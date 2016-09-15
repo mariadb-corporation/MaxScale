@@ -6,17 +6,7 @@ os: linux
 
 env:
   global:
-    - MARIADB_URL=https://downloads.mariadb.org/interstitial/mariadb-5.5.48/bintar-linux-glibc_214-x86_64/mariadb-5.5.48-linux-glibc_214-x86_64.tar.gz/from/http%3A//mirror.netinch.com/pub/mariadb/
-    - MARIADB_TAR=mariadb-5.5.48-linux-glibc_214-x86_64.tar.gz
-    - MARIADB_DIR=mariadb-5.5.48-linux-x86_64
     - secure: "kfzqiIq1XhZ89XYsnqFhPKr5UWB+W4fYAYpOYOLgWMmqfjwqQTm1nN/A6TuFmdbTrzB6hLawsxIUrPS+QKs4TI8tTQMRZ8IZV4TIUQVa7SNQljwrKvnSu0fSoqpPrvXxjEjbTlvpo7X5EKCyCB0Xz6NaYVJIvE9bYnwCEAJw30k="
-
-
-# prepare the environment
-before_script:
-  # get mariadb packages from mariadb.org
-  - chmod +x .travis/download_mariadb.sh
-  - .travis/download_mariadb.sh
 
 # actual compilation commands
 script:

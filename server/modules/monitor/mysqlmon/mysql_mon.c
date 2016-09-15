@@ -50,11 +50,28 @@
 #include <modutil.h>
 #include <maxscale/alloc.h>
 
-extern char *strcasestr(const char *haystack, const char *needle);
+/** Column positions for SHOW SLAVE STATUS */
+#define MYSQL55_STATUS_BINLOG_POS 5
+#define MYSQL55_STATUS_BINLOG_NAME 6
+#define MYSQL55_STATUS_IO_RUNNING 10
+#define MYSQL55_STATUS_SQL_RUNNING 11
+#define MYSQL55_STATUS_MASTER_ID 39
+
+/** Column positions for SHOW SLAVE STATUS */
+#define MARIA10_STATUS_BINLOG_NAME 7
+#define MARIA10_STATUS_BINLOG_POS 8
+#define MARIA10_STATUS_IO_RUNNING 12
+#define MARIA10_STATUS_SQL_RUNNING 13
+#define MARIA10_STATUS_MASTER_ID 41
+
+/** Column positions for SHOW SLAVE HOSTS */
+#define SLAVE_HOSTS_SERVER_ID 0
+#define SLAVE_HOSTS_HOSTNAME 1
+#define SLAVE_HOSTS_PORT 2
 
 static void monitorMain(void *);
 
-static char *version_str = "V1.4.0";
+static char *version_str = "V1.5.0";
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -128,6 +145,89 @@ GetModuleObject()
 {
     return &MyObject;
 }
+
+/**
+ * Monitor specific information about a server
+ */
+typedef struct mysql_server_info
+{
+    int              server_id; /**< Value of @@server_id */
+    int              master_id; /**< Master server id from SHOW SLAVE STATUS*/
+    int              group;     /**< Multi-master group where this server
+                                   belongs, 0 for servers not in groups */
+    bool             read_only; /**< Value of @@read_only */
+    bool             slave_configured; /**< Whether SHOW SLAVE STATUS returned rows */
+    bool             slave_io;  /**< If Slave IO thread is running  */
+    bool             slave_sql; /**< If Slave SQL thread is running */
+    uint64_t         binlog_pos; /**< Binlog position from SHOW SLAVE STATUS */
+    char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
+} MYSQL_SERVER_INFO;
+
+/** Other values are implicitly zero initialized */
+#define MYSQL_SERVER_INFO_INIT {.binlog_name = ""}
+
+void* info_copy_func(const void *val)
+{
+    ss_dassert(val);
+    MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
+    MYSQL_SERVER_INFO *new_val = MXS_MALLOC(sizeof(MYSQL_SERVER_INFO));
+    char *binlog_name = MXS_STRDUP(old_val->binlog_name);
+
+    if (new_val && binlog_name)
+    {
+        *new_val = *old_val;
+        new_val->binlog_name = binlog_name;
+    }
+    else
+    {
+        MXS_FREE(new_val);
+        MXS_FREE(binlog_name);
+        new_val = NULL;
+    }
+
+    return new_val;
+}
+
+void info_free_func(void *val)
+{
+    if (val)
+    {
+        MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
+        MXS_FREE(old_val->binlog_name);
+        MXS_FREE(old_val);
+    }
+}
+
+/**
+ * @brief Helper function that initializes the server info hashtable
+ *
+ * @param handle MySQL monitor handle
+ * @param database List of monitored databases
+ * @return True on success, false if initialization failed. At the moment
+ *         initialization can only fail if memory allocation fails.
+ */
+bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+{
+    MYSQL_SERVER_INFO info = MYSQL_SERVER_INFO_INIT;
+    bool rval = true;
+
+    while (database)
+    {
+        /** Delete any existing structures and replace them with empty ones */
+        hashtable_delete(handle->server_info, database->server);
+
+        if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
+        {
+            rval = false;
+            break;
+        }
+
+        database = database->next;
+    }
+
+    return rval;
+}
+
 /*lint +e14 */
 
 /**
@@ -143,7 +243,7 @@ static void *
 startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*) monitor->handle;
-    bool have_events = false, script_error = false;
+    bool have_events = false, script_error = false, error = false;
 
     if (handle)
     {
@@ -151,10 +251,19 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     }
     else
     {
-        if ((handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR))) == NULL)
+        handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR));
+        HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES, hashtable_item_strhash, hashtable_item_strcmp);
+
+        if (handle == NULL || server_info == NULL)
         {
+            MXS_FREE(handle);
+            hashtable_free(server_info);
             return NULL;
         }
+
+        hashtable_memory_fns(server_info, hashtable_item_strdup, info_copy_func,
+                             hashtable_item_free, info_free_func);
+        handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_gateway_id();
         handle->replicationHeartbeat = 0;
@@ -162,6 +271,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->detectStaleSlave = true;
         handle->master = NULL;
         handle->script = NULL;
+        handle->multimaster = false;
         handle->mysql51_replication = false;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
@@ -180,6 +290,10 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         else if (!strcmp(params->name, "detect_replication_lag"))
         {
             handle->replicationHeartbeat = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "multimaster"))
+        {
+            handle->multimaster = config_truth_value(params->value);
         }
         else if (!strcmp(params->name, "script"))
         {
@@ -214,25 +328,32 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {
         MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
+        error = true;
     }
 
     if (script_error)
     {
-        MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.", monitor->name);
-        MXS_FREE(handle->script);
-        handle->script = NULL;
+        MXS_ERROR("[%s] Errors were found in the script configuration parameters ", monitor->name);
+        error = true;
     }
-    /** If no specific events are given, enable them all */
-    if (!have_events)
+    else if (!have_events)
     {
+        /** If no specific events are given, enable them all */
         memset(handle->events, true, sizeof(handle->events));
     }
 
-    if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
+    if (!init_server_info(handle, monitor->databases))
+    {
+        error = true;
+    }
+
+    if (error)
+    {
+        hashtable_free(handle->server_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+    }
+    else if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
     }
@@ -286,228 +407,159 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
     dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
     dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
     dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
-    dcb_printf(dcb, "\tMonitored servers:	");
+    dcb_printf(dcb, "\nMonitored servers\n\n");
 
     db = mon->databases;
-    sep = "";
+
     while (db)
     {
-        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
-        sep = ", ";
+        MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+        dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
+        dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
+        dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
+        dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
+        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_io ? "YES" : "NO");
+        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_sql ? "YES" : "NO");
+        dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
+        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
+        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+
+        if (handle->multimaster)
+        {
+            dcb_printf(dcb, "Master group: %d\n", serv_info->group);
+        }
+
+        dcb_printf(dcb, "\n");
         db = db->next;
     }
-    dcb_printf(dcb, "\n");
 }
 
-static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
+enum mysql_server_version
 {
-    int isslave = 0;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
+    MYSQL_SERVER_VERSION_100,
+    MYSQL_SERVER_VERSION_55,
+    MYSQL_SERVER_VERSION_51
+};
 
-    if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+static inline void monitor_mysql_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info,
+                                    enum mysql_server_version server_version)
+{
+    int columns, i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
+    const char *query;
+
+    if (server_version == MYSQL_SERVER_VERSION_100)
+    {
+        columns = 42;
+        query = "SHOW ALL SLAVES STATUS";
+        i_io_thread = MARIA10_STATUS_IO_RUNNING;
+        i_sql_thread = MARIA10_STATUS_SQL_RUNNING;
+        i_binlog_name = MARIA10_STATUS_BINLOG_NAME;
+        i_binlog_pos = MARIA10_STATUS_BINLOG_POS;
+        i_master_id = MARIA10_STATUS_MASTER_ID;
+    }
+    else
+    {
+        columns = server_version == MYSQL_SERVER_VERSION_55 ? 40 : 38;
+        query = "SHOW SLAVE STATUS";
+        i_io_thread = MYSQL55_STATUS_IO_RUNNING;
+        i_sql_thread = MYSQL55_STATUS_SQL_RUNNING;
+        i_binlog_name = MYSQL55_STATUS_BINLOG_NAME;
+        i_binlog_pos = MYSQL55_STATUS_BINLOG_POS;
+        i_master_id = MYSQL55_STATUS_MASTER_ID;
+    }
+
+    /** Clear old states */
+    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
+                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+
+    MYSQL_RES* result;
+
+    if (mysql_query(database->con, query) == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
-        int i = 0;
-        long master_id = -1;
-
-        if (mysql_field_count(database->con) < 42)
+        if (mysql_field_count(database->con) < columns)
         {
             mysql_free_result(result);
-            MXS_ERROR("\"SHOW ALL SLAVES STATUS\" "
-                      "returned less than the expected amount of columns. Expected 42 columns."
-                      " MySQL Version: %s", version_str);
+            MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
+                      "Expected %d columns. MySQL Version: %s", query, columns, version_str);
             return;
         }
 
-        while ((row = mysql_fetch_row(result)))
-        {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[12], "Yes", 3) == 0
-                && strncmp(row[13], "Yes", 3) == 0)
-            {
-                isslave += 1;
-            }
+        MYSQL_ROW row = mysql_fetch_row(result);
+        long master_id = -1;
 
-            /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-             * the replication tree, slaves ids will be added to master(s) and we will have at least the
-             * root master server.
-             * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-             */
-            if (strncmp(row[12], "Yes", 3) == 0)
+        if (row)
+        {
+            serv_info->slave_configured = true;
+            int nconfigured = 0;
+            int nrunning = 0;
+
+            do
             {
-                /* get Master_Server_Id values */
-                master_id = atol(row[41]);
-                if (master_id == 0)
+                /* get Slave_IO_Running and Slave_SQL_Running values*/
+                serv_info->slave_io = strncmp(row[i_io_thread], "Yes", 3) == 0;
+                serv_info->slave_sql = strncmp(row[i_sql_thread], "Yes", 3) == 0;
+
+                if (serv_info->slave_io && serv_info->slave_sql)
                 {
-                    master_id = -1;
+                    if (nrunning == 0)
+                    {
+                        /** Only check binlog name for the first running slave */
+                        char *binlog_name = MXS_STRDUP(row[i_binlog_name]);
+
+                        if (binlog_name)
+                        {
+                            MXS_FREE(serv_info->binlog_name);
+                            serv_info->binlog_name = binlog_name;
+                            serv_info->binlog_pos = atol(row[i_binlog_pos]);
+                        }
+                    }
+
+                    nrunning++;
                 }
+
+                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
+                 * root master server.
+                 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+                 */
+                if (serv_info->slave_io && server_version != MYSQL_SERVER_VERSION_51)
+                {
+                    /* Get Master_Server_Id */
+                    master_id = atol(row[i_master_id]);
+                    if (master_id == 0)
+                    {
+                        master_id = -1;
+                    }
+                }
+
+                nconfigured++;
+                row = mysql_fetch_row(result);
             }
+            while (row);
 
-            i++;
-        }
-        /* store master_id of current node */
-        memcpy(&database->server->master_id, &master_id, sizeof(long));
 
-        mysql_free_result(result);
-
-        /* If all configured slaves are running set this node as slave */
-        if (isslave > 0 && isslave == i)
-        {
-            isslave = 1;
+            /* If all configured slaves are running set this node as slave */
+            if (nrunning > 0 && nrunning == nconfigured)
+            {
+                monitor_set_pending_status(database, SERVER_SLAVE);
+            }
         }
         else
         {
-            isslave = 0;
-        }
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-}
-
-static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
-{
-    bool isslave = false;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
-
-    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        long master_id = -1;
-        if (mysql_field_count(database->con) < 40)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("\"SHOW SLAVE STATUS\" "
-                      "returned less than the expected amount of columns. Expected 40 columns."
-                      " MySQL Version: %s", version_str);
-            return;
+            /** Query returned no rows, replication is not configured */
+            serv_info->slave_configured = false;
+            serv_info->slave_io = false;
+            serv_info->slave_sql = false;
+            serv_info->binlog_pos = 0;
+            serv_info->binlog_name[0] = '\0';
         }
 
-        while ((row = mysql_fetch_row(result)))
-        {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[10], "Yes", 3) == 0
-                && strncmp(row[11], "Yes", 3) == 0)
-            {
-                isslave = 1;
-            }
-
-            /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-             * the replication tree, slaves ids will be added to master(s) and we will have at least the
-             * root master server.
-             * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-             */
-            if (strncmp(row[10], "Yes", 3) == 0)
-            {
-                /* get Master_Server_Id values */
-                master_id = atol(row[39]);
-                if (master_id == 0)
-                {
-                    master_id = -1;
-                }
-            }
-        }
-        /* store master_id of current node */
-        memcpy(&database->server->master_id, &master_id, sizeof(long));
+        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
+        database->server->master_id = master_id;
+        serv_info->master_id = master_id;
 
         mysql_free_result(result);
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-}
-
-static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
-{
-    bool isslave = false;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
-
-    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        if (mysql_field_count(database->con) < 38)
-        {
-            mysql_free_result(result);
-
-            MXS_ERROR("\"SHOW SLAVE STATUS\" "
-                      "returned less than the expected amount of columns. Expected 38 columns."
-                      " MySQL Version: %s", version_str);
-            return;
-        }
-
-        while ((row = mysql_fetch_row(result)))
-        {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[10], "Yes", 3) == 0
-                && strncmp(row[11], "Yes", 3) == 0)
-            {
-                isslave = 1;
-            }
-        }
-        mysql_free_result(result);
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
     }
 }
 
@@ -550,9 +602,9 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                     while (nslaves < MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
                     {
                         /* get Slave_IO_Running and Slave_SQL_Running values*/
-                        database->server->slaves[nslaves] = atol(row[0]);
+                        database->server->slaves[nslaves] = atol(row[SLAVE_HOSTS_SERVER_ID]);
                         nslaves++;
-                        MXS_DEBUG("Found slave at %s:%s", row[1], row[2]);
+                        MXS_DEBUG("Found slave at %s:%s", row[SLAVE_HOSTS_HOSTNAME], row[SLAVE_HOSTS_PORT]);
                     }
                     database->server->slaves[nslaves] = 0;
                 }
@@ -667,8 +719,10 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             /* Also clear M/S state in both server and monitor server pending struct */
             server_clear_status(database->server, SERVER_SLAVE);
             server_clear_status(database->server, SERVER_MASTER);
+            server_clear_status(database->server, SERVER_RELAY_MASTER);
             monitor_clear_pending_status(database, SERVER_SLAVE);
             monitor_clear_pending_status(database, SERVER_MASTER);
+            monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
 
             /* Clean addition status too */
             server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
@@ -701,16 +755,19 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         server_set_version_string(database->server, server_string);
     }
 
-    /* get server_id form current node */
-    if (mysql_query(database->con, "SELECT @@server_id") == 0
+    MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, database->server->unique_name);
+    ss_dassert(serv_info);
+
+    /* Get server_id and read_only from current node */
+    if (mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         long server_id = -1;
 
-        if (mysql_field_count(database->con) != 1)
+        if (mysql_field_count(database->con) != 2)
         {
             mysql_free_result(result);
-            MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
+            MXS_ERROR("Unexpected result for 'SELECT @@server_id, @@read_only'. Expected 2 columns."
                       " MySQL Version: %s", version_str);
             return;
         }
@@ -723,7 +780,10 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             {
                 server_id = -1;
             }
+
             database->server->node_id = server_id;
+            serv_info->server_id = server_id;
+            serv_info->read_only = (row[1] && strcmp(row[1], "1") == 0);
         }
         mysql_free_result(result);
     }
@@ -731,17 +791,17 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     /* Check first for MariaDB 10.x.x and get status for multi-master replication */
     if (server_version >= 100000)
     {
-        monitor_mysql100_db(database);
+        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_100);
     }
     else if (server_version >= 5 * 10000 + 5 * 100)
     {
-        monitor_mysql55_db(database);
+        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_55);
     }
     else
     {
         if (handle->mysql51_replication)
         {
-            monitor_mysql51_db(database);
+            monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_51);
         }
         else if (report_version_err)
         {
@@ -752,6 +812,213 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         }
     }
 
+}
+
+/**
+ * @brief A node in a graph
+ */
+struct graph_node
+{
+    int index;
+    int lowest_index;
+    int cycle;
+    bool active;
+    struct graph_node *parent;
+    MYSQL_SERVER_INFO *info;
+    MONITOR_SERVERS *db;
+};
+
+/**
+ * @brief Visit a node in the graph
+ *
+ * This function is the main function used to determine whether the node is a
+ * part of a cycle. It is an implementation of the Tarjan's strongly connected
+ * component algorithm. All one node cycles are ignored since normal
+ * master-slave monitoring handles that.
+ *
+ * Tarjan's strongly connected component algorithm:
+ *
+ *     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+ */
+static void visit_node(struct graph_node *node, struct graph_node **stack,
+                         int *stacksize, int *index, int *cycle)
+{
+    /** Assign an index to this node */
+    node->lowest_index = node->index = *index;
+    node->active = true;
+    *index += 1;
+
+    stack[*stacksize] = node;
+    *stacksize += 1;
+
+    if (node->parent == NULL)
+    {
+        /** This node does not connect to another node, it can't be a part of a cycle */
+        node->lowest_index = -1;
+    }
+    else if (node->parent->index == 0)
+    {
+        /** Node has not been visited */
+        visit_node(node->parent, stack, stacksize, index, cycle);
+
+        if (node->parent->lowest_index < node->lowest_index)
+        {
+            /** The parent connects to a node with a lower index, this node
+                could be a part of a cycle. */
+            node->lowest_index = node->parent->lowest_index;
+        }
+    }
+    else if (node->parent->active)
+    {
+        /** This node could be a root node of the cycle */
+        if (node->parent->index < node->lowest_index)
+        {
+            /** Root node found */
+            node->lowest_index = node->parent->index;
+        }
+    }
+    else
+    {
+        /** Node connects to an already connected cycle, it can't be a part of it */
+        node->lowest_index = -1;
+    }
+
+    if (node->active && node->parent && node->lowest_index > 0)
+    {
+        if (node->lowest_index == node->index &&
+            node->lowest_index == node->parent->lowest_index)
+        {
+            /**
+             * Found a multi-node cycle from the graph. The cycle is formed from the
+             * nodes with a lowest_index value equal to the lowest_index value of the
+             * current node. Rest of the nodes on the stack are not part of a cycle
+             * and can be discarded.
+             */
+
+            *cycle += 1;
+
+            while (*stacksize > 0)
+            {
+                struct graph_node *top = stack[(*stacksize) - 1];
+                top->active = false;
+
+                if (top->lowest_index == node->lowest_index)
+                {
+                    top->cycle = *cycle;
+                }
+                *stacksize -= 1;
+            }
+        }
+    }
+    else
+    {
+        /** Pop invalid nodes off the stack */
+        node->active = false;
+        *stacksize -= 1;
+    }
+}
+
+/**
+ * @brief Find the strongly connected components in the replication tree graph
+ *
+ * Each replication cluster is a directed graph made out of replication
+ * trees. If this graph has strongly connected components (more generally
+ * cycles), it is considered a multi-master cluster due to the fact that there
+ * are multiple nodes where the data can originate.
+ *
+ * Detecting the cycles in the graph allows this monitor to better understand
+ * the relationships between the nodes. All nodes that are a part of a cycle can
+ * be labeled as master nodes. This information will later be used to choose the
+ * right master where the writes should go.
+ *
+ * This function also populates the MYSQL_SERVER_INFO structures group
+ * member. Nodes in a group get a positive group ID where the nodes not in a
+ * group get a group ID of 0.
+ */
+void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nservers)
+{
+    struct graph_node graph[nservers];
+    struct graph_node *stack[nservers];
+    int nodes = 0;
+
+    for (MONITOR_SERVERS *db = database; db; db = db->next)
+    {
+        graph[nodes].info = hashtable_fetch(handle->server_info, db->server->unique_name);
+        graph[nodes].db = db;
+        ss_dassert(graph[nodes].info);
+        graph[nodes].index = graph[nodes].lowest_index = 0;
+        graph[nodes].cycle = 0;
+        graph[nodes].active = false;
+        graph[nodes].parent = NULL;
+        nodes++;
+    }
+
+    /** Build the graph */
+    for (int i = 0; i < nservers; i++)
+    {
+        if (graph[i].info->master_id > 0)
+        {
+            /** Found a connected node */
+            for (int k = 0; k < nservers; k++)
+            {
+                if (graph[k].info->server_id == graph[i].info->master_id)
+                {
+                    graph[i].parent = &graph[k];
+                    break;
+                }
+            }
+        }
+    }
+
+    int index = 1;
+    int cycle = 0;
+    int stacksize = 0;
+
+    for (int i = 0; i < nservers; i++)
+    {
+        if (graph[i].index == 0)
+        {
+            /** Index is 0, this node has not yet been visited */
+            visit_node(&graph[i], stack, &stacksize, &index, &cycle);
+        }
+    }
+
+    for (int i = 0; i < nservers; i++)
+    {
+        graph[i].info->group = graph[i].cycle;
+
+        if (graph[i].cycle > 0)
+        {
+            /** We have at least one cycle in the graph */
+            if (graph[i].info->read_only)
+            {
+                monitor_set_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_clear_pending_status(graph[i].db, SERVER_MASTER);
+            }
+            else
+            {
+                monitor_set_pending_status(graph[i].db, SERVER_MASTER);
+                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+            }
+        }
+        else if (handle->detectStaleMaster && cycle == 0 &&
+                 graph[i].db->server->status & SERVER_MASTER &&
+                 (graph[i].db->pending_status & SERVER_MASTER) == 0)
+        {
+            /**
+             * Stale master detection is handled here for multi-master mode.
+             *
+             * If we know that no cycles were found from the graph and that a
+             * server once had the master status, replication has broken
+             * down. These masters are assigned the stale master status allowing
+             * them to be used as masters even if they lose their slaves. A
+             * slave in this case can be either a normal slave or another
+             * master.
+             */
+            monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+        }
+    }
 }
 
 /**
@@ -927,6 +1194,32 @@ monitorMain(void *arg)
 
         }
 
+        if (handle->multimaster)
+        {
+            /** Find all the master server cycles in the cluster graph. If
+                multiple masters are found, the servers with the read_only
+                variable set to ON will be assigned the slave status. */
+            find_graph_cycles(handle, mon->databases, num_servers);
+        }
+
+        ptr = mon->databases;
+        while (ptr)
+        {
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
+            ss_dassert(serv_info);
+
+            if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
+                getSlaveOfNodeId(mon->databases, ptr->server->node_id) &&
+                getServerByNodeId(mon->databases, ptr->server->master_id) &&
+                (!handle->multimaster || serv_info->group == 0))
+            {
+                /** This server is both a slave and a master i.e. a relay master */
+                monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
+                monitor_clear_pending_status(ptr, SERVER_MASTER);
+            }
+            ptr = ptr->next;
+        }
+
         /* Update server status from monitor pending status on that server*/
 
         ptr = mon->databases;
@@ -934,8 +1227,11 @@ monitorMain(void *arg)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                /* If "detect_stale_master" option is On, let's use the previous master */
-                if (detect_stale_master && root_master &&
+                /** If "detect_stale_master" option is On, let's use the previous master.
+                 *
+                 * Multi-master mode detects the stale masters in find_graph_cycles().
+                 */
+                if (detect_stale_master && root_master && !handle->multimaster &&
                     (strcmp(ptr->server->name, root_master->server->name) == 0 &&
                      ptr->server->port == root_master->server->port) &&
                     (ptr->server->status & SERVER_MASTER) &&
@@ -1445,6 +1741,14 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
                     add_slave_to_master(master->server->slaves, sizeof(master->server->slaves),
                                         current->node_id);
                     master->server->depth = current->depth - 1;
+
+                    if(handle->master && master->server->depth < handle->master->server->depth)
+                    {
+                        /** A master with a lower depth was found, remove
+                            the master status from the previous master. */
+                        monitor_clear_pending_status(handle->master, SERVER_MASTER);
+                    }
+
                     monitor_set_pending_status(master, SERVER_MASTER);
                     handle->master = master;
                 }

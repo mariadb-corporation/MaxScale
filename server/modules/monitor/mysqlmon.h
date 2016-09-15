@@ -28,6 +28,7 @@
 #include <modinfo.h>
 #include <maxconfig.h>
 #include <externcmd.h>
+#include <hashtable.h>
 
 /**
  * @file mysqlmon.h - The MySQL monitor
@@ -62,6 +63,7 @@ typedef struct
     int replicationHeartbeat; /**< Monitor flag for MySQL replication heartbeat */
     bool detectStaleMaster; /**< Monitor flag for MySQL replication Stale Master detection */
     bool detectStaleSlave; /**< Monitor flag for MySQL replication Stale Master detection */
+    bool multimaster; /**< Detect and handle multi-master topologies */
     int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
     int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
@@ -69,6 +71,7 @@ typedef struct
     MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    HASHTABLE *server_info; /**< Contains server specific information */
 } MYSQL_MONITOR;
 
 #endif

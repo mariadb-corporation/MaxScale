@@ -619,7 +619,7 @@ server_status(SERVER *server)
 {
     char    *status = NULL;
 
-    if (NULL == server || (status = (char *)MXS_MALLOC(256)) == NULL)
+    if (NULL == server || (status = (char *)MXS_MALLOC(512)) == NULL)
     {
         return NULL;
     }
@@ -631,6 +631,10 @@ server_status(SERVER *server)
     if (server->status & SERVER_MASTER)
     {
         strcat(status, "Master, ");
+    }
+    if (server->status & SERVER_RELAY_MASTER)
+    {
+        strcat(status, "Relay Master, ");
     }
     if (server->status & SERVER_SLAVE)
     {
