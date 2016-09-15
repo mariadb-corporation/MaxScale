@@ -4395,6 +4395,10 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
         CHK_BACKEND_REF(bref);
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);
+        if (BREF_IS_WAITING_RESULT(bref))
+        {
+            bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
