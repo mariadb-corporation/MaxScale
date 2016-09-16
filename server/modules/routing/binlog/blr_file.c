@@ -35,6 +35,8 @@
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
+ * 16/09/2016   Massimiliano Pinto  Addition of IGNORABLE_EVENT in case of a missing event
+ *                                  detected from master binlog stream
  *
  * @endverbatim
  */
@@ -70,6 +72,7 @@ int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
+extern void encode_value(unsigned char *data, unsigned int value, int len);
 
 typedef struct binlog_event_desc
 {
@@ -81,6 +84,22 @@ typedef struct binlog_event_desc
 static void blr_print_binlog_details(ROUTER_INSTANCE *router,
                                      BINLOG_EVENT_DESC first_event_time,
                                      BINLOG_EVENT_DESC last_event_time);
+static uint8_t *blr_create_ignorable_event(uint32_t event_size,
+                                           REP_HEADER *hdr,
+                                           uint32_t event_pos,
+                                           bool do_checksum);
+static int blr_write_special_event(ROUTER_INSTANCE *router,
+                                   uint32_t file_offset,
+                                   uint32_t hole_size,
+                                   REP_HEADER *hdr,
+                                   int type);
+
+/** MaxScale generated events */
+typedef enum
+{
+    BLRM_IGNORABLE, /*< Ignorable event */
+    BLRM_START_ENCRYPTION /*< Start Encryption event */
+} generated_event_t;
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -363,7 +382,24 @@ int
 blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size, uint8_t *buf)
 {
     int n;
+    uint64_t file_offset = router->current_pos;
 
+    /**
+     * Check for possible hole looking at curren pos and next pos
+     * Fill the gap with a self generated ignorable event
+     * Binlog file position is incremented by blr_write_special_event()
+     */
+
+    if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
+    {
+        uint64_t hole_size = hdr->next_pos - file_offset - size;
+        if (!blr_write_special_event(router, file_offset, hole_size, hdr, BLRM_IGNORABLE))
+        {
+            return 0;
+        }
+    }
+
+    /* Write current received event form master */
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
     {
@@ -383,11 +419,14 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         }
         return 0;
     }
+
+    // Increment offsets
     spinlock_acquire(&router->binlog_lock);
     router->current_pos = hdr->next_pos;
     router->last_written += size;
     router->last_event_pos = hdr->next_pos - hdr->event_size;
     spinlock_release(&router->binlog_lock);
+
     return n;
 }
 
@@ -1994,7 +2033,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
 /** Print Binlog Details
  *
- * @param router    The router instance
+ * @param router        The router instance
  * @param first_event   First Event details
  * @param last_event    First Event details
  */
@@ -2039,3 +2078,149 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
                event_desc != NULL ? event_desc : "unknown", buf_t);
 }
 
+/** Create an ignorable event
+ *
+ * @param event_size     The size of the new event being created (crc32 4 bytes could be included)
+ * @param hdr            Current replication event header, received form master
+ * @param event_pos      The position in binlog file of the new event
+ * @param do_checksum    Whether checksum must be calculated and stored
+ * @return               Returns the pointer of new event
+ */
+static uint8_t *
+blr_create_ignorable_event(uint32_t event_size,
+                           REP_HEADER *hdr,
+                           uint32_t event_pos,
+                           bool do_checksum)
+{
+    uint8_t *new_event;
+
+    if (event_size < BINLOG_EVENT_HDR_LEN)
+    {
+        MXS_ERROR("blr_create_ignorable_event an event of %lu bytes"
+                  " is not valid in blr_file.c", (unsigned long)event_size);
+        return NULL;
+    }
+
+    // Allocate space for event: size might contain the 4 crc32
+    new_event = MXS_CALLOC(1, event_size);
+    if (new_event == NULL)
+    {
+        MXS_ERROR("Unable to allocate memory for blr_create_ignorable_event in blr_file.c ");
+        return NULL;
+    }
+
+    // Populate Event header 19 bytes for Ignorable Event
+    encode_value(&new_event[0], hdr->timestamp, 32); // same timestamp as in current received event
+    new_event[4] = IGNORABLE_EVENT; // type is IGNORABLE_EVENT
+    encode_value(&new_event[5], hdr->serverid, 32); // same serverid as in current received event
+    encode_value(&new_event[9], event_size, 32); // event size
+    encode_value(&new_event[13], event_pos + event_size, 32); // next_pos
+    encode_value(&new_event[17], LOG_EVENT_IGNORABLE_F, 16); // flag is LOG_EVENT_IGNORABLE_F
+
+    /* if checksum is required calculate the crc32 and add it in the last 4 bytes*/
+    if (do_checksum)
+    {
+        /*
+         * Now add the CRC to the Ignorable binlog event.
+         *
+         * The algorithm is first to compute the checksum of an empty buffer
+         * and then the checksum of the real event: 4 byte less than event_size
+         */
+         uint32_t chksum;
+         chksum = crc32(0L, NULL, 0);
+         chksum = crc32(chksum, new_event, event_size - 4);
+
+         // checksum is stored after current event data using 4 bytes
+         encode_value(new_event + event_size - 4, chksum, 32);
+    }
+    return new_event;
+}
+
+/**
+ * Create and write a special event (not received form master) into binlog file
+ *
+ * @param router        The current router instance
+ * @param file_offset   Position where event will be written
+ * @param event_size    The size of new event (it might hold the 4 bytes crc32)
+ * @param hdr           Replication header of the current reived event (from Master)
+ * @param type          Type of special event to create and write
+ */
+static int
+blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr, int type)
+{
+    int n;
+    uint8_t *new_event;
+    char *new_event_desc;
+
+    switch (type)
+    {
+        case BLRM_IGNORABLE:
+            new_event_desc = "IGNORABLE";
+            MXS_INFO("Hole detected while writing in binlog '%s' @ %lu: an %s event "
+                     "of %lu bytes will be written at pos %lu",
+                     router->binlog_name,
+                     router->current_pos,
+                     new_event_desc,
+                     (unsigned long)event_size,
+                     (unsigned long)file_offset);
+
+            /* Create new Ignorable event */
+            if ((new_event = blr_create_ignorable_event(event_size,
+                                                         hdr,
+                                                         file_offset,
+                                                         router->master_chksum)) == NULL)
+            {
+                   return 0;
+            }
+            break;
+        default:
+            new_event_desc = "UNKNOWN";
+            MXS_ERROR("Cannot create special binlog event of %s type and size %lu "
+                       "in binlog file '%s' @ %lu",
+                       new_event_desc,
+                       (unsigned long)event_size,
+                       router->binlog_name,
+                       router->current_pos);
+            new_event_desc = "UNKNOWN";
+            return 0;
+            break;
+    }
+
+    // Write the event
+    if ((n = pwrite(router->binlog_fd, new_event, event_size, file_offset)) != event_size)
+    {
+       char err_msg[STRERROR_BUFLEN];
+       MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
+                 "Truncating to previous record.",
+                 router->service->name, new_event_desc, (unsigned long)file_offset,
+                 router->binlog_name,
+                 strerror_r(errno, err_msg, sizeof(err_msg)));
+
+       /* Remove any partial event that was written */
+       if (ftruncate(router->binlog_fd, router->last_written))
+       {
+           MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
+                     router->service->name, new_event_desc, (unsigned long)file_offset,
+                     router->binlog_name,
+                     strerror_r(errno, err_msg, sizeof(err_msg)));
+       }
+       MXS_FREE(new_event);
+       return 0;
+    }
+
+    MXS_FREE(new_event);
+
+    // Increment offsets, next event will be written after this special one
+    spinlock_acquire(&router->binlog_lock);
+
+    router->last_written += event_size;
+    router->current_pos = file_offset + event_size;
+    router->last_event_pos = file_offset;
+
+    spinlock_release(&router->binlog_lock);
+
+    // Force write
+    fsync(router->binlog_fd);
+
+    return 1;
+}
