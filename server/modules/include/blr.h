@@ -36,6 +36,7 @@
  * 24/08/16     Massimiliano Pinto      Added slave notification state CS_WAIT_DATA.
  *                                      State CS_UPTODATE removed.
  * 01/09/2016   Massimiliano Pinto      Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
+ * 16/09/2016   Massimiliano Pinto      Addition of MARIADB10_START_ENCRYPTION_EVENT 0xa4
  *
  * @endverbatim
  */
@@ -105,8 +106,9 @@
 #define MARIADB10_BINLOG_CHECKPOINT_EVENT       0xa1
 #define MARIADB10_GTID_EVENT                    0xa2
 #define MARIADB10_GTID_GTID_LIST_EVENT          0xa3
+#define MARIADB10_START_ENCRYPTION_EVENT        0xa4
 
-#define MAX_EVENT_TYPE_MARIADB10                0xa3
+#define MAX_EVENT_TYPE_MARIADB10                0xa4
 
 /* Maximum event type so far */
 #define MAX_EVENT_TYPE_END                      MAX_EVENT_TYPE_MARIADB10
