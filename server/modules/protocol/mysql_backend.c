@@ -2011,22 +2011,17 @@ static GWBUF* process_response_data(DCB* dcb,
             outbuf = gwbuf_append(outbuf, readbuf);
             readbuf = NULL;
         }
-            /**
-             * Packet was read. There should be more since bytes were
-             * left over.
-             * Move the next packet to its own buffer and add that next
-             * to the prev packet's buffer.
-             */
-        else /*< nbytes_left < nbytes_to_process */
+        /**
+         * Buffer contains more data than we need. Split the complete packet and
+         * the extra data into two separate buffers.
+         */
+        else
         {
-            ss_dassert(nbytes_left >= 0);
-            nbytes_to_process -= nbytes_left;
-
-            /** Move the prefix of the buffer to outbuf from redbuf */
-            outbuf = gwbuf_append(outbuf,
-                                  gwbuf_clone_portion(readbuf, 0, (size_t) nbytes_left));
-            readbuf = gwbuf_consume(readbuf, (size_t) nbytes_left);
+            ss_dassert(nbytes_left < nbytes_to_process);
+            ss_dassert(nbytes_left > 0);
             ss_dassert(npackets_left > 0);
+            outbuf = gwbuf_append(outbuf, gwbuf_split(&readbuf, nbytes_left));
+            nbytes_to_process -= nbytes_left;
             npackets_left -= 1;
             nbytes_left = 0;
         }
