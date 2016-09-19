@@ -37,6 +37,8 @@
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 16/09/2016   Massimiliano Pinto  Addition of IGNORABLE_EVENT in case of a missing event
  *                                  detected from master binlog stream
+ * 19/09/2016   Massimiliano Pinto  Addition of START_ENCRYPTION_EVENT: new event is written
+ *                                  when encrypt_binlog=1 in Binlog Server option.
  *
  * @endverbatim
  */
@@ -94,6 +96,9 @@ static int blr_write_special_event(ROUTER_INSTANCE *router,
                                    uint32_t hole_size,
                                    REP_HEADER *hdr,
                                    int type);
+static uint8_t *blr_create_start_encryption_event(ROUTER_INSTANCE *router,
+                                                  uint32_t event_pos,
+                                                  bool do_checksum);
 
 /** MaxScale generated events */
 typedef enum
@@ -383,10 +388,17 @@ int
 blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size, uint8_t *buf)
 {
     int n;
+    bool write_begin_encryption = false;
     uint64_t file_offset = router->current_pos;
 
+    /* Track whether FORMAT_DESCRIPTION_EVENT has been received */
+    if (hdr->event_type == FORMAT_DESCRIPTION_EVENT)
+    {
+        write_begin_encryption = true;
+    }
+
     /**
-     * Check for possible hole looking at curren pos and next pos
+     * Check first for possible hole looking at current pos and next pos
      * Fill the gap with a self generated ignorable event
      * Binlog file position is incremented by blr_write_special_event()
      */
@@ -400,7 +412,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         }
     }
 
-    /* Write current received event form master */
+    /* Write current received event from master */
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
     {
@@ -428,6 +440,18 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     router->last_event_pos = hdr->next_pos - hdr->event_size;
     spinlock_release(&router->binlog_lock);
 
+    /* Check whether adding the Start Encryption event into current binlog */
+    if (router->encrypt_binlog && write_begin_encryption)
+    {
+        uint64_t event_size = router->master_chksum ? 40 : 36;
+        uint64_t file_offset = router->current_pos;
+        if (!blr_write_special_event(router, file_offset, event_size, hdr, BLRM_START_ENCRYPTION))
+        {
+            return 0;
+        }
+
+        write_begin_encryption = false;
+    }
     return n;
 }
 
@@ -1464,23 +1488,26 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             event_header_length =  ptr[2 + 50 + 4];
             event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
 
-            if (event_header_ntypes == 168)
+            /* mariadb >= 10.1.7 LOG_EVENT_TYPES*/
+            if (event_header_ntypes == 169)
+            {
+                /* mariadb 10 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 164;
+            }
+            else if (event_header_ntypes == 168)
             {
                 /* mariadb 10 LOG_EVENT_TYPES*/
                 event_header_ntypes -= 163;
             }
+            else if (event_header_ntypes == 165)
+            {
+                /* mariadb 5 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 160;
+            }
             else
             {
-                if (event_header_ntypes == 165)
-                {
-                    /* mariadb 5 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 160;
-                }
-                else
-                {
-                    /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                    event_header_ntypes -= 35;
-                }
+                /* mysql 5.6 LOG_EVENT_TYPES = 35 */
+                event_header_ntypes -= 35;
             }
 
             n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
@@ -2082,7 +2109,7 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 /** Create an ignorable event
  *
  * @param event_size     The size of the new event being created (crc32 4 bytes could be included)
- * @param hdr            Current replication event header, received form master
+ * @param hdr            Current replication event header, received from master
  * @param event_pos      The position in binlog file of the new event
  * @param do_checksum    Whether checksum must be calculated and stored
  * @return               Returns the pointer of new event
@@ -2137,13 +2164,14 @@ blr_create_ignorable_event(uint32_t event_size,
 }
 
 /**
- * Create and write a special event (not received form master) into binlog file
+ * Create and write a special event (not received from master) into binlog file
  *
  * @param router        The current router instance
  * @param file_offset   Position where event will be written
  * @param event_size    The size of new event (it might hold the 4 bytes crc32)
  * @param hdr           Replication header of the current reived event (from Master)
  * @param type          Type of special event to create and write
+ * @return              1 on success, 0 on error
  */
 static int
 blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr, int type)
@@ -2164,11 +2192,29 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
                      (unsigned long)event_size,
                      (unsigned long)file_offset);
 
-            /* Create new Ignorable event */
+            /* Create the new Ignorable event */
             if ((new_event = blr_create_ignorable_event(event_size,
                                                          hdr,
                                                          file_offset,
                                                          router->master_chksum)) == NULL)
+            {
+                   return 0;
+            }
+            break;
+        case BLRM_START_ENCRYPTION:
+            new_event_desc = "MARIADB10_START_ENCRYPTION";
+            MXS_INFO("New event %s is being added in binlog '%s' @ %lu: "
+                     "%lu bytes will be written at pos %lu",
+                     new_event_desc,
+                     router->binlog_name,
+                     router->current_pos,
+                     (unsigned long)event_size,
+                     (unsigned long)file_offset);
+
+            /* Create the MARIADB10_START_ENCRYPTION event */
+            if ((new_event = blr_create_start_encryption_event(router,
+                                                               file_offset,
+                                                               router->master_chksum)) == NULL)
             {
                    return 0;
             }
@@ -2224,3 +2270,67 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
 
     return 1;
 }
+
+/** Create the START_ENCRYPTION_EVENT
+ *
+ * This is a New Event added in MariaDB 10.1.7
+ * Type is 0xa4 and size 36 (crc32 not included)
+ *
+ * @param hdr            Current replication event header, received from master
+ * @param event_pos      The position in binlog file of the new event
+ * @param do_checksum    Whether checksum must be calculated and stored
+ * @return               Returns the pointer of new event
+ */
+
+uint8_t *
+blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, bool do_checksum)
+{
+    uint8_t *new_event;
+    uint8_t event_size = 36;
+    if (do_checksum)
+    {
+        event_size += 4;
+    }
+
+    new_event= MXS_CALLOC(1, event_size);
+    if (new_event == NULL)
+    {
+        return NULL;
+    }
+
+    // Populate Event header 19 bytes
+    encode_value(&new_event[0], time(NULL), 32); // now
+    new_event[4] = MARIADB10_START_ENCRYPTION_EVENT; // type is BEGIN_ENCRYPTION_EVENT
+    encode_value(&new_event[5], router->serverid, 32); // serverid of maxscale
+    encode_value(&new_event[9], event_size, 32); // event size
+    encode_value(&new_event[13], event_pos + event_size, 32); // next_pos
+    encode_value(&new_event[17], LOG_EVENT_IGNORABLE_F, 16); // flag is LOG_EVENT_IGNORABLE_F OR 0 ?
+
+    /* Event conten */
+    // set schema
+    new_event[19] = 1;
+    // key version
+    encode_value(&new_event[20], 1, 32);
+    // nonce
+    gw_generate_random_str((char *)&new_event[24], 12);
+
+    /* if checksum is requred add the crc32 */
+    if (do_checksum)
+    {
+        /*
+         * Now add the CRC to the Ignorable binlog event.
+         *
+         * The algorithm is first to compute the checksum of an empty buffer
+         * and then the checksum of the event.
+         */
+        uint32_t chksum;
+        chksum = crc32(0L, NULL, 0);
+        chksum = crc32(chksum, new_event, event_size - 4);
+
+        // checksum is stored at the end of current event data: 4 less bytes than event size 
+        encode_value(new_event + event_size - 4, chksum, 32);
+    }
+
+    return new_event;
+}
+

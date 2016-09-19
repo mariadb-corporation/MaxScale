@@ -52,6 +52,7 @@
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
  * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA new state
  * 16/08/2016   Massimiliano Pinto  Addition of Start Encription Event description
+ * 19/08/2016   Massimiliano Pinto  Addition of encrypt_binlog option
  *
  * @endverbatim
  */
@@ -294,6 +295,7 @@ createInstance(SERVICE *service, char **options)
     /* Semi-Sync support */
     inst->request_semi_sync = false;
     inst->master_semi_sync = 0;
+    inst->encrypt_binlog = 0;
 
     /* Generate UUID for the router instance */
     uuid_generate_time(defuuid);
@@ -428,6 +430,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "semisync") == 0)
                 {
                     inst->request_semi_sync = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "encrypt_binlog") == 0)
+                {
+                    inst->encrypt_binlog = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "lowwater") == 0)
                 {
@@ -791,10 +797,17 @@ createInstance(SERVICE *service, char **options)
     snprintf(task_name, BLRM_TASK_NAME_LEN, "%s stats", service->name);
     hktask_add(task_name, stats_func, inst, BLR_STATS_FREQ);
 
-    /* Log whether the transaction safety option value is on*/
+    /* Log whether the transaction safety option value is on */
     if (inst->trx_safe)
     {
         MXS_INFO("%s: Service has transaction safety option set to ON",
+                 service->name);
+    }
+
+    /* Log whether the binlog encryption option value is on */
+    if (inst->encrypt_binlog)
+    {
+        MXS_INFO("%s: Service has binlog encryption set to ON",
                  service->name);
     }
 

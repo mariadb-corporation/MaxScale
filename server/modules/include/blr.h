@@ -37,6 +37,7 @@
  *                                      State CS_UPTODATE removed.
  * 01/09/2016   Massimiliano Pinto      Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
  * 16/09/2016   Massimiliano Pinto      Addition of MARIADB10_START_ENCRYPTION_EVENT 0xa4
+ * 19/09/2016   Massimiliano Pinto      Added encrypt_binlog=0|1 option
  *
  * @endverbatim
  */
@@ -538,6 +539,7 @@ typedef struct router_instance
     char              *ssl_version;         /*< config TLS Version for Master SSL connection */
     bool              request_semi_sync;    /*< Request Semi-Sync replication to master */
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
+    int               encrypt_binlog;       /*< Encrypt binlog files */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 
