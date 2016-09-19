@@ -62,6 +62,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <maxscale/alloc.h>
+#include <inttypes.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
@@ -76,7 +77,7 @@ extern void encode_value(unsigned char *data, unsigned int value, int len);
 
 typedef struct binlog_event_desc
 {
-    unsigned long long event_pos;
+    uint64_t event_pos;
     uint8_t event_type;
     time_t  event_time;
 } BINLOG_EVENT_DESC;
@@ -2058,7 +2059,7 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 
     event_desc = blr_get_event_description(router, first_event.event_type);
 
-    MXS_NOTICE("%lu @ %llu, %s, (%s), First EventTime",
+    MXS_NOTICE("%lu @ %" PRIu64 ", %s, (%s), First EventTime",
                first_event.event_time, first_event.event_pos,
                event_desc != NULL ? event_desc : "unknown", buf_t);
 
@@ -2073,7 +2074,7 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 
     event_desc = blr_get_event_description(router, last_event.event_type);
 
-    MXS_NOTICE("%lu @ %llu, %s, (%s), Last EventTime",
+    MXS_NOTICE("%lu @ %" PRIu64 ", %s, (%s), Last EventTime",
                last_event.event_time, last_event.event_pos,
                event_desc != NULL ? event_desc : "unknown", buf_t);
 }
@@ -2105,7 +2106,6 @@ blr_create_ignorable_event(uint32_t event_size,
     new_event = MXS_CALLOC(1, event_size);
     if (new_event == NULL)
     {
-        MXS_ERROR("Unable to allocate memory for blr_create_ignorable_event in blr_file.c ");
         return NULL;
     }
 
