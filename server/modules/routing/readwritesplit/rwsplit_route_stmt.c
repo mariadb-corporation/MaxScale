@@ -927,9 +927,6 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
              */
             if (rses->have_tmp_tables)
             {
-                rses_property_t *rses_prop_tmp;
-
-                rses_prop_tmp = rses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
                 check_drop_tmp_table(rses, querybuf, packet_type);
                 if (is_packet_a_query(packet_type))
                 {
