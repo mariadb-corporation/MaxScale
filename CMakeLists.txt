@@ -98,6 +98,61 @@ endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
 
+# Only do packaging if configured
+if(PACKAGE)
+
+  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
+  # Install the files copied by the postinst script into the share folder
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR})
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR})
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHAREDIR})
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHAREDIR})
+  if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
+    message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
+  else()
+
+    # Generic CPack configuration variables
+    SET(CPACK_SET_DESTDIR ON)
+    set(CPACK_STRIP_FILES FALSE)
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
+    set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
+    set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
+    set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
+    set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
+    if(DISTRIB_SUFFIX)
+      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${DISTRIB_SUFFIX}.${CPACK_PACKAGE_ARCHITECTURE}" CACHE STRING "MaxScale package filename")
+    else()
+      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${CPACK_PACKAGE_ARCHITECTURE}" CACHE STRING "MaxScale package filename")
+    endif()
+    set(CPACK_PACKAGE_NAME "maxscale")
+    set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
+    set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+
+    # See if we are on a RPM-capable or DEB-capable system
+    find_program(RPMBUILD rpmbuild)
+    find_program(DEBBUILD dpkg-buildpackage)
+
+    if(TARBALL)
+      include(cmake/package_tgz.cmake)
+
+    elseif (NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) OR NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ))
+      if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+        include(cmake/package_rpm.cmake)
+        message(STATUS "Generating RPM packages")
+      endif()
+      if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+        include(cmake/package_deb.cmake)
+        message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
+      endif()
+    else()
+      message(FATAL_ERROR "Could not automatically resolve the package generator and no generators "
+        "defined on the command line. Please install distribution specific packaging software or "
+        "define -DTARBALL=Y to build tar.gz packages.")
+    endif()
+  endif()
+endif()
+
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
   file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION_NUMERIC}*.md)
@@ -243,53 +298,8 @@ if(WITH_SCRIPTS)
   endif()
 endif()
 
-# Only do packaging if configured
 if(PACKAGE)
-
-  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
-  # Install the files copied by the postinst script into the share folder
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR})
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR})
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHAREDIR})
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHAREDIR})
-  if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
-    message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
-  else()
-
-    # Generic CPack configuration variables
-    SET(CPACK_SET_DESTDIR ON)
-    set(CPACK_STRIP_FILES FALSE)
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
-    set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
-    set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
-    set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
-    set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
-    if(DISTRIB_SUFFIX)
-      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${DISTRIB_SUFFIX}.${CPACK_PACKAGE_ARCHITECTURE}" CACHE STRING "MaxScale package filename")
-    else()
-      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${CPACK_PACKAGE_ARCHITECTURE}" CACHE STRING "MaxScale package filename")
-    endif()
-    set(CPACK_PACKAGE_NAME "maxscale")
-    set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
-    set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
-    set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-
-    # See if we are on a RPM-capable or DEB-capable system
-    find_program(RPMBUILD rpmbuild)
-    find_program(DEBBUILD dpkg-buildpackage)
-    set(CPACK_GENERATOR "TGZ")
-
-    if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
-      include(cmake/package_rpm.cmake)
-      message(STATUS "Generating RPM packages")
-    endif()
-    if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
-      include(cmake/package_deb.cmake)
-      message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
-    endif()
-
-    include(CPack)
-  endif()
+  include(CPack)
 endif()
 
 # uninstall target
