@@ -651,7 +651,7 @@ static void closeSession(ROUTER *instance, void *router_session)
                 }
 #endif
                 /** Clean operation counter in bref and in SERVER */
-                while (BREF_IS_WAITING_RESULT(bref))
+                if (BREF_IS_WAITING_RESULT(bref))
                 {
                     bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
@@ -663,6 +663,10 @@ static void closeSession(ROUTER *instance, void *router_session)
                 dcb_close(dcb);
                 /** decrease server current connection counters */
                 atomic_add(&bref->bref_backend->backend_conn_count, -1);
+            }
+            else
+            {
+                ss_dassert(!BREF_IS_WAITING_RESULT(bref));
             }
         }
         /** Unlock */
@@ -1121,6 +1125,10 @@ static void handleError(ROUTER *instance, void *router_session,
                     if (bref != NULL)
                     {
                         CHK_BACKEND_REF(bref);
+                        if (BREF_IS_WAITING_RESULT(bref))
+                        {
+                            bref_clear_state(bref, BREF_WAITING_RESULT);
+                        }
                         bref_clear_state(bref, BREF_IN_USE);
                         bref_set_state(bref, BREF_CLOSED);
                     }
@@ -1281,7 +1289,6 @@ void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses)
  * @param bref The backend reference to be modified
  * @param state A bit string where the 1 bits indicate bits that should
  * be turned off in the bref state.
- * 
  */
 void bref_clear_state(backend_ref_t *bref, bref_state_t state)
 {
@@ -1290,11 +1297,8 @@ void bref_clear_state(backend_ref_t *bref, bref_state_t state)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return;
     }
-    if (state != BREF_WAITING_RESULT)
-    {
-        bref->bref_state &= ~state;
-    }
-    else
+
+    if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT))
     {
         int prev1;
         int prev2;
@@ -1319,6 +1323,8 @@ void bref_clear_state(backend_ref_t *bref, bref_state_t state)
             }
         }
     }
+
+    bref->bref_state &= ~state;
 }
 
 /*
@@ -1332,7 +1338,6 @@ void bref_clear_state(backend_ref_t *bref, bref_state_t state)
  * @param bref The backend reference to be modified
  * @param state A bit string where the 1 bits indicate bits that should
  * be turned on in the bref state.
- * 
  */
 void bref_set_state(backend_ref_t *bref, bref_state_t state)
 {
@@ -1341,11 +1346,8 @@ void bref_set_state(backend_ref_t *bref, bref_state_t state)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return;
     }
-    if (state != BREF_WAITING_RESULT)
-    {
-        bref->bref_state |= state;
-    }
-    else
+
+    if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT) == 0)
     {
         int prev1;
         int prev2;
@@ -1371,6 +1373,8 @@ void bref_set_state(backend_ref_t *bref, bref_state_t state)
                       bref->bref_backend->backend_server->port);
         }
     }
+
+    bref->bref_state |= state;
 }
 
 /**
@@ -1684,6 +1688,10 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
         CHK_BACKEND_REF(bref);
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);
+        if (BREF_IS_WAITING_RESULT(bref))
+        {
+            bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)

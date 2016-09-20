@@ -1127,10 +1127,6 @@ monitorMain(void *arg)
                 {
                     dcb_hangup_foreach(ptr->server);
                 }
-
-
-
-
             }
 
             if (mon_status_changed(ptr))
@@ -1225,6 +1221,8 @@ monitorMain(void *arg)
         ptr = mon->databases;
         while (ptr)
         {
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
+            ss_dassert(serv_info);
             if (!SERVER_IN_MAINT(ptr->server))
             {
                 /** If "detect_stale_master" option is On, let's use the previous master.
@@ -1284,6 +1282,10 @@ monitorMain(void *arg)
                               // Master just came up
                               (SERVER_IS_MASTER(root_master->server) &&
                                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
+                    {
+                        ptr->pending_status |= SERVER_SLAVE;
+                    }
+                    else if (root_master == NULL && serv_info->slave_configured)
                     {
                         ptr->pending_status |= SERVER_SLAVE;
                     }
