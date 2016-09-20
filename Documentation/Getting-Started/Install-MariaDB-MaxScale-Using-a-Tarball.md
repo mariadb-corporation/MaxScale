@@ -14,7 +14,7 @@ The required steps are as follows:
     $ sudo useradd -g maxscale maxscale
     $ cd /usr/local
     $ sudo tar -xzvf maxscale-x.y.z.OS.tar.gz
-    $ sudo ln -s maxscale-x.y.z.OS.maxscale
+    $ sudo ln -s maxscale-x.y.z maxscale
     $ cd maxscale
     $ chown -R maxscale var
 
