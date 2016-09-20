@@ -26,7 +26,17 @@ The MaxScale package can be downloaded from the following locations:
 
 Select your operating system and download the package.
 
-Once you have downloaded the package, install it using the package tool relevant for your operating system.
+Depending on your OS, the package will either be a _deb_ or an _rpm_.
+
+An _rpm_ is installed as follows
+```
+$ sudo yum install path-to-maxscale-package.rpm
+```
+and a _deb_ as follows
+```
+$ sudo dpkg -i path-to-maxscale-package.deb
+$ sudo apt-get install -f
+```
 
 ### Starting MariaDB MaxScale
 
