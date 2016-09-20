@@ -7,7 +7,7 @@ install(TARGETS binlogrouter DESTINATION ${MAXSCALE_LIBDIR})
 add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master.c blr_slave.c blr.c)
 target_link_libraries(maxbinlogcheck maxscale-common ${PCRE_LINK_FLAGS} uuid)
 
-install(TARGETS maxbinlogcheck DESTINATION bin)
+install(TARGETS maxbinlogcheck DESTINATION ${MAXSCALE_BINDIR})
 
 if(BUILD_TESTS)
   add_subdirectory(test)
