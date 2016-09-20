@@ -1,6 +1,6 @@
 # Installing MariaDB MaxScale using a tarball
 
-MariaDB MaxScale is also made available as a tarball, which is named like `maxscale-X.Y.X.tar.gz` where `X.Y.Z` is the same as the corresponding version, e.g. `maxscale-2.0.1.tar.gz`.
+MariaDB MaxScale is also made available as a tarball, which is named like `maxscale-x.y.z.OS.tar.gz` where `x.y.z` is the same as the corresponding version and `OS` identifies the operating system, e.g. `maxscale-2.0.1.centos.7.tar.gz`.
 
 The tarball has been built with the assumption that it will be installed in `/usr/local`. However, it is possible to install it in any directory, but in that case MariaDB MaxScale must be invoked with a flag.
 
@@ -13,8 +13,8 @@ The required steps are as follows:
     $ sudo groupadd maxscale
     $ sudo useradd -g maxscale maxscale
     $ cd /usr/local
-    $ sudo tar -xzvf maxscale-X.Y.Z.tar.gz
-    $ sudo ln -s maxscale-X.Y.Z maxscale
+    $ sudo tar -xzvf maxscale-x.y.z.OS.tar.gz
+    $ sudo ln -s maxscale-x.y.z.OS.maxscale
     $ cd maxscale
     $ chown -R maxscale var
 
@@ -34,13 +34,13 @@ If you want to place the configuration file somewhere else but in `/etc` you can
 
 Enter a directory where you have the right to create a subdirectory. Then do as follows.
 
-    $ tar -xzvf maxscale-X.Y.Z.tar.gz
+    $ tar -xzvf maxscale-x.y.z.OS.tar.gz
 
-The next step is to create the MaxScale configuration file `maxscale-X.Y.Z/etc/maxscale.cnf`. The file `maxscale-X.Y.Z/etc/maxscale.cnf.template` can be used as a base. Please refer to [Configuration Guide](Configuration-Guide.md) for details.
+The next step is to create the MaxScale configuration file `maxscale-x.y.z/etc/maxscale.cnf`. The file `maxscale-x.y.z/etc/maxscale.cnf.template` can be used as a base. Please refer to [Configuration Guide](Configuration-Guide.md) for details.
 
 When the configuration file has been created, MariaDB MaxScale can be started.
 
-    $ cd maxscale-X.Y.Z
+    $ cd maxscale-x.y.z
     $ LD_LIBRARY_PATH=lib/maxscale bin/maxscale -d --basedir=.
 
 With the flag `--basedir`, MariaDB MaxScale is told where the `bin`, `etc`, `lib`
