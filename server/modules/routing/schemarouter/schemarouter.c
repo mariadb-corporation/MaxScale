@@ -1381,11 +1381,6 @@ static void freeSession(ROUTER* router_instance, void* router_client_session)
      * all the memory and other resources associated
      * to the client session.
      */
-    if (router_cli_ses->shardmap)
-    {
-        hashtable_free(router_cli_ses->shardmap->hash);
-        free(router_cli_ses->shardmap);
-    }
     free(router_cli_ses->rses_backend_ref);
     free(router_cli_ses);
     return;
