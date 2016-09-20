@@ -94,7 +94,7 @@ typedef struct cache_config
     uint32_t           max_resultset_rows;
     uint32_t           max_resultset_size;
     const char        *storage;
-    const char        *storage_args;
+    const char        *storage_options;
     uint32_t           ttl;
 } CACHE_CONFIG;
 
@@ -238,9 +238,9 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
                 error = true;
             }
         }
-        else if (strcmp(param->name, "storage_args") == 0)
+        else if (strcmp(param->name, "storage_options") == 0)
         {
-            config.storage_args = param->value;
+            config.storage_options = param->value;
         }
         else if (strcmp(param->name, "storage") == 0)
         {

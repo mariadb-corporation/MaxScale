@@ -15,7 +15,7 @@ type=filter
 module=cache
 ttl=5
 storage=...
-storage_args=...
+storage_options=...
 
 [Cached Routing Service]
 type=service
@@ -42,19 +42,19 @@ optional ones.
 #### `storage`
 
 The name of the module that provides the storage for the cache. That
-module will be loaded and provided with the value of `storage_args` as
+module will be loaded and provided with the value of `storage_options` as
 argument. For instance:
 ```
 storage=storage_rocksdb
 ```
 
-#### `storage_args`
+#### `storage_options`
 
 A comma separated list of arguments to be provided to the storage module,
 specified in `storage`, when it is loaded. Note that the needed arguments
 depend upon the specific module. For instance,
 ```
-storage_args=path=/usr/maxscale/cache/rocksdb
+storage_options=storage_specific_option1=value1,storage_specific_option2=value2
 ```
 
 #### `allowed_references`
