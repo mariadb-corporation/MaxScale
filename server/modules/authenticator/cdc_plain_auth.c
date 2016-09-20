@@ -181,7 +181,7 @@ cdc_auth_authenticate(DCB *dcb)
         auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
 
         /* On failed authentication try to reload users and authenticate again */
-        if (CDC_STATE_AUTH_OK != auth_ret && cdc_replace_users(dcb->listener) == AUTH_LOADUSERS_OK)
+        if (CDC_STATE_AUTH_OK != auth_ret && cdc_replace_users(dcb->listener) == MXS_AUTH_LOADUSERS_OK)
         {
             auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
         }
@@ -483,7 +483,7 @@ cdc_read_users(USERS *users, char *usersfile)
  */
 int cdc_replace_users(SERV_LISTENER *listener)
 {
-    int rc = AUTH_LOADUSERS_ERROR;
+    int rc = MXS_AUTH_LOADUSERS_ERROR;
     USERS *newusers = users_alloc();
 
     if (newusers)
@@ -501,7 +501,7 @@ int cdc_replace_users(SERV_LISTENER *listener)
             /** Successfully loaded at least one user */
             oldusers = listener->users;
             listener->users = newusers;
-            rc = AUTH_LOADUSERS_OK;
+            rc = MXS_AUTH_LOADUSERS_OK;
         }
         else if (listener->users)
         {

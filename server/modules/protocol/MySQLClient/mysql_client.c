@@ -577,7 +577,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * data extraction succeeds, then a call is made to the actual
      * authenticate function to carry out the user checks.
      */
-    if (MYSQL_AUTH_SUCCEEDED == (
+    if (MXS_AUTH_SUCCEEDED == (
         auth_val = dcb->authfunc.extract(dcb, read_buffer)))
     {
         /*
@@ -597,7 +597,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * non-null session) then the whole process has succeeded. In all
      * other cases an error return is made.
      */
-    if (MYSQL_AUTH_SUCCEEDED == auth_val)
+    if (MXS_AUTH_SUCCEEDED == auth_val)
     {
         SESSION *session;
 
@@ -628,14 +628,17 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         }
         else
         {
-            auth_val = MYSQL_AUTH_NO_SESSION;
+            auth_val = MXS_AUTH_NO_SESSION;
         }
     }
     /**
-     * If we did not get success throughout, then the protocol state is updated,
-     * the client is notified of the failure and the DCB is closed.
+     * If we did not get success throughout or authentication is not yet complete,
+     * then the protocol state is updated, the client is notified of the failure
+     * and the DCB is closed.
      */
-    if (MYSQL_AUTH_SUCCEEDED != auth_val && MYSQL_AUTH_SSL_INCOMPLETE != auth_val)
+    if (MXS_AUTH_SUCCEEDED != auth_val &&
+        MXS_AUTH_INCOMPLETE != auth_val &&
+        MXS_AUTH_SSL_INCOMPLETE != auth_val)
     {
         protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
         mysql_client_auth_error_handling(dcb, auth_val);
@@ -974,7 +977,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
 
     switch (auth_val)
     {
-    case MYSQL_AUTH_NO_SESSION:
+    case MXS_AUTH_NO_SESSION:
         MXS_DEBUG("%lu [gw_read_client_event] session "
             "creation failed. fd %d, "
             "state = MYSQL_AUTH_NO_SESSION.",
@@ -987,7 +990,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
             0,
             "failed to create new session");
         break;
-    case MYSQL_FAILED_AUTH_DB:
+    case MXS_AUTH_FAILED_DB:
         MXS_DEBUG("%lu [gw_read_client_event] database "
             "specified was not valid. fd %d, "
             "state = MYSQL_FAILED_AUTH_DB.",
@@ -1003,7 +1006,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
 
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
         break;
-    case MYSQL_FAILED_AUTH_SSL:
+    case MXS_AUTH_FAILED_SSL:
         MXS_DEBUG("%lu [gw_read_client_event] client is "
             "not SSL capable for SSL listener. fd %d, "
             "state = MYSQL_FAILED_AUTH_SSL.",
@@ -1016,7 +1019,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
             0,
             "failed to complete SSL authentication");
         break;
-    case MYSQL_AUTH_SSL_INCOMPLETE:
+    case MXS_AUTH_SSL_INCOMPLETE:
         MXS_DEBUG("%lu [gw_read_client_event] unable to "
             "complete SSL authentication. fd %d, "
             "state = MYSQL_AUTH_SSL_INCOMPLETE.",
@@ -1029,7 +1032,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
             0,
             "failed to complete SSL authentication");
         break;
-    case MYSQL_FAILED_AUTH:
+    case MXS_AUTH_FAILED:
         MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
             "state = MYSQL_FAILED_AUTH.",
             pthread_self(),

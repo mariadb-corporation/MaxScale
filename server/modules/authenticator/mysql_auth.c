@@ -152,23 +152,23 @@ mysql_auth_authenticate(DCB *dcb)
 
     if (0 != ssl_ret)
     {
-        auth_ret = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MYSQL_FAILED_AUTH_SSL : MYSQL_FAILED_AUTH;
+        auth_ret = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
     }
 
     else if (!health_after)
     {
-        auth_ret = MYSQL_AUTH_SSL_INCOMPLETE;
+        auth_ret = MXS_AUTH_SSL_INCOMPLETE;
     }
 
     else if (!health_before && health_after)
     {
-        auth_ret = MYSQL_AUTH_SSL_INCOMPLETE;
+        auth_ret = MXS_AUTH_SSL_INCOMPLETE;
         poll_add_epollin_event_to_dcb(dcb, NULL);
     }
 
     else if (0 == strlen(client_data->user))
     {
-        auth_ret = MYSQL_FAILED_AUTH;
+        auth_ret = MXS_AUTH_FAILED;
     }
 
     else
@@ -181,14 +181,14 @@ mysql_auth_authenticate(DCB *dcb)
 
         /* On failed authentication try to load user table from backend database */
         /* Success for service_refresh_users returns 0 */
-        if (MYSQL_AUTH_SUCCEEDED != auth_ret && 0 == service_refresh_users(dcb->service))
+        if (MXS_AUTH_SUCCEEDED != auth_ret && 0 == service_refresh_users(dcb->service))
         {
             auth_ret = combined_auth_check(dcb, client_data->auth_token, client_data->auth_token_len, protocol,
                                            client_data->user, client_data->client_sha1, client_data->db);
         }
 
         /* on successful authentication, set user into dcb field */
-        if (MYSQL_AUTH_SUCCEEDED == auth_ret)
+        if (MXS_AUTH_SUCCEEDED == auth_ret)
         {
             dcb->user = MXS_STRDUP_A(client_data->user);
         }
@@ -247,7 +247,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     {
         if (NULL == (client_data = (MYSQL_session *)MXS_CALLOC(1, sizeof(MYSQL_session))))
         {
-            return MYSQL_FAILED_AUTH;
+            return MXS_AUTH_FAILED;
         }
 #if defined(SS_DEBUG)
         client_data->myses_chk_top = CHK_NUM_MYSQLSES;
@@ -279,7 +279,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23))
     {
         /* Packet is not big enough */
-        return MYSQL_FAILED_AUTH;
+        return MXS_AUTH_FAILED;
     }
 
     return mysql_auth_set_client_data(client_data, protocol, buf);
@@ -339,7 +339,7 @@ mysql_auth_set_client_data(
         else
         {
             /* Packet has incomplete or too long username */
-            return MYSQL_FAILED_AUTH;
+            return MXS_AUTH_FAILED;
         }
         if (client_auth_packet_size > (auth_packet_base_size + user_length + 1))
         {
@@ -364,13 +364,13 @@ mysql_auth_set_client_data(
                 else
                 {
                     /* Failed to allocate space for authentication token string */
-                    return MYSQL_FAILED_AUTH;
+                    return MXS_AUTH_FAILED;
                 }
             }
             else
             {
                 /* Packet was too small to contain authentication token */
-                return MYSQL_FAILED_AUTH;
+                return MXS_AUTH_FAILED;
             }
             packet_length_used += 1 + client_data->auth_token_len;
             /*
@@ -392,12 +392,12 @@ mysql_auth_set_client_data(
                 {
                     /* Packet is too short to contain database string */
                     /* or database string in packet is too long */
-                    return MYSQL_FAILED_AUTH;
+                    return MXS_AUTH_FAILED;
                 }
             }
         }
     }
-    return MYSQL_AUTH_SUCCEEDED;
+    return MXS_AUTH_SUCCEEDED;
 }
 
 /**
@@ -615,7 +615,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
 
     if ((username == NULL) || (mxs_scramble == NULL) || (stage1_hash == NULL))
     {
-        return MYSQL_FAILED_AUTH;
+        return MXS_AUTH_FAILED;
     }
 
     /*<
@@ -633,7 +633,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
             memcpy(stage1_hash, (char *)"_", 1);
         }
 
-        return MYSQL_FAILED_AUTH;
+        return MXS_AUTH_FAILED;
     }
 
     if (token && token_len)
@@ -649,7 +649,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
     {
         /* check if the password is not set in the user table */
         return memcmp(password, null_client_sha1, MYSQL_SCRAMBLE_LEN) ?
-               MYSQL_FAILED_AUTH : MYSQL_AUTH_SUCCEEDED;
+               MXS_AUTH_FAILED : MXS_AUTH_SUCCEEDED;
     }
 
     /*<
@@ -704,7 +704,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
 
     /* now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK */
     return (0 == memcmp(password, check_hash, SHA_DIGEST_LENGTH)) ?
-           MYSQL_AUTH_SUCCEEDED : MYSQL_FAILED_AUTH;
+           MXS_AUTH_SUCCEEDED : MXS_AUTH_FAILED;
 }
 
 /**
@@ -746,14 +746,14 @@ check_db_name_after_auth(DCB *dcb, char *database, int auth_ret)
             db_exists = -1;
         }
 
-        if (db_exists == 0 && auth_ret == MYSQL_AUTH_SUCCEEDED)
+        if (db_exists == 0 && auth_ret == MXS_AUTH_SUCCEEDED)
         {
-            auth_ret = MYSQL_FAILED_AUTH_DB;
+            auth_ret = MXS_AUTH_FAILED_DB;
         }
 
-        if (db_exists < 0 && auth_ret == MYSQL_AUTH_SUCCEEDED)
+        if (db_exists < 0 && auth_ret == MXS_AUTH_SUCCEEDED)
         {
-            auth_ret = MYSQL_FAILED_AUTH;
+            auth_ret = MXS_AUTH_FAILED;
         }
     }
 
@@ -830,7 +830,7 @@ mysql_auth_free_client_data(DCB *dcb)
  */
 static int mysql_auth_load_users(SERV_LISTENER *port)
 {
-    int rc = AUTH_LOADUSERS_OK;
+    int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
     int loaded = replace_mysql_users(port);
 
@@ -847,7 +847,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         if ((loaded = dbusers_load(port->users, path)) == -1)
         {
             MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);;
-            rc = AUTH_LOADUSERS_ERROR;
+            rc = MXS_AUTH_LOADUSERS_ERROR;
         }
         else
         {

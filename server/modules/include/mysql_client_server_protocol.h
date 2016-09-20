@@ -97,13 +97,6 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
-#define MYSQL_AUTH_SUCCEEDED 0
-#define MYSQL_FAILED_AUTH 1
-#define MYSQL_FAILED_AUTH_DB 2
-#define MYSQL_FAILED_AUTH_SSL 3
-#define MYSQL_AUTH_SSL_INCOMPLETE 4
-#define MYSQL_AUTH_NO_SESSION 5
-
 typedef enum
 {
     MYSQL_ALLOC,                        /* Initial state of protocol auth state */
