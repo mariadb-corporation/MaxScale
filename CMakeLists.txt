@@ -304,8 +304,9 @@ endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in gwdirs.h.in.
-if (NOT CMAKE_INSTALL_PREFIX EQUAL "/usr")
+if (NOT PACKAGE)
   install(DIRECTORY DESTINATION var/cache/maxscale)
   install(DIRECTORY DESTINATION var/log/maxscale)
   install(DIRECTORY DESTINATION var/run/maxscale)
+  install(DIRECTORY DESTINATION var/lib/maxscale)
 endif()

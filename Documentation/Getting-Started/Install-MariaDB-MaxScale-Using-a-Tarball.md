@@ -14,11 +14,27 @@ The required steps are as follows:
     $ sudo useradd -g maxscale maxscale
     $ cd /usr/local
     $ sudo tar -xzvf maxscale-x.y.z.OS.tar.gz
-    $ sudo ln -s maxscale-x.y.z maxscale
+    $ sudo ln -s maxscale-x.y.z.OS maxscale
     $ cd maxscale
-    $ chown -R maxscale var
+    $ sudo chown -R maxscale var
 
-Creating the symbolic link is necessary, since MariaDB MaxScale has been built with with the assumption that its base-directory is `/usr/local/maxscale`. It also makes it easy to switch between different versions of MariaDB MaxScale that have been installed side by side in `/usr/local`; just make the symbolic link point to another installation.
+Creating the symbolic link is necessary, since MariaDB MaxScale has been built with with the assumption that its base-directory, that is, the directory under which all its sub-directories are found, is `/usr/local/maxscale`.
+
+The symbolic link also makes it easy to switch between different versions of MariaDB MaxScale that have been installed side by side in `/usr/local`; just make the symbolic link point to another installation.
+
+In addition, the first time you install MariaDB MaxScale from a tarball you need to create the following directories:
+
+    $ sudo mkdir /var/log/maxscale
+    $ sudo mkdir /var/lib/maxscale
+    $ sudo mkdir /var/run/maxscale
+    $ sudo mkdir /var/cache/maxscale
+
+and make `maxscale` the owner of them:
+
+    $ sudo chown maxscale /var/log/maxscale
+    $ sudo chown maxscale /var/lib/maxscale
+    $ sudo chown maxscale /var/run/maxscale
+    $ sudo chown maxscale /var/cache/maxscale
 
 The following step is to create the MariaDB MaxScale configuration file `/etc/maxscale.cnf`. The file `etc/maxscale.cnf.template` can be used as a base. Please refer to [Configuration Guide](Configuration-Guide.md) for details.
 
@@ -40,17 +56,13 @@ The next step is to create the MaxScale configuration file `maxscale-x.y.z/etc/m
 
 When the configuration file has been created, MariaDB MaxScale can be started.
 
-    $ cd maxscale-x.y.z
-    $ LD_LIBRARY_PATH=lib/maxscale bin/maxscale -d --basedir=.
+    $ cd maxscale-x.y.z.OS
+    $ bin/maxscale -d --basedir=.
 
-With the flag `--basedir`, MariaDB MaxScale is told where the `bin`, `etc`, `lib`
-and `var` directories are found. Unless it is specified, MariaDB MaxScale assumes
-the directories are found in `/usr/local/maxscale` and the configuration
-file in `/etc`.
+With the flag `--basedir`, MariaDB MaxScale is told where the `lib`, `etc` and `var` directories are found. Unless it is specified, MariaDB MaxScale assumes the `lib` directory is found in `/usr/local/maxscale`, and the `var` and `etc` directories in `/`.
 
-It is also possible to specify the directories and the location of the
-configuration file individually. Invoke MaxScale like
+It is also possible to specify the directories and the location of the configuration file individually. Invoke MaxScale like
 
-    $ LD_LIBRARY_PATH=lib/maxscale bin/maxscale --help
+    $ bin/maxscale --help
 
 to find out the appropriate flags.
