@@ -65,6 +65,7 @@
 #include <log_manager.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
+#include <secrets.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
@@ -107,6 +108,37 @@ typedef enum
     BLRM_START_ENCRYPTION /*< Start Encryption event */
 } generated_event_t;
 
+/**
+ * The offset in FDE event content that points to the number of events
+ * the master server supports.
+ */
+
+/* Defines and offsets for binlog encryption */
+#define BLRM_FDE_EVENT_TYPES_OFFSET    (2 + 50 + 4 + 1)
+#define BLRM_CRYPTO_SCHEME_LENGTH 1
+#define BLRM_KEY_VERSION_LENGTH   4
+#define BLRM_IV_LENGTH            AES_BLOCK_SIZE
+#define BLRM_IV_OFFS_LENGTH       4
+#define BLRM_NONCE_LENGTH         (BLRM_IV_LENGTH - BLRM_IV_OFFS_LENGTH)
+
+/**
+ * MariaDB 10.1.7 Start Encryption event content
+ *
+ * Event header:    19 bytes
+ * Content size:    17 bytes
+ *     crypto scheme 1 byte
+ *     key_version   4 bytes
+ *     nonce random 12 bytes
+ *
+ * Event size is 19 + 17 = 36 bytes
+ */
+typedef struct start_encryption_event
+{
+    uint8_t header[BINLOG_EVENT_HDR_LEN];
+    uint8_t binlog_crypto_scheme;
+    uint32_t binlog_key_version;
+    uint8_t nonce[BLRM_NONCE_LENGTH];
+} START_ENCRYPTION_EVENT;
 /**
  * Initialise the binlog file for this instance. MaxScale will look
  * for all the binlogs that it has on local disk, determine the next
@@ -1452,14 +1484,14 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             fde_seen = 0;
         }
 
-        /* get event content */
+        /* get event content after event header */
         ptr = data + BINLOG_EVENT_HDR_LEN;
 
         /* check for FORMAT DESCRIPTION EVENT */
         if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
         {
             int event_header_length;
-            int event_header_ntypes;
+            int fde_extra_bytes = 0;
             int n_events;
             int check_alg;
             uint8_t *checksum;
@@ -1485,32 +1517,50 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                           pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t);
             }
 
-            event_header_length =  ptr[2 + 50 + 4];
-            event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
+            /* FDE is:
+             *
+             * 2 bytes          binlog-version
+             * string[50]       mysql-server version
+             * 4 bytes          create timestamp
+             * 1                event header length, 19 is the current length
+             * string[p]        event type header lengths:
+             *                  an array indexed by [Binlog Event Type - 1]
+             */
 
-            /* mariadb >= 10.1.7 LOG_EVENT_TYPES*/
-            if (event_header_ntypes == 169)
+            /* ptr now points to event_header_length byte.
+             * This offset is just 1 byte before the number of supported events offset
+             */
+            event_header_length =  ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
+
+            /* The number of supported events formula:
+             * number_of_events = event_size - (event_header_len + BLRM_FDE_EVENT_TYPES_OFFSET)
+             */
+            n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET;
+
+            /**
+             * The FDE event also carries 5 additional bytes number of events:
+             *
+             * 1 byte is the checksum_alg_type and 4 bytes are the computed crc32
+             *
+             * These 5 bytes are always present even if alg_type is NONE/UNDEF:
+             * then the 4 crc32 bytes must not be checked, whatever the value is.
+             *
+             * In case of CRC32 algo_type the 4 bytes contain the event crc32.
+             */
+            fde_extra_bytes = BINLOG_EVENT_CRC_ALGO_TYPE + BINLOG_EVENT_CRC_SIZE;
+
+            /* Now remove from number of events the extra 5 bytes */
+
+            /* mariadb 10 LOG_EVENT_TYPES >= 160 */
+            if ( n_events >= 160 + 5)
             {
-                /* mariadb 10 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 164;
-            }
-            else if (event_header_ntypes == 168)
-            {
-                /* mariadb 10 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 163;
-            }
-            else if (event_header_ntypes == 165)
-            {
-                /* mariadb 5 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 160;
+                n_events -= fde_extra_bytes;
             }
             else
             {
-                /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                event_header_ntypes -= 35;
+                /* mysql 5.6 LOG_EVENT_TYPES is 35 */
+                n_events -= fde_extra_bytes;
             }
-
-            n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
 
             if (debug)
             {
@@ -1519,29 +1569,27 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 MXS_DEBUG("       FDE Header EventLength %i"
                           ", N. of supported MySQL/MariaDB events %i",
                           event_header_length,
-                          (n_events - event_header_ntypes));
+                          n_events);
             }
 
-            if (event_header_ntypes < n_events)
-            {
-                checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-                check_alg = checksum[0];
+            /* Check whether Master is sending events with CRC32 checksum */
+            checksum = ptr + hdr.event_size - event_header_length - fde_extra_bytes;
+            check_alg = checksum[0];
 
-                if (debug)
-                {
-                    MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
-                              check_alg,
-                              check_alg == 1 ?
-                              "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
-                }
-                if (check_alg == 1)
-                {
-                    found_chksum = 1;
-                }
-                else
-                {
-                    found_chksum = 0;
-                }
+            if (debug)
+            {
+                MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
+                          check_alg,
+                          check_alg == 1 ?
+                          "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
+            }
+            if (check_alg == 1)
+            {
+                found_chksum = 1;
+            }
+            else
+            {
+                found_chksum = 0;
             }
         }
 
@@ -2155,10 +2203,10 @@ blr_create_ignorable_event(uint32_t event_size,
          */
          uint32_t chksum;
          chksum = crc32(0L, NULL, 0);
-         chksum = crc32(chksum, new_event, event_size - 4);
+         chksum = crc32(chksum, new_event, event_size - BINLOG_EVENT_CRC_SIZE);
 
          // checksum is stored after current event data using 4 bytes
-         encode_value(new_event + event_size - 4, chksum, 32);
+         encode_value(new_event + event_size - BINLOG_EVENT_CRC_SIZE, chksum, 32);
     }
     return new_event;
 }
@@ -2286,10 +2334,12 @@ uint8_t *
 blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, bool do_checksum)
 {
     uint8_t *new_event;
-    uint8_t event_size = 36;
+    uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
+
+    /* Add 4 bytes to event size with crc32 */
     if (do_checksum)
     {
-        event_size += 4;
+        event_size += BINLOG_EVENT_CRC_SIZE;
     }
 
     new_event= MXS_CALLOC(1, event_size);
@@ -2306,13 +2356,16 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
     encode_value(&new_event[13], event_pos + event_size, 32); // next_pos
     encode_value(&new_event[17], LOG_EVENT_IGNORABLE_F, 16); // flag is LOG_EVENT_IGNORABLE_F OR 0 ?
 
-    /* Event conten */
-    // set schema
-    new_event[19] = 1;
-    // key version
-    encode_value(&new_event[20], 1, 32);
-    // nonce
-    gw_generate_random_str((char *)&new_event[24], 12);
+    /**
+     *  Now add the event content, after 19 bytes of header
+     */
+
+    /* Set the encryption schema, 1 byte: set to 1 */
+    new_event[BINLOG_EVENT_HDR_LEN] = 1;
+    /* The encryption key version, 4 bytes: set to 1, is added after previous one 1 byte */
+    encode_value(&new_event[BINLOG_EVENT_HDR_LEN + 1], 1, 32);
+    /* The nonce (12 random bytes) is added after previous 5 bytes */
+    gw_generate_random_str((char *)&new_event[BINLOG_EVENT_HDR_LEN + 4 + 1], BLRM_NONCE_LENGTH);
 
     /* if checksum is requred add the crc32 */
     if (do_checksum)
@@ -2325,10 +2378,10 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
          */
         uint32_t chksum;
         chksum = crc32(0L, NULL, 0);
-        chksum = crc32(chksum, new_event, event_size - 4);
+        chksum = crc32(chksum, new_event, event_size - BINLOG_EVENT_CRC_SIZE);
 
-        // checksum is stored at the end of current event data: 4 less bytes than event size 
-        encode_value(new_event + event_size - 4, chksum, 32);
+        // checksum is stored at the end of current event data: 4 less bytes than event size
+        encode_value(new_event + event_size - BINLOG_EVENT_CRC_SIZE, chksum, 32);
     }
 
     return new_event;

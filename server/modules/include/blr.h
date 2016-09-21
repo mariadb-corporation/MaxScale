@@ -57,7 +57,9 @@
 #define BINLOG_NAMEFMT          "%s.%06d"
 #define BINLOG_NAME_ROOT        "mysql-bin"
 
-#define BINLOG_EVENT_HDR_LEN    19
+#define BINLOG_EVENT_HDR_LEN       19
+#define BINLOG_EVENT_CRC_ALGO_TYPE  1
+#define BINLOG_EVENT_CRC_SIZE       4
 
 /**
  * Binlog event types

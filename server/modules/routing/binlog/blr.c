@@ -800,14 +800,14 @@ createInstance(SERVICE *service, char **options)
     /* Log whether the transaction safety option value is on */
     if (inst->trx_safe)
     {
-        MXS_INFO("%s: Service has transaction safety option set to ON",
+        MXS_NOTICE("%s: Service has transaction safety option set to ON",
                  service->name);
     }
 
     /* Log whether the binlog encryption option value is on */
     if (inst->encrypt_binlog)
     {
-        MXS_INFO("%s: Service has binlog encryption set to ON",
+        MXS_NOTICE("%s: Service has binlog encryption set to ON",
                  service->name);
     }
 
