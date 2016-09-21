@@ -13,10 +13,15 @@ set(CMAKE_INSTALL_DATADIR /share CACHE PATH "" FORCE)
 set(CPACK_GENERATOR "TGZ")
 
 # Include the var directories in the tarball
-install(DIRECTORY DESTINATION var/cache/maxscale)
-install(DIRECTORY DESTINATION var/log/maxscale)
-install(DIRECTORY DESTINATION var/run/maxscale)
-install(DIRECTORY DESTINATION var/lib/maxscale)
+#
+# On some platforms with certain CMake versions, installing empty directories
+# with tarballs does not work. As a workaround, the .cmake-tgz-workaround file
+# is installed into the would-be empty directories.
+file(WRITE ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround "")
+install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/cache/maxscale)
+install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/log/maxscale)
+install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/run/maxscale)
+install(FILES ${CMAKE_BINARY_DIR}/.cmake-tgz-workaround DESTINATION var/lib/maxscale)
 
 if(DISTRIB_SUFFIX)
   set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}.${DISTRIB_SUFFIX}")
