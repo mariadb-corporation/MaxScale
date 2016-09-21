@@ -12,6 +12,12 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib" CACHE PATH "" FORCE)
 set(CMAKE_INSTALL_DATADIR /share CACHE PATH "" FORCE)
 set(CPACK_GENERATOR "TGZ")
 
+# Include the var directories in the tarball
+install(DIRECTORY DESTINATION var/cache/maxscale)
+install(DIRECTORY DESTINATION var/log/maxscale)
+install(DIRECTORY DESTINATION var/run/maxscale)
+install(DIRECTORY DESTINATION var/lib/maxscale)
+
 if(DISTRIB_SUFFIX)
   set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}.${DISTRIB_SUFFIX}")
 else()
