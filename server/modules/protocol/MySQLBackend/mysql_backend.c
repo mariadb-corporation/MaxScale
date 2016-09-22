@@ -1229,8 +1229,18 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 /** Record the command to backend's protocol */
                 protocol_add_srv_command(backend_protocol, cmd);
             }
-            /** Write to backend */
-            rc = dcb_write(dcb, queue);
+
+            if (cmd == MYSQL_COM_QUIT && dcb->server->persistpoolmax)
+            {
+                /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
+                gwbuf_free(queue);
+                rc = 1;
+            }
+            else
+            {
+                /** Write to backend */
+                rc = dcb_write(dcb, queue);
+            }
         }
         break;
 
@@ -1587,7 +1597,18 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
         buffer = gw_create_change_user_packet(&mses, dcb->protocol);
     }
 
-    int rc = dcb_write(dcb, buffer);
+    int rc = 1;
+
+    if (MYSQL_IS_COM_QUIT(((uint8_t*)GWBUF_DATA(buffer))) && dcb->server->persistpoolmax)
+    {
+        /** We need to keep the pooled connections alive so we just ignore the COM_QUIT packet */
+        gwbuf_free(buffer);
+        rc = 1;
+    }
+    else
+    {
+        rc = dcb_write(dcb, buffer);
+    }
 
     if (rc == 0)
     {

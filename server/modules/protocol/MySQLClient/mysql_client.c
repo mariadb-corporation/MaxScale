@@ -862,92 +862,78 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
     SESSION *session = dcb->session;
     uint8_t *payload = GWBUF_DATA(read_buffer);
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-    CHK_PROTOCOL(proto)
+    CHK_PROTOCOL(proto);
     int return_code = 0;
 
-    /* Now, we are assuming in the first buffer there is
-     * the information for mysql command */
-    /* Route COM_QUIT to backend */
+    /** Reset error handler when routing of the new query begins */
+    dcb->dcb_errhandle_called = false;
+
+    if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
+    {
+        /**
+         * Feed each statement completely and separately
+         * to router. The routing functions return 1 for
+         * success or 0 for failure.
+         */
+        return_code = route_by_statement(session, &read_buffer) ? 0 : 1;
+
+        if (read_buffer != NULL)
+        {
+            /* Must have been data left over */
+            /* Add incomplete mysql packet to read queue */
+            spinlock_acquire(&dcb->authlock);
+            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+            spinlock_release(&dcb->authlock);
+        }
+    }
+    else if (NULL != session->router_session || (capabilities & (int)RCAP_TYPE_NO_RSESSION))
+    {
+        /** Feed whole packet to router, which will free it
+         *  and return 1 for success, 0 for failure
+         */
+        return_code = SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
+    }
+    /* else return_code is still 0 from when it was originally set */
+    /* Note that read_buffer has been freed or transferred by this point */
+
+    /** Routing failed */
+    if (return_code != 0)
+    {
+        bool router_can_continue;
+        GWBUF* errbuf;
+        /**
+         * Create error to be sent to client if session
+         * can't be continued.
+         */
+        errbuf = mysql_create_custom_error(1, 0,
+                                           "Routing failed. Session is closed.");
+        /**
+         * Ensure that there are enough backends
+         * available for router to continue operation.
+         */
+        session->service->router->handleError(session->service->router_instance,
+                                              session->router_session,
+                                              errbuf,
+                                              dcb,
+                                              ERRACT_NEW_CONNECTION,
+                                              &router_can_continue);
+        gwbuf_free(errbuf);
+        /**
+         * If the router cannot continue, close session
+         */
+        if (!router_can_continue)
+        {
+            MXS_ERROR("Routing the query failed. "
+                      "Session will be closed.");
+        }
+    }
+
     if (proto->current_command == MYSQL_COM_QUIT)
     {
-        /**
-         * Sends COM_QUIT packets since buffer is already
-         * created. A BREF_CLOSED flag is set so dcb_close won't
-         * send redundant COM_QUIT.
-         */
-        /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
-        /* Replaced with freeing the read buffer. */
-        gwbuf_free(read_buffer);
-        /**
-         * Close router session which causes closing of backends.
-         */
+        /** Close router session which causes closing of backends */
         dcb_close(dcb);
     }
-    else
-    {
-        /** Reset error handler when routing of the new query begins */
-        dcb->dcb_errhandle_called = false;
 
-        if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
-        {
-            /**
-             * Feed each statement completely and separately
-             * to router. The routing functions return 1 for
-             * success or 0 for failure.
-             */
-            return_code = route_by_statement(session, &read_buffer) ? 0 : 1;
-
-            if (read_buffer != NULL)
-            {
-                /* Must have been data left over */
-                /* Add incomplete mysql packet to read queue */
-                spinlock_acquire(&dcb->authlock);
-                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                spinlock_release(&dcb->authlock);
-            }
-        }
-        else if (NULL != session->router_session || (capabilities & (int)RCAP_TYPE_NO_RSESSION))
-        {
-            /** Feed whole packet to router, which will free it
-             *  and return 1 for success, 0 for failure
-             */
-            return_code = SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
-        }
-        /* else return_code is still 0 from when it was originally set */
-        /* Note that read_buffer has been freed or transferred by this point */
-
-        /** Routing failed */
-        if (return_code != 0)
-        {
-            bool router_can_continue;
-            GWBUF* errbuf;
-            /**
-             * Create error to be sent to client if session
-             * can't be continued.
-             */
-            errbuf = mysql_create_custom_error(1, 0,
-                "Routing failed. Session is closed.");
-            /**
-             * Ensure that there are enough backends
-             * available for router to continue operation.
-             */
-            session->service->router->handleError(session->service->router_instance,
-                session->router_session,
-                errbuf,
-                dcb,
-                ERRACT_NEW_CONNECTION,
-                &router_can_continue);
-            gwbuf_free(errbuf);
-            /**
-             * If the router cannot continue, close session
-             */
-            if (!router_can_continue)
-            {
-                MXS_ERROR("Routing the query failed. "
-                    "Session will be closed.");
-            }
-        }
-    }
     return return_code;
 }
 
