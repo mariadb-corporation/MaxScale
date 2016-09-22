@@ -345,6 +345,8 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
 
     if (bref->bref_dcb != NULL)
     {
+        bref_clear_state(bref, BREF_CLOSED);
+
         if (!execute_history || execute_sescmd_history(bref))
         {
             /** Add a callback for unresponsive server */

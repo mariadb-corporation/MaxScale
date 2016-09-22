@@ -33,20 +33,22 @@ endif()
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
 
-message(STATUS "Generating TGZ packages")
-set(CPACK_GENERATOR "TGZ")
+if(TARBALL)
+  include(cmake/package_tgz.cmake)
 
-if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
-  include(cmake/package_rpm.cmake)
-  message(STATUS "Generating RPM packages")
-  set(PACKAGE_SUFFIX "rpm")
-  set(RPM TRUE CACHE INTERNAL "RPM based installation")
-elseif(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
-  include(cmake/package_deb.cmake)
-  message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
-  set(PACKAGE_SUFFIX "deb")
-  set(DEB TRUE CACHE INTERNAL "DEB based installation")
+elseif (NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) OR NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ))
+  if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+    include(cmake/package_rpm.cmake)
+  endif()
+  if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+    include(cmake/package_deb.cmake)
+  endif()
+
+  message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
+  message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
+
+else()
+  message(FATAL_ERROR "Could not automatically resolve the package generator and no generators "
+    "defined on the command line. Please install distribution specific packaging software or "
+    "define -DTARBALL=Y to build tar.gz packages.")
 endif()
-
-message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
-message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
