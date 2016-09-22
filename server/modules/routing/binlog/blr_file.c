@@ -1128,6 +1128,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     BINLOG_EVENT_DESC last_event;
     BINLOG_EVENT_DESC fde_event;
     int fde_seen = 0;
+    int start_encryption_seen = 0;
 
     memset(&first_event, '\0', sizeof(first_event));
     memset(&last_event, '\0', sizeof(last_event));
@@ -1491,8 +1492,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
         {
             int event_header_length;
-            int fde_extra_bytes = 0;
-            int n_events;
             int check_alg;
             uint8_t *checksum;
             char    buf_t[40];
@@ -1535,10 +1534,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             /* The number of supported events formula:
              * number_of_events = event_size - (event_header_len + BLRM_FDE_EVENT_TYPES_OFFSET)
              */
-            n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET;
+            int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET;
 
             /**
-             * The FDE event also carries 5 additional bytes number of events:
+             * The FDE event also carries 5 additional bytes:
              *
              * 1 byte is the checksum_alg_type and 4 bytes are the computed crc32
              *
@@ -1547,20 +1546,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
              *
              * In case of CRC32 algo_type the 4 bytes contain the event crc32.
              */
-            fde_extra_bytes = BINLOG_EVENT_CRC_ALGO_TYPE + BINLOG_EVENT_CRC_SIZE;
+            int fde_extra_bytes = BINLOG_EVENT_CRC_ALGO_TYPE + BINLOG_EVENT_CRC_SIZE;
 
-            /* Now remove from number of events the extra 5 bytes */
-
-            /* mariadb 10 LOG_EVENT_TYPES >= 160 */
-            if ( n_events >= 160 + 5)
-            {
-                n_events -= fde_extra_bytes;
-            }
-            else
-            {
-                /* mysql 5.6 LOG_EVENT_TYPES is 35 */
-                n_events -= fde_extra_bytes;
-            }
+            /* Now remove from the calculated number of events the extra 5 bytes */
+            n_events -= fde_extra_bytes;
 
             if (debug)
             {
@@ -1591,6 +1580,53 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             {
                 found_chksum = 0;
             }
+        }
+
+        /* Detect possible Start Encryption Event */
+        if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
+        {
+                START_ENCRYPTION_EVENT ste_event;
+                memset(&ste_event, '\0', sizeof(START_ENCRYPTION_EVENT));
+                char nonce_hex[12 * 2 + 1] = "";
+                /* The start encryption event data is 17 bytes long:
+                 * Scheme = 1
+                 * Key Version: 4
+                 * nonce = 12
+                 */
+
+                /* Fill the event content, after the event header */
+                ste_event.binlog_crypto_scheme = ptr[0];
+                ste_event.binlog_key_version = extract_field(ptr + 1, 32);
+                memcpy(ste_event.nonce, ptr + 1 + 4, BLRM_NONCE_LENGTH);
+
+                gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
+
+                if (debug)
+                {
+                    char *cksum_format = ", crc32 0x";
+                    char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
+                    uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
+                    cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[0] = *(ptr + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
+
+                    if (found_chksum)
+                    {
+                        strcpy(hex_checksum, cksum_format);
+                        gw_bin2hex(hex_checksum + strlen(cksum_format) , cksum_data, BINLOG_EVENT_CRC_SIZE);
+                    }
+
+                    MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u%s",
+                              pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags,
+                              hex_checksum);
+
+                    MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
+                              " nonce: %s\n", ste_event.binlog_crypto_scheme,
+                              ste_event.binlog_key_version, nonce_hex);
+                }
+
+                start_encryption_seen = 1;
         }
 
         /* set last event time, pos and type */
