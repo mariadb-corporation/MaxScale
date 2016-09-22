@@ -79,7 +79,7 @@
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
-#define DEFAULT_AUTH_PLUGIN_NAME "mysql_native_password"
+#define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
 
 /** Maximum length of a MySQL packet */
 #define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
@@ -97,28 +97,6 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
-typedef enum
-{
-    MYSQL_ALLOC,                        /* Initial state of protocol auth state */
-    /* The following are used only for backend connections */
-    MYSQL_PENDING_CONNECT,
-    MYSQL_CONNECTED,
-    /* The following can be used for either client or backend */
-    /* The comments have only been checked for client use at present */
-    MYSQL_AUTH_SENT,
-    MYSQL_AUTH_RECV,                    /* This is only ever a transient value */
-    MYSQL_AUTH_FAILED,                  /* Once this is set, the connection */
-    /* will be ended, so this is transient */
-    /* The following is used only for backend connections */
-    MYSQL_HANDSHAKE_FAILED,
-    /* The following are obsolete and will be removed */
-    MYSQL_AUTH_SSL_REQ, /*< client requested SSL but SSL_accept hasn't beed called */
-    MYSQL_AUTH_SSL_HANDSHAKE_DONE, /*< SSL handshake has been fully completed */
-    MYSQL_AUTH_SSL_HANDSHAKE_FAILED, /*< SSL handshake failed for any reason */
-    MYSQL_AUTH_SSL_HANDSHAKE_ONGOING, /*< SSL_accept has been called but the
-                                           * SSL handshake hasn't been completed */
-    MYSQL_IDLE
-} mysql_auth_state_t;
 
 typedef enum
 {
@@ -272,7 +250,7 @@ typedef struct
     mysql_server_cmd_t  current_command;              /**< Current command being executed */
     server_command_t    protocol_command;             /*< session command list */
     server_command_t*   protocol_cmd_history;         /*< session command history */
-    mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
+    mxs_auth_state_t  protocol_auth_state;            /*< Authentication status */
     mysql_protocol_state_t protocol_state;            /*< Protocol struct status */
     uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
         * created or received */
@@ -288,6 +266,9 @@ typedef struct
 #endif
 } MySQLProtocol;
 
+/** Defines for response codes */
+#define MYSQL_REPLY_ERR 0xff
+#define MYSQL_REPLY_OK  0x00
 
 /*
  * Let's try this with proper enums instead of numbers
@@ -307,7 +288,7 @@ typedef struct
 #define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
 #define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
-#define MYSQL_IS_ERROR_PACKET(payload)          ((int)MYSQL_GET_COMMAND(payload)==0xff)
+#define MYSQL_IS_ERROR_PACKET(payload)          ((int)MYSQL_GET_COMMAND(payload)==MYSQL_REPLY_ERR)
 #define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==MYSQL_COM_QUIT)
 #define MYSQL_IS_COM_INIT_DB(payload)           (MYSQL_GET_COMMAND(payload)==MYSQL_COM_INIT_DB)
 #define MYSQL_IS_CHANGE_USER(payload)       (MYSQL_GET_COMMAND(payload)==MYSQL_COM_CHANGE_USER)
@@ -383,5 +364,6 @@ void init_response_status (
     mysql_server_cmd_t cmd,
     int* npackets,
     ssize_t* nbytes);
+bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 
 #endif /** _MYSQL_PROTOCOL_H */

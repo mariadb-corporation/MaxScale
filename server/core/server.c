@@ -83,6 +83,7 @@ server_alloc(char *servname, char *protocol, unsigned short port)
 #endif
     server->name = servname;
     server->protocol = protocol;
+    server->authenticator = NULL;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;

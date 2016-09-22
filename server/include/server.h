@@ -86,6 +86,7 @@ typedef struct server
     char           *name;          /**< Server name/IP address*/
     unsigned short port;           /**< Port to listen on */
     char           *protocol;      /**< Protocol module to use */
+    char           *authenticator; /**< Authenticator module name */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
     char           *monuser;       /**< User name to use to monitor the db */

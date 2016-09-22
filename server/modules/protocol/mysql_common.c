@@ -50,6 +50,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <netinet/tcp.h>
+#include <modutil.h>
 
 static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
 
@@ -78,7 +79,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
         goto return_p;
     }
     p->protocol_state = MYSQL_PROTOCOL_ALLOC;
-    p->protocol_auth_state = MYSQL_ALLOC;
+    p->protocol_auth_state = MXS_AUTH_STATE_INIT;
     p->current_command = MYSQL_COM_UNDEFINED;
     p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
     p->protocol_command.scom_nresponse_packets = 0;
@@ -143,28 +144,20 @@ const char* gw_mysql_protocol_state2string (int state)
 {
     switch(state)
     {
-    case MYSQL_ALLOC:
-        return "MySQL Protocl struct allocated";
-    case MYSQL_PENDING_CONNECT:
-        return "MySQL Backend socket PENDING connect";
-    case MYSQL_CONNECTED:
-        return "MySQL Backend socket CONNECTED";
-    case MYSQL_AUTH_SENT:
-        return "MySQL Authentication handshake has been sent";
-    case MYSQL_AUTH_RECV:
-        return "MySQL Received user, password, db and capabilities";
-    case MYSQL_AUTH_FAILED:
-        return "MySQL Authentication failed";
-    case MYSQL_IDLE:
-        return "MySQL authentication is succesfully done.";
-    case MYSQL_AUTH_SSL_REQ:
-        return "MYSQL_AUTH_SSL_REQ";
-    case MYSQL_AUTH_SSL_HANDSHAKE_DONE:
-        return "MYSQL_AUTH_SSL_HANDSHAKE_DONE";
-    case MYSQL_AUTH_SSL_HANDSHAKE_FAILED:
-        return "MYSQL_AUTH_SSL_HANDSHAKE_FAILED";
-    case MYSQL_AUTH_SSL_HANDSHAKE_ONGOING:
-        return "MYSQL_AUTH_SSL_HANDSHAKE_ONGOING";
+    case MXS_AUTH_STATE_INIT:
+        return "Authentication initialized";
+    case MXS_AUTH_STATE_PENDING_CONNECT:
+        return "Network connection pending";
+    case MXS_AUTH_STATE_CONNECTED:
+        return "Network connection created";
+    case MXS_AUTH_STATE_MESSAGE_READ:
+        return "Read server handshake";
+    case MXS_AUTH_STATE_RESPONSE_SENT:
+        return "Response to handshake sent";
+    case MXS_AUTH_STATE_FAILED:
+        return "Authentication failed";
+    case MXS_AUTH_STATE_COMPLETE:
+        return "Authentication is complete.";
     default:
         return "MySQL (unknown protocol state)";
     }
@@ -991,4 +984,44 @@ char *create_auth_fail_str(char *username,
 
 retblock:
     return errstr;
+}
+
+/**
+ * @brief Read a complete packet from a DCB
+ *
+ * Read a complete packet from a connected DCB. If data was read, @c readbuf
+ * will point to the head of the read data. If no data was read, @c readbuf will
+ * be set to NULL.
+ *
+ * @param dcb DCB to read from
+ * @param readbuf Pointer to a buffer where the data is stored
+ * @return True on success, false if an error occurred while data was being read
+ */
+bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
+{
+    bool rval = false;
+    GWBUF *localbuf = NULL;
+
+    if (dcb_read(dcb, &localbuf, 0) >= 0)
+    {
+        rval = true;
+        dcb->last_read = hkheartbeat;
+        GWBUF *packets = modutil_get_complete_packets(&localbuf);
+
+        if (packets)
+        {
+            /** A complete packet was read */
+            *readbuf = packets;
+        }
+
+        if (localbuf)
+        {
+            /** Store any extra data in the DCB's readqueue */
+            spinlock_acquire(&dcb->authlock);
+            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, localbuf);
+            spinlock_release(&dcb->authlock);
+        }
+    }
+
+    return rval;
 }

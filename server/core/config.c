@@ -196,6 +196,7 @@ static char *server_params[] =
     "protocol",
     "port",
     "address",
+    "authenticator",
     "monitoruser",
     "monitorpw",
     "persistpoolmax",
@@ -2504,6 +2505,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
     char *protocol = config_get_value(obj->parameters, "protocol");
     char *monuser = config_get_value(obj->parameters, "monitoruser");
     char *monpw = config_get_value(obj->parameters, "monitorpw");
+    char *auth = config_get_value(obj->parameters, "authenticator");
 
     if (address && port && protocol)
     {
@@ -2537,6 +2539,11 @@ int create_new_server(CONFIG_CONTEXT *obj)
         {
             MXS_ERROR("Server '%s' has a monitoruser defined but no corresponding "
                       "password.", obj->object);
+            error_count++;
+        }
+
+        if (auth && (server->authenticator = MXS_STRDUP(auth)) == NULL)
+        {
             error_count++;
         }
 

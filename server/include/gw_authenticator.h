@@ -78,6 +78,29 @@ typedef struct gw_authenticator
 #define MXS_AUTH_LOADUSERS_ERROR 1 /**< Failed to load users */
 
 /**
+ * Authentication states
+ *
+ * The state usually goes from INIT to CONNECTED and alternates between
+ * MESSAGE_READ and RESPONSE_SENT until ending up in either FAILED or COMPLETE.
+ *
+ * If the server immediately rejects the connection, the state ends up in
+ * HANDSHAKE_FAILED. If the connection creation would block, instead of going to
+ * the CONNECTED state, the connection will be in PENDING_CONNECT state until
+ * the connection can be created.
+ */
+typedef enum
+{
+    MXS_AUTH_STATE_INIT, /**< Initial authentication state */
+    MXS_AUTH_STATE_PENDING_CONNECT,/**< Connection creation is underway */
+    MXS_AUTH_STATE_CONNECTED, /**< Network connection to server created */
+    MXS_AUTH_STATE_MESSAGE_READ, /**< Read a authentication message from the server */
+    MXS_AUTH_STATE_RESPONSE_SENT, /**< Responded to the read authentication message */
+    MXS_AUTH_STATE_FAILED, /**< Authentication failed */
+    MXS_AUTH_STATE_HANDSHAKE_FAILED, /**< Authentication failed immediately */
+    MXS_AUTH_STATE_COMPLETE /**< Authentication is complete */
+} mxs_auth_state_t;
+
+/**
  * The GWAUTHENTICATOR version data. The following should be updated whenever
  * the GWAUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.

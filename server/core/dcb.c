@@ -793,6 +793,22 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
     dcb->protoname = MXS_STRDUP_A(protocol);
 
+    const char *authenticator = server->authenticator ?
+        server->authenticator : dcb->func.auth_default ?
+        dcb->func.auth_default() : "NullAuthDeny";
+
+    GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR*)load_module(authenticator,
+                                                               MODULE_AUTHENTICATOR);
+    if (authfuncs == NULL)
+    {
+
+        MXS_ERROR("Failed to load authenticator module '%s'.", authenticator);
+        dcb_close(dcb);
+        return NULL;
+    }
+
+    memcpy(&dcb->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
+
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
      */
@@ -3096,7 +3112,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
         }
         else
         {
-            const char *authenticator_name = "NullAuth";
+            const char *authenticator_name = "NullAuthDeny";
             GWAUTHENTICATOR *authfuncs;
 
             client_dcb->service = listener->session->service;
@@ -3140,7 +3156,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
             if ((authfuncs = (GWAUTHENTICATOR *)load_module(authenticator_name,
                                                             MODULE_AUTHENTICATOR)) == NULL)
             {
-                if ((authfuncs = (GWAUTHENTICATOR *)load_module("NullAuth",
+                if ((authfuncs = (GWAUTHENTICATOR *)load_module("NullAuthDeny",
                                                                 MODULE_AUTHENTICATOR)) == NULL)
                 {
                     MXS_ERROR("Failed to load authenticator module for %s, free dcb %p\n",

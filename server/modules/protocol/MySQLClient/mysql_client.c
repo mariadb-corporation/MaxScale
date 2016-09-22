@@ -312,7 +312,7 @@ int MySQLSendHandshake(DCB* dcb)
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
 
     const char* plugin_name = dcb->authfunc.plugin_name ?
-        dcb->authfunc.plugin_name : DEFAULT_AUTH_PLUGIN_NAME;
+        dcb->authfunc.plugin_name : DEFAULT_MYSQL_AUTH_PLUGIN;
     int plugin_name_len = strlen(plugin_name);
 
     mysql_payload_size =
@@ -512,7 +512,7 @@ int gw_read_client_event(DCB* dcb)
          * will be changed to MYSQL_IDLE (see below).
          *
          */
-    case MYSQL_AUTH_SENT:
+    case MXS_AUTH_STATE_MESSAGE_READ:
         /* After this call read_buffer will point to freed data */
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
             (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
@@ -533,12 +533,12 @@ int gw_read_client_event(DCB* dcb)
          * result in a call that comes to this section of code.
          *
          */
-    case MYSQL_IDLE:
+    case MXS_AUTH_STATE_COMPLETE:
         /* After this call read_buffer will point to freed data */
         return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
         break;
 
-    case MYSQL_AUTH_FAILED:
+    case MXS_AUTH_STATE_FAILED:
         gwbuf_free(read_buffer);
         return_code = 1;
         break;
@@ -601,7 +601,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     {
         SESSION *session;
 
-        protocol->protocol_auth_state = MYSQL_AUTH_RECV;
+        protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**
          * Create session, and a router session for it.
          * If successful, there will be backend connection(s)
@@ -619,7 +619,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                 session->state != SESSION_STATE_DUMMY);
 
-            protocol->protocol_auth_state = MYSQL_IDLE;
+            protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
             /**
              * Send an AUTH_OK packet to the client,
              * packet sequence is # packet_number
@@ -640,7 +640,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         MXS_AUTH_INCOMPLETE != auth_val &&
         MXS_AUTH_SSL_INCOMPLETE != auth_val)
     {
-        protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+        protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
         mysql_client_auth_error_handling(dcb, auth_val);
         /**
          * Close DCB and which will release MYSQL_session
@@ -1106,7 +1106,7 @@ int gw_write_client_event(DCB *dcb)
     protocol = (MySQLProtocol *)dcb->protocol;
     CHK_PROTOCOL(protocol);
 
-    if (protocol->protocol_auth_state == MYSQL_IDLE)
+    if (protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
         dcb_drain_writeq(dcb);
         goto return_1;
@@ -1207,7 +1207,7 @@ static void gw_process_one_new_client(DCB *client_dcb)
     MySQLSendHandshake(client_dcb);
 
     // client protocol state change
-    protocol->protocol_auth_state = MYSQL_AUTH_SENT;
+    protocol->protocol_auth_state = MXS_AUTH_STATE_MESSAGE_READ;
 
     /**
      * Set new descriptor to event set. At the same time,

@@ -213,14 +213,14 @@ typedef enum skygw_chk_t
                                  (s) == SESSION_STATE_STOPPING ? "SESSION_STATE_STOPPING":\
                                   "SESSION_STATE_UNKNOWN"))))))
 
-#define STRPROTOCOLSTATE(s) ((s) == MYSQL_ALLOC ? "MYSQL_ALLOC" :       \
-        ((s) == MYSQL_PENDING_CONNECT ? "MYSQL_PENDING_CONNECT" :       \
-        ((s) == MYSQL_CONNECTED ? "MYSQL_CONNECTED" :                   \
-        ((s) == MYSQL_AUTH_SENT ? "MYSQL_AUTH_SENT" :                   \
-        ((s) == MYSQL_AUTH_RECV ? "MYSQL_AUTH_RECV" :                   \
-        ((s) == MYSQL_AUTH_FAILED ? "MYSQL_AUTH_FAILED" :               \
-        ((s) == MYSQL_IDLE ? "MYSQL_IDLE" :                             \
-        "UNKNOWN MYSQL STATE")))))))
+#define STRPROTOCOLSTATE(s) ((s) == MXS_AUTH_STATE_INIT ? "MXS_AUTH_STATE_INIT" : \
+                            ((s) == MXS_AUTH_STATE_PENDING_CONNECT ? "MXS_AUTH_STATE_PENDING_CONNECT" : \
+                            ((s) == MXS_AUTH_STATE_CONNECTED ? "MXS_AUTH_STATE_CONNECTED" : \
+                            ((s) == MXS_AUTH_STATE_MESSAGE_READ ? "MXS_AUTH_STATE_MESSAGE_READ" : \
+                            ((s) == MXS_AUTH_STATE_RESPONSE_SENT ? "MXS_AUTH_STATE_RESPONSE_SENT" : \
+                            ((s) == MXS_AUTH_STATE_FAILED ? "MXS_AUTH_STATE_FAILED" : \
+                            ((s) == MXS_AUTH_STATE_COMPLETE ? "MXS_AUTH_STATE_COMPLETE" : \
+                            "UNKNOWN AUTH STATE")))))))
 
 #define STRITEMTYPE(t) ((t) == Item::FIELD_ITEM ? "FIELD_ITEM" :      \
         ((t) == Item::FUNC_ITEM ? "FUNC_ITEM" :                       \
