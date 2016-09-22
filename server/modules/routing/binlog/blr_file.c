@@ -139,6 +139,7 @@ typedef struct start_encryption_event
     uint32_t binlog_key_version;
     uint8_t nonce[BLRM_NONCE_LENGTH];
 } START_ENCRYPTION_EVENT;
+
 /**
  * Initialise the binlog file for this instance. MaxScale will look
  * for all the binlogs that it has on local disk, determine the next
@@ -1585,8 +1586,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         /* Detect possible Start Encryption Event */
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
-                START_ENCRYPTION_EVENT ste_event;
-                memset(&ste_event, '\0', sizeof(START_ENCRYPTION_EVENT));
+                START_ENCRYPTION_EVENT ste_event = {};
                 char nonce_hex[12 * 2 + 1] = "";
                 /* The start encryption event data is 17 bytes long:
                  * Scheme = 1
@@ -1599,13 +1599,17 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 ste_event.binlog_key_version = extract_field(ptr + 1, 32);
                 memcpy(ste_event.nonce, ptr + 1 + 4, BLRM_NONCE_LENGTH);
 
-                gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
-
                 if (debug)
                 {
                     char *cksum_format = ", crc32 0x";
                     char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
                     uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
+                    hex_checksum[0]='\0';
+
+                    /* Hex representation of nonce */
+                    gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
+
+                    /* Hex representation of checksum */
                     cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
                     cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
                     cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
