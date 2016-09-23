@@ -197,7 +197,6 @@ extern unsigned int     gwbuf_length(GWBUF *head);
 extern int              gwbuf_count(GWBUF *head);
 extern size_t           gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes,
                                         uint8_t* dest);
-extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
 extern GWBUF            *gwbuf_split(GWBUF **buf, size_t length);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern GWBUF            *gwbuf_clone_all(GWBUF* head);

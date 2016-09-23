@@ -380,9 +380,9 @@ GWBUF* gwbuf_clone_all(GWBUF* buf)
 }
 
 
-GWBUF *gwbuf_clone_portion(GWBUF *buf,
-                           size_t start_offset,
-                           size_t length)
+static GWBUF *gwbuf_clone_portion(GWBUF *buf,
+                                  size_t start_offset,
+                                  size_t length)
 {
     GWBUF* clonebuf;
 

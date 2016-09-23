@@ -957,6 +957,10 @@ handle_global_item(const char *name, const char *value)
     {
         mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
+    else if (strcmp(name, "skip_permission_checks") == 0)
+    {
+        gateway.skip_permission_checks = config_truth_value((char*)value);
+    }
     else if (strcmp(name, "auth_connect_timeout") == 0)
     {
         char* endptr;
@@ -1301,6 +1305,7 @@ global_defaults()
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
+    gateway.skip_permission_checks = false;
     if (version_string != NULL)
     {
         gateway.version_string = MXS_STRDUP_A(version_string);

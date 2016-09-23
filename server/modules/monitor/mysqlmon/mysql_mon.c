@@ -1127,10 +1127,6 @@ monitorMain(void *arg)
                 {
                     dcb_hangup_foreach(ptr->server);
                 }
-
-
-
-
             }
 
             if (mon_status_changed(ptr))
@@ -1225,6 +1221,8 @@ monitorMain(void *arg)
         ptr = mon->databases;
         while (ptr)
         {
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
+            ss_dassert(serv_info);
             if (!SERVER_IN_MAINT(ptr->server))
             {
                 /** If "detect_stale_master" option is On, let's use the previous master.
@@ -1284,6 +1282,10 @@ monitorMain(void *arg)
                               // Master just came up
                               (SERVER_IS_MASTER(root_master->server) &&
                                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
+                    {
+                        ptr->pending_status |= SERVER_SLAVE;
+                    }
+                    else if (root_master == NULL && serv_info->slave_configured)
                     {
                         ptr->pending_status |= SERVER_SLAVE;
                     }
@@ -1433,6 +1435,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
     time_t purge_time;
     char heartbeat_insert_query[512] = "";
     char heartbeat_purge_query[512] = "";
+    MYSQL_RES *result;
+    long returned_rows;
 
     if (handle->master == NULL)
     {
@@ -1440,28 +1444,43 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
         return;
     }
 
-    /* create the maxscale_schema database */
-    if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema"))
+    /* check if the maxscale_schema database and replication_heartbeat table exist */
+    if (mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
     {
-        MXS_ERROR("[mysql_mon]: Error creating maxscale_schema database in Master server"
-                  ": %s", mysql_error(database->con));
-
+        MXS_ERROR( "[mysql_mon]: Error checking for replication_heartbeat in Master server"
+                   ": %s", mysql_error(database->con));
         database->server->rlag = -1;
     }
 
-    /* create repl_heartbeat table in maxscale_schema database */
-    if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
-                    "maxscale_schema.replication_heartbeat "
-                    "(maxscale_id INT NOT NULL, "
-                    "master_server_id INT NOT NULL, "
-                    "master_timestamp INT UNSIGNED NOT NULL, "
-                    "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
-                    "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
-    {
-        MXS_ERROR("[mysql_mon]: Error creating maxscale_schema.replication_heartbeat "
-                  "table in Master server: %s", mysql_error(database->con));
+    result = mysql_store_result(database->con);
 
-        database->server->rlag = -1;
+    if (result == NULL)
+    {
+        returned_rows = 0;
+    }
+    else
+    {
+        returned_rows = mysql_num_rows(result);
+        mysql_free_result(result);
+    }
+
+    if (0 == returned_rows)
+    {
+        /* create repl_heartbeat table in maxscale_schema database */
+        if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
+                        "maxscale_schema.replication_heartbeat "
+                        "(maxscale_id INT NOT NULL, "
+                        "master_server_id INT NOT NULL, "
+                        "master_timestamp INT UNSIGNED NOT NULL, "
+                        "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
+                        "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
+        {
+            MXS_ERROR("[mysql_mon]: Error creating maxscale_schema.replication_heartbeat "
+                      "table in Master server: %s", mysql_error(database->con));
+
+            database->server->rlag = -1;
+        }
     }
 
     /* auto purge old values after 48 hours*/

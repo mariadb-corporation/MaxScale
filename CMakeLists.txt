@@ -98,6 +98,11 @@ endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
 
+# Only do packaging if configured
+if(PACKAGE)
+  include(cmake/package.cmake)
+endif()
+
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
   file(GLOB ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes RELEASE_NOTES *${MAXSCALE_VERSION_NUMERIC}*.md)
@@ -205,6 +210,8 @@ install_file(${CMAKE_BINARY_DIR}/ReleaseNotes.txt core)
 install_file(${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt core)
 install_file(server/maxscale.cnf.template core)
 install_file(server/maxscale_binlogserver_template.cnf core)
+install_program(script/create_grants core)
+install_file(script/create_roles.sql core)
 
 # Install the template into /etc
 if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMPONENT}"))
@@ -225,7 +232,6 @@ if(WITH_SCRIPTS)
   include(cmake/init_scripts.cmake)
 endif()
 
-# Only do packaging if configured
 if(PACKAGE)
 
   # Install the files copied by the postinst script into the share folder
@@ -233,9 +239,6 @@ if(PACKAGE)
   install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
   install_program(${CMAKE_BINARY_DIR}/postinst core)
   install_program(${CMAKE_BINARY_DIR}/postrm core)
-
-  # Include the package configuration
-  include(cmake/package.cmake)
 
   # CPack needs to be included after everything is configured
   include(CPack)
@@ -301,8 +304,9 @@ endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in gwdirs.h.in.
-if (NOT CMAKE_INSTALL_PREFIX EQUAL "/usr")
+if (NOT PACKAGE)
   install(DIRECTORY DESTINATION var/cache/maxscale)
   install(DIRECTORY DESTINATION var/log/maxscale)
   install(DIRECTORY DESTINATION var/run/maxscale)
+  install(DIRECTORY DESTINATION var/lib/maxscale)
 endif()

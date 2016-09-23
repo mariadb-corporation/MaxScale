@@ -79,6 +79,8 @@
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
+#define DEFAULT_AUTH_PLUGIN_NAME "mysql_native_password"
+
 /** Maximum length of a MySQL packet */
 #define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
 
@@ -94,13 +96,6 @@
 #define ToHex(Y) (Y>='0'&&Y<='9'?Y-'0':Y-'A'+10)
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
-
-#define MYSQL_AUTH_SUCCEEDED 0
-#define MYSQL_FAILED_AUTH 1
-#define MYSQL_FAILED_AUTH_DB 2
-#define MYSQL_FAILED_AUTH_SSL 3
-#define MYSQL_AUTH_SSL_INCOMPLETE 4
-#define MYSQL_AUTH_NO_SESSION 5
 
 typedef enum
 {

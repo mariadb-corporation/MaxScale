@@ -4,13 +4,12 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-07-01
+ * Change Date: 2019-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -19,8 +18,8 @@
 
 #include <router.h>
 #include <readwritesplit.h>
+#include <rwsplit_internal.h>
 
-#include <mysql.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <query_classifier.h>
@@ -28,8 +27,6 @@
 #include <spinlock.h>
 #include <modinfo.h>
 #include <modutil.h>
-#include <mysql_client_server_protocol.h>
-#include <mysqld_error.h>
 #include <maxscale/alloc.h>
 
 MODULE_INFO info =
@@ -38,18 +35,16 @@ MODULE_INFO info =
     "A Read/Write splitting router for enhancement read scalability"
 };
 
-#if defined(SS_DEBUG)
-#include <mysql_client_server_protocol.h>
-#endif
-
-#define RWSPLIT_TRACE_MSG_LEN 1000
-
 /**
  * @file readwritesplit.c   The entry points for the read/write query splitting
  * router module.
  *
  * This file contains the entry points that comprise the API to the read write
- * query splitting router.
+ * query splitting router. It also contains functions that are directly called
+ * by the entry point functions. Some of these are used by functions in other
+ * modules of the read write split router, others are used only within this
+ * module.
+ * 
  * @verbatim
  * Revision History
  *
@@ -66,95 +61,36 @@ MODULE_INFO info =
  * 09/09/2015    Martin Brampton     Modify error handler
  * 25/09/2015    Martin Brampton     Block callback processing when no router
  * session in the DCB
+ * 03/08/2016    Martin Brampton     Extract the API functions, move the rest
  *
  * @endverbatim
  */
 
 static char *version_str = "V1.1.0";
 
+/*
+ * The functions that implement the router module API
+ */
+
 static ROUTER *createInstance(SERVICE *service, char **options);
 static void *newSession(ROUTER *instance, SESSION *session);
 static void closeSession(ROUTER *instance, void *session);
 static void freeSession(ROUTER *instance, void *session);
 static int routeQuery(ROUTER *instance, void *session, GWBUF *queue);
-static void diagnostic(ROUTER *instance, DCB *dcb);
-
+static void diagnostics(ROUTER *instance, DCB *dcb);
 static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-
 static void handleError(ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *backend_dcb,
                         error_action_t action, bool *succp);
-
-static void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb);
-static int router_get_servercount(ROUTER_INSTANCE *router);
-static int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
-                                   int router_nservers);
-static int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses);
-static backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb);
-static DCB *rses_get_client_dcb(ROUTER_CLIENT_SES *rses);
-
-static backend_ref_t *check_candidate_bref(backend_ref_t *candidate_bref,
-                                           backend_ref_t *new_bref,
-                                           select_criteria_t sc);
-
-static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                         GWBUF *querybuf, qc_query_type_t type);
-
-static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                   GWBUF *querybuf, qc_query_type_t type);
-
-static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                              GWBUF *querybuf);
-
 static int getCapabilities();
 
-#if defined(NOT_USED)
-static bool router_option_configured(ROUTER_INSTANCE *router,
-                                     const char *optionstr, void *data);
-#endif
-
-#if defined(PREP_STMT_CACHING)
-static prep_stmt_t *prep_stmt_init(prep_stmt_type_t type, void *id);
-static void prep_stmt_done(prep_stmt_t *pstmt);
-#endif /*< PREP_STMT_CACHING */
-
-int bref_cmp_global_conn(const void *bref1, const void *bref2);
-
-int bref_cmp_router_conn(const void *bref1, const void *bref2);
-
-int bref_cmp_behind_master(const void *bref1, const void *bref2);
-
-int bref_cmp_current_load(const void *bref1, const void *bref2);
-
-/**
- * The order of functions _must_ match with the order the select criteria are
- * listed in select_criteria_t definition in readwritesplit.h
+/*
+ * End of the API functions; now the module structure that links to them.
+ * Note that the function names are chosen to exactly match the names used in
+ * the definition of ROUTER_OBJECT. This is not obligatory, but is done to
+ * make it easier to track the connection between calls and functions.
  */
-int (*criteria_cmpfun[LAST_CRITERIA])(const void *, const void *) =
-{
-    NULL,
-    bref_cmp_global_conn,
-    bref_cmp_router_conn,
-    bref_cmp_behind_master,
-    bref_cmp_current_load
-};
-
-static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
-                                           backend_ref_t *backend_ref,
-                                           int router_nservers, int max_nslaves,
-                                           int max_rlag,
-                                           select_criteria_t select_criteria,
-                                           SESSION *session,
-                                           ROUTER_INSTANCE *router);
-
-static bool get_dcb(DCB **dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
-                    char *name, int max_rlag);
-
-static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
-                                           char **options);
-
-
 
 static ROUTER_OBJECT MyObject =
 {
@@ -163,127 +99,37 @@ static ROUTER_OBJECT MyObject =
     closeSession,
     freeSession,
     routeQuery,
-    diagnostic,
+    diagnostics,
     clientReply,
     handleError,
     getCapabilities
 };
 
-static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES *rses);
-
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses);
-
-static void mysql_sescmd_done(mysql_sescmd_t *sescmd);
-
-static mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
-                                         GWBUF *sescmd_buf,
-                                         unsigned char packet_type,
-                                         ROUTER_CLIENT_SES *rses);
-
-static rses_property_t *mysql_sescmd_get_property(mysql_sescmd_t *scmd);
-
-static rses_property_t *rses_property_init(rses_property_type_t prop_type);
-
-static int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop);
-
-static void rses_property_done(rses_property_t *prop);
-
-static mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop);
-
-static bool execute_sescmd_history(backend_ref_t *bref);
-
-static bool execute_sescmd_in_backend(backend_ref_t *backend_ref);
-
-static void sescmd_cursor_reset(sescmd_cursor_t *scur);
-
-static bool sescmd_cursor_history_empty(sescmd_cursor_t *scur);
-
-static void sescmd_cursor_set_active(sescmd_cursor_t *sescmd_cursor,
-                                     bool value);
-
-static bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor);
-
-static GWBUF *sescmd_cursor_clone_querybuf(sescmd_cursor_t *scur);
-
-static mysql_sescmd_t *sescmd_cursor_get_command(sescmd_cursor_t *scur);
-
-static bool sescmd_cursor_next(sescmd_cursor_t *scur);
-
-static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
-                                            backend_ref_t *bref, bool *);
-
-static void tracelog_routed_query(ROUTER_CLIENT_SES *rses, char *funcname,
-                                  backend_ref_t *bref, GWBUF *buf);
-
-static bool route_session_write(ROUTER_CLIENT_SES *router_client_ses,
-                                GWBUF *querybuf, ROUTER_INSTANCE *inst,
-                                unsigned char packet_type,
-                                qc_query_type_t qtype);
-
-static void refreshInstance(ROUTER_INSTANCE *router, CONFIG_PARAMETER *param);
-
-static void bref_clear_state(backend_ref_t *bref, bref_state_t state);
-static void bref_set_state(backend_ref_t *bref, bref_state_t state);
-static sescmd_cursor_t *backend_ref_get_sescmd_cursor(backend_ref_t *bref);
-
-static int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
-static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
-                                        ROUTER_CLIENT_SES **rses,
-                                        DCB *backend_dcb, GWBUF *errmsg);
-static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
-                                      DCB *backend_dcb, GWBUF *errmsg);
-
-static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses);
-
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers);
-
-static bool have_enough_servers(ROUTER_CLIENT_SES **rses, const int nsrv,
-                                int router_nsrv, ROUTER_INSTANCE *router);
+/*
+ * A couple of static variables that are used throughout the router
+ */
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
-static int hashkeyfun(const void *key);
-static int hashcmpfun(const void *, const void *);
-static bool check_for_multi_stmt(ROUTER_CLIENT_SES *rses, GWBUF *buf,
-                                 mysql_server_cmd_t packet_type);
-static bool send_readonly_error(DCB *dcb);
+/*
+ * Declaration of functions that are used only within this module, and are
+ * not part of the API.
+ */
 
-static int hashkeyfun(const void *key)
-{
-    if (key == NULL)
-    {
-        return 0;
-    }
-
-    unsigned int hash = 0, c = 0;
-    const char *ptr = (const char *)key;
-
-    while ((c = *ptr++))
-    {
-        hash = c + (hash << 6) + (hash << 16) - hash;
-    }
-    return hash;
-}
-
-static int hashcmpfun(const void *v1, const void *v2)
-{
-    const char *i1 = (const char *)v1;
-    const char *i2 = (const char *)v2;
-
-    return strcmp(i1, i2);
-}
-
-static void *hstrdup(const void *fval)
-{
-    char *str = (char *)fval;
-    return MXS_STRDUP(str);
-}
-
-static void hfree(void *fval)
-{
-    MXS_FREE(fval);
-}
+static void refreshInstance(ROUTER_INSTANCE *router,
+                            CONFIG_PARAMETER *singleparam);
+static void free_rwsplit_instance(ROUTER_INSTANCE *router);
+static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
+                                           char **options);
+static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
+                                      DCB *backend_dcb, GWBUF *errmsg);
+static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
+                                        ROUTER_CLIENT_SES **rses,
+                                        DCB *backend_dcb, GWBUF *errmsg);
+static int router_get_servercount(ROUTER_INSTANCE *inst);
+static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
+                                int router_nsrv, ROUTER_INSTANCE *router);
 
 /**
  * Implementation of the mandatory version entry point
@@ -296,19 +142,19 @@ char *version()
 }
 
 /**
- * The module initialisation routine, called when the module
+ * The module initialization routine, called when the module
  * is first loaded.
  */
 void ModuleInit()
 {
-    MXS_NOTICE("Initializing statemend-based read/write split router module.");
+    MXS_NOTICE("Initializing statement-based read/write split router module.");
     spinlock_init(&instlock);
     instances = NULL;
 }
 
 /**
  * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
+ * must return the structure that is referred to as the
  * "module object", this is a structure with the set of
  * external entry points for this module.
  *
@@ -319,166 +165,17 @@ ROUTER_OBJECT *GetModuleObject()
     return &MyObject;
 }
 
-/**
- * Refresh the instance by the given parameter value.
- *
- * @param router    Router instance
- * @param singleparam   Parameter fo be reloaded
- *
- * Note: this part is not done. Needs refactoring.
+/*
+ * Now we implement the API functions
  */
-static void refreshInstance(ROUTER_INSTANCE *router,
-                            CONFIG_PARAMETER *singleparam)
-{
-    CONFIG_PARAMETER *param;
-    bool refresh_single;
-    config_param_type_t paramtype;
-
-    if (singleparam != NULL)
-    {
-        param = singleparam;
-        refresh_single = true;
-    }
-    else
-    {
-        param = router->service->svc_config_param;
-        refresh_single = false;
-    }
-    paramtype = config_get_paramtype(param);
-
-    while (param != NULL)
-    {
-        /** Catch unused parameter types */
-        ss_dassert(paramtype == COUNT_TYPE || paramtype == PERCENT_TYPE ||
-                   paramtype == SQLVAR_TARGET_TYPE);
-
-        if (paramtype == COUNT_TYPE)
-        {
-            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                router->rwsplit_config.rw_max_slave_conn_percent = 0;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.rw_max_slave_conn_count = val;
-                }
-            }
-            else if (strncmp(param->name, "max_slave_replication_lag",
-                             MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.rw_max_slave_replication_lag = val;
-                }
-            }
-        }
-        else if (paramtype == PERCENT_TYPE)
-        {
-            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                router->rwsplit_config.rw_max_slave_conn_count = 0;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.rw_max_slave_conn_percent = val;
-                }
-            }
-        }
-        else if (paramtype == SQLVAR_TARGET_TYPE)
-        {
-            if (strncmp(param->name, "use_sql_variables_in", MAX_PARAM_LEN) == 0)
-            {
-                target_t valtarget;
-                bool succp;
-
-                succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.rw_use_sql_variables_in = valtarget;
-                }
-            }
-        }
-
-        if (refresh_single)
-        {
-            break;
-        }
-        param = param->next;
-    }
-
-#if defined(NOT_USED) /*< can't read monitor config parameters */
-    if ((*router->servers)->backend_server->rlag == -2)
-    {
-        rlag_enabled = false;
-    }
-    else
-    {
-        rlag_enabled = true;
-    }
-    /**
-     * If replication lag detection is not enabled the measure can't be
-     * used in slave selection.
-     */
-    if (!rlag_enabled)
-    {
-        if (rlag_limited)
-        {
-            MXS_WARNING("Configuration Failed, max_slave_replication_lag "
-                        "is set to %d,\n\t\t      but detect_replication_lag "
-                        "is not enabled. Replication lag will not be checked.",
-                        router->rwsplit_config.rw_max_slave_replication_lag);
-        }
-
-        if (router->rwsplit_config.rw_slave_select_criteria ==
-            LEAST_BEHIND_MASTER)
-        {
-            MXS_WARNING("Configuration Failed, router option "
-                        "\n\t\t      slave_selection_criteria=LEAST_BEHIND_MASTER "
-                        "is specified, but detect_replication_lag "
-                        "is not enabled.\n\t\t      "
-                        "slave_selection_criteria=%s will be used instead.",
-                        STRCRITERIA(DEFAULT_CRITERIA));
-
-            router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
-        }
-    }
-#endif /*< NOT_USED */
-}
-
-static inline void free_rwsplit_instance(ROUTER_INSTANCE *router)
-{
-    if (router)
-    {
-        if (router->servers)
-        {
-            for (int i = 0; router->servers[i]; i++)
-            {
-                MXS_FREE(router->servers[i]);
-            }
-        }
-        MXS_FREE(router->servers);
-        MXS_FREE(router);
-    }
-}
 
 /**
- * Create an instance of read/write statement router within the MaxScale.
+ * @brief Create an instance of the read/write router (API).
+ * 
+ * Create an instance of read/write statement router within the MaxScale. One
+ * instance of the router is required for each service that is defined in the
+ * configuration as using this router. One instance of the router will handle
+ * multiple connections (or router sessions).
  *
  * @param service   The service this router is being create for
  * @param options   The options for this query router
@@ -702,14 +399,21 @@ static ROUTER *createInstance(SERVICE *service, char **options)
 }
 
 /**
- * Associate a new session with this instance of the router.
+ * @brief Associate a new session with this instance of the router (API).
  *
- * The session is used to store all the data required for a particular
- * client connection.
+ * The session is used to store all the data required by the router for a 
+ * particular client connection. The instance of the router that relates to a 
+ * particular service is passed as the first parameter. The second parameter is
+ * the session that has been created in response to the request from a client
+ * for a connection. The passed session contains generic information; this
+ * function creates the session structure that holds router specific data.
+ * There is often a one to one relationship between sessions and router
+ * sessions, although it is possible to create configurations where a 
+ * connection is handled by multiple routers, one after another.
  *
  * @param instance  The router instance data
- * @param session   The session itself
- * @return Session specific data for this session
+ * @param session   The MaxScale session (generic connection data)
+ * @return Session specific data for this session, i.e. a router session
  */
 static void *newSession(ROUTER *router_inst, SESSION *session)
 {
@@ -885,11 +589,16 @@ return_rses:
 }
 
 /**
- * Close a session with the router, this is the mechanism
- * by which a router may cleanup data structure etc.
+ * @brief Close a router session (API).
+ * 
+ * Close a session with the router, this is the mechanism by which a router 
+ * may cleanup data structure etc. The instance of the router that relates to 
+ * the relevant service is passed, along with the router session that is to 
+ * be closed. Typically the function is used in conjunction with freeSession
+ * which will release the resources used by a router session (see below).
  *
  * @param instance  The router instance data
- * @param session   The session being closed
+ * @param session   The router session being closed
  */
 static void closeSession(ROUTER *instance, void *router_session)
 {
@@ -966,8 +675,10 @@ static void closeSession(ROUTER *instance, void *router_session)
 }
 
 /**
- * When router session is closed, freeSession can be called to free allocated
- * resources.
+ * @brief Free a router session (API).
+ * 
+ * When a router session has been closed, freeSession can be called to free 
+ * allocated resources.
  *
  * @param router_instance   The router instance the session belongs to
  * @param router_client_session Client session
@@ -1031,754 +742,9 @@ static void freeSession(ROUTER *router_instance, void *router_client_session)
 }
 
 /**
- * Provide the router with a pointer to a suitable backend dcb.
+ * @brief The main routing entry point for a query (API)
  *
- * Detect failures in server statuses and reselect backends if necessary.
- * If name is specified, server name becomes primary selection criteria.
- * Similarly, if max replication lag is specified, skip backends which lag too
- * much.
- *
- * @param p_dcb Address of the pointer to the resulting DCB
- * @param rses  Pointer to router client session
- * @param btype Backend type
- * @param name  Name of the backend which is primarily searched. May be NULL.
- *
- * @return True if proper DCB was found, false otherwise.
- */
-static bool get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
-                    char *name, int max_rlag)
-{
-    backend_ref_t *backend_ref;
-    backend_ref_t *master_bref;
-    int i;
-    bool succp = false;
-
-    CHK_CLIENT_RSES(rses);
-    ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
-
-    if (p_dcb == NULL)
-    {
-        goto return_succp;
-    }
-    backend_ref = rses->rses_backend_ref;
-
-    /** get root master from available servers */
-    master_bref = get_root_master_bref(rses);
-
-    if (name != NULL) /*< Choose backend by name from a hint */
-    {
-        ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
-
-        for (i = 0; i < rses->rses_nbackends; i++)
-        {
-            BACKEND *b = backend_ref[i].bref_backend;
-            SERVER server;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
-            /**
-             * To become chosen:
-             * backend must be in use, name must match,
-             * backend's role must be either slave, relay
-             * server, or master.
-             */
-            if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                (strncasecmp(name, b->backend_server->unique_name, PATH_MAX) == 0) &&
-                (SERVER_IS_SLAVE(&server) || SERVER_IS_RELAY_SERVER(&server) ||
-                 SERVER_IS_MASTER(&server)))
-            {
-                *p_dcb = backend_ref[i].bref_dcb;
-                succp = true;
-                ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
-                break;
-            }
-        }
-        if (succp)
-        {
-            goto return_succp;
-        }
-        else
-        {
-            btype = BE_SLAVE;
-        }
-    }
-
-    if (btype == BE_SLAVE)
-    {
-        backend_ref_t *candidate_bref = NULL;
-
-        for (i = 0; i < rses->rses_nbackends; i++)
-        {
-            BACKEND *b = (&backend_ref[i])->bref_backend;
-            SERVER server;
-            SERVER candidate;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
-            /**
-             * Unused backend or backend which is not master nor
-             * slave can't be used
-             */
-            if (!BREF_IS_IN_USE(&backend_ref[i]) ||
-                (!SERVER_IS_MASTER(&server) && !SERVER_IS_SLAVE(&server)))
-            {
-                continue;
-            }
-            /**
-             * If there are no candidates yet accept both master or
-             * slave.
-             */
-            else if (candidate_bref == NULL)
-            {
-                /**
-                 * Ensure that master has not changed dunring
-                 * session and abort if it has.
-                 */
-                if (SERVER_IS_MASTER(&server) && &backend_ref[i] == master_bref)
-                {
-                    /** found master */
-                    candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
-                    succp = true;
-                }
-                /**
-                 * Ensure that max replication lag is not set
-                 * or that candidate's lag doesn't exceed the
-                 * maximum allowed replication lag.
-                 */
-                else if (max_rlag == MAX_RLAG_UNDEFINED ||
-                         (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                          b->backend_server->rlag <= max_rlag))
-                {
-                    /** found slave */
-                    candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
-                    succp = true;
-                }
-            }
-            /**
-             * If candidate is master, any slave which doesn't break
-             * replication lag limits replaces it.
-             */
-            else if (SERVER_IS_MASTER(&candidate) && SERVER_IS_SLAVE(&server) &&
-                     (max_rlag == MAX_RLAG_UNDEFINED ||
-                      (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                       b->backend_server->rlag <= max_rlag)) &&
-                     !rses->rses_config.rw_master_reads)
-            {
-                /** found slave */
-                candidate_bref = &backend_ref[i];
-                candidate.status = candidate_bref->bref_backend->backend_server->status;
-                succp = true;
-            }
-            /**
-             * When candidate exists, compare it against the current
-             * backend and update assign it to new candidate if
-             * necessary.
-             */
-            else if (SERVER_IS_SLAVE(&server))
-            {
-                if (max_rlag == MAX_RLAG_UNDEFINED ||
-                    (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                     b->backend_server->rlag <= max_rlag))
-                {
-                    candidate_bref =
-                        check_candidate_bref(candidate_bref, &backend_ref[i],
-                                             rses->rses_config.rw_slave_select_criteria);
-                    candidate.status =
-                        candidate_bref->bref_backend->backend_server->status;
-                }
-                else
-                {
-                    MXS_INFO("Server %s:%d is too much behind the "
-                             "master, %d s. and can't be chosen.",
-                             b->backend_server->name, b->backend_server->port,
-                             b->backend_server->rlag);
-                }
-            }
-        } /*<  for */
-        /** Assign selected DCB's pointer value */
-        if (candidate_bref != NULL)
-        {
-            *p_dcb = candidate_bref->bref_dcb;
-        }
-
-        goto return_succp;
-    } /*< if (btype == BE_SLAVE) */
-    /**
-     * If target was originally master only then the execution jumps
-     * directly here.
-     */
-    if (btype == BE_MASTER)
-    {
-        if (master_bref)
-        {
-            /** It is possible for the server status to change at any point in time
-             * so copying it locally will make possible error messages
-             * easier to understand */
-            SERVER server;
-            server.status = master_bref->bref_backend->backend_server->status;
-            if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
-            {
-                *p_dcb = master_bref->bref_dcb;
-                succp = true;
-                /** if bref is in use DCB should not be closed */
-                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
-            }
-            else
-            {
-                MXS_ERROR("Server at %s:%d should be master but "
-                          "is %s instead and can't be chosen to master.",
-                          master_bref->bref_backend->backend_server->name,
-                          master_bref->bref_backend->backend_server->port,
-                          STRSRVSTATUS(&server));
-                succp = false;
-            }
-        }
-    }
-
-return_succp:
-    return succp;
-}
-
-/**
- * Find out which of the two backend servers has smaller value for select
- * criteria property.
- *
- * @param cand  previously selected candidate
- * @param new   challenger
- * @param sc    select criteria
- *
- * @return pointer to backend reference of that backend server which has smaller
- * value in selection criteria. If either reference pointer is NULL then the
- * other reference pointer value is returned.
- */
-static backend_ref_t *check_candidate_bref(backend_ref_t *cand,
-                                           backend_ref_t *new,
-                                           select_criteria_t sc)
-{
-    int (*p)(const void *, const void *);
-    /** get compare function */
-    p = criteria_cmpfun[sc];
-
-    if (new == NULL)
-    {
-        return cand;
-    }
-    else if (cand == NULL || (p((void *)cand, (void *)new) > 0))
-    {
-        return new;
-    }
-    else
-    {
-        return cand;
-    }
-}
-
-/**
- * Examine the query type, transaction state and routing hints. Find out the
- * target for query routing.
- *
- *  @param qtype      Type of query
- *  @param trx_active Is transacation active or not
- *  @param hint       Pointer to list of hints attached to the query buffer
- *
- *  @return bitfield including the routing target, or the target server name
- *          if the query would otherwise be routed to slave.
- */
-static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
-                                       qc_query_type_t qtype, HINT *hint)
-{
-    bool trx_active = rses->rses_transaction_active;
-    bool load_active = rses->rses_load_active;
-    target_t use_sql_variables_in = rses->rses_config.rw_use_sql_variables_in;
-    route_target_t target = TARGET_UNDEFINED;
-
-    if (rses->rses_config.rw_strict_multi_stmt && rses->forced_node &&
-        rses->forced_node == rses->rses_master_ref)
-    {
-        target = TARGET_MASTER;
-    }
-    /**
-     * These queries are not affected by hints
-     */
-    else if (!load_active &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-              /** Configured to allow writing variables to all nodes */
-              (use_sql_variables_in == TYPE_ALL &&
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
-              /** enable or disable autocommit are always routed to all */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
-    {
-        /**
-         * This is problematic query because it would be routed to all
-         * backends but since this is SELECT that is not possible:
-         * 1. response set is not handled correctly in clientReply and
-         * 2. multiple results can degrade performance.
-         *
-         * Prepared statements are an exception to this since they do not
-         * actually do anything but only prepare the statement to be used.
-         * They can be safely routed to all backends since the execution
-         * is done later.
-         *
-         * With prepared statement caching the task of routing
-         * the execution of the prepared statements to the right server would be
-         * an easy one. Currently this is not supported.
-         */
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) &&
-            !(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
-        {
-            MXS_WARNING("The query can't be routed to all "
-                        "backend servers because it includes SELECT and "
-                        "SQL variable modifications which is not supported. "
-                        "Set use_sql_variables_in=master or split the "
-                        "query to two, where SQL variable modifications "
-                        "are done in the first and the SELECT in the "
-                        "second one.");
-
-            target = TARGET_MASTER;
-        }
-        target |= TARGET_ALL;
-    }
-    /**
-     * Hints may affect on routing of the following queries
-     */
-    else if (!trx_active && !load_active &&
-             !QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||        /*< any SELECT */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_USERVAR_READ) ||       /*< read user var */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) || /*< read sys var */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_EXEC_STMT) || /*< prepared stmt exec */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
-    {
-        /** First set expected targets before evaluating hints */
-        if (!QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-             /** Configured to allow reading variables from slaves */
-             (use_sql_variables_in == TYPE_ALL &&
-              (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ)))))
-        {
-            target = TARGET_SLAVE;
-        }
-
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-            /** Configured not to allow reading variables from slaves */
-            (use_sql_variables_in == TYPE_MASTER &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
-        {
-            target = TARGET_MASTER;
-        }
-
-        /** If nothing matches then choose the master */
-        if ((target & (TARGET_ALL | TARGET_SLAVE | TARGET_MASTER)) == 0)
-        {
-            target = TARGET_MASTER;
-        }
-    }
-    else
-    {
-        ss_dassert(trx_active ||
-                   (QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
-                     use_sql_variables_in == TYPE_MASTER) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
-        target = TARGET_MASTER;
-    }
-
-    /** process routing hints */
-    while (hint != NULL)
-    {
-        if (hint->type == HINT_ROUTE_TO_MASTER)
-        {
-            target = TARGET_MASTER; /*< override */
-            MXS_DEBUG("%lu [get_route_target] Hint: route to master.",
-                      pthread_self());
-            break;
-        }
-        else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-        {
-            /**
-             * Searching for a named server. If it can't be
-             * found, the oroginal target is chosen.
-             */
-            target |= TARGET_NAMED_SERVER;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "named server : ",
-                      pthread_self());
-        }
-        else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
-        {
-            /** not implemented */
-        }
-        else if (hint->type == HINT_ROUTE_TO_ALL)
-        {
-            /** not implemented */
-        }
-        else if (hint->type == HINT_PARAMETER)
-        {
-            if (strncasecmp((char *)hint->data, "max_slave_replication_lag",
-                            strlen("max_slave_replication_lag")) == 0)
-            {
-                target |= TARGET_RLAG_MAX;
-            }
-            else
-            {
-                MXS_ERROR("Unknown hint parameter "
-                          "'%s' when 'max_slave_replication_lag' "
-                          "was expected.",
-                          (char *)hint->data);
-            }
-        }
-        else if (hint->type == HINT_ROUTE_TO_SLAVE)
-        {
-            target = TARGET_SLAVE;
-            MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                      "slave.",
-                      pthread_self());
-        }
-        hint = hint->next;
-    } /*< while (hint != NULL) */
-
-#if defined(SS_EXTRA_DEBUG)
-    MXS_INFO("Selected target \"%s\"", STRTARGET(target));
-#endif
-    return target;
-}
-
-/**
- * Check if the query is a DROP TABLE... query and
- * if it targets a temporary table, remove it from the hashtable.
- * @param router_cli_ses Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
-                          qc_query_type_t type)
-{
-
-    int tsize = 0, klen = 0, i;
-    char **tbl = NULL;
-    char *hkey, *dbname;
-    MYSQL_session *data;
-    rses_property_t *rses_prop_tmp;
-
-    if (router_cli_ses == NULL || querybuf == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
-                  router_cli_ses, querybuf);
-        return;
-    }
-
-    if (router_cli_ses->client_dcb == NULL)
-    {
-        MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return;
-    }
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    if (data == NULL)
-    {
-        MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",
-                  __FUNCTION__);
-        return;
-    }
-
-    dbname = (char *)data->db;
-
-    if (qc_is_drop_table_query(querybuf))
-    {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-        if (tbl != NULL)
-        {
-            for (i = 0; i < tsize; i++)
-            {
-                klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = MXS_CALLOC(klen, sizeof(char));
-                MXS_ABORT_IF_NULL(hkey);
-                strcpy(hkey, dbname);
-                strcat(hkey, ".");
-                strcat(hkey, tbl[i]);
-
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-                    if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables,
-                                         (void *)hkey))
-                    {
-                        MXS_INFO("Temporary table dropped: %s", hkey);
-                    }
-                }
-                MXS_FREE(tbl[i]);
-                MXS_FREE(hkey);
-            }
-
-            MXS_FREE(tbl);
-        }
-    }
-}
-
-/**
- * Check if the query targets a temporary table.
- * @param router_cli_ses Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- * @return The type of the query
- */
-static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                         GWBUF *querybuf,
-                                         qc_query_type_t type)
-{
-
-    bool target_tmp_table = false;
-    int tsize = 0, klen = 0, i;
-    char **tbl = NULL;
-    char *dbname;
-    char hkey[MYSQL_DATABASE_MAXLEN + MYSQL_TABLE_MAXLEN + 2];
-    MYSQL_session *data;
-    qc_query_type_t qtype = type;
-    rses_property_t *rses_prop_tmp;
-
-    if (router_cli_ses == NULL || querybuf == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
-                  router_cli_ses, querybuf);
-        return type;
-    }
-
-    if (router_cli_ses->client_dcb == NULL)
-    {
-        MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return type;
-    }
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    if (data == NULL)
-    {
-        MXS_ERROR("[%s] Error: User data in client DBC is NULL.", __FUNCTION__);
-        return qtype;
-    }
-
-    dbname = (char *)data->db;
-
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
-    {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-
-        if (tbl != NULL && tsize > 0)
-        {
-            /** Query targets at least one table */
-            for (i = 0; i < tsize && !target_tmp_table && tbl[i]; i++)
-            {
-                sprintf(hkey, "%s.%s", dbname, tbl[i]);
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-                    if (hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey))
-                    {
-                        /**Query target is a temporary table*/
-                        qtype = QUERY_TYPE_READ_TMP_TABLE;
-                        MXS_INFO("Query targets a temporary table: %s", hkey);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    if (tbl != NULL)
-    {
-        for (i = 0; i < tsize; i++)
-        {
-            MXS_FREE(tbl[i]);
-        }
-        MXS_FREE(tbl);
-    }
-
-    return qtype;
-}
-
-/**
- * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out
- * the database and table name, create a hashvalue and
- * add it to the router client session's property. If property
- * doesn't exist then create it first.
- * @param router_cli_ses Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                   GWBUF *querybuf, qc_query_type_t type)
-{
-    if (!QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
-    {
-        return;
-    }
-
-    int klen = 0;
-    char *hkey, *dbname;
-    MYSQL_session *data;
-    rses_property_t *rses_prop_tmp;
-    HASHTABLE *h;
-
-    if (router_cli_ses == NULL || querybuf == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
-                  router_cli_ses, querybuf);
-        return;
-    }
-
-    if (router_cli_ses->client_dcb == NULL)
-    {
-        MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return;
-    }
-
-    router_cli_ses->have_tmp_tables = true;
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    data = (MYSQL_session *)router_cli_ses->client_dcb->data;
-
-    if (data == NULL)
-    {
-        MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",
-                  __FUNCTION__);
-        return;
-    }
-
-    dbname = (char *)data->db;
-
-    bool is_temp = true;
-    char *tblname = NULL;
-
-    tblname = qc_get_created_table_name(querybuf);
-
-    if (tblname && strlen(tblname) > 0)
-    {
-        klen = strlen(dbname) + strlen(tblname) + 2;
-        hkey = MXS_CALLOC(klen, sizeof(char));
-        MXS_ABORT_IF_NULL(hkey);
-        strcpy(hkey, dbname);
-        strcat(hkey, ".");
-        strcat(hkey, tblname);
-    }
-    else
-    {
-        hkey = NULL;
-    }
-
-    if (rses_prop_tmp == NULL)
-    {
-        if ((rses_prop_tmp = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t))))
-        {
-#if defined(SS_DEBUG)
-            rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-            rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-            rses_prop_tmp->rses_prop_rsession = router_cli_ses;
-            rses_prop_tmp->rses_prop_refcount = 1;
-            rses_prop_tmp->rses_prop_next = NULL;
-            rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
-            router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
-        }
-    }
-    if (rses_prop_tmp)
-    {
-        if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
-        {
-            h = hashtable_alloc(7, hashkeyfun, hashcmpfun);
-            hashtable_memory_fns(h, hstrdup, NULL, hfree, NULL);
-            if (h != NULL)
-            {
-                rses_prop_tmp->rses_prop_data.temp_tables = h;
-            }
-            else
-            {
-                MXS_ERROR("Failed to allocate a new hashtable.");
-            }
-        }
-
-        if (hkey && rses_prop_tmp->rses_prop_data.temp_tables &&
-            hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey,
-                          (void *)is_temp) == 0) /*< Conflict in hash table */
-        {
-            MXS_INFO("Temporary table conflict in hashtable: %s", hkey);
-        }
-#if defined(SS_DEBUG)
-        {
-            bool retkey = hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey);
-            if (retkey)
-            {
-                MXS_INFO("Temporary table added: %s", hkey);
-            }
-        }
-#endif
-    }
-
-    MXS_FREE(hkey);
-    MXS_FREE(tblname);
-}
-
-/**
- * Get client DCB pointer of the router client session.
- * This routine must be protected by Router client session lock.
- *
- * @param rses  Router client session pointer
- *
- * @return Pointer to client DCB
- */
-static DCB *rses_get_client_dcb(ROUTER_CLIENT_SES *rses)
-{
-    DCB *dcb = NULL;
-    int i;
-
-    for (i = 0; i < rses->rses_nbackends; i++)
-    {
-        if ((dcb = rses->rses_backend_ref[i].bref_dcb) != NULL &&
-            BREF_IS_IN_USE(&rses->rses_backend_ref[i]) && dcb->session != NULL &&
-            dcb->session->client_dcb != NULL)
-        {
-            return dcb->session->client_dcb;
-        }
-    }
-    return NULL;
-}
-
-/**
- * @brief The main routing entry point
- *
- * The routeQuery will make the routing decision based on the contents
+ * The routeQuery function will make the routing decision based on the contents
  * of the instance, session and the query itself. The query always represents
  * a complete MariaDB/MySQL packet because we define the RCAP_TYPE_STMT_INPUT in
  * getCapabilities().
@@ -1798,34 +764,11 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
 
     if (rses->rses_closed)
     {
-        uint8_t* data = GWBUF_DATA(querybuf);
-
-        if (GWBUF_LENGTH(querybuf) >= 5 && !MYSQL_IS_COM_QUIT(data))
-        {
-            char *query_str = modutil_get_query(querybuf);
-            MXS_ERROR("Can't route %s:\"%s\" to backend server. Router is closed.",
-                      STRPACKETTYPE(data[4]), query_str ? query_str : "(empty)");
-            MXS_FREE(query_str);
-        }
+        closed_session_reply(querybuf);
     }
     else
     {
-        if (GWBUF_IS_TYPE_UNDEFINED(querybuf))
-        {
-            GWBUF *tmpbuf = querybuf;
-
-            querybuf = modutil_get_complete_packets(&tmpbuf);
-            if (tmpbuf)
-            {
-                rses->client_dcb->dcb_readqueue = gwbuf_append(rses->client_dcb->dcb_readqueue, tmpbuf);
-            }
-            querybuf = gwbuf_make_contiguous(querybuf);
-
-            /** Mark buffer to as MySQL type */
-            gwbuf_set_type(querybuf, GWBUF_TYPE_MYSQL);
-            gwbuf_set_type(querybuf, GWBUF_TYPE_SINGLE_STMT);
-        }
-
+        live_session_reply(&querybuf, rses);
         if (route_single_stmt(inst, rses, querybuf))
         {
             rval = 1;
@@ -1841,603 +784,14 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
 }
 
 /**
- * Routing function. Find out query type, backend type, and target DCB(s).
- * Then route query to found target(s).
- * @param inst      router instance
- * @param rses      router session
- * @param querybuf  GWBUF including the query
- *
- * @return true if routing succeed or if it failed due to unsupported query.
- * false if backend failure was encountered.
- */
-static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                              GWBUF *querybuf)
-{
-    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-    mysql_server_cmd_t packet_type = MYSQL_COM_UNDEFINED;
-    uint8_t *packet;
-    size_t packet_len;
-    int ret = 0;
-    DCB *target_dcb = NULL;
-    route_target_t route_target;
-    bool succp = false;
-    int rlag_max = MAX_RLAG_UNDEFINED;
-    backend_type_t btype; /*< target backend type */
-
-    ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
-    ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
-
-    packet = GWBUF_DATA(querybuf);
-    packet_len = gw_mysql_get_byte3(packet);
-
-    if (packet_len == 0)
-    {
-        /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
-        route_target = TARGET_MASTER;
-        packet_type = MYSQL_COM_UNDEFINED;
-        rses->rses_load_active = false;
-        route_target = TARGET_MASTER;
-        MXS_INFO("> LOAD DATA LOCAL INFILE finished: %lu bytes sent.",
-                 rses->rses_load_data_sent + gwbuf_length(querybuf));
-    }
-    else
-    {
-        packet_type = packet[4];
-
-        switch (packet_type)
-        {
-            case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
-            case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
-            case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
-            case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
-            case MYSQL_COM_PING:        /*< 0e all servers are pinged */
-            case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-                qtype = QUERY_TYPE_SESSION_WRITE;
-                break;
-
-            case MYSQL_COM_CREATE_DB:           /**< 5 DDL must go to the master */
-            case MYSQL_COM_DROP_DB:             /**< 6 DDL must go to the master */
-            case MYSQL_COM_STMT_CLOSE:          /*< free prepared statement */
-            case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-            case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
-                qtype = QUERY_TYPE_WRITE;
-                break;
-
-            case MYSQL_COM_QUERY:
-                qtype = qc_get_type(querybuf);
-                break;
-
-            case MYSQL_COM_STMT_PREPARE:
-                qtype = qc_get_type(querybuf);
-                qtype |= QUERY_TYPE_PREPARE_STMT;
-                break;
-
-            case MYSQL_COM_STMT_EXECUTE:
-                /** Parsing is not needed for this type of packet */
-                qtype = QUERY_TYPE_EXEC_STMT;
-                break;
-
-            case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-            case MYSQL_COM_STATISTICS:     /**< 9 ? */
-            case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
-            case MYSQL_COM_CONNECT:        /**< 0b ? */
-            case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
-            case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
-            case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-            case MYSQL_COM_DAEMON:         /**< 1d ? */
-            default:
-                break;
-        } /**< switch by packet type */
-
-        /** This might not be absolutely necessary as some parts of the code
-         * can only be executed by one thread at a time. */
-        if (!rses_begin_locked_router_action(rses))
-        {
-            succp = false;
-            goto retblock;
-        }
-
-        /** Check for multi-statement queries. If no master server is available
-         * and a multi-statement is issued, an error is returned to the client
-         * when the query is routed.
-         *
-         * If we do not have a master node, assigning the forced node is not
-         * effective since we don't have a node to force queries to. In this
-         * situation, assigning QUERY_TYPE_WRITE for the query will trigger
-         * the error processing. */
-        if (check_for_multi_stmt(rses, querybuf, packet_type) &&
-            rses->rses_master_ref == NULL)
-        {
-            qtype |= QUERY_TYPE_WRITE;
-        }
-
-        /**
-         * Check if the query has anything to do with temporary tables.
-         */
-        if (rses->have_tmp_tables &&
-            (packet_type == MYSQL_COM_QUERY || packet_type == MYSQL_COM_DROP_DB))
-        {
-            check_drop_tmp_table(rses, querybuf, qtype);
-            if (packet_type == MYSQL_COM_QUERY)
-            {
-                qtype = is_read_tmp_table(rses, querybuf, qtype);
-            }
-        }
-        check_create_tmp_table(rses, querybuf, qtype);
-
-        /**
-         * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
-         * to the master until the last, empty packet arrives.
-         */
-        if (rses->rses_load_active)
-        {
-            rses->rses_load_data_sent += gwbuf_length(querybuf);
-        }
-        else if (packet_type == MYSQL_COM_QUERY)
-        {
-            qc_query_op_t queryop = qc_get_operation(querybuf);
-            if (queryop == QUERY_OP_LOAD)
-            {
-                rses->rses_load_active = true;
-                rses->rses_load_data_sent = 0;
-            }
-        }
-
-        rses_end_locked_router_action(rses);
-        /**
-         * If autocommit is disabled or transaction is explicitly started
-         * transaction becomes active and master gets all statements until
-         * transaction is committed and autocommit is enabled again.
-         */
-        if (rses->rses_autocommit_enabled &&
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
-        {
-            rses->rses_autocommit_enabled = false;
-
-            if (!rses->rses_transaction_active)
-            {
-                rses->rses_transaction_active = true;
-            }
-        }
-        else if (!rses->rses_transaction_active &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
-        {
-            rses->rses_transaction_active = true;
-        }
-        /**
-         * Explicit COMMIT and ROLLBACK, implicit COMMIT.
-         */
-        if (rses->rses_autocommit_enabled && rses->rses_transaction_active &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK)))
-        {
-            rses->rses_transaction_active = false;
-        }
-        else if (!rses->rses_autocommit_enabled &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
-        {
-            rses->rses_autocommit_enabled = true;
-            rses->rses_transaction_active = false;
-        }
-
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            if (!rses->rses_load_active)
-            {
-                uint8_t *packet = GWBUF_DATA(querybuf);
-                unsigned char ptype = packet[4];
-                size_t len = MIN(GWBUF_LENGTH(querybuf),
-                                 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
-                char *data = (char *)&packet[5];
-                char *contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
-                char *qtypestr = qc_get_qtype_str(qtype);
-                MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
-                         (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
-                         (rses->rses_transaction_active ? "[open]" : "[not open]"),
-                         STRPACKETTYPE(ptype), (qtypestr == NULL ? "N/A" : qtypestr),
-                         contentstr, (querybuf->hint == NULL ? "" : ", Hint:"),
-                         (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
-                MXS_FREE(contentstr);
-                MXS_FREE(qtypestr);
-            }
-            else
-            {
-                MXS_INFO("> Processing LOAD DATA LOCAL INFILE: %lu bytes sent.",
-                         rses->rses_load_data_sent);
-            }
-        }
-        /**
-         * Find out where to route the query. Result may not be clear; it is
-         * possible to have a hint for routing to a named server which can
-         * be either slave or master.
-         * If query would otherwise be routed to slave then the hint determines
-         * actual target server if it exists.
-         *
-         * route_target is a bitfield and may include :
-         * TARGET_ALL
-         * - route to all connected backend servers
-         * TARGET_SLAVE[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
-         * - route primarily according to hints, then to slave and if those
-         *   failed, eventually to master
-         * TARGET_MASTER[|TARGET_NAMED_SERVER|TARGET_RLAG_MAX]
-         * - route primarily according to the hints and if they failed,
-         *   eventually to master
-         */
-        route_target = get_route_target(rses, qtype, querybuf->hint);
-
-        if (TARGET_IS_ALL(route_target))
-        {
-            /** Multiple, conflicting routing target. Return error */
-            if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
-            {
-                backend_ref_t *bref = rses->rses_backend_ref;
-
-                char *query_str = modutil_get_query(querybuf);
-                char *qtype_str = qc_get_qtype_str(qtype);
-
-                MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
-                          "modification is not supported if configuration parameter "
-                          "use_sql_variables_in=all .", STRPACKETTYPE(packet_type),
-                          qtype_str, (query_str == NULL ? "(empty)" : query_str));
-
-                MXS_INFO("Unable to route the query without losing session data "
-                         "modification from other servers. <");
-
-                while (bref != NULL && !BREF_IS_IN_USE(bref))
-                {
-                    bref++;
-                }
-
-                if (bref != NULL && BREF_IS_IN_USE(bref))
-                {
-                    /** Create and add MySQL error to eventqueue */
-                    modutil_reply_parse_error(bref->bref_dcb,
-                                              MXS_STRDUP_A("Routing query to backend failed. "
-                                                           "See the error log for further "
-                                                           "details."), 0);
-                    succp = true;
-                }
-                else
-                {
-                    /**
-                     * If there were no available backend references
-                     * available return false - session will be closed
-                     */
-                    MXS_ERROR("Sending error message to client "
-                              "failed. Router doesn't have any "
-                              "available backends. Session will be "
-                              "closed.");
-                    succp = false;
-                }
-                if (query_str)
-                {
-                    MXS_FREE(query_str);
-                }
-                if (qtype_str)
-                {
-                    MXS_FREE(qtype_str);
-                }
-                goto retblock;
-            }
-            /**
-             * It is not sure if the session command in question requires
-             * response. Statement is examined in route_session_write.
-             * Router locking is done inside the function.
-             */
-            succp = route_session_write(rses, gwbuf_clone(querybuf), inst,
-                                        packet_type, qtype);
-
-            if (succp)
-            {
-                atomic_add(&inst->stats.n_all, 1);
-            }
-            goto retblock;
-        }
-    }
-    /** Lock router session */
-    if (!rses_begin_locked_router_action(rses))
-    {
-        if (packet_type != MYSQL_COM_QUIT)
-        {
-            char *query_str = modutil_get_query(querybuf);
-
-            MXS_ERROR("Can't route %s:%s:\"%s\" to "
-                      "backend server. Router is closed.",
-                      STRPACKETTYPE(packet_type), STRQTYPE(qtype),
-                      (query_str == NULL ? "(empty)" : query_str));
-            MXS_FREE(query_str);
-        }
-        succp = false;
-        goto retblock;
-    }
-
-    DCB *master_dcb = rses->rses_master_ref ? rses->rses_master_ref->bref_dcb : NULL;
-
-    /**
-     * There is a hint which either names the target backend or
-     * hint which sets maximum allowed replication lag for the
-     * backend.
-     */
-    if (TARGET_IS_NAMED_SERVER(route_target) ||
-        TARGET_IS_RLAG_MAX(route_target))
-    {
-        HINT *hint;
-        char *named_server = NULL;
-
-        hint = querybuf->hint;
-
-        while (hint != NULL)
-        {
-            if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-            {
-                /**
-                 * Set the name of searched
-                 * backend server.
-                 */
-                named_server = hint->data;
-                MXS_INFO("Hint: route to server "
-                         "'%s'",
-                         named_server);
-            }
-            else if (hint->type == HINT_PARAMETER &&
-                     (strncasecmp((char *)hint->data, "max_slave_replication_lag",
-                                  strlen("max_slave_replication_lag")) == 0))
-            {
-                int val = (int)strtol((char *)hint->value, (char **)NULL, 10);
-
-                if (val != 0 || errno == 0)
-                {
-                    /** Set max. acceptable replication lag value for backend srv */
-                    rlag_max = val;
-                    MXS_INFO("Hint: max_slave_replication_lag=%d", rlag_max);
-                }
-            }
-            hint = hint->next;
-        } /*< while */
-
-        if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
-        {
-            rlag_max = rses_get_max_replication_lag(rses);
-        }
-
-        /** target may be master or slave */
-        btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER;
-
-        /**
-         * Search backend server by name or replication lag.
-         * If it fails, then try to find valid slave or master.
-         */
-        succp = get_dcb(&target_dcb, rses, btype, named_server, rlag_max);
-
-        if (!succp)
-        {
-            if (TARGET_IS_NAMED_SERVER(route_target))
-            {
-                MXS_INFO("Was supposed to route to named server "
-                         "%s but couldn't find the server in a "
-                         "suitable state.", named_server);
-            }
-            else if (TARGET_IS_RLAG_MAX(route_target))
-            {
-                MXS_INFO("Was supposed to route to server with "
-                         "replication lag at most %d but couldn't "
-                         "find such a slave.", rlag_max);
-            }
-        }
-    }
-    else if (TARGET_IS_SLAVE(route_target))
-    {
-        btype = BE_SLAVE;
-
-        if (rlag_max == MAX_RLAG_UNDEFINED) /*< no rlag max hint, use config */
-        {
-            rlag_max = rses_get_max_replication_lag(rses);
-        }
-        /**
-         * Search suitable backend server, get DCB in target_dcb
-         */
-        succp = get_dcb(&target_dcb, rses, BE_SLAVE, NULL, rlag_max);
-
-        if (succp)
-        {
-#if defined(SS_EXTRA_DEBUG)
-            MXS_INFO("Found DCB for slave.");
-#endif
-            atomic_add(&inst->stats.n_slave, 1);
-        }
-        else
-        {
-            MXS_INFO("Was supposed to route to slave but finding suitable one failed.");
-        }
-    }
-    else if (TARGET_IS_MASTER(route_target))
-    {
-        DCB *curr_master_dcb = NULL;
-
-        succp = get_dcb(&curr_master_dcb, rses, BE_MASTER, NULL, MAX_RLAG_UNDEFINED);
-
-        if (succp && master_dcb == curr_master_dcb)
-        {
-            atomic_add(&inst->stats.n_master, 1);
-            target_dcb = master_dcb;
-        }
-        else
-        {
-            if (succp && master_dcb != curr_master_dcb)
-            {
-                MXS_INFO("Was supposed to route to master but master has changed.");
-            }
-            else
-            {
-                MXS_INFO("Was supposed to route to master but couldn't find master"
-                         " in a suitable state.");
-            }
-
-            if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
-            {
-                /** Old master is no longer available */
-                succp = send_readonly_error(rses->client_dcb);
-            }
-            else
-            {
-                MXS_WARNING("[%s] Write query received from %s@%s when no master is "
-                            "available, closing client connection.", inst->service->name,
-                            rses->client_dcb->user, rses->client_dcb->remote);
-                succp = false;
-            }
-
-            rses_end_locked_router_action(rses);
-            goto retblock;
-        }
-    }
-
-    if (succp) /*< Have DCB of the target backend */
-    {
-        backend_ref_t *bref;
-        sescmd_cursor_t *scur;
-
-        bref = get_bref_from_dcb(rses, target_dcb);
-        scur = &bref->bref_sescmd_cur;
-
-        ss_dassert(target_dcb != NULL);
-
-        MXS_INFO("Route query to %s \t%s:%d <",
-                 (SERVER_IS_MASTER(bref->bref_backend->backend_server) ? "master"
-                  : "slave"), bref->bref_backend->backend_server->name,
-                 bref->bref_backend->backend_server->port);
-        /**
-         * Store current stmt if execution of previous session command
-         * haven't completed yet.
-         *
-         * !!! Note that according to MySQL protocol
-         * there can only be one such non-sescmd stmt at the time.
-         * It is possible that bref->bref_pending_cmd includes a pending
-         * command if rwsplit is parent or child for another router,
-         * which runs all the same commands.
-         *
-         * If the assertion below traps, pending queries are treated
-         * somehow wrong, or client is sending more queries before
-         * previous is received.
-         */
-        if (sescmd_cursor_is_active(scur))
-        {
-            ss_dassert(bref->bref_pending_cmd == NULL);
-            bref->bref_pending_cmd = gwbuf_clone(querybuf);
-
-            rses_end_locked_router_action(rses);
-            goto retblock;
-        }
-
-        if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
-        {
-            backend_ref_t *bref;
-
-            atomic_add(&inst->stats.n_queries, 1);
-            /**
-             * Add one query response waiter to backend reference
-             */
-            bref = get_bref_from_dcb(rses, target_dcb);
-            bref_set_state(bref, BREF_QUERY_ACTIVE);
-            bref_set_state(bref, BREF_WAITING_RESULT);
-        }
-        else
-        {
-            MXS_ERROR("Routing query failed.");
-            succp = false;
-        }
-    }
-    rses_end_locked_router_action(rses);
-
-retblock :
-#if defined(SS_DEBUG2)
-    {
-        char *canonical_query_str;
-
-        canonical_query_str = skygw_get_canonical(querybuf);
-
-        if (canonical_query_str != NULL)
-        {
-            MXS_INFO("Canonical version: %s", canonical_query_str);
-            MXS_FREE(canonical_query_str);
-        }
-    }
-#endif
-    return succp;
-}
-
-/**
- * @node Acquires lock to router client session if it is not closed.
- *
- * Parameters:
- * @param rses - in, use
- *
- *
- * @return true if router session was not closed. If return value is true
- * it means that router is locked, and must be unlocked later. False, if
- * router was closed before lock was acquired.
- *
- *
- * @details (write detailed description here)
- *
- */
-static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES *rses)
-{
-    bool succp = false;
-
-    if (rses == NULL)
-    {
-        return false;
-    }
-
-    CHK_CLIENT_RSES(rses);
-
-    if (rses->rses_closed)
-    {
-
-        goto return_succp;
-    }
-    spinlock_acquire(&rses->rses_lock);
-    if (rses->rses_closed)
-    {
-        spinlock_release(&rses->rses_lock);
-        goto return_succp;
-    }
-    succp = true;
-
-return_succp:
-    return succp;
-}
-
-/** to be inline'd */
-
-/**
- * @node Releases router client session lock.
- *
- * Parameters:
- * @param rses - <usage>
- *          <description>
- *
- * @return void
- *
- *
- * @details (write detailed description here)
- *
- */
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses)
-{
-    CHK_CLIENT_RSES(rses);
-    spinlock_release(&rses->rses_lock);
-}
-
-/**
- * Diagnostics routine
+ * @brief Diagnostics routine (API)
  *
  * Print query router statistics to the DCB passed in
  *
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static void diagnostic(ROUTER *instance, DCB *dcb)
+static void diagnostics(ROUTER *instance, DCB *dcb)
 {
     ROUTER_CLIENT_SES *router_cli_ses;
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
@@ -2495,7 +849,7 @@ static void diagnostic(ROUTER *instance, DCB *dcb)
 }
 
 /**
- * Client Reply routine
+ * @brief Client Reply routine (API)
  *
  * The routine will reply to client for session change with master server data
  *
@@ -2573,25 +927,8 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
      */
     if (sescmd_cursor_is_active(scur))
     {
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) &&
-            MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
-        {
-            uint8_t *buf = (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
-            uint8_t *replybuf = (uint8_t *)GWBUF_DATA(writebuf);
-            size_t len = MYSQL_GET_PACKET_LEN(buf);
-            size_t replylen = MYSQL_GET_PACKET_LEN(replybuf);
-            char *err = strndup(&((char *)replybuf)[8], 5);
-            char *replystr = strndup(&((char *)replybuf)[13], replylen - 4 - 5);
-
-            ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
-
-            MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port, err, replystr);
-            MXS_FREE(err);
-            MXS_FREE(replystr);
-        }
-
+        check_session_command_reply(writebuf, scur, bref);
+                
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
         {
             /**
@@ -2707,91 +1044,253 @@ lock_failed:
     return;
 }
 
-/** Compare nunmber of connections from this router in backend servers */
-int bref_cmp_router_conn(const void *bref1, const void *bref2)
+/**
+ * @brief Router error handling routine (API)
+ * 
+ * Error Handler routine to resolve _backend_ failures. If it succeeds then
+ * there are enough operative backends available and connected. Otherwise it 
+ * fails, and session is terminated.
+ *
+ * @param       instance        The router instance
+ * @param       router_session  The router session
+ * @param       errmsgbuf       The error message to reply
+ * @param       backend_dcb     The backend DCB
+ * @param       action      The action: ERRACT_NEW_CONNECTION or
+ * ERRACT_REPLY_CLIENT
+ * @param   succp       Result of action: true iff router can continue
+ *
+ * Even if succp == true connecting to new slave may have failed. succp is to
+ * tell whether router has enough master/slave connections to continue work.
+ */
+static void handleError(ROUTER *instance, void *router_session,
+                        GWBUF *errmsgbuf, DCB *problem_dcb,
+                        error_action_t action, bool *succp)
 {
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SESSION *session;
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
+    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
 
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
+    CHK_DCB(problem_dcb);
 
-    return ((1000 + 1000 * b1->backend_conn_count) / b1->weight) -
-           ((1000 + 1000 * b2->backend_conn_count) / b2->weight);
+    /** Don't handle same error twice on same DCB */
+    if (problem_dcb->dcb_errhandle_called)
+    {
+        /** we optimistically assume that previous call succeed */
+        /*
+         * The return of true is potentially misleading, but appears to
+         * be safe with the code as it stands on 9 Sept 2015 - MNB
+         */
+        *succp = true;
+        return;
+    }
+    else
+    {
+        problem_dcb->dcb_errhandle_called = true;
+    }
+    session = problem_dcb->session;
+
+    if (session == NULL || rses == NULL)
+    {
+        *succp = false;
+    }
+    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
+    {
+        *succp = false;
+    }
+    else
+    {
+        CHK_SESSION(session);
+        CHK_CLIENT_RSES(rses);
+
+        switch (action)
+        {
+            case ERRACT_NEW_CONNECTION:
+            {
+                if (!rses_begin_locked_router_action(rses))
+                {
+                    *succp = false;
+                    break;
+                }
+
+                /**
+                 * If master has lost its Master status error can't be
+                 * handled so that session could continue.
+                 */
+                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
+                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
+                {
+                    SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
+                    backend_ref_t *bref;
+                    bref = get_bref_from_dcb(rses, problem_dcb);
+                    if (bref != NULL)
+                    {
+                        CHK_BACKEND_REF(bref);
+                        if (BREF_IS_WAITING_RESULT(bref))
+                        {
+                            bref_clear_state(bref, BREF_WAITING_RESULT);
+                        }
+                        bref_clear_state(bref, BREF_IN_USE);
+                        bref_set_state(bref, BREF_CLOSED);
+                    }
+                    else
+                    {
+                        MXS_ERROR("server %s:%d lost the "
+                                  "master status but could not locate the "
+                                  "corresponding backend ref.",
+                                  srv->name, srv->port);
+                    }
+
+                    if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
+                        (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
+                    {
+                        /** The failure of a master is not considered a critical
+                         * failure as partial functionality still remains. Reads
+                         * are allowed as long as slave servers are available
+                         * and writes will cause an error to be returned.
+                         *
+                         * If we were waiting for a response from the master, we
+                         * can't be sure whether it was executed or not. In this
+                         * case the safest thing to do is to close the client
+                         * connection. */
+                        *succp = true;
+                    }
+                    else
+                    {
+                        if (!srv->master_err_is_logged)
+                        {
+                            MXS_ERROR("server %s:%d lost the "
+                                      "master status. Readwritesplit "
+                                      "service can't locate the master. "
+                                      "Client sessions will be closed.",
+                                      srv->name, srv->port);
+                            srv->master_err_is_logged = true;
+                        }
+                        *succp = false;
+                    }
+                }
+                else
+                {
+                    /**
+                     * This is called in hope of getting replacement for
+                     * failed slave(s).  This call may free rses.
+                     */
+                    *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
+                }
+                /* Free the lock if rses still exists */
+                if (rses)
+                {
+                    rses_end_locked_router_action(rses);
+                }
+                break;
+            }
+
+            case ERRACT_REPLY_CLIENT:
+            {
+                handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
+
+            default:
+                *succp = false;
+                break;
+        }
+    }
+    dcb_close(problem_dcb);
 }
 
-/** Compare nunmber of global connections in backend servers */
-int bref_cmp_global_conn(const void *bref1, const void *bref2)
+/**
+ * @brief Get router capabilities (API)
+ * 
+ * Return a bit map indicating the characteristics of this particular router.
+ * In this case, the only bit set indicates that the router wants to receive
+ * data for routing as whole SQL statements.
+ * 
+ * @return int RCAP_TYPE_STMT_INPUT.
+ */
+static int getCapabilities()
 {
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 + 1000 * b1->backend_server->stats.n_current) / b1->weight) -
-           ((1000 + 1000 * b2->backend_server->stats.n_current) / b2->weight);
+    return RCAP_TYPE_STMT_INPUT;
 }
 
-/** Compare relication lag between backend servers */
-int bref_cmp_behind_master(const void *bref1, const void *bref2)
-{
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+/*
+ * This is the end of the API functions, and the start of functions that are
+ * used by the API functions and also used in other modules of the router
+ * code. Their prototypes are included in rwsplit_internal.h since these
+ * functions are not intended for use outside the read write split router.
+ */
 
-    return ((b1->backend_server->rlag < b2->backend_server->rlag) ? -1
-            : ((b1->backend_server->rlag > b2->backend_server->rlag) ? 1 : 0));
+/**
+ * @brief Acquires lock to router client session if it is not closed.
+ *
+ * Parameters:
+ * @param rses - in, use
+ *
+ *
+ * @return true if router session was not closed. If return value is true
+ * it means that router is locked, and must be unlocked later. False, if
+ * router was closed before lock was acquired.
+ *
+ */
+bool rses_begin_locked_router_action(ROUTER_CLIENT_SES *rses)
+{
+    bool succp = false;
+
+    if (rses == NULL)
+    {
+        return false;
+    }
+
+    CHK_CLIENT_RSES(rses);
+
+    if (rses->rses_closed)
+    {
+
+        goto return_succp;
+    }
+    spinlock_acquire(&rses->rses_lock);
+    if (rses->rses_closed)
+    {
+        spinlock_release(&rses->rses_lock);
+        goto return_succp;
+    }
+    succp = true;
+
+return_succp:
+    return succp;
 }
 
-/** Compare nunmber of current operations in backend servers */
-int bref_cmp_current_load(const void *bref1, const void *bref2)
+/** to be inline'd */
+
+/**
+ * @brief Releases router client session lock.
+ *
+ * Parameters:
+ * @param rses - <usage>
+ *          <description>
+ *
+ * @return void
+ *
+ */
+void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses)
 {
-    SERVER *s1 = ((backend_ref_t *)bref1)->bref_backend->backend_server;
-    SERVER *s2 = ((backend_ref_t *)bref2)->bref_backend->backend_server;
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
-
-    if (b1->weight == 0 && b2->weight == 0)
-    {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
-    }
-    else if (b1->weight == 0)
-    {
-        return 1;
-    }
-    else if (b2->weight == 0)
-    {
-        return -1;
-    }
-
-    return ((1000 * s1->stats.n_current_ops) - b1->weight) -
-           ((1000 * s2->stats.n_current_ops) - b2->weight);
+    CHK_CLIENT_RSES(rses);
+    spinlock_release(&rses->rses_lock);
 }
 
-static void bref_clear_state(backend_ref_t *bref, bref_state_t state)
+/*
+ * @brief Clear one or more bits in the backend reference state
+ * 
+ * The router session holds details of the backend servers that are 
+ * involved in the routing for this particular service. Each backend 
+ * server has a state bit string, and this function (along with 
+ * bref_set_state) is used to manage the state.
+ * 
+ * @param bref The backend reference to be modified
+ * @param state A bit string where the 1 bits indicate bits that should
+ * be turned off in the bref state.
+ */
+void bref_clear_state(backend_ref_t *bref, bref_state_t state)
 {
     if (bref == NULL)
     {
@@ -2828,7 +1327,19 @@ static void bref_clear_state(backend_ref_t *bref, bref_state_t state)
     bref->bref_state &= ~state;
 }
 
-static void bref_set_state(backend_ref_t *bref, bref_state_t state)
+/*
+ * @brief Set one or more bits in the backend reference state
+ * 
+ * The router session holds details of the backend servers that are 
+ * involved in the routing for this particular service. Each backend 
+ * server has a state bit string, and this function (along with 
+ * bref_clear_state) is used to manage the state.
+ * 
+ * @param bref The backend reference to be modified
+ * @param state A bit string where the 1 bits indicate bits that should
+ * be turned on in the bref state.
+ */
+void bref_set_state(backend_ref_t *bref, bref_state_t state)
 {
     if (bref == NULL)
     {
@@ -2867,309 +1378,13 @@ static void bref_set_state(backend_ref_t *bref, bref_state_t state)
 }
 
 /**
- * @brief Connect a server
- *
- * Connects to a server, adds callbacks to the created DCB and updates
- * router statistics. If @p execute_history is true, the session command
- * history will be executed on this server.
- *
- * @param b Router's backend structure for the server
- * @param session Client's session object
- * @param execute_history Execute session command history
- * @return True if successful, false if an error occurred
- */
-bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
-{
-    SERVER *serv = bref->bref_backend->backend_server;
-    bool rval = false;
-
-    bref->bref_dcb = dcb_connect(serv, session, serv->protocol);
-
-    if (bref->bref_dcb != NULL)
-    {
-        if (!execute_history || execute_sescmd_history(bref))
-        {
-            /** Add a callback for unresponsive server */
-            dcb_add_callback(bref->bref_dcb, DCB_REASON_NOT_RESPONDING,
-                             &router_handle_state_switch, (void *) bref);
-            bref->bref_state = 0;
-            bref_set_state(bref, BREF_IN_USE);
-            atomic_add(&bref->bref_backend->backend_conn_count, 1);
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to execute session command in %s (%s:%d). See earlier "
-                      "errors for more details.",
-                      bref->bref_backend->backend_server->unique_name,
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
-            dcb_close(bref->bref_dcb);
-            bref->bref_dcb = NULL;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Unable to establish connection with server %s:%d",
-                  serv->name, serv->port);
-    }
-
-    return rval;
-}
-
-/**
- * @brief Log server connections
- *
- * @param select_criteria Slave selection criteria
- * @param backend_ref Backend reference array
- * @param router_nservers Number of backends in @p backend_ref
- */
-void log_server_connections(select_criteria_t select_criteria,
-                            backend_ref_t *backend_ref, int router_nservers)
-{
-    if (select_criteria == LEAST_GLOBAL_CONNECTIONS ||
-        select_criteria == LEAST_ROUTER_CONNECTIONS ||
-        select_criteria == LEAST_BEHIND_MASTER ||
-        select_criteria == LEAST_CURRENT_OPERATIONS)
-    {
-        MXS_INFO("Servers and %s connection counts:",
-                 select_criteria == LEAST_GLOBAL_CONNECTIONS ? "all MaxScale"
-                 : "router");
-
-        for (int i = 0; i < router_nservers; i++)
-        {
-            BACKEND *b = backend_ref[i].bref_backend;
-
-            switch (select_criteria)
-            {
-                case LEAST_GLOBAL_CONNECTIONS:
-                    MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
-                             b->backend_server->stats.n_current, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
-                    break;
-
-                case LEAST_ROUTER_CONNECTIONS:
-                    MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
-                             b->backend_conn_count, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
-                    break;
-
-                case LEAST_CURRENT_OPERATIONS:
-                    MXS_INFO("current operations : %d in \t%s:%d %s",
-                             b->backend_server->stats.n_current_ops,
-                             b->backend_server->name, b->backend_server->port,
-                             STRSRVSTATUS(b->backend_server));
-                    break;
-
-                case LEAST_BEHIND_MASTER:
-                    MXS_INFO("replication lag : %d in \t%s:%d %s",
-                             b->backend_server->rlag, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
-                default:
-                    break;
-            }
-        }
-    }
-}
-
-/**
- * @brief Search suitable backend servers from those of router instance
- *
- * It is assumed that there is only one master among servers of a router instance.
- * As a result, the first master found is chosen. There will possibly be more
- * backend references than connected backends because only those in correct state
- * are connected to.
- *
- * @param p_master_ref Pointer to location where master's backend reference is to  be stored
- * @param backend_ref Pointer to backend server reference object array
- * @param router_nservers Number of backend server pointers pointed to by @p backend_ref
- * @param max_nslaves Upper limit for the number of slaves
- * @param max_slave_rlag Maximum allowed replication lag for any slave
- * @param select_criteria Slave selection criteria
- * @param session Client session
- * @param router Router instance
- * @return true, if at least one master and one slave was found.
- */
-static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
-                                           backend_ref_t *backend_ref,
-                                           int router_nservers, int max_nslaves,
-                                           int max_slave_rlag,
-                                           select_criteria_t select_criteria,
-                                           SESSION *session,
-                                           ROUTER_INSTANCE *router)
-{
-    if (p_master_ref == NULL || backend_ref == NULL)
-    {
-        MXS_ERROR("Master reference (%p) or backend reference (%p) is NULL.",
-                  p_master_ref, backend_ref);
-        ss_dassert(false);
-        return false;
-    }
-
-    /* get the root Master */
-    BACKEND *master_host = get_root_master(backend_ref, router_nservers);
-
-    if (router->rwsplit_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
-        (master_host == NULL || SERVER_IS_DOWN(master_host->backend_server)))
-    {
-        MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
-        return false;
-    }
-
-    /**
-     * Existing session : master is already chosen and connected.
-     * The function was called because new slave must be selected to replace
-     * failed one.
-     */
-    bool master_connected = *p_master_ref != NULL;
-
-    /** Check slave selection criteria and set compare function */
-    int (*p)(const void *, const void *) = criteria_cmpfun[select_criteria];
-    ss_dassert(p);
-
-    /** Sort the pointer list to servers according to slave selection criteria.
-     * The servers that match the criteria the best are at the beginning of
-     * the list. */
-    qsort(backend_ref, (size_t) router_nservers, sizeof(backend_ref_t), p);
-
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-    {
-        log_server_connections(select_criteria, backend_ref, router_nservers);
-    }
-
-    int slaves_found = 0;
-    int slaves_connected = 0;
-    const int min_nslaves = 0; /*< not configurable at the time */
-    bool succp = false;
-
-    /**
-     * Choose at least 1+min_nslaves (master and slave) and at most 1+max_nslaves
-     * servers from the sorted list. First master found is selected.
-     */
-    for (int i = 0; i < router_nservers &&
-         (slaves_connected < max_nslaves || !master_connected); i++)
-    {
-        SERVER *serv = backend_ref[i].bref_backend->backend_server;
-
-        if (!BREF_HAS_FAILED(&backend_ref[i]) && SERVER_IS_RUNNING(serv))
-        {
-            /* check also for relay servers and don't take the master_host */
-            if (slaves_found < max_nslaves &&
-                (max_slave_rlag == MAX_RLAG_UNDEFINED ||
-                 (serv->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                  serv->rlag <= max_slave_rlag)) &&
-                (SERVER_IS_SLAVE(serv) || SERVER_IS_RELAY_SERVER(serv)) &&
-                (master_host == NULL || (serv != master_host->backend_server)))
-            {
-                slaves_found += 1;
-
-                if (BREF_IS_IN_USE((&backend_ref[i])) ||
-                    connect_server(&backend_ref[i], session, true))
-                {
-                    slaves_connected += 1;
-                }
-            }
-                /* take the master_host for master */
-            else if (master_host && (serv == master_host->backend_server))
-            {
-                /** p_master_ref must be assigned with this backend_ref pointer
-                 * because its original value may have been lost when backend
-                 * references were sorted with qsort. */
-                *p_master_ref = &backend_ref[i];
-
-                if (!master_connected)
-                {
-                    if (connect_server(&backend_ref[i], session, false))
-                    {
-                        master_connected = true;
-                    }
-                }
-            }
-        }
-    } /*< for */
-
-    /**
-     * Successful cases
-     */
-    if (slaves_connected >= min_nslaves && slaves_connected <= max_nslaves)
-    {
-        succp = true;
-
-        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            if (slaves_connected < max_nslaves)
-            {
-                MXS_INFO("Couldn't connect to maximum number of "
-                         "slaves. Connected successfully to %d slaves "
-                         "of %d of them.", slaves_connected, slaves_found);
-            }
-
-            for (int i = 0; i < router_nservers; i++)
-            {
-                if (BREF_IS_IN_USE((&backend_ref[i])))
-                {
-                    MXS_INFO("Selected %s in \t%s:%d",
-                             STRSRVSTATUS(backend_ref[i].bref_backend->backend_server),
-                             backend_ref[i].bref_backend->backend_server->name,
-                             backend_ref[i].bref_backend->backend_server->port);
-                }
-            } /* for */
-        }
-    }
-        /** Failure cases */
-    else
-    {
-        if (slaves_connected < min_nslaves)
-        {
-            MXS_ERROR("Couldn't establish required amount of "
-                      "slave connections for router session.");
-        }
-
-        /** Clean up connections */
-        for (int i = 0; i < router_nservers; i++)
-        {
-            if (BREF_IS_IN_USE((&backend_ref[i])))
-            {
-                ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
-
-                /** disconnect opened connections */
-                bref_clear_state(&backend_ref[i], BREF_IN_USE);
-                /** Decrease backend's connection counter. */
-                atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
-                dcb_close(backend_ref[i].bref_dcb);
-            }
-        }
-    }
-
-    return succp;
-}
-
-/**
- * Create a generic router session property strcture.
- */
-static rses_property_t *rses_property_init(rses_property_type_t prop_type)
-{
-    rses_property_t *prop;
-
-    prop = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t));
-    if (prop == NULL)
-    {
-        return NULL;
-    }
-    prop->rses_prop_type = prop_type;
-#if defined(SS_DEBUG)
-    prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-    prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-
-    CHK_RSES_PROP(prop);
-    return prop;
-}
-
-/**
+ * @brief Free resources belonging to a property
+ * 
  * Property is freed at the end of router client session.
+ * 
+ * @param prop The property whose resources are to be released
  */
-static void rses_property_done(rses_property_t *prop)
+void rses_property_done(rses_property_t *prop)
 {
     if (prop == NULL)
     {
@@ -3199,930 +1414,158 @@ static void rses_property_done(rses_property_t *prop)
 }
 
 /**
- * Add property to the router_client_ses structure's rses_properties
- * array. The slot is determined by the type of property.
- * In each slot there is a list of properties of similar type.
- *
- * Router client session must be locked.
+ * @brief Get count of backend servers that are slaves.
+ * 
+ * Find out the number of read backend servers.
+ * Depending on the configuration value type, either copy direct count
+ * of slave connections or calculate the count from percentage value.
+ * 
+ * @param   rses Router client session
+ * @param   router_nservers The number of backend servers in total
  */
-static int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop)
+int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
+                                   int router_nservers)
 {
-    if (rses == NULL)
-    {
-        MXS_ERROR("Router client session is NULL. (%s:%d)", __FILE__, __LINE__);
-        return -1;
-    }
-    if (prop == NULL)
-    {
-        MXS_ERROR("Router client session property is NULL. (%s:%d)", __FILE__, __LINE__);
-        return -1;
-    }
-    rses_property_t *p;
+    int conf_max_nslaves;
+    int max_nslaves;
 
     CHK_CLIENT_RSES(rses);
-    CHK_RSES_PROP(prop);
-    ss_dassert(SPINLOCK_IS_LOCKED(&rses->rses_lock));
 
-    prop->rses_prop_rsession = rses;
-    p = rses->rses_properties[prop->rses_prop_type];
-
-    if (p == NULL)
+    if (rses->rses_config.rw_max_slave_conn_count > 0)
     {
-        rses->rses_properties[prop->rses_prop_type] = prop;
+        conf_max_nslaves = rses->rses_config.rw_max_slave_conn_count;
     }
     else
     {
-        while (p->rses_prop_next != NULL)
-        {
-            p = p->rses_prop_next;
-        }
-        p->rses_prop_next = prop;
+        conf_max_nslaves = (router_nservers * rses->rses_config.rw_max_slave_conn_percent) / 100;
     }
-    return 0;
+    max_nslaves = MIN(router_nservers - 1, MAX(1, conf_max_nslaves));
+
+    return max_nslaves;
 }
 
-/**
- * Router session must be locked.
- * Return session command pointer if succeed, NULL if failed.
+/*
+ * @brief Get the maximum replication lag for this router
+ * 
+ * @param   rses    Router client session
+ * @return  Replication lag from configuration or very large number
  */
-static mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop)
+int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
 {
-    mysql_sescmd_t *sescmd;
+    int conf_max_rlag;
 
-    if (prop == NULL)
+    CHK_CLIENT_RSES(rses);
+
+    /** if there is no configured value, then longest possible int is used */
+    if (rses->rses_config.rw_max_slave_replication_lag > 0)
     {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return NULL;
-    }
-
-    CHK_RSES_PROP(prop);
-    ss_dassert(prop->rses_prop_rsession == NULL ||
-               SPINLOCK_IS_LOCKED(&prop->rses_prop_rsession->rses_lock));
-
-    sescmd = &prop->rses_prop_data.sescmd;
-
-    if (sescmd != NULL)
-    {
-        CHK_MYSQL_SESCMD(sescmd);
-    }
-    return sescmd;
-}
-
-/**
- * Create session command property.
- */
-static mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
-                                         GWBUF *sescmd_buf,
-                                         unsigned char packet_type,
-                                         ROUTER_CLIENT_SES *rses)
-{
-    mysql_sescmd_t *sescmd;
-
-    CHK_RSES_PROP(rses_prop);
-    /** Can't call rses_property_get_sescmd with uninitialized sescmd */
-    sescmd = &rses_prop->rses_prop_data.sescmd;
-    sescmd->my_sescmd_prop = rses_prop; /*< reference to owning property */
-#if defined(SS_DEBUG)
-    sescmd->my_sescmd_chk_top = CHK_NUM_MY_SESCMD;
-    sescmd->my_sescmd_chk_tail = CHK_NUM_MY_SESCMD;
-#endif
-    /** Set session command buffer */
-    sescmd->my_sescmd_buf = sescmd_buf;
-    sescmd->my_sescmd_packet_type = packet_type;
-    sescmd->position = atomic_add(&rses->pos_generator, 1);
-
-    return sescmd;
-}
-
-static void mysql_sescmd_done(mysql_sescmd_t *sescmd)
-{
-    if (sescmd == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return;
-    }
-    CHK_RSES_PROP(sescmd->my_sescmd_prop);
-    gwbuf_free(sescmd->my_sescmd_buf);
-    memset(sescmd, 0, sizeof(mysql_sescmd_t));
-}
-
-/**
- * All cases where backend message starts at least with one response to session
- * command are handled here.
- * Read session commands from property list. If command is already replied,
- * discard packet. Else send reply to client. In both cases move cursor forward
- * until all session command replies are handled.
- *
- * Cases that are expected to happen and which are handled:
- * s = response not yet replied to client, S = already replied response,
- * q = query
- * 1. q+        for example : select * from mysql.user
- * 2. s+        for example : set autocommit=1
- * 3. S+
- * 4. sq+
- * 5. Sq+
- * 6. Ss+
- * 7. Ss+q+
- * 8. S+q+
- * 9. s+q+
- */
-static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
-                                            backend_ref_t *bref,
-                                            bool *reconnect)
-{
-    mysql_sescmd_t *scmd;
-    sescmd_cursor_t *scur;
-    ROUTER_CLIENT_SES *ses;
-
-    scur = &bref->bref_sescmd_cur;
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
-    scmd = sescmd_cursor_get_command(scur);
-    ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
-    CHK_GWBUF(replybuf);
-
-    /**
-     * Walk through packets in the message and the list of session
-     * commands.
-     */
-    while (scmd != NULL && replybuf != NULL)
-    {
-        bref->reply_cmd = *((unsigned char *)replybuf->start + 4);
-        scur->position = scmd->position;
-        /** Faster backend has already responded to client : discard */
-        if (scmd->my_sescmd_is_replied)
-        {
-            bool last_packet = false;
-
-            CHK_GWBUF(replybuf);
-
-            while (!last_packet)
-            {
-                int buflen;
-
-                buflen = GWBUF_LENGTH(replybuf);
-                last_packet = GWBUF_IS_TYPE_RESPONSE_END(replybuf);
-                /** discard packet */
-                replybuf = gwbuf_consume(replybuf, buflen);
-            }
-            /** Set response status received */
-            bref_clear_state(bref, BREF_WAITING_RESULT);
-
-            if (bref->reply_cmd != scmd->reply_cmd)
-            {
-                MXS_ERROR("Slave server '%s': response differs from master's response. "
-                          "Closing connection due to inconsistent session state.",
-                          bref->bref_backend->backend_server->unique_name);
-                sescmd_cursor_set_active(scur, false);
-                bref_clear_state(bref, BREF_QUERY_ACTIVE);
-                bref_clear_state(bref, BREF_IN_USE);
-                bref_set_state(bref, BREF_CLOSED);
-                bref_set_state(bref, BREF_SESCMD_FAILED);
-                if (bref->bref_dcb)
-                {
-                    dcb_close(bref->bref_dcb);
-                }
-                *reconnect = true;
-                gwbuf_free(replybuf);
-                replybuf = NULL;
-            }
-        }
-        /** This is a response from the master and it is the "right" one.
-         * A slave server's response will be compared to this and if
-         * their response differs from the master server's response, they
-         * are dropped from the valid list of backend servers.
-         * Response is in the buffer and it will be sent to client.
-         *
-         * If we have no master server, the first slave's response is considered
-         * the "right" one. */
-        else if (ses->rses_master_ref == NULL ||
-                 !BREF_IS_IN_USE(ses->rses_master_ref) ||
-                 ses->rses_master_ref->bref_dcb == bref->bref_dcb)
-        {
-            /** Mark the rest session commands as replied */
-            scmd->my_sescmd_is_replied = true;
-            scmd->reply_cmd = *((unsigned char *)replybuf->start + 4);
-
-            MXS_INFO("Server '%s' responded to a session command, sending the response "
-                     "to the client.", bref->bref_backend->backend_server->unique_name);
-
-            for (int i = 0; i < ses->rses_nbackends; i++)
-            {
-                if (!BREF_IS_WAITING_RESULT(&ses->rses_backend_ref[i]))
-                {
-                    /** This backend has already received a response */
-                    if (ses->rses_backend_ref[i].reply_cmd != scmd->reply_cmd &&
-                        !BREF_IS_CLOSED(&ses->rses_backend_ref[i]) &&
-                        BREF_IS_IN_USE(&ses->rses_backend_ref[i]))
-                    {
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_QUERY_ACTIVE);
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_IN_USE);
-                        bref_set_state(&ses->rses_backend_ref[i], BREF_CLOSED);
-                        bref_set_state(bref, BREF_SESCMD_FAILED);
-                        if (ses->rses_backend_ref[i].bref_dcb)
-                        {
-                            dcb_close(ses->rses_backend_ref[i].bref_dcb);
-                        }
-                        *reconnect = true;
-                        MXS_INFO("Disabling slave %s:%d, result differs from "
-                                 "master's result. Master: %d Slave: %d",
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->name,
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->port,
-                                 bref->reply_cmd, ses->rses_backend_ref[i].reply_cmd);
-                    }
-                }
-            }
-
-        }
-        else
-        {
-            MXS_INFO("Slave '%s' responded before master to a session command. Result: %d",
-                     bref->bref_backend->backend_server->unique_name,
-                     (int)bref->reply_cmd);
-            if (bref->reply_cmd == 0xff)
-            {
-                SERVER *serv = bref->bref_backend->backend_server;
-                MXS_ERROR("Slave '%s' (%s:%u) failed to execute session command.",
-                          serv->unique_name, serv->name, serv->port);
-            }
-
-            gwbuf_free(replybuf);
-            replybuf = NULL;
-        }
-
-        if (sescmd_cursor_next(scur))
-        {
-            scmd = sescmd_cursor_get_command(scur);
-        }
-        else
-        {
-            scmd = NULL;
-            /** All session commands are replied */
-            scur->scmd_cur_active = false;
-        }
-    }
-    ss_dassert(replybuf == NULL || *scur->scmd_cur_ptr_property == NULL);
-
-    return replybuf;
-}
-
-/**
- * Get the address of current session command.
- *
- * Router session must be locked */
-static mysql_sescmd_t *sescmd_cursor_get_command(sescmd_cursor_t *scur)
-{
-    mysql_sescmd_t *scmd;
-
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
-    scur->scmd_cur_cmd = rses_property_get_sescmd(*scur->scmd_cur_ptr_property);
-
-    CHK_MYSQL_SESCMD(scur->scmd_cur_cmd);
-
-    scmd = scur->scmd_cur_cmd;
-
-    return scmd;
-}
-
-/** router must be locked */
-static bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
-{
-    bool succp;
-
-    if (sescmd_cursor == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
-
-    succp = sescmd_cursor->scmd_cur_active;
-    return succp;
-}
-
-/** router must be locked */
-static void sescmd_cursor_set_active(sescmd_cursor_t *sescmd_cursor,
-                                     bool value)
-{
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
-    /** avoid calling unnecessarily */
-    ss_dassert(sescmd_cursor->scmd_cur_active != value);
-    sescmd_cursor->scmd_cur_active = value;
-}
-
-/**
- * Clone session command's command buffer.
- * Router session must be locked
- */
-static GWBUF *sescmd_cursor_clone_querybuf(sescmd_cursor_t *scur)
-{
-    GWBUF *buf;
-    if (scur == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return NULL;
-    }
-    ss_dassert(scur->scmd_cur_cmd != NULL);
-
-    buf = gwbuf_clone_all(scur->scmd_cur_cmd->my_sescmd_buf);
-
-    CHK_GWBUF(buf);
-    return buf;
-}
-
-static bool sescmd_cursor_history_empty(sescmd_cursor_t *scur)
-{
-    bool succp;
-
-    if (scur == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return true;
-    }
-    CHK_SESCMD_CUR(scur);
-
-    if (scur->scmd_cur_rses->rses_properties[RSES_PROP_TYPE_SESCMD] == NULL)
-    {
-        succp = true;
+        conf_max_rlag = rses->rses_config.rw_max_slave_replication_lag;
     }
     else
     {
-        succp = false;
+        conf_max_rlag = ~(1 << 31);
     }
 
-    return succp;
+    return conf_max_rlag;
 }
 
-static void sescmd_cursor_reset(sescmd_cursor_t *scur)
+/**
+ * @brief Find a back end reference that matches the given DCB
+ * 
+ * Finds out if there is a backend reference pointing at the DCB given as
+ * parameter.
+ * 
+ * @param rses  router client session
+ * @param dcb   DCB
+ *
+ * @return backend reference pointer if succeed or NULL
+ */
+backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 {
-    ROUTER_CLIENT_SES *rses;
-    if (scur == NULL)
+    backend_ref_t *bref;
+    int i = 0;
+    CHK_DCB(dcb);
+    CHK_CLIENT_RSES(rses);
+
+    bref = rses->rses_backend_ref;
+
+    while (i < rses->rses_nbackends)
     {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return;
+        if (bref->bref_dcb == dcb)
+        {
+            break;
+        }
+        bref++;
+        i += 1;
     }
-    CHK_SESCMD_CUR(scur);
-    CHK_CLIENT_RSES(scur->scmd_cur_rses);
-    rses = scur->scmd_cur_rses;
 
-    scur->scmd_cur_ptr_property = &rses->rses_properties[RSES_PROP_TYPE_SESCMD];
-
-    CHK_RSES_PROP((*scur->scmd_cur_ptr_property));
-    scur->scmd_cur_active = false;
-    scur->scmd_cur_cmd = &(*scur->scmd_cur_ptr_property)->rses_prop_data.sescmd;
+    if (i == rses->rses_nbackends)
+    {
+        bref = NULL;
+    }
+    return bref;
 }
 
-static bool execute_sescmd_history(backend_ref_t *bref)
+/**
+ * @brief Call hang up function
+ * 
+ * Calls hang-up function for DCB if it is not both running and in
+ * master/slave/joined/ndb role. Called by DCB's callback routine.
+ */
+int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
 {
-    bool succp = true;
-    sescmd_cursor_t *scur;
-    if (bref == NULL)
+    backend_ref_t *bref;
+    int rc = 1;
+    SERVER *srv;
+    CHK_DCB(dcb);
+
+    if (NULL == dcb->session->router_session)
     {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
     }
+    bref = (backend_ref_t *)data;
     CHK_BACKEND_REF(bref);
 
-    scur = &bref->bref_sescmd_cur;
-    CHK_SESCMD_CUR(scur);
+    srv = bref->bref_backend->backend_server;
 
-    if (!sescmd_cursor_history_empty(scur))
+    if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
     {
-        sescmd_cursor_reset(scur);
-        succp = execute_sescmd_in_backend(bref);
+        goto return_rc;
     }
 
-    return succp;
-}
-
-/**
- * If session command cursor is passive, sends the command to backend for
- * execution.
- *
- * Returns true if command was sent or added successfully to the queue.
- * Returns false if command sending failed or if there are no pending session
- *  commands.
- *
- * Router session must be locked.
- */
-static bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
-{
-    DCB *dcb;
-    bool succp;
-    int rc = 0;
-    sescmd_cursor_t *scur;
-    GWBUF *buf;
-    if (backend_ref == NULL)
+    MXS_DEBUG("%lu [router_handle_state_switch] %s %s:%d in state %s",
+              pthread_self(), STRDCBREASON(reason), srv->name, srv->port,
+              STRSRVSTATUS(srv));
+    CHK_SESSION(((SESSION *)dcb->session));
+    if (dcb->session->router_session)
     {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
-    if (BREF_IS_CLOSED(backend_ref))
-    {
-        succp = false;
-        goto return_succp;
-    }
-    dcb = backend_ref->bref_dcb;
-
-    CHK_DCB(dcb);
-    CHK_BACKEND_REF(backend_ref);
-
-    /**
-     * Get cursor pointer and copy of command buffer to cursor.
-     */
-    scur = &backend_ref->bref_sescmd_cur;
-
-    /** Return if there are no pending ses commands */
-    if (sescmd_cursor_get_command(scur) == NULL)
-    {
-        succp = true;
-        MXS_INFO("Cursor had no pending session commands.");
-
-        goto return_succp;
+        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
     }
 
-    if (!sescmd_cursor_is_active(scur))
+    switch (reason)
     {
-        /** Cursor is left active when function returns. */
-        sescmd_cursor_set_active(scur, true);
-    }
-
-    switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
-    {
-        case MYSQL_COM_CHANGE_USER:
-            /** This makes it possible to handle replies correctly */
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            buf = sescmd_cursor_clone_querybuf(scur);
-            rc = dcb->func.auth(dcb, NULL, dcb->session, buf);
+        case DCB_REASON_NOT_RESPONDING:
+            dcb->func.hangup(dcb);
             break;
 
-        case MYSQL_COM_INIT_DB:
-        {
-            /**
-             * Record database name and store to session.
-             */
-            GWBUF *tmpbuf;
-            MYSQL_session *data;
-            unsigned int qlen;
-
-            data = dcb->session->client_dcb->data;
-            *data->db = 0;
-            tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-            qlen = MYSQL_GET_PACKET_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
-            if (qlen)
-            {
-                --qlen; // The COM_INIT_DB byte
-                if (qlen > MYSQL_DATABASE_MAXLEN)
-                {
-                    MXS_ERROR("Too long a database name received in COM_INIT_DB, "
-                              "trailing data will be cut.");
-                    qlen = MYSQL_DATABASE_MAXLEN;
-                }
-
-                memcpy(data->db, (char*)GWBUF_DATA(tmpbuf) + 5, qlen);
-                data->db[qlen] = 0;
-            }
-        }
-        /** Fallthrough */
-        case MYSQL_COM_QUERY:
         default:
-            /**
-             * Mark session command buffer, it triggers writing
-             * MySQL command to protocol
-             */
-
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            buf = sescmd_cursor_clone_querybuf(scur);
-            rc = dcb->func.write(dcb, buf);
             break;
     }
 
-    if (rc == 1)
-    {
-        succp = true;
-    }
-    else
-    {
-        succp = false;
-    }
-return_succp:
-    return succp;
+return_rc:
+    return rc;
 }
 
-/**
- * Moves cursor to next property and copied address of its sescmd to cursor.
- * Current propery must be non-null.
- * If current property is the last on the list, *scur->scmd_ptr_property == NULL
- *
- * Router session must be locked
+/*
+ * The end of the functions used here and elsewhere in the router; start of
+ * functions that are purely internal to this module, i.e. are called directly
+ * or indirectly by the API functions and not used elsewhere.
  */
-static bool sescmd_cursor_next(sescmd_cursor_t *scur)
-{
-    bool succp = false;
-    rses_property_t *prop_curr;
-    rses_property_t *prop_next;
-
-    if (scur == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
-
-    ss_dassert(scur != NULL);
-    ss_dassert(*(scur->scmd_cur_ptr_property) != NULL);
-    ss_dassert(SPINLOCK_IS_LOCKED(
-                   &(*(scur->scmd_cur_ptr_property))->rses_prop_rsession->rses_lock));
-
-    /** Illegal situation */
-    if (scur == NULL || *scur->scmd_cur_ptr_property == NULL ||
-        scur->scmd_cur_cmd == NULL)
-    {
-        /** Log error */
-        goto return_succp;
-    }
-    prop_curr = *(scur->scmd_cur_ptr_property);
-
-    CHK_MYSQL_SESCMD(scur->scmd_cur_cmd);
-    ss_dassert(prop_curr == mysql_sescmd_get_property(scur->scmd_cur_cmd));
-    CHK_RSES_PROP(prop_curr);
-
-    /** Copy address of pointer to next property */
-    scur->scmd_cur_ptr_property = &(prop_curr->rses_prop_next);
-    prop_next = *scur->scmd_cur_ptr_property;
-    ss_dassert(prop_next == *(scur->scmd_cur_ptr_property));
-
-    /** If there is a next property move forward */
-    if (prop_next != NULL)
-    {
-        CHK_RSES_PROP(prop_next);
-        CHK_RSES_PROP((*(scur->scmd_cur_ptr_property)));
-
-        /** Get pointer to next property's sescmd */
-        scur->scmd_cur_cmd = rses_property_get_sescmd(prop_next);
-
-        ss_dassert(prop_next == scur->scmd_cur_cmd->my_sescmd_prop);
-        CHK_MYSQL_SESCMD(scur->scmd_cur_cmd);
-        CHK_RSES_PROP(scur->scmd_cur_cmd->my_sescmd_prop);
-    }
-    else
-    {
-        /** No more properties, can't proceed. */
-        goto return_succp;
-    }
-
-    if (scur->scmd_cur_cmd != NULL)
-    {
-        succp = true;
-    }
-    else
-    {
-        ss_dassert(false); /*< Log error, sescmd shouldn't be NULL */
-    }
-return_succp:
-    return succp;
-}
-
-static rses_property_t *mysql_sescmd_get_property(mysql_sescmd_t *scmd)
-{
-    CHK_MYSQL_SESCMD(scmd);
-    return scmd->my_sescmd_prop;
-}
-
-static void tracelog_routed_query(ROUTER_CLIENT_SES *rses, char *funcname,
-                                  backend_ref_t *bref, GWBUF *buf)
-{
-    uint8_t *packet = GWBUF_DATA(buf);
-    unsigned char packet_type = packet[4];
-    size_t len;
-    size_t buflen = GWBUF_LENGTH(buf);
-    char *querystr;
-    char *startpos = (char *)&packet[5];
-    BACKEND *b;
-    backend_type_t be_type;
-    DCB *dcb;
-
-    CHK_BACKEND_REF(bref);
-    b = bref->bref_backend;
-    CHK_BACKEND(b);
-    dcb = bref->bref_dcb;
-    CHK_DCB(dcb);
-
-    be_type = BACKEND_TYPE(b);
-
-    if (GWBUF_IS_TYPE_MYSQL(buf))
-    {
-        len = packet[0];
-        len += 256 * packet[1];
-        len += 256 * 256 * packet[2];
-
-        if (packet_type == '\x03')
-        {
-            querystr = (char *)MXS_MALLOC(len);
-            MXS_ABORT_IF_NULL(querystr);
-            memcpy(querystr, startpos, len - 1);
-            querystr[len - 1] = '\0';
-            MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
-                      pthread_self(), funcname, (int)buflen, querystr,
-                      b->backend_server->name, b->backend_server->port,
-                      STRBETYPE(be_type), dcb);
-            MXS_FREE(querystr);
-        }
-        else if (packet_type == '\x22' || packet_type == 0x22 ||
-                 packet_type == '\x26' || packet_type == 0x26 || true)
-        {
-            querystr = (char *)MXS_MALLOC(len);
-            MXS_ABORT_IF_NULL(querystr);
-            memcpy(querystr, startpos, len - 1);
-            querystr[len - 1] = '\0';
-            MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
-                      pthread_self(), funcname, (int)buflen, querystr,
-                      b->backend_server->name, b->backend_server->port,
-                      STRBETYPE(be_type), dcb);
-            MXS_FREE(querystr);
-        }
-    }
-    gwbuf_free(buf);
-}
-
-/**
- * Return RCAP_TYPE_STMT_INPUT.
- */
-static int getCapabilities()
-{
-    return RCAP_TYPE_STMT_INPUT;
-}
-
-/**
- * Execute in backends used by current router session.
- * Save session variable commands to router session property
- * struct. Thus, they can be replayed in backends which are
- * started and joined later.
- *
- * Suppress redundant OK packets sent by backends.
- *
- * The first OK packet is replied to the client.
- *
- * @param router_cli_ses    Client's router session pointer
- * @param querybuf      GWBUF including the query to be routed
- * @param inst          Router instance
- * @param packet_type       Type of MySQL packet
- * @param qtype         Query type from query_classifier
- *
- * @return True if at least one backend is used and routing succeed to all
- * backends being used, otherwise false.
- *
- */
-static bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
-                                GWBUF *querybuf, ROUTER_INSTANCE *inst,
-                                unsigned char packet_type,
-                                qc_query_type_t qtype)
-{
-    bool succp;
-    rses_property_t *prop;
-    backend_ref_t *backend_ref;
-    int i;
-    int max_nslaves;
-    int nbackends;
-    int nsucc;
-
-    MXS_INFO("Session write, routing to all servers.");
-    /** Maximum number of slaves in this router client session */
-    max_nslaves =
-        rses_get_max_slavecount(router_cli_ses, router_cli_ses->rses_nbackends);
-    nsucc = 0;
-    nbackends = 0;
-    backend_ref = router_cli_ses->rses_backend_ref;
-
-    /**
-     * These are one-way messages and server doesn't respond to them.
-     * Therefore reply processing is unnecessary and session
-     * command property is not needed. It is just routed to all available
-     * backends.
-     */
-    if (packet_type == MYSQL_COM_STMT_SEND_LONG_DATA ||
-        packet_type == MYSQL_COM_QUIT || packet_type == MYSQL_COM_STMT_CLOSE)
-    {
-        int rc;
-
-        /** Lock router session */
-        if (!rses_begin_locked_router_action(router_cli_ses))
-        {
-            goto return_succp;
-        }
-
-        for (i = 0; i < router_cli_ses->rses_nbackends; i++)
-        {
-            DCB *dcb = backend_ref[i].bref_dcb;
-
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
-                BREF_IS_IN_USE((&backend_ref[i])))
-            {
-                MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
-                          ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
-                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
-            }
-
-            if (BREF_IS_IN_USE((&backend_ref[i])))
-            {
-                nbackends += 1;
-                if ((rc = dcb->func.write(dcb, gwbuf_clone(querybuf))) == 1)
-                {
-                    nsucc += 1;
-                }
-            }
-        }
-        rses_end_locked_router_action(router_cli_ses);
-        gwbuf_free(querybuf);
-        goto return_succp;
-    }
-    /** Lock router session */
-    if (!rses_begin_locked_router_action(router_cli_ses))
-    {
-        goto return_succp;
-    }
-
-    if (router_cli_ses->rses_nbackends <= 0)
-    {
-        MXS_INFO("Router session doesn't have any backends in use. Routing failed. <");
-        goto return_succp;
-    }
-
-    if (router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
-        router_cli_ses->rses_nsescmd >=
-        router_cli_ses->rses_config.rw_max_sescmd_history_size)
-    {
-        MXS_WARNING("Router session exceeded session command history limit. "
-                    "Slave recovery is disabled and only slave servers with "
-                    "consistent session state are used "
-                    "for the duration of the session.");
-        router_cli_ses->rses_config.rw_disable_sescmd_hist = true;
-        router_cli_ses->rses_config.rw_max_sescmd_history_size = 0;
-    }
-
-    if (router_cli_ses->rses_config.rw_disable_sescmd_hist)
-    {
-        rses_property_t *prop, *tmp;
-        backend_ref_t *bref;
-        bool conflict;
-
-        prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        while (prop)
-        {
-            conflict = false;
-
-            for (i = 0; i < router_cli_ses->rses_nbackends; i++)
-            {
-                bref = &backend_ref[i];
-                if (BREF_IS_IN_USE(bref))
-                {
-
-                    if (bref->bref_sescmd_cur.position <=
-                        prop->rses_prop_data.sescmd.position + 1)
-                    {
-                        conflict = true;
-                        break;
-                    }
-                }
-            }
-
-            if (conflict)
-            {
-                break;
-            }
-
-            tmp = prop;
-            router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD] = prop->rses_prop_next;
-            rses_property_done(tmp);
-            prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        }
-    }
-
-    /**
-     * Additional reference is created to querybuf to
-     * prevent it from being released before properties
-     * are cleaned up as a part of router sessionclean-up.
-     */
-    if ((prop = rses_property_init(RSES_PROP_TYPE_SESCMD)) == NULL)
-    {
-        MXS_ERROR("Router session property initialization failed");
-        rses_end_locked_router_action(router_cli_ses);
-        return false;
-    }
-
-    mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
-
-    /** Add sescmd property to router client session */
-    if (rses_property_add(router_cli_ses, prop) != 0)
-    {
-        MXS_ERROR("Session property addition failed.");
-        rses_end_locked_router_action(router_cli_ses);
-        return false;
-    }
-
-    for (i = 0; i < router_cli_ses->rses_nbackends; i++)
-    {
-        if (BREF_IS_IN_USE((&backend_ref[i])))
-        {
-            sescmd_cursor_t *scur;
-
-            nbackends += 1;
-
-            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-            {
-                MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
-                          ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
-                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
-            }
-
-            scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);
-
-            /**
-             * Add one waiter to backend reference.
-             */
-            bref_set_state(get_bref_from_dcb(router_cli_ses, backend_ref[i].bref_dcb),
-                           BREF_WAITING_RESULT);
-            /**
-             * Start execution if cursor is not already executing.
-             * Otherwise, cursor will execute pending commands
-             * when it completes with previous commands.
-             */
-            if (sescmd_cursor_is_active(scur))
-            {
-                nsucc += 1;
-                MXS_INFO("Backend %s:%d already executing sescmd.",
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port);
-            }
-            else
-            {
-                if (execute_sescmd_in_backend(&backend_ref[i]))
-                {
-                    nsucc += 1;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to execute session command in %s:%d",
-                              backend_ref[i].bref_backend->backend_server->name,
-                              backend_ref[i].bref_backend->backend_server->port);
-                }
-            }
-        }
-    }
-
-    atomic_add(&router_cli_ses->rses_nsescmd, 1);
-
-    /** Unlock router session */
-    rses_end_locked_router_action(router_cli_ses);
-
-return_succp:
-    /**
-     * Routing must succeed to all backends that are used.
-     * There must be at leas one and at most max_nslaves+1 backends.
-     */
-    succp = (nbackends > 0 && nsucc == nbackends && nbackends <= max_nslaves + 1);
-    return succp;
-}
-
-#if defined(NOT_USED)
-
-static bool router_option_configured(ROUTER_INSTANCE *router,
-                                     const char *optionstr, void *data)
-{
-    bool succp = false;
-    char **option;
-
-    option = router->service->routerOptions;
-
-    while (option != NULL)
-    {
-        char *value;
-
-        if ((value = strchr(options[i], '=')) == NULL)
-        {
-            break;
-        }
-        else
-        {
-            *value = 0;
-            value++;
-            if (strcmp(options[i], "slave_selection_criteria") == 0)
-            {
-                if (GET_SELECT_CRITERIA(value) == (select_criteria_t *)*data)
-                {
-                    succp = true;
-                    break;
-                }
-            }
-        }
-    }
-    return succp;
-}
-#endif /*< NOT_USED */
 
 /**
  * @brief Process router options
@@ -4225,156 +1668,6 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
     return success;
 }
 
-/**
- * Error Handler routine to resolve _backend_ failures. If it succeeds then
- * there
- * are enough operative backends available and connected. Otherwise it fails,
- * and session is terminated.
- *
- * @param       instance        The router instance
- * @param       router_session  The router session
- * @param       errmsgbuf       The error message to reply
- * @param       backend_dcb     The backend DCB
- * @param       action      The action: ERRACT_NEW_CONNECTION or
- * ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true iff router can continue
- *
- * Even if succp == true connecting to new slave may have failed. succp is to
- * tell whether router has enough master/slave connections to continue work.
- */
-static void handleError(ROUTER *instance, void *router_session,
-                        GWBUF *errmsgbuf, DCB *problem_dcb,
-                        error_action_t action, bool *succp)
-{
-    SESSION *session;
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
-
-    CHK_DCB(problem_dcb);
-
-    /** Don't handle same error twice on same DCB */
-    if (problem_dcb->dcb_errhandle_called)
-    {
-        /** we optimistically assume that previous call succeed */
-        /*
-         * The return of true is potentially misleading, but appears to
-         * be safe with the code as it stands on 9 Sept 2015 - MNB
-         */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        problem_dcb->dcb_errhandle_called = true;
-    }
-    session = problem_dcb->session;
-
-    if (session == NULL || rses == NULL)
-    {
-        *succp = false;
-    }
-    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
-    {
-        *succp = false;
-    }
-    else
-    {
-        CHK_SESSION(session);
-        CHK_CLIENT_RSES(rses);
-
-        switch (action)
-        {
-            case ERRACT_NEW_CONNECTION:
-            {
-                if (!rses_begin_locked_router_action(rses))
-                {
-                    *succp = false;
-                    break;
-                }
-
-                /**
-                 * If master has lost its Master status error can't be
-                 * handled so that session could continue.
-                 */
-                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
-                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
-                {
-                    SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
-                    backend_ref_t *bref;
-                    bref = get_bref_from_dcb(rses, problem_dcb);
-                    if (bref != NULL)
-                    {
-                        CHK_BACKEND_REF(bref);
-                        bref_clear_state(bref, BREF_IN_USE);
-                        bref_set_state(bref, BREF_CLOSED);
-                    }
-                    else
-                    {
-                        MXS_ERROR("server %s:%d lost the "
-                                  "master status but could not locate the "
-                                  "corresponding backend ref.",
-                                  srv->name, srv->port);
-                    }
-
-                    if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
-                        (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
-                    {
-                        /** The failure of a master is not considered a critical
-                         * failure as partial functionality still remains. Reads
-                         * are allowed as long as slave servers are available
-                         * and writes will cause an error to be returned.
-                         *
-                         * If we were waiting for a response from the master, we
-                         * can't be sure whether it was executed or not. In this
-                         * case the safest thing to do is to close the client
-                         * connection. */
-                        *succp = true;
-                    }
-                    else
-                    {
-                        if (!srv->master_err_is_logged)
-                        {
-                            MXS_ERROR("server %s:%d lost the "
-                                      "master status. Readwritesplit "
-                                      "service can't locate the master. "
-                                      "Client sessions will be closed.",
-                                      srv->name, srv->port);
-                            srv->master_err_is_logged = true;
-                        }
-                        *succp = false;
-                    }
-                }
-                else
-                {
-                    /**
-                     * This is called in hope of getting replacement for
-                     * failed slave(s).  This call may free rses.
-                     */
-                    *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
-                }
-                /* Free the lock if rses still exists */
-                if (rses)
-                {
-                    rses_end_locked_router_action(rses);
-                }
-                break;
-            }
-
-            case ERRACT_REPLY_CLIENT:
-            {
-                handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
-                *succp = false; /*< no new backend servers were made available */
-                break;
-            }
-
-            default:
-                *succp = false;
-                break;
-        }
-    }
-    dcb_close(problem_dcb);
-}
-
 static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
                                       DCB *backend_dcb, GWBUF *errmsg)
 {
@@ -4395,6 +1688,10 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
         CHK_BACKEND_REF(bref);
         bref_clear_state(bref, BREF_IN_USE);
         bref_set_state(bref, BREF_CLOSED);
+        if (BREF_IS_WAITING_RESULT(bref))
+        {
+            bref_clear_state(bref, BREF_WAITING_RESULT);
+        }
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
@@ -4504,53 +1801,6 @@ return_succp:
     return succp;
 }
 
-static void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb)
-{
-#if defined(SS_DEBUG)
-    if (GWBUF_IS_TYPE_MYSQL(buf))
-    {
-        while (gwbuf_length(buf) > 0)
-        {
-            /**
-             * This works with MySQL protocol only !
-             * Protocol specific packet print functions would be nice.
-             */
-            uint8_t *ptr = GWBUF_DATA(buf);
-            size_t len = MYSQL_GET_PACKET_LEN(ptr);
-
-            if (MYSQL_GET_COMMAND(ptr) == 0xff)
-            {
-                SERVER *srv = NULL;
-                backend_ref_t *bref = rses->rses_backend_ref;
-                int i;
-                char *bufstr;
-
-                for (i = 0; i < rses->rses_nbackends; i++)
-                {
-                    if (bref[i].bref_dcb == dcb)
-                    {
-                        srv = bref[i].bref_backend->backend_server;
-                    }
-                }
-                ss_dassert(srv != NULL);
-                char *str = (char *)&ptr[7];
-                bufstr = strndup(str, len - 3);
-
-                MXS_ERROR("Backend server %s:%d responded with "
-                          "error : %s",
-                          srv->name, srv->port, bufstr);
-                MXS_FREE(bufstr);
-            }
-            buf = gwbuf_consume(buf, len + 4);
-        }
-    }
-    else
-    {
-        gwbuf_free(buf);
-    }
-#endif /*< SS_DEBUG */
-}
-
 static int router_get_servercount(ROUTER_INSTANCE *inst)
 {
     int router_nservers = 0;
@@ -4617,149 +1867,6 @@ static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
     return succp;
 }
 
-/**
- * Find out the number of read backend servers.
- * Depending on the configuration value type, either copy direct count
- * of slave connections or calculate the count from percentage value.
- */
-static int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
-                                   int router_nservers)
-{
-    int conf_max_nslaves;
-    int max_nslaves;
-
-    CHK_CLIENT_RSES(rses);
-
-    if (rses->rses_config.rw_max_slave_conn_count > 0)
-    {
-        conf_max_nslaves = rses->rses_config.rw_max_slave_conn_count;
-    }
-    else
-    {
-        conf_max_nslaves = (router_nservers * rses->rses_config.rw_max_slave_conn_percent) / 100;
-    }
-    max_nslaves = MIN(router_nservers - 1, MAX(1, conf_max_nslaves));
-
-    return max_nslaves;
-}
-
-static int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
-{
-    int conf_max_rlag;
-
-    CHK_CLIENT_RSES(rses);
-
-    /** if there is no configured value, then longest possible int is used */
-    if (rses->rses_config.rw_max_slave_replication_lag > 0)
-    {
-        conf_max_rlag = rses->rses_config.rw_max_slave_replication_lag;
-    }
-    else
-    {
-        conf_max_rlag = ~(1 << 31);
-    }
-
-    return conf_max_rlag;
-}
-
-/**
- * Finds out if there is a backend reference pointing at the DCB given as
- * parameter.
- * @param rses  router client session
- * @param dcb   DCB
- *
- * @return backend reference pointer if succeed or NULL
- */
-static backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
-{
-    backend_ref_t *bref;
-    int i = 0;
-    CHK_DCB(dcb);
-    CHK_CLIENT_RSES(rses);
-
-    bref = rses->rses_backend_ref;
-
-    while (i < rses->rses_nbackends)
-    {
-        if (bref->bref_dcb == dcb)
-        {
-            break;
-        }
-        bref++;
-        i += 1;
-    }
-
-    if (i == rses->rses_nbackends)
-    {
-        bref = NULL;
-    }
-    return bref;
-}
-
-/**
- * Calls hang-up function for DCB if it is not both running and in
- * master/slave/joined/ndb role. Called by DCB's callback routine.
- */
-static int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
-{
-    backend_ref_t *bref;
-    int rc = 1;
-    SERVER *srv;
-    CHK_DCB(dcb);
-
-    if (NULL == dcb->session->router_session)
-    {
-        /*
-         * The following processing will fail if there is no router session,
-         * because the "data" parameter will not contain meaningful data,
-         * so we have no choice but to stop here.
-         */
-        return 0;
-    }
-    bref = (backend_ref_t *)data;
-    CHK_BACKEND_REF(bref);
-
-    srv = bref->bref_backend->backend_server;
-
-    if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
-    {
-        goto return_rc;
-    }
-
-    MXS_DEBUG("%lu [router_handle_state_switch] %s %s:%d in state %s",
-              pthread_self(), STRDCBREASON(reason), srv->name, srv->port,
-              STRSRVSTATUS(srv));
-    CHK_SESSION(((SESSION *)dcb->session));
-    if (dcb->session->router_session)
-    {
-        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
-    }
-
-    switch (reason)
-    {
-        case DCB_REASON_NOT_RESPONDING:
-            dcb->func.hangup(dcb);
-            break;
-
-        default:
-            break;
-    }
-
-return_rc:
-    return rc;
-}
-
-static sescmd_cursor_t *backend_ref_get_sescmd_cursor(backend_ref_t *bref)
-{
-    sescmd_cursor_t *scur;
-    CHK_BACKEND_REF(bref);
-
-    scur = &bref->bref_sescmd_cur;
-    CHK_SESCMD_CUR(scur);
-
-    return scur;
-}
-
 #if defined(PREP_STMT_CACHING)
 #define MAX_STMT_LEN 1024
 
@@ -4811,172 +1918,171 @@ static bool prep_stmt_drop(prep_stmt_t *pstmt)
 }
 #endif /*< PREP_STMT_CACHING */
 
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
- *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param   servers     The list of servers
- * @param   router_nservers The number of servers
- * @return          The Master found
- *
- */
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers)
-{
-    int i = 0;
-    BACKEND *master_host = NULL;
-
-    for (i = 0; i < router_nservers; i++)
-    {
-        BACKEND *b;
-
-        if (servers[i].bref_backend == NULL)
-        {
-            continue;
-        }
-
-        b = servers[i].bref_backend;
-
-        if ((b->backend_server->status & (SERVER_MASTER | SERVER_MAINT)) ==
-            SERVER_MASTER)
-        {
-            if (master_host == NULL ||
-                (b->backend_server->depth < master_host->backend_server->depth))
-            {
-                master_host = b;
-            }
-        }
-    }
-    return master_host;
-}
-
-/********************************
- * This routine returns the root master server from MySQL replication tree
- * Get the root Master rule:
- *
- * find server with the lowest replication depth level
- * and the SERVER_MASTER bitval
- * Servers are checked even if they are in 'maintenance'
- *
- * @param   rses pointer to router session
- * @return  pointer to backend reference of the root master or NULL
- *
- */
-static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
-{
-    backend_ref_t *bref;
-    backend_ref_t *candidate_bref = NULL;
-    SERVER master = {};
-
-    for (int i = 0; i < rses->rses_nbackends; i++)
-    {
-        bref = &rses->rses_backend_ref[i];
-        if (bref && BREF_IS_IN_USE(bref))
-        {
-            if (bref == rses->rses_master_ref)
-            {
-                /** Store master state for better error reporting */
-                master.status = bref->bref_backend->backend_server->status;
-            }
-
-            if (bref->bref_backend->backend_server->status & SERVER_MASTER)
-            {
-                if (candidate_bref == NULL ||
-                    (bref->bref_backend->backend_server->depth <
-                     candidate_bref->bref_backend->backend_server->depth))
-                {
-                    candidate_bref = bref;
-                }
-            }
-        }
-    }
-
-    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY)
-    {
-        MXS_ERROR("Could not find master among the backend "
-                  "servers. Previous master's state : %s",
-                  rses->rses_master_ref == NULL ? "No master found" :
-                  (!BREF_IS_IN_USE(rses->rses_master_ref) ? "Master is not in use" :
-                   STRSRVSTATUS(&master)));
-    }
-
-    return candidate_bref;
-}
-
 /**
- * @brief Detect multi-statement queries
+ * @brief Refresh the instance by the given parameter value.
  *
- * It is possible that the session state is modified inside a multi-statement
- * query which would leave any slave sessions in an inconsistent state. Due to
- * this, for the duration of this session, all queries will be sent to the
- * master
- * if the current query contains a multi-statement query.
- * @param rses Router client session
- * @param buf Buffer containing the full query
- * @return True if the query contains multiple statements
+ * Used by createInstance and newSession
+ * 
+ * @param router    Router instance
+ * @param singleparam   Parameter fo be reloaded
+ *
+ * Note: this part is not done. Needs refactoring.
  */
-static bool check_for_multi_stmt(ROUTER_CLIENT_SES *rses, GWBUF *buf,
-                                 mysql_server_cmd_t packet_type)
+static void refreshInstance(ROUTER_INSTANCE *router,
+                            CONFIG_PARAMETER *singleparam)
 {
-    MySQLProtocol *proto = (MySQLProtocol *)rses->client_dcb->protocol;
-    bool rval = false;
+    CONFIG_PARAMETER *param;
+    bool refresh_single;
+    config_param_type_t paramtype;
 
-    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
-        packet_type == MYSQL_COM_QUERY &&
-        (rses->forced_node == NULL || rses->forced_node != rses->rses_master_ref))
+    if (singleparam != NULL)
     {
-        char *ptr, *data = GWBUF_DATA(buf) + 5;
-        /** Payload size without command byte */
-        int buflen = gw_mysql_get_byte3((uint8_t *)GWBUF_DATA(buf)) - 1;
-
-        if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
-        {
-            /** Skip stored procedures etc. */
-            while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
-            {
-                ptr = strnchr_esc_mysql(ptr + 1, ';', buflen - (ptr - data) - 1);
-            }
-
-            if (ptr)
-            {
-                if (ptr < data + buflen &&
-                    !is_mysql_statement_end(ptr, buflen - (ptr - data)))
-                {
-                    rses->forced_node = rses->rses_master_ref;
-                    rval = true;
-                    MXS_INFO("Multi-statement query, routing all future queries to master.");
-                }
-            }
-        }
-    }
-
-    return rval;
-}
-
-/**
- * Send an error message to the client telling that the server is in read only mode
- * @param dcb Client DCB
- * @return True if sending the message was successful, false if an error occurred
- */
-static bool send_readonly_error(DCB *dcb)
-{
-    bool succp = false;
-    const char* errmsg = "The MariaDB server is running with the --read-only"
-        " option so it cannot execute this statement";
-    GWBUF* err = modutil_create_mysql_err_msg(1, 0, ER_OPTION_PREVENTS_STATEMENT,
-                                              "HY000", errmsg);
-
-    if (err)
-    {
-        succp = dcb->func.write(dcb, err);
+        param = singleparam;
+        refresh_single = true;
     }
     else
     {
-        MXS_ERROR("Memory allocation failed when creating client error message.");
+        param = router->service->svc_config_param;
+        refresh_single = false;
+    }
+    paramtype = config_get_paramtype(param);
+
+    while (param != NULL)
+    {
+        /** Catch unused parameter types */
+        ss_dassert(paramtype == COUNT_TYPE || paramtype == PERCENT_TYPE ||
+                   paramtype == SQLVAR_TARGET_TYPE);
+
+        if (paramtype == COUNT_TYPE)
+        {
+            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+            {
+                int val;
+                bool succp;
+
+                router->rwsplit_config.rw_max_slave_conn_percent = 0;
+
+                succp = config_get_valint(&val, param, NULL, paramtype);
+
+                if (succp)
+                {
+                    router->rwsplit_config.rw_max_slave_conn_count = val;
+                }
+            }
+            else if (strncmp(param->name, "max_slave_replication_lag",
+                             MAX_PARAM_LEN) == 0)
+            {
+                int val;
+                bool succp;
+
+                succp = config_get_valint(&val, param, NULL, paramtype);
+
+                if (succp)
+                {
+                    router->rwsplit_config.rw_max_slave_replication_lag = val;
+                }
+            }
+        }
+        else if (paramtype == PERCENT_TYPE)
+        {
+            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
+            {
+                int val;
+                bool succp;
+
+                router->rwsplit_config.rw_max_slave_conn_count = 0;
+
+                succp = config_get_valint(&val, param, NULL, paramtype);
+
+                if (succp)
+                {
+                    router->rwsplit_config.rw_max_slave_conn_percent = val;
+                }
+            }
+        }
+        else if (paramtype == SQLVAR_TARGET_TYPE)
+        {
+            if (strncmp(param->name, "use_sql_variables_in", MAX_PARAM_LEN) == 0)
+            {
+                target_t valtarget;
+                bool succp;
+
+                succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
+
+                if (succp)
+                {
+                    router->rwsplit_config.rw_use_sql_variables_in = valtarget;
+                }
+            }
+        }
+
+        if (refresh_single)
+        {
+            break;
+        }
+        param = param->next;
     }
 
-    return succp;
+#if defined(NOT_USED) /*< can't read monitor config parameters */
+    if ((*router->servers)->backend_server->rlag == -2)
+    {
+        rlag_enabled = false;
+    }
+    else
+    {
+        rlag_enabled = true;
+    }
+    /**
+     * If replication lag detection is not enabled the measure can't be
+     * used in slave selection.
+     */
+    if (!rlag_enabled)
+    {
+        if (rlag_limited)
+        {
+            MXS_WARNING("Configuration Failed, max_slave_replication_lag "
+                        "is set to %d,\n\t\t      but detect_replication_lag "
+                        "is not enabled. Replication lag will not be checked.",
+                        router->rwsplit_config.rw_max_slave_replication_lag);
+        }
+
+        if (router->rwsplit_config.rw_slave_select_criteria ==
+            LEAST_BEHIND_MASTER)
+        {
+            MXS_WARNING("Configuration Failed, router option "
+                        "\n\t\t      slave_selection_criteria=LEAST_BEHIND_MASTER "
+                        "is specified, but detect_replication_lag "
+                        "is not enabled.\n\t\t      "
+                        "slave_selection_criteria=%s will be used instead.",
+                        STRCRITERIA(DEFAULT_CRITERIA));
+
+            router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
+        }
+    }
+#endif /*< NOT_USED */
 }
+
+/*
+ * @brief   Release resources when createInstance fails to complete
+ * 
+ * Internal to createInstance
+ * 
+ * @param   router  Router instance
+ * 
+ */
+static void free_rwsplit_instance(ROUTER_INSTANCE *router)
+{
+    if (router)
+    {
+        if (router->servers)
+        {
+            for (int i = 0; router->servers[i]; i++)
+            {
+                MXS_FREE(router->servers[i]);
+            }
+        }
+        MXS_FREE(router->servers);
+        MXS_FREE(router);
+    }
+}
+

@@ -25,6 +25,8 @@ bool initialize()
 
 CACHE_STORAGE* createInstance(const char* zName, uint32_t ttl, int argc, char* argv[])
 {
+    ss_dassert(zName);
+
     CACHE_STORAGE* pStorage = 0;
 
     try
@@ -56,6 +58,10 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
                       const GWBUF* pQuery,
                       char* pKey)
 {
+    ss_dassert(pStorage);
+    ss_dassert(pQuery);
+    ss_dassert(pKey);
+
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
@@ -80,6 +86,10 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
 
 cache_result_t getValue(CACHE_STORAGE* pStorage, const char* pKey, GWBUF** ppResult)
 {
+    ss_dassert(pStorage);
+    ss_dassert(pKey);
+    ss_dassert(ppResult);
+
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
@@ -106,6 +116,10 @@ cache_result_t putValue(CACHE_STORAGE* pStorage,
                         const char* pKey,
                         const GWBUF* pValue)
 {
+    ss_dassert(pStorage);
+    ss_dassert(pKey);
+    ss_dassert(pValue);
+
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try

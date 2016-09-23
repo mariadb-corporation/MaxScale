@@ -88,6 +88,7 @@ _NAME_=_VALUE_ format (e.g. `-DBUILD_TESTS=Y`).
 |WITH_SCRIPTS|Install systemd and init.d scripts|
 |PACKAGE|Enable building of packages|
 |TARGET_COMPONENT|Which component to install, default is the 'core' package. Other targets are 'experimental', which installs experimental packages, 'devel' which installs development headers and 'all' which installs all components.|
+|TARBALL|Build tar.gz packages, requires PACKAGE=Y|
 
 **Note**: You can look into [defaults.cmake](../../cmake/defaults.cmake) for a
 list of the CMake variables.
@@ -152,7 +153,10 @@ make
 make package
 ```
 
-This will create a tarball and a RPM/DEB package.
+This will create a RPM/DEB package.
+
+To build a tarball, add `-DTARBALL=Y` to the cmake invokation. This will create
+a _maxscale-x.y.z.tar.gz_ file where _x.y.z_ is the version number.
 
 Some Debian and Ubuntu systems suffer from a bug where `make package` fails
 with errors from dpkg-shlibdeps. This can be fixed by running `make` before
