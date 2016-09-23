@@ -1185,10 +1185,8 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
         update_affected_fields(info, 0, pWhere, QC_TOKEN_MIDDLE, 0);
     }
 
-    //TODO: Figure out why the following statements, causes a crash
-    //TODO: long down the road.
-    //TODO: exposed_sqlite3SrcListDelete(pParse->db, pTabList);
-    //TODO: exposed_sqlite3ExprDelete(pParse->db, pWhere);
+    exposed_sqlite3ExprDelete(pParse->db, pWhere);
+    exposed_sqlite3SrcListDelete(pParse->db, pTabList);
     exposed_sqlite3SrcListDelete(pParse->db, pUsing);
 }
 
