@@ -295,7 +295,12 @@ createInstance(SERVICE *service, char **options)
     /* Semi-Sync support */
     inst->request_semi_sync = false;
     inst->master_semi_sync = 0;
-    inst->encrypt_binlog = 0;
+
+    /* Binlog encryption */
+    inst->encryption.enabled = 0;
+
+    /* Encryption CTX */
+    inst->encryption_ctx = NULL;
 
     /* Generate UUID for the router instance */
     uuid_generate_time(defuuid);
@@ -433,7 +438,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "encrypt_binlog") == 0)
                 {
-                    inst->encrypt_binlog = config_truth_value(value);
+                    inst->encryption.enabled = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "lowwater") == 0)
                 {
@@ -805,7 +810,7 @@ createInstance(SERVICE *service, char **options)
     }
 
     /* Log whether the binlog encryption option value is on */
-    if (inst->encrypt_binlog)
+    if (inst->encryption.enabled)
     {
         MXS_NOTICE("%s: Service has binlog encryption set to ON",
                  service->name);
@@ -820,21 +825,34 @@ createInstance(SERVICE *service, char **options)
         MXS_NOTICE("Validating binlog file '%s' ...",
                    inst->binlog_name);
 
-        if (inst->trx_safe && !blr_check_binlog(inst))
+        if (!blr_check_binlog(inst))
         {
-            /* Don't start replication, just return */
-            return (ROUTER *)inst;
+            if (inst->trx_safe)
+            {
+                /* Don't start replication, just return */
+                return (ROUTER *)inst;
+            }
         }
 
-        if (!inst->trx_safe)
+        /* Report current pos in binlog file and last seen transaction pos */
+        MXS_INFO("Current binlog file is %s, safe pos %lu, current pos is %lu\n",
+                 inst->binlog_name, inst->binlog_position, inst->current_pos);
+
+        /* Don't start replication if binlog has START_ENCRYPTION_EVENT but binlog encryption is off */
+        if (!inst->encryption.enabled && inst->encryption_ctx)
         {
-            MXS_INFO("Current binlog file is %s, current pos is %lu\n",
-                     inst->binlog_name, inst->binlog_position);
-        }
-        else
-        {
-            MXS_INFO("Current binlog file is %s, safe pos %lu, current pos is %lu\n",
-                     inst->binlog_name, inst->binlog_position, inst->current_pos);
+            MXS_ERROR("Found START_ENCRYPTION_EVENT but "
+                      "binlog ecryption option is currently Off. Replication can't start right now. "
+                      "Please restart maxScale with option set to On");
+
+            /* Force STOPPED state */ 
+            inst->master_state = BLRM_SLAVE_STOPPED;
+            /* Set mysql_errno and error message */
+            inst->m_errno = BINLOG_FATAL_ERROR_READING;
+            inst->m_errmsg = mxs_strdup("HY000 Binlog encryption is Off but binlog file has "
+                                        "the START_ENCRYPTION_EVENT");
+
+            return (ROUTER *)inst;
         }
 
         /* Start replication from master server */

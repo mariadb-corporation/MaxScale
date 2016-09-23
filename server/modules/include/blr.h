@@ -60,6 +60,9 @@
 #define BINLOG_EVENT_HDR_LEN       19
 #define BINLOG_EVENT_CRC_ALGO_TYPE  1
 #define BINLOG_EVENT_CRC_SIZE       4
+#define BINLOG_EVENT_LEN_OFFSET     9
+#define BINLOG_ENCRYPTION_ALGORYTM_NAME_LEN  13
+#define BINLOG_FATAL_ERROR_READING         1236
 
 /**
  * Binlog event types
@@ -458,6 +461,16 @@ typedef struct
 } MASTER_RESPONSES;
 
 /**
+ * The binlog encryption setup
+ */
+typedef struct binlog_encryption_setup
+{
+  bool enabled;
+  char encryption_algorithm[BINLOG_ENCRYPTION_ALGORYTM_NAME_LEN];
+  char *key_management_filename;
+  uint8_t *keys;
+} BINLOG_ENCRYPTION_SETUP;
+/**
  * The per instance data for the router.
  */
 typedef struct router_instance
@@ -541,7 +554,8 @@ typedef struct router_instance
     char              *ssl_version;         /*< config TLS Version for Master SSL connection */
     bool              request_semi_sync;    /*< Request Semi-Sync replication to master */
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
-    int               encrypt_binlog;       /*< Encrypt binlog files */
+    BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
+    void              *encryption_ctx;      /*< Encryption context */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

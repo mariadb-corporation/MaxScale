@@ -28,6 +28,12 @@
  *                                  Currently MariadDB 10 starting transactions
  *                                  are detected checking GTID event
  *                                  with flags = 0
+ * 26/04/16     Massimiliano Pinto  MariaDB 10.1 GTID flags are properly parsed
+ * 23/09/16     Massimiliano Pinto  MariaDB 10.1 encrypted binlog compatible:
+ *                                  the output shows the START_ENCRYPTION_EVENT and follows
+ *                                  binlog positions without dectypting events.
+ *
+ *
  * @endverbatim
  */
 
@@ -55,7 +61,7 @@ static struct option long_options[] =
     {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "1.1.0";
+char *binlog_check_version = "1.2.0";
 
 int
 maxscale_uptime()

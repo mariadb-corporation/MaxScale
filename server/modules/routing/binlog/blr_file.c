@@ -141,6 +141,20 @@ typedef struct start_encryption_event
 } START_ENCRYPTION_EVENT;
 
 /**
+ * Binlog encryption context of current binlog file
+ *
+ * nonce for current binlog
+ * key version
+ * crypto_scheme
+ */
+typedef struct binlog_encryption_ctx
+{
+    uint8_t binlog_crypto_scheme;
+    uint32_t binlog_key_version;
+    uint8_t nonce[BLRM_NONCE_LENGTH];
+} BINLOG_ENCRYPTION_CTX;
+
+/**
  * Initialise the binlog file for this instance. MaxScale will look
  * for all the binlogs that it has on local disk, determine the next
  * binlog to use and initialise it for writing, determining the
@@ -435,7 +449,6 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
      * Fill the gap with a self generated ignorable event
      * Binlog file position is incremented by blr_write_special_event()
      */
-
     if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
     {
         uint64_t hole_size = hdr->next_pos - file_offset - size;
@@ -444,6 +457,43 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
             return 0;
         }
     }
+
+    if (router->encryption_ctx != NULL)
+    {
+        BINLOG_ENCRYPTION_CTX *tmp_encryption_ctx = (BINLOG_ENCRYPTION_CTX *)(router->encryption_ctx);
+        uint8_t iv[BLRM_IV_LENGTH];
+        uint64_t file_offset = router->current_pos;
+        char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
+        char nonce_hex[BLRM_NONCE_LENGTH * 2 + 1] = "";
+
+        /* Encryption IV is 12 bytes nonce + 4 bytes event position */
+        memcpy(iv, tmp_encryption_ctx->nonce, BLRM_NONCE_LENGTH);
+        gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)file_offset);
+        /* Human readable versions */
+        gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
+        gw_bin2hex(nonce_hex, tmp_encryption_ctx->nonce, BLRM_NONCE_LENGTH);
+
+        MXS_DEBUG("Writing Encrypted event type %d, size %lu. IV is %s, nonce %s, enc scheme %d, key ver %u",
+                 hdr->event_type,
+                 (unsigned long)size,
+                 iv_hex,
+                 nonce_hex,
+                 tmp_encryption_ctx->binlog_crypto_scheme,
+                 tmp_encryption_ctx->binlog_key_version);
+    }
+
+    /**
+     * TODO:
+     *
+     * save event size (buf + 9, 4 bytes)
+     * move first 4 bytes of buf to buf + 9 ...
+     * encrypt buf starting from buf + 4 (so it will be event_size - 4)
+     * move encrypted_data + 9, (4 bytesi), to  encrypted_data[0]
+     * write saved_event_size 4 bytes into encrypted_data + 9
+     * write encrypted_data
+     *
+     * First task is the data move only in current 'buf', no encryption at all.
+     */
 
     /* Write current received event from master */
     if ((n = pwrite(router->binlog_fd, buf, size,
@@ -474,10 +524,14 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     spinlock_release(&router->binlog_lock);
 
     /* Check whether adding the Start Encryption event into current binlog */
-    if (router->encrypt_binlog && write_begin_encryption)
+    if (router->encryption.enabled && write_begin_encryption)
     {
-        uint64_t event_size = router->master_chksum ? 40 : 36;
+        uint64_t event_size = sizeof(START_ENCRYPTION_EVENT);
         uint64_t file_offset = router->current_pos;
+        if (router->master_chksum)
+        {
+            event_size += BINLOG_EVENT_CRC_SIZE;
+        }
         if (!blr_write_special_event(router, file_offset, event_size, hdr, BLRM_START_ENCRYPTION))
         {
             return 0;
@@ -1298,6 +1352,48 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             }
         }
 
+        if (start_encryption_seen)
+        {
+             uint8_t iv[AES_BLOCK_SIZE + 1] = "";
+             char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
+             uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
+
+             /**
+              * Events are encrypted.
+              *
+              * The routine doesn't decrypt them but follows
+              * next event based on the event_size (4 bytes) that is af offset
+              * of BINLOG_EVENT_LEN_OFFSET (9) and it's in clear.
+              *
+              * This version prints to DEBUG the encryption event IV.
+              */
+
+             /* Get binlog file "nonce" and other data from router encryption_ctx */
+             BINLOG_ENCRYPTION_CTX *enc_ctx = router->encryption_ctx;
+
+             /* Encryption IV is 12 bytes nonce + 4 bytes event position */
+             memcpy(iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
+             gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
+
+             /* Human readable version */
+             gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
+
+             MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
+                       (unsigned long)pos,
+                       iv_hex, (unsigned long)event_size,
+                       (unsigned long)(pos + event_size));
+
+            /* Next event pos is ps + event size */
+            pos = pos + event_size;
+
+            /* Update other offsets as well */
+            router->binlog_position = pos;
+            router->current_safe_event = pos;
+            router->current_pos = pos;
+
+            continue;
+        }
+
         /* fill replication header struct */
         hdr.timestamp = EXTRACT32(hdbuf);
         hdr.event_type = hdbuf[4];
@@ -1586,51 +1682,64 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         /* Detect possible Start Encryption Event */
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
-                START_ENCRYPTION_EVENT ste_event = {};
-                char nonce_hex[12 * 2 + 1] = "";
-                /* The start encryption event data is 17 bytes long:
-                 * Scheme = 1
-                 * Key Version: 4
-                 * nonce = 12
-                 */
+            char nonce_hex[12 * 2 + 1] = "";
+            BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+            START_ENCRYPTION_EVENT ste_event = {};
 
-                /* Fill the event content, after the event header */
-                ste_event.binlog_crypto_scheme = ptr[0];
-                ste_event.binlog_key_version = extract_field(ptr + 1, 32);
-                memcpy(ste_event.nonce, ptr + 1 + 4, BLRM_NONCE_LENGTH);
+            /* The start encryption event data is 17 bytes long:
+             * Scheme = 1
+             * Key Version: 4
+             * nonce = 12
+             */
 
-                if (debug)
+            /* Fill the event content, after the event header */
+            ste_event.binlog_crypto_scheme = ptr[0];
+            ste_event.binlog_key_version = extract_field(ptr + 1, 32);
+            memcpy(ste_event.nonce, ptr + 1 + 4, BLRM_NONCE_LENGTH);
+
+            /* Fill the encryption_ctx */
+            memcpy(new_encryption_ctx->nonce, ste_event.nonce, BLRM_NONCE_LENGTH);
+            new_encryption_ctx->binlog_crypto_scheme = ste_event.binlog_crypto_scheme;
+            memcpy(&new_encryption_ctx->binlog_key_version,
+                   &ste_event.binlog_key_version, BLRM_KEY_VERSION_LENGTH);
+
+            if (debug)
+            {
+                char *cksum_format = ", crc32 0x";
+                char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
+                uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
+                hex_checksum[0]='\0';
+
+                /* Hex representation of nonce */
+                gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
+
+                /* Hex representation of checksum */
+                cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
+                cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
+                cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
+                cksum_data[0] = *(ptr + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
+
+                if (found_chksum)
                 {
-                    char *cksum_format = ", crc32 0x";
-                    char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
-                    uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
-                    hex_checksum[0]='\0';
-
-                    /* Hex representation of nonce */
-                    gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
-
-                    /* Hex representation of checksum */
-                    cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
-                    cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
-                    cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
-                    cksum_data[0] = *(ptr + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
-
-                    if (found_chksum)
-                    {
-                        strcpy(hex_checksum, cksum_format);
-                        gw_bin2hex(hex_checksum + strlen(cksum_format) , cksum_data, BINLOG_EVENT_CRC_SIZE);
-                    }
-
-                    MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u%s",
-                              pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags,
-                              hex_checksum);
-
-                    MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
-                              " nonce: %s\n", ste_event.binlog_crypto_scheme,
-                              ste_event.binlog_key_version, nonce_hex);
+                    strcpy(hex_checksum, cksum_format);
+                    gw_bin2hex(hex_checksum + strlen(cksum_format) , cksum_data, BINLOG_EVENT_CRC_SIZE);
                 }
 
-                start_encryption_seen = 1;
+                MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u%s",
+                          pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags,
+                          hex_checksum);
+
+                MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
+                          " nonce: %s\n", ste_event.binlog_crypto_scheme,
+                          ste_event.binlog_key_version, nonce_hex);
+            }
+
+            start_encryption_seen = 1;
+
+            /* Update the router encryption context */
+            MXS_FREE(router->encryption_ctx);
+            router->encryption_ctx = NULL;
+            router->encryption_ctx = new_encryption_ctx;
         }
 
         /* set last event time, pos and type */
@@ -2375,6 +2484,7 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
 {
     uint8_t *new_event;
     uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
+    BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
 
     /* Add 4 bytes to event size with crc32 */
     if (do_checksum)
@@ -2423,6 +2533,22 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
         // checksum is stored at the end of current event data: 4 less bytes than event size
         encode_value(new_event + event_size - BINLOG_EVENT_CRC_SIZE, chksum, 32);
     }
+
+    /* Update the encryption context */
+    uint8_t *nonce_ptr = &(new_event[BINLOG_EVENT_HDR_LEN + 4 + 1]);
+
+    spinlock_acquire(&router->binlog_lock);
+
+    memcpy(new_encryption_ctx->nonce, nonce_ptr, BLRM_NONCE_LENGTH);
+    new_encryption_ctx->binlog_crypto_scheme = new_event[BINLOG_EVENT_HDR_LEN];
+    memcpy(&new_encryption_ctx->binlog_key_version,
+           &new_event[BINLOG_EVENT_HDR_LEN + 1], BLRM_KEY_VERSION_LENGTH);
+
+    MXS_FREE(router->encryption_ctx);
+    router->encryption_ctx = NULL;
+    router->encryption_ctx = new_encryption_ctx;
+
+    spinlock_release(&router->binlog_lock);
 
     return new_event;
 }

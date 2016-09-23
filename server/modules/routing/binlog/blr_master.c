@@ -1250,8 +1250,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                     spinlock_release(&router->lock);
 #ifdef SHOW_EVENTS
-                    printf("blr: len %lu, event type 0x%02x, flags 0x%04x, "
+                    printf("blr @ %lu: len %lu, event type 0x%02x, flags 0x%04x, "
                            "event size %d, event timestamp %lu\n",
+                           router->current_pos,
                            (unsigned long)len - 4,
                            hdr.event_type,
                            hdr.flags,
