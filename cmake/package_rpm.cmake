@@ -23,3 +23,6 @@ set(IGNORED_DIRS
   "%ignore ${CMAKE_INSTALL_PREFIX}/share/man/man1")
 
 set(CPACK_RPM_USER_FILELIST "${IGNORED_DIRS}")
+
+# Installing this prevents RPM from deleting the /var/lib/maxscale folder
+install(DIRECTORY DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
