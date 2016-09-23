@@ -168,6 +168,7 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
             else
             {
                 MXS_NOTICE("Cache item is stale, not using.");
+                result = CACHE_RESULT_NOT_FOUND;
             }
         }
         else
@@ -190,7 +191,7 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
 
 cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
 {
-    // ss_dassert(gwbuf_is_contiguous(pValue));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
     rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
     rocksdb::Slice value(static_cast<const char*>(GWBUF_DATA(pValue)), GWBUF_LENGTH(pValue));

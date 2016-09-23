@@ -2689,7 +2689,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
  */
 bool check_service_permissions(SERVICE* service)
 {
-    if (is_internal_service(service->routerModule))
+    if (is_internal_service(service->routerModule) ||
+        config_get_global_options()->skip_permission_checks)
     {
         return true;
     }

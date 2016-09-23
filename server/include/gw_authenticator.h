@@ -47,6 +47,7 @@ struct servlistener;
  *      authenticate    Carry out the authentication
  *      free            Free extracted data
  *      loadusers       Load or update authenticator user data
+ *      plugin_name     The protocol specific name of the authentication plugin.
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -60,11 +61,21 @@ typedef struct gw_authenticator
     int (*authenticate)(struct dcb *);
     void (*free)(struct dcb *);
     int (*loadusers)(struct servlistener *);
+    const char* plugin_name;
 } GWAUTHENTICATOR;
 
+/** Return values for extract and authenticate entry points */
+#define MXS_AUTH_SUCCEEDED 0 /**< Authentication was successful */
+#define MXS_AUTH_FAILED 1 /**< Authentication failed */
+#define MXS_AUTH_FAILED_DB 2
+#define MXS_AUTH_FAILED_SSL 3
+#define MXS_AUTH_INCOMPLETE 4 /**< Authentication is not yet complete */
+#define MXS_AUTH_SSL_INCOMPLETE 5 /**< SSL connection is not yet complete */
+#define MXS_AUTH_NO_SESSION 6
+
 /** Return values for the loadusers entry point */
-#define AUTH_LOADUSERS_OK    0 /**< Users loaded successfully */
-#define AUTH_LOADUSERS_ERROR 1 /**< Failed to load users */
+#define MXS_AUTH_LOADUSERS_OK    0 /**< Users loaded successfully */
+#define MXS_AUTH_LOADUSERS_ERROR 1 /**< Failed to load users */
 
 /**
  * The GWAUTHENTICATOR version data. The following should be updated whenever

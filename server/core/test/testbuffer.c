@@ -377,15 +377,6 @@ test1()
     gwbuf_free(clone);
     ss_dfprintf(stderr, "Freed cloned buffer");
     ss_dfprintf(stderr, "\t..done\n");
-    partclone = gwbuf_clone_portion(buffer, 25, 50);
-    buflen = GWBUF_LENGTH(partclone);
-    ss_dfprintf(stderr, "Part cloned buffer length is now %d", buflen);
-    ss_info_dassert(50 == buflen, "Incorrect buffer size");
-    ss_info_dassert(0 == GWBUF_EMPTY(partclone), "Part cloned buffer should not be empty");
-    ss_dfprintf(stderr, "\t..done\n");
-    gwbuf_free(partclone);
-    ss_dfprintf(stderr, "Freed part cloned buffer");
-    ss_dfprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite1);
     ss_info_dassert(NULL != buffer, "Buffer should not be null");
     buflen = GWBUF_LENGTH(buffer);

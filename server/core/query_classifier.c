@@ -183,14 +183,24 @@ char* qc_get_canonical(GWBUF* query)
 {
     QC_TRACE();
     ss_dassert(classifier);
+
+    char *rval;
+
     if (classifier->qc_get_canonical)
     {
-        return classifier->qc_get_canonical(query);
+        rval = classifier->qc_get_canonical(query);
     }
     else
     {
-        return modutil_get_canonical(query);
+        rval = modutil_get_canonical(query);
     }
+
+    if (rval)
+    {
+        squeeze_whitespace(rval);
+    }
+
+    return rval;
 }
 
 bool qc_query_has_clause(GWBUF* query)

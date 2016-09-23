@@ -121,6 +121,7 @@ typedef struct
     unsigned int  auth_conn_timeout;                   /**< Connection timeout for the user authentication */
     unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
     unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
+    bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
 } GATEWAY_CONF;

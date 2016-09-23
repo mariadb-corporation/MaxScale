@@ -959,7 +959,7 @@ char *create_auth_fail_str(char *username,
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
     }
-    else if (errcode == MYSQL_FAILED_AUTH_SSL)
+    else if (errcode == MXS_AUTH_FAILED_SSL)
     {
         ferrstr = "Access without SSL denied";
     }
@@ -980,7 +980,7 @@ char *create_auth_fail_str(char *username,
     {
         sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db);
     }
-    else if (errcode == MYSQL_FAILED_AUTH_SSL)
+    else if (errcode == MXS_AUTH_FAILED_SSL)
     {
         sprintf(errstr, "%s", ferrstr);
     }

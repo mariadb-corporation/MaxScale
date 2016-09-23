@@ -215,10 +215,10 @@ static const int LM_MESSAGE_HASH_SIZE = 293; /** A prime, and roughly a quarter 
  *
  * @return Current monotonic raw time in milliseconds.
  */
-static uint64_t time_monotonic_raw_ms()
+static uint64_t time_monotonic_ms()
 {
     struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+    clock_gettime(CLOCK_MONOTONIC, &now);
 
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
@@ -2815,7 +2815,7 @@ static message_suppression_t message_status(const char* file, int line)
             {
                 LM_MESSAGE_STATS stats;
                 spinlock_init(&stats.lock);
-                stats.first_ms = time_monotonic_raw_ms();
+                stats.first_ms = time_monotonic_ms();
                 stats.last_ms = 0;
                 stats.count = 0;
 
@@ -2829,7 +2829,7 @@ static message_suppression_t message_status(const char* file, int line)
 
         if (value)
         {
-            uint64_t now_ms = time_monotonic_raw_ms();
+            uint64_t now_ms = time_monotonic_ms();
 
             spinlock_acquire(&value->lock);
 

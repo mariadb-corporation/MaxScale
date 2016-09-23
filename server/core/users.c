@@ -224,5 +224,5 @@ int users_default_loadusers(SERV_LISTENER *port)
 {
     users_free(port->users);
     port->users = users_alloc();
-    return AUTH_LOADUSERS_OK;
+    return MXS_AUTH_LOADUSERS_OK;
 }

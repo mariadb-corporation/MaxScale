@@ -87,15 +87,26 @@ The setting can be changed to `any`, provided fully qualified names
 are always used or if the names of tables in different databases are
 different.
 
+#### `max_resultset_rows`
+
+Specifies the maximum number of rows a resultset can have in order to be
+stored in the cache. A resultset larger than this, will not be stored.
+```
+max_resultset_rows=1000
+```
+Zero or a negative value is interpreted as no limitation.
+
+The default value is `-1`.
+
 #### `max_resultset_size`
 
 Specifies the maximum size a resultset can have, measured in kibibytes,
 in order to be stored in the cache. A resultset larger than this, will
 not be stored.
 ```
-max_resultset_size=64
+max_resultset_size=128
 ```
-The default value is TBD.
+The default value is 64.
 
 #### `ttl`
 

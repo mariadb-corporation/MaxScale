@@ -32,3 +32,5 @@ endif()
 if(EXTRA_PACKAGE_DEPENDENCIES)
   set(CPACK_RPM_PACKAGE_REQUIRES "${EXTRA_PACKAGE_DEPENDENCIES}")
 endif()
+
+message(STATUS "Generating RPM packages")
