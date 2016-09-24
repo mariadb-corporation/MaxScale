@@ -958,6 +958,15 @@ static void closeSession(ROUTER *instance, void *router_session)
             else
             {
                 ss_dassert(!BREF_IS_WAITING_RESULT(bref));
+
+                /** This should never be true unless a backend reference is taken
+                 * out of use before clearing the BREF_WAITING_RESULT state */
+                if (BREF_IS_WAITING_RESULT(bref))
+                {
+                    MXS_WARNING("A closed backend was expecting a result, this should not be possible. "
+                                "Decrementing active operation counter for this backend.");
+                    bref_clear_state(bref, BREF_WAITING_RESULT);
+                }
             }
         }
         /** Unlock */
