@@ -444,11 +444,12 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *data)
                     }
                     else
                     {
-                        // Memory allocation failed. Let's remove the default database to
+                        // Memory allocation failed. We need to remove the default database to
                         // prevent incorrect cache entries, since we won't know what the
-                        // default db will be.
-                        MXS_FREE(csdata->default_db);
-                        csdata->default_db = NULL;
+                        // default db is. But we only need to do that if "USE <db>" really
+                        // succeeds. The right thing will happen by itself in
+                        // handle_expecting_use_response(); if OK is returned, default_db will
+                        // become NULL, if ERR, default_db will not be changed.
                     }
                 }
                 break;
