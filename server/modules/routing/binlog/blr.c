@@ -842,10 +842,10 @@ createInstance(SERVICE *service, char **options)
         if (!inst->encryption.enabled && inst->encryption_ctx)
         {
             MXS_ERROR("Found START_ENCRYPTION_EVENT but "
-                      "binlog ecryption option is currently Off. Replication can't start right now. "
-                      "Please restart maxScale with option set to On");
+                      "binlog encryption option is currently Off. Replication can't start right now. "
+                      "Please restart MaxScale with option set to On");
 
-            /* Force STOPPED state */ 
+            /* Force STOPPED state */
             inst->master_state = BLRM_SLAVE_STOPPED;
             /* Set mysql_errno and error message */
             inst->m_errno = BINLOG_FATAL_ERROR_READING;

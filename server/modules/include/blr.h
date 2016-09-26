@@ -61,7 +61,7 @@
 #define BINLOG_EVENT_CRC_ALGO_TYPE  1
 #define BINLOG_EVENT_CRC_SIZE       4
 #define BINLOG_EVENT_LEN_OFFSET     9
-#define BINLOG_ENCRYPTION_ALGORYTM_NAME_LEN  13
+#define BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN  13
 #define BINLOG_FATAL_ERROR_READING         1236
 
 /**
@@ -466,7 +466,7 @@ typedef struct
 typedef struct binlog_encryption_setup
 {
   bool enabled;
-  char encryption_algorithm[BINLOG_ENCRYPTION_ALGORYTM_NAME_LEN];
+  char encryption_algorithm[BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN];
   char *key_management_filename;
   uint8_t *keys;
 } BINLOG_ENCRYPTION_SETUP;

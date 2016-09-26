@@ -135,9 +135,11 @@ typedef enum
 typedef struct start_encryption_event
 {
     uint8_t header[BINLOG_EVENT_HDR_LEN];
-    uint8_t binlog_crypto_scheme;
-    uint32_t binlog_key_version;
-    uint8_t nonce[BLRM_NONCE_LENGTH];
+    uint8_t binlog_crypto_scheme; /**< Encryption scheme */
+    uint32_t binlog_key_version;  /**< Encryption key version */
+    uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
+                                       * These bytes + the binlog event current pos
+                                       * form the encrryption IV for the event */
 } START_ENCRYPTION_EVENT;
 
 /**
@@ -149,9 +151,11 @@ typedef struct start_encryption_event
  */
 typedef struct binlog_encryption_ctx
 {
-    uint8_t binlog_crypto_scheme;
-    uint32_t binlog_key_version;
-    uint8_t nonce[BLRM_NONCE_LENGTH];
+    uint8_t binlog_crypto_scheme; /**< Encryption scheme */
+    uint32_t binlog_key_version;  /**< Encryption key version */
+    uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
+                                       * These bytes + the binlog event current pos
+                                       * form the encrryption IV for the event */
 } BINLOG_ENCRYPTION_CTX;
 
 /**
@@ -1683,8 +1687,12 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
             char nonce_hex[12 * 2 + 1] = "";
-            BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
             START_ENCRYPTION_EVENT ste_event = {};
+            BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+            if (new_encryption_ctx == NULL)
+            {
+                return 1;
+            }
 
             /* The start encryption event data is 17 bytes long:
              * Scheme = 1
@@ -1738,7 +1746,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
             /* Update the router encryption context */
             MXS_FREE(router->encryption_ctx);
-            router->encryption_ctx = NULL;
             router->encryption_ctx = new_encryption_ctx;
         }
 
@@ -2485,6 +2492,10 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
     uint8_t *new_event;
     uint8_t event_size = sizeof(START_ENCRYPTION_EVENT);
     BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
+    if (new_encryption_ctx == NULL)
+    {
+        return NULL;
+    }
 
     /* Add 4 bytes to event size with crc32 */
     if (do_checksum)
@@ -2545,7 +2556,6 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
            &new_event[BINLOG_EVENT_HDR_LEN + 1], BLRM_KEY_VERSION_LENGTH);
 
     MXS_FREE(router->encryption_ctx);
-    router->encryption_ctx = NULL;
     router->encryption_ctx = new_encryption_ctx;
 
     spinlock_release(&router->binlog_lock);
