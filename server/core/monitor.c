@@ -711,8 +711,14 @@ mon_get_event_type(MONITOR_SERVERS* node)
         }
         else
         {
+            /** These are used to detect whether we actually lost something or
+             * just transitioned from one state to another */
+            unsigned int prev_bits = prev & (SERVER_MASTER | SERVER_SLAVE);
+            unsigned int present_bits = present & (SERVER_MASTER | SERVER_SLAVE);
+
             /* Was running and still is */
-            if (prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
+            if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
+                     prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
