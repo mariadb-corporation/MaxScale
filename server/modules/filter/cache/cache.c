@@ -14,12 +14,14 @@
 #define MXS_MODULE_NAME "cache"
 #include <maxscale/alloc.h>
 #include <filter.h>
+#include <gwdirs.h>
 #include <log_manager.h>
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysql_utils.h>
 #include <query_classifier.h>
 #include "cache.h"
+#include "rules.h"
 #include "storage.h"
 
 static char VERSION_STRING[] = "V1.0.0";
@@ -90,28 +92,31 @@ FILTER_OBJECT *GetModuleObject()
 
 typedef struct cache_config
 {
-    cache_references_t allowed_references;
-    uint32_t           max_resultset_rows;
-    uint32_t           max_resultset_size;
-    const char        *storage;
-    const char        *storage_options;
-    uint32_t           ttl;
+    uint32_t    max_resultset_rows;
+    uint32_t    max_resultset_size;
+    const char* rules;
+    const char *storage;
+    const char *storage_options;
+    uint32_t    ttl;
+    uint32_t    debug;
 } CACHE_CONFIG;
 
 static const CACHE_CONFIG DEFAULT_CONFIG =
 {
-    CACHE_DEFAULT_ALLOWED_REFERENCES,
     CACHE_DEFAULT_MAX_RESULTSET_ROWS,
     CACHE_DEFAULT_MAX_RESULTSET_SIZE,
     NULL,
     NULL,
-    CACHE_DEFAULT_TTL
+    NULL,
+    CACHE_DEFAULT_TTL,
+    CACHE_DEFAULT_DEBUG
 };
 
 typedef struct cache_instance
 {
     const char            *name;
     CACHE_CONFIG           config;
+    CACHE_RULES           *rules;
     CACHE_STORAGE_MODULE  *module;
     CACHE_STORAGE         *storage;
 } CACHE_INSTANCE;
@@ -167,7 +172,7 @@ static int handle_expecting_response(CACHE_SESSION_DATA *csdata);
 static int handle_expecting_rows(CACHE_SESSION_DATA *csdata);
 static int handle_expecting_use_response(CACHE_SESSION_DATA *csdata);
 static int handle_ignoring_response(CACHE_SESSION_DATA *csdata);
-
+static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONFIG* config);
 static bool route_using_cache(CACHE_SESSION_DATA *sdata, const GWBUF *key, GWBUF **value);
 
 static int send_upstream(CACHE_SESSION_DATA *csdata);
@@ -190,128 +195,60 @@ static void store_result(CACHE_SESSION_DATA *csdata);
  */
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
+    CACHE_INSTANCE *cinstance = NULL;
     CACHE_CONFIG config = DEFAULT_CONFIG;
 
-    bool error = false;
-
-    for (int i = 0; params[i]; ++i)
+    if (process_params(options, params, &config))
     {
-        const FILTER_PARAMETER *param = params[i];
+        CACHE_RULES *rules = NULL;
 
-        if (strcmp(param->name, "allowed_references") == 0)
+        if (config.rules)
         {
-            if (strcmp(param->value, "qualified") == 0)
-            {
-                config.allowed_references = CACHE_REFERENCES_QUALIFIED;
-            }
-            else if (strcmp(param->value, "any") == 0)
-            {
-                config.allowed_references = CACHE_REFERENCES_ANY;
-            }
-            else
-            {
-                MXS_ERROR("Unknown value '%s' for parameter '%s'.", param->value, param->name);
-                error = true;
-            }
+            rules = cache_rules_load(config.rules, config.debug);
         }
-        else if (strcmp(param->name, "max_resultset_rows") == 0)
+        else
         {
-            int v = atoi(param->value);
-
-            if (v > 0)
-            {
-                config.max_resultset_rows = v;
-            }
-            else
-            {
-                config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
-            }
+            rules = cache_rules_create(config.debug);
         }
-        else if (strcmp(param->name, "max_resultset_size") == 0)
-        {
-            int v = atoi(param->value);
 
-            if (v > 0)
+        if (rules)
+        {
+            if ((cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE))) != NULL)
             {
-                config.max_resultset_size = v * 1024;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", param->name);
-                error = true;
-            }
-        }
-        else if (strcmp(param->name, "storage_options") == 0)
-        {
-            config.storage_options = param->value;
-        }
-        else if (strcmp(param->name, "storage") == 0)
-        {
-            config.storage = param->value;
-        }
-        else if (strcmp(param->name, "ttl") == 0)
-        {
-            int v = atoi(param->value);
+                CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
 
-            if (v > 0)
-            {
-                config.ttl = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", param->name);
-                error = true;
-            }
-        }
-        else if (!filter_standard_parameter(params[i]->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", param->name);
-            error = true;
-        }
-    }
-
-    CACHE_INSTANCE *cinstance = NULL;
-
-    if (!error)
-    {
-        if ((cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE))) != NULL)
-        {
-            CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
-
-            if (module)
-            {
-                CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
-
-                if (storage)
+                if (module)
                 {
-                    cinstance->name = name;
-                    cinstance->config = config;
-                    cinstance->module = module;
-                    cinstance->storage = storage;
+                    CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
 
-                    MXS_NOTICE("Cache storage %s opened and initialized.", config.storage);
+                    if (storage)
+                    {
+                        cinstance->name = name;
+                        cinstance->config = config;
+                        cinstance->rules = rules;
+                        cinstance->module = module;
+                        cinstance->storage = storage;
+
+                        MXS_NOTICE("Cache storage %s opened and initialized.", config.storage);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not create storage instance for %s.", name);
+                        cache_rules_free(rules);
+                        cache_storage_close(module);
+                        MXS_FREE(cinstance);
+                        cinstance = NULL;
+                    }
                 }
                 else
                 {
-                    MXS_ERROR("Could not create storage instance for %s.", name);
-                    cache_storage_close(module);
+                    MXS_ERROR("Could not load cache storage module %s.", name);
+                    cache_rules_free(rules);
                     MXS_FREE(cinstance);
                     cinstance = NULL;
                 }
             }
-            else
-            {
-                MXS_ERROR("Could not load cache storage module %s.", name);
-                MXS_FREE(cinstance);
-                cinstance = NULL;
-            }
         }
-    }
-    else
-    {
-        cinstance = NULL;
     }
 
     return (FILTER*)cinstance;
@@ -469,23 +406,33 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *data)
 
                         if (qc_get_operation(packet) == QUERY_OP_SELECT)
                         {
-                            GWBUF *result;
-                            use_default = !route_using_cache(csdata, packet, &result);
-
-                            if (use_default)
+                            if (cache_rules_should_store(cinstance->rules, csdata->default_db, packet))
                             {
-                                csdata->state = CACHE_EXPECTING_RESPONSE;
+                                if (cache_rules_should_use(cinstance->rules, csdata->session))
+                                {
+                                    GWBUF *result;
+                                    use_default = !route_using_cache(csdata, packet, &result);
+
+                                    if (use_default)
+                                    {
+                                        csdata->state = CACHE_EXPECTING_RESPONSE;
+                                    }
+                                    else
+                                    {
+                                        csdata->state = CACHE_EXPECTING_NOTHING;
+                                        C_DEBUG("Using data from cache.");
+                                        gwbuf_free(packet);
+                                        DCB *dcb = csdata->session->client_dcb;
+
+                                        // TODO: This is not ok. Any filters before this filter, will not
+                                        // TODO: see this data.
+                                        rv = dcb->func.write(dcb, result);
+                                    }
+                                }
                             }
                             else
                             {
-                                csdata->state = CACHE_EXPECTING_NOTHING;
-                                C_DEBUG("Using data from cache.");
-                                gwbuf_free(packet);
-                                DCB *dcb = csdata->session->client_dcb;
-
-                                // TODO: This is not ok. Any filters before this filter, will not
-                                // TODO: see this data.
-                                rv = dcb->func.write(dcb, result);
+                                csdata->state = CACHE_IGNORING_RESPONSE;
                             }
                         }
                     }
@@ -934,6 +881,125 @@ static int handle_ignoring_response(CACHE_SESSION_DATA *csdata)
     ss_dassert(csdata->res.data);
 
     return send_upstream(csdata);
+}
+
+/**
+ * Processes the cache params
+ *
+ * @param options Options as passed to the filter.
+ * @param params  Parameters as passed to the filter.
+ * @param config  Pointer to config instance where params will be stored.
+ *
+ * @return True if all parameters could be processed, false otherwise.
+ */
+static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONFIG* config)
+{
+    bool error = false;
+
+    for (int i = 0; params[i]; ++i)
+    {
+        const FILTER_PARAMETER *param = params[i];
+
+        if (strcmp(param->name, "max_resultset_rows") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->max_resultset_rows = v;
+            }
+            else
+            {
+                config->max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
+            }
+        }
+        else if (strcmp(param->name, "max_resultset_size") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->max_resultset_size = v * 1024;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "rules") == 0)
+        {
+            if (*param->value == '/')
+            {
+                config->rules = MXS_STRDUP(param->value);
+            }
+            else
+            {
+                const char *datadir = get_datadir();
+                size_t len = strlen(datadir) + 1 + strlen(param->value) + 1;
+
+                char *rules = MXS_MALLOC(len);
+
+                if (rules)
+                {
+                    sprintf(rules, "%s/%s", datadir, param->value);
+                    config->rules = rules;
+                }
+            }
+
+            if (!config->rules)
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "storage_options") == 0)
+        {
+            config->storage_options = param->value;
+        }
+        else if (strcmp(param->name, "storage") == 0)
+        {
+            config->storage = param->value;
+        }
+        else if (strcmp(param->name, "ttl") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->ttl = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "debug") == 0)
+        {
+            int v = atoi(param->value);
+
+            if ((v >= CACHE_DEBUG_MIN) && (v <= CACHE_DEBUG_MAX))
+            {
+                config->debug = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be between %d and %d, inclusive.",
+                          param->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+                error = true;
+            }
+        }
+        else if (!filter_standard_parameter(params[i]->name))
+        {
+            MXS_ERROR("Unknown configuration entry '%s'.", param->name);
+            error = true;
+        }
+    }
+
+    return !error;
 }
 
 /**
