@@ -397,6 +397,11 @@ dcb_free_all_memory(DCB *dcb)
         dcb->authfunc.free(dcb);
         dcb->data = NULL;
     }
+    if (dcb->backend_data && dcb->authfunc.free && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    {
+        dcb->authfunc.free(dcb);
+        dcb->backend_data = NULL;
+    }
     if (dcb->protoname)
     {
         MXS_FREE(dcb->protoname);

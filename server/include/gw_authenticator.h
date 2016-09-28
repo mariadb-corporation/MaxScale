@@ -67,8 +67,8 @@ typedef struct gw_authenticator
 /** Return values for extract and authenticate entry points */
 #define MXS_AUTH_SUCCEEDED 0 /**< Authentication was successful */
 #define MXS_AUTH_FAILED 1 /**< Authentication failed */
-#define MXS_AUTH_FAILED_DB 2
-#define MXS_AUTH_FAILED_SSL 3
+#define MXS_AUTH_FAILED_DB 2 /**< Authentication failed, database not found */
+#define MXS_AUTH_FAILED_SSL 3 /**< SSL authentication failed */
 #define MXS_AUTH_INCOMPLETE 4 /**< Authentication is not yet complete */
 #define MXS_AUTH_SSL_INCOMPLETE 5 /**< SSL connection is not yet complete */
 #define MXS_AUTH_NO_SESSION 6

@@ -3,6 +3,11 @@ target_link_libraries(MySQLAuth maxscale-common)
 set_target_properties(MySQLAuth PROPERTIES VERSION "1.0.0")
 install_module(MySQLAuth core)
 
+add_library(MySQLBackendAuth SHARED mysql_backend_auth.c)
+target_link_libraries(MySQLBackendAuth maxscale-common MySQLBackend)
+set_target_properties(MySQLBackendAuth PROPERTIES VERSION "1.0.0")
+install_module(MySQLBackendAuth core)
+
 add_library(NullAuthAllow SHARED null_auth_allow.c)
 target_link_libraries(NullAuthAllow maxscale-common)
 set_target_properties(NullAuthAllow PROPERTIES VERSION "1.0.0")

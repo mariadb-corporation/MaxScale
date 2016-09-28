@@ -253,6 +253,7 @@ typedef struct dcb
     time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
     struct service  *service;       /**< The related service */
     void            *data;          /**< Specific client data */
+    void            *backend_data;  /**< Specific backend data */
     DCBMM           memdata;        /**< The data related to DCB memory management */
     SPINLOCK        cb_lock;        /**< The lock for the callbacks linked list */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
@@ -282,7 +283,8 @@ typedef struct dcb
     .authlock = SPINLOCK_INIT, .stats = {0}, .memdata = DCBMM_INIT, \
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
-    .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB}
+    .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
+    .backend_data = NULL}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason

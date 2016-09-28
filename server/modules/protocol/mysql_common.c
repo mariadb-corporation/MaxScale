@@ -52,6 +52,8 @@
 #include <netinet/tcp.h>
 #include <modutil.h>
 
+uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
+
 static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
 
 /**
@@ -1023,5 +1025,37 @@ bool read_complete_packet(DCB *dcb, GWBUF **readbuf)
         }
     }
 
+    return rval;
+}
+
+/**
+ * Copy shared session authentication info
+ *
+ * @param dcb A backend DCB
+ * @param session Destination where authentication data is copied
+ * @return bool true = success, false = fail
+ */
+bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
+{
+    bool rval = true;
+    CHK_DCB(dcb);
+    CHK_SESSION(dcb->session);
+
+    spinlock_acquire(&dcb->session->ses_lock);
+
+    if (dcb->session->state != SESSION_STATE_ALLOC &&
+        dcb->session->state != SESSION_STATE_DUMMY)
+    {
+        memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
+    }
+    else
+    {
+        ss_dassert(false);
+        MXS_ERROR("%lu [gw_get_shared_session_auth_info] Couldn't get "
+                  "session authentication info. Session in a wrong state %d.",
+                  pthread_self(), dcb->session->state);
+        rval = false;
+    }
+    spinlock_release(&dcb->session->ses_lock);
     return rval;
 }

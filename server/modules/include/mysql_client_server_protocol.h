@@ -294,6 +294,8 @@ typedef struct
 #define MYSQL_IS_CHANGE_USER(payload)       (MYSQL_GET_COMMAND(payload)==MYSQL_COM_CHANGE_USER)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
+/* The following can be compared using memcmp to detect a null password */
+extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
@@ -365,5 +367,12 @@ void init_response_status (
     int* npackets,
     ssize_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
+bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
+
+/** Read the backend server's handshake */
+bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer);
+
+/** Send the server handshake response packet to the backend server */
+mxs_auth_state_t gw_send_backend_auth(DCB *dcb);
 
 #endif /** _MYSQL_PROTOCOL_H */

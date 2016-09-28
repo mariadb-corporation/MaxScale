@@ -562,12 +562,6 @@ int gw_read_client_event(DCB* dcb)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
-    MySQLProtocol *protocol;
-    int auth_val;
-
-    protocol = (MySQLProtocol *)dcb->protocol;
-    /* int compress = -1; */
-
     /**
      * The first step in the authentication process is to extract the
      * relevant information from the buffer supplied and place it
@@ -577,17 +571,14 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * data extraction succeeds, then a call is made to the actual
      * authenticate function to carry out the user checks.
      */
-    if (MXS_AUTH_SUCCEEDED == (
-        auth_val = dcb->authfunc.extract(dcb, read_buffer)))
+    int auth_val = dcb->authfunc.extract(dcb, read_buffer);
+
+    if (MXS_AUTH_SUCCEEDED == auth_val)
     {
-        /*
-         * Maybe this comment will be useful some day:
-          compress =
-          GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
-          &protocol->client_capabilities);
-        */
         auth_val = dcb->authfunc.authenticate(dcb);
     }
+
+    MySQLProtocol *protocol = (MySQLProtocol *)dcb->protocol;
 
     /**
      * At this point, if the auth_val return code indicates success
