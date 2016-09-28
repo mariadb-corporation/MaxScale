@@ -47,6 +47,7 @@ static bool cache_rule_op_get(const char *s, cache_rule_op_t *op);
 static const char *cache_rule_op_to_string(cache_rule_op_t op);
 
 static bool cache_rule_compare(CACHE_RULE *rule, const char *value);
+static bool cache_rule_compare_n(CACHE_RULE *rule, const char *value, size_t length);
 static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
                                             cache_rule_op_t        op,
                                             const char            *value,
@@ -59,7 +60,18 @@ static CACHE_RULE *cache_rule_create(cache_rule_attribute_t attribute,
                                      cache_rule_op_t        op,
                                      const char            *value,
                                      uint32_t               debug);
-static bool cache_rule_compare(CACHE_RULE *rule, const char *value);
+static bool cache_rule_matches_column(CACHE_RULE *rule,
+                                      const char *default_db,
+                                      const GWBUF *query);
+static bool cache_rule_matches_database(CACHE_RULE *rule,
+                                        const char *default_db,
+                                        const GWBUF *query);
+static bool cache_rule_matches_query(CACHE_RULE *rule,
+                                     const char *default_db,
+                                     const GWBUF *query);
+static bool cache_rule_matches_table(CACHE_RULE *rule,
+                                     const char *default_db,
+                                     const GWBUF *query);
 static bool cache_rule_matches(CACHE_RULE *rule,
                                const char *default_db,
                                const GWBUF *query);
@@ -525,20 +537,34 @@ static void cache_rule_free(CACHE_RULE* rule)
  */
 static bool cache_rule_compare(CACHE_RULE *self, const char *value)
 {
+    return cache_rule_compare_n(self, value, strlen(value));
+}
+
+/**
+ * Check whether a value matches a rule.
+ *
+ * @param self  The rule object.
+ * @param value The value to check.
+ * @param len   The length of value.
+ *
+ * @return True if the value matches, false otherwise.
+ */
+static bool cache_rule_compare_n(CACHE_RULE *self, const char *value, size_t length)
+{
     bool compares = false;
 
     switch (self->op)
     {
     case CACHE_OP_EQ:
     case CACHE_OP_NEQ:
-        compares = (strcmp(self->value, value) == 0);
+        compares = (strncmp(self->value, value, length) == 0);
         break;
 
     case CACHE_OP_LIKE:
     case CACHE_OP_UNLIKE:
-        compares = (pcre2_match(self->regexp.code, (PCRE2_SPTR)value,
-                                PCRE2_ZERO_TERMINATED, 0, 0,
-                                self->regexp.data, NULL) >= 0);
+        compares = (pcre2_match(self->regexp.code,
+                                (PCRE2_SPTR)value, length,
+                                0, 0, self->regexp.data, NULL) >= 0);
         break;
 
     default:
@@ -551,6 +577,175 @@ static bool cache_rule_compare(CACHE_RULE *self, const char *value)
     }
 
     return compares;
+}
+
+/**
+ * Returns boolean indicating whether the column rule matches the query or not.
+ *
+ * @param self       The CACHE_RULE object.
+ * @param default_db The current default db.
+ * @param query      The query.
+ *
+ * @return True, if the rule matches, false otherwise.
+ */
+static bool cache_rule_matches_column(CACHE_RULE *self, const char *default_db, const GWBUF *query)
+{
+    ss_dassert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
+    ss_info_dassert(!true, "Column matching not implemented yet.");
+
+    return false;
+}
+
+/**
+ * Returns boolean indicating whether the database rule matches the query or not.
+ *
+ * @param self       The CACHE_RULE object.
+ * @param default_db The current default db.
+ * @param query      The query.
+ *
+ * @return True, if the rule matches, false otherwise.
+ */
+static bool cache_rule_matches_database(CACHE_RULE *self, const char *default_db, const GWBUF *query)
+{
+    ss_dassert(self->attribute == CACHE_ATTRIBUTE_DATABASE);
+
+    bool matches = false;
+
+    int n;
+    char **names = qc_get_database_names((GWBUF*)query, &n); // TODO: Make qc const-correct.
+
+    if (names)
+    {
+        int i = 0;
+
+        while (!matches && (i < n))
+        {
+            matches = cache_rule_compare(self, names[i]);
+            ++i;
+        }
+
+        for (int i = 0; i < n; ++i)
+        {
+            MXS_FREE(names[i]);
+        }
+        MXS_FREE(names);
+    }
+
+    if (!matches && default_db)
+    {
+        matches = cache_rule_compare(self, default_db);
+    }
+
+    return matches;
+}
+
+/**
+ * Returns boolean indicating whether the query rule matches the query or not.
+ *
+ * @param self       The CACHE_RULE object.
+ * @param default_db The current default db.
+ * @param query      The query.
+ *
+ * @return True, if the rule matches, false otherwise.
+ */
+static bool cache_rule_matches_query(CACHE_RULE *self, const char *default_db, const GWBUF *query)
+{
+    ss_dassert(self->attribute == CACHE_ATTRIBUTE_QUERY);
+
+    char* sql;
+    int len;
+
+    // Will succeed, query contains a contiguous COM_QUERY.
+    modutil_extract_SQL((GWBUF*)query, &sql, &len);
+
+    return cache_rule_compare_n(self, sql, len);
+}
+
+/**
+ * Returns boolean indicating whether the table rule matches the query or not.
+ *
+ * @param self       The CACHE_RULE object.
+ * @param default_db The current default db.
+ * @param query      The query.
+ *
+ * @return True, if the rule matches, false otherwise.
+ */
+static bool cache_rule_matches_table(CACHE_RULE *self, const char *default_db, const GWBUF *query)
+{
+    ss_dassert(self->attribute == CACHE_ATTRIBUTE_TABLE);
+
+    bool matches = false;
+
+    int n;
+    char **names;
+    bool fullnames;
+
+    fullnames = false;
+    names = qc_get_table_names((GWBUF*)query, &n, fullnames);
+
+    if (names)
+    {
+        int i = 0;
+        while (!matches && (i < n))
+        {
+            char *name = names[i];
+            matches = cache_rule_compare(self, name);
+            MXS_FREE(name);
+            ++i;
+        }
+
+        if (i < n)
+        {
+            MXS_FREE(names[i]);
+            ++i;
+        }
+
+        MXS_FREE(names);
+
+        if (!matches)
+        {
+            fullnames = true;
+            names = qc_get_table_names((GWBUF*)query, &n, fullnames);
+
+            size_t default_db_len = default_db ? strlen(default_db) : 0;
+            i = 0;
+
+            while (!matches && (i < n))
+            {
+                char *name = names[i];
+                char *dot = strchr(name, '.');
+
+                if (!dot)
+                {
+                    if (default_db)
+                    {
+                        name = (char*)MXS_MALLOC(default_db_len + 1 + strlen(name) + 1);
+
+                        strcpy(name, default_db);
+                        strcpy(name + default_db_len, ".");
+                        strcpy(name + default_db_len + 1, names[i]);
+
+                        MXS_FREE(names[i]);
+                        names[i] = name;
+                    }
+                }
+
+                matches = cache_rule_compare(self, name);
+                MXS_FREE(name);
+                ++i;
+            }
+
+            if (i < n)
+            {
+                MXS_FREE(names[i]);
+                ++i;
+            }
+
+            MXS_FREE(names);
+        }
+    }
+
+    return matches;
 }
 
 /**
@@ -569,47 +764,19 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
     switch (self->attribute)
     {
     case CACHE_ATTRIBUTE_COLUMN:
-        // TODO: Not implemented yet.
-        ss_dassert(!true);
+        matches = cache_rule_matches_column(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_DATABASE:
-        {
-            int n;
-            char **names = qc_get_database_names((GWBUF*)query, &n); // TODO: Make qc const-correct.
-
-            if (names)
-            {
-                int i = 0;
-
-                while (!matches && (i < n))
-                {
-                    matches = cache_rule_compare(self, names[i]);
-                    ++i;
-                }
-
-                for (int i = 0; i < n; ++i)
-                {
-                    MXS_FREE(names[i]);
-                }
-                MXS_FREE(names);
-            }
-
-            if (!matches && default_db)
-            {
-                matches = cache_rule_compare(self, default_db);
-            }
-        }
+        matches = cache_rule_matches_database(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_TABLE:
-        // TODO: Not implemented yet.
-        ss_dassert(!true);
+        matches = cache_rule_matches_table(self, default_db, query);
         break;
 
     case CACHE_ATTRIBUTE_QUERY:
-        // TODO: Not implemented yet.
-        ss_dassert(!true);
+        matches = cache_rule_matches_query(self, default_db, query);
         break;
 
     default:
