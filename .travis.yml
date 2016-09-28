@@ -21,8 +21,8 @@ addons:
       - libpcre3-dev
       - doxygen
       - pandoc
-      - libuuid
-      - libuuid-dev
+      - uuid
+      - uuid-dev
   coverity_scan:
     project:
       name: "mariadb-corporation/MaxScale"
