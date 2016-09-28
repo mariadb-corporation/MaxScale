@@ -60,8 +60,26 @@
  */
 
 /* This could be placed in the protocol, with a new API entry point
- * It is certainly MySQL specific.
- *  */
+ * It is certainly MySQL specific. Packet types are DB specific, but can be
+ * assumed to be enums, which can be handled as integers without knowing
+ * which DB is involved until the packet type needs to be interpreted.
+ * 
+ */
+
+/**
+ * @brief Determine packet type
+ *
+ * Examine the packet in the buffer to extract the type, if possible. At the
+ * same time set the second parameter to indicate whether the packet was
+ * empty.
+ * 
+ * It is assumed that the packet length and type are contained within a single
+ * buffer, the one indicated by the first parameter.
+ * 
+ * @param querybuf  Buffer containing the packet
+ * @param non_empty_packet  bool indicating whether the packet is non-empty
+ * @return The packet type, or MYSQL_COM_UNDEFINED; also the second parameter is set
+ */
 int
 determine_packet_type(GWBUF *querybuf, bool *non_empty_packet)
 {
@@ -85,6 +103,17 @@ determine_packet_type(GWBUF *querybuf, bool *non_empty_packet)
 /*
  * This appears to be MySQL specific
  */
+/**
+ * @brief Determine if a packet contains a SQL query
+ *
+ * Packet type tells us this, but in a DB specific way. This function is
+ * provided so that code that is not DB specific can find out whether a packet
+ * contains a SQL query. Clearly, to be effective different functions must be
+ * called for different DB types.
+ * 
+ * @param packet_type   Type of packet (integer)
+ * @return bool indicating whether packet contains a SQL query
+ */
 bool
 is_packet_a_query(int packet_type)
 {
@@ -93,6 +122,17 @@ is_packet_a_query(int packet_type)
 
 /*
  * This looks MySQL specific
+ */
+/**
+ * @brief Determine if a packet contains a one way message
+ *
+ * Packet type tells us this, but in a DB specific way. This function is
+ * provided so that code that is not DB specific can find out whether a packet
+ * contains a one way messsage. Clearly, to be effective different functions must be
+ * called for different DB types.
+ * 
+ * @param packet_type   Type of packet (integer)
+ * @return bool indicating whether packet contains a one way message
  */
 bool
 is_packet_a_one_way_message(int packet_type)
@@ -104,6 +144,17 @@ is_packet_a_one_way_message(int packet_type)
 /*
  * This one is problematic because it is MySQL specific, but also router
  * specific.
+ */
+/**
+ * @brief Log the transaction status
+ *
+ * The router session and the query buffer are used to log the transaction
+ * status, along with the query type (which is a generic description that
+ * should be usable across all DB types).
+ * 
+ * @param rses      Router session
+ * @param querybuf  Query buffer
+ * @param qtype     Query type
  */
 void
 log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype)
@@ -139,6 +190,23 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
  * MySQL specific and could migrate to the MySQL protocol; likewise the
  * utility to convert packet type to a string. The aim is for most of this
  * code to remain as part of the router.
+ */
+/**
+ * @brief Operations to be carried out if request is for all backend servers
+ *
+ * If the choice of sending to all backends is in conflict with other bit
+ * settings in route_target, then error messages are written to the log.
+ * 
+ * Otherwise, the function route_session_write is called to carry out the
+ * actual routing.
+ * 
+ * @param route_target  Bit map indicating where packet should be routed
+ * @param inst          Router instance
+ * @param rses          Router session
+ * @param querybuf      Query buffer containing packet
+ * @param packet_type   Integer (enum) indicating type of packet
+ * @param qtype         Query type 
+ * @return bool indicating whether the session can continue
  */
 bool
 handle_target_is_all(route_target_t route_target,
@@ -218,6 +286,15 @@ handle_target_is_all(route_target_t route_target,
 }
 
 /* This is MySQL specific */
+/**
+ * @brief Write an error message to the log indicating failure
+ * 
+ * Used when an attempt to lock the router session fails.
+ *
+ * @param querybuf      Query buffer containing packet
+ * @param packet_type   Integer (enum) indicating type of packet
+ * @param qtype         Query type 
+ */
 void
 session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t qtype)
 {
@@ -237,6 +314,14 @@ session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t 
 /*
  * Probably MySQL specific because of modutil function
  */
+/**
+ * @brief Write an error message to the log for closed session
+ * 
+ * This happens if a request is received for a session that is already
+ * closing down.
+ *
+ * @param querybuf      Query buffer containing packet
+ */
 void closed_session_reply(GWBUF *querybuf)
 {
     uint8_t* data = GWBUF_DATA(querybuf);
@@ -253,6 +338,15 @@ void closed_session_reply(GWBUF *querybuf)
 
 /*
  * Probably MySQL specific because of modutil function
+ */
+/**
+ * @brief First step to handle request in a live session
+ * 
+ * Used when a request is about to be routed. Note that the query buffer is 
+ * passed by name and is likely to be modified by this function.
+ *
+ * @param querybuf      Query buffer containing packet
+ * @param rses          Router session
  */
 void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
 {
@@ -275,6 +369,16 @@ void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
 
 /*
  * Uses MySQL specific mechanisms
+ */
+/**
+ * @brief Write an error message to the log for session lock failure
+ * 
+ * This happens when processing a client reply and the session cannot be
+ * locked.
+ *
+ * @param rses          Router session
+ * @param buf           Query buffer containing reply data
+ * @param dcb           The backend DCB that sent the reply
  */
 void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb)
 {
@@ -326,6 +430,15 @@ void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb)
 /*
  * Uses MySQL specific mechanisms
  */
+/**
+ * @brief Check the reply from a backend server to a session command
+ * 
+ * If the reply is an error, a message may be logged.
+ *
+ * @param writebuf      Query buffer containing reply data
+ * @param scur          Session cursor
+ * @param bref          Router session data for a backend server
+ */
 void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend_ref_t *bref)
 {
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) &&
@@ -349,7 +462,7 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
 }
 
 /**
- * If session command cursor is passive, sends the command to backend for
+ * @brief If session command cursor is passive, sends the command to backend for
  * execution.
  *
  * Returns true if command was sent or added successfully to the queue.
@@ -357,6 +470,9 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
  *  commands.
  *
  * Router session must be locked.
+ * 
+ * @param backend_ref   Router session backend database data
+ * @return bool - true for success, false for failure
  */
 /*
  * Uses MySQL specific values in the large switch statement, although it

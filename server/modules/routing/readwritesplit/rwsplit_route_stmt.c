@@ -424,6 +424,14 @@ return_succp:
     return succp;
 }
 
+/**
+ * @brief Function to hash keys in read-write split router
+ * 
+ * Used to store information about temporary tables.
+ *
+ * @param key   key to be hashed, actually a character string
+ * @result      the hash value integer
+ */
 int rwsplit_hashkeyfun(const void *key)
 {
     if (key == NULL)
@@ -441,6 +449,15 @@ int rwsplit_hashkeyfun(const void *key)
     return hash;
 }
 
+/**
+ * @brief Function to compare hash keys in read-write split router
+ * 
+ * Used to manage information about temporary tables.
+ *
+ * @param key   first key to be compared, actually a character string
+ * @param v2    second key to be compared, actually a character string
+ * @result      1 if keys are equal, 0 otherwise
+ */
 int rwsplit_hashcmpfun(const void *v1, const void *v2)
 {
     const char *i1 = (const char *)v1;
@@ -449,12 +466,27 @@ int rwsplit_hashcmpfun(const void *v1, const void *v2)
     return strcmp(i1, i2);
 }
 
+/**
+ * @brief Function to duplicate a hash value in read-write split router
+ * 
+ * Used to manage information about temporary tables.
+ *
+ * @param fval  value to be duplicated, actually a character string
+ * @result      the duplicated value, actually a character string
+ */
 void *rwsplit_hstrdup(const void *fval)
 {
     char *str = (char *)fval;
     return MXS_STRDUP(str);
 }
 
+/**
+ * @brief Function to free hash values in read-write split router
+ * 
+ * Used to manage information about temporary tables.
+ *
+ * @param key   value to be freed
+ */
 void rwsplit_hfree(void *fval)
 {
     MXS_FREE(fval);
@@ -869,6 +901,16 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     return target;
 }
 
+/**
+ * @brief Handle multi statement queries and load statements
+ * 
+ * One of the possible types of handling required when a request is routed
+ *
+ *  @param ses          Router session
+ *  @param querybuf     Buffer containing query to be routed
+ *  @param packet_type  Type of packet (database specific)
+ *  @param qtype        Query type
+ */
 void
 handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
     int packet_type, int *qtype)
@@ -955,6 +997,18 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
         }
 }
 
+/**
+ * @brief Handle hinted target query
+ * 
+ * One of the possible types of handling required when a request is routed
+ *
+ *  @param ses          Router session
+ *  @param querybuf     Buffer containing query to be routed
+ *  @param route_target Target for the query
+ *  @param target_dcb   DCB for the target server
+ * 
+ *  @return bool - true if succeeded, false otherwise
+ */
 bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
         route_target_t route_target, DCB **target_dcb)
 {
@@ -1027,6 +1081,17 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
     return succp;
 }
 
+/**
+ * @brief Handle slave is the target
+ * 
+ * One of the possible types of handling required when a request is routed
+ *
+ *  @param inst         Router instance
+ *  @param ses          Router session
+ *  @param target_dcb   DCB for the target server
+ * 
+ *  @return bool - true if succeeded, false otherwise
+ */
 bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         DCB **target_dcb)
 {
@@ -1050,6 +1115,17 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     }
 }
 
+/**
+ * @brief Handle master is the target
+ * 
+ * One of the possible types of handling required when a request is routed
+ *
+ *  @param inst         Router instance
+ *  @param ses          Router session
+ *  @param target_dcb   DCB for the target server
+ * 
+ *  @return bool - true if succeeded, false otherwise
+ */
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         DCB **target_dcb)
 {
@@ -1090,6 +1166,18 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     return succp;
 }
 
+/**
+ * @brief Handle got a target
+ * 
+ * One of the possible types of handling required when a request is routed
+ *
+ *  @param inst         Router instance
+ *  @param ses          Router session
+ *  @param querybuf     Buffer containing query to be routed
+ *  @param target_dcb   DCB for the target server
+ * 
+ *  @return bool - true if succeeded, false otherwise
+ */
 bool
 handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         GWBUF *querybuf, DCB *target_dcb)
@@ -1149,7 +1237,11 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 }
 
 /**
- * Create a generic router session property structure.
+ * @brief Create a generic router session property structure.
+ * 
+ * @param prop_type     Property type
+ * 
+ * @return property structure of requested type, or NULL if failed
  */
 rses_property_t *rses_property_init(rses_property_type_t prop_type)
 {
@@ -1171,11 +1263,18 @@ rses_property_t *rses_property_init(rses_property_type_t prop_type)
 }
 
 /**
+ * @brief Add property to the router client session
+ * 
  * Add property to the router_client_ses structure's rses_properties
  * array. The slot is determined by the type of property.
  * In each slot there is a list of properties of similar type.
  *
  * Router client session must be locked.
+ * 
+ * @param rses      Router session
+ * @param prop      Router session property to be added
+ * 
+ * @return -1 on failure, 0 on success
  */
 int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop)
 {
