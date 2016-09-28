@@ -17,16 +17,14 @@
 #include <stdio.h>
 #include <maxscale/alloc.h>
 #include <modutil.h>
-#include <query_classifier.h>
 #include <mysql_client_server_protocol.h>
+#include <query_classifier.h>
+#include <session.h>
 #include "cache.h"
 
 static const char KEY_ATTRIBUTE[] = "attribute";
-static const char KEY_COLUMN[]    = "column";
 static const char KEY_OP[]        = "op";
-static const char KEY_QUERY[]     = "query";
 static const char KEY_STORE[]     = "store";
-static const char KEY_TABLE[]     = "table";
 static const char KEY_USE[]       = "use";
 static const char KEY_VALUE[]     = "value";
 
@@ -34,13 +32,37 @@ static const char VALUE_ATTRIBUTE_COLUMN[]   = "column";
 static const char VALUE_ATTRIBUTE_DATABASE[] = "database";
 static const char VALUE_ATTRIBUTE_QUERY[]    = "query";
 static const char VALUE_ATTRIBUTE_TABLE[]    = "table";
+static const char VALUE_ATTRIBUTE_USER[]     = "user";
 
 static const char VALUE_OP_EQ[]     = "=";
 static const char VALUE_OP_NEQ[]    = "!=";
 static const char VALUE_OP_LIKE[]   = "like";
 static const char VALUE_OP_UNLIKE[] = "unlike";
 
-static bool cache_rule_attribute_get(const char *s, cache_rule_attribute_t *attribute);
+struct cache_attribute_mapping
+{
+    const char* name;
+    int         value;
+};
+
+static struct cache_attribute_mapping cache_store_attributes[] =
+{
+    { VALUE_ATTRIBUTE_COLUMN,   CACHE_ATTRIBUTE_COLUMN },
+    { VALUE_ATTRIBUTE_DATABASE, CACHE_ATTRIBUTE_DATABASE },
+    { VALUE_ATTRIBUTE_QUERY,    CACHE_ATTRIBUTE_QUERY },
+    { VALUE_ATTRIBUTE_TABLE,    CACHE_ATTRIBUTE_TABLE },
+    { NULL,                     0 }
+};
+
+static struct cache_attribute_mapping cache_use_attributes[] =
+{
+    { VALUE_ATTRIBUTE_USER, CACHE_ATTRIBUTE_USER },
+    { NULL,                 0 }
+};
+
+static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
+                                     const char *s,
+                                     cache_rule_attribute_t *attribute);
 static const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
 
 static bool cache_rule_op_get(const char *s, cache_rule_op_t *op);
@@ -72,6 +94,7 @@ static bool cache_rule_matches_query(CACHE_RULE *rule,
 static bool cache_rule_matches_table(CACHE_RULE *rule,
                                      const char *default_db,
                                      const GWBUF *query);
+static bool cache_rule_matches_user(CACHE_RULE *rule, const char *user);
 static bool cache_rule_matches(CACHE_RULE *rule,
                                const char *default_db,
                                const GWBUF *query);
@@ -80,9 +103,15 @@ static void cache_rule_free(CACHE_RULE *rule);
 static bool cache_rule_matches(CACHE_RULE *rule, const char *default_db, const GWBUF *query);
 
 static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule);
+static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule);
 static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root);
-static bool cache_rules_parse_store(CACHE_RULES *self, json_t *store);
+
+typedef bool (*cache_rules_parse_element_t)(CACHE_RULES *self, json_t *object, size_t index);
+
+static bool cache_rules_parse_array(CACHE_RULES *self, json_t *store, const char* name,
+                                    cache_rules_parse_element_t);
 static bool cache_rules_parse_store_element(CACHE_RULES *self, json_t *object, size_t index);
+static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, size_t index);
 
 /*
  * API begin
@@ -218,8 +247,25 @@ bool cache_rules_should_store(CACHE_RULES *self, const char *default_db, const G
  */
 bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
 {
-    // TODO: Also support user.
-    return true;
+    bool should_use = false;
+
+    CACHE_RULE *rule = self->use_rules;
+    const char *user = session_getUser((SESSION*)session);
+
+    if (rule && user)
+    {
+        while (rule && !should_use)
+        {
+            should_use = cache_rule_matches_user(rule, user);
+            rule = rule->next;
+        }
+    }
+    else
+    {
+        should_use = true;
+    }
+
+    return should_use;
 }
 
 /*
@@ -229,35 +275,26 @@ bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
 /**
  * Converts a string to an attribute
  *
+ * @param           Name/value mapping.
  * @param s         A string
  * @param attribute On successful return contains the corresponding attribute type.
  *
  * @return True if the string could be converted, false otherwise.
  */
-static bool cache_rule_attribute_get(const char *s, cache_rule_attribute_t *attribute)
+static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
+                                     const char *s,
+                                     cache_rule_attribute_t *attribute)
 {
-    if (strcmp(s, VALUE_ATTRIBUTE_COLUMN) == 0)
-    {
-        *attribute = CACHE_ATTRIBUTE_COLUMN;
-        return true;
-    }
+    ss_dassert(attribute);
 
-    if (strcmp(s, VALUE_ATTRIBUTE_DATABASE) == 0)
+    while (mapping->name)
     {
-        *attribute = CACHE_ATTRIBUTE_DATABASE;
-        return true;
-    }
-
-    if (strcmp(s, VALUE_ATTRIBUTE_QUERY) == 0)
-    {
-        *attribute = CACHE_ATTRIBUTE_QUERY;
-        return true;
-    }
-
-    if (strcmp(s, VALUE_ATTRIBUTE_TABLE) == 0)
-    {
-        *attribute = CACHE_ATTRIBUTE_TABLE;
-        return true;
+        if (strcmp(s, mapping->name) == 0)
+        {
+            *attribute = mapping->value;
+            return true;
+        }
+        ++mapping;
     }
 
     return false;
@@ -749,6 +786,21 @@ static bool cache_rule_matches_table(CACHE_RULE *self, const char *default_db, c
 }
 
 /**
+ * Returns boolean indicating whether the user rule matches the user or not.
+ *
+ * @param self   The CACHE_RULE object.
+ * @param user   The current default db.
+ *
+ * @return True, if the rule matches, false otherwise.
+ */
+static bool cache_rule_matches_user(CACHE_RULE *self, const char *user)
+{
+    ss_dassert(self->attribute == CACHE_ATTRIBUTE_USER);
+
+    return cache_rule_compare(self, user);
+}
+
+/**
  * Returns boolean indicating whether the rule matches the query or not.
  *
  * @param self       The CACHE_RULE object.
@@ -777,6 +829,10 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
 
     case CACHE_ATTRIBUTE_QUERY:
         matches = cache_rule_matches_query(self, default_db, query);
+        break;
+
+    case CACHE_ATTRIBUTE_USER:
+        ss_dassert(!true);
         break;
 
     default:
@@ -811,6 +867,37 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
 }
 
 /**
+ * Append a rule to the tail of a chain or rules.
+ *
+ * @param head The head of the chain, can be NULL.
+ * @param tail The tail to be added to the chain.
+ *
+ * @return The head.
+ */
+static CACHE_RULE* cache_rule_append(CACHE_RULE* head, CACHE_RULE* tail)
+{
+    ss_dassert(tail);
+
+    if (!head)
+    {
+        head = tail;
+    }
+    else
+    {
+        CACHE_RULE *rule = head;
+
+        while (rule->next)
+        {
+            rule = rule->next;
+        }
+
+        rule->next = tail;
+    }
+
+    return head;
+}
+
+/**
  * Adds a "store" rule to the rules object
  *
  * @param self Pointer to the CACHE_RULES object that is being built.
@@ -818,21 +905,18 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
  */
 static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule)
 {
-    if (self->store_rules)
-    {
-        CACHE_RULE *r = self->store_rules;
+    self->store_rules = cache_rule_append(self->store_rules, rule);
+}
 
-        while (r->next)
-        {
-            r = r->next;
-        }
-
-        r->next = rule;
-    }
-    else
-    {
-        self->store_rules = rule;
-    }
+/**
+ * Adds a "store" rule to the rules object
+ *
+ * @param self Pointer to the CACHE_RULES object that is being built.
+ * @param rule The rule to be added.
+ */
+static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
+{
+    self->use_rules = cache_rule_append(self->use_rules, rule);
 }
 
 /**
@@ -852,28 +936,48 @@ static bool cache_rules_parse_json(CACHE_RULES *self, json_t *root)
     {
         if (json_is_array(store))
         {
-            parsed = cache_rules_parse_store(self, store);
+            parsed = cache_rules_parse_array(self, store, KEY_STORE, cache_rules_parse_store_element);
         }
         else
         {
-            MXS_ERROR("The cache rules object contains a `store` key, but it is not an array.");
+            MXS_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_STORE);
         }
     }
 
-    // TODO: Parse 'use' as well.
+    if (!store || parsed)
+    {
+        json_t *use = json_object_get(root, KEY_USE);
+
+        if (use)
+        {
+            if (json_is_array(use))
+            {
+                parsed = cache_rules_parse_array(self, use, KEY_USE, cache_rules_parse_use_element);
+            }
+            else
+            {
+                MXS_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_USE);
+            }
+        }
+    }
 
     return parsed;
 }
 
 /**
- * Parses the "store" array.
+ * Parses a array.
  *
- * @param self   Pointer to the CACHE_RULES object that is being built.
- * @param store  The "store" array.
+ * @param self          Pointer to the CACHE_RULES object that is being built.
+ * @param array         An array.
+ * @param name          The name of the array.
+ * @param parse_element Function for parsing an element.
  *
  * @return True, if the array could be parsed, false otherwise.
  */
-static bool cache_rules_parse_store(CACHE_RULES *self, json_t *store)
+static bool cache_rules_parse_array(CACHE_RULES *self,
+                                    json_t *store,
+                                    const char *name,
+                                    cache_rules_parse_element_t parse_element)
 {
     ss_dassert(json_is_array(store));
 
@@ -889,11 +993,11 @@ static bool cache_rules_parse_store(CACHE_RULES *self, json_t *store)
 
         if (json_is_object(element))
         {
-            parsed = cache_rules_parse_store_element(self, element, i);
+            parsed = parse_element(self, element, i);
         }
         else
         {
-            MXS_ERROR("Element %lu of the 'store' array is not an object.", i);
+            MXS_ERROR("Element %lu of the '%s' array is not an object.", i, name);
             parsed = false;
         }
 
@@ -902,6 +1006,62 @@ static bool cache_rules_parse_store(CACHE_RULES *self, json_t *store)
 
     return parsed;
 }
+
+/**
+ * Parses an object in an array.
+ *
+ * @param self   Pointer to the CACHE_RULES object that is being built.
+ * @param object An object from the "store" array.
+ * @param index  Index of the object in the array.
+ *
+ * @return True, if the object could be parsed, false otherwise.
+ */
+static CACHE_RULE *cache_rules_parse_element(CACHE_RULES *self, json_t *object,
+                                             const char* array_name, size_t index,
+                                             struct cache_attribute_mapping *mapping)
+{
+    ss_dassert(json_is_object(object));
+
+    CACHE_RULE *rule = NULL;
+
+    json_t *a = json_object_get(object, KEY_ATTRIBUTE);
+    json_t *o = json_object_get(object, KEY_OP);
+    json_t *v = json_object_get(object, KEY_VALUE);
+
+    if (a && o && v && json_is_string(a) && json_is_string(o) && json_is_string(v))
+    {
+        cache_rule_attribute_t attribute;
+
+        if (cache_rule_attribute_get(mapping, json_string_value(a), &attribute))
+        {
+            cache_rule_op_t op;
+
+            if (cache_rule_op_get(json_string_value(o), &op))
+            {
+                rule = cache_rule_create(attribute, op, json_string_value(v), self->debug);
+            }
+            else
+            {
+                MXS_ERROR("Element %lu in the `%s` array has an invalid value "
+                          "\"%s\" for 'op'.", index, array_name, json_string_value(o));
+            }
+        }
+        else
+        {
+            MXS_ERROR("Element %lu in the `%s` array has an invalid value "
+                      "\"%s\" for 'attribute'.", index, array_name, json_string_value(a));
+        }
+    }
+    else
+    {
+        MXS_ERROR("Element %lu in the `%s` array does not contain "
+                  "'attribute', 'op' and/or 'value', or one or all of them "
+                  "is not a string.", index, array_name);
+    }
+
+    return rule;
+}
+
 
 /**
  * Parses an object in the "store" array.
@@ -914,49 +1074,33 @@ static bool cache_rules_parse_store(CACHE_RULES *self, json_t *store)
  */
 static bool cache_rules_parse_store_element(CACHE_RULES *self, json_t *object, size_t index)
 {
-    bool parsed = false;
-    ss_dassert(json_is_object(object));
+    CACHE_RULE *rule = cache_rules_parse_element(self, object, KEY_STORE, index, cache_store_attributes);
 
-    json_t *a = json_object_get(object, KEY_ATTRIBUTE);
-    json_t *o = json_object_get(object, KEY_OP);
-    json_t *v = json_object_get(object, KEY_VALUE);
-
-    if (a && o && v && json_is_string(a) && json_is_string(o) && json_is_string(v))
+    if (rule)
     {
-        cache_rule_attribute_t attribute;
-
-        if (cache_rule_attribute_get(json_string_value(a), &attribute))
-        {
-            cache_rule_op_t op;
-
-            if (cache_rule_op_get(json_string_value(o), &op))
-            {
-                CACHE_RULE *rule = cache_rule_create(attribute, op, json_string_value(v), self->debug);
-
-                if (rule)
-                {
-                    cache_rules_add_store_rule(self, rule);
-                    parsed = true;
-                }
-            }
-            else
-            {
-                MXS_ERROR("Element %lu in the `store` array has an invalid value "
-                          "\"%s\" for 'op'.", index, json_string_value(o));
-            }
-        }
-        else
-        {
-            MXS_ERROR("Element %lu in the `store` array has an invalid value "
-                      "\"%s\" for 'attribute'.", index, json_string_value(a));
-        }
-    }
-    else
-    {
-        MXS_ERROR("Element %lu in the `store` array does not contain "
-                  "'attribute', 'op' and/or 'value', or one or all of them "
-                  "is not a string.", index);
+        cache_rules_add_store_rule(self, rule);
     }
 
-    return parsed;
+    return rule != NULL;
+}
+
+/**
+ * Parses an object in the "use" array.
+ *
+ * @param self   Pointer to the CACHE_RULES object that is being built.
+ * @param object An object from the "store" array.
+ * @param index  Index of the object in the array.
+ *
+ * @return True, if the object could be parsed, false otherwise.
+ */
+static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, size_t index)
+{
+    CACHE_RULE *rule = cache_rules_parse_element(self, object, KEY_USE, index, cache_use_attributes);
+
+    if (rule)
+    {
+        cache_rules_add_use_rule(self, rule);
+    }
+
+    return rule != NULL;
 }

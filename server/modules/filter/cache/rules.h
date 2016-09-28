@@ -26,6 +26,7 @@ typedef enum cache_rule_attribute
     CACHE_ATTRIBUTE_DATABASE,
     CACHE_ATTRIBUTE_QUERY,
     CACHE_ATTRIBUTE_TABLE,
+    CACHE_ATTRIBUTE_USER,
 } cache_rule_attribute_t;
 
 typedef enum cache_rule_op
@@ -54,7 +55,8 @@ typedef struct cache_rule
 typedef struct cache_rules
 {
     uint32_t    debug;        // The debug level.
-    CACHE_RULE *store_rules;  // The rules for 'store'.
+    CACHE_RULE *store_rules;  // The rules for when to store data to the cache.
+    CACHE_RULE *use_rules;    // The rules for when to use data from the cache.
 } CACHE_RULES;
 
 

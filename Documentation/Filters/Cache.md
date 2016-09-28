@@ -266,6 +266,59 @@ to be cached.
 
 ## When to Use
 
+By default, if no rules file have been provided or if the `use` field is
+missing from the object, all users may be returned data from the cache.
+
+By providing a `use` field in the JSON object, the decision whether to use
+data from the cache can be controlled in a more detailed manner. The decision
+to use data from the cache can depend upon
+
+   * the user.
+
+Each entry in the `use` array is an object containing three fields,
+
+```
+{
+    "attribute": <string>,
+    "op": <string>
+    "value": <string>
+}
+```
+
+where,
+   * the _attribute_ can be `user`,
+   * the _op_ can be `=`, `!=`, `like` or `unlike`, and
+   * the _value_ a string.
+
+If _op_ is `=` or `!=` then _value_ is used verbatim; if it is `like`
+or `unlike`, then _value_ is interpreted as a _pcre2_ regular expression.
+
+The objects in the `use` array are processed in order. If the result
+of a comparison is _true_, no further processing will be made and the
+data in the cache will be used, subject to the value of `ttl`.
+
+If the result of the comparison is _false_, then the next object is
+processed. The process continues until the array is exhausted. If there
+is no match, then data in the cache will not be used.
+
+Note that `use` is relevant only if the query is subject to caching,
+that is, if all queries are cached or if a query matches a particular
+rule in the `store` array.
+
+### Examples
+
+Use data from the cache for all users except `admin`.
+```
+{
+    "use": [
+        {
+            "attribute": "user",
+            "op": "!=",
+            "value": "admin"
+        }
+    ]
+}
+```
 # Storage
 
 ## Storage RocksDB
