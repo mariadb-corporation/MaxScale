@@ -4276,6 +4276,8 @@ static void handleError(ROUTER *instance, void *router_session,
     }
     session = problem_dcb->session;
 
+    bool close_dcb = true;
+
     if (session == NULL || rses == NULL)
     {
         *succp = false;
@@ -4295,6 +4297,9 @@ static void handleError(ROUTER *instance, void *router_session,
             {
                 if (!rses_begin_locked_router_action(rses))
                 {
+                    close_dcb = false; /* With the assumption that if the router session is closed,
+                                        * then so is the dcb.
+                                        */
                     *succp = false;
                     break;
                 }
@@ -4363,6 +4368,9 @@ static void handleError(ROUTER *instance, void *router_session,
                      */
                     *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
+
+                dcb_close(problem_dcb);
+                close_dcb = false;
                 /* Free the lock if rses still exists */
                 if (rses)
                 {
@@ -4374,16 +4382,22 @@ static void handleError(ROUTER *instance, void *router_session,
             case ERRACT_REPLY_CLIENT:
             {
                 handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
+                close_dcb = false;
                 *succp = false; /*< no new backend servers were made available */
                 break;
             }
 
             default:
+                ss_dassert(!true);
                 *succp = false;
                 break;
         }
     }
-    dcb_close(problem_dcb);
+
+    if (close_dcb)
+    {
+        dcb_close(problem_dcb);
+    }
 }
 
 static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
@@ -4398,18 +4412,39 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
     client_dcb = ses->client_dcb;
     spinlock_release(&ses->ses_lock);
 
-    /**
-     * If bref exists, mark it closed
-     */
-    if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
+    if (rses_begin_locked_router_action(rses))
     {
-        CHK_BACKEND_REF(bref);
-        bref_clear_state(bref, BREF_IN_USE);
-        bref_set_state(bref, BREF_CLOSED);
-        if (BREF_IS_WAITING_RESULT(bref))
+        /**
+         * If bref exists, mark it closed
+         */
+        if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
         {
-            bref_clear_state(bref, BREF_WAITING_RESULT);
+            CHK_BACKEND_REF(bref);
+
+            if (BREF_IS_IN_USE(bref))
+            {
+                bref_clear_state(bref, BREF_IN_USE);
+                bref_set_state(bref, BREF_CLOSED);
+                if (BREF_IS_WAITING_RESULT(bref))
+                {
+                    bref_clear_state(bref, BREF_WAITING_RESULT);
+                }
+
+                dcb_close(backend_dcb);
+            }
         }
+        else
+        {
+            // All dcbs should be associated with a backend reference.
+            ss_dassert(!true);
+        }
+
+        rses_end_locked_router_action(rses);
+    }
+    else
+    {
+        // The session has already been closed, hence the dcb has been
+        // closed as well.
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
