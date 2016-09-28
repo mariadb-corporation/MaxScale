@@ -21,6 +21,7 @@
 #include <platform.h>
 #include <query_classifier.h>
 #include <skygw_utils.h>
+#include <modutil.h>
 #include "builtin_functions.h"
 
 //#define QC_TRACE_ENABLED
@@ -188,6 +189,7 @@ static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info);
 static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse);
+static void log_invalid_data(GWBUF* query, const char* message);
 static bool parse_query(GWBUF* query);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query);
@@ -594,6 +596,33 @@ static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse)
     }
 
     return rv;
+}
+
+/**
+ * Logs information about invalid data.
+ *
+ * @param query   The query that could not be parsed.
+ * @param message What is being asked for.
+ */
+static void log_invalid_data(GWBUF* query, const char* message)
+{
+    // At this point the query should be contiguous, but better safe than sorry.
+
+    if (GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1)
+    {
+        char *sql;
+        int length;
+
+        if (modutil_extract_SQL(query, &sql, &length))
+        {
+            if (length > GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1)
+            {
+                length = GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
+            }
+
+            MXS_INFO("qc_sqlite: Parsing the query failed, %s: %*s", message, length, sql);
+        }
+    }
 }
 
 static void append_affected_field(QC_SQLITE_INFO* info, const char* s)
@@ -2549,9 +2578,9 @@ static uint32_t qc_sqlite_get_type(GWBUF* query)
         {
             types = info->types;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report query type");
         }
     }
     else
@@ -2577,9 +2606,9 @@ static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
         {
             op = info->operation;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report query operation");
         }
     }
     else
@@ -2608,9 +2637,9 @@ static char* qc_sqlite_get_created_table_name(GWBUF* query)
                 created_table_name = mxs_strdup(info->created_table_name);
             }
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report created tables");
         }
     }
     else
@@ -2636,9 +2665,9 @@ static bool qc_sqlite_is_drop_table_query(GWBUF* query)
         {
             is_drop_table = info->is_drop_table;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report whether query is drop table");
         }
     }
     else
@@ -2664,9 +2693,9 @@ static bool qc_sqlite_is_real_query(GWBUF* query)
         {
             is_real_query = info->is_real_query;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report whether query is a real query");
         }
     }
     else
@@ -2708,9 +2737,9 @@ static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnam
                 *tblsize = 0;
             }
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report what tables are accessed");
         }
     }
     else
@@ -2747,9 +2776,9 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
         {
             has_clause = info->has_clause;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report whether the query has a where clause");
         }
     }
     else
@@ -2775,9 +2804,9 @@ static char* qc_sqlite_get_affected_fields(GWBUF* query)
         {
             affected_fields = info->affected_fields;
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report what fields are affected");
         }
     }
     else
@@ -2811,9 +2840,9 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
                 database_names = copy_string_array(info->database_names, sizep);
             }
         }
-        else
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
-            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+            log_invalid_data(query, "cannot report what databases are accessed");
         }
     }
     else
