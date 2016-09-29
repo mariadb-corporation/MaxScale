@@ -219,6 +219,15 @@ int sqlite3Dequote(char *z){
   }
   for(i=1, j=0;; i++){
     assert( z[i] );
+#ifdef MAXSCALE
+    if ( z[i]=='\\' ){
+      z[j++] = '\\';
+      if ( z[i+1]==quote || z[i+1]=='\\' ){
+        z[j++] = quote;
+        i++;
+      }
+    } else
+#endif
     if( z[i]==quote ){
       if( z[i+1]==quote ){
         z[j++] = quote;
