@@ -1,4 +1,4 @@
-if(BUILD_CDC)
+if(BUILD_AVRO)
   add_subdirectory(CDC)
   add_subdirectory(examples)
 endif()
