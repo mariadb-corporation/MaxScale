@@ -275,11 +275,16 @@ hkthread(void *data)
                 ptr->nextdue = now + ptr->frequency;
                 taskfn = ptr->task;
                 taskdata = ptr->data;
+                // We need to copy type and name, in case hktask_remove is called from
+                // the callback. Otherwise we will access freed data.
+                HKTASK_TYPE type = ptr->type;
+                char name[strlen(ptr->name) + 1];
+                strcpy(name, ptr->name);
                 spinlock_release(&tasklock);
                 (*taskfn)(taskdata);
-                if (ptr->type == HK_ONESHOT)
+                if (type == HK_ONESHOT)
                 {
-                    hktask_remove(ptr->name);
+                    hktask_remove(name);
                 }
                 spinlock_acquire(&tasklock);
                 ptr = tasks;
