@@ -285,6 +285,12 @@ cdc_auth_set_client_data(CDC_session *client_data,
                          uint8_t *client_auth_packet,
                          int client_auth_packet_size)
 {
+    if (client_auth_packet_size % 2 != 0)
+    {
+        /** gw_hex2bin expects an even number of bytes */
+        client_auth_packet_size--;
+    }
+
     int rval = CDC_STATE_AUTH_ERR;
     int decoded_size = client_auth_packet_size / 2;
     char decoded_buffer[decoded_size + 1]; // Extra for terminating null
