@@ -79,6 +79,7 @@ typedef struct cache_storage_api
      * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
      */
     cache_result_t (*getKey)(CACHE_STORAGE* storage,
+                             const char* default_db,
                              const GWBUF* query,
                              char* key);
     /**

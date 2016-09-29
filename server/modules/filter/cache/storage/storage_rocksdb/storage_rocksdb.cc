@@ -55,10 +55,12 @@ void freeInstance(CACHE_STORAGE* pInstance)
 }
 
 cache_result_t getKey(CACHE_STORAGE* pStorage,
+                      const char* zDefaultDB,
                       const GWBUF* pQuery,
                       char* pKey)
 {
     ss_dassert(pStorage);
+    // zDefaultDB may be NULL.
     ss_dassert(pQuery);
     ss_dassert(pKey);
 
@@ -66,7 +68,7 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(pQuery, pKey);
+        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(zDefaultDB, pQuery, pKey);
     }
     catch (const std::bad_alloc&)
     {

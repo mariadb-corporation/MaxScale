@@ -1014,7 +1014,7 @@ static bool route_using_cache(CACHE_SESSION_DATA *csdata,
                               const GWBUF *query,
                               GWBUF **value)
 {
-    cache_result_t result = csdata->api->getKey(csdata->storage, query, csdata->key);
+    cache_result_t result = csdata->api->getKey(csdata->storage, csdata->default_db, query, csdata->key);
 
     if (result == CACHE_RESULT_OK)
     {

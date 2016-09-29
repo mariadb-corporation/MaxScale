@@ -27,7 +27,7 @@ public:
     static RocksDBStorage* Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
     ~RocksDBStorage();
 
-    cache_result_t getKey(const GWBUF* pQuery, char* pKey);
+    cache_result_t getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey);
     cache_result_t getValue(const char* pKey, GWBUF** ppResult);
     cache_result_t putValue(const char* pKey, const GWBUF* pValue);
 

@@ -842,8 +842,9 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
     if ((matches && (self->debug & CACHE_DEBUG_MATCHING)) ||
         (!matches && (self->debug & CACHE_DEBUG_NON_MATCHING)))
     {
-        const char *sql = GWBUF_DATA(query) + MYSQL_HEADER_LEN + 1; // Header + command byte.
-        int sql_len = GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
+        char* sql;
+        int sql_len;
+        modutil_extract_SQL((GWBUF*)query, &sql, &sql_len);
         const char* text;
 
         if (matches)
@@ -855,7 +856,7 @@ static bool cache_rule_matches(CACHE_RULE *self, const char *default_db, const G
             text = "does NOT match";
         }
 
-        MXS_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%*s\".",
+        MXS_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%.*s\".",
                    cache_rule_attribute_to_string(self->attribute),
                    cache_rule_op_to_string(self->op),
                    self->value,

@@ -15,10 +15,21 @@
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <algorithm>
+#include <set>
 #include <rocksdb/env.h>
+#include <maxscale/alloc.h>
 #include <gwdirs.h>
+extern "C"
+{
+// TODO: Add extern "C" to modutil.h
+#include <modutil.h>
+}
+#include <query_classifier.h>
 #include "rocksdbinternals.h"
 
+using std::for_each;
+using std::set;
 using std::string;
 using std::unique_ptr;
 
@@ -28,7 +39,11 @@ namespace
 
 string u_storageDirectory;
 
-const size_t ROCKSDB_KEY_LENGTH = SHA512_DIGEST_LENGTH;
+const size_t ROCKSDB_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
+
+#if ROCKSDB_KEY_LENGTH > CACHE_KEY_MAXLEN
+#error storage_rocksdb key is too long.
+#endif
 
 // See https://github.com/facebook/rocksdb/wiki/Basic-Operations#thread-pools
 // These figures should perhaps depend upon the number of cache instances.
@@ -121,17 +136,60 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
     return pStorage;
 }
 
-cache_result_t RocksDBStorage::getKey(const GWBUF* pQuery, char* pKey)
+cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey)
 {
-    // ss_dassert(gwbuf_is_contiguous(pQuery));
-    const uint8_t* pData = static_cast<const uint8_t*>(GWBUF_DATA(pQuery));
-    size_t len = MYSQL_GET_PACKET_LEN(pData) - 1; // Subtract 1 for packet type byte.
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
-    const uint8_t* pSql = &pData[5]; // Symbolic constant for 5?
+    int n;
+    bool fullnames = true;
+    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
+
+    set<string> dbs; // Elements in set are sorted.
+
+    for (int i = 0; i < n; ++i)
+    {
+        char *zTable = pzTables[i];
+        char *zDot = strchr(zTable, '.');
+
+        if (zDot)
+        {
+            *zDot = 0;
+            dbs.insert(zTable);
+        }
+        else if (zDefaultDB)
+        {
+            // If zDefaultDB is NULL, then there will be a table for which we
+            // do not know the database. However, that will fail in the server,
+            // so nothing will be stored.
+            dbs.insert(zDefaultDB);
+        }
+        MXS_FREE(zTable);
+    }
+    MXS_FREE(pzTables);
+
+    // dbs now contain each accessed database in sorted order. Now copy them to a single string.
+    string tag;
+    for_each(dbs.begin(), dbs.end(), [&tag](const string& db) { tag.append(db); });
 
     memset(pKey, 0, CACHE_KEY_MAXLEN);
 
-    SHA512(pSql, len, reinterpret_cast<unsigned char*>(pKey));
+    const unsigned char* pData;
+
+    // We store the databases in the first half of the key. That will ensure that
+    // identical queries targeting different default databases will not clash.
+    // This will also mean that entries related to the same databases will
+    // be placed near each other.
+    pData = reinterpret_cast<const unsigned char*>(tag.data());
+    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey));
+
+    char *pSql;
+    int length;
+
+    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
+
+    // Then we store the query itself in the second half of the key.
+    pData = reinterpret_cast<const unsigned char*>(pSql);
+    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey) + SHA512_DIGEST_LENGTH);
 
     return CACHE_RESULT_OK;
 }
