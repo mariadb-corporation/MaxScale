@@ -919,6 +919,7 @@ static void update_database_names(QC_SQLITE_INFO* info, const char* zDatabase)
 static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable)
 {
     char* zCopy = mxs_strdup(zTable);
+    // TODO: Is this call really needed. Check also sqlite3Dequote.
     exposed_sqlite3Dequote(zCopy);
 
     enlarge_string_array(1, info->table_names_len, &info->table_names, &info->table_names_capacity);
