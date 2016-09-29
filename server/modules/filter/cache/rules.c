@@ -202,6 +202,7 @@ void cache_rules_free(CACHE_RULES *rules)
     if (rules)
     {
         cache_rule_free(rules->store_rules);
+        cache_rule_free(rules->use_rules);
         MXS_FREE(rules);
     }
 }

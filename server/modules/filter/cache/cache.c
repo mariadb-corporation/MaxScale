@@ -233,7 +233,7 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
                     }
                     else
                     {
-                        MXS_ERROR("Could not create storage instance for %s.", name);
+                        MXS_ERROR("Could not create storage instance for '%s'.", name);
                         cache_rules_free(rules);
                         cache_storage_close(module);
                         MXS_FREE(cinstance);
@@ -242,7 +242,7 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
                 }
                 else
                 {
-                    MXS_ERROR("Could not load cache storage module %s.", name);
+                    MXS_ERROR("Could not load cache storage module '%s'.", name);
                     cache_rules_free(rules);
                     MXS_FREE(cinstance);
                     cinstance = NULL;
