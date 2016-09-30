@@ -1511,6 +1511,12 @@ backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
  * 
  * Calls hang-up function for DCB if it is not both running and in
  * master/slave/joined/ndb role. Called by DCB's callback routine.
+ * 
+ * @param dcb       DCB relating to a backend server
+ * @param reason    The reason for the state change
+ * @param data      Data is a backend reference structure belonging to this router
+ * 
+ * @return  1 for success, 0 for failure
  */
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
 {
@@ -1668,6 +1674,14 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
     return success;
 }
 
+/**
+ * @brief Handle an error reply for a client
+ *
+ * @param ses           Session
+ * @param rses          Router session
+ * @param backend_dcb   DCB for the backend server that has failed
+ * @param errmsg        GWBUF containing the error message
+ */
 static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
                                       DCB *backend_dcb, GWBUF *errmsg)
 {
@@ -1801,6 +1815,13 @@ return_succp:
     return succp;
 }
 
+/**
+ * @brief Calculate the number of backend servers
+ *
+ * @param inst      Router instance
+ *
+ * @return int - count of servers
+ */
 static int router_get_servercount(ROUTER_INSTANCE *inst)
 {
     int router_nservers = 0;
@@ -1814,6 +1835,16 @@ static int router_get_servercount(ROUTER_INSTANCE *inst)
     return router_nservers;
 }
 
+/**
+ * @brief Calculate whether we have enough servers to route a query
+ *
+ * @param p_rses        Router session
+ * @param min_nsrv      Minimum number of servers that is sufficient
+ * @param nsrv          Actual number of servers
+ * @param router        Router instance
+ *
+ * @return bool - whether enough, side effect is error logging
+ */
 static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
                                 int router_nsrv, ROUTER_INSTANCE *router)
 {

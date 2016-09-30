@@ -15,10 +15,21 @@
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <algorithm>
+#include <set>
 #include <rocksdb/env.h>
+#include <maxscale/alloc.h>
 #include <gwdirs.h>
+extern "C"
+{
+// TODO: Add extern "C" to modutil.h
+#include <modutil.h>
+}
+#include <query_classifier.h>
 #include "rocksdbinternals.h"
 
+using std::for_each;
+using std::set;
 using std::string;
 using std::unique_ptr;
 
@@ -28,12 +39,51 @@ namespace
 
 string u_storageDirectory;
 
-const size_t ROCKSDB_KEY_LENGTH = SHA512_DIGEST_LENGTH;
+const size_t ROCKSDB_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
+
+#if ROCKSDB_KEY_LENGTH > CACHE_KEY_MAXLEN
+#error storage_rocksdb key is too long.
+#endif
 
 // See https://github.com/facebook/rocksdb/wiki/Basic-Operations#thread-pools
 // These figures should perhaps depend upon the number of cache instances.
 const size_t ROCKSDB_N_LOW_THREADS = 2;
 const size_t ROCKSDB_N_HIGH_THREADS = 1;
+
+struct StorageRocksDBVersion
+{
+    uint8_t major;
+    uint8_t minor;
+    uint8_t correction;
+};
+
+const uint8_t STORAGE_ROCKSDB_MAJOR = 0;
+const uint8_t STORAGE_ROCKSDB_MINOR = 1;
+const uint8_t STORAGE_ROCKSDB_CORRECTION = 0;
+
+const StorageRocksDBVersion STORAGE_ROCKSDB_VERSION =
+{
+    STORAGE_ROCKSDB_MAJOR,
+    STORAGE_ROCKSDB_MINOR,
+    STORAGE_ROCKSDB_CORRECTION
+};
+
+string toString(const StorageRocksDBVersion& version)
+{
+    string rv;
+
+    rv += "{ ";
+    rv += std::to_string(version.major);
+    rv += ", ";
+    rv += std::to_string(version.minor);
+    rv += ", ";
+    rv += std::to_string(version.correction);
+    rv += " }";
+
+    return rv;
+}
+
+const char STORAGE_ROCKSDB_VERSION_KEY[] = "MaxScale_Storage_RocksDB_Version";
 
 }
 
@@ -99,39 +149,162 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
     options.env = rocksdb::Env::Default();
     options.max_background_compactions = ROCKSDB_N_LOW_THREADS;
     options.max_background_flushes = ROCKSDB_N_HIGH_THREADS;
-    options.create_if_missing = true;
-    rocksdb::DBWithTTL* pDb;
 
-    rocksdb::Status status = rocksdb::DBWithTTL::Open(options, path, &pDb, ttl);
+    rocksdb::DBWithTTL* pDb;
+    rocksdb::Status status;
+    rocksdb::Slice key(STORAGE_ROCKSDB_VERSION_KEY);
+
+    do
+    {
+        // Try to open existing.
+        options.create_if_missing = false;
+        options.error_if_exists = false;
+
+        status = rocksdb::DBWithTTL::Open(options, path, &pDb, ttl);
+
+        if (status.IsInvalidArgument()) // Did not exist
+        {
+            MXS_NOTICE("Database \"%s\" does not exist, creating.", path.c_str());
+
+            options.create_if_missing = true;
+            options.error_if_exists = true;
+
+            status = rocksdb::DBWithTTL::Open(options, path, &pDb, ttl);
+
+            if (status.ok())
+            {
+                MXS_NOTICE("Database \"%s\" created, storing version %s into it.",
+                           path.c_str(), toString(STORAGE_ROCKSDB_VERSION).c_str());
+
+                rocksdb::Slice value(reinterpret_cast<const char*>(&STORAGE_ROCKSDB_VERSION),
+                                     sizeof(STORAGE_ROCKSDB_VERSION));
+
+                status = pDb->Put(rocksdb::WriteOptions(), key, value);
+
+                if (!status.ok())
+                {
+                    MXS_ERROR("Could not store version information to created RocksDB database \"%s\". "
+                              "You may need to delete the database and retry. RocksDB error: %s",
+                              path.c_str(),
+                              status.ToString().c_str());
+                }
+            }
+        }
+    }
+    while (status.IsInvalidArgument());
 
     RocksDBStorage* pStorage = nullptr;
 
     if (status.ok())
     {
-        unique_ptr<rocksdb::DBWithTTL> sDb(pDb);
+        std::string value;
 
-        pStorage = new RocksDBStorage(sDb, zName, path, ttl);
+        status = pDb->Get(rocksdb::ReadOptions(), key, &value);
+
+        if (status.ok())
+        {
+            const StorageRocksDBVersion* pVersion =
+                reinterpret_cast<const StorageRocksDBVersion*>(value.data());
+
+            // When the version is bumped, it needs to be decided what if any
+            // backward compatibility is provided. After all, it's a cache, so
+            // you should be able to delete it at any point and pay a small
+            // price while the cache is rebuilt.
+            if ((pVersion->major == STORAGE_ROCKSDB_MAJOR) &&
+                (pVersion->minor == STORAGE_ROCKSDB_MINOR) &&
+                (pVersion->correction == STORAGE_ROCKSDB_CORRECTION))
+            {
+                MXS_NOTICE("Version of \"%s\" is %s, version of storage_rocksdb is %s.",
+                           path.c_str(),
+                           toString(*pVersion).c_str(),
+                           toString(STORAGE_ROCKSDB_VERSION).c_str());
+
+                unique_ptr<rocksdb::DBWithTTL> sDb(pDb);
+
+                pStorage = new RocksDBStorage(sDb, zName, path, ttl);
+            }
+            else
+            {
+                MXS_ERROR("Version of RocksDB database \"%s\" is %s, while version required "
+                          "is %s. You need to delete the database and restart.",
+                          path.c_str(),
+                           toString(*pVersion).c_str(),
+                           toString(STORAGE_ROCKSDB_VERSION).c_str());
+                delete pDb;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not read version information from RocksDB database %s. "
+                      "You may need to delete the database and retry. RocksDB error: %s",
+                      path.c_str(),
+                      status.ToString().c_str());
+            delete pDb;
+        }
     }
     else
     {
-        MXS_ERROR("Could not open RocksDB database %s using path %s: %s",
-                  zName, path.c_str(), status.ToString().c_str());
+        MXS_ERROR("Could not open/initialize RocksDB database %s. RocksDB error: %s",
+                  path.c_str(), status.ToString().c_str());
     }
 
     return pStorage;
 }
 
-cache_result_t RocksDBStorage::getKey(const GWBUF* pQuery, char* pKey)
+cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey)
 {
-    // ss_dassert(gwbuf_is_contiguous(pQuery));
-    const uint8_t* pData = static_cast<const uint8_t*>(GWBUF_DATA(pQuery));
-    size_t len = MYSQL_GET_PACKET_LEN(pData) - 1; // Subtract 1 for packet type byte.
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
-    const uint8_t* pSql = &pData[5]; // Symbolic constant for 5?
+    int n;
+    bool fullnames = true;
+    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
+
+    set<string> dbs; // Elements in set are sorted.
+
+    for (int i = 0; i < n; ++i)
+    {
+        char *zTable = pzTables[i];
+        char *zDot = strchr(zTable, '.');
+
+        if (zDot)
+        {
+            *zDot = 0;
+            dbs.insert(zTable);
+        }
+        else if (zDefaultDB)
+        {
+            // If zDefaultDB is NULL, then there will be a table for which we
+            // do not know the database. However, that will fail in the server,
+            // so nothing will be stored.
+            dbs.insert(zDefaultDB);
+        }
+        MXS_FREE(zTable);
+    }
+    MXS_FREE(pzTables);
+
+    // dbs now contain each accessed database in sorted order. Now copy them to a single string.
+    string tag;
+    for_each(dbs.begin(), dbs.end(), [&tag](const string& db) { tag.append(db); });
 
     memset(pKey, 0, CACHE_KEY_MAXLEN);
 
-    SHA512(pSql, len, reinterpret_cast<unsigned char*>(pKey));
+    const unsigned char* pData;
+
+    // We store the databases in the first half of the key. That will ensure that
+    // identical queries targeting different default databases will not clash.
+    // This will also mean that entries related to the same databases will
+    // be placed near each other.
+    pData = reinterpret_cast<const unsigned char*>(tag.data());
+    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey));
+
+    char *pSql;
+    int length;
+
+    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
+
+    // Then we store the query itself in the second half of the key.
+    pData = reinterpret_cast<const unsigned char*>(pSql);
+    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey) + SHA512_DIGEST_LENGTH);
 
     return CACHE_RESULT_OK;
 }

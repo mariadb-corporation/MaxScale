@@ -273,6 +273,8 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->script = NULL;
         handle->multimaster = false;
         handle->mysql51_replication = false;
+        handle->failover = false;
+        handle->failcount = MYSQLMON_DEFAULT_FAILCOUNT;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
@@ -294,6 +296,19 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         else if (!strcmp(params->name, "multimaster"))
         {
             handle->multimaster = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "failover"))
+        {
+            handle->failover = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "failcount"))
+        {
+            handle->failcount = atoi(params->value);
+            if (handle->failcount <= 0)
+            {
+                MXS_ERROR("[%s] Invalid value for 'failcount': %s", monitor->name, params->value);
+                error = true;
+            }
         }
         else if (!strcmp(params->name, "script"))
         {
@@ -352,6 +367,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         hashtable_free(handle->server_info);
         MXS_FREE(handle->script);
         MXS_FREE(handle);
+        handle = NULL;
     }
     else if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
     {
@@ -1022,6 +1038,80 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nse
 }
 
 /**
+ * @brief Check whether failover conditions have been met
+ *
+ * This function checks whether all the conditions to trigger a failover have
+ * been met. For a failover to happen, only one server must be available and
+ * other servers must have passed the configured tolerance level of failures.
+ *
+ * @param handle Monitor instance
+ * @param db     Monitor servers
+ *
+ * @return True if failover is required
+ */
+bool failover_required(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
+{
+    int candidates = 0;
+
+    while (db)
+    {
+        if (SERVER_IS_RUNNING(db->server))
+        {
+            candidates++;
+            MYSQL_SERVER_INFO *server_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+
+            if (server_info->read_only || candidates > 1)
+            {
+                return false;
+            }
+        }
+        else if (db->mon_err_count < handle->failcount)
+        {
+            return false;
+        }
+
+        db = db->next;
+    }
+
+    return candidates == 1;
+}
+
+/**
+ * @brief Initiate simple failover
+ *
+ * This function does the actual failover by assigning the last remaining server
+ * the master status and setting all other servers into maintenance mode. By
+ * setting the servers into maintenance mode, we prevent any possible conflicts
+ * when the failed servers come back up.
+ *
+ * @param handle Monitor instance
+ * @param db     Monitor servers
+ */
+void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
+{
+    while (db)
+    {
+        if (SERVER_IS_RUNNING(db->server))
+        {
+            if (!SERVER_IS_MASTER(db->server))
+            {
+                MXS_WARNING("Failover initiated, server '%s' is now the master. "
+                            "All other servers are set into maintenance mode.",
+                            db->server->unique_name);
+            }
+
+            monitor_set_pending_status(db, SERVER_MASTER);
+            monitor_clear_pending_status(db, SERVER_SLAVE);
+        }
+        else
+        {
+            monitor_set_pending_status(db, SERVER_MAINT);
+        }
+        db = db->next;
+    }
+}
+
+/**
  * The entry point for the monitoring module thread
  *
  * @param arg   The handle of the monitor
@@ -1294,6 +1384,17 @@ monitorMain(void *arg)
                 ptr->server->status = ptr->pending_status;
             }
             ptr = ptr->next;
+        }
+
+        /** Now that all servers have their status correctly set, we can check
+            if we need to do a failover */
+        if (handle->failover)
+        {
+            if (failover_required(handle, mon->databases))
+            {
+                /** Other servers have died, initiate a failover to the last remaining server */
+                do_failover(handle, mon->databases);
+            }
         }
 
         ptr = mon->databases;

@@ -53,7 +53,7 @@ typedef struct cache_storage_api
      * @param name  The name of the cache instance.
      * @param ttl   Time to live; number of seconds the value is valid.
      * @param argc  The number of elements in the argv array.
-     * @param argv  Array of arguments, as passed in the `storage_args` parameter
+     * @param argv  Array of arguments, as passed in the `storage_options` parameter
      *              in the cache section in the MaxScale configuration file.
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
@@ -79,6 +79,7 @@ typedef struct cache_storage_api
      * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
      */
     cache_result_t (*getKey)(CACHE_STORAGE* storage,
+                             const char* default_db,
                              const GWBUF* query,
                              char* key);
     /**

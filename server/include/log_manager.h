@@ -54,21 +54,6 @@ extern "C" {
 #define MXS_MODULE_NAME NULL
 #endif
 
-enum mxs_log_priorities
-{
-    MXS_LOG_EMERG   = (1 << LOG_EMERG),
-    MXS_LOG_ALERT   = (1 << LOG_ALERT),
-    MXS_LOG_CRIT    = (1 << LOG_CRIT),
-    MXS_LOG_ERR     = (1 << LOG_ERR),
-    MXS_LOG_WARNING = (1 << LOG_WARNING),
-    MXS_LOG_NOTICE  = (1 << LOG_NOTICE),
-    MXS_LOG_INFO    = (1 << LOG_INFO),
-    MXS_LOG_DEBUG   = (1 << LOG_DEBUG),
-
-    MXS_LOG_MASK    = (MXS_LOG_EMERG | MXS_LOG_ALERT | MXS_LOG_CRIT | MXS_LOG_ERR |
-                       MXS_LOG_WARNING | MXS_LOG_NOTICE | MXS_LOG_INFO | MXS_LOG_DEBUG),
-};
-
 typedef enum
 {
     MXS_LOG_TARGET_DEFAULT = 0,
@@ -93,6 +78,8 @@ extern __thread mxs_log_info_t mxs_log_tls;
 /**
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
+ *
+ * @param priority One of the syslog LOG_ERR, LOG_WARNING, etc. constants.
  */
 #define MXS_LOG_PRIORITY_IS_ENABLED(priority) \
     (((mxs_log_enabled_priorities & (1 << priority)) ||      \
@@ -149,11 +136,20 @@ int mxs_log_message(int priority,
     mxs_log_message(priority, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
- * Log an error, warning, notice, info, or debug  message.
+ * Log an alert, error, warning, notice, info, or debug  message.
+ *
+ * MXS_ALERT   Not throttled  To be used when the system is about to go down in flames.
+ * MXS_ERROR   Throttled      For errors.
+ * MXS_WARNING Throttled      For warnings.
+ * MXS_NOTICE  Not Throttled  For messages deemed important, typically used during startup.
+ * MXS_INFO    Not Throttled  For information thought to be of value for investigating some problem.
+ * MXS_DEBUG   Not Throttled  For debugging messages during development. Should be removed when a
+ *                            feature is ready.
  *
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
  */
+#define MXS_ALERT(format, ...)   MXS_LOG_MESSAGE(LOG_ALERT,   format, ##__VA_ARGS__)
 #define MXS_ERROR(format, ...)   MXS_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
 #define MXS_WARNING(format, ...) MXS_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
 #define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)

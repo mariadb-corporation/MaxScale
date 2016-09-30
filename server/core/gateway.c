@@ -365,9 +365,9 @@ sigfatal_handler(int i)
     GATEWAY_CONF* cnf = config_get_global_options();
     fprintf(stderr, "\n\nMaxScale "MAXSCALE_VERSION" received fatal signal %d\n", i);
 
-    MXS_ERROR("Fatal: MaxScale "MAXSCALE_VERSION" received fatal signal %d. Attempting backtrace.", i);
+    MXS_ALERT("Fatal: MaxScale "MAXSCALE_VERSION" received fatal signal %d. Attempting backtrace.", i);
 
-    MXS_ERROR("Commit ID: %s System name: %s "
+    MXS_ALERT("Commit ID: %s System name: %s "
               "Release string: %s",
               maxscale_commit, cnf->sysname, cnf->release_string);
 
@@ -380,7 +380,7 @@ sigfatal_handler(int i)
         {
             for (n = 0; n < count; n++)
             {
-                MXS_ERROR("  %s\n", symbols[n]);
+                MXS_ALERT("  %s\n", symbols[n]);
             }
             MXS_FREE(symbols);
         }
