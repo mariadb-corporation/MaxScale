@@ -582,11 +582,31 @@ static CACHE_SESSION_DATA *cache_session_data_create(CACHE_INSTANCE *instance,
 
     if (data)
     {
-        data->instance = instance;
-        data->api = instance->module->api;
-        data->storage = instance->storage;
-        data->session = session;
-        data->state = CACHE_EXPECTING_NOTHING;
+        char *default_db = NULL;
+
+        ss_dassert(session->client_dcb);
+        ss_dassert(session->client_dcb->data);
+        MYSQL_session *mysql_session = (MYSQL_session*)session->client_dcb->data;
+
+        if (mysql_session->db[0] != 0)
+        {
+            default_db = MXS_STRDUP(mysql_session->db);
+        }
+
+        if ((mysql_session->db[0] == 0) || default_db)
+        {
+            data->instance = instance;
+            data->api = instance->module->api;
+            data->storage = instance->storage;
+            data->session = session;
+            data->state = CACHE_EXPECTING_NOTHING;
+            data->default_db = default_db;
+        }
+        else
+        {
+            MXS_FREE(data);
+            data = NULL;
+        }
     }
 
     return data;
