@@ -66,6 +66,20 @@ which of them is the real write node and assigns the appropriate status for each
 node. This module also supports launchable scripts on monitored events. Read the
 [Monitor Common Documentation](../Monitors/Monitor-Common.md) for more details.
 
+### Multi-master mode for MySQL Monitor
+
+The MySQL monitor now detects complex multi-master replication
+topologies. This allows the mysqlmon module to be used as a replacement
+for the mmmon module. For more details, please read the
+[MySQL Monitor Documentation](../Monitors/MySQL-Monitor.md).
+
+### Failover mode for MySQL Monitor
+
+A simple failover mode has been added to the MySQL Monitor. This mode is
+aimed for two node master-slave clusters where the slave can act as a
+master in case the original master fails. For more details, please read
+the [MySQL Monitor Documentation](../Monitors/MySQL-Monitor.md).
+
 ## Bug fixes
 
 [Here is a list of bugs fixed since the release of MaxScale 2.0.X.](https://jira.mariadb.org/browse/MXS-739?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.0.0)

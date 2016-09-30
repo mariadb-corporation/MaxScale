@@ -14,12 +14,14 @@
 #define MXS_MODULE_NAME "cache"
 #include <maxscale/alloc.h>
 #include <filter.h>
+#include <gwdirs.h>
 #include <log_manager.h>
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysql_utils.h>
 #include <query_classifier.h>
 #include "cache.h"
+#include "rules.h"
 #include "storage.h"
 
 static char VERSION_STRING[] = "V1.0.0";
@@ -90,39 +92,43 @@ FILTER_OBJECT *GetModuleObject()
 
 typedef struct cache_config
 {
-    cache_references_t allowed_references;
-    uint32_t           max_resultset_rows;
-    uint32_t           max_resultset_size;
-    const char        *storage;
-    const char        *storage_args;
-    uint32_t           ttl;
+    uint32_t    max_resultset_rows;
+    uint32_t    max_resultset_size;
+    const char* rules;
+    const char *storage;
+    const char *storage_options;
+    uint32_t    ttl;
+    uint32_t    debug;
 } CACHE_CONFIG;
 
 static const CACHE_CONFIG DEFAULT_CONFIG =
 {
-    CACHE_DEFAULT_ALLOWED_REFERENCES,
     CACHE_DEFAULT_MAX_RESULTSET_ROWS,
     CACHE_DEFAULT_MAX_RESULTSET_SIZE,
     NULL,
     NULL,
-    CACHE_DEFAULT_TTL
+    NULL,
+    CACHE_DEFAULT_TTL,
+    CACHE_DEFAULT_DEBUG
 };
 
 typedef struct cache_instance
 {
     const char            *name;
     CACHE_CONFIG           config;
+    CACHE_RULES           *rules;
     CACHE_STORAGE_MODULE  *module;
     CACHE_STORAGE         *storage;
 } CACHE_INSTANCE;
 
 typedef enum cache_session_state
 {
-    CACHE_EXPECTING_RESPONSE,  // A select has been sent, and we are waiting for the response.
-    CACHE_EXPECTING_FIELDS,    // A select has been sent, and we want more fields.
-    CACHE_EXPECTING_ROWS,      // A select has been sent, and we want more rows.
-    CACHE_EXPECTING_NOTHING,   // We are not expecting anything from the server.
-    CACHE_IGNORING_RESPONSE,   // We are not interested in the data received from the server.
+    CACHE_EXPECTING_RESPONSE,     // A select has been sent, and we are waiting for the response.
+    CACHE_EXPECTING_FIELDS,       // A select has been sent, and we want more fields.
+    CACHE_EXPECTING_ROWS,         // A select has been sent, and we want more rows.
+    CACHE_EXPECTING_NOTHING,      // We are not expecting anything from the server.
+    CACHE_EXPECTING_USE_RESPONSE, // A "USE DB" was issued.
+    CACHE_IGNORING_RESPONSE,      // We are not interested in the data received from the server.
 } cache_session_state_t;
 
 typedef struct cache_request_state
@@ -143,15 +149,17 @@ static void cache_response_state_reset(CACHE_RESPONSE_STATE *state);
 
 typedef struct cache_session_data
 {
-    CACHE_INSTANCE      *instance; /**< The cache instance the session is associated with. */
-    CACHE_STORAGE_API   *api;      /**< The storage API to be used. */
-    CACHE_STORAGE       *storage;  /**< The storage to be used with this session data. */
-    DOWNSTREAM           down;     /**< The previous filter or equivalent. */
-    UPSTREAM             up;       /**< The next filter or equivalent. */
-    CACHE_REQUEST_STATE  req;      /**< The request state. */
-    CACHE_RESPONSE_STATE res;      /**< The response state. */
-    SESSION             *session;  /**< The session this data is associated with. */
+    CACHE_INSTANCE      *instance;   /**< The cache instance the session is associated with. */
+    CACHE_STORAGE_API   *api;        /**< The storage API to be used. */
+    CACHE_STORAGE       *storage;    /**< The storage to be used with this session data. */
+    DOWNSTREAM           down;       /**< The previous filter or equivalent. */
+    UPSTREAM             up;         /**< The next filter or equivalent. */
+    CACHE_REQUEST_STATE  req;        /**< The request state. */
+    CACHE_RESPONSE_STATE res;        /**< The response state. */
+    SESSION             *session;    /**< The session this data is associated with. */
     char                 key[CACHE_KEY_MAXLEN]; /**< Key storage. */
+    char                *default_db; /**< The default database. */
+    char                *use_db;     /**< Pending default database. Needs server response. */
     cache_session_state_t state;
 } CACHE_SESSION_DATA;
 
@@ -162,8 +170,9 @@ static int handle_expecting_fields(CACHE_SESSION_DATA *csdata);
 static int handle_expecting_nothing(CACHE_SESSION_DATA *csdata);
 static int handle_expecting_response(CACHE_SESSION_DATA *csdata);
 static int handle_expecting_rows(CACHE_SESSION_DATA *csdata);
+static int handle_expecting_use_response(CACHE_SESSION_DATA *csdata);
 static int handle_ignoring_response(CACHE_SESSION_DATA *csdata);
-
+static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONFIG* config);
 static bool route_using_cache(CACHE_SESSION_DATA *sdata, const GWBUF *key, GWBUF **value);
 
 static int send_upstream(CACHE_SESSION_DATA *csdata);
@@ -186,128 +195,60 @@ static void store_result(CACHE_SESSION_DATA *csdata);
  */
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
+    CACHE_INSTANCE *cinstance = NULL;
     CACHE_CONFIG config = DEFAULT_CONFIG;
 
-    bool error = false;
-
-    for (int i = 0; params[i]; ++i)
+    if (process_params(options, params, &config))
     {
-        const FILTER_PARAMETER *param = params[i];
+        CACHE_RULES *rules = NULL;
 
-        if (strcmp(param->name, "allowed_references") == 0)
+        if (config.rules)
         {
-            if (strcmp(param->value, "qualified") == 0)
-            {
-                config.allowed_references = CACHE_REFERENCES_QUALIFIED;
-            }
-            else if (strcmp(param->value, "any") == 0)
-            {
-                config.allowed_references = CACHE_REFERENCES_ANY;
-            }
-            else
-            {
-                MXS_ERROR("Unknown value '%s' for parameter '%s'.", param->value, param->name);
-                error = true;
-            }
+            rules = cache_rules_load(config.rules, config.debug);
         }
-        else if (strcmp(param->name, "max_resultset_rows") == 0)
+        else
         {
-            int v = atoi(param->value);
-
-            if (v > 0)
-            {
-                config.max_resultset_rows = v;
-            }
-            else
-            {
-                config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
-            }
+            rules = cache_rules_create(config.debug);
         }
-        else if (strcmp(param->name, "max_resultset_size") == 0)
-        {
-            int v = atoi(param->value);
 
-            if (v > 0)
+        if (rules)
+        {
+            if ((cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE))) != NULL)
             {
-                config.max_resultset_size = v * 1024;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", param->name);
-                error = true;
-            }
-        }
-        else if (strcmp(param->name, "storage_args") == 0)
-        {
-            config.storage_args = param->value;
-        }
-        else if (strcmp(param->name, "storage") == 0)
-        {
-            config.storage = param->value;
-        }
-        else if (strcmp(param->name, "ttl") == 0)
-        {
-            int v = atoi(param->value);
+                CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
 
-            if (v > 0)
-            {
-                config.ttl = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", param->name);
-                error = true;
-            }
-        }
-        else if (!filter_standard_parameter(params[i]->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", param->name);
-            error = true;
-        }
-    }
-
-    CACHE_INSTANCE *cinstance = NULL;
-
-    if (!error)
-    {
-        if ((cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE))) != NULL)
-        {
-            CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
-
-            if (module)
-            {
-                CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
-
-                if (storage)
+                if (module)
                 {
-                    cinstance->name = name;
-                    cinstance->config = config;
-                    cinstance->module = module;
-                    cinstance->storage = storage;
+                    CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
 
-                    MXS_NOTICE("Cache storage %s opened and initialized.", config.storage);
+                    if (storage)
+                    {
+                        cinstance->name = name;
+                        cinstance->config = config;
+                        cinstance->rules = rules;
+                        cinstance->module = module;
+                        cinstance->storage = storage;
+
+                        MXS_NOTICE("Cache storage %s opened and initialized.", config.storage);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Could not create storage instance for '%s'.", name);
+                        cache_rules_free(rules);
+                        cache_storage_close(module);
+                        MXS_FREE(cinstance);
+                        cinstance = NULL;
+                    }
                 }
                 else
                 {
-                    MXS_ERROR("Could not create storage instance for %s.", name);
-                    cache_storage_close(module);
+                    MXS_ERROR("Could not load cache storage module '%s'.", name);
+                    cache_rules_free(rules);
                     MXS_FREE(cinstance);
                     cinstance = NULL;
                 }
             }
-            else
-            {
-                MXS_ERROR("Could not load cache storage module %s.", name);
-                MXS_FREE(cinstance);
-                cinstance = NULL;
-            }
         }
-    }
-    else
-    {
-        cinstance = NULL;
     }
 
     return (FILTER*)cinstance;
@@ -417,36 +358,89 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *data)
         cache_response_state_reset(&csdata->res);
         csdata->state = CACHE_IGNORING_RESPONSE;
 
-        // TODO: This returns the wrong result if GWBUF_LENGTH(packet) is < 5.
-        if (modutil_is_SQL(packet))
+        if (gwbuf_length(packet) > MYSQL_HEADER_LEN + 1) // We need at least a packet with a type.
         {
-            packet = gwbuf_make_contiguous(packet);
+            uint8_t header[MYSQL_HEADER_LEN + 1];
 
-            // We do not care whether the query was fully parsed or not.
-            // If a query cannot be fully parsed, the worst thing that can
-            // happen is that caching is not used, even though it would be
-            // possible.
+            gwbuf_copy_data(packet, 0, sizeof(header), header);
 
-            if (qc_get_operation(packet) == QUERY_OP_SELECT)
+            switch ((int)MYSQL_GET_COMMAND(header))
             {
-                GWBUF *result;
-                use_default = !route_using_cache(csdata, packet, &result);
-
-                if (use_default)
+            case MYSQL_COM_INIT_DB:
                 {
-                    csdata->state = CACHE_EXPECTING_RESPONSE;
-                }
-                else
-                {
-                    csdata->state = CACHE_EXPECTING_NOTHING;
-                    C_DEBUG("Using data from cache.");
-                    gwbuf_free(packet);
-                    DCB *dcb = csdata->session->client_dcb;
+                    ss_dassert(!csdata->use_db);
+                    size_t len = MYSQL_GET_PACKET_LEN(header) - 1; // Remove the command byte.
+                    csdata->use_db = MXS_MALLOC(len + 1);
 
-                    // TODO: This is not ok. Any filters before this filter, will not
-                    // TODO: see this data.
-                    rv = dcb->func.write(dcb, result);
+                    if (csdata->use_db)
+                    {
+                        uint8_t *use_db = (uint8_t*)csdata->use_db;
+                        gwbuf_copy_data(packet, MYSQL_HEADER_LEN + 1, len, use_db);
+                        csdata->use_db[len] = 0;
+                        csdata->state = CACHE_EXPECTING_USE_RESPONSE;
+                    }
+                    else
+                    {
+                        // Memory allocation failed. We need to remove the default database to
+                        // prevent incorrect cache entries, since we won't know what the
+                        // default db is. But we only need to do that if "USE <db>" really
+                        // succeeds. The right thing will happen by itself in
+                        // handle_expecting_use_response(); if OK is returned, default_db will
+                        // become NULL, if ERR, default_db will not be changed.
+                    }
                 }
+                break;
+
+            case MYSQL_COM_QUERY:
+                {
+                    GWBUF *tmp = gwbuf_make_contiguous(packet);
+
+                    if (tmp)
+                    {
+                        packet = tmp;
+
+                        // We do not care whether the query was fully parsed or not.
+                        // If a query cannot be fully parsed, the worst thing that can
+                        // happen is that caching is not used, even though it would be
+                        // possible.
+
+                        if (qc_get_operation(packet) == QUERY_OP_SELECT)
+                        {
+                            if (cache_rules_should_store(cinstance->rules, csdata->default_db, packet))
+                            {
+                                if (cache_rules_should_use(cinstance->rules, csdata->session))
+                                {
+                                    GWBUF *result;
+                                    use_default = !route_using_cache(csdata, packet, &result);
+
+                                    if (use_default)
+                                    {
+                                        csdata->state = CACHE_EXPECTING_RESPONSE;
+                                    }
+                                    else
+                                    {
+                                        csdata->state = CACHE_EXPECTING_NOTHING;
+                                        C_DEBUG("Using data from cache.");
+                                        gwbuf_free(packet);
+                                        DCB *dcb = csdata->session->client_dcb;
+
+                                        // TODO: This is not ok. Any filters before this filter, will not
+                                        // TODO: see this data.
+                                        rv = dcb->func.write(dcb, result);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                csdata->state = CACHE_IGNORING_RESPONSE;
+                            }
+                        }
+                    }
+                }
+                break;
+
+            default:
+                break;
             }
         }
 
@@ -519,6 +513,10 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
         rv = handle_expecting_rows(csdata);
         break;
 
+    case CACHE_EXPECTING_USE_RESPONSE:
+        rv = handle_expecting_use_response(csdata);
+        break;
+
     case CACHE_IGNORING_RESPONSE:
         rv = handle_ignoring_response(csdata);
         break;
@@ -584,11 +582,31 @@ static CACHE_SESSION_DATA *cache_session_data_create(CACHE_INSTANCE *instance,
 
     if (data)
     {
-        data->instance = instance;
-        data->api = instance->module->api;
-        data->storage = instance->storage;
-        data->session = session;
-        data->state = CACHE_EXPECTING_NOTHING;
+        char *default_db = NULL;
+
+        ss_dassert(session->client_dcb);
+        ss_dassert(session->client_dcb->data);
+        MYSQL_session *mysql_session = (MYSQL_session*)session->client_dcb->data;
+
+        if (mysql_session->db[0] != 0)
+        {
+            default_db = MXS_STRDUP(mysql_session->db);
+        }
+
+        if ((mysql_session->db[0] == 0) || default_db)
+        {
+            data->instance = instance;
+            data->api = instance->module->api;
+            data->storage = instance->storage;
+            data->session = session;
+            data->state = CACHE_EXPECTING_NOTHING;
+            data->default_db = default_db;
+        }
+        else
+        {
+            MXS_FREE(data);
+            data = NULL;
+        }
     }
 
     return data;
@@ -603,6 +621,8 @@ static void cache_session_data_free(CACHE_SESSION_DATA* data)
 {
     if (data)
     {
+        ss_dassert(!data->use_db);
+        MXS_FREE(data->default_db);
         MXS_FREE(data);
     }
 }
@@ -704,7 +724,7 @@ static int handle_expecting_response(CACHE_SESSION_DATA *csdata)
             store_result(csdata);
 
             rv = send_upstream(csdata);
-            csdata->state = CACHE_EXPECTING_NOTHING;
+            csdata->state = CACHE_IGNORING_RESPONSE;
             break;
 
         case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
@@ -819,6 +839,58 @@ static int handle_expecting_rows(CACHE_SESSION_DATA *csdata)
 }
 
 /**
+ * Called when a response to a "USE db" is received from the server.
+ *
+ * @param csdata The cache session data.
+ */
+static int handle_expecting_use_response(CACHE_SESSION_DATA *csdata)
+{
+    ss_dassert(csdata->state == CACHE_EXPECTING_USE_RESPONSE);
+    ss_dassert(csdata->res.data);
+
+    int rv = 1;
+
+    size_t buflen = gwbuf_length(csdata->res.data);
+
+    if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
+    {
+        uint8_t command;
+
+        gwbuf_copy_data(csdata->res.data, MYSQL_HEADER_LEN, 1, &command);
+
+        switch (command)
+        {
+        case 0x00: // OK
+            // In case csdata->use_db could not be allocated in routeQuery(), we will
+            // in fact reset the default db here. That's ok as it will prevent broken
+            // entries in the cache.
+            MXS_FREE(csdata->default_db);
+            csdata->default_db = csdata->use_db;
+            csdata->use_db = NULL;
+            break;
+
+        case 0xff: // ERR
+            MXS_FREE(csdata->use_db);
+            csdata->use_db = NULL;
+            break;
+
+        default:
+            MXS_ERROR("\"USE %s\" received unexpected server response %d.",
+                      csdata->use_db ? csdata->use_db : "<db>", command);
+            MXS_FREE(csdata->default_db);
+            MXS_FREE(csdata->use_db);
+            csdata->default_db = NULL;
+            csdata->use_db = NULL;
+        }
+
+        rv = send_upstream(csdata);
+        csdata->state = CACHE_IGNORING_RESPONSE;
+    }
+
+    return rv;
+}
+
+/**
  * Called when all data from the server is ignored.
  *
  * @param csdata The cache session data.
@@ -829,6 +901,125 @@ static int handle_ignoring_response(CACHE_SESSION_DATA *csdata)
     ss_dassert(csdata->res.data);
 
     return send_upstream(csdata);
+}
+
+/**
+ * Processes the cache params
+ *
+ * @param options Options as passed to the filter.
+ * @param params  Parameters as passed to the filter.
+ * @param config  Pointer to config instance where params will be stored.
+ *
+ * @return True if all parameters could be processed, false otherwise.
+ */
+static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONFIG* config)
+{
+    bool error = false;
+
+    for (int i = 0; params[i]; ++i)
+    {
+        const FILTER_PARAMETER *param = params[i];
+
+        if (strcmp(param->name, "max_resultset_rows") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->max_resultset_rows = v;
+            }
+            else
+            {
+                config->max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
+            }
+        }
+        else if (strcmp(param->name, "max_resultset_size") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->max_resultset_size = v * 1024;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "rules") == 0)
+        {
+            if (*param->value == '/')
+            {
+                config->rules = MXS_STRDUP(param->value);
+            }
+            else
+            {
+                const char *datadir = get_datadir();
+                size_t len = strlen(datadir) + 1 + strlen(param->value) + 1;
+
+                char *rules = MXS_MALLOC(len);
+
+                if (rules)
+                {
+                    sprintf(rules, "%s/%s", datadir, param->value);
+                    config->rules = rules;
+                }
+            }
+
+            if (!config->rules)
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "storage_options") == 0)
+        {
+            config->storage_options = param->value;
+        }
+        else if (strcmp(param->name, "storage") == 0)
+        {
+            config->storage = param->value;
+        }
+        else if (strcmp(param->name, "ttl") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config->ttl = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "debug") == 0)
+        {
+            int v = atoi(param->value);
+
+            if ((v >= CACHE_DEBUG_MIN) && (v <= CACHE_DEBUG_MAX))
+            {
+                config->debug = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be between %d and %d, inclusive.",
+                          param->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+                error = true;
+            }
+        }
+        else if (!filter_standard_parameter(params[i]->name))
+        {
+            MXS_ERROR("Unknown configuration entry '%s'.", param->name);
+            error = true;
+        }
+    }
+
+    return !error;
 }
 
 /**
@@ -843,7 +1034,7 @@ static bool route_using_cache(CACHE_SESSION_DATA *csdata,
                               const GWBUF *query,
                               GWBUF **value)
 {
-    cache_result_t result = csdata->api->getKey(csdata->storage, query, csdata->key);
+    cache_result_t result = csdata->api->getKey(csdata->storage, csdata->default_db, query, csdata->key);
 
     if (result == CACHE_RESULT_OK)
     {
@@ -883,14 +1074,19 @@ static void store_result(CACHE_SESSION_DATA *csdata)
 {
     ss_dassert(csdata->res.data);
 
-    csdata->res.data = gwbuf_make_contiguous(csdata->res.data);
+    GWBUF *data = gwbuf_make_contiguous(csdata->res.data);
 
-    cache_result_t result = csdata->api->putValue(csdata->storage,
-                                                  csdata->key,
-                                                  csdata->res.data);
-
-    if (result != CACHE_RESULT_OK)
+    if (data)
     {
-        MXS_ERROR("Could not store cache item.");
+        csdata->res.data = data;
+
+        cache_result_t result = csdata->api->putValue(csdata->storage,
+                                                      csdata->key,
+                                                      csdata->res.data);
+
+        if (result != CACHE_RESULT_OK)
+        {
+            MXS_ERROR("Could not store cache item.");
+        }
     }
 }

@@ -44,6 +44,8 @@
  */
 
 /**
+ * @brief Check for dropping of temporary tables
+ * 
  * Check if the query is a DROP TABLE... query and
  * if it targets a temporary table, remove it from the hashtable.
  * @param router_cli_ses Router client session
@@ -351,6 +353,15 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_
     return rval;
 }
 
+/**
+ * @brief Determine the type of a query
+ * 
+ * @param querybuf      GWBUF containing the query
+ * @param packet_type   Integer denoting DB specific enum
+ * @param non_empty_packet  Boolean to be set by this function
+ * 
+ * @return qc_query_type_t the query type; also the non_empty_packet bool is set
+ */
 qc_query_type_t
 determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
 {

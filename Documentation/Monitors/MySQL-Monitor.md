@@ -119,6 +119,51 @@ This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
 functionality. The only difference is that the MySQL monitor will also detect
 traditional Master-Slave topologies.
 
+### `failover`
+
+Failover mode. This feature takes a boolean parameter is disabled by default.
+
+This parameter is intended to be used with simple, two node master-slave pairs
+where the failure of the master can be resolved by "promoting" the slave as the
+new master. Normally this is done by using an external agent of some sort
+(possibly triggered by MaxScale's monitor scripts), like
+[MariaDB Replication Manager](https://github.com/tanji/replication-manager)
+or [MHA](https://code.google.com/p/mysql-master-ha/).
+
+The failover mode in mysqlmon is completely passive in the sense that it does
+not modify the cluster or any servers in it. It labels a slave server as a
+master server when there is only one running server. Before a failover can be
+initiated, the following conditions must have been met:
+
+- The monitor has repeatedly failed to connect to the failed servers
+- There is only one running server among the monitored servers
+- @@read_only is not enabled on the last running server
+
+When these conditions are met, the monitor assigns the last remaining server the
+master status and puts all other servers into maintenance mode. This is done to
+prevent accidental use of the failed servers if they came back online.
+
+When the failed servers come back up, the maintenance mode needs to be manually
+cleared once replication has been set up.
+
+**Note**: A failover will cause permanent changes in the data of the promoted
+  server. Only use this feature if you know that the slave servers are capable
+  of acting as master servers.
+
+### `failcount`
+
+Number of failures that must occur on all failed servers before a failover is
+initiated. The default value is 5 failures.
+
+The monitor will attemt to contact all servers once per monitoring cycle. When
+_failover_ mode is enabled, all of the failed servers must fail _failcount_
+number of connection attemps before a failover is initiated.
+
+The formula for calculating the actual number of milliseconds before failover
+can start is `monitor_interval * failcount`. This means that to trigger a
+failover after 10 seconds of master failure with a _monitor_interval_ of 1000
+milliseconds, the value of _failcount_ must be 10.
+
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin when a server goes down.

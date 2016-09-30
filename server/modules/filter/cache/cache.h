@@ -15,19 +15,24 @@
 
 #include <limits.h>
 
+#define CACHE_DEBUG_NONE         0
+#define CACHE_DEBUG_MATCHING     1
+#define CACHE_DEBUG_NON_MATCHING 2
+#define CACHE_DEBUG_USE          4
+#define CACHE_DEBUG_NON_USE      8
 
-typedef enum cache_references
-{
-    CACHE_REFERENCES_ANY,         // select * from tbl;
-    CACHE_REFERENCES_QUALIFIED    // select * from db.tbl;
-} cache_references_t;
+#define CACHE_DEBUG_RULES        (CACHE_DEBUG_MATCHING | CACHE_DEBUG_NON_MATCHING)
+#define CACHE_DEBUG_USAGE        (CACHE_DEBUG_USE | CACHE_DEBUG_NON_USE)
+#define CACHE_DEBUG_MIN          CACHE_DEBUG_NONE
+#define CACHE_DEBUG_MAX          (CACHE_DEBUG_RULES | CACHE_DEBUG_USAGE)
 
-#define CACHE_DEFAULT_ALLOWED_REFERENCES CACHE_REFERENCES_QUALIFIED
 // Count
 #define CACHE_DEFAULT_MAX_RESULTSET_ROWS UINT_MAX
 // Bytes
 #define CACHE_DEFAULT_MAX_RESULTSET_SIZE 64 * 1024
 // Seconds
 #define CACHE_DEFAULT_TTL                10
+// Integer value
+#define CACHE_DEFAULT_DEBUG              0
 
 #endif
