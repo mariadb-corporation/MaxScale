@@ -218,13 +218,12 @@ if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMP
   install_custom_file(server/maxscale.cnf.template ${MAXSCALE_CONFDIR} core)
 endif()
 
-# This should be moved to the qc_mysqlembedded directory
-# install(PROGRAMS ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
-
+install_file(${CMAKE_SOURCE_DIR}/COPYRIGHT core)
 install_file(${CMAKE_SOURCE_DIR}/README core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE.TXT core)
 install_file(etc/lsyncd_example.conf core)
 install_manual(Documentation/maxscale.1 1 core)
+install_file(${CMAKE_SOURCE_DIR}/server/maxscale_binlogserver_template.cnf core)
 
 
 # Install startup scripts and ldconfig files
