@@ -49,6 +49,7 @@
 #include <thread.h>
 #include <zlib.h>
 #include <mysql_client_server_protocol.h>
+#include <secrets.h>
 
 #define BINLOG_FNAMELEN         255
 #define BLR_PROTOCOL            "MySQLBackend"
@@ -60,6 +61,7 @@
 #define BINLOG_EVENT_HDR_LEN       19
 #define BINLOG_EVENT_CRC_ALGO_TYPE  1
 #define BINLOG_EVENT_CRC_SIZE       4
+/* BINLOG_EVENT_LEN_OFFSET points to event_size in event_header */
 #define BINLOG_EVENT_LEN_OFFSET     9
 #define BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN  13
 #define BINLOG_FATAL_ERROR_READING         1236
@@ -315,6 +317,7 @@ typedef struct blfile
     int             refcnt;                         /*< Reference count for file */
     BLCACHE         *cache;                         /*< Record cache for this file */
     SPINLOCK        lock;                           /*< The file lock */
+    void            *encryption_ctx;                /*< The encryption context */
     struct blfile   *next;                          /*< Next file in list */
 } BLFILE;
 
@@ -402,6 +405,7 @@ typedef struct router_slave
     THREAD            lsi_sender_tid;  /*< Who sent */
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
     uint32_t          lsi_binlog_pos; /*< What position */
+    void              *encryption_ctx;      /*< Encryption context */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -470,6 +474,7 @@ typedef struct binlog_encryption_setup
   char *key_management_filename;
   uint8_t *keys;
 } BINLOG_ENCRYPTION_SETUP;
+
 /**
  * The per instance data for the router.
  */
@@ -558,6 +563,52 @@ typedef struct router_instance
     void              *encryption_ctx;      /*< Encryption context */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
+
+/**
+ * Binlog encryption context of slave binlog file
+ */
+
+typedef struct slave_encryption_ctx
+{
+    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
+    uint32_t binlog_key_version;     /**< Encryption key version */
+    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
+                                      * These bytes + the binlog event current pos
+                                      * form the encrryption IV for the event */
+    char     *log_file;              /**< The log file the client has requested */
+    uint32_t first_enc_event_pos;    /**< The position of first encrypted event
+                                      * It's the first event afte Start_encryption_event
+                                      * Which is after FDE */
+} SLAVE_ENCRYPTION_CTX;
+
+/**
+ * Binlog encryption context of binlog file
+ */
+
+typedef struct binlog_encryption_ctx
+{
+    uint8_t  binlog_crypto_scheme;   /**< Encryption scheme */
+    uint32_t binlog_key_version;     /**< Encryption key version */
+    uint8_t  nonce[AES_BLOCK_SIZE];  /**< nonce (random bytes) of current binlog.
+                                      * These bytes + the binlog event current pos
+                                      * form the encrryption IV for the event */
+    char     *binlog_file;           /**< Current binlog file being encrypted */
+} BINLOG_ENCRYPTION_CTX;
+
+/**
+ * Defines and offsets for binlog encryption
+ *
+ * BLRM_FDE_EVENT_TYPES_OFFSET is the offset in FDE event content that points to
+ * the number of events the master server supports.
+ */
+#define BLRM_FDE_EVENT_TYPES_OFFSET (2 + 50 + 4 + 1)
+#define BLRM_CRYPTO_SCHEME_LENGTH   1
+#define BLRM_KEY_VERSION_LENGTH     4
+#define BLRM_IV_LENGTH              AES_BLOCK_SIZE
+#define BLRM_IV_OFFS_LENGTH         4
+#define BLRM_NONCE_LENGTH           (BLRM_IV_LENGTH - BLRM_IV_OFFS_LENGTH)
+
+
 
 /**
  * State machine for the master to MaxScale replication

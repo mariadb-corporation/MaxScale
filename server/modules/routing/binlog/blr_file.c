@@ -77,6 +77,7 @@ extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
+extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
 
 typedef struct binlog_event_desc
 {
@@ -109,19 +110,6 @@ typedef enum
 } generated_event_t;
 
 /**
- * The offset in FDE event content that points to the number of events
- * the master server supports.
- */
-
-/* Defines and offsets for binlog encryption */
-#define BLRM_FDE_EVENT_TYPES_OFFSET    (2 + 50 + 4 + 1)
-#define BLRM_CRYPTO_SCHEME_LENGTH 1
-#define BLRM_KEY_VERSION_LENGTH   4
-#define BLRM_IV_LENGTH            AES_BLOCK_SIZE
-#define BLRM_IV_OFFS_LENGTH       4
-#define BLRM_NONCE_LENGTH         (BLRM_IV_LENGTH - BLRM_IV_OFFS_LENGTH)
-
-/**
  * MariaDB 10.1.7 Start Encryption event content
  *
  * Event header:    19 bytes
@@ -141,22 +129,6 @@ typedef struct start_encryption_event
                                        * These bytes + the binlog event current pos
                                        * form the encrryption IV for the event */
 } START_ENCRYPTION_EVENT;
-
-/**
- * Binlog encryption context of current binlog file
- *
- * nonce for current binlog
- * key version
- * crypto_scheme
- */
-typedef struct binlog_encryption_ctx
-{
-    uint8_t binlog_crypto_scheme; /**< Encryption scheme */
-    uint32_t binlog_key_version;  /**< Encryption key version */
-    uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
-                                       * These bytes + the binlog event current pos
-                                       * form the encrryption IV for the event */
-} BINLOG_ENCRYPTION_CTX;
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -441,6 +413,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     int n;
     bool write_begin_encryption = false;
     uint64_t file_offset = router->current_pos;
+    uint32_t event_size[4];
 
     /* Track whether FORMAT_DESCRIPTION_EVENT has been received */
     if (hdr->event_type == FORMAT_DESCRIPTION_EVENT)
@@ -462,7 +435,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         }
     }
 
-    if (router->encryption_ctx != NULL)
+    if (router->encryption.enabled && router->encryption_ctx != NULL && !write_begin_encryption)
     {
         BINLOG_ENCRYPTION_CTX *tmp_encryption_ctx = (BINLOG_ENCRYPTION_CTX *)(router->encryption_ctx);
         uint8_t iv[BLRM_IV_LENGTH];
@@ -484,21 +457,31 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
                  nonce_hex,
                  tmp_encryption_ctx->binlog_crypto_scheme,
                  tmp_encryption_ctx->binlog_key_version);
+
+        /**
+         * Encrypt binlog event:
+         *
+         * Save event size (buf + 9, 4 bytes)
+         * move first 4 bytes of buf to buf + 9 ...
+         * encrypt buf starting from buf + 4 (so it will be event_size - 4)
+         * move encrypted_data + 9, (4 bytes), to  encrypted_data[0]
+         * write saved_event_size 4 bytes into encrypted_data + 9
+         * write encrypted_data
+         */
+   
+        memcpy(&event_size, buf + BINLOG_EVENT_LEN_OFFSET , 4);
+        memmove(buf + BINLOG_EVENT_LEN_OFFSET, buf, 4);
+        uint8_t *buf_ptr = buf + 4;
+        /* 16 bytes after buf + 4 are owerwritten by XORed with IV */
+        /* Only 15 bytes are involved */ 
+        for (int i=0; i < (AES_BLOCK_SIZE - 1); i++)
+        {
+            buf_ptr[i]= buf_ptr[i] ^ iv[i];
+        }
+        memmove(buf, buf + BINLOG_EVENT_LEN_OFFSET, 4);
+        memcpy(buf + BINLOG_EVENT_LEN_OFFSET, &event_size, 4);
     }
-
-    /**
-     * TODO:
-     *
-     * save event size (buf + 9, 4 bytes)
-     * move first 4 bytes of buf to buf + 9 ...
-     * encrypt buf starting from buf + 4 (so it will be event_size - 4)
-     * move encrypted_data + 9, (4 bytesi), to  encrypted_data[0]
-     * write saved_event_size 4 bytes into encrypted_data + 9
-     * write encrypted_data
-     *
-     * First task is the data move only in current 'buf', no encryption at all.
-     */
-
+ 
     /* Write current received event from master */
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
@@ -622,6 +605,8 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
         return NULL;
     }
 
+    file->encryption_ctx = NULL;
+
     file->next = router->files;
     router->files = file;
     spinlock_release(&router->fileslock);
@@ -648,6 +633,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     int n;
     unsigned long filelen = 0;
     struct stat statb;
+    SLAVE_ENCRYPTION_CTX *file_enc_ctx = NULL;
 
     memset(hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
 
@@ -732,6 +718,10 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
 
         return NULL;
     }
+
+    /* Get encryption_ctx */
+    file_enc_ctx = file->encryption_ctx;
+
     spinlock_release(&file->lock);
     spinlock_release(&router->binlog_lock);
 
@@ -770,6 +760,35 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
             break;
         }
         return NULL;
+    }
+
+    /* Check whether we need to decrypt the current event */
+    if (file_enc_ctx && pos >= file_enc_ctx->first_enc_event_pos)
+    {
+        uint8_t *event_ptr = hdbuf;
+        uint8_t iv[AES_BLOCK_SIZE];
+        uint8_t event_size[4];
+
+        /* Encryption IV is 12 bytes nonce + 4 bytes event position */
+        memcpy(&iv, file_enc_ctx->nonce, BLRM_NONCE_LENGTH);
+        gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
+
+        /* Save event size */
+        memcpy(&event_size, event_ptr + BINLOG_EVENT_LEN_OFFSET , 4);
+
+        MXS_INFO("Decoding encrypted event @ pos %lu, size %lu",
+                  (unsigned long)pos, (unsigned long)extract_field(event_size, 32));
+
+        memmove(event_ptr + BINLOG_EVENT_LEN_OFFSET, event_ptr, 4);
+        uint8_t *buf_ptr = event_ptr + 4;
+        /* 16 bytes after buf + 4 are owerwritten by XORed with IV */
+        // 15 for now
+        for (int i=0; i < (AES_BLOCK_SIZE - 1); i++)
+        {
+            buf_ptr[i]= buf_ptr[i] ^ iv[i];
+        }
+        memmove(event_ptr, event_ptr + BINLOG_EVENT_LEN_OFFSET, 4);
+        memcpy(event_ptr + BINLOG_EVENT_LEN_OFFSET, &event_size, 4);
     }
 
     hdr->timestamp = EXTRACT32(hdbuf);
@@ -971,6 +990,7 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
     {
         close(file->fd);
         file->fd = -1;
+        file->encryption_ctx = NULL;
         MXS_FREE(file);
     }
 }
@@ -1686,7 +1706,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         /* Detect possible Start Encryption Event */
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
-            char nonce_hex[12 * 2 + 1] = "";
+            char nonce_hex[AES_BLOCK_SIZE * 2 + 1] = "";
             START_ENCRYPTION_EVENT ste_event = {};
             BINLOG_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(BINLOG_ENCRYPTION_CTX));
             if (new_encryption_ctx == NULL)

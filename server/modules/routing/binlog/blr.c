@@ -941,10 +941,11 @@ newSession(ROUTER *instance, SESSION *session)
     slave->mariadb10_compat = false;
     slave->heartbeat = 0;
     slave->lastEventReceived = 0;
+    slave->encryption_ctx = NULL;
 
     /**
-         * Add this session to the list of active sessions.
-         */
+     * Add this session to the list of active sessions.
+     */
     spinlock_acquire(&inst->lock);
     slave->next = inst->slaves;
     inst->slaves = slave;
@@ -1020,6 +1021,10 @@ static void freeSession(ROUTER* router_instance,
     if (slave->passwd)
     {
         MXS_FREE(slave->passwd);
+    }
+    if (slave->encryption_ctx)
+    {
+        MXS_FREE(slave->encryption_ctx);
     }
     MXS_FREE(slave);
 }
