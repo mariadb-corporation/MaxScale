@@ -468,7 +468,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
          * write saved_event_size 4 bytes into encrypted_data + 9
          * write encrypted_data
          */
-   
+
         memcpy(&event_size, buf + BINLOG_EVENT_LEN_OFFSET , 4);
         memmove(buf + BINLOG_EVENT_LEN_OFFSET, buf, 4);
         uint8_t *buf_ptr = buf + 4;

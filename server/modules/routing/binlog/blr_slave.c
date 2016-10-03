@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 201nMariaDB Corporation Ab
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
@@ -2374,11 +2374,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                  memcpy(new_encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
 
                  /* Save current first_enc_event_pos */
-                 if (slave->encryption_ctx)
-                 {
-                     SLAVE_ENCRYPTION_CTX *slave_enc_ctx = (SLAVE_ENCRYPTION_CTX *)slave->encryption_ctx;
-                     new_encryption_ctx->first_enc_event_pos = slave_enc_ctx->first_enc_event_pos;
-                 }
+                 new_encryption_ctx->first_enc_event_pos = hdr.next_pos;
 
                  /* set the encryption ctx into slave */
                  slave->encryption_ctx = new_encryption_ctx;
@@ -2387,12 +2383,14 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                           slave->binlogfile,
                           (unsigned long) hdr.next_pos);
             }
-
-            MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
-                     blr_get_event_description(router, hdr.event_type), 
-                     (unsigned long)hdr.event_size,
-                     slave->binlogfile,
-                     (unsigned long) slave->binlog_pos);
+            else
+            {
+                MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
+                         blr_get_event_description(router, hdr.event_type), 
+                         (unsigned long)hdr.event_size,
+                         slave->binlogfile,
+                         (unsigned long) slave->binlog_pos);
+            }
 
             /* set next pos */
             slave->binlog_pos = hdr.next_pos;
