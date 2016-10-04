@@ -473,7 +473,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         memmove(buf + BINLOG_EVENT_LEN_OFFSET, buf, 4);
         uint8_t *buf_ptr = buf + 4;
         /* 16 bytes after buf + 4 are owerwritten by XORed with IV */
-        /* Only 15 bytes are involved */ 
+        /* Only 15 bytes are involved */
         for (int i = 0; i < (AES_BLOCK_SIZE - 1); i++)
         {
             buf_ptr[i]= buf_ptr[i] ^ iv[i];
@@ -605,8 +605,6 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
         return NULL;
     }
 
-    file->encryption_ctx = NULL;
-
     file->next = router->files;
     router->files = file;
     spinlock_release(&router->fileslock);
@@ -622,10 +620,11 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
  * @param pos       Position of binlog record to read
  * @param hdr       Binlog header to populate
  * @param errmsg    Allocated BINLOG_ERROR_MSG_LEN bytes message error buffer
+ * @param enc_ctx   Encryption context for binlog file being read
  * @return          The binlog record wrapped in a GWBUF structure
  */
 GWBUF *
-blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HEADER *hdr, char *errmsg)
+blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HEADER *hdr, char *errmsg, SLAVE_ENCRYPTION_CTX *enc_ctx)
 {
     uint8_t hdbuf[BINLOG_EVENT_HDR_LEN];
     GWBUF *result;
@@ -633,7 +632,6 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     int n;
     unsigned long filelen = 0;
     struct stat statb;
-    SLAVE_ENCRYPTION_CTX *file_enc_ctx = NULL;
 
     memset(hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
 
@@ -719,9 +717,6 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
         return NULL;
     }
 
-    /* Get encryption_ctx */
-    file_enc_ctx = file->encryption_ctx;
-
     spinlock_release(&file->lock);
     spinlock_release(&router->binlog_lock);
 
@@ -763,14 +758,14 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     }
 
     /* Check whether we need to decrypt the current event */
-    if (file_enc_ctx && pos >= file_enc_ctx->first_enc_event_pos)
+    if (enc_ctx && pos >= enc_ctx->first_enc_event_pos)
     {
         uint8_t *event_ptr = hdbuf;
         uint8_t iv[AES_BLOCK_SIZE];
         uint8_t event_size[4];
 
         /* Encryption IV is 12 bytes nonce + 4 bytes event position */
-        memcpy(&iv, file_enc_ctx->nonce, BLRM_NONCE_LENGTH);
+        memcpy(&iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
         gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
 
         /* Save event size */
@@ -990,7 +985,6 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
     {
         close(file->fd);
         file->fd = -1;
-        file->encryption_ctx = NULL;
         MXS_FREE(file);
     }
 }
@@ -2582,4 +2576,3 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
 
     return new_event;
 }
-

@@ -317,7 +317,6 @@ typedef struct blfile
     int             refcnt;                         /*< Reference count for file */
     BLCACHE         *cache;                         /*< Record cache for this file */
     SPINLOCK        lock;                           /*< The file lock */
-    void            *encryption_ctx;                /*< The encryption context */
     struct blfile   *next;                          /*< Next file in list */
 } BLFILE;
 
@@ -616,7 +615,6 @@ typedef struct binlog_encryption_ctx
 #define BLRM_NONCE_LENGTH           (BLRM_IV_LENGTH - BLRM_IV_OFFS_LENGTH)
 
 
-
 /**
  * State machine for the master to MaxScale replication
  */
@@ -729,7 +727,7 @@ extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *, uint32_t po
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
-extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *, SLAVE_ENCRYPTION_CTX *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 extern unsigned long blr_file_size(BLFILE *);
 extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);

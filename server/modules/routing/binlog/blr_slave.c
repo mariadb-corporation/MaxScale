@@ -2327,11 +2327,8 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 #endif
     int events_before = slave->stats.n_events;
 
-    /* Set file encryption context from slave pointer */
-    file->encryption_ctx = slave->encryption_ctx;
-
     while (burst-- && burst_size > 0 &&
-           (record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
+           (record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg, slave->encryption_ctx)) != NULL)
     {
         char binlog_name[BINLOG_FNAMELEN + 1];
         uint32_t binlog_pos;
@@ -2489,6 +2486,11 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             slave->lastReply = time(0);
         }
     }
+
+    /**
+     * End of while reading
+     * Checking last buffer first
+     */ 
     if (record == NULL)
     {
         slave->stats.n_failed_read++;
@@ -2874,7 +2876,8 @@ blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     {
         return NULL;
     }
-    if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
+    /* FDE is not encrypted, so we can pass NULL to last parameter */
+    if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg, NULL)) == NULL)
     {
         if (hdr.ok != SLAVE_POS_READ_OK)
         {
@@ -5722,7 +5725,8 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
     {
         return 0;
     }
-    if ((record = blr_read_binlog(router, file, fde_end_pos, &hdr, err_msg)) == NULL)
+    /* Start Encryption Event is not encrypted, we can pass NULL to last parameter */
+    if ((record = blr_read_binlog(router, file, fde_end_pos, &hdr, err_msg, NULL)) == NULL)
     {
         if (hdr.ok != SLAVE_POS_READ_OK)
         {
