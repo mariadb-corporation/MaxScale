@@ -2328,16 +2328,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     int events_before = slave->stats.n_events;
 
     /* Set file encryption context from slave pointer */
-    spinlock_acquire(&slave->catch_lock);
-    if (slave->encryption_ctx)
-    {
-        file->encryption_ctx = slave->encryption_ctx;
-    }
-    else
-    {
-        file->encryption_ctx = NULL;
-    }
-    spinlock_release(&slave->catch_lock);
+    file->encryption_ctx = slave->encryption_ctx;
 
     while (burst-- && burst_size > 0 &&
            (record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
@@ -5716,7 +5707,6 @@ bool blr_notify_waiting_slave(ROUTER_SLAVE *slave)
 static int
 blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_end_pos)
 {
-    BLFILE *file;
     REP_HEADER hdr;
     GWBUF *record, *head;
     uint8_t *ptr;
@@ -5727,6 +5717,7 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
 
     memset(&hdr, 0, BINLOG_EVENT_HDR_LEN);
 
+    BLFILE *file;
     if ((file = blr_open_binlog(router, slave->binlogfile)) == NULL)
     {
         return 0;
@@ -5754,10 +5745,16 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
     {
         uint8_t *record_ptr = GWBUF_DATA(record);
         SLAVE_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+
+        if (!new_encryption_ctx)
+        {
+            return 0;
+        }
         record_ptr += BINLOG_EVENT_HDR_LEN;
         new_encryption_ctx->binlog_crypto_scheme = record_ptr[0]; // 1 Byte
         memcpy(&new_encryption_ctx->binlog_key_version, record_ptr + 1, BLRM_KEY_VERSION_LENGTH);
         memcpy(new_encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
+
         /* Set the pos of first encrypted event */
         new_encryption_ctx->first_enc_event_pos = fde_end_pos + hdr.event_size;
 

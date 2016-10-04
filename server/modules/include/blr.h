@@ -601,7 +601,14 @@ typedef struct binlog_encryption_ctx
  * BLRM_FDE_EVENT_TYPES_OFFSET is the offset in FDE event content that points to
  * the number of events the master server supports.
  */
-#define BLRM_FDE_EVENT_TYPES_OFFSET (2 + 50 + 4 + 1)
+#define BLR_FDE_EVENT_BINLOG_VERSION       2
+#define BLR_FDE_EVENT_SERVER_VERSION      50
+#define BLR_FDE_EVENT_BINLOG_TIME          4
+#define BLR_FDE_EVENT_BINLOG_EVENT_HDR_LEN 1
+#define BLRM_FDE_EVENT_TYPES_OFFSET        (BLR_FDE_EVENT_BINLOG_VERSION + \
+                                            BLR_FDE_EVENT_SERVER_VERSION + \
+                                            BLR_FDE_EVENT_BINLOG_TIME + \
+                                            BLR_FDE_EVENT_BINLOG_EVENT_HDR_LEN)
 #define BLRM_CRYPTO_SCHEME_LENGTH   1
 #define BLRM_KEY_VERSION_LENGTH     4
 #define BLRM_IV_LENGTH              AES_BLOCK_SIZE

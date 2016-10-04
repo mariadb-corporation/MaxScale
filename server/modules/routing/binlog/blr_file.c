@@ -474,7 +474,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         uint8_t *buf_ptr = buf + 4;
         /* 16 bytes after buf + 4 are owerwritten by XORed with IV */
         /* Only 15 bytes are involved */ 
-        for (int i=0; i < (AES_BLOCK_SIZE - 1); i++)
+        for (int i = 0; i < (AES_BLOCK_SIZE - 1); i++)
         {
             buf_ptr[i]= buf_ptr[i] ^ iv[i];
         }
