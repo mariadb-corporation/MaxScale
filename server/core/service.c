@@ -288,6 +288,11 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     memcpy(&port->listener->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
 
+    /**
+     * Normally, we'd allocate the DCB specific authentication data. As the
+     * listeners aren't normal DCBs, we can skip that.
+     */
+
     if (port->address)
     {
         sprintf(config_bind, "%s:%d", port->address, port->port);
@@ -1457,7 +1462,8 @@ int service_refresh_users(SERVICE *service)
 
             for (SERV_LISTENER *port = service->ports; port; port = port->next)
             {
-                if (port->listener->authfunc.loadusers(port) != MXS_AUTH_LOADUSERS_OK)
+                if (port->listener->authfunc.loadusers &&
+                    port->listener->authfunc.loadusers(port) != MXS_AUTH_LOADUSERS_OK)
                 {
                     MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",
                               service->name, port->name);

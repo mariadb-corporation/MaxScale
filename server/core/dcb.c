@@ -397,10 +397,10 @@ dcb_free_all_memory(DCB *dcb)
         dcb->authfunc.free(dcb);
         dcb->data = NULL;
     }
-    if (dcb->backend_data && dcb->authfunc.free && dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+    if (dcb->authfunc.destroy)
     {
-        dcb->authfunc.free(dcb);
-        dcb->backend_data = NULL;
+        dcb->authfunc.destroy(dcb->authenticator_data);
+        dcb->authenticator_data = NULL;
     }
     if (dcb->protoname)
     {
@@ -813,6 +813,12 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     }
 
     memcpy(&dcb->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
+
+    /** Allocate DCB specific authentication data */
+    if (dcb->authfunc.create)
+    {
+        dcb->authenticator_data = dcb->authfunc.create();
+    }
 
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
@@ -3172,6 +3178,13 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
                 }
             }
             memcpy(&(client_dcb->authfunc), authfuncs, sizeof(GWAUTHENTICATOR));
+
+            /** Allocate DCB specific authentication data */
+            if (client_dcb->authfunc.create)
+            {
+                client_dcb->authenticator_data = client_dcb->authfunc.create();
+            }
+
             if (client_dcb->service->max_connections &&
                 client_dcb->service->client_count >= client_dcb->service->max_connections)
             {

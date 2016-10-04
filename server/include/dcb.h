@@ -252,8 +252,8 @@ typedef struct dcb
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
     time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
     struct service  *service;       /**< The related service */
-    void            *data;          /**< Specific client data */
-    void            *backend_data;  /**< Specific backend data */
+    void            *data;          /**< Specific client data, shared between DCBs of this session */
+    void            *authenticator_data; /**< The authenticator data for this DCB */
     DCBMM           memdata;        /**< The data related to DCB memory management */
     SPINLOCK        cb_lock;        /**< The lock for the callbacks linked list */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
@@ -284,7 +284,7 @@ typedef struct dcb
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
-    .backend_data = NULL}
+    .authenticator_data = NULL}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason

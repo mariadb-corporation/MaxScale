@@ -42,12 +42,14 @@ struct servlistener;
  * @verbatim
  * The operations that can be performed on the descriptor
  *
+ *      create          Create a data structure unique to this DCB, stored in dcb->authenticator_data
  *      extract         Extract the data from a buffer and place in a structure
+ *                      shared at the session level, stored in dcb->data
  *      connectssl      Determine whether the connection can support SSL
  *      authenticate    Carry out the authentication
  *      free            Free extracted data
+ *      destroy         Destroy the unique DCB data
  *      loadusers       Load or update authenticator user data
- *      plugin_name     The protocol specific name of the authentication plugin.
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -56,12 +58,13 @@ struct servlistener;
  */
 typedef struct gw_authenticator
 {
+    void *(*create)();
     int (*extract)(struct dcb *, GWBUF *);
     bool (*connectssl)(struct dcb *);
     int (*authenticate)(struct dcb *);
     void (*free)(struct dcb *);
+    void (*destroy)(void *);
     int (*loadusers)(struct servlistener *);
-    const char* plugin_name;
 } GWAUTHENTICATOR;
 
 /** Return values for extract and authenticate entry points */

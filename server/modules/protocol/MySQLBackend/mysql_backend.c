@@ -848,8 +848,12 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     uint32_t capabilities = create_capabilities(conn, (local_session.db && strlen(local_session.db)), false);
     gw_mysql_set_byte4(client_capabilities, capabilities);
 
-    const char* auth_plugin_name = dcb->authfunc.plugin_name ?
-                                   dcb->authfunc.plugin_name : DEFAULT_MYSQL_AUTH_PLUGIN;
+    /**
+     * Use the default authentication plugin name. If the server is using a
+     * different authentication mechanism, it will send an AuthSwitchRequest
+     * packet.
+     */
+    const char* auth_plugin_name =  DEFAULT_MYSQL_AUTH_PLUGIN;
 
     long bytes = response_length(conn, local_session.user, local_session.client_sha1,
                                  local_session.db, auth_plugin_name);
@@ -909,7 +913,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
     }
 
     // if the db is not NULL append it
-    if (local_session.db && strlen(local_session.db))
+    if (local_session.db[0])
     {
         memcpy(payload, local_session.db, strlen(local_session.db));
         payload += strlen(local_session.db);

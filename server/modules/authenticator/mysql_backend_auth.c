@@ -50,7 +50,7 @@ typedef struct mysql_backend_auth
  * @brief Allocate a new mysql_backend_auth object
  * @return Allocated object or NULL if memory allocation failed
  */
-mysql_backend_auth_t* mba_alloc()
+void* auth_backend_create()
 {
     mysql_backend_auth_t* mba = MXS_MALLOC(sizeof(*mba));
 
@@ -60,6 +60,18 @@ mysql_backend_auth_t* mba_alloc()
     }
 
     return mba;
+}
+
+/**
+ * @brief Free allocated mysql_backend_auth object
+ * @param data Allocated mysql_backend_auth object
+ */
+void auth_backend_destroy(void *data)
+{
+    if (data)
+    {
+        MXS_FREE(data);
+    }
 }
 
 /**
@@ -95,9 +107,9 @@ auth_backend_extract(DCB *dcb, GWBUF *buf)
 {
     int rval = MXS_AUTH_FAILED;
 
-    if (dcb->backend_data || (dcb->backend_data = mba_alloc()))
+    if (dcb->authenticator_data)
     {
-        mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->backend_data;
+        mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
         switch (mba->state)
         {
@@ -146,7 +158,7 @@ static int
 auth_backend_authenticate(DCB *dcb)
 {
     int rval = MXS_AUTH_FAILED;
-    mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->backend_data;
+    mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
     if (mba->state == MBA_SEND_RESPONSE)
     {
@@ -193,16 +205,6 @@ auth_backend_ssl(DCB *dcb)
 }
 
 /**
- * @brief Dummy function for the free entry point
- */
-static void
-auth_backend_free(DCB *dcb)
-{
-    MXS_FREE(dcb->backend_data);
-    dcb->backend_data = NULL;
-}
-
-/**
  * @brief Dummy function for the loadusers entry point
  */
 static int auth_backend_load_users(SERV_LISTENER *port)
@@ -230,12 +232,13 @@ static char *version_str = "V1.0.0";
  */
 static GWAUTHENTICATOR MyObject =
 {
-    auth_backend_extract,       /* Extract data into structure   */
-    auth_backend_ssl,           /* Check if client supports SSL  */
-    auth_backend_authenticate,  /* Authenticate user credentials */
-    auth_backend_free,          /* Free the client data held in DCB */
-    auth_backend_load_users,    /* Load users from backend databases */
-    DEFAULT_MYSQL_AUTH_PLUGIN
+    auth_backend_create,       /* Create authenticator */
+    auth_backend_extract,      /* Extract data into structure   */
+    auth_backend_ssl,          /* Check if client supports SSL  */
+    auth_backend_authenticate, /* Authenticate user credentials */
+    NULL,                      /* The shared data is freed by the client DCB */
+    auth_backend_destroy,      /* Destroy authenticator */
+    NULL                       /* We don't need to load users */
 };
 
 /**

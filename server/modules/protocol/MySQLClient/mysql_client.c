@@ -311,8 +311,12 @@ int MySQLSendHandshake(DCB* dcb)
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
 
-    const char* plugin_name = dcb->authfunc.plugin_name ?
-        dcb->authfunc.plugin_name : DEFAULT_MYSQL_AUTH_PLUGIN;
+    /**
+     * Use the default authentication plugin name in the initial handshake. If the
+     * authenticator needs to change the authentication method, it should send
+     * an AuthSwitchRequest packet to the client.
+     */
+    const char* plugin_name = DEFAULT_MYSQL_AUTH_PLUGIN;
     int plugin_name_len = strlen(plugin_name);
 
     mysql_payload_size =
@@ -562,6 +566,13 @@ int gw_read_client_event(DCB* dcb)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
+    /** Allocate the shared session structure */
+    if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
+    {
+        dcb_close(dcb);
+        return 1;
+    }
+
     /**
      * The first step in the authentication process is to extract the
      * relevant information from the buffer supplied and place it
@@ -590,7 +601,17 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      */
     if (MXS_AUTH_SUCCEEDED == auth_val)
     {
-        SESSION *session;
+        if (dcb->user == NULL)
+        {
+            /** User authentication complete, copy the username to the DCB */
+            MYSQL_session *ses = dcb->data;
+            if ((dcb->user = MXS_STRDUP(ses->user)) == NULL)
+            {
+                dcb_close(dcb);
+                gwbuf_free(read_buffer);
+                return 0;
+            }
+        }
 
         protocol->protocol_auth_state = MXS_AUTH_STATE_RESPONSE_SENT;
         /**
@@ -600,7 +621,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        session = session_alloc(dcb->service, dcb);
+        SESSION *session = session_alloc(dcb->service, dcb);
 
         if (session != NULL)
         {

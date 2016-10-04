@@ -57,6 +57,25 @@ uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
 
 /**
+ * @brief Allocate a new MySQL_session
+ * @return New MySQL_session or NULL if memory allocation failed
+ */
+MYSQL_session* mysql_session_alloc()
+{
+    MYSQL_session *ses = MXS_CALLOC(1, sizeof(MYSQL_session));
+
+    if (ses)
+    {
+#ifdef SS_DEBUG
+        ses->myses_chk_top = CHK_NUM_MYSQLSES;
+        ses->myses_chk_tail = CHK_NUM_MYSQLSES;
+#endif
+    }
+
+    return ses;
+}
+
+/**
  * Creates MySQL protocol structure
  *
  * @param dcb *          Must be non-NULL.

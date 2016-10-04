@@ -67,12 +67,13 @@ extern char *decryptPassword(char *crypt);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    cdc_auth_set_protocol_data,           /* Extract data into structure   */
-    cdc_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-    cdc_auth_authenticate,                /* Authenticate user credentials */
-    cdc_auth_free_client_data,            /* Free the client data held in DCB */
-    cdc_replace_users,
-    NULL
+    NULL,                           /* No create entry point */
+    cdc_auth_set_protocol_data,     /* Extract data into structure   */
+    cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+    cdc_auth_authenticate,          /* Authenticate user credentials */
+    cdc_auth_free_client_data,      /* Free the client data held in DCB */
+    NULL,                           /* No destroy entry point */
+    cdc_replace_users               /* Load CDC users */
 };
 
 static int cdc_auth_check(

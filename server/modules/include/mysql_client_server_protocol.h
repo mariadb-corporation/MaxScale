@@ -81,6 +81,9 @@
 
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
 
+/** All authentication responses are at least this many bytes long */
+#define MYSQL_AUTH_PACKET_BASE_SIZE 36
+
 /** Maximum length of a MySQL packet */
 #define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
 
@@ -296,6 +299,8 @@ typedef struct
 
 /* The following can be compared using memcmp to detect a null password */
 extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
+
+MYSQL_session* mysql_session_alloc();
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);

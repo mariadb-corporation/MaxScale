@@ -62,12 +62,13 @@ static int mysql_auth_load_users(SERV_LISTENER *port);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    mysql_auth_set_protocol_data,           /* Extract data into structure   */
-    mysql_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-    mysql_auth_authenticate,                /* Authenticate user credentials */
-    mysql_auth_free_client_data,            /* Free the client data held in DCB */
-    mysql_auth_load_users,                  /* Load users from backend databases */
-    "mysql_native_password"
+    NULL,                             /* No create entry point */
+    mysql_auth_set_protocol_data,     /* Extract data into structure   */
+    mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+    mysql_auth_authenticate,          /* Authenticate user credentials */
+    mysql_auth_free_client_data,      /* Free the client data held in DCB */
+    NULL,                             /* No destroy entry point */
+    mysql_auth_load_users             /* Load users from backend databases */
 };
 
 static int combined_auth_check(
@@ -243,22 +244,8 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
-    if (dcb->data == NULL)
-    {
-        if (NULL == (client_data = (MYSQL_session *)MXS_CALLOC(1, sizeof(MYSQL_session))))
-        {
-            return MXS_AUTH_FAILED;
-        }
-#if defined(SS_DEBUG)
-        client_data->myses_chk_top = CHK_NUM_MYSQLSES;
-        client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
-#endif
-        dcb->data = client_data;
-    }
-    else
-    {
-        client_data = (MYSQL_session *)dcb->data;
-    }
+
+    client_data = (MYSQL_session *)dcb->data;
 
     client_auth_packet_size = gwbuf_length(buf);
 
@@ -311,7 +298,7 @@ mysql_auth_set_client_data(
     gwbuf_copy_data(buffer, 0, client_auth_packet_size, client_auth_packet);
 
     /* The numbers are the fixed elements in the client handshake packet */
-    int auth_packet_base_size = 4 + 4 + 4 + 1 + 23;
+    int auth_packet_base_size = MYSQL_AUTH_PACKET_BASE_SIZE;
     int packet_length_used = 0;
 
     /* Take data from fixed locations first */
