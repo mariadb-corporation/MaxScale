@@ -383,4 +383,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb);
 /** Write an OK packet to a DCB */
 int mxs_mysql_send_ok(DCB *dcb, int sequence, int affected_rows, const char* message);
 
+/** Check for OK packet */
+bool mxs_mysql_is_ok_packet(GWBUF *buffer);
+
 #endif /** _MYSQL_PROTOCOL_H */

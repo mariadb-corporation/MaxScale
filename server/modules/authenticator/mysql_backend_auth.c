@@ -17,6 +17,10 @@
  * Backend authentication module for the MySQL protocol. Implements the
  * client side of the 'mysql_native_password' authentication plugin.
  *
+ * The "heavy lifting" of the authentication is done by the protocol module so
+ * the only thing left for this module is to read the final OK packet from the
+ * server.
+ *
  * @verbatim
  * Revision History
  * Date         Who                     Description
@@ -33,8 +37,6 @@
 /** Authentication states */
 enum mba_state
 {
-    MBA_NEED_HANDSHAKE,         /**< Waiting for server's handshake packet */
-    MBA_SEND_RESPONSE,          /**< A response to the server's handshake has been sent */
     MBA_NEED_OK,                /**< Waiting for server's OK packet */
     MBA_AUTH_OK,                /**< Authentication completed successfully */
     MBA_AUTH_FAILED             /**< Authentication failed */
@@ -56,7 +58,7 @@ void* auth_backend_create()
 
     if (mba)
     {
-        mba->state = MBA_NEED_HANDSHAKE;
+        mba->state = MBA_NEED_OK;
     }
 
     return mba;
@@ -73,26 +75,6 @@ void auth_backend_destroy(void *data)
         MXS_FREE(data);
     }
 }
-
-/**
- * Receive the MySQL authentication packet from backend, packet # is 2
- *
- * @param protocol The MySQL protocol structure
- * @return False in case of failure, true if authentication was successful.
- */
-static bool gw_read_auth_response(DCB *dcb, GWBUF *buffer)
-{
-    bool rval = false;
-    uint8_t cmd;
-
-    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) &&  cmd == MYSQL_REPLY_OK)
-    {
-        rval = true;
-    }
-
-    return rval;
-}
-
 /**
  * @brief Extract backend response
  *
@@ -102,46 +84,29 @@ static bool gw_read_auth_response(DCB *dcb, GWBUF *buffer)
  * @see gw_quthenticator.h
  * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
-static int
-auth_backend_extract(DCB *dcb, GWBUF *buf)
+static int auth_backend_extract(DCB *dcb, GWBUF *buf)
 {
     int rval = MXS_AUTH_FAILED;
+    mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
-    if (dcb->authenticator_data)
+    switch (mba->state)
     {
-        mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
+        case MBA_NEED_OK:
+            if (mxs_mysql_is_ok_packet(buf))
+            {
+                rval = MXS_AUTH_SUCCEEDED;
+                mba->state = MBA_AUTH_OK;
+            }
+            else
+            {
+                mba->state = MBA_AUTH_FAILED;
+            }
+            break;
 
-        switch (mba->state)
-        {
-            case MBA_NEED_HANDSHAKE:
-                if (gw_read_backend_handshake(dcb, buf))
-                {
-                    rval = MXS_AUTH_INCOMPLETE;
-                    mba->state = MBA_SEND_RESPONSE;
-                }
-                else
-                {
-                    mba->state = MBA_AUTH_FAILED;
-                }
-                break;
-
-            case MBA_NEED_OK:
-                if (gw_read_auth_response(dcb, buf))
-                {
-                    rval = MXS_AUTH_SUCCEEDED;
-                    mba->state =  MBA_AUTH_OK;
-                }
-                else
-                {
-                    mba->state = MBA_AUTH_FAILED;
-                }
-                break;
-
-            default:
-                MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-                ss_dassert(false);
-                break;
-        }
+        default:
+            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+            ss_dassert(false);
+            break;
     }
 
     return rval;
@@ -154,32 +119,12 @@ auth_backend_extract(DCB *dcb, GWBUF *buf)
  * @return Authentication status
  * @see gw_authenticator.h
  */
-static int
-auth_backend_authenticate(DCB *dcb)
+static int auth_backend_authenticate(DCB *dcb)
 {
     int rval = MXS_AUTH_FAILED;
     mysql_backend_auth_t *mba = (mysql_backend_auth_t*)dcb->authenticator_data;
 
-    if (mba->state == MBA_SEND_RESPONSE)
-    {
-        /** First message read, decode password and send the auth credentials to backend */
-        switch (gw_send_backend_auth(dcb))
-        {
-            case MXS_AUTH_STATE_CONNECTED:
-                rval = MXS_AUTH_SSL_INCOMPLETE;
-                break;
-
-            case MXS_AUTH_STATE_RESPONSE_SENT:
-                mba->state = MBA_NEED_OK;
-                rval = MXS_AUTH_INCOMPLETE;
-                break;
-
-            default:
-                /** Authentication failed */
-                break;
-        }
-    }
-    else if (mba->state == MBA_AUTH_OK)
+    if (mba->state == MBA_AUTH_OK)
     {
         /** Authentication completed successfully */
         rval = MXS_AUTH_SUCCEEDED;
@@ -198,8 +143,7 @@ auth_backend_authenticate(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  * @return Boolean indicating whether client is SSL capable
  */
-static bool
-auth_backend_ssl(DCB *dcb)
+static bool auth_backend_ssl(DCB *dcb)
 {
     return dcb->server->server_ssl != NULL;
 }

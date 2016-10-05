@@ -580,10 +580,25 @@ gw_read_backend_event(DCB *dcb)
                 log_error_response(dcb, readbuf);
             }
 
-            if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED ||
-                proto->protocol_auth_state == MXS_AUTH_STATE_RESPONSE_SENT)
+            if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED)
             {
-                /** Read the first message from the server */
+                mxs_auth_state_t state = MXS_AUTH_STATE_FAILED;
+
+                /** Read the server handshake and send the standard response */
+                if (gw_read_backend_handshake(dcb, readbuf))
+                {
+                    state = gw_send_backend_auth(dcb);
+                }
+
+                proto->protocol_auth_state = state;
+                gwbuf_free(readbuf);
+            }
+            else if (proto->protocol_auth_state == MXS_AUTH_STATE_RESPONSE_SENT)
+            {
+                /** Read the message from the server. This will be the first
+                 * packet that can contain authenticator specific data from the
+                 * backend server. For 'mysql_native_password' it'll be an OK
+                 * packet */
                 proto->protocol_auth_state = handle_server_response(dcb, readbuf);
             }
 
