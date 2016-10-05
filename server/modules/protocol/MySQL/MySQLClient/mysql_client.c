@@ -86,7 +86,6 @@ static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
 static char *gw_default_auth();
 static int gw_connection_limit(DCB *dcb, int limit);
-static int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 static int MySQLSendHandshake(DCB* dcb);
 static int route_by_statement(SESSION *, GWBUF **);
 static void mysql_client_auth_error_handling(DCB *dcb, int auth_val);
@@ -161,92 +160,6 @@ GWPROTOCOL* GetModuleObject()
 static char *gw_default_auth()
 {
     return "MySQLAuth";
-}
-/**
- * mysql_send_ok
- *
- * Send a MySQL protocol OK message to the dcb (client)
- *
- * @param dcb Descriptor Control Block for the connection to which the OK is sent
- * @param packet_number
- * @param in_affected_rows
- * @param mysql_message
- * @return packet length
- *
- */
-int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message)
-{
-    uint8_t *outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t *mysql_payload = NULL;
-    uint8_t field_count = 0;
-    uint8_t affected_rows = 0;
-    uint8_t insert_id = 0;
-    uint8_t mysql_server_status[2];
-    uint8_t mysql_warning_counter[2];
-    GWBUF *buf;
-
-    affected_rows = in_affected_rows;
-
-    mysql_payload_size =
-        sizeof(field_count) +
-        sizeof(affected_rows) +
-        sizeof(insert_id) +
-        sizeof(mysql_server_status) +
-        sizeof(mysql_warning_counter);
-
-    if (mysql_message != NULL)
-    {
-        mysql_payload_size += strlen(mysql_message);
-    }
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        return 0;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with packet number
-    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
-    mysql_packet_header[3] = packet_number;
-
-    // write header
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    mysql_payload = outbuf + sizeof(mysql_packet_header);
-
-    mysql_server_status[0] = 2;
-    mysql_server_status[1] = 0;
-    mysql_warning_counter[0] = 0;
-    mysql_warning_counter[1] = 0;
-
-    // write data
-    memcpy(mysql_payload, &field_count, sizeof(field_count));
-    mysql_payload = mysql_payload + sizeof(field_count);
-
-    memcpy(mysql_payload, &affected_rows, sizeof(affected_rows));
-    mysql_payload = mysql_payload + sizeof(affected_rows);
-
-    memcpy(mysql_payload, &insert_id, sizeof(insert_id));
-    mysql_payload = mysql_payload + sizeof(insert_id);
-
-    memcpy(mysql_payload, mysql_server_status, sizeof(mysql_server_status));
-    mysql_payload = mysql_payload + sizeof(mysql_server_status);
-
-    memcpy(mysql_payload, mysql_warning_counter, sizeof(mysql_warning_counter));
-    mysql_payload = mysql_payload + sizeof(mysql_warning_counter);
-
-    if (mysql_message != NULL)
-    {
-        memcpy(mysql_payload, mysql_message, strlen(mysql_message));
-    }
-
-    // writing data in the Client buffer queue
-    dcb->func.write(dcb, buf);
-
-    return sizeof(mysql_packet_header) + mysql_payload_size;
 }
 
 /**
@@ -625,18 +538,10 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
         if (session != NULL)
         {
-            int packet_number = ssl_required_by_dcb(dcb) ? 3 : 2;
-
             CHK_SESSION(session);
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
-                session->state != SESSION_STATE_DUMMY);
-
+                       session->state != SESSION_STATE_DUMMY);
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            /**
-             * Send an AUTH_OK packet to the client,
-             * packet sequence is # packet_number
-             */
-            mysql_send_ok(dcb, packet_number, 0, NULL);
         }
         else
         {

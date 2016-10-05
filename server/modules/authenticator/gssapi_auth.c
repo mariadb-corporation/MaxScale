@@ -281,26 +281,10 @@ int gssapi_auth_authenticate(DCB *dcb)
 
         MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
-        if (validate_gssapi_token(ses->auth_token, ses->auth_token_len))
+        if (validate_gssapi_token(ses->auth_token, ses->auth_token_len) &&
+            mxs_mysql_send_ok(dcb, 4, 0, NULL))
         {
-            /** Auth token is valid, send the OK packet
-             * @see https://dev.mysql.com/doc/internals/en/packet-OK_Packet.html */
-            uint8_t ok_packet[] =
-            {
-                0x07, 0x00, 0x00, 0x04, // Header
-                0x00, // OK byte
-                0x00, // Affected rows
-                0x00, // Last insert id
-                0x02, 0x00, // Status flags
-                0x00, 0x00 // Warnings
-            };
-
-            GWBUF *buffer = gwbuf_alloc_and_load(sizeof(ok_packet), ok_packet);
-
-            if (buffer && dcb->func.write(dcb, buffer))
-            {
-                rval = MXS_AUTH_SUCCEEDED;
-            }
+            rval = MXS_AUTH_SUCCEEDED;
         }
     }
 

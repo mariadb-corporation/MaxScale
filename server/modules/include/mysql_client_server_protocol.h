@@ -380,4 +380,7 @@ bool gw_read_backend_handshake(DCB *dcb, GWBUF *buffer);
 /** Send the server handshake response packet to the backend server */
 mxs_auth_state_t gw_send_backend_auth(DCB *dcb);
 
+/** Write an OK packet to a DCB */
+int mxs_mysql_send_ok(DCB *dcb, int sequence, int affected_rows, const char* message);
+
 #endif /** _MYSQL_PROTOCOL_H */

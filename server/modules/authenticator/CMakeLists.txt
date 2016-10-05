@@ -1,21 +1,20 @@
 add_library(MySQLAuth SHARED mysql_auth.c)
-target_link_libraries(MySQLAuth maxscale-common)
+target_link_libraries(MySQLAuth maxscale-common MySQLCommon)
 set_target_properties(MySQLAuth PROPERTIES VERSION "1.0.0")
 install_module(MySQLAuth core)
 
 add_library(MySQLBackendAuth SHARED mysql_backend_auth.c)
-target_link_libraries(MySQLBackendAuth maxscale-common MySQLBackend)
+target_link_libraries(MySQLBackendAuth maxscale-common MySQLCommon)
 set_target_properties(MySQLBackendAuth PROPERTIES VERSION "1.0.0")
 install_module(MySQLBackendAuth core)
 
 add_library(GSSAPIAuth SHARED gssapi_auth.c gssapi_auth_common.c)
-target_link_libraries(GSSAPIAuth maxscale-common gssapi_krb5)
+target_link_libraries(GSSAPIAuth maxscale-common gssapi_krb5 MySQLCommon)
 set_target_properties(GSSAPIAuth PROPERTIES VERSION "1.0.0")
 install_module(GSSAPIAuth core)
 
 add_library(GSSAPIBackendAuth SHARED gssapi_backend_auth.c gssapi_auth_common.c)
-target_link_libraries(GSSAPIBackendAuth maxscale-common  gssapi_krb5
-  MySQLBackend) # Needed for gw_send_backend_auth
+target_link_libraries(GSSAPIBackendAuth maxscale-common  gssapi_krb5 MySQLCommon)
 set_target_properties(GSSAPIBackendAuth PROPERTIES VERSION "1.0.0")
 install_module(GSSAPIBackendAuth core)
 

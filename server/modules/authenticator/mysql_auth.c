@@ -192,6 +192,8 @@ mysql_auth_authenticate(DCB *dcb)
         if (MXS_AUTH_SUCCEEDED == auth_ret)
         {
             dcb->user = MXS_STRDUP_A(client_data->user);
+            /** Send an OK packet to the client */
+            mxs_mysql_send_ok(dcb, ssl_required_by_dcb(dcb) ? 3 : 2, 0, NULL);
         }
         else if (dcb->service->log_auth_warnings)
         {
