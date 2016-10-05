@@ -290,8 +290,29 @@ where,
    * the _op_ can be `=`, `!=`, `like` or `unlike`, and
    * the _value_ a string.
 
-If _op_ is `=` or `!=` then _value_ is used verbatim; if it is `like`
-or `unlike`, then _value_ is interpreted as a _pcre2_ regular expression.
+If _op_ is `=` or `!=` then _value_ is interpreted as a MariaDB account
+string, that is, `%` means indicates wildcard, but if _op_ is `like` or
+`unlike` it is simply assumed _value_ is a pcre2 regular expression.
+
+For instance, the following are equivalent:
+
+```
+{
+    "attribute": "user",
+    "op": "=",
+    "value": "'bob'@'%'"
+}
+
+{
+    "attribute": "user",
+    "op": "like",
+    "value": "bob@.*"
+}
+
+Note that if _op_ is `=` or `!=` then the usual assumptions apply,
+that is, a value of `bob` is equivalent with `'bob'@'%'`. If _like_
+or _unlike_ is used, then no assumptions apply, but the string is
+used verbatim as a regular expression.
 
 The objects in the `use` array are processed in order. If the result
 of a comparison is _true_, no further processing will be made and the
@@ -307,7 +328,8 @@ rule in the `store` array.
 
 ### Examples
 
-Use data from the cache for all users except `admin`.
+Use data from the cache for all users except `admin` (actually `'admin'@'%'`),
+regardless of what host the `admin` user comes from.
 ```
 {
     "use": [
@@ -319,6 +341,7 @@ Use data from the cache for all users except `admin`.
     ]
 }
 ```
+
 # Storage
 
 ## Storage RocksDB

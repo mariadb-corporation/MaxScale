@@ -63,10 +63,8 @@ static struct cache_attribute_mapping cache_use_attributes[] =
 static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
                                      const char *s,
                                      cache_rule_attribute_t *attribute);
-static const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
 
 static bool cache_rule_op_get(const char *s, cache_rule_op_t *op);
-static const char *cache_rule_op_to_string(cache_rule_op_t op);
 
 static bool cache_rule_compare(CACHE_RULE *rule, const char *value);
 static bool cache_rule_compare_n(CACHE_RULE *rule, const char *value, size_t length);
@@ -114,10 +112,86 @@ static bool cache_rules_parse_array(CACHE_RULES *self, json_t *store, const char
 static bool cache_rules_parse_store_element(CACHE_RULES *self, json_t *object, size_t index);
 static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, size_t index);
 
+static bool dequote_mysql(char *s);
+
+typedef enum pcre_quote_approach
+{
+    PCRE_QUOTE_VERBATIM,
+    PCRE_QUOTE_QUERY
+} pcre_quote_approach_t;
+
+typedef enum mysql_account_kind
+{
+    MYSQL_ACCOUNT_WITH_WILDCARD,
+    MYSQL_ACCOUNT_WITHOUT_WILDCARD
+} mysql_account_kind_t;
+
+static mysql_account_kind_t mysql_to_pcre(char *pcre, const char *mysql, pcre_quote_approach_t approach);
+
 /*
  * API begin
  */
 
+/**
+ * Returns a string representation of a attribute.
+ *
+ * @param attribute An attribute type.
+ *
+ * @return Corresponding string, not to be freed.
+ */
+const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute)
+{
+    switch (attribute)
+    {
+    case CACHE_ATTRIBUTE_COLUMN:
+        return "column";
+
+    case CACHE_ATTRIBUTE_DATABASE:
+        return "database";
+
+    case CACHE_ATTRIBUTE_QUERY:
+        return "query";
+
+    case CACHE_ATTRIBUTE_TABLE:
+        return "table";
+
+    case CACHE_ATTRIBUTE_USER:
+        return "user";
+
+    default:
+        ss_dassert(!true);
+        return "<invalid>";
+    }
+}
+
+/**
+ * Returns a string representation of an operator.
+ *
+ * @param op An operator.
+ *
+ * @return Corresponding string, not to be freed.
+ */
+const char *cache_rule_op_to_string(cache_rule_op_t op)
+{
+    switch (op)
+    {
+    case CACHE_OP_EQ:
+        return "=";
+
+    case CACHE_OP_NEQ:
+        return "!=";
+
+    case CACHE_OP_LIKE:
+        return "like";
+
+    case CACHE_OP_UNLIKE:
+        return "unlike";
+
+    default:
+        ss_dassert(!true);
+        return "<invalid>";
+    }
+}
 
 /**
  * Create a default cache rules object.
@@ -272,12 +346,27 @@ bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
 
     CACHE_RULE *rule = self->use_rules;
     const char *user = session_getUser((SESSION*)session);
+    const char *host = session_get_remote((SESSION*)session);
 
-    if (rule && user)
+    if (!user)
     {
+        user = "";
+    }
+
+    if (!host)
+    {
+        host = "";
+    }
+
+    if (rule)
+    {
+        char account[strlen(user) + 1 + strlen(host) + 1];
+        sprintf(account, "%s@%s", user, host);
+
         while (rule && !should_use)
         {
-            should_use = cache_rule_matches_user(rule, user);
+            should_use = cache_rule_matches_user(rule, account);
+
             rule = rule->next;
         }
     }
@@ -322,35 +411,6 @@ static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
 }
 
 /**
- * Returns a string representation of a attribute.
- *
- * @param attribute An attribute type.
- *
- * @return Corresponding string, not to be freed.
- */
-static const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute)
-{
-    switch (attribute)
-    {
-    case CACHE_ATTRIBUTE_COLUMN:
-        return "column";
-
-    case CACHE_ATTRIBUTE_DATABASE:
-        return "database";
-
-    case CACHE_ATTRIBUTE_QUERY:
-        return "query";
-
-    case CACHE_ATTRIBUTE_TABLE:
-        return "table";
-
-    default:
-        ss_dassert(!true);
-        return "<invalid>";
-    }
-}
-
-/**
  * Converts a string to an operator
  *
  * @param s A string
@@ -385,35 +445,6 @@ static bool cache_rule_op_get(const char *s, cache_rule_op_t *op)
     }
 
     return false;
-}
-
-/**
- * Returns a string representation of an operator.
- *
- * @param op An operator.
- *
- * @return Corresponding string, not to be freed.
- */
-static const char *cache_rule_op_to_string(cache_rule_op_t op)
-{
-    switch (op)
-    {
-    case CACHE_OP_EQ:
-        return "=";
-
-    case CACHE_OP_NEQ:
-        return "!=";
-
-    case CACHE_OP_LIKE:
-        return "like";
-
-    case CACHE_OP_UNLIKE:
-        return "unlike";
-
-    default:
-        ss_dassert(!true);
-        return "<invalid>";
-    }
 }
 
 /**
@@ -484,6 +515,99 @@ static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
     return rule;
 }
 
+static CACHE_RULE *cache_rule_create_user(cache_rule_attribute_t attribute,
+                                          cache_rule_op_t        op,
+                                          const char            *cvalue,
+                                          uint32_t               debug)
+{
+    ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
+
+    CACHE_RULE *rule = NULL;
+
+    bool error = false;
+    size_t len = strlen(cvalue);
+
+    char value[strlen(cvalue) + 1];
+    strcpy(value, cvalue);
+
+    char *at = strchr(value, '@');
+    char *user = value;
+    char *host;
+
+    if (at)
+    {
+        *at = 0;
+        host = at + 1;
+    }
+    else
+    {
+        host = "%";
+    }
+
+    if (dequote_mysql(user))
+    {
+        char pcre_user[2 * len + 1]; // Surely enough
+
+        if (*user == 0)
+        {
+            strcpy(pcre_user, ".*");
+        }
+        else
+        {
+            mysql_to_pcre(pcre_user, user, PCRE_QUOTE_VERBATIM);
+        }
+
+        if (dequote_mysql(host))
+        {
+            char pcre_host[2 * len + 1]; // Surely enough
+
+            if (mysql_to_pcre(pcre_host, host, PCRE_QUOTE_QUERY) == MYSQL_ACCOUNT_WITH_WILDCARD)
+            {
+                op = (op == CACHE_OP_EQ ? CACHE_OP_LIKE : CACHE_OP_UNLIKE);
+
+                char regexp[strlen(pcre_user) + 1 + strlen(pcre_host) + 1];
+
+                sprintf(regexp, "%s@%s", pcre_user, pcre_host);
+
+                rule = cache_rule_create_regexp(attribute, op, regexp, debug);
+            }
+            else
+            {
+                // No wildcard, no need to use regexp.
+
+                rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
+                char *value = MXS_MALLOC(strlen(user) + 1 + strlen(host) + 1);
+
+                if (rule && value)
+                {
+                    sprintf(value, "%s@%s", user, host);
+
+                    rule->attribute = attribute;
+                    rule->op = op;
+                    rule->debug = debug;
+                    rule->value = value;
+                }
+                else
+                {
+                    MXS_FREE(rule);
+                    MXS_FREE(value);
+                    rule = NULL;
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not dequote host %s.", cvalue);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not dequote user %s.", cvalue);
+    }
+
+    return rule;
+}
+
 /**
  * Creates a CACHE_RULE object doing simple matching.
  *
@@ -501,21 +625,30 @@ static CACHE_RULE *cache_rule_create_simple(cache_rule_attribute_t attribute,
 {
     ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE *rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
+    CACHE_RULE *rule;
 
-    char *value = MXS_STRDUP(cvalue);
-
-    if (rule && value)
+    if (attribute == CACHE_ATTRIBUTE_USER)
     {
-        rule->attribute = attribute;
-        rule->op = op;
-        rule->value = value;
-        rule->debug = debug;
+        rule = cache_rule_create_user(attribute, op, cvalue, debug);
     }
     else
     {
-        MXS_FREE(value);
-        MXS_FREE(rule);
+        rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
+        char *value = MXS_STRDUP(cvalue);
+
+        if (rule && value)
+        {
+            rule->attribute = attribute;
+            rule->op = op;
+            rule->debug = debug;
+            rule->value = value;
+        }
+        else
+        {
+            MXS_FREE(rule);
+            MXS_FREE(value);
+            rule = NULL;
+        }
     }
 
     return rule;
@@ -807,18 +940,42 @@ static bool cache_rule_matches_table(CACHE_RULE *self, const char *default_db, c
 }
 
 /**
- * Returns boolean indicating whether the user rule matches the user or not.
+ * Returns boolean indicating whether the user rule matches the account or not.
  *
- * @param self   The CACHE_RULE object.
- * @param user   The current default db.
+ * @param self    The CACHE_RULE object.
+ * @param account The account.
  *
  * @return True, if the rule matches, false otherwise.
  */
-static bool cache_rule_matches_user(CACHE_RULE *self, const char *user)
+static bool cache_rule_matches_user(CACHE_RULE *self, const char *account)
 {
     ss_dassert(self->attribute == CACHE_ATTRIBUTE_USER);
 
-    return cache_rule_compare(self, user);
+    bool matches = cache_rule_compare(self, account);
+
+
+    if ((matches && (self->debug & CACHE_DEBUG_MATCHING)) ||
+        (!matches && (self->debug & CACHE_DEBUG_NON_MATCHING)))
+    {
+        const char *text;
+        if (matches)
+        {
+            text = "MATCHES";
+        }
+        else
+        {
+            text = "does NOT match";
+        }
+
+        MXS_NOTICE("Rule { \"attribute\": \"%s\", \"op\": \"%s\", \"value\": \"%s\" } %s \"%s\".",
+                   cache_rule_attribute_to_string(self->attribute),
+                   cache_rule_op_to_string(self->op),
+                   self->value,
+                   text,
+                   account);
+    }
+
+    return matches;
 }
 
 /**
@@ -1151,4 +1308,139 @@ static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, siz
     }
 
     return rule != NULL;
+}
+
+/**
+ * Remove quote characters surrounding a string.
+ * 'abcd' => abcd
+ * "abcd" => abcd
+ * `abcd` => abcd
+ *
+ * @param s The string to be dequoted.
+ *
+ * @note The string is modified in place.
+ */
+static bool dequote_mysql(char *s)
+{
+    bool dequoted = true;
+
+    char *i = s;
+    char *end = s + strlen(s);
+
+    // Remove space from the beginning
+    while (*i && isspace(*i))
+    {
+        ++i;
+    }
+
+    if (*i)
+    {
+        // Remove space from the end
+        while (isspace(*(end - 1)))
+        {
+            *(end - 1) = 0;
+            --end;
+        }
+
+        ss_dassert(end > i);
+
+        char quote;
+
+        switch (*i)
+        {
+        case '\'':
+        case '"':
+        case '`':
+            quote = *i;
+            ++i;
+            break;
+
+        default:
+            quote = 0;
+        }
+
+        if (quote)
+        {
+            --end;
+
+            if (*end == quote)
+            {
+                *end = 0;
+
+                memmove(s, i, end - i + 1);
+            }
+            else
+            {
+                dequoted = false;
+            }
+        }
+        else if (i != s)
+        {
+            memmove(s, i, end - i + 1);
+        }
+    }
+    else
+    {
+        *s = 0;
+    }
+
+    return dequoted;
+}
+
+/**
+ * Convert MySQL/MariaDB account string to a pcre compatible one.
+ *
+ * @param pcre     The string to which the conversion should be copied.
+ *                 To be on the safe size, the buffer should be twice the
+ *                 size of 'mysql'.
+ * @param mysql    The mysql account string.
+ * @param approach Whether % should be converted or not.
+ *
+ * @return Whether or not the account contains a wildcard.
+ */
+static mysql_account_kind_t mysql_to_pcre(char *pcre, const char *mysql, pcre_quote_approach_t approach)
+{
+    mysql_account_kind_t rv = MYSQL_ACCOUNT_WITHOUT_WILDCARD;
+
+    while (*mysql)
+    {
+        switch (*mysql)
+        {
+        case '%':
+            if (approach == PCRE_QUOTE_QUERY)
+            {
+                *pcre = '.';
+                pcre++;
+                *pcre = '*';
+            }
+            rv = MYSQL_ACCOUNT_WITH_WILDCARD;
+            break;
+
+        case '\'':
+        case '^':
+        case '.':
+        case '$':
+        case '|':
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case '*':
+        case '+':
+        case '?':
+        case '{':
+        case '}':
+            *pcre++ = '\\';
+            // Flowthrough
+        default:
+            *pcre = *mysql;
+        }
+
+        ++pcre;
+        ++mysql;
+    }
+
+    *pcre = 0;
+
+    return rv;
 }

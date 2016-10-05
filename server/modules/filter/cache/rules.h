@@ -59,6 +59,8 @@ typedef struct cache_rules
     CACHE_RULE *use_rules;    // The rules for when to use data from the cache.
 } CACHE_RULES;
 
+const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
+const char *cache_rule_op_to_string(cache_rule_op_t op);
 
 CACHE_RULES *cache_rules_create(uint32_t debug);
 void cache_rules_free(CACHE_RULES *rules);
