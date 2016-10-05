@@ -667,6 +667,15 @@ static void closeSession(ROUTER *instance, void *router_session)
             else
             {
                 ss_dassert(!BREF_IS_WAITING_RESULT(bref));
+
+                /** This should never be true unless a backend reference is taken
+                 * out of use before clearing the BREF_WAITING_RESULT state */
+                if (BREF_IS_WAITING_RESULT(bref))
+                {
+                    MXS_WARNING("A closed backend was expecting a result, this should not be possible. "
+                                "Decrementing active operation counter for this backend.");
+                    bref_clear_state(bref, BREF_WAITING_RESULT);
+                }
             }
         }
         /** Unlock */
@@ -1044,160 +1053,6 @@ lock_failed:
     return;
 }
 
-/**
- * @brief Router error handling routine (API)
- * 
- * Error Handler routine to resolve _backend_ failures. If it succeeds then
- * there are enough operative backends available and connected. Otherwise it 
- * fails, and session is terminated.
- *
- * @param       instance        The router instance
- * @param       router_session  The router session
- * @param       errmsgbuf       The error message to reply
- * @param       backend_dcb     The backend DCB
- * @param       action      The action: ERRACT_NEW_CONNECTION or
- * ERRACT_REPLY_CLIENT
- * @param   succp       Result of action: true iff router can continue
- *
- * Even if succp == true connecting to new slave may have failed. succp is to
- * tell whether router has enough master/slave connections to continue work.
- */
-static void handleError(ROUTER *instance, void *router_session,
-                        GWBUF *errmsgbuf, DCB *problem_dcb,
-                        error_action_t action, bool *succp)
-{
-    SESSION *session;
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
-    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
-
-    CHK_DCB(problem_dcb);
-
-    /** Don't handle same error twice on same DCB */
-    if (problem_dcb->dcb_errhandle_called)
-    {
-        /** we optimistically assume that previous call succeed */
-        /*
-         * The return of true is potentially misleading, but appears to
-         * be safe with the code as it stands on 9 Sept 2015 - MNB
-         */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        problem_dcb->dcb_errhandle_called = true;
-    }
-    session = problem_dcb->session;
-
-    if (session == NULL || rses == NULL)
-    {
-        *succp = false;
-    }
-    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
-    {
-        *succp = false;
-    }
-    else
-    {
-        CHK_SESSION(session);
-        CHK_CLIENT_RSES(rses);
-
-        switch (action)
-        {
-            case ERRACT_NEW_CONNECTION:
-            {
-                if (!rses_begin_locked_router_action(rses))
-                {
-                    *succp = false;
-                    break;
-                }
-
-                /**
-                 * If master has lost its Master status error can't be
-                 * handled so that session could continue.
-                 */
-                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
-                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
-                {
-                    SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
-                    backend_ref_t *bref;
-                    bref = get_bref_from_dcb(rses, problem_dcb);
-                    if (bref != NULL)
-                    {
-                        CHK_BACKEND_REF(bref);
-                        if (BREF_IS_WAITING_RESULT(bref))
-                        {
-                            bref_clear_state(bref, BREF_WAITING_RESULT);
-                        }
-                        bref_clear_state(bref, BREF_IN_USE);
-                        bref_set_state(bref, BREF_CLOSED);
-                    }
-                    else
-                    {
-                        MXS_ERROR("server %s:%d lost the "
-                                  "master status but could not locate the "
-                                  "corresponding backend ref.",
-                                  srv->name, srv->port);
-                    }
-
-                    if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
-                        (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
-                    {
-                        /** The failure of a master is not considered a critical
-                         * failure as partial functionality still remains. Reads
-                         * are allowed as long as slave servers are available
-                         * and writes will cause an error to be returned.
-                         *
-                         * If we were waiting for a response from the master, we
-                         * can't be sure whether it was executed or not. In this
-                         * case the safest thing to do is to close the client
-                         * connection. */
-                        *succp = true;
-                    }
-                    else
-                    {
-                        if (!srv->master_err_is_logged)
-                        {
-                            MXS_ERROR("server %s:%d lost the "
-                                      "master status. Readwritesplit "
-                                      "service can't locate the master. "
-                                      "Client sessions will be closed.",
-                                      srv->name, srv->port);
-                            srv->master_err_is_logged = true;
-                        }
-                        *succp = false;
-                    }
-                }
-                else
-                {
-                    /**
-                     * This is called in hope of getting replacement for
-                     * failed slave(s).  This call may free rses.
-                     */
-                    *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
-                }
-                /* Free the lock if rses still exists */
-                if (rses)
-                {
-                    rses_end_locked_router_action(rses);
-                }
-                break;
-            }
-
-            case ERRACT_REPLY_CLIENT:
-            {
-                handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
-                *succp = false; /*< no new backend servers were made available */
-                break;
-            }
-
-            default:
-                *succp = false;
-                break;
-        }
-    }
-    dcb_close(problem_dcb);
-}
 
 /**
  * @brief Get router capabilities (API)
@@ -1675,6 +1530,175 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
 }
 
 /**
+ * @brief Router error handling routine (API)
+ * 
+ * Error Handler routine to resolve _backend_ failures. If it succeeds then
+ * there are enough operative backends available and connected. Otherwise it 
+ * fails, and session is terminated.
+ *
+ * @param       instance        The router instance
+ * @param       router_session  The router session
+ * @param       errmsgbuf       The error message to reply
+ * @param       backend_dcb     The backend DCB
+ * @param       action      The action: ERRACT_NEW_CONNECTION or
+ * ERRACT_REPLY_CLIENT
+ * @param   succp       Result of action: true iff router can continue
+ *
+ * Even if succp == true connecting to new slave may have failed. succp is to
+ * tell whether router has enough master/slave connections to continue work.
+ */
+static void handleError(ROUTER *instance, void *router_session,
+                        GWBUF *errmsgbuf, DCB *problem_dcb,
+                        error_action_t action, bool *succp)
+{
+    SESSION *session;
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
+    ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
+
+    CHK_DCB(problem_dcb);
+
+    /** Don't handle same error twice on same DCB */
+    if (problem_dcb->dcb_errhandle_called)
+    {
+        /** we optimistically assume that previous call succeed */
+        /*
+         * The return of true is potentially misleading, but appears to
+         * be safe with the code as it stands on 9 Sept 2015 - MNB
+         */
+        *succp = true;
+        return;
+    }
+    else
+    {
+        problem_dcb->dcb_errhandle_called = true;
+    }
+    session = problem_dcb->session;
+
+    bool close_dcb = true;
+
+    if (session == NULL || rses == NULL)
+    {
+        *succp = false;
+    }
+    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
+    {
+        *succp = false;
+    }
+    else
+    {
+        CHK_SESSION(session);
+        CHK_CLIENT_RSES(rses);
+
+        switch (action)
+        {
+            case ERRACT_NEW_CONNECTION:
+            {
+                if (!rses_begin_locked_router_action(rses))
+                {
+                    close_dcb = false; /* With the assumption that if the router session is closed,
+                                        * then so is the dcb.
+                                        */
+                    *succp = false;
+                    break;
+                }
+
+                /**
+                 * If master has lost its Master status error can't be
+                 * handled so that session could continue.
+                 */
+                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
+                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
+                {
+                    SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
+                    backend_ref_t *bref;
+                    bref = get_bref_from_dcb(rses, problem_dcb);
+                    if (bref != NULL)
+                    {
+                        CHK_BACKEND_REF(bref);
+                        if (BREF_IS_WAITING_RESULT(bref))
+                        {
+                            bref_clear_state(bref, BREF_WAITING_RESULT);
+                        }
+                        bref_clear_state(bref, BREF_IN_USE);
+                        bref_set_state(bref, BREF_CLOSED);
+                    }
+                    else
+                    {
+                        MXS_ERROR("server %s:%d lost the "
+                                  "master status but could not locate the "
+                                  "corresponding backend ref.",
+                                  srv->name, srv->port);
+                    }
+
+                    if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
+                        (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
+                    {
+                        /** The failure of a master is not considered a critical
+                         * failure as partial functionality still remains. Reads
+                         * are allowed as long as slave servers are available
+                         * and writes will cause an error to be returned.
+                         *
+                         * If we were waiting for a response from the master, we
+                         * can't be sure whether it was executed or not. In this
+                         * case the safest thing to do is to close the client
+                         * connection. */
+                        *succp = true;
+                    }
+                    else
+                    {
+                        if (!srv->master_err_is_logged)
+                        {
+                            MXS_ERROR("server %s:%d lost the "
+                                      "master status. Readwritesplit "
+                                      "service can't locate the master. "
+                                      "Client sessions will be closed.",
+                                      srv->name, srv->port);
+                            srv->master_err_is_logged = true;
+                        }
+                        *succp = false;
+                    }
+                }
+                else
+                {
+                    /**
+                     * This is called in hope of getting replacement for
+                     * failed slave(s).  This call may free rses.
+                     */
+                    *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
+                }
+
+                dcb_close(problem_dcb);
+                close_dcb = false;
+                /* Free the lock if rses still exists */
+                if (rses)
+                {
+                    rses_end_locked_router_action(rses);
+                }
+                break;
+            }
+
+            case ERRACT_REPLY_CLIENT:
+            {
+                handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
+                close_dcb = false;
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
+
+            default:
+                ss_dassert(!true);
+                *succp = false;
+                break;
+        }
+    }
+
+    if (close_dcb)
+    {
+    dcb_close(problem_dcb);
+}
+}
+
+/**
  * @brief Handle an error reply for a client
  *
  * @param ses           Session
@@ -1694,18 +1718,39 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
     client_dcb = ses->client_dcb;
     spinlock_release(&ses->ses_lock);
 
-    /**
-     * If bref exists, mark it closed
-     */
-    if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
+    if (rses_begin_locked_router_action(rses))
     {
-        CHK_BACKEND_REF(bref);
-        bref_clear_state(bref, BREF_IN_USE);
-        bref_set_state(bref, BREF_CLOSED);
-        if (BREF_IS_WAITING_RESULT(bref))
+        /**
+         * If bref exists, mark it closed
+         */
+        if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
         {
-            bref_clear_state(bref, BREF_WAITING_RESULT);
+            CHK_BACKEND_REF(bref);
+
+            if (BREF_IS_IN_USE(bref))
+            {
+                bref_clear_state(bref, BREF_IN_USE);
+                bref_set_state(bref, BREF_CLOSED);
+                if (BREF_IS_WAITING_RESULT(bref))
+                {
+                    bref_clear_state(bref, BREF_WAITING_RESULT);
+                }
+
+                dcb_close(backend_dcb);
+            }
         }
+        else
+        {
+            // All dcbs should be associated with a backend reference.
+            ss_dassert(!true);
+        }
+
+        rses_end_locked_router_action(rses);
+    }
+    else
+    {
+        // The session has already been closed, hence the dcb has been
+        // closed as well.
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)

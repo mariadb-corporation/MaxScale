@@ -94,12 +94,13 @@ This defines whether (on | off) MariaDB MaxScale sends to the slave the heartbea
 ### `semisync`
 
 This parameter controls whether binlog server could ask Master server to start the Semi-Synchronous replication.
-In order to get semi-sync working the Master server must have the *rpl_semi_sync_master* plugin installed.
-The available plugin and the value of GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the Master registration phase: if plugin is installed in the Master database the binlog server then requests the semi-sync option.
+In order to get semi-sync working, the Master server must have the *rpl_semi_sync_master* plugin installed.
+The availability of the plugin and the value of the GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the Master registration phase: if the plugin is installed in the Master database, the binlog server subsequently requests the semi-sync option.
+
 Note:
  - the network replication stream from Master has two additional bytes before each binlog event.
- - the Semi-Sync protocol requires an acknoledge packet to be sent back to Master only when requested: the semi-sync flag will have value of 1.
-   This flag is set only if *rpl_semi_sync_master_enabled=1* in the Master, otherwise it will always have value of 0 and no ack packet is sent back.
+ - the Semi-Sync protocol requires an acknowledge packet to be sent back to Master only when requested: the semi-sync flag will have value of 1.
+   This flag is set only if *rpl_semi_sync_master_enabled=1* is set in the Master, otherwise it will always have value of 0 and no ack packet is sent back.
 
 Please note that semi-sync replication is only related to binlog server to Master communication.
 ### `ssl_cert_verification_depth`

@@ -5,14 +5,13 @@
 * SSL can be used in the communication between MariaDB MaxScale and the backend servers.
 * The number of allowed connections can explicitly be throttled.
 * MariaDB MaxScale can continue serving read request even if the master has gone down.
-* The security of MaxAdmin has been improved; you can only connect from the
-  same host MariaDB MaxScale is running on, and the Linux identity is used for
-  authorization.
+* The security of MaxAdmin has been improved; Unix domain sockets can be used in the
+  communication with MariaDB MaxScale and the Linux identity can be used for authorization.
 * MariaDB MaxScale can in real time make binlog events available as raw AVRO or
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
-* [MariaDB MaxScale 2.0.0 Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
+* [MariaDB MaxScale 2.0.1 Release Notes](Release-Notes/MaxScale-2.0.1-Release-Notes.md)
 
 ## MariaDB MaxScale 1.4
 * Authentication now allows table level resolution of grants. MaxScale service

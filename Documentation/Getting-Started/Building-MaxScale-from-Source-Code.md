@@ -6,6 +6,7 @@ requirements are as follows:
 * CMake version 2.8 or later (Packaging requires version 2.8.12 or later)
 * GCC version 4.4.7 or later
 * libaio
+* libcurl
 * OpenSSL
 * Bison 2.7 or later
 * Flex 2.5.35 or later

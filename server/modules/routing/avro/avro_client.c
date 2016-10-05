@@ -449,7 +449,10 @@ avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *q
     const char req_last_gtid[] = "QUERY-LAST-TRANSACTION";
     const char req_gtid[] = "QUERY-TRANSACTION";
     const size_t req_data_len = sizeof(req_data) - 1;
-    uint8_t *data = GWBUF_DATA(queue);
+    size_t buflen = gwbuf_length(queue);
+    uint8_t data[buflen + 1];
+    gwbuf_copy_data(queue, 0, buflen, data);
+    data[buflen] = '\0';
     char *command_ptr = strstr((char *)data, req_data);
 
     if (command_ptr != NULL)
