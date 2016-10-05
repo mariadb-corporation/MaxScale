@@ -624,7 +624,7 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
  * @return          The binlog record wrapped in a GWBUF structure
  */
 GWBUF *
-blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HEADER *hdr, char *errmsg, SLAVE_ENCRYPTION_CTX *enc_ctx)
+blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HEADER *hdr, char *errmsg, const SLAVE_ENCRYPTION_CTX *enc_ctx)
 {
     uint8_t hdbuf[BINLOG_EVENT_HDR_LEN];
     GWBUF *result;
