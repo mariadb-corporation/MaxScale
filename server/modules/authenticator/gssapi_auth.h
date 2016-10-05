@@ -14,6 +14,9 @@
 #ifndef _GSSAPI_AUTH_H
 #define _GSSAPI_AUTH_H
 
+#include <stdint.h>
+#include <stddef.h>
+#include <gssapi.h>
 
 /** Client auth plugin name */
 static const char auth_plugin_name[] = "auth_gssapi_client";
@@ -34,10 +37,15 @@ enum gssapi_auth_state
 typedef struct gssapi_auth
 {
     enum gssapi_auth_state state;
+    uint8_t *principal_name;
+    size_t principal_name_len;
 } gssapi_auth_t;
 
 /** These functions can used for the `create` and `destroy` entry points */
 void* gssapi_auth_alloc();
 void gssapi_auth_free(void *data);
+
+/** Report GSSAPI errors */
+void report_error(OM_uint32 major, OM_uint32 minor);
 
 #endif

@@ -1354,7 +1354,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
      */
     const char* auth_plugin_name =  DEFAULT_MYSQL_AUTH_PLUGIN;
 
-    long bytes = response_length(conn, local_session.user, local_session.client_sha1,
+    long bytes = response_length(conn, local_session.user, curr_passwd,
                                  local_session.db, auth_plugin_name);
 
     // allocating the GWBUF

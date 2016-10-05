@@ -21,6 +21,8 @@ void* gssapi_auth_alloc()
     if (rval)
     {
         rval->state = GSSAPI_AUTH_INIT;
+        rval->principal_name = NULL;
+        rval->principal_name_len = 0;
     }
 
     return rval;
@@ -30,6 +32,40 @@ void gssapi_auth_free(void *data)
 {
     if (data)
     {
-        MXS_FREE(data);
+        gssapi_auth_t *auth = (gssapi_auth_t*)data;
+        MXS_FREE(auth->principal_name);
+        MXS_FREE(auth);
+    }
+}
+
+/**
+ * @brief Report GSSAPI errors
+ *
+ * @param major GSSAPI major error number
+ * @param minor GSSAPI minor error number
+ */
+void report_error(OM_uint32 major, OM_uint32 minor)
+{
+    OM_uint32 status_maj = major;
+    OM_uint32 status_min = minor;
+    OM_uint32 res = 0;
+    gss_buffer_desc buf = {0, 0};
+
+    major = gss_display_status(&minor, status_maj, GSS_C_GSS_CODE, NULL, &res, &buf);
+
+    {
+        char sbuf[buf.length + 1];
+        memcpy(sbuf, buf.value, buf.length);
+        sbuf[buf.length] = '\0';
+        MXS_ERROR("GSSAPI Major Error: %s", sbuf);
+    }
+
+    major = gss_display_status(&minor, status_min, GSS_C_MECH_CODE, NULL, &res, &buf);
+
+    {
+        char sbuf[buf.length + 1];
+        memcpy(sbuf, buf.value, buf.length);
+        sbuf[buf.length] = '\0';
+        MXS_ERROR("GSSAPI Minor Error: %s", sbuf);
     }
 }

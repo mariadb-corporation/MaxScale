@@ -15,7 +15,6 @@
 #include <maxscale/alloc.h>
 #include <dcb.h>
 #include <mysql_client_server_protocol.h>
-#include <gssapi.h>
 #include "gssapi_auth.h"
 
 /**
@@ -87,9 +86,14 @@ bool store_client_token(DCB *dcb, GWBUF *buffer)
  * @param dcb Client DCB
  * @param buffer Buffer containing the first authentication response
  */
-static void copy_shared_username(DCB *dcb, GWBUF *buffer)
+static void copy_client_information(DCB *dcb, GWBUF *buffer)
 {
     size_t buflen = gwbuf_length(buffer);
+    MySQLProtocol *protocol = (MySQLProtocol*)dcb->protocol;
+    /* Take data from fixed locations first */
+    gwbuf_copy_data(buffer, 4, 4, (uint8_t*)&protocol->client_capabilities);
+    protocol->charset = 0;
+    gwbuf_copy_data(buffer, 4 + 4 + 4, 1, (uint8_t*)&protocol->charset);
 
     if (buflen > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
@@ -123,7 +127,7 @@ static int gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
     switch (auth->state)
     {
         case GSSAPI_AUTH_INIT:
-            copy_shared_username(dcb, read_buffer);
+            copy_client_information(dcb, read_buffer);
             rval = MXS_AUTH_SUCCEEDED;
             break;
 
@@ -151,38 +155,6 @@ bool gssapi_auth_connectssl(DCB *dcb)
 {
     MySQLProtocol *protocol = (MySQLProtocol*)dcb->protocol;
     return protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
-}
-
-/**
- * @brief Report GSSAPI errors
- *
- * @param major GSSAPI major error number
- * @param minor GSSAPI minor error number
- */
-static void report_error(OM_uint32 major, OM_uint32 minor)
-{
-    OM_uint32 status_maj = major;
-    OM_uint32 status_min = minor;
-    OM_uint32 res = 0;
-    gss_buffer_desc buf = {0, 0};
-
-    major = gss_display_status(&minor, status_maj, GSS_C_GSS_CODE, NULL, &res, &buf);
-
-    {
-        char sbuf[buf.length + 1];
-        memcpy(sbuf, buf.value, buf.length);
-        sbuf[buf.length] = '\0';
-        MXS_ERROR("GSSAPI Major Error: %s", sbuf);
-    }
-
-    major = gss_display_status(&minor, status_min, GSS_C_MECH_CODE, NULL, &res, &buf);
-
-    {
-        char sbuf[buf.length + 1];
-        memcpy(sbuf, buf.value, buf.length);
-        sbuf[buf.length] = '\0';
-        MXS_ERROR("GSSAPI Minor Error: %s", sbuf);
-    }
 }
 
 static gss_name_t server_name = GSS_C_NO_NAME;
