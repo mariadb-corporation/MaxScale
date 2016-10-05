@@ -6,13 +6,13 @@ Last updated 24th June 2015
 
 The purpose of this tutorial is to introduce the MariaDB MaxScale Administrator to a few of the common administration tasks that need to be performed with MariaDB MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MariaDB MaxScale.
 
-[Starting MariaDB MaxScale](#starting)
-[Stopping MariaDB MaxScale](#stopping)
-[Checking The Status Of The MariaDB MaxScale Services](#checking)
-[Persistent Connections](#persistent)
-[What Clients Are Connected To MariaDB MaxScale](#clients)
-[Rotating the Log File](#rotating)
-[Taking A Database Server Out Of Use](#outofuse)
+- [Starting MariaDB MaxScale](#starting)
+- [Stopping MariaDB MaxScale](#stopping)
+- [Checking The Status Of The MariaDB MaxScale Services](#checking)
+- [Persistent Connections](#persistent)
+- [What Clients Are Connected To MariaDB MaxScale](#clients)
+- [Rotating the Log File](#rotating)
+- [Taking A Database Server Out Of Use](#outofuse)
 
 <a name="starting"></a>
 ### Starting MariaDB MaxScale

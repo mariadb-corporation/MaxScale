@@ -484,7 +484,7 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
     size_t result_size;
 
     /** This should never fail with rc == 0 because we used pcre2_match_data_create_from_pattern() */
-    if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL))
+    if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL) > 0)
     {
         result_size = strlen(sql) + strlen(replace);
         result = MXS_MALLOC(result_size);

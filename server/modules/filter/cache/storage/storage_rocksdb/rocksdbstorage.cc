@@ -184,7 +184,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
                 if (!status.ok())
                 {
                     MXS_ERROR("Could not store version information to created RocksDB database \"%s\". "
-                              "You may need to delete the database and retry. RocksDB error: %s",
+                              "You may need to delete the database and retry. RocksDB error: \"%s\"",
                               path.c_str(),
                               status.ToString().c_str());
                 }
@@ -236,7 +236,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
         else
         {
             MXS_ERROR("Could not read version information from RocksDB database %s. "
-                      "You may need to delete the database and retry. RocksDB error: %s",
+                      "You may need to delete the database and retry. RocksDB error: \"%s\"",
                       path.c_str(),
                       status.ToString().c_str());
             delete pDb;
@@ -244,8 +244,13 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
     }
     else
     {
-        MXS_ERROR("Could not open/initialize RocksDB database %s. RocksDB error: %s",
+        MXS_ERROR("Could not open/initialize RocksDB database %s. RocksDB error: \"%s\"",
                   path.c_str(), status.ToString().c_str());
+
+        if (status.IsIOError())
+        {
+            MXS_ERROR("Is an other MaxScale process running?");
+        }
     }
 
     return pStorage;
