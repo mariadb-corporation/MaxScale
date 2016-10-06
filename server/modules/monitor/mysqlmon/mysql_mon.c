@@ -275,6 +275,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->mysql51_replication = false;
         handle->failover = false;
         handle->failcount = MYSQLMON_DEFAULT_FAILCOUNT;
+        handle->warn_failover = true;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
@@ -1093,11 +1094,12 @@ void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
     {
         if (SERVER_IS_RUNNING(db->server))
         {
-            if (!SERVER_IS_MASTER(db->server))
+            if (!SERVER_IS_MASTER(db->server) && handle->warn_failover)
             {
                 MXS_WARNING("Failover initiated, server '%s' is now the master. "
                             "All other servers are set into maintenance mode.",
                             db->server->unique_name);
+                handle->warn_failover = false;
             }
 
             server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER);
@@ -1396,6 +1398,10 @@ monitorMain(void *arg)
             {
                 /** Other servers have died, initiate a failover to the last remaining server */
                 do_failover(handle, mon->databases);
+            }
+            else
+            {
+                handle->warn_failover = true;
             }
         }
 
