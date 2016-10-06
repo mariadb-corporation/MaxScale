@@ -64,6 +64,7 @@ CACHE_RULES *cache_rules_create(uint32_t debug);
 void cache_rules_free(CACHE_RULES *rules);
 
 CACHE_RULES *cache_rules_load(const char *path, uint32_t debug);
+CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug);
 
 bool cache_rules_should_store(CACHE_RULES *rules, const char *default_db, const GWBUF* query);
 bool cache_rules_should_use(CACHE_RULES *rules, const SESSION *session);

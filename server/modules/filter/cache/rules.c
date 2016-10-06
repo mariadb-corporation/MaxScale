@@ -104,6 +104,7 @@ static bool cache_rule_matches(CACHE_RULE *rule, const char *default_db, const G
 
 static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule);
 static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule);
+static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug);
 static bool cache_rules_parse_json(CACHE_RULES* self, json_t* root);
 
 typedef bool (*cache_rules_parse_element_t)(CACHE_RULES *self, json_t *object, size_t index);
@@ -158,17 +159,7 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
 
         if (root)
         {
-            rules = cache_rules_create(debug);
-
-            if (rules)
-            {
-                if (!cache_rules_parse_json(rules, root))
-                {
-                    cache_rules_free(rules);
-                    rules = NULL;
-                }
-            }
-
+            rules = cache_rules_create_from_json(root, debug);
             json_decref(root);
         }
         else
@@ -185,6 +176,35 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
 
         MXS_ERROR("Could not open rules file %s for reading: %s",
                   path, strerror_r(errno, errbuf, sizeof(errbuf)));
+    }
+
+    return rules;
+}
+
+/**
+ * Parses the caching rules from a string and returns corresponding object.
+ *
+ * @param json  String containing json.
+ * @param debug The debug level.
+ *
+ * @return The corresponding rules object, or NULL in case of error.
+ */
+CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
+{
+    CACHE_RULES *rules = NULL;
+
+    json_error_t error;
+    json_t *root = json_loads(json, JSON_DISABLE_EOF_CHECK, &error);
+
+    if (root)
+    {
+        rules = cache_rules_create_from_json(root, debug);
+        json_decref(root);
+    }
+    else
+    {
+        MXS_ERROR("Parsing rules failed: (%d:%d): %s",
+                  error.line, error.column, error.text);
     }
 
     return rules;
@@ -919,6 +939,32 @@ static void cache_rules_add_store_rule(CACHE_RULES* self, CACHE_RULE* rule)
 static void cache_rules_add_use_rule(CACHE_RULES* self, CACHE_RULE* rule)
 {
     self->use_rules = cache_rule_append(self->use_rules, rule);
+}
+
+/**
+ * Creates a rules object from a JSON object.
+ *
+ * @param root  The root JSON object in the rules file.
+ * @param debug The debug level.
+ *
+ * @return A rules object if the json object could be parsed, NULL otherwise.
+ */
+static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
+{
+    ss_dassert(root);
+
+    CACHE_RULES *rules = cache_rules_create(debug);
+
+    if (rules)
+    {
+        if (!cache_rules_parse_json(rules, root))
+        {
+            cache_rules_free(rules);
+            rules = NULL;
+        }
+    }
+
+    return rules;
 }
 
 /**
