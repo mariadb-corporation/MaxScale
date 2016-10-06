@@ -1100,11 +1100,13 @@ void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
                             db->server->unique_name);
             }
 
+            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER);
             monitor_set_pending_status(db, SERVER_MASTER);
             monitor_clear_pending_status(db, SERVER_SLAVE);
         }
         else
         {
+            server_set_status(db->server, SERVER_MAINT);
             monitor_set_pending_status(db, SERVER_MAINT);
         }
         db = db->next;
