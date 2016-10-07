@@ -486,6 +486,11 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         return 1;
     }
 
+    /** Read the client's packet sequence and increment that by one */
+    uint8_t next_sequence;
+    gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
+    next_sequence++;
+
     /**
      * The first step in the authentication process is to extract the
      * relevant information from the buffer supplied and place it
@@ -542,6 +547,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
+            mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
         }
         else
         {

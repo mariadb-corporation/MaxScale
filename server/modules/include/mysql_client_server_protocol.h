@@ -70,6 +70,10 @@
 #define MYSQL_HEADER_LEN 4L
 #define MYSQL_CHECKSUM_LEN 4L
 
+/** Offsets to various parts of the client packet */
+#define MYSQL_SEQ_OFFSET 3
+#define MYSQL_COM_OFFSET 4
+
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
 #define GW_MYSQL_SERVER_CAPABILITIES_BYTE1 0xff

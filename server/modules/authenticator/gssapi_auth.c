@@ -281,8 +281,7 @@ int gssapi_auth_authenticate(DCB *dcb)
 
         MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
-        if (validate_gssapi_token(ses->auth_token, ses->auth_token_len) &&
-            mxs_mysql_send_ok(dcb, 4, 0, NULL))
+        if (validate_gssapi_token(ses->auth_token, ses->auth_token_len))
         {
             rval = MXS_AUTH_SUCCEEDED;
         }
