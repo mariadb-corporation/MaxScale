@@ -435,6 +435,12 @@ router_options=master,slave
 
 A more complete description of router options and what is available for a given router is included with the documentation of the router itself.
 
+#### `router_options`
+
+Option string given to the router module. The value of this parameter
+should be a comma-separated list of key-value pairs. See router specific
+documentation for more details.
+
 #### `filters`
 
 The filters option allow a set of filters to be defined for a service; requests from the client are passed through these filters before being sent to the router for dispatch to the backend server.  The filters parameter takes one or more filter names, as defined within the filter definition section of the configuration file. Multiple filters are separated using the | character.
@@ -832,6 +838,18 @@ The port to use to listen for incoming connections to MariaDB MaxScale from the 
 The `socket` option may be included in a listener definition, this configures the listener to use Unix domain sockets to listen for incoming connections. The parameter value given is the name of the socket to use.
 
 If a socket option and an address option is given then the listener will listen on both the specific IP address and the Unix socket.
+
+#### `authenticator`
+
+The authenticator module to use. Each protocol module defines a default
+authentication module which is used if no `authenticator` parameter is
+found from the configuration.
+
+#### `authenticator_options`
+
+Option string given to the authenticator module. The value of this
+parameter should be a comma-separated list of key-value pairs. See
+authenticator specific documentation for more details.
 
 #### Available Protocols
 
