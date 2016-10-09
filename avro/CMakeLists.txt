@@ -1,4 +1,4 @@
-if (AVRO_FOUND)
+if (AVRO_FOUND AND JANSSON_FOUND)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_library(maxavro maxavro.c maxavro_schema.c maxavro_record.c maxavro_file.c)
   target_link_libraries(maxavro maxscale-common jansson)

@@ -41,6 +41,7 @@ find_package(Git)
 find_package(CURL)
 find_package(RabbitMQ)
 find_package(LibUUID)
+find_package(Jansson)
 find_package(Avro)
 find_package(GSSAPI)
 
