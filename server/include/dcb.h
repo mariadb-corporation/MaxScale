@@ -156,6 +156,11 @@ typedef enum
     DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
 } dcb_role_t;
 
+#define DCB_STRTYPE(dcb) (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ? "Client DCB" : \
+                          dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER ? "Backend DCB" : \
+                          dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER ? "Listener DCB" : \
+                          dcb->dcb_role == DCB_ROLE_INTERNAL ? "Internal DCB" : "Unknown DCB")
+
 /**
  * Callback reasons for the DCB callback mechanism.
  */

@@ -2412,55 +2412,6 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
     }
 #endif /* FAKE_CODE */
 
-#if defined(SS_DEBUG_MYSQL)
-    {
-        size_t   len;
-        uint8_t* packet = (uint8_t *)buf;
-        char*    str;
-
-        /** Print only MySQL packets */
-        if (written > 5)
-        {
-            str = (char *)&packet[5];
-            len      = packet[0];
-            len     += 256 * packet[1];
-            len     += 256 * 256 * packet[2];
-
-            if (strncmp(str, "insert", 6) == 0 ||
-                strncmp(str, "create", 6) == 0 ||
-                strncmp(str, "drop", 4) == 0)
-            {
-                ss_dassert((dcb->dcb_server_status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE)) ==
-                           (SERVER_RUNNING | SERVER_MASTER));
-            }
-
-            if (strncmp(str, "set autocommit", 14) == 0 && nbytes > 17)
-            {
-                char* s = (char *)MXS_CALLOC(1, nbytes + 1);
-                MXS_ABORT_IF_NULL(s);
-
-                if (nbytes - 5 > len)
-                {
-                    size_t len2 = packet[4 + len];
-                    len2 += 256 * packet[4 + len + 1];
-                    len2 += 256 * 256 * packet[4 + len + 2];
-
-                    char* str2 = (char *)&packet[4 + len + 5];
-                    snprintf(s, 5 + len + len2, "long %s %s", (char *)str, (char *)str2);
-                }
-                else
-                {
-                    snprintf(s, len, "%s", (char *)str);
-                }
-                MXS_INFO("%lu [gw_write] Wrote %d bytes : %s ",
-                         pthread_self(),
-                         w,
-                         s);
-                MXS_FREE(s);
-            }
-        }
-    }
-#endif
     saved_errno = errno;
     errno = 0;
 
@@ -2477,13 +2428,13 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
 #endif
         {
             char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Write to dcb %p "
-                      "in state %s fd %d failed due errno %d, %s",
-                      dcb,
-                      STRDCBSTATE(dcb->state),
-                      dcb->fd,
-                      saved_errno,
-                      strerror_r(saved_errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Write to %s %s in state %s failed due errno %d, %s",
+                      DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
+                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)));
+            MXS_DEBUG("Write to %s %s in state %s failed due errno %d, %s (at %p, fd %d)",
+                      DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
+                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)),
+                      dcb, dcb->fd);
         }
     }
     else
