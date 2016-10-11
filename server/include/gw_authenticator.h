@@ -33,6 +33,9 @@
 #include <openssl/err.h>
 #include <openssl/dh.h>
 
+/** Maximum number of authenticator options */
+#define AUTHENTICATOR_MAX_OPTIONS 256
+
 struct dcb;
 struct server;
 struct session;
@@ -42,14 +45,30 @@ struct servlistener;
  * @verbatim
  * The operations that can be performed on the descriptor
  *
- *      create          Create a data structure unique to this DCB, stored in dcb->authenticator_data
+ *      initialize      Initialize the authenticator instance. The return value
+ *                      of this function will be given to the `create` entry point.
+ *                      If a module does not implement this entry point, the value
+ *                      given to the `create` is NULL.
+ *
+ *      create          Create a data structure unique to this DCB, stored in
+ *                      `dcb->authenticator_data`. If a module does not implement
+ *                      this entry point, `dcb->authenticator_data` will be set to NULL.
+ *
  *      extract         Extract the data from a buffer and place in a structure
- *                      shared at the session level, stored in dcb->data
- *      connectssl      Determine whether the connection can support SSL
+ *                      shared at the session level, stored in `dcb->data`
+ *
+ *      connectSSL      Determine whether the connection can support SSL
+ *
  *      authenticate    Carry out the authentication
- *      free            Free extracted data
- *      destroy         Destroy the unique DCB data
- *      loadusers       Load or update authenticator user data
+ *
+ *      free            Free extracted data. This is only called for the client
+ *                      side authenticators so backend authenticators should not
+ *                      implement it.
+ *
+ *      destroy         Destroy the unique DCB data returned by the `create`
+ *                      entry point.
+ *
+ *      loadUsers       Load or update authenticator user data
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -58,13 +77,14 @@ struct servlistener;
  */
 typedef struct gw_authenticator
 {
-    void *(*create)();
-    int (*extract)(struct dcb *, GWBUF *);
-    bool (*connectssl)(struct dcb *);
-    int (*authenticate)(struct dcb *);
-    void (*free)(struct dcb *);
-    void (*destroy)(void *);
-    int (*loadusers)(struct servlistener *);
+    void* (*initialize)(char **options);
+    void* (*create)(void* instance);
+    int   (*extract)(struct dcb *, GWBUF *);
+    bool  (*connectssl)(struct dcb *);
+    int   (*authenticate)(struct dcb *);
+    void  (*free)(struct dcb *);
+    void  (*destroy)(void *);
+    int   (*loadusers)(struct servlistener *);
 } GWAUTHENTICATOR;
 
 /** Return values for extract and authenticate entry points */
@@ -110,6 +130,9 @@ typedef enum
  */
 #define GWAUTHENTICATOR_VERSION      {1, 1, 0}
 
+
+bool authenticator_init(void **instance, const char *authenticator, const char *options);
+char* get_default_authenticator(const char *protocol);
 
 #endif /* GW_AUTHENTICATOR_H */
 

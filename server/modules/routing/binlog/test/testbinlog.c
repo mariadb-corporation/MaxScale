@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 			s = strtok_r(NULL, ",", &lasts);
 		}
 
-		server = server_alloc("_none_", "MySQLBackend", (int)3306);
+		server = server_alloc("_none_", "MySQLBackend", 3306, "MySQLBackendAuth", NULL);
 		if (server == NULL) {
 			return 1;
 		}

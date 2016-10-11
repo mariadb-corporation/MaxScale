@@ -814,12 +814,6 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 
     memcpy(&dcb->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
 
-    /** Allocate DCB specific authentication data */
-    if (dcb->authfunc.create)
-    {
-        dcb->authenticator_data = dcb->authfunc.create();
-    }
-
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
      */
@@ -878,6 +872,16 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
      * EPOLLOUT event that will be received once the connection
      * is established.
      */
+
+    /** Allocate DCB specific authentication data */
+    if (dcb->authfunc.create &&
+        (dcb->authenticator_data = dcb->authfunc.create(dcb->server->auth_instance)) == NULL)
+    {
+        MXS_ERROR("Failed to create authenticator for backend DCB.");
+        dcb->state = DCB_STATE_DISCONNECTED;
+        dcb_final_free(dcb);
+        return NULL;
+    }
 
     /**
      * Add the dcb in the poll set
@@ -3180,9 +3184,13 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
             memcpy(&(client_dcb->authfunc), authfuncs, sizeof(GWAUTHENTICATOR));
 
             /** Allocate DCB specific authentication data */
-            if (client_dcb->authfunc.create)
+            if (client_dcb->authfunc.create &&
+                (client_dcb->authenticator_data = client_dcb->authfunc.create(
+                 client_dcb->listener->auth_instance)) == NULL)
             {
-                client_dcb->authenticator_data = client_dcb->authfunc.create();
+                MXS_ERROR("Failed to create authenticator for client DCB.");
+                dcb_close(client_dcb);
+                return NULL;
             }
 
             if (client_dcb->service->max_connections &&

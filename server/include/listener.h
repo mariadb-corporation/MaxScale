@@ -47,6 +47,7 @@ typedef struct servlistener
     unsigned short port;        /**< Port to listen on */
     char *address;              /**< Address to listen with */
     char *authenticator;        /**< Name of authenticator */
+    void *auth_instance;        /**< Authenticator instance created in GWAUTHENTICATOR::initialize() */
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
     struct dcb *listener;       /**< The DCB for the listener */
     struct users *users;        /**< The user data for this listener */
@@ -58,7 +59,7 @@ typedef struct servlistener
 
 SERV_LISTENER *listener_alloc(struct service* service, char *name, char *protocol,
                               char *address, unsigned short port, char *authenticator,
-                              SSL_LISTENER *ssl);
+                              char* options, SSL_LISTENER *ssl);
 void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);

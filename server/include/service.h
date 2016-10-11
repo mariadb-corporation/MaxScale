@@ -173,7 +173,8 @@ extern SERVICE *service_find(char *);
 extern int service_isvalid(SERVICE *);
 extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
                               char *address, unsigned short port,
-                              char *authenticator, SSL_LISTENER *ssl);
+                              char *authenticator, char *options,
+                              SSL_LISTENER *ssl);
 extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);

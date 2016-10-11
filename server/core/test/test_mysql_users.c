@@ -213,7 +213,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
         return ret;
     }
 
-    SERV_LISTENER *port = listener_alloc(service, "testlistener", "MySQLClient", NULL, 4006, NULL, NULL);
+    SERV_LISTENER *port = listener_alloc(service, "testlistener", "MySQLClient", NULL, 4006, "MySQLAuth", NULL, NULL);
 
     dcb = dcb_alloc(DCB_ROLE_INTERNAL, port);
 

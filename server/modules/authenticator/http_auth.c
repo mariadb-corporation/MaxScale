@@ -59,6 +59,7 @@ static void http_auth_free_client_data(DCB *dcb);
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                            /* No initialize entry point */
     NULL,                            /* No create entry point */
     http_auth_set_protocol_data,     /* Extract data into structure   */
     http_auth_is_client_ssl_capable, /* Check if client supports SSL  */

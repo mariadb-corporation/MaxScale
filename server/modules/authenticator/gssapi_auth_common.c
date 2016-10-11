@@ -14,7 +14,7 @@
 #include "gssapi_auth.h"
 #include <maxscale/alloc.h>
 
-void* gssapi_auth_alloc()
+void* gssapi_auth_alloc(void *instance)
 {
     gssapi_auth_t* rval = MXS_MALLOC(sizeof(gssapi_auth_t));
 

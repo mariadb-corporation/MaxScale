@@ -59,6 +59,7 @@ static void max_admin_auth_free_client_data(DCB *dcb);
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                                 /* No initialize entry point */
     NULL,                                 /* No create entry point */
     max_admin_auth_set_protocol_data,     /* Extract data into structure   */
     max_admin_auth_is_client_ssl_capable, /* Check if client supports SSL  */

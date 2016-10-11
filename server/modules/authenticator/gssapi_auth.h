@@ -42,7 +42,7 @@ typedef struct gssapi_auth
 } gssapi_auth_t;
 
 /** These functions can used for the `create` and `destroy` entry points */
-void* gssapi_auth_alloc();
+void* gssapi_auth_alloc(void *instance);
 void gssapi_auth_free(void *data);
 
 /** Report GSSAPI errors */

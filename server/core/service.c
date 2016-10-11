@@ -672,11 +672,12 @@ service_free(SERVICE *service)
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address, unsigned short port, char *authenticator,
+serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
+                   unsigned short port, char *authenticator, char *options,
                    SSL_LISTENER *ssl)
 {
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
-                                          port, authenticator, ssl);
+                                          port, authenticator, options, ssl);
 
     if (proto)
     {

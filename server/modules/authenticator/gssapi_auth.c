@@ -294,6 +294,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                            /* TODO: implement initialize entry point */
     gssapi_auth_alloc,               /* Allocate authenticator data */
     gssapi_auth_extract,             /* Extract data into structure   */
     gssapi_auth_connectssl,          /* Check if client supports SSL  */

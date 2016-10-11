@@ -69,7 +69,7 @@ test1()
     ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     ss_info_dassert(0 != serviceAddProtocol(service, "TestProtocol", "testprotocol",
-                                            "localhost", 9876, "MySQL", NULL),
+                                            "localhost", 9876, "MySQLClient", "MySQLAuth", NULL),
                     "Add Protocol should succeed");
     ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", "localhost", 9876),
                     "Service should have new protocol as requested");

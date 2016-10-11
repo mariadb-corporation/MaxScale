@@ -170,6 +170,7 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                               /* TODO: implement initialize entry point */
     gssapi_auth_alloc,                  /* Allocate authenticator data */
     gssapi_backend_auth_extract,        /* Extract data into structure   */
     gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */

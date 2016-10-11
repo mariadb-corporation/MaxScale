@@ -87,6 +87,7 @@ typedef struct server
     unsigned short port;           /**< Port to listen on */
     char           *protocol;      /**< Protocol module to use */
     char           *authenticator; /**< Authenticator module name */
+    void           *auth_instance; /**< Authenticator instance */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
     char           *monuser;       /**< User name to use to monitor the db */
@@ -193,7 +194,7 @@ typedef struct server
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
 
-extern SERVER *server_alloc(char *, char *, unsigned short);
+extern SERVER *server_alloc(char *, char *, unsigned short, char*, char*);
 extern int server_free(SERVER *);
 extern SERVER *server_find_by_unique_name(char *);
 extern SERVER *server_find(char *, unsigned short);

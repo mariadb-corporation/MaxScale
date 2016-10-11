@@ -67,6 +67,7 @@ extern char *decryptPassword(char *crypt);
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                           /* No initialize entry point */
     NULL,                           /* No create entry point */
     cdc_auth_set_protocol_data,     /* Extract data into structure   */
     cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */

@@ -62,6 +62,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port);
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                             /* No initialize entry point */
     NULL,                             /* No create entry point */
     mysql_auth_set_protocol_data,     /* Extract data into structure   */
     mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */

@@ -52,7 +52,7 @@ typedef struct mysql_backend_auth
  * @brief Allocate a new mysql_backend_auth object
  * @return Allocated object or NULL if memory allocation failed
  */
-void* auth_backend_create()
+void* auth_backend_create(void *instance)
 {
     mysql_backend_auth_t* mba = MXS_MALLOC(sizeof(*mba));
 
@@ -148,14 +148,6 @@ static bool auth_backend_ssl(DCB *dcb)
     return dcb->server->server_ssl != NULL;
 }
 
-/**
- * @brief Dummy function for the loadusers entry point
- */
-static int auth_backend_load_users(SERV_LISTENER *port)
-{
-    return MXS_AUTH_LOADUSERS_OK;
-}
-
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
 */
@@ -176,6 +168,7 @@ static char *version_str = "V1.0.0";
  */
 static GWAUTHENTICATOR MyObject =
 {
+    NULL,                      /* No initialize entry point */
     auth_backend_create,       /* Create authenticator */
     auth_backend_extract,      /* Extract data into structure   */
     auth_backend_ssl,          /* Check if client supports SSL  */
