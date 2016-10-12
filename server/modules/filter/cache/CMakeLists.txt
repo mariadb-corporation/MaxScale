@@ -5,3 +5,7 @@ set_target_properties(cache PROPERTIES LINK_FLAGS -Wl,-z,defs)
 install_module(cache experimental)
 
 add_subdirectory(storage)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
