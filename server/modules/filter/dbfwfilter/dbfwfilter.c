@@ -1657,7 +1657,9 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
 {
     char *msg = NULL;
 
-    char format[] = "dbfwfilter: Query could not be %s and will hence be rejected";
+    char format[] =
+        "dbfwfilter: Query could not be %s and will hence be rejected. "
+        "Please ensure that the SQL syntax is correct";
     size_t len = sizeof(format) + strlen(reason); // sizeof includes the trailing NULL as well.
     char message[len];
     sprintf(message, format, reason);
