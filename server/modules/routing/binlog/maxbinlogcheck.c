@@ -39,7 +39,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include <blr.h>
+#include "blr.h"
 
 
 static void printVersion(const char *progname);

@@ -18,7 +18,7 @@
 #define _GNU_SOURCE
 #endif
 
-#include <avrorouter.h>
+#include "avrorouter.h"
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <stdio.h>

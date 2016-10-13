@@ -39,7 +39,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
-#include <avrorouter.h>
+#include "avrorouter.h"
 #include <maxavro.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dbusers.h>

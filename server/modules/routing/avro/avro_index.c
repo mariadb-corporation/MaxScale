@@ -32,7 +32,7 @@
  * @endverbatim
  */
 
-#include <avrorouter.h>
+#include "avrorouter.h"
 #include <maxscale/skygw_debug.h>
 #include <glob.h>
 

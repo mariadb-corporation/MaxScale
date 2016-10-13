@@ -33,7 +33,7 @@
 #include <binlog_common.h>
 #include <blr_constants.h>
 #include <sys/stat.h>
-#include <avrorouter.h>
+#include "avrorouter.h"
 #include <maxscale/log_manager.h>
 #include <maxscale/maxscale_pcre2.h>
 #include <ini.h>

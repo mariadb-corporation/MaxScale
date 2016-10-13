@@ -33,8 +33,8 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
-#include <maxscaled.h>
-#include <maxadmin.h>
+#include "maxscaled.h"
+#include <maxscale/maxadmin.h>
 #include <maxscale/alloc.h>
 
  /* @see function load_module in load_utils.c for explanation of the following

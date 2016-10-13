@@ -54,7 +54,7 @@
 #include <histedit.h>
 #endif
 
-#include <maxadmin.h>
+#include <maxscale/maxadmin.h>
 /*
  * We need a common.h file that is included by every component.
  */

@@ -15,7 +15,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <mysqlhint.h>
+#include "mysqlhint.h"
 
 /**
  * hintfilter.c - a filter to parse the MaxScale hint syntax and attach those

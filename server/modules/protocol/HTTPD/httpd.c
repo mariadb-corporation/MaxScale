@@ -32,7 +32,7 @@
  * @endverbatim
  */
 
-#include <httpd.h>
+#include "httpd.h"
 #include <maxscale/alloc.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/gw.h>

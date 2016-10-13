@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <maxscale/router.h>
-#include <schemarouter.h>
-#include <sharding_common.h>
+#include "schemarouter.h"
+#include "sharding_common.h"
 #include <maxscale/secrets.h>
 #include <mysql.h>
 #include <maxscale/skygw_utils.h>

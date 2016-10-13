@@ -79,7 +79,7 @@
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
-#include <readconnection.h>
+#include "readconnection.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>

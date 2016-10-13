@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -21,8 +21,8 @@
 #include <maxscale/modutil.h>
 
 #include <maxscale/router.h>
-#include <readwritesplit.h>
-#include <rwsplit_internal.h>
+#include "readwritesplit.h"
+#include "rwsplit_internal.h"
 /**
  * @file rwsplit_tmp_table.c   The functions that carry out checks on
  * statements to see if they involve various operations involving temporary
