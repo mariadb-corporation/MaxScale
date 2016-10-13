@@ -75,9 +75,15 @@ MXS_BEGIN_DECLS
 #define MYSQL_HEADER_LEN 4L
 #define MYSQL_CHECKSUM_LEN 4L
 
-/** Offsets to various parts of the client packet */
-#define MYSQL_SEQ_OFFSET 3
-#define MYSQL_COM_OFFSET 4
+/**
+ * Offsets and sizes of various parts of the client packet. If the offset is
+ * defined but not the size, the size of the value is one byte.
+ */
+#define MYSQL_SEQ_OFFSET        3
+#define MYSQL_COM_OFFSET        4
+#define MYSQL_CHARSET_OFFSET    12
+#define MYSQL_CLIENT_CAP_OFFSET 4
+#define MYSQL_CLIENT_CAP_SIZE   4
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
@@ -279,8 +285,9 @@ typedef struct
 } MySQLProtocol;
 
 /** Defines for response codes */
-#define MYSQL_REPLY_ERR 0xff
-#define MYSQL_REPLY_OK  0x00
+#define MYSQL_REPLY_ERR               0xff
+#define MYSQL_REPLY_OK                0x00
+#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe
 
 /*
  * Let's try this with proper enums instead of numbers
