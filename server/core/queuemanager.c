@@ -28,12 +28,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <queuemanager.h>
+#include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
-#include <spinlock.h>
-#include <log_manager.h>
-#include <hk_heartbeat.h>
-#include <skygw_debug.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/hk_heartbeat.h>
+#include <maxscale/skygw_debug.h>
 
 #if defined(SS_DEBUG)
 int debug_check_fail = 0;

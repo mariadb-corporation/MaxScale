@@ -29,10 +29,10 @@
  * @endverbatim
  */
 
-#include <gw_authenticator.h>
+#include <maxscale/gw_authenticator.h>
 #include <mysql_client_server_protocol.h>
 #include <maxscale/alloc.h>
-#include <utils.h>
+#include <maxscale/utils.h>
 
 /** Authentication states */
 enum mba_state

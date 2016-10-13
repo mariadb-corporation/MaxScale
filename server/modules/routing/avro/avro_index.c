@@ -33,7 +33,7 @@
  */
 
 #include <avrorouter.h>
-#include <skygw_debug.h>
+#include <maxscale/skygw_debug.h>
 #include <glob.h>
 
 void* safe_key_free(void *data);

@@ -24,12 +24,12 @@
  *
  * @endverbatim
  */
-#include <buffer.h>
+#include <maxscale/buffer.h>
 #include <string.h>
 #include <mysql_client_server_protocol.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */

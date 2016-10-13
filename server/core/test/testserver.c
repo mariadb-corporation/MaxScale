@@ -34,8 +34,8 @@
 #include <string.h>
 
 #include <maxscale/alloc.h>
-#include <server.h>
-#include <log_manager.h>
+#include <maxscale/server.h>
+#include <maxscale/log_manager.h>
 /**
  * test1    Allocate a server and do lots of other things
  *

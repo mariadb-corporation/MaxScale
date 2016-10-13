@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -23,14 +23,14 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 
-#include <hashtable.h>
-#include <mlist.h>
-#include <spinlock.h>
-#include <skygw_debug.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/mlist.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
 
 #define MAX_PREFIXLEN 250

@@ -27,19 +27,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <service.h>
-#include <session.h>
-#include <router.h>
-#include <modules.h>
-#include <modinfo.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/router.h>
+#include <maxscale/modules.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <debugcli.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 
 
 MODULE_INFO     info =

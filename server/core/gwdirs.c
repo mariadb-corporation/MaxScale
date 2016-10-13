@@ -11,9 +11,9 @@
  * Public License.
  */
 
-#include <gwdirs.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
+#include <maxscale/gw.h>
 
 /**
  * Set the configuration file directory

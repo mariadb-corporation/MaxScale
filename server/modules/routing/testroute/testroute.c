@@ -12,8 +12,8 @@
  */
 #include <stdio.h>
 #include <maxscale/alloc.h>
-#include <router.h>
-#include <modinfo.h>
+#include <maxscale/router.h>
+#include <maxscale/modinfo.h>
 
 static char *version_str = "V1.0.0";
 

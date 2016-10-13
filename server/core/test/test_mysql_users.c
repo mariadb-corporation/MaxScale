@@ -28,16 +28,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <dcb.h>
-#include <service.h>
-#include <users.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dbusers.h>
+#include <maxscale/dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/users.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dbusers.h>
 #include <mysql_client_server_protocol.h>
 #include <mysql_auth.h>
-#include <listener.h>
+#include <maxscale/listener.h>
 #include <arpa/inet.h>
 #include <maxscale/alloc.h>
 

@@ -55,26 +55,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <session.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/session.h>
 #include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
-#include <buffer.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/buffer.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 
-#include <rdtsc.h>
-#include <thread.h>
+#include <maxscale/rdtsc.h>
+#include <maxscale/thread.h>
 
 /* Temporary requirement for auth data */
 #include <mysql_client_server_protocol.h>

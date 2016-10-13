@@ -34,8 +34,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <maxscale_pcre2.h>
-#include <skygw_debug.h>
+#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/skygw_debug.h>
 
 #define test_assert(a, b) if(!(a)){fprintf(stderr, b);return 1;}
 

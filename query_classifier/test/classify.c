@@ -16,12 +16,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <query_classifier.h>
-#include <buffer.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/buffer.h>
 #include <mysql.h>
 #include <unistd.h>
-#include <gwdirs.h>
-#include <log_manager.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
 
 char* append(char* types, const char* type_name, size_t* lenp)
 {

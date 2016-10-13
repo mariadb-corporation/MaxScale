@@ -13,11 +13,11 @@
 
 #include <stdlib.h>
 #include "rules.h"
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#include <skygw_debug.h>
+#include <maxscale/skygw_debug.h>
 
 struct test_case
 {

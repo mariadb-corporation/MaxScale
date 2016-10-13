@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <jansson.h>
-#include <buffer.h>
+#include <maxscale/buffer.h>
 
 /** File magic and sync marker sizes block sizes */
 #define AVRO_MAGIC_SIZE 4

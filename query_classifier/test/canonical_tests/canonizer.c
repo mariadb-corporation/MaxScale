@@ -15,9 +15,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <query_classifier.h>
-#include <buffer.h>
-#include <gwdirs.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/buffer.h>
+#include <maxscale/gwdirs.h>
 
 int main(int argc, char** argv)
 {

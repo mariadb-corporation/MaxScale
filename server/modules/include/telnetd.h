@@ -24,8 +24,8 @@
  *
  * @endverbatim
  */
-#include <dcb.h>
-#include <housekeeper.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */

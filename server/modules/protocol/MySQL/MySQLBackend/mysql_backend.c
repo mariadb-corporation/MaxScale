@@ -11,14 +11,14 @@
  * Public License.
  */
 
-#include "mysql_client_server_protocol.h"
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <modutil.h>
-#include <utils.h>
+#include <mysql_client_server_protocol.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modutil.h>
+#include <maxscale/utils.h>
 #include <netinet/tcp.h>
-#include <gw.h>
+#include <maxscale/gw.h>
 #include <mysqld_error.h>
 
 /*
@@ -50,8 +50,8 @@
  *
  */
 #include <maxscale/alloc.h>
-#include <modinfo.h>
-#include <gw_protocol.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/gw_protocol.h>
 #include <mysql_auth.h>
 
 /* @see function load_module in load_utils.c for explanation of the following

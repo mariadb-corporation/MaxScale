@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <externcmd.h>
+#include <maxscale/externcmd.h>
 #include <maxscale/alloc.h>
 
 /**

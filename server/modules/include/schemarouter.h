@@ -27,8 +27,8 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
-#include <dcb.h>
-#include <hashtable.h>
+#include <maxscale/dcb.h>
+#include <maxscale/hashtable.h>
 #include <mysql_client_server_protocol.h>
 #include <pcre2.h>
 /**

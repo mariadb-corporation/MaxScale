@@ -68,24 +68,24 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <maxscale.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
 #include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <sys/stat.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
 #include <zlib.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
+#include <maxscale/gw.h>
 
 extern int load_mysql_users(SERV_LISTENER *listener);
 extern void blr_master_close(ROUTER_INSTANCE* router);

@@ -33,16 +33,16 @@
 #include <string.h>
 #include <errno.h>
 #include <maxscale/alloc.h>
-#include <session.h>
-#include <listmanager.h>
-#include <service.h>
-#include <router.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <atomic.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <housekeeper.h>
+#include <maxscale/session.h>
+#include <maxscale/listmanager.h>
+#include <maxscale/service.h>
+#include <maxscale/router.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/atomic.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/housekeeper.h>
 
 /* This list of all sessions */
 LIST_CONFIG SESSIONlist =

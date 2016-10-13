@@ -13,10 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <housekeeper.h>
-#include <thread.h>
-#include <spinlock.h>
-#include <log_manager.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/thread.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/log_manager.h>
 
 /**
  * @file housekeeper.c  Provide a mechanism to run periodic tasks

@@ -29,26 +29,26 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 
 #include <mysql_client_server_protocol.h>
 #include <ini.h>
 #include <sys/stat.h>
 
 #include <avrorouter.h>
-#include <random_jkiss.h>
+#include <maxscale/random_jkiss.h>
 #include <binlog_common.h>
 #include <avro/errors.h>
 #include <maxscale/alloc.h>

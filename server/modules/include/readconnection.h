@@ -25,7 +25,7 @@
  *
  * @endverbatim
  */
-#include <dcb.h>
+#include <maxscale/dcb.h>
 
 /**
  * Internal structure used to define the set of backend servers we are routing

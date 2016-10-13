@@ -15,9 +15,9 @@
 
 #include <stdbool.h>
 #include <jansson.h>
-#include <buffer.h>
-#include <session.h>
-#include <maxscale_pcre2.h>
+#include <maxscale/buffer.h>
+#include <maxscale/session.h>
+#include <maxscale/maxscale_pcre2.h>
 
 
 typedef enum cache_rule_attribute

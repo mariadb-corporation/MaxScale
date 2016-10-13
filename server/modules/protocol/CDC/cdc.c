@@ -32,11 +32,11 @@
 
 #include <cdc.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
-#include <modinfo.h>
-#include <log_manager.h>
-#include <gw_protocol.h>
-#include <modinfo.h>
+#include <maxscale/gw.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/modinfo.h>
 #include <maxscale/poll.h>
 
 MODULE_INFO info =

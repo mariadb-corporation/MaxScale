@@ -47,18 +47,18 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
 #include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <gwdirs.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);

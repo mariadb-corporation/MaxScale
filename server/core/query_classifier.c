@@ -11,10 +11,10 @@
  * Public License.
  */
 
-#include <query_classifier.h>
-#include <log_manager.h>
-#include <modules.h>
-#include <modutil.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 
 //#define QC_TRACE_ENABLED

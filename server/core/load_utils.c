@@ -34,17 +34,17 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
-#include <modules.h>
-#include <modinfo.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
-#include <notification.h>
+#include <maxscale/modules.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
+#include <maxscale/notification.h>
 #include <curl/curl.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
-#include <gw.h>
-#include <gwdirs.h>
+#include <maxscale/gw.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
 static MODULES *registered = NULL;

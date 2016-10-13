@@ -16,12 +16,12 @@
 
 #include <my_config.h>
 #include <poll.h>
-#include <buffer.h>
-#include <modutil.h>
+#include <maxscale/buffer.h>
+#include <maxscale/modutil.h>
 #include <mysql_client_server_protocol.h>
-#include <hashtable.h>
-#include <log_manager.h>
-#include <query_classifier.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
 
 bool extract_database(GWBUF* buf, char* str);
 void create_error_reply(char* fail_str, DCB* dcb);

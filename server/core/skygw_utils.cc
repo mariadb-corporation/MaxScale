@@ -23,12 +23,12 @@
 #include <time.h>
 #include <stddef.h>
 #include <regex.h>
-#include "skygw_debug.h"
-#include <skygw_types.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/skygw_types.h>
 #include <sys/time.h>
-#include "skygw_utils.h"
-#include <atomic.h>
-#include <random_jkiss.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/atomic.h>
+#include <maxscale/random_jkiss.h>
 #include <pcre2.h>
 
 static void simple_mutex_free_memory(simple_mutex_t* sm);

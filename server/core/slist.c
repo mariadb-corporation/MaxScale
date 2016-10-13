@@ -11,9 +11,9 @@
  * Public License.
  */
 
-#include <slist.h>
+#include <maxscale/slist.h>
 #include <maxscale/alloc.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 
 static slist_cursor_t* slist_cursor_init(slist_t* list);
 static slist_t* slist_init_ex(bool create_cursors);

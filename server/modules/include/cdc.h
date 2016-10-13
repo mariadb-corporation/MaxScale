@@ -21,19 +21,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <service.h>
-#include <session.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <router.h>
-#include <poll.h>
-#include <atomic.h>
-#include <gw.h>
+#include <maxscale/router.h>
+#include <maxscale/poll.h>
+#include <maxscale/atomic.h>
+#include <maxscale/gw.h>
 
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128

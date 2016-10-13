@@ -16,10 +16,10 @@
 #include <errno.h>
 #include <stdio.h>
 #include <maxscale/alloc.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
 #include <mysql_client_server_protocol.h>
-#include <query_classifier.h>
-#include <session.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/session.h>
 #include "cache.h"
 
 static const char KEY_ATTRIBUTE[] = "attribute";

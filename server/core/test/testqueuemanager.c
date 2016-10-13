@@ -37,10 +37,10 @@ extern int debug_check_fail;
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <queuemanager.h>
-#include <random_jkiss.h>
-#include <test_utils.h>
-#include <hk_heartbeat.h>
+#include <maxscale/queuemanager.h>
+#include <maxscale/random_jkiss.h>
+#include <maxscale/test_utils.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/alloc.h>
 
 /**

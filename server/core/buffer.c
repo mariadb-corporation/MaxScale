@@ -37,19 +37,19 @@
  *
  * @endverbatim
  */
-#include <buffer.h>
+#include <maxscale/buffer.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <maxscale/alloc.h>
-#include <atomic.h>
-#include <skygw_debug.h>
-#include <skygw_utils.h>
-#include <spinlock.h>
-#include <hint.h>
-#include <log_manager.h>
+#include <maxscale/atomic.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/hint.h>
+#include <maxscale/log_manager.h>
 
 #if defined(BUFFER_TRACE)
-#include <hashtable.h>
+#include <maxscale/hashtable.h>
 #include <execinfo.h>
 
 static HASHTABLE *buffer_hashtable = NULL;

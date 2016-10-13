@@ -25,10 +25,10 @@
  * @endverbatim
  */
 
-#include <gw_authenticator.h>
+#include <maxscale/gw_authenticator.h>
 #include <cdc.h>
-#include <modutil.h>
-#include <users.h>
+#include <maxscale/modutil.h>
+#include <maxscale/users.h>
 #include <sys/stat.h>
 #include <maxscale/alloc.h>
 

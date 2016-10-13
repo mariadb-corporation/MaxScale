@@ -24,8 +24,8 @@
  * @endverbatim
  */
 
-#include <dcb.h>
-#include <hashtable.h>
+#include <maxscale/dcb.h>
+#include <maxscale/hashtable.h>
 #include <math.h>
 
 #undef PREP_STMT_CACHING

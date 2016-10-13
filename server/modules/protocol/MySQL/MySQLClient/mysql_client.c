@@ -45,21 +45,21 @@
  * 07/02/2016   Martin Brampton         Split off authentication and SSL.
  * 31/05/2016   Martin Brampton         Implement connection throttling
  */
-#include <gw_protocol.h>
-#include <skygw_utils.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <mysql_client_server_protocol.h>
 #include <mysql_auth.h>
-#include <gw_ssl.h>
+#include <maxscale/gw_ssl.h>
 #include <maxscale/poll.h>
-#include <gw.h>
-#include <modinfo.h>
+#include <maxscale/gw.h>
+#include <maxscale/modinfo.h>
 #include <sys/stat.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
 #include <netinet/tcp.h>
 
-#include "gw_authenticator.h"
+#include <maxscale/gw_authenticator.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
   * lint directives.

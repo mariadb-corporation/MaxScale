@@ -34,9 +34,9 @@
 #include <string.h>
 #include <errno.h>
 #include <maxscale/poll.h>
-#include <dcb.h>
-#include <test_utils.h>
-#include <listener.h>
+#include <maxscale/dcb.h>
+#include <maxscale/test_utils.h>
+#include <maxscale/listener.h>
 
 /**
  * test1    Allocate a service and do lots of other things

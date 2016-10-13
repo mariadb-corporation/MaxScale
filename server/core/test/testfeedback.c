@@ -34,17 +34,17 @@
 #include <my_config.h>
 #include <mysql.h>
 #include <stdio.h>
-#include <notification.h>
+#include <maxscale/notification.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <maxscale/alloc.h>
-#include <housekeeper.h>
-#include <buffer.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/buffer.h>
 #include <regex.h>
-#include <modules.h>
-#include <maxscale_test.h>
+#include <maxscale/modules.h>
+#include <maxscale/maxscale_test.h>
 
 static char* server_options[] =
 {

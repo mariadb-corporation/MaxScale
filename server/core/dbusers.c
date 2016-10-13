@@ -39,17 +39,17 @@
 #include <ctype.h>
 #include <mysql.h>
 
-#include <dcb.h>
-#include <service.h>
-#include <users.h>
-#include <dbusers.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/users.h>
+#include <maxscale/dbusers.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
 #include <mysql_client_server_protocol.h>
 #include <mysqld_error.h>
 #include <regex.h>
-#include <mysql_utils.h>
+#include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
 
 /** Don't include the root user */

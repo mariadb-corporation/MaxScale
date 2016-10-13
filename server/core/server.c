@@ -35,16 +35,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <session.h>
-#include <server.h>
-#include <spinlock.h>
-#include <dcb.h>
+#include <maxscale/session.h>
+#include <maxscale/server.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gw_ssl.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gw_ssl.h>
 #include <maxscale/alloc.h>
-#include <modules.h>
+#include <maxscale/modules.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;

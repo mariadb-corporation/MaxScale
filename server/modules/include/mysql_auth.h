@@ -23,8 +23,8 @@
  * @endverbatim
  */
 
-#include <dcb.h>
-#include <buffer.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
 #include <stdint.h>
 #include <mysql_client_server_protocol.h>
 

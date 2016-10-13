@@ -18,9 +18,9 @@
 #include <maxscale/alloc.h>
 
 /* Note that modutil contains much MySQL specific code */
-#include <modutil.h>
+#include <maxscale/modutil.h>
 
-#include <router.h>
+#include <maxscale/router.h>
 #include <readwritesplit.h>
 #include <rwsplit_internal.h>
 /**

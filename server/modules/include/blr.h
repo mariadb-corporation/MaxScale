@@ -37,12 +37,12 @@
  *
  * @endverbatim
  */
-#include <dcb.h>
-#include <buffer.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <memlog.h>
-#include <thread.h>
+#include <maxscale/memlog.h>
+#include <maxscale/thread.h>
 #include <zlib.h>
 #include <mysql_client_server_protocol.h>
 

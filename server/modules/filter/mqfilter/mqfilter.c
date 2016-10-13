@@ -59,23 +59,23 @@
 #include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 #include <amqp.h>
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
 #include <mysql_client_server_protocol.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-#include <spinlock.h>
-#include <session.h>
-#include <housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/session.h>
+#include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
 
 MODULE_INFO info =

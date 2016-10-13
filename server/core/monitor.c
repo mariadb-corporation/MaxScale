@@ -30,16 +30,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <monitor.h>
-#include <spinlock.h>
-#include <modules.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <maxscale_pcre2.h>
-#include <externcmd.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/modules.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/externcmd.h>
 #include <mysqld_error.h>
-#include <mysql_utils.h>
+#include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
 
 /*
@@ -52,7 +52,7 @@
 #define ADDITEM( _event_type, _event_name ) { #_event_name }
 const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
 {
-#include "def_monitor_event.h"
+#include <maxscale/def_monitor_event.h>
 };
 #undef ADDITEM
 

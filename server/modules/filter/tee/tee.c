@@ -43,23 +43,23 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <sys/time.h>
 #include <regex.h>
 #include <string.h>
-#include <service.h>
-#include <router.h>
-#include <dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/router.h>
+#include <maxscale/dcb.h>
 #include <sys/time.h>
 #include <maxscale/poll.h>
 #include <mysql_client_server_protocol.h>
-#include <housekeeper.h>
+#include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
-#include <listmanager.h>
+#include <maxscale/listmanager.h>
 
 #define MYSQL_COM_QUIT                  0x01
 #define MYSQL_COM_INITDB                0x02

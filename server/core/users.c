@@ -13,10 +13,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <users.h>
+#include <maxscale/users.h>
 #include <maxscale/alloc.h>
-#include <atomic.h>
-#include <log_manager.h>
+#include <maxscale/atomic.h>
+#include <maxscale/log_manager.h>
 
 /**
  * @file users.c User table maintenance routines

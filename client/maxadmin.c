@@ -48,7 +48,7 @@
 #include <getopt.h>
 #include <stdbool.h>
 
-#include <version.h>
+#include <maxscale/version.h>
 
 #ifdef HISTORY
 #include <histedit.h>

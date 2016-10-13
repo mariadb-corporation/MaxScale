@@ -25,10 +25,10 @@
  * @endverbatim
  */
 
-#include <modinfo.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <gw_protocol.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/gw_protocol.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
   * lint directives.

@@ -15,8 +15,8 @@
 #include <dlfcn.h>
 #include <sys/param.h>
 #include <maxscale/alloc.h>
-#include <gwdirs.h>
-#include <log_manager.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
 
 CACHE_STORAGE_MODULE* cache_storage_open(const char *name)
 {

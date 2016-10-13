@@ -32,10 +32,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale_test.h>
-#include <test_utils.h>
-#include <service.h>
-#include <gwdirs.h>
+#include <maxscale/maxscale_test.h>
+#include <maxscale/test_utils.h>
+#include <maxscale/service.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
 /**

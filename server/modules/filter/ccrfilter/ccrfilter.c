@@ -11,14 +11,14 @@
  * Public License.
  */
 #include <stdio.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <string.h>
-#include <hint.h>
-#include <query_classifier.h>
+#include <maxscale/hint.h>
+#include <maxscale/query_classifier.h>
 #include <regex.h>
 #include <maxscale/alloc.h>
 

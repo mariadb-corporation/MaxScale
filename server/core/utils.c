@@ -29,16 +29,16 @@
  */
 
 
-#include <gw.h>
-#include <dcb.h>
-#include <session.h>
+#include <maxscale/gw.h>
+#include <maxscale/dcb.h>
+#include <maxscale/session.h>
 #include <openssl/sha.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <random_jkiss.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/random_jkiss.h>
 
 /* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :     \

@@ -27,14 +27,14 @@
 
 #include <mysql_auth.h>
 #include <mysql_client_server_protocol.h>
-#include <gw_authenticator.h>
+#include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <dbusers.h>
-#include <gwdirs.h>
-#include <gw.h>
-#include <secrets.h>
-#include <utils.h>
+#include <maxscale/dbusers.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/gw.h>
+#include <maxscale/secrets.h>
+#include <maxscale/utils.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.

@@ -20,10 +20,10 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <gwdirs.h>
-#include <log_manager.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
 #include <mysql_client_server_protocol.h>
-#include <query_classifier.h>
+#include <maxscale/query_classifier.h>
 using std::cerr;
 using std::cin;
 using std::cout;

@@ -11,8 +11,8 @@
  * Public License.
  */
 
-#include <modules.h>
-#include <query_classifier.h>
+#include <maxscale/modules.h>
+#include <maxscale/query_classifier.h>
 
 qc_parse_result_t qc_parse(GWBUF* querybuf)
 {

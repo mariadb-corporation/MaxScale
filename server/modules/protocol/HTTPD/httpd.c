@@ -34,11 +34,11 @@
 
 #include <httpd.h>
 #include <maxscale/alloc.h>
-#include <gw_protocol.h>
-#include <gw.h>
-#include <modinfo.h>
-#include <log_manager.h>
-#include <resultset.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/gw.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/resultset.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
   * lint directives.

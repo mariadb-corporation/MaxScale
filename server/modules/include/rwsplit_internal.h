@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#include <query_classifier.h>
+#include <maxscale/query_classifier.h>
     
 /* This needs to be removed along with dependency on it - see the 
  * rwsplit_tmp_table_multi functions

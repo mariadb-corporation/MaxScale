@@ -55,12 +55,12 @@
 #include <strfunc.h>
 #include <item_func.h>
 
-#include <skygw_types.h>
-#include <skygw_debug.h>
-#include <log_manager.h>
-#include <query_classifier.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
 #include <mysql_client_server_protocol.h>
-#include <gwdirs.h>
+#include <maxscale/gwdirs.h>
 
 #include <stdio.h>
 #include <stdlib.h>

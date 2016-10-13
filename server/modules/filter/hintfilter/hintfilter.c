@@ -11,10 +11,10 @@
  * Public License.
  */
 #include <stdio.h>
-#include <filter.h>
+#include <maxscale/filter.h>
 #include <maxscale/alloc.h>
-#include <modinfo.h>
-#include <modutil.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
 #include <mysqlhint.h>
 
 /**

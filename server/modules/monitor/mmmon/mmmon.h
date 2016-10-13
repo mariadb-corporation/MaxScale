@@ -16,18 +16,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <monitor.h>
-#include <spinlock.h>
-#include <thread.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
-#include <externcmd.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/maxconfig.h>
+#include <maxscale/externcmd.h>
 
 /**
  * @file mmmon.h - The Multi-Master monitor

@@ -58,29 +58,29 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <utils.h>
-#include <secrets.h>
-#include <spinlock.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/utils.h>
+#include <maxscale/secrets.h>
+#include <maxscale/spinlock.h>
 #include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 
 #include <mysql_client_server_protocol.h>
 #include <ini.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
+#include <maxscale/gw.h>
 
 static char *version_str = "V2.1.0";
 

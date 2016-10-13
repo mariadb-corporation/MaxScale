@@ -42,15 +42,15 @@
  *
  */
 
-#include <gw.h>
-#include <utils.h>
+#include <maxscale/gw.h>
+#include <maxscale/utils.h>
 #include <mysql_client_server_protocol.h>
 #include <maxscale/alloc.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <netinet/tcp.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
 
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN] = "";
 

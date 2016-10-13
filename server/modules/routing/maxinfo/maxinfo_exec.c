@@ -27,24 +27,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <service.h>
-#include <session.h>
-#include <router.h>
-#include <modules.h>
-#include <monitor.h>
-#include <version.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <maxscale.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/router.h>
+#include <maxscale/modules.h>
+#include <maxscale/monitor.h>
+#include <maxscale/version.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/maxscale.h>
 #include <maxscale/poll.h>
 #include <maxinfo.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <resultset.h>
-#include <maxconfig.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/resultset.h>
+#include <maxscale/maxconfig.h>
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);

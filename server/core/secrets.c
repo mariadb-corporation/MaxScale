@@ -11,17 +11,17 @@
  * Public License.
  */
 
-#include <secrets.h>
+#include <maxscale/secrets.h>
 #include <time.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
-#include <gwdirs.h>
-#include <random_jkiss.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/random_jkiss.h>
 #include <maxscale/alloc.h>
 
-#include "gw.h"
+#include <maxscale/gw.h>
 
 /**
  * Generate a random printable character

@@ -34,8 +34,8 @@
 #include <blr_constants.h>
 #include <sys/stat.h>
 #include <avrorouter.h>
-#include <log_manager.h>
-#include <maxscale_pcre2.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale_pcre2.h>
 #include <ini.h>
 #include <stdlib.h>
 #include <glob.h>

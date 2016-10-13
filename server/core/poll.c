@@ -21,20 +21,20 @@
 #include <errno.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <dcb.h>
-#include <atomic.h>
-#include <gwbitmask.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gw.h>
-#include <maxconfig.h>
-#include <housekeeper.h>
-#include <maxconfig.h>
+#include <maxscale/dcb.h>
+#include <maxscale/atomic.h>
+#include <maxscale/gwbitmask.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gw.h>
+#include <maxscale/maxconfig.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/maxconfig.h>
 #include <mysql.h>
-#include <resultset.h>
-#include <session.h>
-#include <statistics.h>
-#include <query_classifier.h>
+#include <maxscale/resultset.h>
+#include <maxscale/session.h>
+#include <maxscale/statistics.h>
+#include <maxscale/query_classifier.h>
 
 #define         PROFILE_POLL    0
 

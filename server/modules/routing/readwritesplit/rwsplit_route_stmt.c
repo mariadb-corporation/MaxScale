@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <maxscale/alloc.h>
 
-#include <router.h>
+#include <maxscale/router.h>
 #include <readwritesplit.h>
 #include <rwsplit_internal.h>
 /**

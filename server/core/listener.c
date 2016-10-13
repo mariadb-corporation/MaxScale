@@ -30,13 +30,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <listener.h>
-#include <gw_ssl.h>
-#include <gw_protocol.h>
-#include <log_manager.h>
+#include <maxscale/listener.h>
+#include <maxscale/gw_ssl.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
-#include <users.h>
-#include <modules.h>
+#include <maxscale/users.h>
+#include <maxscale/modules.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;

@@ -34,12 +34,12 @@
  *@endverbatim
  */
 
-#include <gw.h>
-#include <dcb.h>
-#include <session.h>
+#include <maxscale/gw.h>
+#include <maxscale/dcb.h>
+#include <maxscale/session.h>
 
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 

@@ -54,13 +54,13 @@
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <service.h>
-#include <router.h>
-#include <poll.h>
-#include <users.h>
-#include <dbusers.h>
-#include <version.h>
-#include <housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/router.h>
+#include <maxscale/poll.h>
+#include <maxscale/users.h>
+#include <maxscale/dbusers.h>
+#include <maxscale/version.h>
+#include <maxscale/housekeeper.h>
 #include <mysql.h>
 
 #define GW_MYSQL_VERSION "5.5.5-10.0.0 " MAXSCALE_VERSION "-maxscale"

@@ -48,35 +48,35 @@
 #include <ftw.h>
 #include <string.h>
 #include <strings.h>
-#include <gw.h>
+#include <maxscale/gw.h>
 #include <unistd.h>
 #include <time.h>
 #include <getopt.h>
-#include <service.h>
-#include <server.h>
-#include <dcb.h>
-#include <session.h>
-#include <modules.h>
-#include <maxconfig.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/dcb.h>
+#include <maxscale/session.h>
+#include <maxscale/modules.h>
+#include <maxscale/maxconfig.h>
 #include <maxscale/poll.h>
-#include <housekeeper.h>
-#include <service.h>
-#include <thread.h>
-#include <memlog.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/thread.h>
+#include <maxscale/memlog.h>
 
 #include <stdlib.h>
 #include <unistd.h>
 #include <mysql.h>
-#include <monitor.h>
-#include <version.h>
-#include <maxscale.h>
+#include <maxscale/monitor.h>
+#include <maxscale/version.h>
+#include <maxscale/maxscale.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
 
 #include <execinfo.h>
 
@@ -84,7 +84,7 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/file.h>
-#include <statistics.h>
+#include <maxscale/statistics.h>
 #include <maxscale/alloc.h>
 
 #define STRING_BUFFER_SIZE 1024

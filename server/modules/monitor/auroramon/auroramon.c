@@ -15,12 +15,12 @@
  * @file auroramon.c - Amazon RDS Aurora monitor
  */
 
-#include <modinfo.h>
-#include <thread.h>
-#include <monitor.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/thread.h>
+#include <maxscale/monitor.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
-#include <skygw_debug.h>
+#include <maxscale/skygw_debug.h>
 
 static char *version_str = (char*)"V1.0.0";
 

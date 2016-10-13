@@ -35,7 +35,7 @@
 
 
 #include "galeramon.h"
-#include <dcb.h>
+#include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
 
 static void monitorMain(void *);

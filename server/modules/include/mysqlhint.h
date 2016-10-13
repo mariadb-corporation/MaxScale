@@ -19,7 +19,7 @@
  * Date         Who             Description
  * 17-07-2014   Mark Riddoch    Initial implementation
  */
-#include <hint.h>
+#include <maxscale/hint.h>
 
 /* Parser tokens for the hint parser */
 typedef enum

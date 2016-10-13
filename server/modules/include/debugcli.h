@@ -13,9 +13,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <service.h>
-#include <session.h>
-#include <spinlock.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
 
 /**
  * @file debugcli.h The debug interface to the gateway

@@ -33,9 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gwbitmask.h>
+#include <maxscale/gwbitmask.h>
 
-#include <skygw_debug.h>
+#include <maxscale/skygw_debug.h>
 
 /**
  * test1    Create a bitmap and mess around with it

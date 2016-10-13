@@ -15,13 +15,13 @@
 
 #include <signal.h>
 #include <string.h>
-#include <log_manager.h>
-#include <modinfo.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
 #include <mysql_client_server_protocol.h>
-#include <platform.h>
-#include <query_classifier.h>
-#include <skygw_utils.h>
-#include <modutil.h>
+#include <maxscale/platform.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 #include "builtin_functions.h"
 

@@ -15,25 +15,25 @@
 #include <unistd.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <service.h>
-#include <session.h>
-#include <gw_protocol.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/gw_protocol.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <router.h>
+#include <maxscale/router.h>
 #include <maxscale/poll.h>
-#include <atomic.h>
-#include <gw.h>
+#include <maxscale/atomic.h>
+#include <maxscale/gw.h>
 #include <telnetd.h>
-#include <adminusers.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <modinfo.h>
+#include <maxscale/adminusers.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.

@@ -13,13 +13,13 @@
 
 #define MXS_MODULE_NAME "cache"
 #include <maxscale/alloc.h>
-#include <filter.h>
-#include <gwdirs.h>
-#include <log_manager.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <mysql_utils.h>
-#include <query_classifier.h>
+#include <maxscale/filter.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/mysql_utils.h>
+#include <maxscale/query_classifier.h>
 #include "cache.h"
 #include "rules.h"
 #include "storage.h"

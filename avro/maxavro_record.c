@@ -12,10 +12,10 @@
  */
 
 #include "maxavro.h"
-#include "skygw_utils.h"
+#include <maxscale/skygw_utils.h>
 #include <string.h>
-#include <skygw_debug.h>
-#include <log_manager.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/log_manager.h>
 #include <errno.h>
 
 bool maxavro_read_datablock_start(MAXAVRO_FILE *file);

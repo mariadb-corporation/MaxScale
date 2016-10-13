@@ -24,9 +24,9 @@
  *
  * @endverbatim
  */
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 /**
  * The maxscaled specific protocol structure to put in the DCB.
  */

@@ -17,18 +17,18 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <router.h>
+#include <maxscale/router.h>
 #include <readwritesplit.h>
 #include <rwsplit_internal.h>
 
 #include <mysql.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <modinfo.h>
-#include <modutil.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
 #include <mysql_client_server_protocol.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>

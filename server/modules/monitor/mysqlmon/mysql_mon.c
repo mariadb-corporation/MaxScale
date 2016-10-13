@@ -46,8 +46,8 @@
  */
 
 #include "../mysqlmon.h"
-#include <dcb.h>
-#include <modutil.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 
 /** Column positions for SHOW SLAVE STATUS */

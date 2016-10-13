@@ -14,6 +14,6 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
 #endif

@@ -36,14 +36,14 @@
  * or diagnostic being made for the session script.
  */
 
-#include <skygw_types.h>
-#include <spinlock.h>
-#include <skygw_debug.h>
-#include <log_manager.h>
-#include <string.h>
-#include <filter.h>
-#include <session.h>
-#include <modutil.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/skygw_debug.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/string.h>
+#include <maxscale/filter.h>
+#include <maxscale/session.h>
+#include <maxscale/modutil.h>
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"

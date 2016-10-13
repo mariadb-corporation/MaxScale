@@ -28,21 +28,21 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/skygw_types.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
 #include <avrorouter.h>
 #include <maxavro.h>
 #include <maxscale/alloc.h>
-#include <dbusers.h>
+#include <maxscale/dbusers.h>
 
 extern char *blr_extract_column(GWBUF *buf, int col);
 extern uint32_t extract_field(uint8_t *src, int bits);

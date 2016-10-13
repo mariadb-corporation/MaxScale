@@ -12,7 +12,7 @@
  */
 
 
-#include <mysql_utils.h>
+#include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <maxscale/alloc.h>
 #include <avrorouter.h>

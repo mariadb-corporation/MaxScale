@@ -37,16 +37,16 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <time.h>
 #include <sys/time.h>
 #include <regex.h>
 #include <string.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 #include <maxscale/alloc.h>
 
 MODULE_INFO info =

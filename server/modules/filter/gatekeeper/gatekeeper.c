@@ -12,13 +12,13 @@
  */
 
 #include <stdio.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <atomic.h>
-#include <query_classifier.h>
-#include <hashtable.h>
-#include <gwdirs.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/atomic.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
 #define GK_DEFAULT_HASHTABLE_SIZE 1000

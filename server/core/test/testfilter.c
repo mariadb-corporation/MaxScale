@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <filter.h>
+#include <maxscale/filter.h>
 
 
 /**

@@ -26,13 +26,13 @@
  * @endverbatim
  */
 
-#include <gw_authenticator.h>
+#include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
-#include <modinfo.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <adminusers.h>
-#include <users.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/adminusers.h>
+#include <maxscale/users.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.

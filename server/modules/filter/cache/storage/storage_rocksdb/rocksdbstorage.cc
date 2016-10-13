@@ -19,13 +19,13 @@
 #include <set>
 #include <rocksdb/env.h>
 #include <maxscale/alloc.h>
-#include <gwdirs.h>
+#include <maxscale/gwdirs.h>
 extern "C"
 {
 // TODO: Add extern "C" to modutil.h
-#include <modutil.h>
+#include <maxscale/modutil.h>
 }
-#include <query_classifier.h>
+#include <maxscale/query_classifier.h>
 #include "rocksdbinternals.h"
 
 using std::for_each;

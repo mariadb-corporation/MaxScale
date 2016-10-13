@@ -13,16 +13,16 @@
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <stdio.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
 #include <string.h>
 #include <pcre2.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 #include <maxscale/alloc.h>
-#include "maxconfig.h"
+#include <maxscale/maxconfig.h>
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
