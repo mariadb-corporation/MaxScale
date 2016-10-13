@@ -42,6 +42,7 @@ find_package(CURL)
 find_package(RabbitMQ)
 find_package(LibUUID)
 find_package(Avro)
+find_package(GSSAPI)
 
 # Find or build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target

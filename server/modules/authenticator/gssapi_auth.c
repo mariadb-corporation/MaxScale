@@ -14,6 +14,7 @@
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
 #include <mysql_client_server_protocol.h>
 #include "gssapi_auth.h"
 
