@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <ini.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
 #include <maxscale/service.h>

@@ -22,7 +22,7 @@
 #include <pcre2.h>
 #include <maxscale/atomic.h>
 #include <maxscale/alloc.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.

@@ -17,7 +17,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <maxscale/externcmd.h>
 #include <maxscale/secrets.h>
 

@@ -26,7 +26,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/skygw_debug.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes

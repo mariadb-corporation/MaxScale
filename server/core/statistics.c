@@ -25,7 +25,7 @@
 
 #include <maxscale/statistics.h>
 #include <maxscale/alloc.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <string.h>
 #include <maxscale/platform.h>
 

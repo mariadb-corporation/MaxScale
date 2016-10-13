@@ -26,7 +26,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <maxscale/externcmd.h>
 #include <maxscale/hashtable.h>
 

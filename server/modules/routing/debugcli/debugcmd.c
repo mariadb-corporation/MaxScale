@@ -64,7 +64,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/users.h>
 #include <maxscale/dbusers.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/monitor.h>

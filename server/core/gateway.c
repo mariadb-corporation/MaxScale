@@ -57,7 +57,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
 #include <maxscale/modules.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <maxscale/poll.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/service.h>

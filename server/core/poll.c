@@ -27,9 +27,8 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/gw.h>
-#include <maxscale/maxconfig.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <mysql.h>
 #include <maxscale/resultset.h>
 #include <maxscale/session.h>

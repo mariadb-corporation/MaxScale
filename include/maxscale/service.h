@@ -22,7 +22,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/resultset.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 #include <maxscale/queuemanager.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>

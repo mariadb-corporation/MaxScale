@@ -26,7 +26,7 @@
 #include <secrets.h>
 #include <dcb.h>
 #include <modinfo.h>
-#include <maxconfig.h>
+#include <config.h>
 #include <externcmd.h>
 
 /**

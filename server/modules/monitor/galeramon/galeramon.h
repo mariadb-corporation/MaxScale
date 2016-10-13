@@ -27,7 +27,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/maxconfig.h>
+#include <maxscale/config.h>
 
 /**
  * @file galeramon.h - The Galera cluster monitor
