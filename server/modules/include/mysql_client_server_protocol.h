@@ -61,6 +61,8 @@
 #include <maxscale/dbusers.h>
 #include <maxscale/version.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/utils.h>
+#include <maxscale/gw.h>
 #include <mysql.h>
 
 #define GW_MYSQL_VERSION "5.5.5-10.0.0 " MAXSCALE_VERSION "-maxscale"
@@ -338,27 +340,8 @@ int mysql_send_auth_error (
     int in_affected_rows,
     const char* mysql_message);
 
-void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
-void gw_sha1_2_str(
-    const uint8_t *in,
-    int in_len,
-    const uint8_t *in2,
-    int in2_len,
-    uint8_t *out);
-void gw_str_xor(
-    uint8_t       *output,
-    const uint8_t *input1,
-    const uint8_t *input2,
-    unsigned int  len);
-
-char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-int    gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
-int    gw_generate_random_str(char *output, int len);
-int    setnonblocking(int fd);
-int    setipaddress(struct in_addr *a, char *p);
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
 GWBUF* gw_MySQL_get_packets(GWBUF** p_readbuf, int* npackets);
-GWBUF* gw_MySQL_discard_packets(GWBUF* buf, int npackets);
 void   protocol_add_srv_command(MySQLProtocol* p, mysql_server_cmd_t cmd);
 void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
