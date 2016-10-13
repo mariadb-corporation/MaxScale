@@ -33,7 +33,7 @@
 #include <maxavro.h>
 #include <binlog_common.h>
 #include <sqlite3.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 
 /** SQLite3 version 3.7.14 introduced the new v2 close interface */
 #if SQLITE_VERSION_NUMBER < 3007014

@@ -29,12 +29,12 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 
 #if defined(SS_DEBUG)
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #endif
 
 #define RWSPLIT_TRACE_MSG_LEN 1000

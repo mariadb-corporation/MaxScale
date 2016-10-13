@@ -68,7 +68,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/skygw_types.h>
 #include <time.h>

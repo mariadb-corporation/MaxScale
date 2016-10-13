@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
 #include "cache.h"

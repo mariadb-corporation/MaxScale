@@ -47,7 +47,7 @@
  *					and necessary headers.
  * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
  *					called by backend server to send data to client
- *					Included mysql_client_server_protocol.h
+ *					Included maxscale/protocol/mysql.h
  *					with macros and MySQL commands with MYSQL_ prefix
  *					avoiding any conflict with the standard ones
  *					in mysql.h
@@ -88,7 +88,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 
 #include <maxscale/modutil.h>
 

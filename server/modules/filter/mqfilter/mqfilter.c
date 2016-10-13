@@ -70,7 +70,7 @@
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/spinlock.h>

@@ -56,7 +56,7 @@
 #include <maxscale/dcb.h>
 #include <sys/time.h>
 #include <maxscale/poll.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
 #include <maxscale/listmanager.h>

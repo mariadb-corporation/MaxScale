@@ -44,7 +44,7 @@
 
 #include <maxscale/gw.h>
 #include <maxscale/utils.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
@@ -1273,7 +1273,7 @@ load_hashed_password(uint8_t *scramble, uint8_t *payload, uint8_t *passwd)
  * @param db_specified Whether the connection request specified a database
  * @param compress Whether compression is requested - NOT SUPPORTED
  * @return Bit mask (32 bits)
- * @note Capability bits are defined in mysql_client_server_protocol.h
+ * @note Capability bits are defined in maxscale/protocol/mysql.h
  */
 static uint32_t
 create_capabilities(MySQLProtocol *conn, bool db_specified, bool compress)

@@ -26,7 +26,7 @@
  */
 #include <maxscale/buffer.h>
 #include <string.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <maxscale/modutil.h>

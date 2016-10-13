@@ -17,7 +17,7 @@
 #include <string.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/skygw_utils.h>

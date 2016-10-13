@@ -1,5 +1,5 @@
-#ifndef _MYSQL_PROTOCOL_H
-#define _MYSQL_PROTOCOL_H
+#ifndef _MAXSCALE_PROTOCOL_MYSQL_H
+#define _MAXSCALE_PROTOCOL_MYSQL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *

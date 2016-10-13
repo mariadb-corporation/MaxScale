@@ -35,7 +35,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/dbusers.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <mysql_auth.h>
 #include <maxscale/listener.h>
 #include <arpa/inet.h>

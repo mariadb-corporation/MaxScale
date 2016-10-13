@@ -16,7 +16,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <ctype.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/random_jkiss.h>
 #include <maxscale/alloc.h>

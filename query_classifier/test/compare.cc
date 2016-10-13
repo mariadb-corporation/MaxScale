@@ -22,7 +22,7 @@
 #include <sstream>
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 using std::cerr;
 using std::cin;

@@ -44,7 +44,7 @@
 #include <maxscale/memlog.h>
 #include <maxscale/thread.h>
 #include <zlib.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 
 #define BINLOG_FNAMELEN         255
 #define BLR_PROTOCOL            "MySQLBackend"

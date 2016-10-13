@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <maxscale/buffer.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/skygw_debug.h>
 
 EXTERN_C_BLOCK_BEGIN

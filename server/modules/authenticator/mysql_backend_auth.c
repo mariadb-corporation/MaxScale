@@ -30,7 +30,7 @@
  */
 
 #include <maxscale/gw_authenticator.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 

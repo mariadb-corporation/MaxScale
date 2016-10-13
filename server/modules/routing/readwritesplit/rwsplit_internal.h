@@ -30,7 +30,7 @@ extern "C" {
 /* This needs to be removed along with dependency on it - see the 
  * rwsplit_tmp_table_multi functions
  */
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
     
 /*
  * The following are implemented in rwsplit_mysql.c

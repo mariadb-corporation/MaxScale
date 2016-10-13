@@ -59,7 +59,7 @@
 #include <maxscale/skygw_debug.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/gwdirs.h>
 
 #include <stdio.h>

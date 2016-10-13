@@ -29,7 +29,7 @@
 
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <pcre2.h>
 /**
  * Bitmask values for the router session's initialization. These values are used

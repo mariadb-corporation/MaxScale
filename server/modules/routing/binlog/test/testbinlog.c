@@ -42,7 +42,7 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <ini.h>
 #include <sys/stat.h>
 #include <getopt.h>

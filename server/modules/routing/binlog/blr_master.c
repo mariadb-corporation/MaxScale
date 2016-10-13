@@ -77,7 +77,7 @@
 #include <maxscale/thread.h>
 
 /* Temporary requirement for auth data */
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 
 

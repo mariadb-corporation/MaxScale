@@ -46,7 +46,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <mysqld_error.h>
 #include <regex.h>
 #include <maxscale/mysql_utils.h>

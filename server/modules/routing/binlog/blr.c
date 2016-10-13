@@ -75,7 +75,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <ini.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>

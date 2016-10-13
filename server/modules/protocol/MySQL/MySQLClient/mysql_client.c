@@ -49,7 +49,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <mysql_auth.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/poll.h>
@@ -874,7 +874,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
  *
  * @param dcb Request handler DCB connected to the client
  * @param auth_val The type of authentication failure
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 static void
 mysql_client_auth_error_handling(DCB *dcb, int auth_val)

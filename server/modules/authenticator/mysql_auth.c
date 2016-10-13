@@ -26,7 +26,7 @@
  */
 
 #include <mysql_auth.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
@@ -133,7 +133,7 @@ GWAUTHENTICATOR* GetModuleObject()
  *
  * @param dcb Request handler DCB connected to the client
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 static int
 mysql_auth_authenticate(DCB *dcb)
@@ -233,7 +233,7 @@ mysql_auth_authenticate(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 static int
@@ -286,7 +286,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param client_auth_packet The data from the buffer received from client
  * @param client_auth_packet size An integer giving the size of the data
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 static int
@@ -581,7 +581,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
  * @param username      The current username in the authentication request
  * @param stage1_hash   The SHA1(candidate_password) decoded by this routine
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  *
  */
 int
@@ -707,7 +707,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
  * @param database A string containing the database name
  * @param auth_ret The authentication status prior to calling this function.
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 int
 check_db_name_after_auth(DCB *dcb, char *database, int auth_ret)
@@ -764,7 +764,7 @@ check_db_name_after_auth(DCB *dcb, char *database, int auth_ret)
  * @param stage1_hash A password hash for authentication
  * @param database A string containing the name for the default database
  * @return Authentication status
- * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 static int combined_auth_check(
     DCB             *dcb,

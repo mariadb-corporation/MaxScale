@@ -26,7 +26,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <stdint.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 
 int gw_check_mysql_scramble_data(DCB *dcb,
                                  uint8_t *token,
