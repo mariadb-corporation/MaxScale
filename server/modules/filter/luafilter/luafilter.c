@@ -40,7 +40,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/skygw_debug.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/string.h>
+#include <string.h>
 #include <maxscale/filter.h>
 #include <maxscale/session.h>
 #include <maxscale/modutil.h>
