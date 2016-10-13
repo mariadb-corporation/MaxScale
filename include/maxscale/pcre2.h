@@ -21,7 +21,7 @@
 #include <pcre2.h>
 
 /**
- * @file maxscale_pcre2.h - Utility functions for regular expression matching
+ * @file pcre2.h - Utility functions for regular expression matching
  * with the bundled PCRE2 library.
  *
  * @verbatim

@@ -1099,7 +1099,7 @@ void prepare_pcre2_patterns()
  * @param string String to match
  * @return MXS_PCRE2_MATCH if the pattern matches, MXS_PCRE2_NOMATCH if it does
  * not match and MXS_PCRE2_ERROR if an error occurred
- * @see maxscale_pcre2.h
+ * @see maxscale/pcre2.h
  */
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string)
 {

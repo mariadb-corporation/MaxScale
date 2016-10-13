@@ -29,7 +29,7 @@
 #include <maxscale/dbusers.h>
 #include <avro.h>
 #include <cdc.h>
-#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 #include <maxavro.h>
 #include <binlog_common.h>
 #include <sqlite3.h>

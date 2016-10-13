@@ -18,7 +18,7 @@
 #include <errno.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 
 #define MAXSCALE_EXTCMD_ARG_MAX 256
 

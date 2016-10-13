@@ -74,7 +74,7 @@
 #include <time.h>
 #include <assert.h>
 #include <regex.h>
-#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 #include "dbfwfilter.h"
 #include <ruleparser.yy.h>
 #include <lex.yy.h>

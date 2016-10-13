@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #include "avrorouter.h"
 #include <maxscale/log_manager.h>
-#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 #include <ini.h>
 #include <stdlib.h>
 #include <glob.h>

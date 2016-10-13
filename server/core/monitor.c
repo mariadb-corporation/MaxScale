@@ -36,7 +36,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
-#include <maxscale/maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/externcmd.h>
 #include <mysqld_error.h>
 #include <maxscale/mysql_utils.h>
