@@ -33,10 +33,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/test_utils.h>
 #include <maxscale/service.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
+#include "test_utils.h"
 
 /**
  * test1    Allocate a service and do lots of other things

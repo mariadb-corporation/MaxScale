@@ -2330,7 +2330,8 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 #ifdef BUILD_RULE_PARSER
-#include <test_utils.h>
+// TODO: Not ok to include file from other component's test directory.
+#include "../../../core/test/test_utils.h"
 
 int main(int argc, char** argv)
 {

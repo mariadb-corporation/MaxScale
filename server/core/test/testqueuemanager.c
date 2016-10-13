@@ -39,9 +39,9 @@ extern int debug_check_fail;
 #include <errno.h>
 #include <maxscale/queuemanager.h>
 #include <maxscale/random_jkiss.h>
-#include <maxscale/test_utils.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/alloc.h>
+#include "test_utils.h"
 
 /**
  * test1    Allocate a queue and do lots of other things
