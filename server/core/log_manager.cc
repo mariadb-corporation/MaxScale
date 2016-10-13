@@ -2942,7 +2942,7 @@ int mxs_log_message(int priority,
                 if (status == MESSAGE_SUPPRESSED)
                 {
                     suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
-                    suppression_len += 3; // Remove the %lu
+                    suppression_len -= 3; // Remove the %lu
                     suppression_len += UINTLEN(suppress_ms);
                 }
 
