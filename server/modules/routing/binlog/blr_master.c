@@ -1291,7 +1291,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                     if (router->master_chksum)
                     {
-                        uint32_t size = MIN(len - extra_bytes - semisync_bytes,
+                        uint32_t size = MXS_MIN(len - extra_bytes - semisync_bytes,
                                             router->checksum_size);
 
                         router->stored_checksum = crc32(router->stored_checksum,
@@ -1342,7 +1342,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     size = len - (check_packet_len + MYSQL_CHECKSUM_LEN);
                 }
 
-                size = MIN(size, router->checksum_size);
+                size = MXS_MIN(size, router->checksum_size);
 
                 if (router->checksum_size > 0)
                 {
@@ -2454,7 +2454,7 @@ GWBUF
             break;
         case -1:
             {
-                char err_msg[STRERROR_BUFLEN];
+                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Reading saved events: failed to read binlog "
                           "file %s at position %llu"
                           " (%s).", router->binlog_name,
@@ -2514,7 +2514,7 @@ GWBUF
     {
         if (n == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Reading saved events: the event at %llu in %s. "
                       "%s, expected %d bytes.",
                       pos, router->binlog_name,
@@ -2806,7 +2806,7 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
     if ((n = pwrite(router->binlog_fd, buf, data_len,
                     router->last_written)) != data_len)
     {
-        char err_msg[STRERROR_BUFLEN];
+        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->last_written,
@@ -2934,7 +2934,7 @@ bool blr_send_event(blr_thread_role_t role,
         while (rval && len > 0)
         {
             uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1 :
-                                   MIN(MYSQL_PACKET_LENGTH_MAX, len);
+                                   MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
 
             if (blr_send_packet(slave, buf, payload_len, first))
             {

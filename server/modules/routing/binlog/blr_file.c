@@ -244,7 +244,7 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
     }
 
     int created = 0;
-    char err_msg[STRERROR_BUFLEN];
+    char err_msg[MXS_STRERROR_BUFLEN];
 
     char path[PATH_MAX + 1] = "";
 
@@ -366,7 +366,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
     {
-        char err_msg[STRERROR_BUFLEN];
+        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->last_written,
@@ -594,7 +594,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
             break;
         case -1:
             {
-                char err_msg[STRERROR_BUFLEN];
+                char err_msg[MXS_STRERROR_BUFLEN];
                 snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
                          file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
@@ -677,7 +677,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
                 break;
             case -1:
                 {
-                    char err_msg[STRERROR_BUFLEN];
+                    char err_msg[MXS_STRERROR_BUFLEN];
                     snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                              "Failed to reread header in binlog file '%s'; (%s), event at %lu",
                              file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
@@ -737,7 +737,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     {
         if (n == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                      "Error reading the binlog event at %lu in binlog file '%s';"
                      "(%s), expected %d bytes.",
@@ -1906,7 +1906,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     char filename[len + sizeof('/') + sizeof(MASTER_INI)]; // sizeof includes NULL
     char tmp_file[len + sizeof('/') + sizeof(MASTER_INI) + sizeof('.') + sizeof(TMP)];
-    char err_msg[STRERROR_BUFLEN];
+    char err_msg[MXS_STRERROR_BUFLEN];
     char *ssl_ca;
     char *ssl_cert;
     char *ssl_key;

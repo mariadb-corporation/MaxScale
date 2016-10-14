@@ -35,4 +35,42 @@
 # define MXS_END_DECLS
 #endif
 
+/**
+ * Define intended for use with strerror.
+ *
+ * char errbuf[MXS_STRERROR_BUFLEN];
+ * strerror_r(errno, errbuf, sizeof(errbuf))
+ */
+#define MXS_STRERROR_BUFLEN 512
+
+/**
+ * Returns the smaller of two items.
+ *
+ * @param a A value.
+ * @param b Another value.
+ *
+ * @return a if a is smaller than b, b otherwise.
+ *
+ * @note This a macro, so the arguments will be evaluated more than once.
+ */
+#define MXS_MIN(a,b) ((a)<(b) ? (a) : (b))
+
+/**
+ * Returns the larger of two items.
+ *
+ * @param a A value.
+ * @param b Another value.
+ *
+ * @return a if a is larger than b, b otherwise.
+ *
+ * @note This a macro, so the arguments will be evaluated more than once.
+ */
+#define MXS_MAX(a,b) ((a)>(b) ? (a) : (b))
+
+/**
+ * COMMON INCLUDE FILES
+ */
+#include <stdbool.h>
+#include <stddef.h>
+
 #endif

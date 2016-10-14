@@ -523,7 +523,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             {
                 uint64_t value = 0;
                 int width = metadata[metadata_offset] + metadata[metadata_offset + 1] * 8;
-                int bits_in_nullmap = MIN(width, extra_bits);
+                int bits_in_nullmap = MXS_MIN(width, extra_bits);
                 extra_bits -= bits_in_nullmap;
                 width -= bits_in_nullmap;
                 size_t bytes = width / 8;

@@ -11,8 +11,8 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include "maxavro.h"
-#include <maxscale/skygw_utils.h>
 #include <string.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
@@ -324,7 +324,7 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE *file)
             {
                 if (ferror(file->file))
                 {
-                    char err[STRERROR_BUFLEN];
+                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Failed to read %ld bytes: %d, %s", data_size, errno,
                               strerror_r(errno, err, sizeof(err)));
                     file->last_error = MAXAVRO_ERR_IO;

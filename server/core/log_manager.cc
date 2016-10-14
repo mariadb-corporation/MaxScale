@@ -1643,7 +1643,7 @@ static bool logfile_write_header(skygw_file_t* file)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing header failed due to %d, %s\n",
                   errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         written = false;
@@ -1820,13 +1820,13 @@ static bool check_file_and_path(const char* filename, bool* writable)
             {
                 if (file_is_symlink(filename))
                 {
-                    char errbuf[STRERROR_BUFLEN];
+                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access file pointed to by %s due to %d, %s.\n",
                               filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
                 else
                 {
-                    char errbuf[STRERROR_BUFLEN];
+                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access %s due to %d, %s.\n",
                               filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
@@ -1925,7 +1925,7 @@ static bool logfile_init(logfile_t*    logfile,
 
         if (mkdir(dir, S_IRWXU | S_IRWXG) != 0 && (errno != EEXIST))
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             LOG_ERROR("MaxScale Log: Error, creating directory %s failed due to %d, %s.\n",
                       dir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 
@@ -2110,7 +2110,7 @@ static bool logfile_write_footer(skygw_file_t* file, const char* suffix)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing footer failed due to %d, %s\n",
                   errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         written = false;
@@ -2238,7 +2238,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             if (err)
             {
                 // TODO: Log this to syslog.
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 LOG_ERROR("MaxScale Log: Error, writing to the log-file %s failed due to %d, %s. "
                           "Disabling writing to the log.\n",
                           lf->lf_full_file_name, err, strerror_r(err, errbuf, sizeof(errbuf)));

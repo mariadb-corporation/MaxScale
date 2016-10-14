@@ -568,7 +568,7 @@ createInstance(SERVICE *service, char **options)
         mkdir_rval = mkdir(inst->binlogdir, 0700);
         if (mkdir_rval == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Service %s, Failed to create binlog directory '%s': [%d] %s",
                       service->name,
                       inst->binlogdir,
@@ -1628,7 +1628,7 @@ errorReply(ROUTER *instance,
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int error;
     socklen_t len;
-    char msg[STRERROR_BUFLEN + 1 + 5] = "";
+    char msg[MXS_STRERROR_BUFLEN + 1 + 5] = "";
     char *errmsg;
     unsigned long mysql_errno;
 
@@ -1688,7 +1688,7 @@ errorReply(ROUTER *instance,
         getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 &&
         error != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
     }
     else

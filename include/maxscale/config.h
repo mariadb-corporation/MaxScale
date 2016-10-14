@@ -31,7 +31,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/skygw_utils.h>
 #include <sys/utsname.h>
 #include <stdint.h>
 #include <openssl/sha.h>

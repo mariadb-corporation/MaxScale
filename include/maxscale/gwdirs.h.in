@@ -20,7 +20,6 @@
 #include <maxscale/cdefs.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/skygw_utils.h>
 
 MXS_BEGIN_DECLS
 

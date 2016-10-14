@@ -60,7 +60,7 @@ int setnonblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
@@ -70,7 +70,7 @@ int setnonblocking(int fd)
 
     if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
@@ -346,7 +346,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
                     }
                     else
                     {
-                        char err[STRERROR_BUFLEN];
+                        char err[MXS_STRERROR_BUFLEN];
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
                                   path, errno, strerror_r(errno, err, sizeof(err)));
                     }
@@ -355,7 +355,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
         }
         else
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to create directory '%s': %d, %s",
                       path, errno, strerror_r(errno, err, sizeof(err)));
         }

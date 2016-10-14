@@ -844,7 +844,7 @@ void init_response_status(GWBUF*             buf,
             nparam = gw_mysql_get_byte2(readbuf);
             gwbuf_copy_data(buf, 11, 2, readbuf);
             nattr = gw_mysql_get_byte2(readbuf);
-            *npackets = 1 + nparam + MIN(1, nparam) + nattr + MIN(nattr, 1);
+            *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
             break;
 
         case MYSQL_COM_QUIT:

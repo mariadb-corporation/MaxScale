@@ -42,7 +42,6 @@
 #include <maxscale/listmanager.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/resultset.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
 MXS_BEGIN_DECLS

@@ -30,6 +30,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <maxscale/modutil.h>
+#include <maxscale/skygw_utils.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
@@ -1059,7 +1060,7 @@ void prepare_pcre2_patterns()
     {
         int err;
         size_t erroff;
-        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
 
         if ((re_percent = pcre2_compile(pattern_percent, PCRE2_ZERO_TERMINATED,
                                         0, &err, &erroff, NULL)) &&
@@ -1137,7 +1138,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
                 {
                     if (errcode != 0)
                     {
-                        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+                        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
                         pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
                         MXS_ERROR("Failed to match pattern: %s", errbuf);
                     }

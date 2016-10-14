@@ -21,13 +21,6 @@
 
 MXS_BEGIN_DECLS
 
-/*
- * We need a common.h file that is included by every component.
- */
-#if !defined(STRERROR_BUFLEN)
-#define STRERROR_BUFLEN 512
-#endif
-
 /**
  * If MXS_MODULE_NAME is defined before log_manager.h is included, then all
  * logged messages will be prefixed with that string enclosed in square brackets.

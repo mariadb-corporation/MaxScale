@@ -233,7 +233,7 @@ char* config_clean_string_list(char* str)
                                 PCRE2_ZERO_TERMINATED, 0, &re_err, &err_offset, NULL)) == NULL ||
             (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
-            PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+            PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
             pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
             MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
                       __FUNCTION__, (int)err_offset, errbuf);
@@ -2145,7 +2145,7 @@ bool config_has_duplicate_sections(const char* config)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open file '%s': %s", config,
                       strerror_r(errno, errbuf, sizeof(errbuf)));
             rval = true;

@@ -56,7 +56,6 @@
 #include <maxscale/gw_ssl.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/gwbitmask.h>
-#include <maxscale/skygw_utils.h>
 #include <netinet/in.h>
 
 MXS_BEGIN_DECLS

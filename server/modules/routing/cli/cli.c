@@ -272,7 +272,7 @@ execute(ROUTER *instance, void *router_session, GWBUF *queue)
     {
         const char* data = GWBUF_DATA(queue);
         int len = GWBUF_LENGTH(queue);
-        int n = MIN(len, CMDBUFLEN - cmdlen - 1);
+        int n = MXS_MIN(len, CMDBUFLEN - cmdlen - 1);
 
         if (n != len)
         {

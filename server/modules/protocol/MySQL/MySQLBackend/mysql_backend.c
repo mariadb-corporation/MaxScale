@@ -310,7 +310,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
 
     if (so < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Establishing connection to backend server "
                   "%s:%d failed.\n\t\t             Socket creation failed "
                   "due %d, %s.",
@@ -328,7 +328,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
 
     if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to set socket options "
                   "%s:%d failed.\n\t\t             Socket configuration failed "
                   "due %d, %s.",
@@ -345,7 +345,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
 
     if (setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to set socket options "
                   "%s:%d failed.\n\t\t             Socket configuration failed "
                   "due %d, %s.",
@@ -362,7 +362,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
     int one = 1;
     if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to set socket options "
                   "%s:%d failed.\n\t\t             Socket configuration failed "
                   "due %d, %s.",
@@ -388,7 +388,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to connect backend server %s:%d, "
                       "due %d, %s.",
                       host,
@@ -1057,7 +1057,7 @@ static int gw_error_backend_event(DCB *dcb)
         {
             if (error != 0)
             {
-                char errstring[STRERROR_BUFLEN];
+                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("DCB in state %s got error '%s'.",
                           STRDCBSTATE(dcb->state),
                           strerror_r(error, errstring, sizeof(errstring)));
@@ -1095,7 +1095,7 @@ static int gw_error_backend_event(DCB *dcb)
         {
             if (error != 0)
             {
-                char errstring[STRERROR_BUFLEN];
+                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error '%s' in session that is not ready for routing.",
                           strerror_r(error, errstring, sizeof(errstring)));
             }
@@ -1199,7 +1199,7 @@ static int gw_backend_hangup(DCB *dcb)
         {
             if (error != 0 && ses_state != SESSION_STATE_STOPPING)
             {
-                char errstring[STRERROR_BUFLEN];
+                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Hangup in session that is not ready for routing, "
                           "Error reported is '%s'.",
                           strerror_r(error, errstring, sizeof(errstring)));
@@ -1766,7 +1766,7 @@ close_socket(int sock)
     /*< Close newly created socket. */
     if (close(sock) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to close socket %d due %d, %s.",
                   sock,
                   errno,

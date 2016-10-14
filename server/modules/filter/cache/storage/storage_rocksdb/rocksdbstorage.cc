@@ -118,7 +118,7 @@ bool RocksDBStorage::Initialize()
     else if (errno != EEXIST)
     {
         initialized = false;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
 
         MXS_ERROR("Failed to create storage directory %s: %s",
                   u_storageDirectory.c_str(),

@@ -874,7 +874,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 if (removed_cfg == -1)
                 {
-                    char err_msg[STRERROR_BUFLEN];
+                    char err_msg[MXS_STRERROR_BUFLEN];
                     snprintf(error_string, BINLOG_ERROR_MSG_LEN,
                              "Error removing %s, %s, errno %u", path,
                              strerror_r(errno, err_msg, sizeof(err_msg)), errno);

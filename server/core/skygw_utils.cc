@@ -58,7 +58,7 @@ int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock)
     else
     {
         rwlock->srw_rwlock_thr = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr,
                     "* pthread_rwlock_rdlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
@@ -77,7 +77,7 @@ int skygw_rwlock_wrlock(skygw_rwlock_t* rwlock)
     else
     {
         rwlock->srw_rwlock_thr = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr,
                     "* pthread_rwlock_wrlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
@@ -95,7 +95,7 @@ int skygw_rwlock_unlock(skygw_rwlock_t* rwlock)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "* pthread_rwlock_unlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
     }
@@ -108,7 +108,7 @@ int skygw_rwlock_destroy(skygw_rwlock_t* rwlock)
     /** Lock */
     if ((err = pthread_rwlock_wrlock(rwlock->srw_rwlock)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Error : pthread_rwlock_wrlock failed due to %d, %s.\n",
                 err, strerror_r(err, errbuf, sizeof (errbuf)));
         goto retblock;
@@ -120,7 +120,7 @@ int skygw_rwlock_destroy(skygw_rwlock_t* rwlock)
     /** Destroy */
     if ((err = pthread_rwlock_destroy(rwlock->srw_rwlock)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Error : pthread_rwlock_destroy failed due to %d,%s\n",
                 err, strerror_r(err, errbuf, sizeof (errbuf)));
     }
@@ -152,7 +152,7 @@ int skygw_rwlock_init(skygw_rwlock_t** rwlock)
     if (err != 0)
     {
         free(rwl);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "* Creating pthread_rwlock failed : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -204,7 +204,7 @@ size_t snprint_timestamp(char* p_ts, size_t tslen)
 
     t = time(NULL);
     localtime_r(&t, &tm);
-    snprintf(p_ts, MIN(tslen, timestamp_len), timestamp_formatstr,
+    snprintf(p_ts, MXS_MIN(tslen, timestamp_len), timestamp_formatstr,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
              tm.tm_min, tm.tm_sec);
     rval = strlen(p_ts) * sizeof (char);
@@ -245,7 +245,7 @@ size_t snprint_timestamp_hp(char* p_ts, size_t tslen)
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, &tm);
     usec = tv.tv_usec / 1000;
-    snprintf(p_ts, MIN(tslen, timestamp_len_hp), timestamp_formatstr_hp,
+    snprintf(p_ts, MXS_MIN(tslen, timestamp_len_hp), timestamp_formatstr_hp,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
              tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
     rval = strlen(p_ts) * sizeof (char);
@@ -350,7 +350,7 @@ int skygw_thread_start(skygw_thread_t* thr)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Starting file writer thread failed due error, %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -526,7 +526,7 @@ simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, const char* name)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing simple mutex %s failed due error %d, %s\n",
                 name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -566,7 +566,7 @@ int simple_mutex_done(simple_mutex_t* sm)
     if (err != 0)
     {
         perror("simple_mutex : ");
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying simple mutex %s failed due %d, %s\n",
                 sm->sm_name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -613,7 +613,7 @@ int simple_mutex_lock(simple_mutex_t* sm, bool block)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking simple mutex %s failed due error, %d, %s\n",
                 sm->sm_name, err,  strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -642,7 +642,7 @@ int simple_mutex_unlock(simple_mutex_t* sm)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking simple mutex %s failed due error %d, %s\n",
                 sm->sm_name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -676,7 +676,7 @@ skygw_message_t* skygw_message_init(void)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing pthread mutex failed due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         free(mes);
@@ -687,7 +687,7 @@ skygw_message_t* skygw_message_init(void)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing pthread cond var failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         pthread_mutex_destroy(&mes->mes_mutex);
@@ -716,7 +716,7 @@ void skygw_message_done(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying cond var failed due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -725,7 +725,7 @@ void skygw_message_done(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -743,7 +743,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -757,7 +757,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Signaling pthread cond var failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -765,7 +765,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -783,7 +783,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -795,7 +795,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
         if (err != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "* Locking pthread cond wait failed, due error %d, %s\n",
                     err, strerror_r(errno, errbuf, sizeof (errbuf)));
         }
@@ -805,7 +805,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -821,7 +821,7 @@ void skygw_message_reset(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -832,7 +832,7 @@ void skygw_message_reset(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -934,7 +934,7 @@ skygw_file_t* skygw_file_init(const char* fname,
     {
         int eno = errno;
         errno = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Opening file %s failed due %d, %s.\n",
                 file->sf_fname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
         free(file);
@@ -958,7 +958,7 @@ skygw_file_t* skygw_file_init(const char* fname,
         {
             int eno = errno;
             errno = 0;
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "failed to create symlink %s -> %s due %d, %s. Exiting.",
                     fname, symlinkname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
             free(file);
@@ -994,7 +994,7 @@ void skygw_file_close(skygw_file_t* file)
 
         if ((err = fclose(file->sf_file)) != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "* Closing file %s failed due to %d, %s.\n",
                     file->sf_fname, errno, strerror_r(errno, errbuf, sizeof (errbuf)));
         }
@@ -1170,7 +1170,7 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
 
     if (search_re == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "Regex memory allocation failed : %s\n",
                 strerror_r(errno, errbuf, sizeof (errbuf)));
         newstr = haystack;
@@ -1183,7 +1183,7 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
 
     if (newstr == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "Regex memory allocation failed : %s\n",
                 strerror_r(errno, errbuf, sizeof (errbuf)));
         free(search_re);

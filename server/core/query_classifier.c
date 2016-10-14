@@ -16,6 +16,7 @@
 #include <maxscale/modules.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/skygw_utils.h>
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
