@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _MAXSCALE_SKYGW_TYPES_H
+#define _MAXSCALE_SKYGW_TYPES_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -11,12 +14,12 @@
  * Public License.
  */
 
-#if !defined(SKYGW_TYPES_H)
-#define SKYGW_TYPES_H
-
+#include <maxscale/cdefs.h>
 #include <math.h>
 #include <stdbool.h>
 #include <ctype.h>
+
+MXS_BEGIN_DECLS
 
 #define SECOND_USEC (1024*1024L)
 #define MSEC_USEC   (1024L)
@@ -43,5 +46,7 @@
 
 #define MAX_ERROR_MSG PATH_MAX
 #define array_nelems(a) ((uint)(sizeof(a)/sizeof(a[0])))
+
+MXS_END_DECLS
 
 #endif /* SKYGW_TYPES_H */

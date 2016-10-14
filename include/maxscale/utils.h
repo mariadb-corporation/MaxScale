@@ -1,5 +1,6 @@
-#ifndef _UTILS_H
-#define _UTILS_H
+#pragma once
+#ifndef _MAXSCALE_UTILS_H
+#define _MAXSCALE_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -25,6 +26,10 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
 int setnonblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
@@ -36,5 +41,7 @@ void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
 int gw_getsockerrno(int fd);
 char *create_hex_sha1_sha1_passwd(char *passwd);
+
+MXS_END_DECLS
 
 #endif

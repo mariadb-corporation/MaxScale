@@ -1,5 +1,6 @@
-#ifndef _USERS_H
-#define _USERS_H
+#pragma once
+#ifndef _MAXSCALE_USERS_H
+#define _MAXSCALE_USERS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,10 +13,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
 #include <openssl/sha.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file users.h The functions to manipulate the table of users maintained
@@ -69,5 +74,7 @@ extern int users_default_loadusers(SERV_LISTENER *port); /**< A generic implemen
                                                           * loadusers entry point */
 extern void usersPrint(USERS *);                  /**< Print data about the users loaded */
 extern void dcb_usersPrint(DCB *, USERS *);       /**< Print data about the users loaded */
+
+MXS_END_DECLS
 
 #endif

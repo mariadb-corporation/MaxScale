@@ -1,5 +1,6 @@
-#ifndef _GW_SSL_H
-#define _GW_SSL_H
+#pragma once
+#ifndef _MAXSCALE_GW_SSL_H
+#define _MAXSCALE_GW_SSL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,11 +28,14 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/gw_protocol.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
+
+MXS_BEGIN_DECLS
 
 struct dcb;
 
@@ -77,5 +81,7 @@ bool ssl_check_data_to_process(struct dcb *dcb);
 bool ssl_required_by_dcb(struct dcb *dcb);
 bool ssl_required_but_not_negotiated(struct dcb *dcb);
 const char* ssl_method_type_to_string(ssl_method_type_t method_type);
+
+MXS_END_DECLS
 
 #endif /* _GW_SSL_H */

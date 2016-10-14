@@ -1,5 +1,6 @@
-#ifndef _PLATFORM_H
-#define _PLATFORM_H
+#pragma once
+#ifndef _MAXSCALE_PLATFORM_H
+#define _MAXSCALE_PLATFORM_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,6 +13,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 #if !defined(__cplusplus)
 
@@ -47,5 +52,7 @@
 #endif // __cplusplus < 201103
 
 #endif // __cplusplus
+
+MXS_END_DECLS
 
 #endif // _PLATFORM_H

@@ -1,5 +1,6 @@
-#ifndef _POLL_H
-#define _POLL_H
+#pragma once
+#ifndef _MAXSCALE_POLL_H
+#define _MAXSCALE_POLL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,10 +13,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/gwbitmask.h>
 #include <maxscale/resultset.h>
 #include <sys/epoll.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file poll.h     The poll related functionality
@@ -67,4 +72,7 @@ extern  void            poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev);
 extern  void            poll_fake_hangup_event(DCB *dcb);
 extern  void            poll_fake_write_event(DCB *dcb);
 extern  void            poll_fake_read_event(DCB *dcb);
+
+MXS_END_DECLS
+
 #endif

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _SCHEMAROUTER_H
 #define _SCHEMAROUTER_H
 /*
@@ -23,14 +24,15 @@
  *
  * @endverbatim
  */
-#ifndef PCRE2_CODE_UNIT_WIDTH
-#define PCRE2_CODE_UNIT_WIDTH 8
-#endif
 
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/protocol/mysql.h>
-#include <pcre2.h>
+#include <maxscale/pcre2.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.
@@ -376,5 +378,7 @@ typedef struct router_instance
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+
+MXS_END_DECLS
 
 #endif /*< _SCHEMAROUTER_H */

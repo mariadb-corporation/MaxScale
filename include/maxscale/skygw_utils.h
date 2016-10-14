@@ -1,5 +1,6 @@
-#ifndef _SKYGW_UTILS_H
-#define _SKYGW_UTILS_H
+#pragma once
+#ifndef _MAXSCALE_SKYGW_UTILS_H
+#define _MAXSCALE_SKYGW_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,6 +13,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 /*
  * We need a common.h file that is included by every component.
@@ -105,12 +110,8 @@ struct skygw_file_st
     skygw_chk_t  sf_chk_tail;
 };
 
-EXTERN_C_BLOCK_BEGIN
-
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
-
-EXTERN_C_BLOCK_END
 
 /** Skygw thread routines */
 skygw_thread_t*   skygw_thread_init(const char* name,
@@ -126,8 +127,6 @@ size_t get_timestamp_len_hp(void);
 size_t snprint_timestamp(char* p_ts, size_t tslen);
 size_t snprint_timestamp_hp(char* p_ts, size_t tslen);
 
-EXTERN_C_BLOCK_BEGIN
-
 void skygw_thread_set_state(skygw_thread_t* thr,
                             skygw_thr_state_t state);
 void* skygw_thread_get_data(skygw_thread_t* thr);
@@ -135,8 +134,6 @@ bool skygw_thread_must_exit(skygw_thread_t* thr);
 bool skygw_thread_set_exitflag(skygw_thread_t* thr,
                                skygw_message_t* sendmes,
                                skygw_message_t* recmes);
-
-EXTERN_C_BLOCK_END
 
 /** Skygw thread routines */
 
@@ -159,8 +156,6 @@ int skygw_file_write(skygw_file_t* file,
                      bool          flush);
 /** Skygw file routines */
 
-EXTERN_C_BLOCK_BEGIN
-
 void acquire_lock(int* l);
 void release_lock(int* l);
 
@@ -179,14 +174,10 @@ void skygw_message_reset(skygw_message_t* mes);
 
 /** Skygw message routines */
 
-EXTERN_C_BLOCK_END
-
 int skygw_rwlock_wrlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_init(skygw_rwlock_t** rwlock);
-
-EXTERN_C_BLOCK_BEGIN
 
 size_t get_decimal_len(size_t s);
 
@@ -203,6 +194,6 @@ bool strip_escape_chars(char*);
 char* trim(char *str);
 char* squeeze_whitespace(char* str);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif /* SKYGW_UTILS_H */

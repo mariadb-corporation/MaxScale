@@ -1,5 +1,6 @@
-#ifndef _MODUTIL_H
-#define _MODUTIL_H
+#pragma once
+#ifndef _MAXSCALE_MODUTIL_H
+#define _MAXSCALE_MODUTIL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,10 +27,14 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
 #include <string.h>
 #include <maxscale/pcre2.h>
+
+MXS_BEGIN_DECLS
 
 #define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
 #define PTR_IS_EOF(b) (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)
@@ -69,5 +74,7 @@ char* strnchr_esc_mysql(char* ptr, char c, int len);
 bool is_mysql_statement_end(const char* start, int len);
 bool is_mysql_sp_end(const char* start, int len);
 char* modutil_get_canonical(GWBUF* querybuf);
+
+MXS_END_DECLS
 
 #endif

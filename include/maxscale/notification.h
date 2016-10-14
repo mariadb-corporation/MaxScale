@@ -1,5 +1,6 @@
-#ifndef _NOTIFICATION_SERVICE_H
-#define _NOTIFICATION_SERVICE_H
+#pragma once
+#ifndef _MAXSCALE_NOTIFICATION_H
+#define _MAXSCALE_NOTIFICATION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,6 +27,10 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 #define _NOTIFICATION_CONNECT_TIMEOUT   30
 #define _NOTIFICATION_OPERATION_TIMEOUT 30
@@ -57,4 +62,7 @@ typedef struct
 extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern FEEDBACK_CONF * config_get_feedback_data();
+
+MXS_END_DECLS
+
 #endif

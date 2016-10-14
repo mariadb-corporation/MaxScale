@@ -1,5 +1,6 @@
-#ifndef MYSQL_BINLOG_H
-#define MYSQL_BINLOG_H
+#pragma once
+#ifndef _MAXSCALE_MYSQL_BINLOG_H
+#define _MAXSCALE_MYSQL_BINLOG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -17,9 +18,12 @@
  * @file mysql_binlog.h - Extracting information from binary logs
  */
 
+#include <maxscale/cdefs.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
+
+MXS_BEGIN_DECLS
 
 /** Maximum GTID string length */
 #define GTID_MAX_LEN 64
@@ -90,5 +94,7 @@ uint64_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
                     uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest);
 
 void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm);
+
+MXS_END_DECLS
 
 #endif /* MYSQL_BINLOG_H */

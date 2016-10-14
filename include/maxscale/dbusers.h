@@ -1,5 +1,6 @@
-#ifndef _DBUSERS_H
-#define _DBUSERS_H
+#pragma once
+#ifndef _MAXSCALE_DBUSERS_H
+#define _MAXSCALE_DBUSERS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,9 +14,11 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/service.h>
 #include <arpa/inet.h>
 
+MXS_BEGIN_DECLS
 
 /**
  * @file dbusers.h Extarct user information form the backend database
@@ -76,5 +79,7 @@ extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int reload_mysql_users(SERV_LISTENER *listener);
 extern int replace_mysql_users(SERV_LISTENER *listener);
+
+MXS_END_DECLS
 
 #endif

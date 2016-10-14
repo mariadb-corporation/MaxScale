@@ -1,5 +1,6 @@
-#ifndef _MAXSCALE_H
-#define _MAXSCALE_H
+#pragma once
+#ifndef _MAXSCALE_MAXSCALE_H
+#define _MAXSCALE_MAXSCALE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,8 +28,10 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <time.h>
 
+MXS_BEGIN_DECLS
 
 /* Exit status for MaxScale */
 #define MAXSCALE_SHUTDOWN       0   /* Good shutdown */
@@ -42,5 +45,7 @@
 void maxscale_reset_starttime(void);
 time_t maxscale_started(void);
 int maxscale_uptime(void);
+
+MXS_END_DECLS
 
 #endif

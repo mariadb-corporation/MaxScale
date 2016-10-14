@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALED_H
 #define _MAXSCALED_H
 /*
@@ -27,6 +28,9 @@
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * The maxscaled specific protocol structure to put in the DCB.
  */
@@ -40,5 +44,7 @@ typedef struct maxscaled
 #define MAXSCALED_STATE_LOGIN   1   /**< Waiting for user */
 #define MAXSCALED_STATE_PASSWD  2   /**< Waiting for password */
 #define MAXSCALED_STATE_DATA    3   /**< User logged in */
+
+MXS_END_DECLS
 
 #endif

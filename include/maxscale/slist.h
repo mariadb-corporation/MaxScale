@@ -1,5 +1,6 @@
-#ifndef _SLIST_H
-#define _SLIST_H
+#pragma once
+#ifndef _MAXSCALE_SLIST_H
+#define _MAXSCALE_SLIST_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,9 +14,10 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/skygw_utils.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 typedef struct slist_node_st    slist_node_t;
 typedef struct slist_st         slist_t;
@@ -61,6 +63,6 @@ void            slcursor_remove_data(slist_cursor_t* c);
 bool            slcursor_move_to_begin(slist_cursor_t* c);
 bool            slcursor_step_ahead(slist_cursor_t* c);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

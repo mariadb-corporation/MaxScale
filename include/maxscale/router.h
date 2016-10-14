@@ -1,5 +1,6 @@
-#ifndef _ROUTER_H
-#define _ROUTER_H
+#pragma once
+#ifndef _MAXSCALE_ROUTER_H
+#define _MAXSCALE_ROUTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,10 +28,14 @@
  * 27/10/2015   Martin Brampton     Add RCAP_TYPE_NO_RSESSION
  *
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/buffer.h>
 #include <stdint.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * The ROUTER handle points to module specific data, so the best we can do
@@ -100,6 +105,6 @@ typedef enum router_capability_t
                                        users when the service is started */
 } router_capability_t;
 
-
+MXS_END_DECLS
 
 #endif

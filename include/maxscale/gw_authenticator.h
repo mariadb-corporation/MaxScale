@@ -1,5 +1,6 @@
-#ifndef GW_AUTHENTICATOR_H
-#define GW_AUTHENTICATOR_H
+#pragma once
+#ifndef _MAXSCALE_GW_AUTHENTICATOR_H
+#define _MAXSCALE_GW_AUTHENTICATOR_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,11 +28,14 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/dh.h>
+
+MXS_BEGIN_DECLS
 
 /** Maximum number of authenticator options */
 #define AUTHENTICATOR_MAX_OPTIONS 256
@@ -133,6 +137,8 @@ typedef enum
 
 bool authenticator_init(void **instance, const char *authenticator, const char *options);
 char* get_default_authenticator(const char *protocol);
+
+MXS_END_DECLS
 
 #endif /* GW_AUTHENTICATOR_H */
 

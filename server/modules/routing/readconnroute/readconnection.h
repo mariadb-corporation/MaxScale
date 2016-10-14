@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _READCONNECTION_H
 #define _READCONNECTION_H
 /*
@@ -25,7 +26,11 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * Internal structure used to define the set of backend servers we are routing
@@ -84,4 +89,7 @@ typedef struct router_instance
     struct router_instance
         *next;
 } ROUTER_INSTANCE;
+
+MXS_END_DECLS
+
 #endif

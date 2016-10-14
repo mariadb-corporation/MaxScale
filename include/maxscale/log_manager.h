@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _MAXSCALE_LOG_MANAGER_H
+#define _MAXSCALE_LOG_MANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -10,16 +13,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#if !defined(LOG_MANAGER_H)
-#define LOG_MANAGER_H
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+MXS_BEGIN_DECLS
 
 /*
  * We need a common.h file that is included by every component.
@@ -195,8 +195,6 @@ enum
                                     trailing NULL. If longer, it will be cut. */
 };
 
-#if defined(__cplusplus)
-}
-#endif
+MXS_END_DECLS
 
 #endif /** LOG_MANAGER_H */

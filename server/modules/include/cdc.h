@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _CDC_H
+#define _CDC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -18,6 +21,7 @@
  * 11-01-2016   Massimiliano Pinto  First Implementation
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +38,8 @@
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
 #include <maxscale/gw.h>
+
+MXS_BEGIN_DECLS
 
 #define CDC_SMALL_BUFFER       1024
 #define CDC_METHOD_MAXLEN      128
@@ -87,3 +93,7 @@ typedef struct  cdc_protocol
 
 /* routines */
 extern int gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
+
+MXS_END_DECLS
+
+#endif

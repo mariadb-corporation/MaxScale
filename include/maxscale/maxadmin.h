@@ -1,5 +1,6 @@
-#ifndef _MAXADMIN_H
-#define _MAXADMIN_H
+#pragma once
+#ifndef _MAXSCALE_MAXADMIN_H
+#define _MAXSCALE_MAXADMIN_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,6 +13,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 #define MAXADMIN_DEFAULT_SOCKET                "/tmp/maxadmin.sock"
 
@@ -27,5 +32,7 @@
 
 #define MAXADMIN_AUTH_PASSWORD_PROMPT          "PASSWORD"
 #define MAXADMIN_AUTH_PASSWORD_PROMPT_LEN      8
+
+MXS_END_DECLS
 
 #endif

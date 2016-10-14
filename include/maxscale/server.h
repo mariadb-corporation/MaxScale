@@ -1,5 +1,6 @@
-#ifndef _SERVER_H
-#define _SERVER_H
+#pragma once
+#ifndef _MAXSCALE_SERVER_H
+#define _MAXSCALE_SERVER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,6 +13,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/resultset.h>
 
@@ -43,6 +46,8 @@
  *
  * @endverbatim
  */
+
+MXS_BEGIN_DECLS
 
 #define MAX_SERVER_NAME_LEN 1024
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
@@ -221,5 +226,7 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
+
+MXS_END_DECLS
 
 #endif

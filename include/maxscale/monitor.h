@@ -1,5 +1,6 @@
-#ifndef _MONITOR_H
-#define _MONITOR_H
+#pragma once
+#ifndef _MAXSCALE_MONITOR_H
+#define _MAXSCALE_MONITOR_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,6 +13,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <mysql.h>
 #include <maxscale/server.h>
 #include <maxscale/dcb.h>
@@ -20,6 +23,8 @@
 #include <maxscale/config.h>
 #include <maxscale/externcmd.h>
 #include <maxscale/secrets.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file monitor.h      The interface to the monitor module
@@ -225,5 +230,7 @@ int mon_parse_event_string(bool* events, size_t count, char* string);
 connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
+
+MXS_END_DECLS
 
 #endif

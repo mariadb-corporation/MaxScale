@@ -1,5 +1,6 @@
-#ifndef CACHE_H
-#define CACHE_H
+#pragma once
+#ifndef _MAXSCALE_FILTER_CACHE_CACHE_H
+#define _MAXSCALE_FILTER_CACHE_CACHE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,6 +15,8 @@
  */
 
 #include <limits.h>
+
+MXS_BEGIN_DECLS
 
 #define CACHE_DEBUG_NONE         0
 #define CACHE_DEBUG_MATCHING     1
@@ -34,5 +37,7 @@
 #define CACHE_DEFAULT_TTL                10
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
+
+MXS_END_DECLS
 
 #endif

@@ -1,5 +1,6 @@
-#ifndef _GWBITMASK_H
-#define _GWBITMASK_H
+#pragma once
+#ifndef _MAXSCALE_GWBITMASK_H
+#define _MAXSCALE_GWBITMASK_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,8 +14,11 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/limits.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file gwbitmask.h An implementation of an arbitrarily long bitmask
@@ -54,5 +58,7 @@ extern int  bitmask_isset(GWBITMASK *, int);
 extern int  bitmask_isallclear(GWBITMASK *);
 extern void bitmask_copy(GWBITMASK *, GWBITMASK *);
 extern char *bitmask_render_readable(GWBITMASK *);
+
+MXS_END_DECLS
 
 #endif

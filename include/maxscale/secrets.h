@@ -1,5 +1,6 @@
-#ifndef _SECRETS_H
-#define _SECRETS_H
+#pragma once
+#ifndef _MAXSCALE_SECRETS_H
+#define _MAXSCALE_SECRETS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -25,6 +26,7 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,8 +34,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-
 #include <openssl/aes.h>
+
+MXS_BEGIN_DECLS
 
 #define MAXSCALE_KEYLEN 32
 #define MAXSCALE_IV_LEN 16
@@ -55,5 +58,7 @@ enum
 extern int  secrets_writeKeys(const char *directory);
 extern char *decryptPassword(const char *);
 extern char *encryptPassword(const char*, const char *);
+
+MXS_END_DECLS
 
 #endif

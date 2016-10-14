@@ -1,5 +1,6 @@
-#ifndef _LISTENER_H
-#define _LISTENER_H
+#pragma once
+#ifndef _MAXSCALE_LISTENER_H
+#define _MAXSCALE_LISTENER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,9 +28,12 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/hashtable.h>
+
+MXS_BEGIN_DECLS
 
 struct dcb;
 struct service;
@@ -64,5 +68,7 @@ void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
 int listener_init_SSL(SSL_LISTENER *ssl_listener);
+
+MXS_END_DECLS
 
 #endif

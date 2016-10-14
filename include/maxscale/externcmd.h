@@ -1,5 +1,6 @@
-#ifndef _EXTERN_CMD_HG
-#define _EXTERN_CMD_HG
+#pragma once
+#ifndef _MAXSCALE_EXTERN_CMD_HG
+#define _MAXSCALE_EXTERN_CMD_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,12 +14,15 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/pcre2.h>
+
+MXS_BEGIN_DECLS
 
 #define MAXSCALE_EXTCMD_ARG_MAX 256
 
@@ -37,5 +41,7 @@ int externcmd_execute(EXTERNCMD* cmd);
 bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* re, const char* replace);
 bool externcmd_can_execute(const char* argstr);
 bool externcmd_matches(const EXTERNCMD* cmd, const char* match);
+
+MXS_END_DECLS
 
 #endif

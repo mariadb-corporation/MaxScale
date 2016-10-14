@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALE_CONFIG_H
 #define _MAXSCALE_CONFIG_H
 /*
@@ -12,6 +13,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/skygw_utils.h>
 #include <sys/utsname.h>
 #include <stdint.h>
@@ -32,6 +35,8 @@
  *
  * @endverbatim
  */
+
+MXS_BEGIN_DECLS
 
 #define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
 #define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
@@ -159,5 +164,7 @@ int                 config_threadcount();
 int                 config_truth_value(char *);
 void                free_config_parameter(CONFIG_PARAMETER* p1);
 bool                is_internal_service(const char *router);
+
+MXS_END_DECLS
 
 #endif

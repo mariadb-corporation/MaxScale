@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _MXS_AVRO_H
+#define _MXS_AVRO_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,8 +18,7 @@
  * MaxScale AVRO router
  *
  */
-#ifndef _MXS_AVRO_H
-#define _MXS_AVRO_H
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <blr_constants.h>
@@ -34,6 +36,8 @@
 #include <binlog_common.h>
 #include <sqlite3.h>
 #include <maxscale/protocol/mysql.h>
+
+MXS_BEGIN_DECLS
 
 /** SQLite3 version 3.7.14 introduced the new v2 close interface */
 #if SQLITE_VERSION_NUMBER < 3007014
@@ -311,5 +315,7 @@ extern void table_map_remap(uint8_t *ptr, uint8_t hdr_len, TABLE_MAP *map);
  */
 #define AVRO_CS_BUSY             0x0001
 #define AVRO_WAIT_DATA           0x0002
+
+MXS_END_DECLS
 
 #endif

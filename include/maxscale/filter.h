@@ -1,5 +1,6 @@
-#ifndef _FILTER_H
-#define _FILTER_H
+#pragma once
+#ifndef _MAXSCALE_FILTER_H
+#define _MAXSCALE_FILTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -22,10 +23,14 @@
  * 27/05/2014   Mark Riddoch            Initial implementation
  *
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
 #include <maxscale/buffer.h>
 #include <stdint.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * The FILTER handle points to module specific data, so the best we can do
@@ -115,5 +120,7 @@ int filter_standard_parameter(char *);
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, FILTER_DEF *);
 void dListFilters(DCB *);
+
+MXS_END_DECLS
 
 #endif

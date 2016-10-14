@@ -1,5 +1,6 @@
-#ifndef _THREAD_H
-#define _THREAD_H
+#pragma once
+#ifndef _MAXSCALE_THREAD_H
+#define _MAXSCALE_THREAD_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -22,6 +23,10 @@
  * of changes.
  */
 
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * Thread type and thread identifier function macros
  */
@@ -32,5 +37,7 @@
 extern THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg);
 extern void thread_wait(THREAD thd);
 extern void thread_millisleep(int ms);
+
+MXS_END_DECLS
 
 #endif

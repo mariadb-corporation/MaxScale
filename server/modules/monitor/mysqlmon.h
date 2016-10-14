@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MYSQLMON_H
 #define _MYSQLMON_H
 /*
@@ -13,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +31,8 @@
 #include <maxscale/config.h>
 #include <maxscale/externcmd.h>
 #include <maxscale/hashtable.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file mysqlmon.h - The MySQL monitor
@@ -79,5 +83,7 @@ typedef struct
                                    down before failover is initiated */
     bool warn_failover; /**< Log a warning when failover happens */
 } MYSQL_MONITOR;
+
+MXS_END_DECLS
 
 #endif

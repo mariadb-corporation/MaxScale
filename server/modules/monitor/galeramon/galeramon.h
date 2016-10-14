@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _GALERAMON_H
 #define _GALERAMON_H
 /*
@@ -13,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +30,8 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * @file galeramon.h - The Galera cluster monitor
@@ -58,5 +62,7 @@ typedef struct
     bool use_priority; /*< Use server priorities */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } GALERA_MONITOR;
+
+MXS_END_DECLS
 
 #endif

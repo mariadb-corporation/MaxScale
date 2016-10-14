@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _RWSPLIT_INTERNAL_H
+#define _RWSPLIT_INTERNAL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -18,15 +21,11 @@
  * Created on 08 August 2016, 11:54
  */
 
-#ifndef RWSPLIT_INTERNAL_H
-#define RWSPLIT_INTERNAL_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#include <maxscale/cdefs.h>
 #include <maxscale/query_classifier.h>
-    
+
+MXS_BEGIN_DECLS
+
 /* This needs to be removed along with dependency on it - see the 
  * rwsplit_tmp_table_multi functions
  */
@@ -144,6 +143,8 @@ qc_query_type_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_
 #ifdef __cplusplus
 }
 #endif
+
+MXS_END_DECLS
 
 #endif /* RWSPLIT_INTERNAL_H */
 
