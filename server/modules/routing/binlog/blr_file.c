@@ -35,6 +35,9 @@
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
+ * 16/09/2016   Massimiliano Pinto  Addition of IGNORABLE_EVENT in case of a missing event
+ *                                  detected from master binlog stream
+ * 19/09/2016   Massimiliano Pinto  START_ENCRYPTION_EVENT is detected by maxbinlocheck.
  *
  * @endverbatim
  */
@@ -60,6 +63,7 @@
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
+#include <inttypes.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
@@ -70,10 +74,11 @@ int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
+extern void encode_value(unsigned char *data, unsigned int value, int len);
 
 typedef struct binlog_event_desc
 {
-    unsigned long long event_pos;
+    uint64_t event_pos;
     uint8_t event_type;
     time_t  event_time;
 } BINLOG_EVENT_DESC;
@@ -81,6 +86,44 @@ typedef struct binlog_event_desc
 static void blr_print_binlog_details(ROUTER_INSTANCE *router,
                                      BINLOG_EVENT_DESC first_event_time,
                                      BINLOG_EVENT_DESC last_event_time);
+
+static uint8_t *blr_create_ignorable_event(uint32_t event_size,
+                                           REP_HEADER *hdr,
+                                           uint32_t event_pos,
+                                           bool do_checksum);
+static int blr_write_special_event(ROUTER_INSTANCE *router,
+                                   uint32_t file_offset,
+                                   uint32_t hole_size,
+                                   REP_HEADER *hdr,
+                                   int type);
+
+/** MaxScale generated events */
+typedef enum
+{
+    BLRM_IGNORABLE, /*< Ignorable event */
+    BLRM_START_ENCRYPTION /*< Start Encryption event */
+} generated_event_t;
+
+/**
+ * MariaDB 10.1.7 Start Encryption event content
+ *
+ * Event header:    19 bytes
+ * Content size:    17 bytes
+ *     crypto scheme 1 byte
+ *     key_version   4 bytes
+ *     nonce random 12 bytes
+ *
+ * Event size is 19 + 17 = 36 bytes
+ */
+typedef struct start_encryption_event
+{
+    uint8_t header[BINLOG_EVENT_HDR_LEN]; /**< Replication event header */
+    uint8_t binlog_crypto_scheme;         /**< Encryption scheme */
+    uint32_t binlog_key_version;          /**< Encryption key version */
+    uint8_t nonce[BLRM_NONCE_LENGTH];     /**< nonce (random bytes) of current binlog.
+                                           * These bytes + the binlog event current pos
+                                           * form the encrryption IV for the event */
+} START_ENCRYPTION_EVENT;
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -364,6 +407,24 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
 {
     int n;
 
+    uint64_t file_offset = router->current_pos;
+
+    /**
+     * Check for possible hole looking at current pos and next pos
+     * Fill the gap with a self generated ignorable event
+     * Binlog file position is incremented by blr_write_special_event()
+     */
+
+    if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
+    {
+        uint64_t hole_size = hdr->next_pos - file_offset - size;
+        if (!blr_write_special_event(router, file_offset, hole_size, hdr, BLRM_IGNORABLE))
+        {
+            return 0;
+        }
+    }
+
+    /* Write current received event form master */
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
     {
@@ -383,6 +444,8 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         }
         return 0;
     }
+
+    /* Increment offsets */
     spinlock_acquire(&router->binlog_lock);
     router->current_pos = hdr->next_pos;
     router->last_written += size;
@@ -1032,6 +1095,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     BINLOG_EVENT_DESC last_event;
     BINLOG_EVENT_DESC fde_event;
     int fde_seen = 0;
+    int start_encryption_seen = 0;
 
     memset(&first_event, '\0', sizeof(first_event));
     memset(&last_event, '\0', sizeof(last_event));
@@ -1198,6 +1262,35 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                     return 0;
                 }
             }
+        }
+
+        /* If binlog is encrypted just set pos = pos + event_size and continue */
+        if (start_encryption_seen)
+        {
+             uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
+
+             /**
+              * Events are encrypted.
+              *
+              * The routine doesn't decrypt them but follows
+              * next event based on the event_size (4 bytes) that is af offset
+              * of BINLOG_EVENT_LEN_OFFSET (9) and it's in clear.
+              *
+              */
+             MXS_DEBUG("** Encrypted Event @ %lu: size is %lu, next event at %lu\n",
+                       (unsigned long)pos,
+                       (unsigned long)event_size,
+                       (unsigned long)(pos + event_size));
+
+            /* Next event pos is ps + event size */
+            pos = pos + event_size;
+
+            /* Update other offsets as well */
+            router->binlog_position = pos;
+            router->current_safe_event = pos;
+            router->current_pos = pos;
+
+            continue;
         }
 
         /* fill replication header struct */
@@ -1395,8 +1488,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
         {
             int event_header_length;
-            int event_header_ntypes;
-            int n_events;
             int check_alg;
             uint8_t *checksum;
             char    buf_t[40];
@@ -1421,29 +1512,40 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                           pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t);
             }
 
-            event_header_length =  ptr[2 + 50 + 4];
-            event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
+            /* FDE is:
+             *
+             * 2 bytes          binlog-version
+             * string[50]       mysql-server version
+             * 4 bytes          create timestamp
+             * 1                event header length, 19 is the current length
+             * string[p]        event type header lengths:
+             *                  an array indexed by [Binlog Event Type - 1]
+             */
 
-            if (event_header_ntypes == 168)
-            {
-                /* mariadb 10 LOG_EVENT_TYPES*/
-                event_header_ntypes -= 163;
-            }
-            else
-            {
-                if (event_header_ntypes == 165)
-                {
-                    /* mariadb 5 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 160;
-                }
-                else
-                {
-                    /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                    event_header_ntypes -= 35;
-                }
-            }
+            /* ptr now points to event_header_length byte.
+             * This offset is just 1 byte before the number of supported events offset
+             */
+            event_header_length =  ptr[BLRM_FDE_EVENT_TYPES_OFFSET - 1];
 
-            n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
+            /* The number of supported events formula:
+             * number_of_events = event_size - (event_header_len + BLRM_FDE_EVENT_TYPES_OFFSET)
+             */
+            int n_events = hdr.event_size - event_header_length - BLRM_FDE_EVENT_TYPES_OFFSET;
+
+            /**
+             * The FDE event also carries 5 additional bytes:
+             *
+             * 1 byte is the checksum_alg_type and 4 bytes are the computed crc32
+             *
+             * These 5 bytes are always present even if alg_type is NONE/UNDEF:
+             * then the 4 crc32 bytes must not be checked, whatever the value is.
+             *
+             * In case of CRC32 algo_type the 4 bytes contain the event crc32.
+             */
+            int fde_extra_bytes = BINLOG_EVENT_CRC_ALGO_TYPE + BINLOG_EVENT_CRC_SIZE;
+
+            /* Now remove from the calculated number of events the extra 5 bytes */
+            n_events -= fde_extra_bytes;
 
             if (debug)
             {
@@ -1452,30 +1554,75 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 MXS_DEBUG("       FDE Header EventLength %i"
                           ", N. of supported MySQL/MariaDB events %i",
                           event_header_length,
-                          (n_events - event_header_ntypes));
+                          n_events);
             }
 
-            if (event_header_ntypes < n_events)
+            /* Check whether Master is sending events with CRC32 checksum */
+            checksum = ptr + hdr.event_size - event_header_length - fde_extra_bytes;
+            check_alg = checksum[0];
+
+            if (debug)
             {
-                checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-                check_alg = checksum[0];
+                MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
+                          check_alg,
+                          check_alg == 1 ?
+                          "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
+            }
+            if (check_alg == 1)
+            {
+                found_chksum = 1;
+            }
+            else
+            {
+                found_chksum = 0;
+            }
+        }
+
+        /* Detect possible Start Encryption Event */
+        if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
+        {
+                START_ENCRYPTION_EVENT ste_event;
+                memset(&ste_event, '\0', sizeof(START_ENCRYPTION_EVENT));
+                char nonce_hex[BLRM_NONCE_LENGTH * 2 + 1] = "";
+                /* The start encryption event data is 17 bytes long:
+                 * Scheme = 1
+                 * Key Version: 4
+                 * nonce = 12
+                 */
+
+                /* Fill the event content, after the event header */
+                ste_event.binlog_crypto_scheme = ptr[0];
+                ste_event.binlog_key_version = extract_field(ptr + 1, 32);
+                memcpy(ste_event.nonce, ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
+
+                gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
 
                 if (debug)
                 {
-                    MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
-                              check_alg,
-                              check_alg == 1 ?
-                              "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF");
+                    char *cksum_format = ", crc32 0x";
+                    char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
+                    uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
+                    cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
+                    cksum_data[0] = *(ptr + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
+
+                    if (found_chksum)
+                    {
+                        strcpy(hex_checksum, cksum_format);
+                        gw_bin2hex(hex_checksum + strlen(cksum_format) , cksum_data, BINLOG_EVENT_CRC_SIZE);
+                    }
+
+                    MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u%s",
+                              pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags,
+                              hex_checksum);
+
+                    MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
+                              " nonce: %s\n", ste_event.binlog_crypto_scheme,
+                              ste_event.binlog_key_version, nonce_hex);
                 }
-                if (check_alg == 1)
-                {
-                    found_chksum = 1;
-                }
-                else
-                {
-                    found_chksum = 0;
-                }
-            }
+
+                start_encryption_seen = 1;
         }
 
         /* set last event time, pos and type */
@@ -1994,7 +2141,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
 /** Print Binlog Details
  *
- * @param router    The router instance
+ * @param router        The router instance
  * @param first_event   First Event details
  * @param last_event    First Event details
  */
@@ -2019,7 +2166,7 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 
     event_desc = blr_get_event_description(router, first_event.event_type);
 
-    MXS_NOTICE("%lu @ %llu, %s, (%s), First EventTime",
+    MXS_NOTICE("%lu @ %" PRIu64 ", %s, (%s), First EventTime",
                first_event.event_time, first_event.event_pos,
                event_desc != NULL ? event_desc : "unknown", buf_t);
 
@@ -2034,8 +2181,154 @@ blr_print_binlog_details(ROUTER_INSTANCE *router,
 
     event_desc = blr_get_event_description(router, last_event.event_type);
 
-    MXS_NOTICE("%lu @ %llu, %s, (%s), Last EventTime",
+    MXS_NOTICE("%lu @ %" PRIu64 ", %s, (%s), Last EventTime",
                last_event.event_time, last_event.event_pos,
                event_desc != NULL ? event_desc : "unknown", buf_t);
 }
 
+/** Create an ignorable event
+ *
+ * @param event_size     The size of the new event being created (crc32 4 bytes could be included)
+ * @param hdr            Current replication event header, received from master
+ * @param event_pos      The position in binlog file of the new event
+ * @param do_checksum    Whether checksum must be calculated and stored
+ * @return               Returns the pointer of new event
+ */
+static uint8_t *
+blr_create_ignorable_event(uint32_t event_size,
+                           REP_HEADER *hdr,
+                           uint32_t event_pos,
+                           bool do_checksum)
+{
+    uint8_t *new_event;
+
+    if (event_size < BINLOG_EVENT_HDR_LEN)
+    {
+        MXS_ERROR("blr_create_ignorable_event an event of %lu bytes"
+                  " is not valid in blr_file.c", (unsigned long)event_size);
+        return NULL;
+    }
+
+    // Allocate space for event: size might contain the 4 crc32
+    new_event = MXS_CALLOC(1, event_size);
+    if (new_event == NULL)
+    {
+        return NULL;
+    }
+
+    // Populate Event header 19 bytes for Ignorable Event
+    encode_value(&new_event[0], hdr->timestamp, 32); // same timestamp as in current received event
+    new_event[4] = IGNORABLE_EVENT; // type is IGNORABLE_EVENT
+    encode_value(&new_event[5], hdr->serverid, 32); // same serverid as in current received event
+    encode_value(&new_event[9], event_size, 32); // event size
+    encode_value(&new_event[13], event_pos + event_size, 32); // next_pos
+    encode_value(&new_event[17], LOG_EVENT_IGNORABLE_F, 16); // flag is LOG_EVENT_IGNORABLE_F
+
+    /* if checksum is required calculate the crc32 and add it in the last 4 bytes*/
+    if (do_checksum)
+    {
+        /*
+         * Now add the CRC to the Ignorable binlog event.
+         *
+         * The algorithm is first to compute the checksum of an empty buffer
+         * and then the checksum of the real event: 4 byte less than event_size
+         */
+         uint32_t chksum;
+         chksum = crc32(0L, NULL, 0);
+         chksum = crc32(chksum, new_event, event_size - 4);
+
+         // checksum is stored after current event data using 4 bytes
+         encode_value(new_event + event_size - 4, chksum, 32);
+    }
+    return new_event;
+}
+
+/**
+ * Create and write a special event (not received from master) into binlog file
+ *
+ * @param router        The current router instance
+ * @param file_offset   Position where event will be written
+ * @param event_size    The size of new event (it might hold the 4 bytes crc32)
+ * @param hdr           Replication header of the current reived event (from Master)
+ * @param type          Type of special event to create and write
+ * @return              1 on success, 0 on error
+ */
+static int
+blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr, int type)
+{
+    int n;
+    uint8_t *new_event;
+    char *new_event_desc;
+
+    switch (type)
+    {
+        case BLRM_IGNORABLE:
+            new_event_desc = "IGNORABLE";
+            MXS_INFO("Hole detected while writing in binlog '%s' @ %lu: an %s event "
+                     "of %lu bytes will be written at pos %lu",
+                     router->binlog_name,
+                     router->current_pos,
+                     new_event_desc,
+                     (unsigned long)event_size,
+                     (unsigned long)file_offset);
+
+            /* Create the ignorable event */
+            if ((new_event = blr_create_ignorable_event(event_size,
+                                                         hdr,
+                                                         file_offset,
+                                                         router->master_chksum)) == NULL)
+            {
+                   return 0;
+            }
+            break;
+        default:
+            new_event_desc = "UNKNOWN";
+            MXS_ERROR("Cannot create special binlog event of %s type and size %lu "
+                       "in binlog file '%s' @ %lu",
+                       new_event_desc,
+                       (unsigned long)event_size,
+                       router->binlog_name,
+                       router->current_pos);
+            new_event_desc = "UNKNOWN";
+            return 0;
+            break;
+    }
+
+    // Write the event
+    if ((n = pwrite(router->binlog_fd, new_event, event_size, file_offset)) != event_size)
+    {
+       char err_msg[STRERROR_BUFLEN];
+       MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
+                 "Truncating to previous record.",
+                 router->service->name, new_event_desc, (unsigned long)file_offset,
+                 router->binlog_name,
+                 strerror_r(errno, err_msg, sizeof(err_msg)));
+
+       /* Remove any partial event that was written */
+       if (ftruncate(router->binlog_fd, router->last_written))
+       {
+           MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
+                     router->service->name, new_event_desc, (unsigned long)file_offset,
+                     router->binlog_name,
+                     strerror_r(errno, err_msg, sizeof(err_msg)));
+       }
+       MXS_FREE(new_event);
+       return 0;
+    }
+
+    MXS_FREE(new_event);
+
+    // Increment offsets, next event will be written after this special one
+    spinlock_acquire(&router->binlog_lock);
+
+    router->last_written += event_size;
+    router->current_pos = file_offset + event_size;
+    router->last_event_pos = file_offset;
+
+    spinlock_release(&router->binlog_lock);
+
+    // Force write
+    fsync(router->binlog_fd);
+
+    return 1;
+}

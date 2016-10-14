@@ -50,6 +50,7 @@
  *                                  for connection error and authentication failure.
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
+ * 16/08/2016   Massimiliano Pinto  Addition of Start Encription Event description
  *
  * @endverbatim
  */
@@ -1116,7 +1117,8 @@ static char *event_names_mariadb10[] =
     /* New MariaDB 10.x event numbers */
     "Binlog Checkpoint Event",
     "GTID Event",
-    "GTID List Event"
+    "GTID List Event",
+    "Start Encryption Event"
 };
 
 /**

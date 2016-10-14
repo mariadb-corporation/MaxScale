@@ -34,6 +34,7 @@
  * 11/07/16     Massimiliano Pinto      Added SSL backend support
  * 22/07/16     Massimiliano Pinto      Added Semi-Sync replication support
  * 01/08/2016   Massimiliano Pinto      Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
+ * 16/09/2016   Massimiliano Pinto      Addition of MARIADB10_START_ENCRYPTION_EVENT 0xa4
  *
  * @endverbatim
  */
@@ -45,6 +46,7 @@
 #include <maxscale/thread.h>
 #include <zlib.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/secrets.h>
 
 #define BINLOG_FNAMELEN         255
 #define BLR_PROTOCOL            "MySQLBackend"
@@ -53,7 +55,13 @@
 #define BINLOG_NAMEFMT          "%s.%06d"
 #define BINLOG_NAME_ROOT        "mysql-bin"
 
-#define BINLOG_EVENT_HDR_LEN    19
+#define BINLOG_EVENT_HDR_LEN       19
+#define BINLOG_EVENT_CRC_ALGO_TYPE  1
+#define BINLOG_EVENT_CRC_SIZE       4
+/* BINLOG_EVENT_LEN_OFFSET points to event_size in event_header */
+#define BINLOG_EVENT_LEN_OFFSET     9
+#define BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN  13
+#define BINLOG_FATAL_ERROR_READING         1236
 
 /**
  * Binlog event types
@@ -103,8 +111,9 @@
 #define MARIADB10_BINLOG_CHECKPOINT_EVENT       0xa1
 #define MARIADB10_GTID_EVENT                    0xa2
 #define MARIADB10_GTID_GTID_LIST_EVENT          0xa3
+#define MARIADB10_START_ENCRYPTION_EVENT        0xa4
 
-#define MAX_EVENT_TYPE_MARIADB10                0xa3
+#define MAX_EVENT_TYPE_MARIADB10                0xa4
 
 /* Maximum event type so far */
 #define MAX_EVENT_TYPE_END                      MAX_EVENT_TYPE_MARIADB10
@@ -536,6 +545,26 @@ typedef struct router_instance
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
+
+/**
+ * Defines and offsets for binlog encryption
+ *
+ * BLRM_FDE_EVENT_TYPES_OFFSET is the offset in FDE event content that points to
+ * the number of events the master server supports.
+ */
+#define BLR_FDE_EVENT_BINLOG_VERSION       2
+#define BLR_FDE_EVENT_SERVER_VERSION      50
+#define BLR_FDE_EVENT_BINLOG_TIME          4
+#define BLR_FDE_EVENT_BINLOG_EVENT_HDR_LEN 1
+#define BLRM_FDE_EVENT_TYPES_OFFSET        (BLR_FDE_EVENT_BINLOG_VERSION + \
+                                            BLR_FDE_EVENT_SERVER_VERSION + \
+                                            BLR_FDE_EVENT_BINLOG_TIME + \
+                                            BLR_FDE_EVENT_BINLOG_EVENT_HDR_LEN)
+#define BLRM_CRYPTO_SCHEME_LENGTH   1
+#define BLRM_KEY_VERSION_LENGTH     4
+#define BLRM_IV_LENGTH              AES_BLOCK_SIZE
+#define BLRM_IV_OFFS_LENGTH         4
+#define BLRM_NONCE_LENGTH           (BLRM_IV_LENGTH - BLRM_IV_OFFS_LENGTH)
 
 /**
  * State machine for the master to MaxScale replication
