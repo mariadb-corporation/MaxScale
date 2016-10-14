@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <maxscale/log_manager.h>
 #include <string.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/users.h>
 #include <maxscale/dbusers.h>
 #include <strings.h>

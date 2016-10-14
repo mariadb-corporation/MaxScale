@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <maxscale/skygw_utils.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <string.h>
 #include <strings.h>
 #include <maxscale/alloc.h>

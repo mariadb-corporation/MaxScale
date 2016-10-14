@@ -34,7 +34,7 @@ MXS_BEGIN_DECLS
 #define FSYNCLIMIT 10
 
 #include <maxscale/skygw_types.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 #define DISKWRITE_LATENCY (5*MSEC_USEC)
 

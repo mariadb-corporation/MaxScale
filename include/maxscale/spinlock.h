@@ -26,7 +26,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 

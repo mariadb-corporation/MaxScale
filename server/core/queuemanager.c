@@ -33,7 +33,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/hk_heartbeat.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 #if defined(SS_DEBUG)
 int debug_check_fail = 0;

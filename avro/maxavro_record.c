@@ -14,7 +14,7 @@
 #include "maxavro.h"
 #include <maxscale/skygw_utils.h>
 #include <string.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include <errno.h>
 

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _MAXSCALE_SKYGW_DEBUG_H
-#define _MAXSCALE_SKYGW_DEBUG_H
+#ifndef _MAXSCALE_DEBUG_H
+#define _MAXSCALE_DEBUG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,15 +15,12 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
-
-#define __USE_UNIX98 1
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <stdbool.h>
+#include <maxscale/log_manager.h>
 
 MXS_BEGIN_DECLS
 
@@ -572,4 +569,4 @@ static bool conn_open[10240];
 
 MXS_END_DECLS
 
-#endif /* SKYGW_DEBUG_H */
+#endif

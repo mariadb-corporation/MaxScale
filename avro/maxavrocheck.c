@@ -23,7 +23,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <getopt.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 static int verbose = 0;
 static uint64_t seekto = 0;

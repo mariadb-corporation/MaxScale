@@ -37,7 +37,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/resultset.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 MXS_BEGIN_DECLS
 

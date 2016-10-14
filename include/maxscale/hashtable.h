@@ -30,7 +30,7 @@
  * @endverbatim
  */
 #include <maxscale/cdefs.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS

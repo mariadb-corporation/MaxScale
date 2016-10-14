@@ -23,7 +23,7 @@
 #include <time.h>
 #include <stddef.h>
 #include <regex.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/skygw_types.h>
 #include <sys/time.h>
 #include <maxscale/skygw_utils.h>

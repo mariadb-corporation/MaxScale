@@ -20,7 +20,7 @@
 #include <maxscale/monitor.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 static char *version_str = (char*)"V1.0.0";
 

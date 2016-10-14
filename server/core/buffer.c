@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/hint.h>
