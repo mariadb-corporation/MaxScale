@@ -15,7 +15,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/skygw_utils.h>
+#include "skygw_utils.h"
 
 MXS_BEGIN_DECLS
 

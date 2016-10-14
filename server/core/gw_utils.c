@@ -37,8 +37,6 @@
 #include <maxscale/gw.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
-
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
 SPINLOCK tmplock = SPINLOCK_INIT;

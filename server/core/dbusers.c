@@ -43,7 +43,6 @@
 #include <maxscale/service.h>
 #include <maxscale/users.h>
 #include <maxscale/dbusers.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/protocol/mysql.h>

@@ -40,7 +40,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/skygw_utils.h>
+#include <maxscale/utils.h>
 #include <maxscale/log_manager.h>
 #include <time.h>
 #include <sys/time.h>

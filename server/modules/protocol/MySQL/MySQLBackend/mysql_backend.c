@@ -12,7 +12,6 @@
  */
 
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/utils.h>

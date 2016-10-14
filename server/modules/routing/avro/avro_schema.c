@@ -27,7 +27,6 @@
 #include <maxscale/log_manager.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/debug.h>
 #include <string.h>
 #include <strings.h>

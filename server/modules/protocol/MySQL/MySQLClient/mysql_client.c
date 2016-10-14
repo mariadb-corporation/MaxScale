@@ -46,7 +46,6 @@
  * 31/05/2016   Martin Brampton         Implement connection throttling
  */
 #include <maxscale/gw_protocol.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>

@@ -31,7 +31,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
 #include <maxscale/users.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/dbusers.h>

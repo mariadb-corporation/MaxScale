@@ -28,7 +28,6 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/debug.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 #include "maxscale/mlist.h"

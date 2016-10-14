@@ -20,7 +20,6 @@
 #include "readwritesplit.h"
 #include "rwsplit_internal.h"
 
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>

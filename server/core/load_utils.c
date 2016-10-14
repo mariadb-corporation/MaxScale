@@ -36,7 +36,6 @@
 #include <dlfcn.h>
 #include <maxscale/modules.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
 #include <maxscale/notification.h>

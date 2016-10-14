@@ -43,7 +43,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
 

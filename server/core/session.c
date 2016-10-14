@@ -40,7 +40,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/atomic.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/housekeeper.h>
 

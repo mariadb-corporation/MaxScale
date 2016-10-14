@@ -40,7 +40,6 @@
 #include <stdlib.h>
 #include <glob.h>
 #include <maxscale/alloc.h>
-#include <maxscale/skygw_utils.h>
 
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";

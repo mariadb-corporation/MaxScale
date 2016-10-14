@@ -96,9 +96,6 @@ struct skygw_file_st
     skygw_chk_t  sf_chk_tail;
 };
 
-bool utils_init(); /*< Call this first before using any other function */
-void utils_end();
-
 /** Skygw thread routines */
 skygw_thread_t*   skygw_thread_init(const char* name,
                                     void* (*sth_thrfun)(void* data),
@@ -166,19 +163,6 @@ int skygw_rwlock_unlock(skygw_rwlock_t* rwlock);
 int skygw_rwlock_init(skygw_rwlock_t** rwlock);
 
 size_t get_decimal_len(size_t s);
-
-char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest,
-                            size_t* destsize);
-char* replace_values(const char** src, const size_t* srcsize, char** dest,
-                     size_t* destsize);
-char* replace_literal(char* haystack,
-                      const char* needle,
-                      const char* replacement);
-char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize);
-bool is_valid_posix_path(char* path);
-bool strip_escape_chars(char*);
-char* trim(char *str);
-char* squeeze_whitespace(char* str);
 
 MXS_END_DECLS
 

@@ -74,7 +74,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <maxscale/skygw_utils.h>
+#include <maxscale/utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 

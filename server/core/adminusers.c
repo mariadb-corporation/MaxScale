@@ -21,7 +21,6 @@
 #include <crypt.h>
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/gwdirs.h>
 #include <sys/stat.h>

@@ -81,7 +81,6 @@
 #include <maxscale/gw.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/listener.h>

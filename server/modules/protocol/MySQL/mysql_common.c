@@ -46,7 +46,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <netinet/tcp.h>
 #include <maxscale/modutil.h>

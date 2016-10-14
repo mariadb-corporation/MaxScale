@@ -71,7 +71,6 @@
 #include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
 #include <maxscale/protocol/mysql.h>

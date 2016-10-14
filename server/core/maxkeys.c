@@ -25,7 +25,6 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <maxscale/secrets.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/gwdirs.h>
 

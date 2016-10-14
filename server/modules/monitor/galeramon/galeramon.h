@@ -35,7 +35,6 @@
 #include <maxscale/thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/dcb.h>

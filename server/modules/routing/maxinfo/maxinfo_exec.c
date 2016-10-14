@@ -41,7 +41,6 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/poll.h>
 #include "maxinfo.h"
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
