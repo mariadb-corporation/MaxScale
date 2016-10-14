@@ -1,5 +1,6 @@
-#ifndef _SERVICE_H
-#define _SERVICE_H
+#pragma once
+#ifndef _MAXSCALE_SERVICE_H
+#define _MAXSCALE_SERVICE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,21 +14,6 @@
  * Public License.
  */
 
-#include <time.h>
-#include <maxscale/gw_protocol.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/server.h>
-#include <maxscale/listener.h>
-#include <maxscale/filter.h>
-#include <maxscale/hashtable.h>
-#include <maxscale/resultset.h>
-#include <maxscale/config.h>
-#include <maxscale/queuemanager.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
 /**
  * @file service.h
  *
@@ -53,6 +39,26 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <time.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/server.h>
+#include <maxscale/listener.h>
+#include <maxscale/filter.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/resultset.h>
+#include <maxscale/config.h>
+#include <maxscale/queuemanager.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
+
+MXS_BEGIN_DECLS
+
 struct server;
 struct router;
 struct router_object;
@@ -221,5 +227,7 @@ extern int serviceSessionCountAll();
 extern RESULTSET *serviceGetList();
 extern RESULTSET *serviceGetListenerList();
 extern bool service_all_services_have_listeners();
+
+MXS_END_DECLS
 
 #endif

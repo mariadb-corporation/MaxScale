@@ -163,10 +163,10 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
      {
          uint8_t *packet = GWBUF_DATA(querybuf);
          unsigned char ptype = packet[4];
-         size_t len = MIN(GWBUF_LENGTH(querybuf),
+         size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
                 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
          char *data = (char *)&packet[5];
-         char *contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
+         char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
          char *qtypestr = qc_get_qtype_str(qtype);
          MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
            (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),

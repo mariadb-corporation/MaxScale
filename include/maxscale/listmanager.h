@@ -1,5 +1,6 @@
-#ifndef _LISTMANAGER_H
-#define _LISTMANAGER_H
+#pragma once
+#ifndef _MAXSCALE_LISTMANAGER_H
+#define _MAXSCALE_LISTMANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,8 +27,11 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
+
+MXS_BEGIN_DECLS
 
 struct dcb;
 
@@ -115,5 +119,6 @@ void list_map(LIST_CONFIG *list_config, bool (*callback)(void *, ...));
 list_entry_t *list_remove_first(LIST_CONFIG *list_config);
 list_entry_t *list_remove_last(LIST_CONFIG *list_config);
 
+MXS_END_DECLS
 
 #endif /* LISTMANAGER_H */

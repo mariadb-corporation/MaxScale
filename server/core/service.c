@@ -67,6 +67,7 @@
 #include <maxscale/version.h>
 #include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 /** To be used with configuration type checks */
 typedef struct typelib_st
@@ -78,13 +79,13 @@ typedef struct typelib_st
 
 /** Set of subsequent false,true pairs */
 static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
-typelib_t bool_type  = {array_nelems(bool_strings) - 1, "bool_type", bool_strings};
+typelib_t bool_type  = {MXS_ARRAY_NELEMS(bool_strings) - 1, "bool_type", bool_strings};
 
 /** List of valid values */
 static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
 typelib_t sqlvar_target_type =
 {
-    array_nelems(sqlvar_target_strings) - 1,
+    MXS_ARRAY_NELEMS(sqlvar_target_strings) - 1,
     "sqlvar_target_type",
     sqlvar_target_strings
 };
@@ -382,7 +383,7 @@ int serviceStartAllPorts(SERVICE* service)
             service->stats.n_failed_starts++;
             char taskname[strlen(service->name) + strlen("_start_retry_") +
                           (int) ceil(log10(INT_MAX)) + 1];
-            int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
+            int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
             snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
                      service->name, service->stats.n_failed_starts);
             hktask_oneshot(taskname, service_internal_restart,

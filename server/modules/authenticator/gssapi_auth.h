@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _GSSAPI_AUTH_H
+#define _GSSAPI_AUTH_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -11,12 +14,12 @@
  * Public License.
  */
 
-#ifndef _GSSAPI_AUTH_H
-#define _GSSAPI_AUTH_H
-
+#include <maxscale/cdefs.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <gssapi.h>
+
+MXS_BEGIN_DECLS
 
 /** Client auth plugin name */
 static const char auth_plugin_name[] = "auth_gssapi_client";
@@ -47,5 +50,7 @@ void gssapi_auth_free(void *data);
 
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
+
+MXS_END_DECLS
 
 #endif

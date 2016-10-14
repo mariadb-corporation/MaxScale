@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _MAXSCALE_DEBUG_H
+#define _MAXSCALE_DEBUG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -11,29 +14,15 @@
  * Public License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <maxscale/cdefs.h>
 #include <assert.h>
 #include <limits.h>
-
-#define __USE_UNIX98 1
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <stdbool.h>
+#include <maxscale/log_manager.h>
 
-#if !defined(SKYGW_DEBUG_H)
-#define SKYGW_DEBUG_H
-
-
-#ifdef __cplusplus
-#define EXTERN_C_BLOCK_BEGIN    extern "C" {
-#define EXTERN_C_BLOCK_END      }
-#define EXTERN_C_FUNC           extern "C"
-#else
-#define EXTERN_C_BLOCK_BEGIN
-#define EXTERN_C_BLOCK_END
-#define EXTERN_C_FUNC
-#endif
+MXS_BEGIN_DECLS
 
 #if defined(SS_DEBUG)
 # define SS_PROF
@@ -578,4 +567,6 @@ typedef enum skygw_chk_t
 static bool conn_open[10240];
 #endif /* FAKE_CODE */
 
-#endif /* SKYGW_DEBUG_H */
+MXS_END_DECLS
+
+#endif

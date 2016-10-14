@@ -5,7 +5,7 @@
 #include "builtin_functions.h"
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 static struct
 {

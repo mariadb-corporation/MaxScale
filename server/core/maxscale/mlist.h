@@ -1,5 +1,6 @@
-#ifndef _MLIST_H
-#define _MLIST_H
+#pragma once
+#ifndef _MAXSCALE_MLIST_H
+#define _MAXSCALE_MLIST_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,9 +14,10 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/skygw_utils.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 typedef struct mlist_node_st mlist_node_t;
 
@@ -74,6 +76,6 @@ mlist_cursor_t* mlist_cursor_init(mlist_t* ml);
 void*           mlist_cursor_get_data_nomutex(mlist_cursor_t* c);
 bool            mlist_cursor_move_to_first(mlist_cursor_t* c);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

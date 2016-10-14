@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALE_FILTER_CACHE_RULES_H
 #define _MAXSCALE_FILTER_CACHE_RULES_H
 /*
@@ -13,12 +14,14 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <jansson.h>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include <maxscale/pcre2.h>
 
+MXS_BEGIN_DECLS
 
 typedef enum cache_rule_attribute
 {
@@ -70,5 +73,7 @@ CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug);
 
 bool cache_rules_should_store(CACHE_RULES *rules, const char *default_db, const GWBUF* query);
 bool cache_rules_should_use(CACHE_RULES *rules, const SESSION *session);
+
+MXS_END_DECLS
 
 #endif

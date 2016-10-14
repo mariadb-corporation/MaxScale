@@ -1,5 +1,6 @@
-#ifndef _MAXSCALE_FILTER_CACHE_CACHE_H
-#define _MAXSCALE_FILTER_CACHE_CACHE_H
+#pragma once
+#ifndef _MAXSCALE_FILTER_CACHE_CACHE_STORAGE_API_H
+#define _MAXSCALE_FILTER_CACHE_CACHE_STORAGE_API_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -17,9 +18,9 @@
 #include <stdint.h>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 typedef enum cache_result
 {
@@ -116,6 +117,6 @@ typedef struct cache_storage_api
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
 typedef CACHE_STORAGE_API* (*CacheGetStorageAPIFN)();
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _TELNETD_H
 #define _TELNETD_H
 /*
@@ -24,8 +25,13 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */
@@ -57,4 +63,7 @@ typedef struct telnetd
 #define TELNET_IAC               255
 #define TELNET_ECHO              1
 #define TELNET_SUPPRESS_GO_AHEAD 3
+
+MXS_END_DECLS
+
 #endif

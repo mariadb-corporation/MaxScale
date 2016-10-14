@@ -2004,7 +2004,7 @@ static int routeQuery(ROUTER* instance,
     {
         uint8_t* packet = GWBUF_DATA(querybuf);
         unsigned char ptype = packet[4];
-        size_t len = MIN(GWBUF_LENGTH(querybuf),
+        size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
                          MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);

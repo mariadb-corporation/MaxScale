@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MYSQLHINT_H
 #define _MYSQLHINT_H
 /*
@@ -19,7 +20,11 @@
  * Date         Who             Description
  * 17-07-2014   Mark Riddoch    Initial implementation
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/hint.h>
+
+MXS_BEGIN_DECLS
 
 /* Parser tokens for the hint parser */
 typedef enum
@@ -105,11 +110,10 @@ typedef struct
 #define HS_PVALUE       5
 #define HS_PREPARE      6
 
-
 extern HINT *hint_parser(HINT_SESSION *session, GWBUF *request);
 NAMEDHINTS* free_named_hint(NAMEDHINTS* named_hint);
 HINTSTACK*  free_hint_stack(HINTSTACK* hint_stack);
 
-
+MXS_END_DECLS
 
 #endif

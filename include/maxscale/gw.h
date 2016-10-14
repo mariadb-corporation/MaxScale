@@ -1,5 +1,6 @@
-#ifndef _GW_HG
-#define _GW_HG
+#pragma once
+#ifndef _MAXSCALE_GW_HG
+#define _MAXSCALE_GW_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,7 +14,7 @@
  * Public License.
  */
 
-
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -34,6 +35,8 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <maxscale/gwdirs.h>
+
+MXS_BEGIN_DECLS
 
 #define EXIT_FAILURE 1
 
@@ -83,4 +86,7 @@ char* get_libdir();
 long get_processor_count();
 void clean_up_pathname(char *path);
 bool mxs_mkdir_all(const char *path, int mask);
+
+MXS_END_DECLS
+
 #endif

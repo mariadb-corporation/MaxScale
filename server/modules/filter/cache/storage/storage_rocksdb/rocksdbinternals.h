@@ -14,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include "storage_rocksdb.h"
 #include <rocksdb/env.h>
 #include <rocksdb/version.h>

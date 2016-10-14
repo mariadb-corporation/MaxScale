@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MMMON_H
 #define _MMMON_H
 /*
@@ -13,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +35,8 @@
  * @file mmmon.h - The Multi-Master monitor
  */
 
+MXS_BEGIN_DECLS
+
 /**
  * The handle for an instance of a Multi-Master Monitor module
  */
@@ -48,5 +52,7 @@ typedef struct
     char* script; /*< Script to call when state changes occur on servers */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } MM_MONITOR;
+
+MXS_END_DECLS
 
 #endif

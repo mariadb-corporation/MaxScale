@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MYSQL_AUTH_H
 #define _MYSQL_AUTH_H
 /*
@@ -23,10 +24,13 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <stdint.h>
 #include <maxscale/protocol/mysql.h>
+
+MXS_BEGIN_DECLS
 
 int gw_check_mysql_scramble_data(DCB *dcb,
                                  uint8_t *token,
@@ -40,5 +44,7 @@ int gw_find_mysql_user_password_sha1(
     char *username,
     uint8_t *gateway_password,
     DCB *dcb);
+
+MXS_END_DECLS
 
 #endif /** _MYSQL_AUTH_H */

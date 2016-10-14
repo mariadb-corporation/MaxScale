@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALE_LIMITS_H
 #define _MAXSCALE_LIMITS_H
 /*
@@ -13,6 +14,10 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
 // This file defines hard limits of MaxScale.
 
 // Thread information is stored in a bitmask whose size must be a
@@ -20,5 +25,7 @@
 // from 1. Hence, the hard maximum number of threads must be a
 // multiple of 8 minus 1.
 #define MXS_MAX_THREADS 255
+
+MXS_END_DECLS
 
 #endif

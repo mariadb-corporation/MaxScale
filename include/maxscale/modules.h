@@ -1,5 +1,6 @@
-#ifndef _MODULES_H
-#define _MODULES_H
+#pragma once
+#ifndef _MAXSCALE_MODULES_H
+#define _MAXSCALE_MODULES_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,12 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/resultset.h>
-#include <maxscale/skygw_debug.h>
-
-EXTERN_C_BLOCK_BEGIN
 
 /**
  * @file modules.h  Utilities for loading modules
@@ -37,6 +32,14 @@ EXTERN_C_BLOCK_BEGIN
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/resultset.h>
+#include <maxscale/debug.h>
+
+MXS_BEGIN_DECLS
 
 typedef struct modules
 {
@@ -71,6 +74,6 @@ extern  RESULTSET   *moduleGetList();
 extern void module_feedback_send(void*);
 extern void moduleShowFeedbackReport(DCB *dcb);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

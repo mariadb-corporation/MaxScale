@@ -1,5 +1,6 @@
-#ifndef _STATISTICS_HG
-#define _STATISTICS_HG
+#pragma once
+#ifndef _MAXSCALE_STATISTICS_HG
+#define _MAXSCALE_STATISTICS_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -25,7 +26,10 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <stdint.h>
+
+MXS_BEGIN_DECLS
 
 typedef void* ts_stats_t;
 
@@ -67,5 +71,7 @@ ts_stats_set(ts_stats_t stats, int value, int thread_id)
 {
     ((int64_t*)stats)[thread_id] = value;
 }
+
+MXS_END_DECLS
 
 #endif

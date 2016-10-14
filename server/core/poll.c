@@ -215,7 +215,7 @@ poll_init()
     }
     if ((epoll_fd = epoll_create(MAX_EVENTS)) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("FATAL: Could not create epoll instance: %s", strerror_r(errno, errbuf, sizeof(errbuf)));
         exit(-1);
     }
@@ -945,7 +945,7 @@ process_pollq(int thread_id)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLOUT due %d, %s. "
                       "dcb %p, fd %i",
@@ -1012,7 +1012,7 @@ process_pollq(int thread_id)
         if (eno == 0)
         {
             eno = dcb_fake_write_errno[dcb->fd];
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "Added fake errno %d. "
                       "%s",
@@ -1024,7 +1024,7 @@ process_pollq(int thread_id)
 #endif /* FAKE_CODE */
         if (eno != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLERR due %d, %s.",
                       pthread_self(),
@@ -1047,7 +1047,7 @@ process_pollq(int thread_id)
     {
         int eno = 0;
         eno = gw_getsockerrno(dcb->fd);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -1083,7 +1083,7 @@ process_pollq(int thread_id)
     {
         int eno = 0;
         eno = gw_getsockerrno(dcb->fd);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",

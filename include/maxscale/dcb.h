@@ -1,5 +1,6 @@
-#ifndef _DCB_H
-#define _DCB_H
+#pragma once
+#ifndef _MAXSCALE_DCB_H
+#define _MAXSCALE_DCB_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,23 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/spinlock.h>
-#include <maxscale/buffer.h>
-#include <maxscale/listmanager.h>
-#include <maxscale/gw_protocol.h>
-#include <maxscale/gw_authenticator.h>
-#include <maxscale/gw_ssl.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/gwbitmask.h>
-#include <maxscale/skygw_utils.h>
-#include <netinet/in.h>
-
-#define ERRHANDLE
-
-struct session;
-struct server;
-struct service;
-struct servlistener;
 
 /**
  * @file dcb.h  The Descriptor Control Block
@@ -62,6 +46,26 @@ struct servlistener;
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/buffer.h>
+#include <maxscale/listmanager.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/gw_authenticator.h>
+#include <maxscale/gw_ssl.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/gwbitmask.h>
+#include <netinet/in.h>
+
+MXS_BEGIN_DECLS
+
+#define ERRHANDLE
+
+struct session;
+struct server;
+struct service;
+struct servlistener;
 
 struct dcb;
 
@@ -369,4 +373,7 @@ void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
 
 #define DCB_IS_CLONE(d) ((d)->flags & DCBF_CLONE)
 #define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
+
+MXS_END_DECLS
+
 #endif /*  _DCB_H */

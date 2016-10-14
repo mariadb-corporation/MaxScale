@@ -39,7 +39,6 @@
 #include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
@@ -412,7 +411,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "start_index") == 0)
                 {
-                    first_file = MAX(1, atoi(value));
+                    first_file = MXS_MAX(1, atoi(value));
                 }
                 else
                 {
@@ -1038,7 +1037,7 @@ void converter_func(void* data)
 
     if (binlog_end == AVRO_LAST_FILE)
     {
-        router->task_delay = MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
+        router->task_delay = MXS_MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
         add_conversion_task(router);
         MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
                  " more data is written before continuing. Next check in %d seconds.",
@@ -1061,7 +1060,7 @@ static bool ensure_dir_ok(const char* path, int mode)
 
     if (path)
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         char resolved[PATH_MAX + 1];
         const char *rp = realpath(path, resolved);
 

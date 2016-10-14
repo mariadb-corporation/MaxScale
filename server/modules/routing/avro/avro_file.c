@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <glob.h>
 #include <maxscale/alloc.h>
+#include <maxscale/skygw_utils.h>
 
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";
@@ -160,7 +161,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
 {
     FILE *config_file;
     char filename[PATH_MAX + 1];
-    char err_msg[STRERROR_BUFLEN];
+    char err_msg[MXS_STRERROR_BUFLEN];
 
     snprintf(filename, sizeof(filename), "%s/"AVRO_PROGRESS_FILE".tmp", router->avrodir);
 
@@ -419,7 +420,7 @@ static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t p
         {
             if (n == -1)
             {
-                char err_msg[STRERROR_BUFLEN];
+                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error reading the event at %lu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,

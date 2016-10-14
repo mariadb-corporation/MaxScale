@@ -1,6 +1,6 @@
+#pragma once
 #ifndef TEST_UTILS_H
 #define TEST_UTILS_H
-
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <maxscale/poll.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>

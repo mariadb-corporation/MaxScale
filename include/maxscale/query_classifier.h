@@ -1,5 +1,6 @@
-#ifndef QUERY_CLASSIFIER_HG
-#define QUERY_CLASSIFIER_HG
+#pragma once
+#ifndef _MAXSCALE_QUERY_CLASSIFIER_HG
+#define _MAXSCALE_QUERY_CLASSIFIER_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -13,10 +14,10 @@
  * Public License.
  */
 
-#include <maxscale/skygw_utils.h>
+#include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 typedef enum
 {
@@ -130,6 +131,6 @@ struct query_classifier
 
 #define QUERY_CLASSIFIER_VERSION {1, 0, 0}
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

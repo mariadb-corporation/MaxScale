@@ -1,5 +1,6 @@
-#ifndef _HASTABLE_H
-#define _HASTABLE_H
+#pragma once
+#ifndef _MAXSCALE_HASTABLE_H
+#define _MAXSCALE_HASTABLE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -28,10 +29,11 @@
  *
  * @endverbatim
  */
-#include <maxscale/skygw_debug.h>
+#include <maxscale/cdefs.h>
+#include <maxscale/debug.h>
 #include <maxscale/spinlock.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 /**
  * The entries within a hashtable.
@@ -150,6 +152,6 @@ extern int hashtable_item_strcmp(const void* str1, const void* str2);
 extern void* hashtable_item_strdup(const void *str);
 extern int hashtable_item_strhash(const void *str);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

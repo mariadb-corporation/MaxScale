@@ -1,5 +1,6 @@
-#ifndef _GW_DIRS_HG
-#define _GW_DIRS_HG
+#pragma once
+#ifndef _MAXSCALE_GW_DIRS_HG
+#define _MAXSCALE_GW_DIRS_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,11 +16,12 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
 #endif
+
+#include <maxscale/cdefs.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/skygw_utils.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 /**
  * All of the following DEFAULT_* variables are defined in cmake/install_layout.cmake
@@ -76,6 +78,6 @@ char* get_logdir();
 char* get_langdir();
 char* get_execdir();
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

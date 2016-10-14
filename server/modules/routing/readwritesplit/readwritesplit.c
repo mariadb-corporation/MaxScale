@@ -559,7 +559,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     {
         int n_conn = 0;
         double pct = (double)client_rses->rses_config.rw_max_slave_conn_percent / 100.0;
-        n_conn = MAX(floor((double)client_rses->rses_nbackends * pct), 1);
+        n_conn = MXS_MAX(floor((double)client_rses->rses_nbackends * pct), 1);
         client_rses->rses_config.rw_max_slave_conn_count = n_conn;
     }
 
@@ -1294,7 +1294,7 @@ int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
     {
         conf_max_nslaves = (router_nservers * rses->rses_config.rw_max_slave_conn_percent) / 100;
     }
-    max_nslaves = MIN(router_nservers - 1, MAX(1, conf_max_nslaves));
+    max_nslaves = MXS_MIN(router_nservers - 1, MXS_MAX(1, conf_max_nslaves));
 
     return max_nslaves;
 }
@@ -1897,7 +1897,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
 
     /** With too few servers session is not created */
     if (router_nsrv < min_nsrv ||
-        MAX((*p_rses)->rses_config.rw_max_slave_conn_count,
+        MXS_MAX((*p_rses)->rses_config.rw_max_slave_conn_count,
             (router_nsrv * (*p_rses)->rses_config.rw_max_slave_conn_percent) /
             100) < min_nsrv)
     {

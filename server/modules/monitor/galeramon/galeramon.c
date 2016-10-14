@@ -559,12 +559,12 @@ monitorMain(void *arg)
 
         /*
          * Let's select a master server:
-         * it could be the candidate master following MIN(node_id) rule or
+         * it could be the candidate master following MXS_MIN(node_id) rule or
          * the server that was master in the previous monitor polling cycle
          * Decision depends on master_stickiness value set in configuration
          */
 
-        /* get the candidate master, following MIN(node_id) rule */
+        /* get the candidate master, following MXS_MIN(node_id) rule */
         candidate_master = get_candidate_master(mon);
 
         /* Select the master, based on master_stickiness */
@@ -656,7 +656,7 @@ monitorMain(void *arg)
 /**
  * get candidate master from all nodes
  *
- * The current available rule: get the server with MIN(node_id)
+ * The current available rule: get the server with MXS_MIN(node_id)
  * node_id comes from 'wsrep_local_index' variable
  *
  * @param   servers The monitored servers list

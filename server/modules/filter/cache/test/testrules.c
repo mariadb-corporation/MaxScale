@@ -17,7 +17,7 @@
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
 #endif
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 struct test_case
 {

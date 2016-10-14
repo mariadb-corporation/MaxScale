@@ -1,5 +1,6 @@
-#ifndef _HINT_H
-#define _HINT_H
+#pragma once
+#ifndef _MAXSCALE_HINT_H
+#define _MAXSCALE_HINT_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -25,8 +26,10 @@
  * @endverbatim
  */
 
-#include <maxscale/skygw_debug.h>
+#include <maxscale/cdefs.h>
+#include <maxscale/debug.h>
 
+MXS_BEGIN_DECLS
 
 /**
  * The types of hint that are supported by the generic hinting mechanism.
@@ -63,4 +66,7 @@ extern  HINT    *hint_create_route(HINT *, HINT_TYPE, char *);
 extern  void    hint_free(HINT *);
 extern  HINT    *hint_dup(HINT *);
 bool            hint_exists(HINT **, HINT_TYPE);
+
+MXS_END_DECLS
+
 #endif

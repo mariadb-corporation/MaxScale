@@ -1,5 +1,6 @@
-#ifndef _SESSION_H
-#define _SESSION_H
+#pragma once
+#ifndef _MAXSCALE_SESSION_H
+#define _MAXSCALE_SESSION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -33,14 +34,17 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <time.h>
 #include <maxscale/atomic.h>
 #include <maxscale/buffer.h>
 #include <maxscale/listmanager.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/resultset.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
+
+MXS_BEGIN_DECLS
 
 struct dcb;
 struct service;
@@ -201,4 +205,7 @@ void session_disable_log_priority(SESSION* ses, int priority);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 void process_idle_sessions();
 void enable_session_timeouts();
+
+MXS_END_DECLS
+
 #endif

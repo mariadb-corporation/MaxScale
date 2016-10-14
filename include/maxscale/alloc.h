@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALE_ALLOC_H
 #define _MAXSCALE_ALLOC_H
 /*
@@ -13,11 +14,11 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/skygw_debug.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 /*
  * NOTE: Do not use these functions directly, use the macros below.
@@ -77,6 +78,6 @@ char *mxs_strndup_a(const char *s, size_t n/*, const char *caller*/);
  */
 #define MXS_ABORT_IF_FALSE(b) do { if (!b) { abort(); } } while (false)
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

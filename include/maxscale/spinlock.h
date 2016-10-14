@@ -1,5 +1,6 @@
-#ifndef _SPINLOCK_H
-#define _SPINLOCK_H
+#pragma once
+#ifndef _MAXSCALE_SPINLOCK_H
+#define _MAXSCALE_SPINLOCK_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -23,9 +24,11 @@
  * for the lock to be released. However they are useful in that they do not involve
  * system calls and are light weight when the expected wait time for a lock is low.
  */
-#include <maxscale/skygw_debug.h>
 
-EXTERN_C_BLOCK_BEGIN
+#include <maxscale/cdefs.h>
+#include <maxscale/debug.h>
+
+MXS_BEGIN_DECLS
 
 #define SPINLOCK_PROFILE 0
 
@@ -74,6 +77,6 @@ extern int spinlock_acquire_nowait(const SPINLOCK *lock);
 extern void spinlock_release(const SPINLOCK *lock);
 extern void spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
 
-EXTERN_C_BLOCK_END
+MXS_END_DECLS
 
 #endif

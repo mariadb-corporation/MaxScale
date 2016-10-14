@@ -89,7 +89,7 @@ secrets_readKeys(const char* path)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("The provided path \"%s\" does not exist or cannot be accessed. "
                       "Error: %d, %s.", path, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             return NULL;
@@ -111,7 +111,7 @@ secrets_readKeys(const char* path)
         {
             if (!reported)
             {
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_NOTICE("Encrypted password file %s can't be accessed "
                            "(%s). Password encryption is not used.",
                            secret_file,
@@ -121,7 +121,7 @@ secrets_readKeys(const char* path)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Access for secrets file "
                       "[%s] failed. Error %d, %s.",
                       secret_file,
@@ -137,7 +137,7 @@ secrets_readKeys(const char* path)
     {
         int eno = errno;
         errno = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed opening secret "
                   "file [%s]. Error %d, %s.",
                   secret_file,
@@ -153,7 +153,7 @@ secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         close(fd);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("fstat for secret file %s "
                   "failed. Error %d, %s.",
                   secret_file,
@@ -167,7 +167,7 @@ secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         close(fd);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Secrets file %s has "
                   "incorrect size. Error %d, %s.",
                   secret_file,
@@ -202,7 +202,7 @@ secrets_readKeys(const char* path)
         errno = 0;
         close(fd);
         MXS_FREE(keys);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Read from secrets file "
                   "%s failed. Read %ld, expected %d bytes. Error %d, %s.",
                   secret_file,
@@ -219,7 +219,7 @@ secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         MXS_FREE(keys);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed closing the "
                   "secrets file %s. Error %d, %s.",
                   secret_file,
@@ -267,7 +267,7 @@ int secrets_writeKeys(const char *dir)
     /* Open for writing | Create | Truncate the file for writing */
     if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("failed opening secret "
                   "file [%s]. Error %d, %s.",
                   secret_file,
@@ -279,7 +279,7 @@ int secrets_writeKeys(const char *dir)
     /* Open for writing | Create | Truncate the file for writing */
     if ((randfd = open("/dev/random", O_RDONLY)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("failed opening /dev/random. Error %d, %s.",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
@@ -302,7 +302,7 @@ int secrets_writeKeys(const char *dir)
     /* Write data */
     if (write(fd, &key, sizeof(key)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("failed writing into "
                   "secret file [%s]. Error %d, %s.",
                   secret_file,
@@ -315,7 +315,7 @@ int secrets_writeKeys(const char *dir)
     /* close file */
     if (close(fd) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("failed closing the "
                   "secret file [%s]. Error %d, %s.",
                   secret_file,
@@ -325,7 +325,7 @@ int secrets_writeKeys(const char *dir)
 
     if (chmod(secret_file, S_IRUSR) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("failed to change the permissions of the"
                   "secret file [%s]. Error %d, %s.",
                   secret_file,

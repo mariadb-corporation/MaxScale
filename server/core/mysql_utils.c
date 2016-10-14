@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/config.h>
 
 /**

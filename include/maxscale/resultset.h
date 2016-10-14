@@ -1,5 +1,6 @@
-#ifndef _RESULTSET_H
-#define _RESULTSET_H
+#pragma once
+#ifndef _MAXSCALE_RESULTSET_H
+#define _MAXSCALE_RESULTSET_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -24,8 +25,11 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 
+MXS_BEGIN_DECLS
 
 /**
  * Column types
@@ -84,5 +88,7 @@ extern void resultset_free_row(RESULT_ROW *);
 extern int resultset_row_set(RESULT_ROW *, int, const char *);
 extern void resultset_stream_mysql(RESULTSET *, DCB *);
 extern void resultset_stream_json(RESULTSET *, DCB *);
+
+MXS_END_DECLS
 
 #endif

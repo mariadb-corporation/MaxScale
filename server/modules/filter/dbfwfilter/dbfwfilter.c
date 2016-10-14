@@ -70,7 +70,6 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/skygw_types.h>
 #include <time.h>
 #include <assert.h>
 #include <regex.h>
@@ -1174,7 +1173,7 @@ bool define_regex_rule(void* scanner, char* pattern)
     }
     else
     {
-        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
         pcre2_get_error_message(err, errbuf, sizeof(errbuf));
         MXS_ERROR("dbfwfilter: Invalid regular expression '%s': %s",
                   start, errbuf);
@@ -1344,7 +1343,7 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open rule file '%s': %d, %s", filename, errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
 
@@ -2241,7 +2240,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 int len;
                 if (modutil_extract_SQL(queue, &sql, &len))
                 {
-                    len = MIN(len, FW_MAX_SQL_LEN);
+                    len = MXS_MIN(len, FW_MAX_SQL_LEN);
                     if (match && my_instance->log_match & FW_LOG_MATCH)
                     {
                         ss_dassert(rname);

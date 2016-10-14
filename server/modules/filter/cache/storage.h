@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXSCALE_FILTER_CACHE_STORAGE_H
 #define _MAXSCALE_FILTER_CACHE_STORAGE_H
 /*
@@ -13,7 +14,10 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include "cache_storage_api.h"
+
+MXS_BEGIN_DECLS
 
 typedef struct cache_storage_module_t
 {
@@ -23,5 +27,7 @@ typedef struct cache_storage_module_t
 
 CACHE_STORAGE_MODULE* cache_storage_open(const char *name);
 void cache_storage_close(CACHE_STORAGE_MODULE *module);
+
+MXS_END_DECLS
 
 #endif

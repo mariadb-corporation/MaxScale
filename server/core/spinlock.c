@@ -26,7 +26,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/atomic.h>
 #include <time.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 
 /**
  * Initialise a spinlock.

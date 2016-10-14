@@ -1,5 +1,6 @@
-#ifndef _BUFFER_H
-#define _BUFFER_H
+#pragma once
+#ifndef _MAXSCALE_BUFFER_H
+#define _MAXSCALE_BUFFER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -42,13 +43,15 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <string.h>
-#include <maxscale/skygw_debug.h>
+#include <maxscale/debug.h>
 #include <maxscale/hint.h>
 #include <maxscale/spinlock.h>
 #include <stdint.h>
 
-EXTERN_C_BLOCK_BEGIN
+MXS_BEGIN_DECLS
 
 /**
  * Buffer properties - used to store properties related to the buffer
@@ -214,7 +217,7 @@ void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 #if defined(BUFFER_TRACE)
 extern void             dprintAllBuffers(void *pdcb);
 #endif
-EXTERN_C_BLOCK_END
 
+MXS_END_DECLS
 
 #endif

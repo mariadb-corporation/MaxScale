@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MAXINFO_H
 #define _MAXINFO_H
 /*
@@ -12,9 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/service.h>
-#include <maxscale/session.h>
-#include <maxscale/spinlock.h>
 
 /**
  * @file maxinfo.h The MaxScale information schema provider
@@ -27,6 +25,14 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
+
 struct maxinfo_session;
 
 /**
@@ -138,4 +144,7 @@ extern void         maxinfo_send_parse_error(DCB *, char *, PARSE_ERROR);
 extern void     maxinfo_send_error(DCB *, int, char  *);
 extern RESULTSET    *maxinfo_variables();
 extern RESULTSET    *maxinfo_status();
+
+MXS_END_DECLS
+
 #endif

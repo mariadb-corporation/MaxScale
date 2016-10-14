@@ -1,5 +1,6 @@
-#ifndef _HOUSEKEEPER_H
-#define _HOUSEKEEPER_H
+#pragma once
+#ifndef _MAXSCALE_HOUSEKEEPER_H
+#define _MAXSCALE_HOUSEKEEPER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,9 +13,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cdefs.h>
 #include <time.h>
 #include <maxscale/dcb.h>
 #include <maxscale/hk_heartbeat.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * @file housekeeper.h A mechanism to have task run periodically
  *
@@ -53,5 +59,7 @@ extern int  hktask_oneshot(const char *name, void (*task)(void *), void *data, i
 extern int  hktask_remove(const char *name);
 extern void hkshutdown();
 extern void hkshow_tasks(DCB *pdcb);
+
+MXS_END_DECLS
 
 #endif

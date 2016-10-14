@@ -1,5 +1,6 @@
-#ifndef _ATOMIC_H
-#define _ATOMIC_H
+#pragma once
+#ifndef _MAXSCALE_ATOMIC_H
+#define _MAXSCALE_ATOMIC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,9 +27,13 @@
  * @endverbatim
  */
 
-#ifdef __cplusplus
-extern "C" int atomic_add(int *variable, int value);
-#else
-extern int atomic_add(int *variable, int value);
-#endif
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
+int atomic_add(int *variable, int value);
+int atomic_add(int *variable, int value);
+
+MXS_END_DECLS
+
 #endif

@@ -1,5 +1,6 @@
-#ifndef _HK_HEARTBEAT_H
-#define _HK_HEARTBEAT_H
+#pragma once
+#ifndef _MAXSCALE_HK_HEARTBEAT_H
+#define _MAXSCALE_HK_HEARTBEAT_H
 
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
@@ -14,11 +15,17 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
 /**
  * The global housekeeper heartbeat value. This value is incremented
  * every 100 milliseconds and may be used for crude timing etc.
  */
 
 extern long hkheartbeat;
+
+MXS_END_DECLS
 
 #endif

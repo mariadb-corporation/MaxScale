@@ -1,5 +1,6 @@
-#ifndef RANDOM_JKISS_H
-#define RANDOM_JKISS_H
+#pragma once
+#ifndef _MAXSCALE_RANDOM_JKISS_H
+#define _MAXSCALE_RANDOM_JKISS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -20,14 +21,12 @@
  * Created on 26 August 2015, 15:34
  */
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 extern unsigned int random_jkiss(void);
 
-#ifdef  __cplusplus
-}
-#endif
+MXS_END_DECLS
 
 #endif  /* RANDOM_H */

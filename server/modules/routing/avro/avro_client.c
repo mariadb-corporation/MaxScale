@@ -35,7 +35,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
@@ -858,7 +857,7 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         }
         else
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open file '%s': %d, %s", buffer, errno,
                       strerror_r(errno, err, sizeof(err)));
         }

@@ -1,3 +1,6 @@
+#pragma once
+#ifndef _SHARDING_COMMON_HG
+#define _SHARDING_COMMON_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -11,9 +14,7 @@
  * Public License.
  */
 
-#ifndef _SHARDING_COMMON_HG
-#define _SHARDING_COMMON_HG
-
+#include <maxscale/cdefs.h>
 #include <my_config.h>
 #include <poll.h>
 #include <maxscale/buffer.h>
@@ -23,8 +24,12 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 
+MXS_BEGIN_DECLS
+
 bool extract_database(GWBUF* buf, char* str);
 void create_error_reply(char* fail_str, DCB* dcb);
 bool change_current_db(char* dest, HASHTABLE* dbhash, GWBUF* buf);
+
+MXS_END_DECLS
 
 #endif

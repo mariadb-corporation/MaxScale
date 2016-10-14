@@ -1,5 +1,6 @@
-#ifndef _RDTSC_H
-#define _RDTSC_H
+#pragma once
+#ifndef _MAXSCALE_RDTSC_H
+#define _MAXSCALE_RDTSC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -31,6 +32,10 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
+
 typedef unsigned long long CYCLES;
 
 /**
@@ -53,4 +58,7 @@ static __inline__ CYCLES rdtsc(void)
     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
     return x;
 }
+
+MXS_END_DECLS
+
 #endif

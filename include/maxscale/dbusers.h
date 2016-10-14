@@ -1,5 +1,6 @@
-#ifndef _DBUSERS_H
-#define _DBUSERS_H
+#pragma once
+#ifndef _MAXSCALE_DBUSERS_H
+#define _MAXSCALE_DBUSERS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -12,10 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#include <maxscale/service.h>
-#include <arpa/inet.h>
-
 
 /**
  * @file dbusers.h Extarct user information form the backend database
@@ -32,6 +29,12 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <arpa/inet.h>
+
+MXS_BEGIN_DECLS
 
 /* Refresh rate limits for load users from database */
 #define USERS_REFRESH_TIME         30           /* Allowed time interval (in seconds) after last update*/
@@ -76,5 +79,7 @@ extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int reload_mysql_users(SERV_LISTENER *listener);
 extern int replace_mysql_users(SERV_LISTENER *listener);
+
+MXS_END_DECLS
 
 #endif

@@ -1,5 +1,6 @@
-#ifndef _QUEUEMANAGER_H
-#define _QUEUEMANAGER_H
+#pragma once
+#ifndef _MAXSCALE_QUEUEMANAGER_H
+#define _MAXSCALE_QUEUEMANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,8 +27,11 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
 
 #define CONNECTION_QUEUE_LIMIT 1000
 
@@ -66,5 +70,7 @@ mxs_queue_count(QUEUE_CONFIG *queue_config)
     int count = queue_config->end - queue_config->start;
     return count < 0 ? (count + queue_config->queue_limit + 1): count;
 }
+
+MXS_END_DECLS
 
 #endif /* QUEUEMANAGER_H */

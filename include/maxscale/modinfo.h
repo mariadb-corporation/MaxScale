@@ -1,5 +1,6 @@
-#ifndef _MODINFO_H
-#define _MODINFO_H
+#pragma once
+#ifndef _MAXSCALE_MODINFO_H
+#define _MAXSCALE_MODINFO_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -24,6 +25,10 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * The status of the module. This gives some idea of the module
@@ -83,4 +88,7 @@ typedef struct
     MODULE_VERSION  api_version;
     char        *description;
 } MODULE_INFO;
+
+MXS_END_DECLS
+
 #endif

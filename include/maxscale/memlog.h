@@ -1,5 +1,6 @@
-#ifndef _MEMLOG_H
-#define _MEMLOG_H
+#pragma once
+#ifndef _MAXSCALE_MEMLOG_H
+#define _MAXSCALE_MEMLOG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -24,7 +25,11 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
 
 typedef enum { ML_INT, ML_LONG, ML_LONGLONG, ML_STRING } MEMLOGTYPE;
 
@@ -58,5 +63,7 @@ extern void    memlog_set(MEMLOG *, unsigned int);
 extern void    memlog_log(MEMLOG *, void *);
 extern void    memlog_flush_all();
 extern void    memlog_flush(MEMLOG *);
+
+MXS_END_DECLS
 
 #endif

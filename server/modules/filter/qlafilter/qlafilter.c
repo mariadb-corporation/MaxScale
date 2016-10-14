@@ -350,7 +350,7 @@ newSession(FILTER *instance, SESSION *session)
 
             if (my_session->fp == NULL)
             {
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Opening output file for qla "
                           "fileter failed due to %d, %s",
                           errno,
@@ -363,7 +363,7 @@ newSession(FILTER *instance, SESSION *session)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Memory allocation for qla filter failed due to "
                   "%d, %s.",
                   errno,

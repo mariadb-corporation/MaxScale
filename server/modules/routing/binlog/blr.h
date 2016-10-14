@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _BLR_H
 #define _BLR_H
 /*
@@ -38,6 +39,8 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <pthread.h>
@@ -47,6 +50,8 @@
 #include <zlib.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
+
+MXS_BEGIN_DECLS
 
 #define BINLOG_FNAMELEN         255
 #define BLR_PROTOCOL            "MySQLBackend"
@@ -704,5 +709,7 @@ extern bool blr_send_event(blr_thread_role_t role,
                            ROUTER_SLAVE *slave,
                            REP_HEADER *hdr,
                            uint8_t *buf);
+
+MXS_END_DECLS
 
 #endif

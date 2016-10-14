@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MYSQLMON_H
 #define _MYSQLMON_H
 /*
@@ -12,23 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <maxscale/monitor.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <maxscale/skygw_utils.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/config.h>
-#include <maxscale/externcmd.h>
-#include <maxscale/hashtable.h>
 
 /**
  * @file mysqlmon.h - The MySQL monitor
@@ -49,6 +33,26 @@
  * 07/05/15 Markus Makela       Addition of command execution on Master server failure
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/config.h>
+#include <maxscale/externcmd.h>
+#include <maxscale/hashtable.h>
+
+MXS_BEGIN_DECLS
 
 #define MYSQLMON_DEFAULT_FAILCOUNT 5
 
@@ -79,5 +83,7 @@ typedef struct
                                    down before failover is initiated */
     bool warn_failover; /**< Log a warning when failover happens */
 } MYSQL_MONITOR;
+
+MXS_END_DECLS
 
 #endif
