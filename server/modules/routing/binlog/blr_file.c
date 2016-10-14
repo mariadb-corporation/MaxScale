@@ -1581,8 +1581,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         /* Detect possible Start Encryption Event */
         if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
         {
-                START_ENCRYPTION_EVENT ste_event;
-                memset(&ste_event, '\0', sizeof(START_ENCRYPTION_EVENT));
+                START_ENCRYPTION_EVENT ste_event = {};
                 char nonce_hex[BLRM_NONCE_LENGTH * 2 + 1] = "";
                 /* The start encryption event data is 17 bytes long:
                  * Scheme = 1
@@ -2289,7 +2288,6 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
                        (unsigned long)event_size,
                        router->binlog_name,
                        router->current_pos);
-            new_event_desc = "UNKNOWN";
             return 0;
             break;
     }
