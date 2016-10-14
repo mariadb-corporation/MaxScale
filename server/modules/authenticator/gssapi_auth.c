@@ -16,12 +16,26 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/secrets.h>
+#include <maxscale/mysql_utils.h>
 #include "gssapi_auth.h"
+
+/** Query that gets all users that authenticate via the gssapi plugin */
+const char *gssapi_users_query =
+    "SELECT u.user, u.host, d.db FROM "
+    "mysql.user AS u JOIN mysql.db AS d "
+    "ON (u.user = d.user AND u.host = d.host) WHERE u.plugin = 'gssapi' "
+    "UNION "
+    "SELECT u.user, u.host, t.db FROM "
+    "mysql.user AS u JOIN mysql.tables_priv AS t "
+    "ON (u.user = t.user AND u.host = t.host) WHERE u.plugin = 'gssapi';";
+
+#define GSSAPI_USERS_QUERY_NUM_FIELDS 3
 
 typedef struct gssapi_instance
 {
     char *principal_name;
-}GSSAPI_INSTANCE;
+} GSSAPI_INSTANCE;
 
 /**
  * @brief Initialize the GSSAPI authenticator
@@ -337,14 +351,60 @@ void gssapi_auth_free_data(DCB *dcb)
 }
 
 /**
- * @brief Dummy function for loadusers entry point
+ * @brief Load database users that use GSSAPI authentication
+ *
+ * Loading the list of database users that use the 'gssapi' plugin allows us to
+ * give more precise error messages to the clients when authentication fails.
  *
  * @param listener Listener definition
- * @return Always MXS_AUTH_LOADUSERS_OK
+ * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR on error
  */
 int gssapi_auth_load_users(SERV_LISTENER *listener)
 {
-    return MXS_AUTH_LOADUSERS_OK;
+    char *user, *pw;
+    int rval = MXS_AUTH_LOADUSERS_ERROR;
+
+    if (serviceGetUser(listener->service, &user, &pw) && (pw = decryptPassword(pw)))
+    {
+        for (SERVER_REF *servers = listener->service->dbref; servers; servers = servers->next)
+        {
+            MYSQL *mysql = mysql_init(NULL);
+
+            if (mxs_mysql_real_connect(mysql, servers->server, user, pw))
+            {
+                if (mysql_query(mysql, gssapi_users_query))
+                {
+                    MXS_ERROR("Failed to query server '%s' for GSSAPI users.",
+                              servers->server->unique_name);
+                }
+                else
+                {
+                    MYSQL_RES *res = mysql_store_result(mysql);
+
+                    if (res)
+                    {
+                        ss_dassert(mysql_num_fields(res) == GSSAPI_USERS_QUERY_NUM_FIELDS);
+                        MYSQL_ROW row;
+
+                        while ((row = mysql_fetch_row(res)))
+                        {
+                            /** TODO: Store this information in the users table of the listener */
+                            MXS_INFO("Would add: '%s'@'%s' for '%s'", row[0], row[1], row[2]);
+                        }
+
+                        rval = MXS_AUTH_LOADUSERS_OK;
+                        mysql_free_result(res);
+                    }
+                }
+
+                mysql_close(mysql);
+            }
+        }
+
+        MXS_FREE(pw);
+    }
+
+    return rval;
 }
 
 /**
@@ -359,7 +419,7 @@ static GWAUTHENTICATOR MyObject =
     gssapi_auth_authenticate,        /* Authenticate user credentials */
     gssapi_auth_free_data,           /* Free the client data held in DCB */
     gssapi_auth_free,                /* Free authenticator data */
-    gssapi_auth_load_users           /* Dummy function */
+    gssapi_auth_load_users           /* Load database users */
 };
 
 MODULE_INFO info =
