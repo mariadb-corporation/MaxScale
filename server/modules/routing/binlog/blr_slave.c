@@ -79,7 +79,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
 #include <sys/stat.h>
-#include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>

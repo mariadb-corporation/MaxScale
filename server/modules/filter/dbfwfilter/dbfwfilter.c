@@ -70,7 +70,6 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/skygw_types.h>
 #include <time.h>
 #include <assert.h>
 #include <regex.h>

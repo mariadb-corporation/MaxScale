@@ -36,7 +36,6 @@
  * or diagnostic being made for the session script.
  */
 
-#include <maxscale/skygw_types.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>

@@ -55,7 +55,6 @@
 #include <strfunc.h>
 #include <item_func.h>
 
-#include <maxscale/skygw_types.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>

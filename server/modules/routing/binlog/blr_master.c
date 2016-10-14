@@ -69,7 +69,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 

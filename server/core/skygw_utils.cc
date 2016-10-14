@@ -15,6 +15,8 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
+#include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -24,12 +26,21 @@
 #include <stddef.h>
 #include <regex.h>
 #include <maxscale/debug.h>
-#include <maxscale/skygw_types.h>
 #include <sys/time.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/atomic.h>
 #include <maxscale/random_jkiss.h>
 #include <pcre2.h>
+
+#if !defined(PATH_MAX)
+# if defined(__USE_POSIX)
+#   define PATH_MAX _POSIX_PATH_MAX
+# else
+#   define PATH_MAX 256
+# endif
+#endif
+
+#define MAX_ERROR_MSG PATH_MAX
 
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void thread_free_memory(skygw_thread_t* th, char* name);

@@ -27,8 +27,15 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <math.h>
+#include <stdlib.h>
 
 MXS_BEGIN_DECLS
+
+#define CALCLEN(i) ((size_t)(floor(log10(abs(i))) + 1))
+#define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
+
+#define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array)/sizeof(array[0])))
 
 int setnonblocking(int fd);
 char  *gw_strend(register const char *s);

@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/externcmd.h>
+#include <ctype.h>
 #include <maxscale/alloc.h>
 
 /**

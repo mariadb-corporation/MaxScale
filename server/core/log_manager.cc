@@ -29,9 +29,9 @@
 #include <maxscale/mlist.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/debug.h>
-#include <maxscale/skygw_types.h>
 #include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
