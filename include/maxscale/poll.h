@@ -14,14 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/dcb.h>
-#include <maxscale/gwbitmask.h>
-#include <maxscale/resultset.h>
-#include <sys/epoll.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file poll.h     The poll related functionality
  *
@@ -34,6 +26,15 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+#include <maxscale/gwbitmask.h>
+#include <maxscale/resultset.h>
+#include <sys/epoll.h>
+
+MXS_BEGIN_DECLS
+
 #define MAX_EVENTS 1000
 
 /**

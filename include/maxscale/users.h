@@ -14,14 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/hashtable.h>
-#include <maxscale/dcb.h>
-#include <maxscale/listener.h>
-#include <openssl/sha.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file users.h The functions to manipulate the table of users maintained
  * for each service
@@ -37,6 +29,14 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/dcb.h>
+#include <maxscale/listener.h>
+#include <openssl/sha.h>
+
+MXS_BEGIN_DECLS
 
 #define USERS_HASHTABLE_DEFAULT_SIZE 52
 

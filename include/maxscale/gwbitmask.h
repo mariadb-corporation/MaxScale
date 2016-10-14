@@ -14,12 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/limits.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file gwbitmask.h An implementation of an arbitrarily long bitmask
  *
@@ -32,6 +26,12 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/limits.h>
+
+MXS_BEGIN_DECLS
 
 /* This number MUST an be exact multiple of 8 */
 #define MXS_BITMASK_LENGTH     (MXS_MAX_THREADS + 1)    /**< Number of bits in the bitmask */

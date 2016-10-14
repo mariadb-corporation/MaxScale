@@ -14,12 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/service.h>
-#include <arpa/inet.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file dbusers.h Extarct user information form the backend database
  *
@@ -35,6 +29,12 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <arpa/inet.h>
+
+MXS_BEGIN_DECLS
 
 /* Refresh rate limits for load users from database */
 #define USERS_REFRESH_TIME         30           /* Allowed time interval (in seconds) after last update*/

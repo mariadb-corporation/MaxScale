@@ -15,13 +15,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/service.h>
-#include <maxscale/session.h>
-#include <maxscale/spinlock.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file debugcli.h The debug interface to the gateway
  *
@@ -33,6 +26,14 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
+
 struct cli_session;
 
 /**

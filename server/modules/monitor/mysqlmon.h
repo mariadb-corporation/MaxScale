@@ -14,26 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <maxscale/monitor.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <maxscale/skygw_utils.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/config.h>
-#include <maxscale/externcmd.h>
-#include <maxscale/hashtable.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file mysqlmon.h - The MySQL monitor
  *
@@ -53,6 +33,26 @@ MXS_BEGIN_DECLS
  * 07/05/15 Markus Makela       Addition of command execution on Master server failure
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <maxscale/skygw_utils.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/config.h>
+#include <maxscale/externcmd.h>
+#include <maxscale/hashtable.h>
+
+MXS_BEGIN_DECLS
 
 #define MYSQLMON_DEFAULT_FAILCOUNT 5
 

@@ -15,16 +15,6 @@
  *
  */
 
-#include <maxscale/cdefs.h>
-
-#ifndef PCRE2_CODE_UNIT_WIDTH
-#define PCRE2_CODE_UNIT_WIDTH 8
-#endif
-
-#include <pcre2.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file pcre2.h - Utility functions for regular expression matching
  * with the bundled PCRE2 library.
@@ -36,6 +26,16 @@ MXS_BEGIN_DECLS
  * 30-10-2015 Markus Makela Initial implementation
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+
+#ifndef PCRE2_CODE_UNIT_WIDTH
+#define PCRE2_CODE_UNIT_WIDTH 8
+#endif
+
+#include <pcre2.h>
+
+MXS_BEGIN_DECLS
 
 typedef enum
 {

@@ -14,12 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/skygw_utils.h>
-#include <sys/utsname.h>
-#include <stdint.h>
-#include <openssl/sha.h>
-#include <maxscale/spinlock.h>
 /**
  * @file config.h The configuration handling elements
  *
@@ -35,6 +29,13 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/skygw_utils.h>
+#include <sys/utsname.h>
+#include <stdint.h>
+#include <openssl/sha.h>
+#include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS
 

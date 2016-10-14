@@ -14,10 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/dcb.h>
-#include <maxscale/resultset.h>
-
 /**
  * @file service.h
  *
@@ -46,6 +42,10 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+#include <maxscale/resultset.h>
 
 MXS_BEGIN_DECLS
 

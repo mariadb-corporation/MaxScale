@@ -14,22 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <time.h>
-#include <maxscale/gw_protocol.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/dcb.h>
-#include <maxscale/server.h>
-#include <maxscale/listener.h>
-#include <maxscale/filter.h>
-#include <maxscale/hashtable.h>
-#include <maxscale/resultset.h>
-#include <maxscale/config.h>
-#include <maxscale/queuemanager.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
 /**
  * @file service.h
  *
@@ -55,6 +39,23 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <time.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/server.h>
+#include <maxscale/listener.h>
+#include <maxscale/filter.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/resultset.h>
+#include <maxscale/config.h>
+#include <maxscale/queuemanager.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
 
 MXS_BEGIN_DECLS
 

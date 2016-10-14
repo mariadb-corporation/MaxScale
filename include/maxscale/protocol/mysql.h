@@ -36,6 +36,7 @@
  *
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -64,6 +65,8 @@
 #include <maxscale/utils.h>
 #include <maxscale/gw.h>
 #include <mysql.h>
+
+MXS_BEGIN_DECLS
 
 #define GW_MYSQL_VERSION "5.5.5-10.0.0 " MAXSCALE_VERSION "-maxscale"
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
@@ -372,5 +375,7 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, int affected_rows, const char* mes
 
 /** Check for OK packet */
 bool mxs_mysql_is_ok_packet(GWBUF *buffer);
+
+MXS_END_DECLS
 
 #endif /** _MYSQL_PROTOCOL_H */

@@ -13,12 +13,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <maxscale/cdefs.h>
-#include <maxscale/service.h>
-#include <maxscale/session.h>
-#include <maxscale/spinlock.h>
-
-MXS_BEGIN_DECLS
 
 /**
  * @file maxinfo.h The MaxScale information schema provider
@@ -31,6 +25,14 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
+
 struct maxinfo_session;
 
 /**

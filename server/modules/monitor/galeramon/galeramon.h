@@ -14,6 +14,17 @@
  * Public License.
  */
 
+/**
+ * @file galeramon.h - The Galera cluster monitor
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date      Who             Description
+ * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
+ * @endverbatim
+ */
+
 #include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,17 +43,6 @@
 #include <maxscale/config.h>
 
 MXS_BEGIN_DECLS
-
-/**
- * @file galeramon.h - The Galera cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date      Who             Description
- * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
- * @endverbatim
- */
 
 /**
  * The handle for an instance of a Galera Monitor module

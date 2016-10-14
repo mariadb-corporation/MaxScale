@@ -14,14 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/dcb.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/resultset.h>
-#include <maxscale/skygw_debug.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file modules.h  Utilities for loading modules
  *
@@ -40,6 +32,14 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/resultset.h>
+#include <maxscale/skygw_debug.h>
+
+MXS_BEGIN_DECLS
 
 typedef struct modules
 {

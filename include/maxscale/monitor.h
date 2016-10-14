@@ -14,18 +14,6 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <mysql.h>
-#include <maxscale/server.h>
-#include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/resultset.h>
-#include <maxscale/config.h>
-#include <maxscale/externcmd.h>
-#include <maxscale/secrets.h>
-
-MXS_BEGIN_DECLS
-
 /**
  * @file monitor.h      The interface to the monitor module
  *
@@ -47,6 +35,18 @@ MXS_BEGIN_DECLS
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <mysql.h>
+#include <maxscale/server.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/resultset.h>
+#include <maxscale/config.h>
+#include <maxscale/externcmd.h>
+#include <maxscale/secrets.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * The "Module Object" for a monitor module.

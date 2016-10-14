@@ -15,7 +15,7 @@
  */
 
 /**
- * @file protocol.h
+ * @file gw_authenticator.h
  *
  * The authenticator module interface definitions for MaxScale
  *
