@@ -33,6 +33,7 @@
 #include <maxscale/session.h>
 #include <maxscale/statistics.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/utils.h>
 
 #define         PROFILE_POLL    0
 

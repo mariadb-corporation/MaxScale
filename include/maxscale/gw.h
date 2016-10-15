@@ -69,23 +69,7 @@ MXS_BEGIN_DECLS
 #define MYSQL_CONN_DEBUG
 #undef MYSQL_CONN_DEBUG
 
-#include "dcb.h"
-
 bool gw_daemonize(void);
-int  do_read_dcb(DCB *dcb);
-void MySQLListener(int epfd, char *config_bind);
-int  MySQLAccept(DCB *listener);
-int  do_read_dcb(DCB *dcb);
-int  do_read_10(DCB *dcb, uint8_t *buffer);
-int  MySQLWrite(DCB *dcb, GWBUF *queue);
-int  setnonblocking(int fd);
-int  gw_getsockerrno(int fd);
-int  parse_bindconfig(const char *, struct sockaddr_in *);
-int setipaddress(struct in_addr *, char *);
-char* get_libdir();
-long get_processor_count();
-void clean_up_pathname(char *path);
-bool mxs_mkdir_all(const char *path, int mask);
 
 MXS_END_DECLS
 

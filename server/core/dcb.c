@@ -90,6 +90,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 #if defined(FAKE_CODE)
 unsigned char dcb_fake_write_errno[10240];
