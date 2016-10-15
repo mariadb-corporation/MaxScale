@@ -298,46 +298,30 @@ mysql_auth_set_client_data(
     uint8_t client_auth_packet[client_auth_packet_size];
     gwbuf_copy_data(buffer, 0, client_auth_packet_size, client_auth_packet);
 
-    /* The numbers are the fixed elements in the client handshake packet */
-    int auth_packet_base_size = MYSQL_AUTH_PACKET_BASE_SIZE;
     int packet_length_used = 0;
 
-    /* Take data from fixed locations first */
-    memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
-    protocol->charset = 0;
-    memcpy(&protocol->charset, client_auth_packet + 4 + 4 + 4, 1);
-
-    /* Make username and database a null string in case none is provided */
-    client_data->user[0] = 0;
-    client_data->db[0] = 0;
     /* Make authentication token length 0 and token null in case none is provided */
     client_data->auth_token_len = 0;
     client_data->auth_token = NULL;
 
-    if (client_auth_packet_size > auth_packet_base_size)
+    if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /* Should have a username */
-        char *first_letter_of_username = (char *)(client_auth_packet + auth_packet_base_size);
+        char *first_letter_of_username = (char *)(client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE);
         int user_length = strlen(first_letter_of_username);
-        if (client_auth_packet_size > (auth_packet_base_size + user_length)
-            && user_length <= MYSQL_USER_MAXLEN)
-        {
-            strcpy(client_data->user, first_letter_of_username);
-        }
-        else
-        {
-            /* Packet has incomplete or too long username */
-            return MXS_AUTH_FAILED;
-        }
-        if (client_auth_packet_size > (auth_packet_base_size + user_length + 1))
+
+        ss_dassert(client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length)
+                   && user_length <= MYSQL_USER_MAXLEN);
+
+        if (client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1))
         {
             /* Extra 1 is for the terminating null after user name */
-            packet_length_used = auth_packet_base_size + user_length + 1;
+            packet_length_used = MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1;
             /* We should find an authentication token next */
             /* One byte of packet is the length of authentication token */
             memcpy(&client_data->auth_token_len,
-                   client_auth_packet + packet_length_used,
-                   1);
+                   client_auth_packet + packet_length_used, 1);
+
             if (client_auth_packet_size >
                 (packet_length_used + client_data->auth_token_len))
             {
@@ -346,7 +330,7 @@ mysql_auth_set_client_data(
                 {
                     /* The extra 1 is for the token length byte, just extracted*/
                     memcpy(client_data->auth_token,
-                           client_auth_packet + auth_packet_base_size + user_length + 1 + 1,
+                           client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1 + 1,
                            client_data->auth_token_len);
                 }
                 else
@@ -359,29 +343,6 @@ mysql_auth_set_client_data(
             {
                 /* Packet was too small to contain authentication token */
                 return MXS_AUTH_FAILED;
-            }
-            packet_length_used += 1 + client_data->auth_token_len;
-            /*
-             * Note: some clients may pass empty database, CONNECT_WITH_DB !=0 but database =""
-             */
-            if ((uint32_t)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &
-                gw_mysql_get_byte4((uint8_t *)&protocol->client_capabilities)
-                && client_auth_packet_size > packet_length_used)
-            {
-                char *database = (char *)(client_auth_packet + packet_length_used);
-                int database_length = strlen(database);
-                if (client_auth_packet_size >
-                    (packet_length_used + database_length)
-                    && strlen(database) <= MYSQL_DATABASE_MAXLEN)
-                {
-                    strcpy(client_data->db, database);
-                }
-                else
-                {
-                    /* Packet is too short to contain database string */
-                    /* or database string in packet is too long */
-                    return MXS_AUTH_FAILED;
-                }
             }
         }
     }

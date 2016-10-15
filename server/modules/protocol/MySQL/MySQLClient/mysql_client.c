@@ -467,6 +467,44 @@ int gw_read_client_event(DCB* dcb)
 }
 
 /**
+ * @brief Store client connection information into the DCB
+ * @param dcb Client DCB
+ * @param buffer Buffer containing the handshake response packet
+ */
+static void store_client_information(DCB *dcb, GWBUF *buffer)
+{
+    size_t len = gwbuf_length(buffer);
+    uint8_t data[len];
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    MYSQL_session *ses = (MYSQL_session*)dcb->data;
+
+    gwbuf_copy_data(buffer, 0, len, data);
+    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == len);
+
+    proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
+    proto->charset = data[MYSQL_CHARSET_OFFSET];
+    strcpy(ses->user, (char*)data + MYSQL_AUTH_PACKET_BASE_SIZE);
+    *ses->db = '\0';
+
+    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+    {
+        /** Client supports default database on connect */
+        size_t userlen = strlen(ses->user) + 1;
+
+        /** Skip the authentication token, it is handled by the authenticators */
+        uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
+
+        size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
+
+        if (data[dboffset])
+        {
+            /** Client is connecting with a default database */
+            strcpy(ses->db, (char*)data + dboffset);
+        }
+    }
+}
+
+/**
  * @brief Client read event, process when client not yet authenticated
  *
  * @param dcb           Descriptor control block
@@ -490,6 +528,14 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     /** Read the client's packet sequence and increment that by one */
     uint8_t next_sequence;
     gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
+
+    if (next_sequence == 1)
+    {
+        /** This is the first response from the client, read the connection
+         * information and store them in the shared structure */
+        store_client_information(dcb, read_buffer);
+    }
+
     next_sequence++;
 
     /**

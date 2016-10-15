@@ -155,31 +155,8 @@ bool store_client_token(DCB *dcb, GWBUF *buffer)
  */
 static void copy_client_information(DCB *dcb, GWBUF *buffer)
 {
-    size_t buflen = gwbuf_length(buffer);
-    MySQLProtocol *protocol = (MySQLProtocol*)dcb->protocol;
     gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
-
-    /* Store the connection characteristics and sequence number of the current packet */
-    protocol->charset = 0;
-    gwbuf_copy_data(buffer, MYSQL_CHARSET_OFFSET, 1, (uint8_t*)&protocol->charset);
-    gwbuf_copy_data(buffer, MYSQL_CLIENT_CAP_OFFSET, MYSQL_CLIENT_CAP_SIZE,
-                    (uint8_t*)&protocol->client_capabilities);
     gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
-
-    if (buflen > MYSQL_AUTH_PACKET_BASE_SIZE)
-    {
-        buflen -= MYSQL_AUTH_PACKET_BASE_SIZE;
-
-        /** TODO: Implement something that can safely iterate bytes of a GWBUF
-         * so that we know where the terminating null character is. For the time
-         * being, we'll just copy everything. */
-        uint8_t data[buflen];
-        gwbuf_copy_data(buffer, MYSQL_AUTH_PACKET_BASE_SIZE, buflen, data);
-
-        MYSQL_session *ses = (MYSQL_session*)dcb->data;
-        /** data is null-terminated so the strcpy is safe */
-        strcpy(ses->user, (char*)data);
-    }
 }
 
 /**
