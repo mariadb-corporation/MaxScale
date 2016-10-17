@@ -30,7 +30,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <maxscale/modutil.h>
-#include <maxscale/skygw_utils.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */

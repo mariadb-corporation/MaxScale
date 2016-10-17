@@ -33,7 +33,6 @@
 #include <maxscale/monitor.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/modules.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/pcre2.h>

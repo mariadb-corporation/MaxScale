@@ -26,7 +26,6 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
-#include <maxscale/skygw_utils.h>
 
 struct option options[] =
 {

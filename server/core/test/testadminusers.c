@@ -37,7 +37,7 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
-#include <maxscale/skygw_utils.h>
+#include <maxscale/utils.h>
 
 /**
  * test1    default user

@@ -24,6 +24,7 @@ void* gssapi_auth_alloc(void *instance)
         rval->state = GSSAPI_AUTH_INIT;
         rval->principal_name = NULL;
         rval->principal_name_len = 0;
+        rval->sequence = 0;
     }
 
     return rval;

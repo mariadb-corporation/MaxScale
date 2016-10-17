@@ -21,7 +21,6 @@
 #include "sharding_common.h"
 #include <maxscale/secrets.h>
 #include <mysql.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/dcb.h>

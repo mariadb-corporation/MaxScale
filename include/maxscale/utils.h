@@ -27,8 +27,10 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
+#include <netinet/in.h>
 
 MXS_BEGIN_DECLS
 
@@ -37,7 +39,13 @@ MXS_BEGIN_DECLS
 
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array)/sizeof(array[0])))
 
+bool utils_init(); /*< Call this first before using any other function */
+void utils_end();
+
 int setnonblocking(int fd);
+int  parse_bindconfig(const char *, struct sockaddr_in *);
+int setipaddress(struct in_addr *, char *);
+
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
 int gw_generate_random_str(char *output, int len);
@@ -48,6 +56,27 @@ void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_len, uint8_t *out);
 int gw_getsockerrno(int fd);
 char *create_hex_sha1_sha1_passwd(char *passwd);
+
+char* trim(char *str);
+char* squeeze_whitespace(char* str);
+bool strip_escape_chars(char*);
+
+bool is_valid_posix_path(char* path);
+
+char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest,
+                            size_t* destsize);
+char* replace_values(const char** src, const size_t* srcsize, char** dest,
+                     size_t* destsize);
+char* replace_literal(char* haystack,
+                      const char* needle,
+                      const char* replacement);
+char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize);
+
+void clean_up_pathname(char *path);
+
+bool mxs_mkdir_all(const char *path, int mask);
+
+long get_processor_count();
 
 MXS_END_DECLS
 

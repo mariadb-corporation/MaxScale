@@ -55,7 +55,6 @@
 #include <maxscale/filter.h>
 #include <maxscale/dbusers.h>
 #include <maxscale/poll.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>

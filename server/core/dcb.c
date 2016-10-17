@@ -81,7 +81,6 @@
 #include <maxscale/gw.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/listener.h>
@@ -91,6 +90,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 #if defined(FAKE_CODE)
 unsigned char dcb_fake_write_errno[10240];
@@ -3101,7 +3101,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
         conn_open[c_sock] = true;
 #endif /* FAKE_CODE */
         /* set nonblocking  */
-        sendbuf = GW_CLIENT_SO_SNDBUF;
+        sendbuf = MXS_CLIENT_SO_SNDBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen) != 0)
         {
@@ -3109,7 +3109,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
                       errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         }
 
-        sendbuf = GW_CLIENT_SO_RCVBUF;
+        sendbuf = MXS_CLIENT_SO_RCVBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen) != 0)
         {

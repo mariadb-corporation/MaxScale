@@ -13,7 +13,7 @@
 
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gw.h>
+#include <maxscale/utils.h>
 
 /**
  * Set the configuration file directory

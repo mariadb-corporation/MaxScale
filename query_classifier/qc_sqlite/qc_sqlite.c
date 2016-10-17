@@ -20,7 +20,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 #include "builtin_functions.h"

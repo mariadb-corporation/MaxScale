@@ -37,7 +37,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <debugcli.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 
 

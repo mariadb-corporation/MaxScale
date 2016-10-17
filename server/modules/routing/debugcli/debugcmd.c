@@ -72,7 +72,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
 
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
 

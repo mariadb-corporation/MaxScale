@@ -24,7 +24,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/atomic.h>
 #include <maxscale/gwbitmask.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/gw.h>
 #include <maxscale/housekeeper.h>
@@ -34,6 +33,7 @@
 #include <maxscale/session.h>
 #include <maxscale/statistics.h>
 #include <maxscale/query_classifier.h>
+#include <maxscale/utils.h>
 
 #define         PROFILE_POLL    0
 

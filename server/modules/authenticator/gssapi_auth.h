@@ -39,9 +39,10 @@ enum gssapi_auth_state
 /** Common state tracking structure */
 typedef struct gssapi_auth
 {
-    enum gssapi_auth_state state;
-    uint8_t *principal_name;
-    size_t principal_name_len;
+    enum gssapi_auth_state state; /**< Authentication state*/
+    uint8_t *principal_name;      /**< Principal name */
+    size_t principal_name_len;    /**< Length of the principal name */
+    uint8_t sequence;             /**< The next packet seqence number */
 } gssapi_auth_t;
 
 /** These functions can used for the `create` and `destroy` entry points */

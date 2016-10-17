@@ -58,7 +58,7 @@
 #include <maxscale/users.h>
 #include <maxscale/monitor.h>
 #include <maxscale/modules.h>
-#include <maxscale/skygw_utils.h>
+#include <maxscale/utils.h>
 #include <maxscale/log_manager.h>
 #include <mysql.h>
 #include <sys/utsname.h>

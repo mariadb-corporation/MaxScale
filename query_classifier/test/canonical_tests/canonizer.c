@@ -18,7 +18,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/buffer.h>
 #include <maxscale/gwdirs.h>
-#include <maxscale/skygw_utils.h>
+#include <maxscale/utils.h>
 
 int main(int argc, char** argv)
 {

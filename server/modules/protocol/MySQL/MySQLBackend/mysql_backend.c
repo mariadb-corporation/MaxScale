@@ -12,7 +12,6 @@
  */
 
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/utils.h>
@@ -324,7 +323,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
     /* prepare for connect */
     setipaddress(&serv_addr.sin_addr, host);
     serv_addr.sin_port = htons(port);
-    bufsize = GW_BACKEND_SO_SNDBUF;
+    bufsize = MXS_BACKEND_SO_SNDBUF;
 
     if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
     {
@@ -341,7 +340,7 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
         close_socket(so);
         goto return_rv;
     }
-    bufsize = GW_BACKEND_SO_RCVBUF;
+    bufsize = MXS_BACKEND_SO_RCVBUF;
 
     if (setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
     {

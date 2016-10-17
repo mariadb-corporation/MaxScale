@@ -82,7 +82,7 @@ void* gssapi_auth_init(char **options)
  * @see https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::AuthSwitchRequest
  * @see https://web.mit.edu/kerberos/krb5-1.5/krb5-1.5.4/doc/krb5-user/What-is-a-Kerberos-Principal_003f.html
  */
-static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE *instance)
+static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE *instance, gssapi_auth_t *auth)
 {
     size_t principal_name_len = strlen(instance->principal_name);
     size_t plen = sizeof(auth_plugin_name) + 1 + principal_name_len;
@@ -93,7 +93,7 @@ static GWBUF* create_auth_change_packet(GSSAPI_INSTANCE *instance)
         uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
         gw_mysql_set_byte3(data, plen);
         data += 3;
-        *data++ = 0x02; // Second packet
+        *data++ = ++auth->sequence; // Second packet
         *data++ = 0xfe; // AuthSwitchRequest command
         memcpy(data, auth_plugin_name, sizeof(auth_plugin_name)); // Plugin name
         data += sizeof(auth_plugin_name);
@@ -143,10 +143,14 @@ static void copy_client_information(DCB *dcb, GWBUF *buffer)
 {
     size_t buflen = gwbuf_length(buffer);
     MySQLProtocol *protocol = (MySQLProtocol*)dcb->protocol;
-    /* Take data from fixed locations first */
-    gwbuf_copy_data(buffer, 4, 4, (uint8_t*)&protocol->client_capabilities);
+    gssapi_auth_t *auth = (gssapi_auth_t*)dcb->authenticator_data;
+
+    /* Store the connection characteristics and sequence number of the current packet */
     protocol->charset = 0;
-    gwbuf_copy_data(buffer, 4 + 4 + 4, 1, (uint8_t*)&protocol->charset);
+    gwbuf_copy_data(buffer, MYSQL_CHARSET_OFFSET, 1, (uint8_t*)&protocol->charset);
+    gwbuf_copy_data(buffer, MYSQL_CLIENT_CAP_OFFSET, MYSQL_CLIENT_CAP_SIZE,
+                    (uint8_t*)&protocol->client_capabilities);
+    gwbuf_copy_data(buffer, MYSQL_SEQ_OFFSET, 1, &auth->sequence);
 
     if (buflen > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
@@ -292,7 +296,7 @@ int gssapi_auth_authenticate(DCB *dcb)
         /** We need to send the authentication switch packet to change the
          * authentication to something other than the 'mysql_native_password'
          * method */
-        GWBUF *buffer = create_auth_change_packet(instance);
+        GWBUF *buffer = create_auth_change_packet(instance, auth);
 
         if (buffer && dcb->func.write(dcb, buffer))
         {

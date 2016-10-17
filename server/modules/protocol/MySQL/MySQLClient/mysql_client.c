@@ -46,7 +46,6 @@
  * 31/05/2016   Martin Brampton         Implement connection throttling
  */
 #include <maxscale/gw_protocol.h>
-#include <maxscale/skygw_utils.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
@@ -479,6 +478,9 @@ int gw_read_client_event(DCB* dcb)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
+    ss_debug(uint8_t hdr[MYSQL_HEADER_LEN]);
+    ss_dassert(gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN &&
+               MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN == gwbuf_length(read_buffer));
     /** Allocate the shared session structure */
     if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
     {
