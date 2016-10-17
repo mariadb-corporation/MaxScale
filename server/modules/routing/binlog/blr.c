@@ -79,7 +79,6 @@
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gw.h>
 
 static char *version_str = "V2.1.0";
 

@@ -48,10 +48,10 @@
 #include <ftw.h>
 #include <string.h>
 #include <strings.h>
-#include <maxscale/gw.h>
 #include <unistd.h>
 #include <time.h>
 #include <getopt.h>
+#include <pwd.h>
 #include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/dcb.h>
@@ -86,6 +86,7 @@
 #include <sys/file.h>
 #include <maxscale/statistics.h>
 #include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -190,6 +191,7 @@ void write_child_exit_code(int fd, int code);
 static bool change_cwd();
 void shutdown_server();
 static void log_exit_status();
+static bool daemonize();
 
 /** SSL multi-threading functions and structures */
 
@@ -416,25 +418,30 @@ sigfatal_handler(int i)
  */
 static int signal_set(int sig, void (*handler)(int))
 {
-    static struct sigaction sigact;
-    static int err;
     int rc = 0;
 
-    memset(&sigact, 0, sizeof(struct sigaction));
+    struct sigaction sigact = {};
     sigact.sa_handler = handler;
-    GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
+
+    int err;
+
+    do
+    {
+        errno = 0;
+        err = sigaction(sig, &sigact, NULL);
+    }
+    while (errno == EINTR);
 
     if (err < 0)
     {
-        int eno = errno;
-        errno = 0;
         char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         rc = 1;
     }
+
     return rc;
 }
 
@@ -1573,7 +1580,7 @@ int main(int argc, char **argv)
 
         /** Daemonize the process and wait for the child process to notify
          * the parent process of its exit status. */
-        parent_process = gw_daemonize();
+        parent_process = daemonize();
 
         if (parent_process)
         {
@@ -2657,4 +2664,39 @@ static void log_exit_status()
         default:
             break;
     }
+}
+
+/**
+ * Daemonize the process by forking and putting the process into the
+ * background.
+ *
+ * @return True if context is that of the parent process, false if that of the
+ *         child process.
+ */
+static bool daemonize(void)
+{
+    pid_t pid;
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "fork() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+
+    if (pid != 0)
+    {
+        /* exit from main */
+        return true;
+    }
+
+    if (setsid() < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+    return false;
 }

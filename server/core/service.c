@@ -60,7 +60,6 @@
 #include <sys/types.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/resultset.h>
-#include <maxscale/gw.h>
 #include <maxscale/gwdirs.h>
 #include <math.h>
 #include <maxscale/version.h>

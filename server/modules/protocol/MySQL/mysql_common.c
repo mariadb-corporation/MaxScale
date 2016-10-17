@@ -42,7 +42,6 @@
  *
  */
 
-#include <maxscale/gw.h>
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>

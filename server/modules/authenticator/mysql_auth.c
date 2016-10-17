@@ -32,7 +32,6 @@
 #include <maxscale/poll.h>
 #include <maxscale/dbusers.h>
 #include <maxscale/gwdirs.h>
-#include <maxscale/gw.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 

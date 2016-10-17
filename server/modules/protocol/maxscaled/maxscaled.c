@@ -21,14 +21,15 @@
 #include <maxscale/session.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <pwd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
-#include <maxscale/gw.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>

@@ -73,7 +73,6 @@
 #include <string.h>
 #include <sys/utsname.h>
 #include <maxscale/dbusers.h>
-#include <maxscale/gw.h>
 #include <maxscale/alloc.h>
 #include <maxscale/limits.h>
 #define PCRE2_CODE_UNIT_WIDTH 8

@@ -22,7 +22,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <blr_constants.h>
-#include <maxscale/gw.h>
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
@@ -108,7 +107,7 @@ typedef enum avro_binlog_end
 #define TABLE_MAP_MAX_NAME_LEN 64
 
 /** How many bytes each thread tries to send */
-#define AVRO_DATA_BURST_SIZE MAX_BUFFER_SIZE
+#define AVRO_DATA_BURST_SIZE (32 * 1024)
 
 /** A CREATE TABLE abstraction */
 typedef struct table_create

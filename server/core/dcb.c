@@ -78,7 +78,6 @@
 #include <maxscale/modules.h>
 #include <maxscale/router.h>
 #include <errno.h>
-#include <maxscale/gw.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
@@ -86,6 +85,8 @@
 #include <maxscale/listener.h>
 #include <maxscale/hk_heartbeat.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -1069,7 +1070,7 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
 {
     GWBUF *buffer;
 
-    int bufsize = MXS_MIN(bytesavailable, MAX_BUFFER_SIZE);
+    int bufsize = MXS_MIN(bytesavailable, MXS_MAX_NW_READ_BUFFER_SIZE);
     if (maxbytes)
     {
         bufsize = MXS_MIN(bufsize, maxbytes - nreadtotal);
@@ -1187,10 +1188,10 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 static GWBUF *
 dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
 {
-    unsigned char temp_buffer[MAX_BUFFER_SIZE];
+    unsigned char temp_buffer[MXS_MAX_NW_READ_BUFFER_SIZE];
     GWBUF *buffer = NULL;
 
-    *nsingleread = SSL_read(dcb->ssl, (void *)temp_buffer, MAX_BUFFER_SIZE);
+    *nsingleread = SSL_read(dcb->ssl, (void *)temp_buffer, MXS_MAX_NW_READ_BUFFER_SIZE);
     dcb->stats.n_reads++;
 
     switch (SSL_get_error(dcb->ssl, *nsingleread))

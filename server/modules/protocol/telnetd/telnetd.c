@@ -28,7 +28,6 @@
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
-#include <maxscale/gw.h>
 #include <telnetd.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log_manager.h>

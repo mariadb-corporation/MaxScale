@@ -33,7 +33,7 @@ MXS_BEGIN_DECLS
 #define MXS_BACKEND_SO_RCVBUF (128 * 1024)
 
 /**
- * MSX_BACKEND_SO_SNDBUF
+ * MXS_BACKEND_SO_SNDBUF
  *
  * The value used when setting SO_SNDBUF of backend sockets.
  */
@@ -52,6 +52,16 @@ MXS_BEGIN_DECLS
  * The value used when setting SO_SNDBUF of client sockets.
  */
 #define MXS_CLIENT_SO_SNDBUF  (128 * 1024)
+
+/**
+ * MXS_MAX_NW_READ_BUFFER_SIZE
+ *
+ * The maximum amount of data read in one gofrom a client DCB.
+ *
+ * TODO: Consider removing altogether so that we always read
+ *       whatever is available in the socket.
+ */
+#define MXS_MAX_NW_READ_BUFFER_SIZE (32 * 1024)
 
 /**
  * MXS_MAX_THREADS
