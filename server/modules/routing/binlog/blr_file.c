@@ -2293,7 +2293,7 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
     // Write the event
     if ((n = pwrite(router->binlog_fd, new_event, event_size, file_offset)) != event_size)
     {
-       char err_msg[STRERROR_BUFLEN];
+       char err_msg[MXS_STRERROR_BUFLEN];
        MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                  "Truncating to previous record.",
                  router->service->name, new_event_desc, (unsigned long)file_offset,
