@@ -1750,16 +1750,6 @@ int main(int argc, char **argv)
             goto return_main;
         }
 
-        if (!(*syslog_enabled))
-        {
-            printf("Syslog logging is disabled.\n");
-        }
-
-        if (!(*maxlog_enabled))
-        {
-            printf("MaxScale logging is disabled.\n");
-        }
-
         mxs_log_set_syslog_enabled(*syslog_enabled);
         mxs_log_set_maxlog_enabled(*maxlog_enabled);
 
@@ -1824,6 +1814,11 @@ int main(int argc, char **argv)
                 get_datadir(),
                 get_libdir(),
                 get_cachedir());
+    }
+
+    if (!(*syslog_enabled) && !(*maxlog_enabled))
+    {
+        fprintf(stderr, "warning: Both MaxScale and Syslog logging disabled.\n");
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path);
