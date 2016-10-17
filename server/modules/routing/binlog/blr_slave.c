@@ -260,7 +260,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     case COM_QUIT:
         MXS_DEBUG("COM_QUIT received from slave with server_id %d",
                   slave->serverid);
-        break;
+        return 1;
     default:
         blr_send_custom_error(slave->dcb, 1, 0,
                               "You have an error in your SQL syntax; Check the "
