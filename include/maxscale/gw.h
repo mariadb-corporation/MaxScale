@@ -38,8 +38,6 @@
 
 MXS_BEGIN_DECLS
 
-bool gw_daemonize(void);
-
 MXS_END_DECLS
 
 #endif

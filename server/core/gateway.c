@@ -190,6 +190,7 @@ void write_child_exit_code(int fd, int code);
 static bool change_cwd();
 void shutdown_server();
 static void log_exit_status();
+static bool daemonize();
 
 /** SSL multi-threading functions and structures */
 
@@ -1578,7 +1579,7 @@ int main(int argc, char **argv)
 
         /** Daemonize the process and wait for the child process to notify
          * the parent process of its exit status. */
-        parent_process = gw_daemonize();
+        parent_process = daemonize();
 
         if (parent_process)
         {
@@ -2662,4 +2663,39 @@ static void log_exit_status()
         default:
             break;
     }
+}
+
+/**
+ * Daemonize the process by forking and putting the process into the
+ * background.
+ *
+ * @return True if context is that of the parent process, false if that of the
+ *         child process.
+ */
+static bool daemonize(void)
+{
+    pid_t pid;
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "fork() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+
+    if (pid != 0)
+    {
+        /* exit from main */
+        return true;
+    }
+
+    if (setsid() < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+    return false;
 }
