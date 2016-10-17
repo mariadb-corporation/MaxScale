@@ -38,9 +38,6 @@
 
 MXS_BEGIN_DECLS
 
-// network buffer is 32K
-#define MAX_BUFFER_SIZE 32768
-
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 
 bool gw_daemonize(void);
