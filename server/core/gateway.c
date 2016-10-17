@@ -416,25 +416,30 @@ sigfatal_handler(int i)
  */
 static int signal_set(int sig, void (*handler)(int))
 {
-    static struct sigaction sigact;
-    static int err;
     int rc = 0;
 
-    memset(&sigact, 0, sizeof(struct sigaction));
+    struct sigaction sigact = {};
     sigact.sa_handler = handler;
-    GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
+
+    int err;
+
+    do
+    {
+        errno = 0;
+        err = sigaction(sig, &sigact, NULL);
+    }
+    while (errno == EINTR);
 
     if (err < 0)
     {
-        int eno = errno;
-        errno = 0;
         char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         rc = 1;
     }
+
     return rc;
 }
 

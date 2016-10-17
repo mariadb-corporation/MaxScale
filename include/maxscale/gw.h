@@ -38,8 +38,6 @@
 
 MXS_BEGIN_DECLS
 
-#define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
-
 bool gw_daemonize(void);
 
 MXS_END_DECLS
