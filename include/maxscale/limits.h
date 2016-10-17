@@ -18,12 +18,49 @@
 
 MXS_BEGIN_DECLS
 
-// This file defines hard limits of MaxScale.
+/**
+ * @file lmits.h
+ *
+ * This file contains defines for hard limits of MaxScale.
+ */
 
-// Thread information is stored in a bitmask whose size must be a
-// multiple of 8. The bitmask is indexed using the thread id that start
-// from 1. Hence, the hard maximum number of threads must be a
-// multiple of 8 minus 1.
+
+/**
+ * MXS_BACKEND_SO_RCVBUF
+ *
+ * The value used when setting SO_RCVBUF of backend sockets.
+ */
+#define MXS_BACKEND_SO_RCVBUF (128 * 1024)
+
+/**
+ * MSX_BACKEND_SO_SNDBUF
+ *
+ * The value used when setting SO_SNDBUF of backend sockets.
+ */
+#define MXS_BACKEND_SO_SNDBUF (128 * 1024)
+
+/**
+ * MXS_CLIENT_SO_RCVBUF
+ *
+ * The value used when setting SO_RCVBUF of client sockets.
+ */
+#define MXS_CLIENT_SO_RCVBUF  (128 * 1024)
+
+/**
+ * MXS_CLIENT_SO_SNDBUF
+ *
+ * The value used when setting SO_SNDBUF of client sockets.
+ */
+#define MXS_CLIENT_SO_SNDBUF  (128 * 1024)
+
+/**
+ * MXS_MAX_THREADS
+ *
+ * Thread information is stored in a bitmask whose size must be a
+ * multiple of 8. The bitmask is indexed using the thread id that start
+ * from 1. Hence, the hard maximum number of threads must be a
+ * multiple of 8 minus 1.
+ */
 #define MXS_MAX_THREADS 255
 
 MXS_END_DECLS

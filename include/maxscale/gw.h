@@ -41,15 +41,6 @@ MXS_BEGIN_DECLS
 // network buffer is 32K
 #define MAX_BUFFER_SIZE 32768
 
-/**
- * Configuration for send and receive socket buffer sizes for
- * backend and cleint connections.
- */
-#define GW_BACKEND_SO_SNDBUF (128 * 1024)
-#define GW_BACKEND_SO_RCVBUF (128 * 1024)
-#define GW_CLIENT_SO_SNDBUF  (128 * 1024)
-#define GW_CLIENT_SO_RCVBUF  (128 * 1024)
-
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 
 bool gw_daemonize(void);
