@@ -4944,13 +4944,11 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
         }
     }
 
-    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY)
+    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
+        rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
     {
-        MXS_ERROR("Could not find master among the backend "
-                  "servers. Previous master's state : %s",
-                  rses->rses_master_ref == NULL ? "No master found" :
-                  (!BREF_IS_IN_USE(rses->rses_master_ref) ? "Master is not in use" :
-                   STRSRVSTATUS(&master)));
+        MXS_ERROR("Could not find master among the backend servers. "
+                  "Previous master's state : %s", STRSRVSTATUS(&master));
     }
 
     return candidate_bref;
