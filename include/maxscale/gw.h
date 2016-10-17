@@ -38,8 +38,6 @@
 
 MXS_BEGIN_DECLS
 
-#define EXIT_FAILURE 1
-
 // network buffer is 32K
 #define MAX_BUFFER_SIZE 32768
 
@@ -53,21 +51,6 @@ MXS_BEGIN_DECLS
 #define GW_CLIENT_SO_RCVBUF  (128 * 1024)
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
-#define GW_MYSQL_LOOP_TIMEOUT 300000000
-#define GW_MYSQL_READ 0
-#define GW_MYSQL_WRITE 1
-
-#define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
-#define GW_MYSQL_HANDSHAKE_FILLER 0x00
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE1 0xff
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE2 0xf7
-#define GW_MYSQL_SERVER_LANGUAGE 0x08
-#define GW_MYSQL_MAX_PACKET_LEN 0xffffffL;
-#define GW_MYSQL_SCRAMBLE_SIZE 20
-
-// debug for mysql_* functions
-#define MYSQL_CONN_DEBUG
-#undef MYSQL_CONN_DEBUG
 
 bool gw_daemonize(void);
 
