@@ -26,11 +26,12 @@
  */
 
 #include <maxscale/gw_authenticator.h>
+#include <sys/stat.h>
 #include <cdc.h>
+#include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/modutil.h>
 #include <maxscale/users.h>
-#include <sys/stat.h>
-#include <maxscale/alloc.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30

@@ -16,7 +16,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/utils.h>
 #include <netinet/tcp.h>
-#include <maxscale/gw.h>
 #include <mysqld_error.h>
 
 /*

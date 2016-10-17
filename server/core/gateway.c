@@ -48,10 +48,10 @@
 #include <ftw.h>
 #include <string.h>
 #include <strings.h>
-#include <maxscale/gw.h>
 #include <unistd.h>
 #include <time.h>
 #include <getopt.h>
+#include <pwd.h>
 #include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/dcb.h>
@@ -86,6 +86,7 @@
 #include <sys/file.h>
 #include <maxscale/statistics.h>
 #include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1

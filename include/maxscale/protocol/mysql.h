@@ -63,7 +63,6 @@
 #include <maxscale/version.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/utils.h>
-#include <maxscale/gw.h>
 #include <mysql.h>
 
 MXS_BEGIN_DECLS

@@ -78,7 +78,6 @@
 #include <maxscale/modules.h>
 #include <maxscale/router.h>
 #include <errno.h>
-#include <maxscale/gw.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
@@ -86,6 +85,8 @@
 #include <maxscale/listener.h>
 #include <maxscale/hk_heartbeat.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>

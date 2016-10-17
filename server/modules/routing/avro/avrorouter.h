@@ -22,7 +22,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <blr_constants.h>
-#include <maxscale/gw.h>
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>

@@ -83,7 +83,6 @@
 #include <maxscale/version.h>
 #include <zlib.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gw.h>
 
 extern int load_mysql_users(SERV_LISTENER *listener);
 extern void blr_master_close(ROUTER_INSTANCE* router);

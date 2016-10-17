@@ -25,7 +25,6 @@
 #include <maxscale/atomic.h>
 #include <maxscale/gwbitmask.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/gw.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/config.h>
 #include <mysql.h>

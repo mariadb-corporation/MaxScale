@@ -20,8 +20,6 @@
 #include <maxscale/random_jkiss.h>
 #include <maxscale/alloc.h>
 
-#include <maxscale/gw.h>
-
 /**
  * Generate a random printable character
  *

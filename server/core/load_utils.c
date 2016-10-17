@@ -42,7 +42,6 @@
 #include <curl/curl.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
-#include <maxscale/gw.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 

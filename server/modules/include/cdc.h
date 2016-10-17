@@ -37,7 +37,6 @@
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
-#include <maxscale/gw.h>
 
 MXS_BEGIN_DECLS
 

@@ -52,7 +52,6 @@
 #include <mysql_auth.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/poll.h>
-#include <maxscale/gw.h>
 #include <maxscale/modinfo.h>
 #include <sys/stat.h>
 #include <maxscale/modutil.h>
