@@ -177,7 +177,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
-include_directories(avro)
 include_directories(include)
 include_directories(server/inih)
 include_directories(server/modules/include)
@@ -185,8 +184,10 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
 
 if (BUILD_AVRO)
+  include_directories(avro)
   add_subdirectory(avro)
 endif()
+
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
