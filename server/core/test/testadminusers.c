@@ -279,7 +279,9 @@ char	*home, buf[1024];
 	
 	sprintf(buf, "%s/passwd", get_datadir());
     if(!is_valid_posix_path(buf))
+    {
         exit(1);
+    }
 	if (strcmp(buf, "/etc/passwd") != 0)
 		unlink(buf);
 
