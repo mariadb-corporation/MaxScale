@@ -35,6 +35,12 @@
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 
+typedef struct mysql_auth
+{
+    char *cache_dir; /**< Custom cache directory location */
+} MYSQL_AUTH;
+
+
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
 */
@@ -50,6 +56,7 @@ MODULE_INFO info =
 
 static char *version_str = "V1.1.0";
 
+static void* mysql_auth_init(char **options);
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
@@ -61,7 +68,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    NULL,                             /* No initialize entry point */
+    mysql_auth_init,                  /* Initialize the authenticator */
     NULL,                             /* No create entry point */
     mysql_auth_set_protocol_data,     /* Extract data into structure   */
     mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
@@ -120,6 +127,60 @@ GWAUTHENTICATOR* GetModuleObject()
     return &MyObject;
 }
 /*lint +e14 */
+
+/**
+ * @brief Initialize the authenticator instance
+ *
+ * @param options Authenticator options
+ * @return New MYSQL_AUTH instance or NULL on error
+ */
+static void* mysql_auth_init(char **options)
+{
+    MYSQL_AUTH *instance = MXS_MALLOC(sizeof(*instance));
+
+    if (instance)
+    {
+        bool error = false;
+        instance->cache_dir = NULL;
+
+        for (int i = 0; options[i]; i++)
+        {
+            char *value = strchr(options[i], '=');
+
+            if (value)
+            {
+                *value++ = '\0';
+
+                if (strcmp(options[i], "cache_dir") == 0)
+                {
+                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL)
+                    {
+                        error = true;
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Unknown authenticator option: %s", options[i]);
+                    error = true;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Unknown authenticator option: %s", options[i]);
+                error = true;
+            }
+        }
+
+        if (error)
+        {
+            MXS_FREE(instance->cache_dir);
+            MXS_FREE(instance);
+            instance = NULL;
+        }
+    }
+
+    return instance;
+}
 
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
@@ -781,21 +842,29 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
     int loaded = replace_mysql_users(port);
+    char path[PATH_MAX];
+
+    if (instance->cache_dir)
+    {
+        strcpy(path, instance->cache_dir);
+    }
+    else
+    {
+        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+    }
 
     if (loaded < 0)
     {
         MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
                   port->name, port->address ? port->address : "0.0.0.0", port->port);
 
-        /* Try loading authentication data from file cache */
-        char path[PATH_MAX];
-        sprintf(path, "%s/%s/%s/%s/%s", get_cachedir(), service->name, port->name,
-                DBUSERS_DIR, DBUSERS_FILE);
+        strcat(path, DBUSERS_FILE);
 
         if ((loaded = dbusers_load(port->users, path)) == -1)
         {
-            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);;
+            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
             rc = MXS_AUTH_LOADUSERS_ERROR;
         }
         else
@@ -806,9 +875,6 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     else
     {
         /* Users loaded successfully, save authentication data to file cache */
-        char path[PATH_MAX];
-        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
-
         if (mxs_mkdir_all(path, 0777))
         {
             strcat(path, DBUSERS_FILE);
