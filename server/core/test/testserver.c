@@ -50,7 +50,8 @@ test1()
     /* Server tests */
     ss_dfprintf(stderr,
                 "testserver : creating server called MyServer");
-    server = server_alloc("MyServer", "HTTPD", 9876, "NullAuthAccept", NULL);
+    server = server_alloc("MyServer", "HTTPD", 9876, "NullAuthAllow", NULL);
+    ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
 
     //ss_info_dassert(NULL != service, "New server with valid protocol and port must not be null");
