@@ -160,24 +160,24 @@ retblock:
  */
 const char* gw_mysql_protocol_state2string (int state)
 {
-    switch(state)
+    switch (state)
     {
-    case MXS_AUTH_STATE_INIT:
-        return "Authentication initialized";
-    case MXS_AUTH_STATE_PENDING_CONNECT:
-        return "Network connection pending";
-    case MXS_AUTH_STATE_CONNECTED:
-        return "Network connection created";
-    case MXS_AUTH_STATE_MESSAGE_READ:
-        return "Read server handshake";
-    case MXS_AUTH_STATE_RESPONSE_SENT:
-        return "Response to handshake sent";
-    case MXS_AUTH_STATE_FAILED:
-        return "Authentication failed";
-    case MXS_AUTH_STATE_COMPLETE:
-        return "Authentication is complete.";
-    default:
-        return "MySQL (unknown protocol state)";
+        case MXS_AUTH_STATE_INIT:
+            return "Authentication initialized";
+        case MXS_AUTH_STATE_PENDING_CONNECT:
+            return "Network connection pending";
+        case MXS_AUTH_STATE_CONNECTED:
+            return "Network connection created";
+        case MXS_AUTH_STATE_MESSAGE_READ:
+            return "Read server handshake";
+        case MXS_AUTH_STATE_RESPONSE_SENT:
+            return "Response to handshake sent";
+        case MXS_AUTH_STATE_FAILED:
+            return "Authentication failed";
+        case MXS_AUTH_STATE_COMPLETE:
+            return "Authentication is complete.";
+        default:
+            return "MySQL (unknown protocol state)";
     }
 }
 
@@ -267,7 +267,7 @@ GWBUF* mysql_create_custom_error(int         packet_number,
 
     field_count = 0xff;
     gw_mysql_set_byte2(mysql_err, /* mysql_errno */ 2003);
-    mysql_statemsg[0]='#';
+    mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
     if (msg != NULL)
@@ -333,8 +333,8 @@ GWBUF* mysql_create_custom_error(int         packet_number,
  */
 GWBUF *
 mysql_create_standard_error(int packet_number,
-        int error_number,
-        const char *error_message)
+                            int error_number,
+                            const char *error_message)
 {
     uint8_t *outbuf = NULL;
     uint32_t mysql_payload_size = 0;
@@ -356,7 +356,7 @@ mysql_create_standard_error(int packet_number,
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
-    mysql_packet_header[3]= 0;
+    mysql_packet_header[3] = 0;
     memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
 
     // current buffer pointer
@@ -392,9 +392,9 @@ mysql_create_standard_error(int packet_number,
  */
 int
 mysql_send_standard_error(DCB *dcb,
-        int packet_number,
-        int error_number,
-        const char *error_message)
+                          int packet_number,
+                          int error_number,
+                          const char *error_message)
 {
     GWBUF *buf;
     buf = mysql_create_standard_error(packet_number, error_number, error_message);
@@ -469,7 +469,7 @@ int mysql_send_auth_error(DCB        *dcb,
 
     field_count = 0xff;
     gw_mysql_set_byte2(mysql_err, /*mysql_errno */ 1045);
-    mysql_statemsg[0]='#';
+    mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
     if (mysql_message != NULL)
@@ -837,27 +837,27 @@ void init_response_status(GWBUF*             buf,
     {
         switch (cmd)
         {
-        case MYSQL_COM_STMT_PREPARE:
-            gwbuf_copy_data(buf, 9, 2, readbuf);
-            nparam = gw_mysql_get_byte2(readbuf);
-            gwbuf_copy_data(buf, 11, 2, readbuf);
-            nattr = gw_mysql_get_byte2(readbuf);
-            *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
-            break;
+            case MYSQL_COM_STMT_PREPARE:
+                gwbuf_copy_data(buf, 9, 2, readbuf);
+                nparam = gw_mysql_get_byte2(readbuf);
+                gwbuf_copy_data(buf, 11, 2, readbuf);
+                nattr = gw_mysql_get_byte2(readbuf);
+                *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
+                break;
 
-        case MYSQL_COM_QUIT:
-        case MYSQL_COM_STMT_SEND_LONG_DATA:
-        case MYSQL_COM_STMT_CLOSE:
-            *npackets = 0; /*< these don't reply anything */
-            break;
+            case MYSQL_COM_QUIT:
+            case MYSQL_COM_STMT_SEND_LONG_DATA:
+            case MYSQL_COM_STMT_CLOSE:
+                *npackets = 0; /*< these don't reply anything */
+                break;
 
-        default:
-            /**
-             * assume that other session commands respond
-             * OK or ERR
-             */
-            *npackets = 1;
-            break;
+            default:
+                /**
+                 * assume that other session commands respond
+                 * OK or ERR
+                 */
+                *npackets = 1;
+                break;
         }
     }
 
@@ -923,7 +923,7 @@ char* create_auth_failed_msg(GWBUF*readbuf,
                              uint8_t* sha1)
 {
     char* errstr;
-    char* uname=(char *)GWBUF_DATA(readbuf) + 5;
+    char* uname = (char *)GWBUF_DATA(readbuf) + 5;
     const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
 
     /** -4 comes from 2X'%s' minus terminating char */
