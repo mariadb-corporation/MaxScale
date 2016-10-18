@@ -37,7 +37,8 @@
 
 typedef struct mysql_auth
 {
-    char *cache_dir; /**< Custom cache directory location */
+    char *cache_dir;          /**< Custom cache directory location */
+    bool inject_service_user; /**< Inject the service user into the list of users */
 } MYSQL_AUTH;
 
 
@@ -142,6 +143,7 @@ static void* mysql_auth_init(char **options)
     {
         bool error = false;
         instance->cache_dir = NULL;
+        instance->inject_service_user = true;
 
         for (int i = 0; options[i]; i++)
         {
@@ -157,6 +159,10 @@ static void* mysql_auth_init(char **options)
                     {
                         error = true;
                     }
+                }
+                else if (strcmp(options[i], "inject_service_user") == 0)
+                {
+                    instance->inject_service_user = config_truth_value(value);
                 }
                 else
                 {
@@ -831,6 +837,48 @@ mysql_auth_free_client_data(DCB *dcb)
 }
 
 /**
+ * @brief Inject the service user into the cache
+ *
+ * @param port Service listener
+ * @return True on success, false on error
+ */
+static bool add_service_user(SERV_LISTENER *port)
+{
+    char *user = NULL;
+    char *pw = NULL;
+    bool rval = false;
+
+    if (serviceGetUser(port->service, &user, &pw))
+    {
+        pw = decryptPassword(pw);
+
+        if (pw)
+        {
+            char *newpw = create_hex_sha1_sha1_passwd(pw);
+
+            if (newpw)
+            {
+                add_mysql_users_with_host_ipv4(port->users, user, "%", newpw, "Y", "");
+                add_mysql_users_with_host_ipv4(port->users, user, "localhost", newpw, "Y", "");
+                MXS_FREE(newpw);
+                rval = true;
+            }
+            MXS_FREE(pw);
+        }
+        else
+        {
+            MXS_ERROR("[%s] Failed to decrypt service user password.", port->service->name);
+        }
+    }
+    else
+    {
+        MXS_ERROR("[%s] Failed to retrieve service credentials.", port->service->name);
+    }
+
+    return rval;
+}
+
+/**
  * @brief Load MySQL authentication users
  *
  * This function loads MySQL users from the backend database.
@@ -870,6 +918,16 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         else
         {
             MXS_WARNING("Using cached credential information.");
+        }
+
+        if (instance->inject_service_user)
+        {
+            /** Inject the service user as a 'backup' user that's available
+             * if loading of the users fails */
+            if (!add_service_user(port))
+            {
+                MXS_ERROR("[%s] Failed to inject service user.", port->service->name);
+            }
         }
     }
     else

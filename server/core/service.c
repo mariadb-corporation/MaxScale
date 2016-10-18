@@ -303,7 +303,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     /** Load the authentication users before before starting the listener */
     if (port->listener->authfunc.loadusers &&
-        (service->router->getCapabilities() & RCAP_TYPE_NO_USERS_INIT) == 0 &&
         port->listener->authfunc.loadusers(port) != MXS_AUTH_LOADUSERS_OK)
     {
         MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",

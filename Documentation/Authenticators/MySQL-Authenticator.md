@@ -32,3 +32,21 @@ port=4006
 authenticator=MySQLAuth
 authenticator_options=cache_dir=/tmp
 ```
+
+### `inject_service_user`
+
+Inject service credentials into the list of database users if loading of
+users fails. This option takes a boolean value and it is enabled by
+default.
+
+When a connection to the backend database cannot be made, the service user
+can be injected into the list of allowed users. This allows administrative
+operations to be done via the SQL interface with modules that support it
+e.g. the Binlogrouter and Maxinfo modules.
+
+If users are loaded successfully, the service user credentials are _not_
+injected into the list of users.
+
+```
+authenticator_options=inject_service_user=false
+```

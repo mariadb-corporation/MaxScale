@@ -1790,7 +1790,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static uint64_t getCapabilities()
 {
-    return (RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_USERS_INIT);
+    return RCAP_TYPE_NO_RSESSION;
 }
 
 /**
