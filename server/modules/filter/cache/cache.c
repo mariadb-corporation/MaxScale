@@ -621,7 +621,10 @@ static void cache_session_data_free(CACHE_SESSION_DATA* data)
 {
     if (data)
     {
-        ss_dassert(!data->use_db);
+        // In normal circumstances, only data->default_db may be non-NULL at
+        // this point. However, if the authentication with the backend fails
+        // and the session is closed, data->use_db may be non-NULL.
+        MXS_FREE(data->use_db);
         MXS_FREE(data->default_db);
         MXS_FREE(data);
     }
