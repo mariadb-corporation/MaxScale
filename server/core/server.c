@@ -44,6 +44,9 @@
 #include <log_manager.h>
 #include <gw_ssl.h>
 
+/** The latin1 charset */
+#define SERVER_DEFAULT_CHARSET 0x08
+
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
 
@@ -89,6 +92,7 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     server->persistmaxtime = 0;
     server->persistpoolmax = 0;
     server->slave_configured = false;
+    server->charset = SERVER_DEFAULT_CHARSET;
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
