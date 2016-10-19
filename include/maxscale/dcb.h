@@ -227,6 +227,7 @@ typedef struct dcb
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
+    int             owner;          /**< Owning thread */
     SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
