@@ -59,6 +59,13 @@
 %include {
 #include "sqliteInt.h"
 
+// Copied from query_classifier.h
+enum
+{
+  QUERY_TYPE_READ               = 0x000002, /*< Read database data:any */
+  QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
+};
+
 // MaxScale naming convention:
 //
 // - A function that "overloads" a sqlite3 function has the same name
@@ -294,11 +301,13 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 //
 
 %ifdef MAXSCALE
-cmd ::= BEGIN transtype(Y) trans_opt.  {mxs_sqlite3BeginTransaction(pParse, Y);}
+id_opt ::= .
+id_opt ::= deferred_id.
+
+cmd ::= BEGIN id_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
 %endif
 %ifndef MAXSCALE
 cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
-%endif
 trans_opt ::= .
 trans_opt ::= TRANSACTION.
 trans_opt ::= TRANSACTION nm.
@@ -307,10 +316,11 @@ transtype(A) ::= .             {A = TK_DEFERRED;}
 transtype(A) ::= DEFERRED(X).  {A = @X;}
 transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
+%endif
 %ifdef MAXSCALE
-cmd ::= COMMIT trans_opt.      {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= END trans_opt.         {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK trans_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT id_opt.      {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= END id_opt.         {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK id_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
 %endif
 %ifndef MAXSCALE
 cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
@@ -318,6 +328,7 @@ cmd ::= END trans_opt.         {sqlite3CommitTransaction(pParse);}
 cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
 %endif
 
+%ifndef MAXSCALE
 savepoint_opt ::= SAVEPOINT.
 savepoint_opt ::= .
 cmd ::= SAVEPOINT nm(X). {
@@ -329,6 +340,7 @@ cmd ::= RELEASE savepoint_opt nm(X). {
 cmd ::= ROLLBACK trans_opt TO savepoint_opt nm(X). {
   sqlite3Savepoint(pParse, SAVEPOINT_ROLLBACK, &X);
 }
+%endif
 
 ///////////////////// The CREATE TABLE statement ////////////////////////////
 //
@@ -3144,8 +3156,39 @@ show(A) ::= SHOW WARNINGS show_warnings_options. {
 //////////////////////// The START TRANSACTION statement ////////////////////////////////////
 //
 
-cmd ::= START TRANSACTION. {
-  mxs_sqlite3BeginTransaction(pParse, 0);
+%type start_transaction_characteristic {int}
+
+start_transaction_characteristic(A) ::= READ WRITE. {
+  A = QUERY_TYPE_WRITE;
+}
+
+start_transaction_characteristic(A) ::= READ id. { // READ ONLY
+  A = QUERY_TYPE_READ;
+}
+
+start_transaction_characteristic(A) ::= WITH id id. { // WITH CONSISTENT SNAPSHOT
+  A = 0;
+}
+
+%type start_transaction_characteristics {int}
+
+start_transaction_characteristics(A) ::= .
+{
+  A = 0;
+}
+
+start_transaction_characteristics(A) ::= start_transaction_characteristic(X).
+{
+  A = X;
+}
+
+start_transaction_characteristics(A) ::=
+    start_transaction_characteristics(X) COMMA start_transaction_characteristic(Y). {
+  A = X | Y;
+}
+
+cmd ::= START TRANSACTION start_transaction_characteristics(X). {
+  mxs_sqlite3BeginTransaction(pParse, X);
 }
 
 //////////////////////// The TRUNCATE statement ////////////////////////////////////

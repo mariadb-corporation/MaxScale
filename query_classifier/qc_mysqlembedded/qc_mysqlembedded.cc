@@ -630,6 +630,14 @@ static uint32_t resolve_query_type(THD* thd)
 
     case SQLCOM_BEGIN:
         type |= QUERY_TYPE_BEGIN_TRX;
+        if (lex->start_transaction_opt & MYSQL_START_TRANS_OPT_READ_WRITE)
+        {
+            type |= QUERY_TYPE_WRITE;
+        }
+        else if (lex->start_transaction_opt & MYSQL_START_TRANS_OPT_READ_ONLY)
+        {
+            type |= QUERY_TYPE_READ;
+        }
         goto return_qtype;
         break;
 

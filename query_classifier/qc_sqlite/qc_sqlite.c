@@ -968,7 +968,7 @@ void mxs_sqlite3BeginTransaction(Parse* pParse, int type)
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-    info->types = QUERY_TYPE_BEGIN_TRX;
+    info->types = QUERY_TYPE_BEGIN_TRX | type;
 }
 
 void mxs_sqlite3BeginTrigger(Parse *pParse,      /* The parse context of the CREATE TRIGGER statement */
