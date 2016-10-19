@@ -8,6 +8,7 @@
 * Client side SSL works.
 
 For more details, please refer to
+* [MaxScale 1.4.4 Release Notes](Release-Notes/MaxScale-1.4.4-Release-Notes.md)
 * [MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
 * [MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
 * [MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
@@ -38,7 +39,7 @@ For more details, please refer to [MaxScale 1.3 Release Notes](Release-Notes/Max
       * Firewall filter
       * Multi-Master monitor
       * RabbitMQ logging filter
-      * Schema Sharding router 
+      * Schema Sharding router
 * Added option to use high precision timestamps in logging.
 * Readwritesplit router now returns the master server's response.
 * New readwritesplit router option added. It is now possible to control the amount of memory readwritesplit sessions will consume by limiting the amount of session modifying statements they can execute.
