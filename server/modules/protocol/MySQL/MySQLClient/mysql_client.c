@@ -56,8 +56,9 @@
 #include <sys/stat.h>
 #include <maxscale/modutil.h>
 #include <netinet/tcp.h>
-
+#include <maxscale/query_classifier.h>
 #include <maxscale/gw_authenticator.h>
+#include <maxscale/session.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -849,6 +850,34 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
 
     if (capabilities & RCAP_TYPE_STMT_INPUT)
     {
+        SESSION *ses = dcb->session;
+        ss_dassert(ses);
+
+        uint32_t type = qc_get_type(read_buffer);
+
+        if (type & QUERY_TYPE_BEGIN_TRX)
+        {
+            session_trx_state_t trx_state;
+            if (type & QUERY_TYPE_WRITE)
+            {
+                trx_state = SESSION_TRX_READ_WRITE;
+            }
+            else if (type & QUERY_TYPE_READ)
+            {
+                trx_state = SESSION_TRX_READ_ONLY;
+            }
+            else
+            {
+                trx_state = SESSION_TRX_ACTIVE;
+            }
+
+            session_set_trx_state(ses, trx_state);
+        }
+        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
+        {
+            session_set_trx_state(ses, SESSION_TRX_INACTIVE);
+        }
+
         /**
          * Feed each statement completely and separately
          * to router. The routing functions return 1 for
