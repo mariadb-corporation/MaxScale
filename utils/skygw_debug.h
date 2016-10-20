@@ -406,14 +406,6 @@ typedef enum skygw_chk_t
                               lf->lf_name_suffix != NULL &&             \
                               lf->lf_full_file_name != NULL,                \
                               "NULL in name variable\n");               \
-              ss_debug(                                                 \
-              (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
-               lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \
-               false :                                                  \
-               (lf->lf_filepath == NULL ||                              \
-                lf->lf_name_prefix == NULL ||                           \
-                lf->lf_name_suffix == NULL ||                           \
-                lf->lf_full_file_name == NULL ? false : true));)        \
           }
 
 #define CHK_FILEWRITER(fwr) {                                           \
