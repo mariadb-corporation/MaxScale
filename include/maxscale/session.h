@@ -73,6 +73,36 @@ typedef enum
     SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } session_state_t;
 
+typedef enum
+{
+    SESSION_TRX_INACTIVE_BIT   = 1, /* 0b0001 */
+    SESSION_TRX_ACTIVE_BIT     = 2, /* 0b0010 */
+    SESSION_TRX_READ_ONLY_BIT  = 4, /* 0b0100 */
+    SESSION_TRX_READ_WRITE_BIT = 8, /* 0b1000 */
+} session_trx_state_bit_t;
+
+typedef enum
+{
+    /*< The current transaction state is not known. */
+    SESSION_TRX_UNKNOWN     = 0,
+    /*< There is no on-going transaction. */
+    SESSION_TRX_INACTIVE    = SESSION_TRX_INACTIVE_BIT,
+    /*< A transaction is active. */
+    SESSION_TRX_ACTIVE      = SESSION_TRX_ACTIVE_BIT,
+    /*< An explicit READ ONLY transaction is active. */
+    SESSION_TRX_READ_ONLY   = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
+    /*< An explicit READ WRITE transaction is active. */
+    SESSION_TRX_READ_WRITE  = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT)
+} session_trx_state_t;
+
+/**
+ * Convert transaction state to string representation.
+ *
+ * @param state A transaction state.
+ * @return String representation of the state.
+ */
+const char* session_trx_state_to_string(session_trx_state_t state);
+
 /**
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
@@ -150,6 +180,7 @@ typedef struct session
     UPSTREAM        tail;             /*< The tail of the filter chain */
     int             refcount;         /*< Reference count on the session */
     bool            ses_is_child;     /*< this is a child session */
+    session_trx_state_t trx_state;    /*< The current transaction state. */
     skygw_chk_t     ses_chk_tail;
 } SESSION;
 
@@ -205,6 +236,58 @@ void session_disable_log_priority(SESSION* ses, int priority);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 void process_idle_sessions();
 void enable_session_timeouts();
+
+/**
+ * Get the transaction state of the session.
+ *
+ * @param ses The SESSION object.
+ * @return The transaction state.
+ */
+session_trx_state_t session_get_trx_state(const SESSION* ses);
+
+/**
+ * Set the transaction state of the session.
+ *
+ * NOTE: Only the protocol object may call this.
+ *
+ * @param ses       The SESSION object.
+ * @param new_state The new transaction state.
+ *
+ * @return The previous transaction state.
+ */
+session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
+
+/**
+ * Tells whether a transaction is active.
+ *
+ * @return True if a transaction is active, false otherwise.
+ */
+static inline bool session_trx_is_active(const SESSION* ses)
+{
+    return ses->trx_state & SESSION_TRX_ACTIVE_BIT;
+}
+
+/**
+ * Tells whether an explicit READ ONLY transaction is active.
+ *
+ * @return True if an explicit READ ONLY transaction is active,
+ *         false otherwise.
+ */
+static inline bool session_trx_is_read_only(const SESSION* ses)
+{
+    return ses->trx_state == SESSION_TRX_READ_ONLY;
+}
+
+/**
+ * Tells whether an explicit READ WRITE transaction is active.
+ *
+ * @return True if an explicit READ WRITE  transaction is active,
+ *         false otherwise.
+ */
+static inline bool session_trx_is_read_write(const SESSION* ses)
+{
+    return ses->trx_state == SESSION_TRX_READ_WRITE;
+}
 
 MXS_END_DECLS
 
