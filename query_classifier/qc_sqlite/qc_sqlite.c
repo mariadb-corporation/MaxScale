@@ -1629,7 +1629,7 @@ void maxscaleExplain(Parse* pParse, SrcList* pName)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_READ;
-    update_names(info, "information_schema", "COLUMNS");
+    update_names(info, pName->a[0].zDatabase, pName->a[0].zName);
     append_affected_field(info,
                           "COLUMN_DEFAULT COLUMN_KEY COLUMN_NAME "
                           "COLUMN_TYPE EXTRA IS_NULLABLE");
@@ -2191,7 +2191,7 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
     case MXS_SHOW_COLUMNS:
         {
             info->types = QUERY_TYPE_READ;
-            update_names(info, "information_schema", "COLUMNS");
+            update_names(info, zDatabase, zName);
             if (pShow->data == MXS_SHOW_COLUMNS_FULL)
             {
                 append_affected_field(info,

@@ -95,7 +95,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *));
 static void parsing_info_set_plain_str(void* ptr, char* str);
 /** Free THD context and close MYSQL */
 static void parsing_info_done(void* ptr);
-static void* skygw_get_affected_tables(void* lexptr);
+static TABLE_LIST* skygw_get_affected_tables(void* lexptr);
 static bool ensure_query_is_parsed(GWBUF* query);
 static bool parse_query(GWBUF* querybuf);
 static bool query_is_parsed(GWBUF* buf);
@@ -1063,7 +1063,7 @@ LEX* get_lex(GWBUF* querybuf)
  * @param thd Pointer to a valid THD
  * @return Pointer to the head of the TABLE_LIST chain or NULL in case of an error
  */
-static void* skygw_get_affected_tables(void* lexptr)
+static TABLE_LIST* skygw_get_affected_tables(void* lexptr)
 {
     LEX* lex = (LEX*) lexptr;
 
@@ -1073,7 +1073,23 @@ static void* skygw_get_affected_tables(void* lexptr)
         return NULL;
     }
 
-    return (void*) lex->current_select->table_list.first;
+    TABLE_LIST *tbl = lex->current_select->table_list.first;
+
+    if (tbl && tbl->schema_select_lex && tbl->schema_select_lex->table_list.elements &&
+        lex->sql_command != SQLCOM_SHOW_KEYS)
+    {
+        /**
+         * Some statements e.g. EXPLAIN or SHOW COLUMNS give `information_schema`
+         * as the underlying table and the table in the query is stored in
+         * @c schema_select_lex.
+         *
+         * SHOW [KEYS | INDEX] does the reverse so we need to skip the
+         * @c schema_select_lex when processing a SHOW [KEYS | INDEX] statement.
+         */
+        tbl = tbl->schema_select_lex->table_list.first;
+    }
+
+    return tbl;
 }
 
 /**
@@ -1111,7 +1127,7 @@ char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
 
     while (lex->current_select)
     {
-        tbl = (TABLE_LIST*) skygw_get_affected_tables(lex);
+        tbl = skygw_get_affected_tables(lex);
 
         while (tbl)
         {
@@ -1803,7 +1819,7 @@ char** qc_get_database_names(GWBUF* querybuf, int* size)
 
     while (lex->current_select)
     {
-        tbl = lex->current_select->table_list.first;
+        tbl = skygw_get_affected_tables(lex);
 
         while (tbl)
         {
