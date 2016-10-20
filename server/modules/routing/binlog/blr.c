@@ -275,7 +275,7 @@ createInstance(SERVICE *service, char **options)
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
-    inst->trx_safe = 1;
+    inst->trx_safe = 0;
     inst->pending_transaction = 0;
     inst->last_safe_pos = 0;
     inst->last_event_pos = 0;
