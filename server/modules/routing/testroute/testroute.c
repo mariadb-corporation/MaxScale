@@ -32,7 +32,7 @@ static  void   freeSession(ROUTER *instance, void *session);
 static  int    routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static  void   clientReply(ROUTER *instance, void *session, GWBUF *queue, DCB*);
 static  void   diagnostic(ROUTER *instance, DCB *dcb);
-static  int    getCapabilities ();
+static  uint64_t getCapabilities ();
 static void    handleError(ROUTER           *instance,
                            void             *router_session,
                            GWBUF            *errbuf,
@@ -164,7 +164,7 @@ diagnostic(ROUTER *instance, DCB *dcb)
 {
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities()
 {
     return 0;
 }

@@ -89,7 +89,7 @@ static int route_by_statement(SESSION *, GWBUF **);
 static void mysql_client_auth_error_handling(DCB *dcb, int auth_val);
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
-static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities);
+static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int);
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 static void gw_process_one_new_client(DCB *client_dcb);
@@ -780,7 +780,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
     SESSION *session;
     session_state_t session_state_value;
-    uint8_t capabilities = 0;
+    uint64_t capabilities = 0;
 
     session = dcb->session;
     CHK_SESSION(session);
@@ -809,7 +809,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
     /** If the router requires statement input or we are still authenticating
      * we need to make sure that a complete SQL packet is read before continuing */
-    if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
+    if (capabilities & RCAP_TYPE_STMT_INPUT)
     {
         uint8_t* data;
         int packet_size;
@@ -836,7 +836,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
  * @return 0 if succeed, 1 otherwise
  */
 static int
-gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
+gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
 {
     SESSION *session = dcb->session;
     uint8_t *payload = GWBUF_DATA(read_buffer);
@@ -847,7 +847,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
+    if (capabilities & RCAP_TYPE_STMT_INPUT)
     {
         /**
          * Feed each statement completely and separately
@@ -865,7 +865,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
             spinlock_release(&dcb->authlock);
         }
     }
-    else if (NULL != session->router_session || (capabilities & (int)RCAP_TYPE_NO_RSESSION))
+    else if (NULL != session->router_session || (capabilities & RCAP_TYPE_NO_RSESSION))
     {
         /** Feed whole packet to router, which will free it
          *  and return 1 for success, 0 for failure

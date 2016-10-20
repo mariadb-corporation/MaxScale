@@ -79,7 +79,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void errorReply(ROUTER *instance, void *router_session, GWBUF *message,
                        DCB *backend_dcb, error_action_t action, bool *succp);
-static int getCapabilities();
+static uint64_t getCapabilities();
 extern int MaxScaleUptime();
 extern void avro_get_used_tables(AVRO_INSTANCE *router, DCB *dcb);
 void converter_func(void* data);
@@ -955,7 +955,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
     ss_dassert(false);
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities()
 {
     return RCAP_TYPE_NO_RSESSION;
 }
