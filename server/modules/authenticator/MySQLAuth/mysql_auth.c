@@ -30,7 +30,7 @@
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <maxscale/dbusers.h>
+#include "dbusers.h"
 #include <maxscale/gwdirs.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
@@ -884,13 +884,20 @@ static bool add_service_user(SERV_LISTENER *port)
  * This function loads MySQL users from the backend database.
  *
  * @param port Listener definition
- * @return AUTH_LOADUSERS_OK on success, AUTH_LOADUSERS_ERROR on error
+ * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
+ * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
 static int mysql_auth_load_users(SERV_LISTENER *port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+
+    if (port->users == NULL && !check_service_permissions(port->service))
+    {
+        return MXS_AUTH_LOADUSERS_FATAL;
+    }
+
     int loaded = replace_mysql_users(port);
     char path[PATH_MAX];
 

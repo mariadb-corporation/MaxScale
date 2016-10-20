@@ -40,7 +40,6 @@
 #include "avrorouter.h"
 #include <maxavro.h>
 #include <maxscale/alloc.h>
-#include <maxscale/dbusers.h>
 
 extern char *blr_extract_column(GWBUF *buf, int col);
 extern uint32_t extract_field(uint8_t *src, int bits);

@@ -114,6 +114,15 @@ typedef struct server_ref_t
  */
 #define SERVICE_PARAM_UNINIT -1
 
+/* Refresh rate limits for load users from database */
+#define USERS_REFRESH_TIME         30           /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_MAX_PER_TIME 4    /* Max number of load calls within the time interval */
+
+/** Default timeout values used by the connections which fetch user authentication data */
+#define DEFAULT_AUTH_CONNECT_TIMEOUT 3
+#define DEFAULT_AUTH_READ_TIMEOUT    1
+#define DEFAULT_AUTH_WRITE_TIMEOUT   2
+
 /**
  * Defines a service within the gateway.
  *

@@ -89,14 +89,14 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
  * @return The default authenticator for the protocol or NULL if the protocol
  * does not provide one
  */
-char* get_default_authenticator(const char *protocol)
+const char* get_default_authenticator(const char *protocol)
 {
     char *rval = NULL;
     GWPROTOCOL *protofuncs = (GWPROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
     if (protofuncs && protofuncs->auth_default)
     {
-        rval = MXS_STRDUP(protofuncs->auth_default());
+        rval = protofuncs->auth_default();
     }
 
     return rval;

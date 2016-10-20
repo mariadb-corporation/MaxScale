@@ -71,7 +71,8 @@ listener_alloc(struct service* service, char* name, char *protocol, char *addres
     {
         authenticator = MXS_STRDUP(authenticator);
     }
-    else if ((authenticator = get_default_authenticator(protocol)) == NULL)
+    else if ((authenticator = (char*)get_default_authenticator(protocol)) == NULL ||
+             (authenticator = MXS_STRDUP(authenticator)) == NULL)
     {
         MXS_ERROR("No authenticator defined for listener '%s' and could not get "
                   "default authenticator for protocol '%s'.", name, protocol);
@@ -83,6 +84,9 @@ listener_alloc(struct service* service, char* name, char *protocol, char *addres
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for "
                   "listener '%s'.", authenticator, name);
+        MXS_FREE(address);
+        MXS_FREE(authenticator);
+        return NULL;
     }
 
     protocol = MXS_STRDUP(protocol);

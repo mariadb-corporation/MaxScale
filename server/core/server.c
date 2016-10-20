@@ -69,7 +69,8 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     {
         authenticator = MXS_STRDUP(authenticator);
     }
-    else if ((authenticator = get_default_authenticator(protocol)) == NULL)
+    else if ((authenticator = (char*)get_default_authenticator(protocol)) == NULL ||
+             (authenticator = MXS_STRDUP(authenticator)) == NULL)
     {
         MXS_ERROR("No authenticator defined for server at %s:%u and no default "
                   "authenticator for protocol '%s'.", servname, port, protocol);

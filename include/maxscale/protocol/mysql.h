@@ -59,7 +59,6 @@
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/users.h>
-#include <maxscale/dbusers.h>
 #include <maxscale/version.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/utils.h>
@@ -93,6 +92,7 @@ MXS_BEGIN_DECLS
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
+/** Name of the default server side authentication plugin */
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
 
 /** All authentication responses are at least this many bytes long */
@@ -105,7 +105,12 @@ MXS_BEGIN_DECLS
 # define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif
 
-#define MYSQL_HOSTNAME_MAXLEN  60
+/* Max length of fields in the mysql.user table */
+#define MYSQL_USER_MAXLEN     128
+#define MYSQL_PASSWORD_LEN    41
+#define MYSQL_HOST_MAXLEN     60
+#define MYSQL_DATABASE_MAXLEN 128
+#define MYSQL_TABLE_MAXLEN    64
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 #define SMALL_CHUNK 1024

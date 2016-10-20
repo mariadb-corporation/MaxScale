@@ -432,7 +432,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         else if (strcasecmp(word, "USER()") == 0)
         {
             /* Return user@host */
-            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN + 1] = "";
+            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOST_MAXLEN + 1] = "";
 
             MXS_FREE(query_text);
             snprintf(user_host, sizeof(user_host),
@@ -3401,8 +3401,6 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-    int loaded;
-
     /* if unconfigured return an error */
     if (router->master_state == BLRM_UNCONFIGURED)
     {
@@ -3532,28 +3530,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->current_pos, router->binlog_position);
 
     /* Try reloading new users and update cached credentials */
-    loaded = service_refresh_users(router->service);
-
-    if (loaded == 0)
-    {
-        for (SERV_LISTENER *port = router->service->ports; port; port = port->next)
-        {
-            char path[PATH_MAX];
-            sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
-
-            if (mxs_mkdir_all(path, 0775))
-            {
-                strcat(path, BLR_DBUSERS_FILE);
-                dbusers_save(port->users, path);
-            }
-        }
-    }
-    else
-    {
-        MXS_NOTICE("Service %s: user credentials could not be refreshed. "
-                   "Will use existing cached credentials (%s/%s) if possible.",
-                   router->service->name, router->binlogdir, BLR_DBUSERS_DIR);
-    }
+    service_refresh_users(router->service);
 
     return blr_slave_send_ok(router, slave);
 }

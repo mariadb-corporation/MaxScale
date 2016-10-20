@@ -33,7 +33,7 @@
 #include <maxscale/users.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
-#include <maxscale/dbusers.h>
+#include "dbusers.h"
 #include <maxscale/protocol/mysql.h>
 #include <mysql_auth.h>
 #include <maxscale/listener.h>
