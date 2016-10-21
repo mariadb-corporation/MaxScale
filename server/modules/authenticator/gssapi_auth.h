@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <gssapi.h>
+#include <sqlite3.h>
 
 MXS_BEGIN_DECLS
 
@@ -36,18 +37,15 @@ enum gssapi_auth_state
     GSSAPI_AUTH_FAILED
 };
 
-/** Common state tracking structure */
+/** Common structure for both backend and client authenticators */
 typedef struct gssapi_auth
 {
     enum gssapi_auth_state state; /**< Authentication state*/
     uint8_t *principal_name;      /**< Principal name */
     size_t principal_name_len;    /**< Length of the principal name */
     uint8_t sequence;             /**< The next packet seqence number */
+    sqlite3 *handle;              /**< SQLite3 database handle */
 } gssapi_auth_t;
-
-/** These functions can used for the `create` and `destroy` entry points */
-void* gssapi_auth_alloc(void *instance);
-void gssapi_auth_free(void *data);
 
 /** Report GSSAPI errors */
 void report_error(OM_uint32 major, OM_uint32 minor);
