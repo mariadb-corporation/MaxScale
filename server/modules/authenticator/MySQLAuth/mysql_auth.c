@@ -155,7 +155,8 @@ static void* mysql_auth_init(char **options)
 
                 if (strcmp(options[i], "cache_dir") == 0)
                 {
-                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL)
+                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL ||
+                        !clean_up_pathname(instance->cache_dir))
                     {
                         error = true;
                     }
@@ -903,7 +904,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
     if (instance->cache_dir)
     {
-        strcpy(path, instance->cache_dir);
+        snprintf(path, sizeof(path) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
     }
     else
     {

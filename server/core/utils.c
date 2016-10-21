@@ -315,14 +315,15 @@ char *create_hex_sha1_sha1_passwd(char *passwd)
  * Remove duplicate and trailing forward slashes from a path.
  * @param path Path to clean up
  */
-void clean_up_pathname(char *path)
+bool clean_up_pathname(char *path)
 {
     char *data = path;
     size_t len = strlen(path);
 
     if (len > PATH_MAX)
     {
-        MXS_WARNING("Pathname too long: %s", path);
+        MXS_ERROR("Pathname too long: %s", path);
+        return false;
     }
 
     while (*data != '\0')
@@ -350,6 +351,8 @@ void clean_up_pathname(char *path)
             len--;
         }
     }
+
+    return true;
 }
 
 /**
