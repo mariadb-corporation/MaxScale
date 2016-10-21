@@ -287,13 +287,22 @@ Then simply set this file to have execute permissions and it may be run like any
 
 ## The .maxadmin file
 
-MaxAdmin supports a mechanism to set defaults for all the command line switches via a file in the home directory of the user. If a file named .maxadmin exists it will be read and parameters set according to the lies in this files. The parameter that can be set is: socket. An example of a .maxadmin file that will alter the default password and user name arguments would be
+MaxAdmin supports a mechanism to set defaults for the command line switches via a file in the home directory of the user. If a file named `.maxadmin` exists, it will be read and parameters set according to the entries in that file.
+
+This mechanism can be used to provide defaults to the command line options. If a command line option is provided, it will still override the value in the `.maxadmin` file.
+
+The parameters than can be set are:
+   * `1.4`: _hostname_, _port_, _user_ and _passwd_
+   * `2.0.0` and `2.0.1`: _socket_
+   * `2.0.2` onwards: _socket_, _hostname_, _port_, _user_ and _passwd_ (and as synonym _password_)
+
+An example of a `.maxadmin` file that will alter the default socket path is:
 
     socket=/somepath/maxadmin.socket
 
-This mechanism can be used to provide a means of passwords entry into maxadmin or to override any of the command line option defaults. If a command line option is given that will still override the value in the .maxadmin file.
+Note that if in `2.0.2` or later, a value for _socket_ as well as any of the internet socket related options, such as _hostname_, is provided in `.maxadmin`, then _socket_ takes precedense. In that case, provide at least one internet socket related option on the command line to force MaxAdmin to use an internet socket and thus the internet socket related options from `.maxadmin`.
 
-The .maxadmin file may  be made read only to protect any passwords written to that file.
+The `.maxadmin` file may  be made read only to protect any passwords written to that file.
 
 <a name="help"></a>
 # Getting Help
