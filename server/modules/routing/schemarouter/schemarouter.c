@@ -92,7 +92,7 @@ static route_target_t get_shard_route_target(qc_query_type_t qtype,
                                              bool            trx_active,
                                              HINT*           hint);
 
-static uint64_t getCapabilities();
+static uint64_t getCapabilities(void);
 
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
@@ -3642,7 +3642,7 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
 /**
  * Return RCAP_TYPE_STMT_INPUT.
  */
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

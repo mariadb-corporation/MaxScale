@@ -57,7 +57,7 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities();
+static uint64_t getCapabilities(void);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
                            const char *replace);
@@ -553,7 +553,7 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

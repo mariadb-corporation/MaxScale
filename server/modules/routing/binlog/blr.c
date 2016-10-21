@@ -100,7 +100,7 @@ static  void    errorReply(ROUTER  *instance,
                            error_action_t     action,
                            bool    *succp);
 
-static uint64_t getCapabilities();
+static uint64_t getCapabilities(void);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
@@ -1766,7 +1766,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 }
 
 
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_NO_RSESSION;
 }

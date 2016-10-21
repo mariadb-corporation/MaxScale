@@ -89,7 +89,7 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
-static uint64_t getCapabilities();
+static uint64_t getCapabilities(void);
 
 static bool read_stored_data(GK_INSTANCE *inst);
 static bool write_stored_data(GK_INSTANCE *inst);
@@ -430,7 +430,7 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

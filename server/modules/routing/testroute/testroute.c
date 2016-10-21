@@ -164,7 +164,7 @@ diagnostic(ROUTER *instance, DCB *dcb)
 {
 }
 
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return 0;
 }

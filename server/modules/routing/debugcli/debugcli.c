@@ -333,7 +333,7 @@ diagnostics(ROUTER *instance, DCB *dcb)
     return; /* Nothing to do currently */
 }
 
-static uint64_t getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return 0;
 }

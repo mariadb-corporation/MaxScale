@@ -84,7 +84,7 @@ typedef struct filter_object
     int    (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
     int    (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
     void   (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
-    uint64_t (*getCapabilities)();
+    uint64_t (*getCapabilities)(void);
 } FILTER_OBJECT;
 
 /**

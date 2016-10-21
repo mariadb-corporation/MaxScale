@@ -83,7 +83,7 @@ typedef struct router_object
                            DCB*           backend_dcb,
                            error_action_t action,
                            bool*          succp);
-    uint64_t (*getCapabilities)();
+    uint64_t (*getCapabilities)(void);
 } ROUTER_OBJECT;
 
 /**
