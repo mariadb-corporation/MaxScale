@@ -925,7 +925,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         }
         else
         {
-            MXS_WARNING("Using cached credential information.");
+            MXS_WARNING("[%s] Using cached credential information from '%s'.", service->name, path);
         }
 
         if (instance->inject_service_user)
@@ -945,6 +945,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         {
             strcat(path, DBUSERS_FILE);
             dbusers_save(port->users, path);
+            MXS_INFO("[%s] Storing cached credential information at '%s'.", service->name, path);
         }
     }
 
