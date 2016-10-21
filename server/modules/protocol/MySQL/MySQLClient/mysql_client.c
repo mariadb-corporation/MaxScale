@@ -87,7 +87,7 @@ static char *gw_default_auth();
 static int gw_connection_limit(DCB *dcb, int limit);
 static int MySQLSendHandshake(DCB* dcb);
 static int route_by_statement(SESSION *, GWBUF **);
-static void mysql_client_auth_error_handling(DCB *dcb, int auth_val);
+static void mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number);
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
@@ -480,7 +480,8 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
     MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
     gwbuf_copy_data(buffer, 0, len, data);
-    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == len);
+    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == len ||
+        len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
@@ -506,6 +507,37 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 }
 
 /**
+ * @brief Debug check function for authentication packets
+ *
+ * Check that the packet is consistent with how the protocol works and that no
+ * unexpected data is processed.
+ *
+ * @param dcb Client DCB
+ * @param buf Buffer containing packet
+ * @param bytes Number of bytes available
+ */
+static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
+{
+    uint8_t hdr[MYSQL_HEADER_LEN];
+    ss_dassert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
+
+    int buflen = gwbuf_length(buf);
+    int pktlen = MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN;
+
+    if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
+    {
+        /** This is an SSL request packet */
+        ss_dassert(dcb->listener->ssl);
+        ss_dassert(buflen == bytes && pktlen >= buflen);
+    }
+    else
+    {
+        /** Normal packet */
+        ss_dassert(buflen == pktlen);
+    }
+}
+
+/**
  * @brief Client read event, process when client not yet authenticated
  *
  * @param dcb           Descriptor control block
@@ -516,9 +548,8 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
-    ss_debug(uint8_t hdr[MYSQL_HEADER_LEN]);
-    ss_dassert(gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN &&
-               MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN == gwbuf_length(read_buffer));
+    ss_debug(check_packet(dcb, read_buffer, nbytes_read));
+
     /** Allocate the shared session structure */
     if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
     {
@@ -612,7 +643,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         MXS_AUTH_SSL_INCOMPLETE != auth_val)
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-        mysql_client_auth_error_handling(dcb, auth_val);
+        mysql_client_auth_error_handling(dcb, auth_val, next_sequence);
         /**
          * Close DCB and which will release MYSQL_session
          */
@@ -953,12 +984,10 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 static void
-mysql_client_auth_error_handling(DCB *dcb, int auth_val)
+mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
 {
-    int packet_number, message_len;
+    int message_len;
     char *fail_str = NULL;
-
-    packet_number = ssl_required_by_dcb(dcb) ? 3 : 2;
 
     switch (auth_val)
     {
@@ -1002,7 +1031,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
             mysql_send_auth_error(dcb,
                                   packet_number,
                                   0,
-                                  "failed to complete SSL authentication");
+                                  "Access without SSL denied");
             break;
         case MXS_AUTH_SSL_INCOMPLETE:
             MXS_DEBUG("%lu [gw_read_client_event] unable to "
