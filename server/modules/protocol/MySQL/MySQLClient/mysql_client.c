@@ -916,6 +916,14 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
         {
             session_set_trx_state(ses, SESSION_TRX_INACTIVE);
         }
+        else if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+        {
+            session_set_autocommit(ses, true);
+        }
+        else if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
+        {
+            session_set_autocommit(ses, false);
+        }
 
         /**
          * Feed each statement completely and separately

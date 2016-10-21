@@ -143,6 +143,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->state = SESSION_STATE_READY;
 
     session->trx_state = SESSION_TRX_UNKNOWN;
+    session->autocommit = true;
     /*
      * Only create a router session if we are not the listening
      * DCB or an internal DCB. Creating a router session may create a connection to a

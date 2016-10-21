@@ -181,6 +181,7 @@ typedef struct session
     int             refcount;         /*< Reference count on the session */
     bool            ses_is_child;     /*< this is a child session */
     session_trx_state_t trx_state;    /*< The current transaction state. */
+    bool            autocommit;       /*< Whether autocommit is on. */
     skygw_chk_t     ses_chk_tail;
 } SESSION;
 
@@ -287,6 +288,41 @@ static inline bool session_trx_is_read_only(const SESSION* ses)
 static inline bool session_trx_is_read_write(const SESSION* ses)
 {
     return ses->trx_state == SESSION_TRX_READ_WRITE;
+}
+
+/**
+ * Tells whether autocommit is ON or not.
+ *
+ * Note that the returned value effectively only tells the last value
+ * of the statement "set autocommit=...".
+ *
+ * That is, if the statement "set autocommit=1" has been executed, then
+ * even if a transaction has been started, which implicitly will cause
+ * autocommit to be set to 0 for the duration of the transaction, this
+ * function will still return true.
+ *
+ * Note also that by default autocommit is ON.
+ *
+ * @return True if autocommit has been set ON, false otherwise.
+ */
+static inline bool session_is_autocommit(const SESSION* ses)
+{
+    return ses->autocommit;
+}
+
+/**
+ * Sets the autocommit state of the session.
+ *
+ * NOTE: Only the protocol object may call this.
+ *
+ * @param enable True if autocommit is enabled, false otherwise.
+ * @return The previous state.
+ */
+static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
+{
+    bool prev_autocommit = ses->autocommit;
+    ses->autocommit = autocommit;
+    return prev_autocommit;
 }
 
 MXS_END_DECLS
