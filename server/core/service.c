@@ -143,6 +143,7 @@ service_alloc(const char *servname, const char *router)
         return NULL;
     }
 
+    service->capabilities = service->router->getCapabilities();
     service->client_count = 0;
     service->name = (char*)servname;
     service->routerModule = (char*)router;
@@ -1066,6 +1067,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     char *ptr, *brkt;
     int n = 0;
     bool rval = true;
+    uint64_t capabilities = 0;
 
     if ((flist = (FILTER_DEF **) MXS_MALLOC(sizeof(FILTER_DEF *))) == NULL)
     {
@@ -1088,7 +1090,11 @@ serviceSetFilters(SERVICE *service, char *filters)
 
         if ((flist[n - 1] = filter_find(filter_name)))
         {
-            if (!filter_load(flist[n - 1]))
+            if (filter_load(flist[n - 1]))
+            {
+                capabilities |= flist[n - 1]->obj->getCapabilities();
+            }
+            else
             {
                 MXS_ERROR("Failed to load filter '%s' for service '%s'.",
                           filter_name, service->name);
@@ -1112,6 +1118,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     {
         service->filters = flist;
         service->n_filters = n;
+        service->capabilities |= capabilities;
     }
     else
     {

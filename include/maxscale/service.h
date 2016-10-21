@@ -167,6 +167,7 @@ typedef struct service
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /*< If starting of the service should be retried later */
     bool log_auth_warnings;            /*< Log authentication failures and warnings */
+    uint64_t capabilities;             /*< The capabilities of the service. */
 } SERVICE;
 
 typedef enum count_spec_t
@@ -236,6 +237,19 @@ extern int serviceSessionCountAll();
 extern RESULTSET *serviceGetList();
 extern RESULTSET *serviceGetListenerList();
 extern bool service_all_services_have_listeners();
+
+/**
+ * Get the capabilities of the servive.
+ *
+ * The capabilities of a service are the union of the capabilities of
+ * its router and all filters.
+ *
+ * @return The service capabilities.
+ */
+static inline uint64_t service_get_capabilities(const SERVICE *service)
+{
+    return service->capabilities;
+}
 
 MXS_END_DECLS
 
