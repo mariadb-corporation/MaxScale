@@ -485,23 +485,26 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
-    strcpy(ses->user, (char*)data + MYSQL_AUTH_PACKET_BASE_SIZE);
-    *ses->db = '\0';
 
-    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+    if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
-        /** Client supports default database on connect */
-        size_t userlen = strlen(ses->user) + 1;
+        strcpy(ses->user, (char*)data + MYSQL_AUTH_PACKET_BASE_SIZE);
 
-        /** Skip the authentication token, it is handled by the authenticators */
-        uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
-
-        size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
-
-        if (data[dboffset])
+        if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
         {
-            /** Client is connecting with a default database */
-            strcpy(ses->db, (char*)data + dboffset);
+            /** Client supports default database on connect */
+            size_t userlen = strlen(ses->user) + 1;
+
+            /** Skip the authentication token, it is handled by the authenticators */
+            uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
+
+            size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
+
+            if (data[dboffset])
+            {
+                /** Client is connecting with a default database */
+                strcpy(ses->db, (char*)data + dboffset);
+            }
         }
     }
 }
@@ -561,10 +564,15 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     uint8_t next_sequence;
     gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
 
-    if (next_sequence == 1)
+    if (next_sequence == 1 || (ssl_required_by_dcb(dcb) && next_sequence == 2))
     {
         /** This is the first response from the client, read the connection
-         * information and store them in the shared structure */
+         * information and store them in the shared structure. For SSL connections,
+         * this will be packet number two since the first packet will be the
+         * Protocol::SSLRequest packet.
+         *
+         * @see https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
+         */
         store_client_information(dcb, read_buffer);
     }
 
