@@ -16,8 +16,21 @@ Binlogrouter is configured with a comma-separated list of key-value pairs. The f
 
 ### `binlogdir`
 
-This parameter allows the location that MariaDB MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MariaDB MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
-In the binlog dir there is also the 'cache' directory that contains data retrieved from the master during registration phase and the master.ini file which contains the configuration of current configured master.
+This parameter allows the location that MariaDB MaxScale uses to store binlog
+files to be set. If this parameter is not set to a directory name then MariaDB
+MaxScale will store the binlog files in the directory
+/var/cache/maxscale/<Service Name>.  In the binlog dir there is also the 'cache'
+directory that contains data retrieved from the master during registration phase
+and the master.ini file which contains the configuration of current configured
+master.
+
+From 2.1 onwards, the 'cache' directory is stored in the same location as other
+user credential caches. This means that with the default options, the user
+credential cache is stored in /var/cache/maxscale/<Service Name>/<Listener Name>/cache/.
+
+Read the [MySQL Authenticator](../Authenticators/MySQL-Authenticator.md)
+documentation for instructions on how to define a custom location for the user
+cache.
 
 ### `uuid`
 
@@ -51,6 +64,10 @@ The MariaDB MaxScale router will identify itself to the slaves using the server 
 This is the user name that MariaDB MaxScale uses when it connects to the master. This user name must have the rights required for replication as with any other user that a slave uses for replication purposes. If the user parameter is not given in the router options then the same user as is used to retrieve the credential information will be used for the replication connection, i.e. the user in the service entry.
 
 This user is the only one available for MySQL connection to MaxScale Binlog Server for administration when master connection is not done yet.
+
+In MaxScale 2.1, the service user injection is done by the MySQLAuth
+authenticator module. Read the [MySQL Authenticator](../Authenticators/MySQL-Authenticator.md)
+documentation for more details.
 
 The user that is used for replication, either defined using the user= option in the router options or using the username and password defined of the service must be granted replication privileges on the database server.
 

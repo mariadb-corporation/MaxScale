@@ -9,7 +9,10 @@ needs no further configuration to work.
 
 ## Authenticator options
 
-The client authentication module, _MySQLAuth_, supports authenticator options.
+The client authentication module, _MySQLAuth_, supports authenticator
+options. The `authenticator_options` parameter is supported by listeners
+and servers and expects a comma-separated list of key-value pairs. The
+following options contain examples on how to define it.
 
 ### `cache_dir`
 
@@ -17,19 +20,14 @@ The location where the user credential cache is stored. The default value
 for this is `<cache dir>/<service name>/<listener name>/cache/` where
 `<cache dir>` by default is `/var/cache`.
 
+If _cache_dir_ is defined, the user cache file is stored in `<cache
+dir>/`. No additional directories are appended to the _cache_dir_ value.
+
 Each listener has its own user cache where the user credential information
 queried from the backends is stored. This information is used to
 authenticate users if a connection to the backend servers can't be made.
 
-#### Example configuration
-
 ```
-[Read-Write Listener]
-type=listener
-service=Read-Write Service
-protocol=MySQLClient
-port=4006
-authenticator=MySQLAuth
 authenticator_options=cache_dir=/tmp
 ```
 

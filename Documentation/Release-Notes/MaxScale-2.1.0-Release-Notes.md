@@ -47,6 +47,11 @@ For more information about this configuration entry, please see
 
 ### User data cache
 
+The user data cache stores the cached credentials that are used by some router
+modules. In 2.1.0, the authenticator modules are responsible for the persisting
+of the user data cache. Currently, only the MySQLAuth module implements user
+data caching.
+
 The user data loaded from the backend databases is now stored on a per listener
 basis instead of a per service basis. In earlier versions, each service had its own
 cache directory in `/var/cache/maxscale`. This directory contains cached user
