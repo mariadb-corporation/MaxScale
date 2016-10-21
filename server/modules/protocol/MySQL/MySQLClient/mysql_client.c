@@ -837,8 +837,8 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         return 1;
     }
 
-    /** Ask what type of input the router expects */
-    capabilities = session->service->router->getCapabilities();
+    /** Ask what type of input the router/filter chain expects */
+    capabilities = service_get_capabilities(session->service);
 
     /** Update the current protocol command being executed */
     if (!process_client_commands(dcb, nbytes_read, &read_buffer))
