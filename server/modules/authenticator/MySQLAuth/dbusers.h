@@ -59,11 +59,9 @@ extern int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const 
 extern bool check_service_permissions(SERVICE* service);
 extern int dbusers_load(USERS *, const char *filename);
 extern int dbusers_save(USERS *, const char *filename);
-extern int load_mysql_users(SERV_LISTENER *listener);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
-extern int reload_mysql_users(SERV_LISTENER *listener);
 extern int replace_mysql_users(SERV_LISTENER *listener);
 
 MXS_END_DECLS
