@@ -81,6 +81,7 @@ static  void    setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream
 static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities();
 
 static FILTER_OBJECT MyObject =
 {
@@ -93,6 +94,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     clientReply,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -556,4 +558,14 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     if (my_instance->query_delimiter)
         dcb_printf(dcb, "\t\tLogging with query delimiter %s.\n",
                    my_instance->query_delimiter);
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities()
+{
+    return RCAP_TYPE_STMT_INPUT;
 }

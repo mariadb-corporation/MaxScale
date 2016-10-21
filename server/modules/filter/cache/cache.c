@@ -35,6 +35,7 @@ static void    setUpstream(FILTER *instance, void *sdata, UPSTREAM *upstream);
 static int     routeQuery(FILTER *instance, void *sdata, GWBUF *queue);
 static int     clientReply(FILTER *instance, void *sdata, GWBUF *queue);
 static void    diagnostics(FILTER *instance, void *sdata, DCB *dcb);
+static uint64_t getCapabilities();
 
 #define C_DEBUG(format, ...) MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
 
@@ -81,6 +82,7 @@ FILTER_OBJECT *GetModuleObject()
             routeQuery,
             clientReply,
             diagnostics,
+            getCapabilities
         };
 
     return &object;
@@ -548,6 +550,17 @@ static void diagnostics(FILTER *instance, void *sdata, DCB *dcb)
     CACHE_SESSION_DATA *csdata = (CACHE_SESSION_DATA*)sdata;
 
     dcb_printf(dcb, "Hello World from Cache!\n");
+}
+
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities()
+{
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 //

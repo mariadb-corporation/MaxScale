@@ -987,7 +987,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
 
 static uint64_t getCapabilities()
 {
-    return RCAP_TYPE_PACKET_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /********************************

@@ -89,6 +89,8 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities();
+
 static bool read_stored_data(GK_INSTANCE *inst);
 static bool write_stored_data(GK_INSTANCE *inst);
 
@@ -103,6 +105,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     NULL,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -420,6 +423,16 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     dcb_printf(dcb, "\t\tQueryhash entries: %u\n", inst->stats.entries);
     dcb_printf(dcb, "\t\tQueryhash hits: %u\n", inst->stats.hit);
     dcb_printf(dcb, "\t\tQueryhash misses: %u\n", inst->stats.miss);
+}
+
+/**
+ * @brief Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities()
+{
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**

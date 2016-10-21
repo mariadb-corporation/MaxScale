@@ -25,6 +25,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/routing.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
 #include <maxscale/buffer.h>
@@ -83,6 +84,7 @@ typedef struct filter_object
     int    (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
     int    (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
     void   (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
+    uint64_t (*getCapabilities)();
 } FILTER_OBJECT;
 
 /**
@@ -90,7 +92,7 @@ typedef struct filter_object
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
-#define FILTER_VERSION  {2, 1, 0}
+#define FILTER_VERSION  {2, 2, 0}
 /**
  * The definition of a filter from the configuration file.
  * This is basically the link between a plugin to load and the
@@ -120,6 +122,22 @@ int filter_standard_parameter(char *);
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, FILTER_DEF *);
 void dListFilters(DCB *);
+
+/**
+ * Specifies capabilities specific for filters. Common capabilities
+ * are defined by @c routing_capability_t.
+ *
+ * @see routing_capability_t
+ *
+ * @note The values of the capabilities here *must* be between 0x000100000000
+ *       and 0x800000000000, that is, bits 32 to 47.
+ */
+
+/*
+typedef enum filter_capability
+{
+} filter_capability_t;
+*/
 
 MXS_END_DECLS
 

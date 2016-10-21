@@ -105,6 +105,7 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities();
 
 static FILTER_OBJECT MyObject =
 {
@@ -117,6 +118,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     NULL,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -2326,6 +2328,16 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         }
         spinlock_release(&my_instance->lock);
     }
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities()
+{
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 #ifdef BUILD_RULE_PARSER
