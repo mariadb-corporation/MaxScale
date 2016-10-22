@@ -345,7 +345,7 @@ main(int argc, char **argv)
 #else
     while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
     {
-        num = strlen(buf);
+        int num = strlen(buf);
 #endif
         /* Strip trailing \n\r */
         for (int i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
