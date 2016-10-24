@@ -272,7 +272,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 
-    const char *authenticator_name = "NullAuth";
+    const char *authenticator_name = "NullAuthDeny";
 
     if (port->authenticator)
     {
