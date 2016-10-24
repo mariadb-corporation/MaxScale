@@ -15,6 +15,7 @@ cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=Y -DBUILD_AVRO=N
 
 make
+make test
 sudo make install
 
 sudo ./postinst

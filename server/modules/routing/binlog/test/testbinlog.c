@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 			serviceAddRouterOption(service, s);
 			s = strtok_r(NULL, ",", &lasts);
 		}
-
+		set_libdir(MXS_STRDUP_A("../../../authenticator/"));
 		server = server_alloc("_none_", "MySQLBackend", 3306, "MySQLBackendAuth", NULL);
 		if (server == NULL) {
 			return 1;

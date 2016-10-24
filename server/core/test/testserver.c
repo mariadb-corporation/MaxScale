@@ -36,6 +36,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/server.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/gwdirs.h>
 /**
  * test1    Allocate a server and do lots of other things
  *
@@ -48,8 +49,8 @@ test1()
     char    *status;
 
     /* Server tests */
-    ss_dfprintf(stderr,
-                "testserver : creating server called MyServer");
+    ss_dfprintf(stderr, "testserver : creating server called MyServer");
+    set_libdir(MXS_STRDUP_A("../../modules/authenticator/"));
     server = server_alloc("MyServer", "HTTPD", 9876, "NullAuthAllow", NULL);
     ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
