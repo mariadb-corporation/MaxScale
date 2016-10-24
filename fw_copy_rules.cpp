@@ -9,7 +9,7 @@ void copy_rules(TestConnections* Test, char * rules_name, char * rules_dir)
 
     Test->set_timeout(30);
     char str[2048];
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/%s %s@%s:%s/rules/rules.txt", Test->maxscale_sshkey, rules_dir, rules_name, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/%s %s@%s:%s/rules/rules.txt", Test->maxscale_keyfile, rules_dir, rules_name, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
     system(str);
 

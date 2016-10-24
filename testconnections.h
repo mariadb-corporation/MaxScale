@@ -20,17 +20,21 @@
  * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
  * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
  * - SysbenchDir - path to SysBench directory (sysbanch should be >= 0.5)
- * - repl_N - Number of Master/Slave setup nodes
- * - repl_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
- * - repl_port_NNN - MariaDB port for node NNN
- * - repl_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
- * - repl_User - User name to access Master/Slav setup
- * - repl_Password - Password to access Master/Slave setup
+ * - node_N - Number of Master/Slave setup nodes
+ * - node_NNN - IP address of node NNN (NNN - 3 digits node index starting from 000)
+ * - node_port_NNN - MariaDB port for node NNN
+ * - node_sshkey_NNN - ssh key to access node NNN (should be sutable for 'root' and 'ec2-user')
+ * - node_User - User name to access Master/Slav setup
+ * - node_Password - Password to access Master/Slave setup
  * - galera_N, galera_NNN, galera_port_NNN, galera_sshkey_NNN, galera_User, galera_Password - same for Galera setup
  *
  */
 class TestConnections
 {
+private:
+    /** If false, logs are copied in the destructor */
+    bool copy_logs;
+
 public:
     /**
      * @brief TestConnections constructor: reads environmental variables, copies MaxScale.cnf for MaxScale machine
@@ -42,6 +46,8 @@ public:
      * @brief TestConnections constructor: only reads environmental variables
      */
     TestConnections();
+
+    ~TestConnections();
 
     /**
      * @brief global_result Result of test, 0 if PASSED
@@ -94,6 +100,11 @@ public:
     MYSQL *routers[3];
 
     /**
+     * @brief ports of 3 int which contains copies of rwsplit_port, readconn_master_port, readconn_slave_port
+     */
+    int ports[3];
+
+    /**
      * @brief galera Mariadb_nodes object containing references to Galera setuo
      */
     Mariadb_nodes * galera;
@@ -131,7 +142,7 @@ public:
     /**
      * @brief Maxscale_sshkey   ssh key for Maxscale machine
      */
-    char maxscale_sshkey[4096];
+    char maxscale_keyfile[4096];
 
     /**
      * @brief GetLogsCommand    Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
@@ -222,9 +233,24 @@ public:
     int binlog_cmd_option;
 
     /**
-     * @brief ssl if true ssl  will be used
+     * @brief ssl if true ssl will be used
      */
     int ssl;
+
+    /**
+     * @brief backend_ssl if true ssl configuratio for all servers will be added
+     */
+    bool backend_ssl;
+
+    /**
+    * @brief ssl_options string with ssl configuration for command line client
+    */
+    char ssl_options[1024];
+
+    /**
+     * @brief threads Number of Maxscale threads
+     */
+    int threads;
 
     /**
      * @brief timeout seconds until test termination
@@ -369,6 +395,12 @@ public:
      * @return  0 in case of success
      */
     int start_binlog();
+
+    /**
+     * @brief prepare_binlog clean up binlog directory, set proper access rights to it
+     * @return 0
+     */
+    int prepare_binlog();
 
     /**
      * @brief start_mm configure first node as Master for second, Second as Master for first
@@ -553,6 +585,13 @@ public:
     int try_query(MYSQL *conn, const char *sql);
 
     /**
+     * @brief try_query_all Executes SQL query on all MaxScale connections
+     * @param sql SQL string
+     * @return 0 if ok
+     */
+    int try_query_all(const char *sql);
+
+    /**
      * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
      * @param nodes Mariadb_nodes object
      * @return node index if one master found, -1 if no master found or several masters found
@@ -561,7 +600,10 @@ public:
 
     int execute_maxadmin_command(char * cmd);
     int execute_maxadmin_command_print(char * cmd);
+    int check_maxadmin_param(const char *command,const  char *param,const  char *value);
     int get_maxadmin_param(char *command, char *param, char *result);
+    void check_current_operations(int value);
+    void check_current_connections(int value);
 
     /**
      * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'

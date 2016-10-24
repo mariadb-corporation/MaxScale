@@ -35,7 +35,7 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
     Test->set_timeout(200);
 
     system(str);
-    Test->ssh_maxscale(false, "rm %s/script_output", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(false, "rm -f %s/script_output", Test->maxscale_access_homedir);
 
     Test->tprintf("%s\n", str);fflush(stdout);
     Test->ssh_maxscale(FALSE, "%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output",
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Copying expected script output to Maxscale machine\n");
     char str[2048];
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet script_output_expected* %s@%s:%s/",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
+            Test->maxscale_keyfile, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
     sprintf(str, "%s/script_output_expected", Test->maxscale_access_homedir);

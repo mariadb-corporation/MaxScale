@@ -1,4 +1,5 @@
-# libssl-dev libmariadbclient-dev php5 perl coreutils realpath
+# libssl-dev libmariadbclient-dev php5 perl coreutils realpath libjansson-dev openjdk-7-jdk (openjdk-8-jdk, openjdk-9-jdk)
+# pip install JayDeBeApi
 project(maxscale_system_test)
 cmake_minimum_required(VERSION 2.8)
 
@@ -43,8 +44,13 @@ add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp config_check.c
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
   different_size.cpp fw_copy_rules)
-target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt jansson)
 install(TARGETS testcore DESTINATION system-test)
+
+# Helper function to add a configuration template
+function(add_template name template)
+  set(CNF_TEMPLATES "${CNF_TEMPLATES}{\"${name}\",\"${template}\"}," CACHE INTERNAL "")
+endfunction()
 
 # This functions adds a source file as an executable, links that file against
 # the common test core and creates a test from it. The first parameter is the
@@ -58,6 +64,7 @@ install(TARGETS testcore DESTINATION system-test)
 #     add_test_executable(simple_test.cpp simple_test simple_config)
 function(add_test_executable source name template)
   file(APPEND templates "${name} ${template}\n")
+  add_template(${name} ${template})
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
   install(TARGETS ${name} DESTINATION system-test)
@@ -67,6 +74,7 @@ endfunction()
 # Same as add_test_executable, but do not add executable into tests list
 function(add_test_executable_notest source name template)
   file(APPEND templates "${name} ${template}\n")
+  add_template(${name} ${template})
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
   install(TARGETS ${name} DESTINATION system-test)
@@ -77,14 +85,40 @@ endfunction()
 # also suitable for symlinks
 function(add_test_script name template)
   file(APPEND templates "${name} ${template}\n")
+  add_template(${name} ${template})
   install(PROGRAMS ${name} DESTINATION system-test)
   add_test(${name} ${name})
 endfunction()
+
+# Label a list of tests as heavy, long running tests
+macro(heavy_weight_tests)
+  foreach(name IN ITEMS ${ARGN})
+    set_property(TEST ${name} PROPERTY LABELS "HEAVY")
+  endforeach()
+endmacro()
+
+# Label tests as medium weight tests. These tests take more than 180 seconds to complete.
+macro(medium_weight_tests)
+  foreach(name IN ITEMS ${ARGN})
+    set_property(TEST ${name} PROPERTY LABELS "MEDIUM")
+  endforeach()
+endmacro()
+
+# Label tests as light weight tests. These tests take less than 90 seconds to complete.
+macro(light_weight_tests)
+  foreach(name IN ITEMS ${ARGN})
+    set_property(TEST ${name} PROPERTY LABELS "LIGHT")
+  endforeach()
+endmacro()
 
 add_test_executable_notest(t.cpp t replication)
 add_test_executable_notest(non_native_setup.cpp non_native_setup replication)
 
 add_test_executable_notest(binlog_big_transaction.cpp binlog_big_transaction setup_binlog2)
+
+#add_test_executable_notest(avro_long.cpp avro_long avro)
+
+#add_test_executable_notest(sysbench_example.cpp sysbench_example replication)
 
 if(Java_FOUND)
   add_subdirectory(maxscale/java/)
@@ -107,7 +141,6 @@ install(DIRECTORY ssl-cert DESTINATION system-test USE_SOURCE_PERMISSIONS)
 add_test_executable(regexfilter1.cpp regexfilter1 regexfilter1)
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 add_test_executable(mxs365.cpp mxs365 replication)
-# ReadConn cases are commented out now due to Maxscale failures
 add_test_executable(longblob.cpp longblob longblob)
 set_tests_properties(longblob PROPERTIES TIMEOUT 7200)
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication)
@@ -191,7 +224,7 @@ add_test_executable(bug729.cpp bug729 replication)
 add_test_script(mariadb_tests_hartmut.sh replication)
 add_test_script(mariadb_tests_hartmut_galera.sh replication)
 add_test_script(bug567.sh replication)
-add_test_script(bug516.sh replication)
+#add_test_script(bug516.sh replication) # removing because maxadmin does not use TPC any more
 add_test_script(bug561.sh replication)
 add_test_script(bug562.sh replication)
 add_test_script(bug585 bug585)
@@ -202,7 +235,7 @@ set_tests_properties(run_session_hang.sh PROPERTIES TIMEOUT 3600)
 add_test_script(bug564.sh replication)
 add_test_executable(bug730.cpp bug730 bug730)
 set_tests_properties(bug730 PROPERTIES TIMEOUT 3600)
-add_test_executable(bug711.cpp bug711 bug711)
+#add_test_executable(bug711.cpp bug711 bug711)
 add_test_executable(crash_out_of_files.cpp crash_out_of_files load)
 add_test_executable(crash_out_of_files_galera.cpp crash_out_of_files_galera galera)
 add_test_script(run_ctrl_c.sh replication)
@@ -218,6 +251,8 @@ add_test_executable(mxs127.cpp mxs127 mxs127)
 add_test_executable(session_limits.cpp session_limits session_limits)
 add_test_executable(script.cpp script script)
 add_test_executable(mm.cpp mm mm)
+#add_test_executable(mm_mysqlmon.cpp mm_mysqlmon mm_mysqlmon)
+#add_test_executable(failover_mysqlmon.cpp failover_mysqlmon failover_mysqlmon)
 add_test_script(ssl_load ssl_load)
 add_test_script(ssl_load_galera ssl_load_galera)
 #add_test_executable(config_reload.cpp config_reload config_reload)
@@ -252,7 +287,8 @@ add_test_executable(open_close_connections.cpp open_close_connections replicatio
 add_test_script(open_close_connections_ssl ssl)
 add_test_executable(galera_priority.cpp galera_priority galera_priority)
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548)
-add_test_executable_notest(mxs559_block_master.cpp mxs559_block_master mxs559)
+#add_test_executable_notest(mxs559_block_master.cpp mxs559_block_master mxs559)
+add_test_executable(mxs559_block_master.cpp mxs559_block_master mxs559)
 add_test_script(sql_queries_pers1 sql_queries_pers1)
 add_test_script(sql_queries_pers10 sql_queries_pers10)
 set_tests_properties(sql_queries_pers1 PROPERTIES TIMEOUT 3600)
@@ -277,20 +313,23 @@ add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication)
 add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
+add_test_script(mxs37_table_privilege_galera galera)
 
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication)
 set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
 add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog)
 set_tests_properties(different_size_binlog PROPERTIES TIMEOUT 3600)
 add_test_executable(max_connections.cpp max_connections replication)
+#add_test_executable(backend_auth_fail.cpp backend_auth_fail replication)
 set_tests_properties(max_connections PROPERTIES TIMEOUT 3600)
 add_test_executable(lots_of_rows.cpp lots_of_rows galera)
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication)
 add_test_executable(test_hints.cpp test_hints hints2)
 add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
-add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication)
+#add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication)
+#add_test_executable(mxs722.cpp mxs722 replication)
 
-add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog)
+add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe)
 add_test_executable(ses_bigmem.cpp ses_bigmem no_ses_cmd_store)
 
 add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync)
@@ -305,13 +344,112 @@ set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
 add_test_executable(stale_slaves.cpp stale_slaves replication)
 add_test_executable(rwsplit_readonly.cpp rwsplit_readonly rwsplit_readonly)
 add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_readonly)
+set_tests_properties(rwsplit_readonly_stress PROPERTIES TIMEOUT 3600)
+
+add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication)
+#add_test_executable(mxs720_line_with_no_equal.cpp mxs720_line_with_no_equal mxs720_line_with_no_equal)
+#add_test_executable(mxs720_wierd_line.cpp mxs720_wierd_line mxs720_wierd_line)
+
+#add_test_executable(mxs729_maxadmin.cpp mxs729_maxadmin replication)
+#add_test_executable(mxs710_bad_socket.cpp mxs710_bad_socket mxs710_bad_socket)
+#add_test_script(mxs711_two_ports mxs711_two_ports)
+#add_test_executable(mxs682_cyrillic.cpp mxs682_cyrillic replication)
+#add_test_script(mxs682_cyrillic_galera galera)
+#add_test_executable(mxs657_restart.cpp mxs657_restart replication)
+#set_tests_properties(mxs657_restart PROPERTIES TIMEOUT 4600)
+
+#add_test_executable(show_monitor_crash.cpp show_monitor_crash show_monitor_crash)
+#add_test_executable(connection_limit.cpp connection_limit connection_limit)
+#add_test_executable(avro.cpp avro avro)
+#add_test_executable(cdc_client.cpp cdc_client avro)
+
+#add_test_executable(mxs781_binlog_wrong_passwrd.cpp mxs781_binlog_wrong_passwrd setup_binlog)
+
+add_test_script(mxs791.sh replication)
+add_test_script(mxs791_galera.sh galera)
+#add_test_executable(mxs799_crash_bad_socket.cpp mxs799_crash_bad_socket mxs799)
+#add_test_executable(user_cache.cpp user_cache user_cache)
+#add_test_executable(mxs813_long_hostname.cpp mxs813_long_hostname setup_binlog)
+#add_test_executable(mxs716.cpp mxs716 replication)
+#add_test_executable(mxs827_write_timeout.cpp mxs827_write_timeout replication)
+#add_test_executable(mxs812_1.cpp mxs812_1 longblob)
+#add_test_executable(mxs812_2.cpp mxs812_2 longblob)
+#add_test_executable(maxinfo.cpp maxinfocpp maxinfo)
+#add_test_executable(gatekeeper.cpp gatekeeper gatekeeper)
+#add_test_executable(ccrfilter.cpp ccrfilter ccrfilter)
+#add_test_executable(auroramon.cpp auroramon auroramon)
+#add_test_executable(mxs874_slave_recovery.cpp mxs874_slave_recovery repl2slaves)
 
 # Python based tests
 add_test_script(mxs585.py replication)
 add_test_script(mxs598.py ssl)
 add_test_script(maxinfo.py maxinfo)
 
-# See if we are on a RPM-capable or DEB-capable system
+# Label some tests as HEAVY to exclude them from quick test on every push
+set_tests_properties(binlog_semisync PROPERTIES LABELS "HEAVY")
+set_tests_properties(binlog_semisync_txs1_ss0 PROPERTIES LABELS "HEAVY")
+set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES LABELS "HEAVY")
+set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES LABELS "HEAVY")
+set_tests_properties(sql_queries_pers1 PROPERTIES LABELS "HEAVY")
+set_tests_properties(sql_queries_pers10 PROPERTIES LABELS "HEAVY")
+set_tests_properties(bug519 PROPERTIES LABELS "HEAVY")
+set_tests_properties(crash_out_of_files PROPERTIES LABELS "HEAVY")
+set_tests_properties(crash_out_of_files_galera PROPERTIES LABELS "HEAVY")
+set_tests_properties(sysbench_kill_slave PROPERTIES LABELS "HEAVY")
+set_tests_properties(load_balancing_pers1 PROPERTIES LABELS "HEAVY")
+set_tests_properties(load_balancing_pers10 PROPERTIES LABELS "HEAVY")
+set_tests_properties(load_balancing_galera_pers1 PROPERTIES LABELS "HEAVY")
+set_tests_properties(load_balancing_galera_pers10 PROPERTIES LABELS "HEAVY")
+set_tests_properties(different_size_binlog PROPERTIES LABELS "HEAVY")
+set_tests_properties(different_size_rwsplit PROPERTIES LABELS "HEAVY")
+set_tests_properties(max_connections PROPERTIES LABELS "HEAVY")
+set_tests_properties(lots_of_rows PROPERTIES LABELS "HEAVY")
+set_tests_properties(binlog_change_master PROPERTIES LABELS "HEAVY")
+set_tests_properties(rwsplit_readonly_stress PROPERTIES LABELS "HEAVY")
+#set_tests_properties(mxs657_restart PROPERTIES LABELS "HEAVY")
+
+medium_weight_tests(mxs564_big_dump rw_select_insert ssl sql_queries
+  mariadb_tests_hartmut_galera.sh bug648 longblob mariadb_tests_hartmut.sh
+  fwf_syntax mm bug509 script fwf setup_binlog run_session_hang.sh 
+  max_connections binlog_change_master binlog_semisync_txs0_ss0 ssl_load)
+
+light_weight_tests(
+  bug359
+  bug448
+  bug469
+  bug495
+  bug507
+  bug526
+  bug699
+  bug729
+  change_user
+  connect_to_nonexisting_db
+  encrypted_passwords
+  galera_priority
+  kill_master
+  load_balancing
+  maxinfo.py
+  maxscale_process_user
+  mxs118
+  mxs127
+  mxs244_prepared_stmt_loop
+  mxs314
+  mxs37_table_privilege
+  mxs47
+  mxs791.sh
+  namedserverfilter
+  prepared_statement
+  readconnrouter_master
+  readconnrouter_slave
+  regexfilter1
+  run_ctrl_c.sh
+  rwsplit_conn_num
+  rwsplit_connect
+  server_weight
+  setup_binlog_crc_none
+  test_hints
+  )
+
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)
 
@@ -342,3 +480,5 @@ set(CPACK_RPM_PACKAGE_NAME "maxscale-system-test")
 set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
 set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
 include(CPack)
+
+configure_file(templates.h.in templates.h @ONLY)

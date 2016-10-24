@@ -146,12 +146,25 @@ public:
     * @brief v51 true indicates that ione backed is 5.1
     */
     bool v51;
-    int connect();
+
     /**
-     * @brief  close connections which were previously opened by Connect()
-     * @return
+    * @brief test_dir path to test application
+    */
+   char test_dir[4096];
+
+    /**
+     * @brief connect Open MariaDB connections to all nodes
+     * @return 0 if success
      */
-    int close_connections();
+    int connect();
+
+    /**
+     * @brief Close connections opened by connect()
+     *
+     * This sets the values of used @c nodes to NULL.
+     */
+    void close_connections();
+
     /**
      * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
      * @return 0
@@ -365,7 +378,7 @@ public:
      * @param sql query to execute
      * @return 0 in case of success
      */
-    int execute_query_all_nodes(char * sql);
+    int execute_query_all_nodes(const char* sql);
 
     /**
      * @brief execute 'SELECT @@version' against all nodes and store result in 'vesion' fied
@@ -378,6 +391,35 @@ public:
      * @return 0 if success
      */
     int truncate_mariadb_logs();
+
+    /**
+     * @brief configure_ssl Modifies my.cnf in order to enable ssl, redefine access user to require ssl
+     * @return 0 if success
+     */
+    int configure_ssl(bool require);
+
+    /**
+     * @brief disable_ssl Modifies my.cnf in order to get rid of ssl, redefine access user to allow connections without ssl
+     * @return 0 if success
+     */
+    int disable_ssl();
+
+    /**
+     * @brief Copy a local file to the Node i machine
+     * @param src Source file on the local filesystem
+     * @param dest Destination file on the MaxScale machine's file system
+     * @param i Node index
+     * @return exit code of the system command or 1 in case of i > N
+     */
+    int copy_to_node(char* src, char* dest, int i);
+
+    /**
+     * @brief Synchronize slaves with the master
+     *
+     * Only works with master-slave replication and should not be used with Galera clusters.
+     * The function expects that the first node, @c nodes[0], is the master.
+     */
+    void sync_slaves();
 };
 
 #endif // MARIADB_NODES_H

@@ -1,0 +1,13 @@
+#ifndef TEMPLATES_H
+#define TEMPLATES_H
+
+static struct
+{
+    const char* test_name;
+    const char* test_template;
+} cnf_templates[] = {
+@CNF_TEMPLATES@ {NULL, NULL}};
+
+const char * default_template = "replication";
+
+#endif
