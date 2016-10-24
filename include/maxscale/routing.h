@@ -29,7 +29,13 @@ MXS_BEGIN_DECLS
  */
 typedef enum routing_capability
 {
-    RCAP_TYPE_STMT_INPUT = 0x0001, /**< Statement per buffer. */
+    /**< Statements are delivered one per buffer. */
+    RCAP_TYPE_STMT_INPUT           = 0x0001, /* 0b0000000000000001 */
+    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_INPUT. */
+    RCAP_TYPE_CONTIGUOUS_INPUT     = 0x0003, /* 0b0000000000000011 */
+    /**< The transaction state and autocommit mode of the session are tracked;
+         implies RCAP_TYPE_CONTIGUOUS_INPUT and RCAP_TYPE_STMT_INPUT. */
+    RCAP_TYPE_TRANSACTION_TRACKING = 0x0007, /* 0b0000000000000111 */
 } routing_capability_t;
 
 #define RCAP_TYPE_NONE 0
