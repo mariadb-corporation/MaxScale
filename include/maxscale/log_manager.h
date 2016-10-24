@@ -156,7 +156,12 @@ int mxs_log_message(int priority,
 #define MXS_WARNING(format, ...) MXS_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
 #define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
 #define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
+
+#if defined(SS_DEBUG)
 #define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
+#else
+#define MXS_DEBUG(format, ...)
+#endif
 
 /**
  * Log an out of memory error using custom message.

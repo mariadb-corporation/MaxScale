@@ -633,9 +633,8 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses =
         (ROUTER_CLIENT_SES *) router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
+    ss_debug(int prev_val = ) atomic_add(&router_cli_ses->backend->current_connection_count, -1);
     ss_dassert(prev_val > 0);
 
     spinlock_acquire(&router->lock);

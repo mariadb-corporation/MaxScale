@@ -1044,9 +1044,8 @@ process_pollq(int thread_id)
 
     if (ev & EPOLLHUP)
     {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
-        char errbuf[MXS_STRERROR_BUFLEN];
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -1080,9 +1079,8 @@ process_pollq(int thread_id)
 #ifdef EPOLLRDHUP
     if (ev & EPOLLRDHUP)
     {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
-        char errbuf[MXS_STRERROR_BUFLEN];
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",

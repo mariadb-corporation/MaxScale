@@ -3578,17 +3578,14 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
     size_t buflen = GWBUF_LENGTH(buf);
     char* querystr;
     char* startpos = (char *)&packet[5];
-    BACKEND* b;
-    backend_type_t be_type;
-    DCB* dcb;
 
     CHK_BACKEND_REF(bref);
-    b = bref->bref_backend;
+    ss_debug(BACKEND *b = bref->bref_backend);
     CHK_BACKEND(b);
-    dcb = bref->bref_dcb;
+    ss_debug(DCB *dcb = bref->bref_dcb);
     CHK_DCB(dcb);
 
-    be_type = BACKEND_TYPE(b);
+    ss_debug(backend_type_t be_type = BACKEND_TYPE(b));
 
     if (GWBUF_IS_TYPE_MYSQL(buf))
     {

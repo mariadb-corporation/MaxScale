@@ -1199,7 +1199,6 @@ get_users(SERV_LISTENER *listener, USERS *users)
                              MYSQL_PASSWORD_LEN +
                              sizeof(char) +
                              MYSQL_DATABASE_MAXLEN;
-    int dbnames = 0;
     int db_grants = 0;
     char dbnm[MYSQL_DATABASE_MAXLEN + 1];
     bool anon_user = false;
@@ -1454,7 +1453,7 @@ get_users(SERV_LISTENER *listener, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        dbnames = get_databases(listener, con);
+        ss_debug(int dbnames =) get_databases(listener, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }

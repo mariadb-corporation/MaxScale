@@ -247,7 +247,11 @@ To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_debug`
 
-Enable or disable the logging of messages whose syslog priority is *debug*. This kind of messages are intended for development purposes and are disabled by default.
+Enable or disable the logging of messages whose syslog priority is *debug*.
+This kind of messages are intended for development purposes and are disabled
+by default. Note that if MariaDB MaxScale has been built in release mode, then
+debug messages are excluded from the build and this setting will not have any
+effect.
 
 ```
 # Valid options are:
