@@ -15,6 +15,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
@@ -111,6 +112,12 @@ void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling);
 
 void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
 
+static inline bool mxs_log_priority_is_enabled(int priority)
+{
+    assert((priority & ~LOG_PRIMASK) == 0);
+    return MXS_LOG_PRIORITY_IS_ENABLED(priority);
+}
+
 int mxs_log_message(int priority,
                     const char* modname,
                     const char* file, int line, const char* function,
@@ -126,7 +133,9 @@ int mxs_log_message(int priority,
  *       MXS_ERROR, MXS_WARNING, etc. macros instead.
  */
 #define MXS_LOG_MESSAGE(priority, format, ...)\
-    mxs_log_message(priority, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    (mxs_log_priority_is_enabled(priority) ? \
+     mxs_log_message(priority, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__) :\
+     0)
 
 /**
  * Log an alert, error, warning, notice, info, or debug  message.
