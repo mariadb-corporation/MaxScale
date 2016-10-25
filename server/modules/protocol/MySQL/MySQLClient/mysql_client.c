@@ -1435,41 +1435,46 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
                 {
-                    uint32_t type = qc_get_type(packetbuf);
+                    uint32_t *data = GWBUF_DATA(packetbuf);
 
-                    if (type & QUERY_TYPE_BEGIN_TRX)
+                    if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
                     {
-                        if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
+                        uint32_t type = qc_get_type(packetbuf);
+
+                        if (type & QUERY_TYPE_BEGIN_TRX)
                         {
-                            session_set_autocommit(session, false);
-                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
-                        }
-                        else
-                        {
-                            session_trx_state_t trx_state;
-                            if (type & QUERY_TYPE_WRITE)
+                            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
                             {
-                                trx_state = SESSION_TRX_READ_WRITE;
-                            }
-                            else if (type & QUERY_TYPE_READ)
-                            {
-                                trx_state = SESSION_TRX_READ_ONLY;
+                                session_set_autocommit(session, false);
+                                session_set_trx_state(session, SESSION_TRX_INACTIVE);
                             }
                             else
                             {
-                                trx_state = SESSION_TRX_ACTIVE;
+                                session_trx_state_t trx_state;
+                                if (type & QUERY_TYPE_WRITE)
+                                {
+                                    trx_state = SESSION_TRX_READ_WRITE;
+                                }
+                                else if (type & QUERY_TYPE_READ)
+                                {
+                                    trx_state = SESSION_TRX_READ_ONLY;
+                                }
+                                else
+                                {
+                                    trx_state = SESSION_TRX_ACTIVE;
+                                }
+
+                                session_set_trx_state(session, trx_state);
                             }
-
-                            session_set_trx_state(session, trx_state);
                         }
-                    }
-                    else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
-                    {
-                        session_set_trx_state(session, SESSION_TRX_INACTIVE);
-
-                        if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+                        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
                         {
-                            session_set_autocommit(session, true);
+                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
+
+                            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+                            {
+                                session_set_autocommit(session, true);
+                            }
                         }
                     }
                 }
