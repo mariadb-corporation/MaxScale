@@ -248,6 +248,7 @@ typedef struct dcb
     SPINLOCK        delayqlock;     /**< Delay Backend Write Queue spinlock */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
+    GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
     SPINLOCK        authlock;       /**< Generic Authorization spinlock */
 
     DCBSTATS        stats;          /**< DCB related statistics */

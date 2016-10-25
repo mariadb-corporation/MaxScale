@@ -81,8 +81,19 @@ int max_poll_sleep;
  */
 #define MUTEX_EPOLL     0
 
+/** Fake epoll event struct */
+typedef struct fake_event
+{
+    DCB               *dcb;   /*< The DCB where this event was generated */
+    GWBUF             *data;  /*< Fake data, placed in the DCB's read queue */
+    uint32_t           event; /*< The EPOLL event type */
+    struct fake_event *tail;  /*< The last event */
+    struct fake_event *next;  /*< The next event */
+} fake_event_t;
+
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
+static fake_event_t **fake_events; /*< Thread-specific fake event queue */
 static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 static GWBITMASK poll_mask;
 #if MUTEX_EPOLL
@@ -91,7 +102,7 @@ static simple_mutex_t epoll_wait_mutex; /*< serializes calls to epoll_wait */
 static int n_waiting = 0;    /*< No. of threads in epoll_wait */
 
 static int process_pollq(int thread_id, struct epoll_event *event);
-static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, __uint32_t ev);
+static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev);
 static bool poll_dcb_session_check(DCB *dcb, const char *);
 
 DCB *eventq = NULL;
@@ -224,6 +235,11 @@ poll_init()
         }
     }
 
+    if ((fake_events = MXS_CALLOC(sizeof(fake_event_t*), n_threads)) == NULL)
+    {
+        exit(-1);
+    }
+
     memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
     bitmask_init(&poll_mask);
@@ -339,7 +355,7 @@ poll_add_dcb(DCB *dcb)
                   STRDCBSTATE(dcb->state));
     }
     dcb->state = new_state;
-    spinlock_release(&dcb->dcb_initlock);
+
     /*
      * The only possible failure that will not cause a crash is
      * running out of system resources.
@@ -356,6 +372,7 @@ poll_add_dcb(DCB *dcb)
     }
 
     dcb->owner = owner;
+    spinlock_release(&dcb->dcb_initlock);
 
     rc = epoll_ctl(epoll_fd[owner], EPOLL_CTL_ADD, dcb->fd, &ev);
     if (rc)
@@ -702,6 +719,19 @@ poll_waitevents(void *arg)
             process_pollq(thread_id, &events[i]);
         }
 
+        /** Process fake events */
+        while (fake_events[thread_id])
+        {
+            fake_event_t *event = fake_events[thread_id];
+            fake_events[thread_id] = fake_events[thread_id]->next;
+
+            struct epoll_event ev;
+            event->dcb->dcb_fakequeue = event->data;
+            ev.data.ptr = event->dcb;
+            ev.events = event->event;
+            process_pollq(thread_id, &ev);
+        }
+
         if (check_timeouts && hkheartbeat >= next_timeout_check)
         {
             process_idle_sessions();
@@ -795,7 +825,6 @@ process_pollq(int thread_id, struct epoll_event *event)
     unsigned long qtime;
 
     DCB *dcb = event->data.ptr;
-    atomic_add(&pollStats.evq_pending, -1);
 
 #if PROFILE_POLL
     memlog_log(plog, hkheartbeat - dcb->evq.inserted);
@@ -1132,8 +1161,6 @@ dprintPollStats(DCB *dcb)
                pollStats.evq_length);
     dcb_printf(dcb, "Maximum event queue length:                    %" PRId32 "\n",
                pollStats.evq_max);
-    dcb_printf(dcb, "No. of DCBs with pending events:               %" PRId32 "\n",
-               pollStats.evq_pending);
     dcb_printf(dcb, "No. of wakeups with pending queue:             %" PRId32 "\n",
                pollStats.wake_evqpending);
 
@@ -1366,7 +1393,6 @@ poll_loadav(void *data)
         current_avg = 0.0;
     }
     avg_samples[next_sample] = current_avg;
-    evqp_samples[next_sample] = pollStats.evq_pending;
     next_sample++;
     if (next_sample >= n_avg_samples)
     {
@@ -1396,50 +1422,30 @@ void poll_add_epollin_event_to_dcb(DCB*   dcb,
 
 static void poll_add_event_to_dcb(DCB*       dcb,
                                   GWBUF*     buf,
-                                  __uint32_t ev)
+                                  uint32_t ev)
 {
-    /** Add buf to readqueue */
-    spinlock_acquire(&dcb->authlock);
-    dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buf);
-    spinlock_release(&dcb->authlock);
+    fake_event_t *event = MXS_MALLOC(sizeof(*event));
 
-    spinlock_acquire(&pollqlock);
+    if (event)
+    {
+        event->data = buf;
+        event->dcb = dcb;
+        event->event = ev;
+        event->next = NULL;
+        event->tail = event;
 
-    /** Set event to DCB */
-    if (DCB_POLL_BUSY(dcb))
-    {
-        if (dcb->evq.pending_events == 0)
+        int thr = dcb->owner;
+
+        if (fake_events[thr])
         {
-            pollStats.evq_pending++;
-        }
-        dcb->evq.pending_events |= ev;
-    }
-    else
-    {
-        dcb->evq.pending_events = ev;
-        /** Add DCB to eventqueue if it isn't already there */
-        if (eventq)
-        {
-            dcb->evq.prev = eventq->evq.prev;
-            eventq->evq.prev->evq.next = dcb;
-            eventq->evq.prev = dcb;
-            dcb->evq.next = eventq;
+            fake_events[thr]->tail->next = event;
+            fake_events[thr]->tail = event;
         }
         else
         {
-            eventq = dcb;
-            dcb->evq.prev = dcb;
-            dcb->evq.next = dcb;
-        }
-        pollStats.evq_length++;
-        pollStats.evq_pending++;
-
-        if (pollStats.evq_length > pollStats.evq_max)
-        {
-            pollStats.evq_max = pollStats.evq_length;
+            fake_events[thr] = event;
         }
     }
-    spinlock_release(&pollqlock);
 }
 
 /*
@@ -1458,7 +1464,7 @@ static void poll_add_event_to_dcb(DCB*       dcb,
 void
 poll_fake_write_event(DCB *dcb)
 {
-    poll_fake_event(dcb, EPOLLOUT);
+    poll_add_event_to_dcb(dcb, NULL, EPOLLOUT);
 }
 
 /*
@@ -1477,79 +1483,7 @@ poll_fake_write_event(DCB *dcb)
 void
 poll_fake_read_event(DCB *dcb)
 {
-    poll_fake_event(dcb, EPOLLIN);
-}
-
-/*
- * Insert a fake completion event for a DCB into the polling queue.
- *
- * This is used to trigger transmission activity on another DCB from
- * within the event processing routine of a DCB. or to allow a DCB
- * to defer some further output processing, to allow for other DCBs
- * to receive a slice of the processing time. Fake events are added
- * to the tail of the event queue, in the same way that real events
- * are, so maintain the "fairness" of processing.
- *
- * @param dcb   DCB to emulate an event for
- * @param ev    Event to emulate
- */
-void
-poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev)
-{
-
-    spinlock_acquire(&pollqlock);
-    /*
-     * If the DCB is already on the queue, there are no pending events and
-     * there are other events on the queue, then
-     * take it off the queue. This stops the DCB hogging the threads.
-     */
-    if (DCB_POLL_BUSY(dcb) && dcb->evq.pending_events == 0 && dcb->evq.prev != dcb)
-    {
-        dcb->evq.prev->evq.next = dcb->evq.next;
-        dcb->evq.next->evq.prev = dcb->evq.prev;
-        if (eventq == dcb)
-        {
-            eventq = dcb->evq.next;
-        }
-        dcb->evq.next = NULL;
-        dcb->evq.prev = NULL;
-        pollStats.evq_length--;
-    }
-
-    if (DCB_POLL_BUSY(dcb))
-    {
-        if (dcb->evq.pending_events == 0)
-        {
-            pollStats.evq_pending++;
-        }
-        dcb->evq.pending_events |= ev;
-    }
-    else
-    {
-        dcb->evq.pending_events = ev;
-        dcb->evq.inserted = hkheartbeat;
-        if (eventq)
-        {
-            dcb->evq.prev = eventq->evq.prev;
-            eventq->evq.prev->evq.next = dcb;
-            eventq->evq.prev = dcb;
-            dcb->evq.next = eventq;
-        }
-        else
-        {
-            eventq = dcb;
-            dcb->evq.prev = dcb;
-            dcb->evq.next = dcb;
-        }
-        pollStats.evq_length++;
-        pollStats.evq_pending++;
-        dcb->evq.inserted = hkheartbeat;
-        if (pollStats.evq_length > pollStats.evq_max)
-        {
-            pollStats.evq_max = pollStats.evq_length;
-        }
-    }
-    spinlock_release(&pollqlock);
+    poll_add_event_to_dcb(dcb, NULL, EPOLLIN);
 }
 
 /*
@@ -1567,42 +1501,7 @@ poll_fake_hangup_event(DCB *dcb)
 #else
     uint32_t ev = EPOLLHUP;
 #endif
-
-    spinlock_acquire(&pollqlock);
-    if (DCB_POLL_BUSY(dcb))
-    {
-        if (dcb->evq.pending_events == 0)
-        {
-            pollStats.evq_pending++;
-        }
-        dcb->evq.pending_events |= ev;
-    }
-    else
-    {
-        dcb->evq.pending_events = ev;
-        dcb->evq.inserted = hkheartbeat;
-        if (eventq)
-        {
-            dcb->evq.prev = eventq->evq.prev;
-            eventq->evq.prev->evq.next = dcb;
-            eventq->evq.prev = dcb;
-            dcb->evq.next = eventq;
-        }
-        else
-        {
-            eventq = dcb;
-            dcb->evq.prev = dcb;
-            dcb->evq.next = dcb;
-        }
-        pollStats.evq_length++;
-        pollStats.evq_pending++;
-        dcb->evq.inserted = hkheartbeat;
-        if (pollStats.evq_length > pollStats.evq_max)
-        {
-            pollStats.evq_max = pollStats.evq_length;
-        }
-    }
-    spinlock_release(&pollqlock);
+    poll_add_event_to_dcb(dcb, NULL, ev);
 }
 
 /**
@@ -1696,14 +1595,14 @@ poll_get_stat(POLL_STAT stat)
         return ts_stats_sum(pollStats.n_accept);
     case POLL_STAT_EVQ_LEN:
         return pollStats.evq_length;
-    case POLL_STAT_EVQ_PENDING:
-        return pollStats.evq_pending;
     case POLL_STAT_EVQ_MAX:
         return pollStats.evq_max;
     case POLL_STAT_MAX_QTIME:
         return (int)queueStats.maxqtime;
     case POLL_STAT_MAX_EXECTIME:
         return (int)queueStats.maxexectime;
+    default:
+        break;
     }
     return 0;
 }

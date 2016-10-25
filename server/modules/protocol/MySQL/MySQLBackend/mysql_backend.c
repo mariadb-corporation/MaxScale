@@ -599,10 +599,8 @@ gw_read_backend_event(DCB *dcb)
             if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
             {
                 /** Authentication completed successfully */
-                spinlock_acquire(&dcb->authlock);
                 GWBUF *localq = dcb->delayq;
                 dcb->delayq = NULL;
-                spinlock_release(&dcb->authlock);
 
                 if (localq)
                 {
@@ -746,9 +744,9 @@ gw_read_and_write(DCB *dcb)
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
-        spinlock_acquire(&dcb->authlock);
+
         dcb->dcb_readqueue = read_buffer;
-        spinlock_release(&dcb->authlock);
+
         if (tmp == NULL)
         {
             /** No complete packets */
@@ -1012,7 +1010,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
             gwbuf_free(queue);
             rc = 0;
-            spinlock_release(&dcb->authlock);
+
             break;
 
         case MXS_AUTH_STATE_COMPLETE:
@@ -1027,7 +1025,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                       dcb->fd,
                       STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
-            spinlock_release(&dcb->authlock);
+
             /**
              * Statement type is used in readwrite split router.
              * Command is *not* set for readconn router.
@@ -1082,7 +1080,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              * connected with auth ok
              */
             backend_set_delayqueue(dcb, queue);
-            spinlock_release(&dcb->authlock);
+
             rc = 1;
         }
         break;
@@ -1807,9 +1805,9 @@ static GWBUF* process_response_data(DCB* dcb,
 
                     /** Store the already read data into the readqueue of the DCB
                      * and restore the response status to the initial number of packets */
-                    spinlock_acquire(&dcb->authlock);
+
                     dcb->dcb_readqueue = gwbuf_append(outbuf, dcb->dcb_readqueue);
-                    spinlock_release(&dcb->authlock);
+
                     protocol_set_response_status(p, initial_packets, initial_bytes);
                     return NULL;
                 }
