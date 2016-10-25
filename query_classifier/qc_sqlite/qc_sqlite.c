@@ -11,17 +11,18 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "qc_sqlite"
 #include <sqliteInt.h>
 
 #include <signal.h>
 #include <string.h>
+#include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/protocol/mysql.h>
-#include <maxscale/platform.h>
-#include <maxscale/query_classifier.h>
 #include <maxscale/modutil.h>
-#include <maxscale/alloc.h>
+#include <maxscale/platform.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/query_classifier.h>
 #include "builtin_functions.h"
 
 //#define QC_TRACE_ENABLED
@@ -348,7 +349,7 @@ static void parse_query_string(const char* query, size_t len)
         if (qc_info_was_tokenized(this_thread.info->status))
         {
             format =
-                "qc_sqlite: Statement was classified only based on keywords "
+                "Statement was classified only based on keywords "
                 "(Sqlite3 error: %s, %s): \"%.*s%s\"";
         }
         else
@@ -356,7 +357,7 @@ static void parse_query_string(const char* query, size_t len)
             if (qc_info_was_parsed(this_thread.info->status))
             {
                 format =
-                    "qc_sqlite: Statement was only partially parsed "
+                    "Statement was only partially parsed "
                     "(Sqlite3 error: %s, %s): \"%.*s%s\"";
 
                 // The status was set to QC_QUERY_PARSED, but sqlite3 returned an
@@ -366,7 +367,7 @@ static void parse_query_string(const char* query, size_t len)
             else
             {
                 format =
-                    "qc_sqlite: Statement was neither parsed nor recognized from keywords "
+                    "Statement was neither parsed nor recognized from keywords "
                     "(Sqlite3 error: %s, %s): \"%.*s%s\"";
             }
         }
@@ -406,7 +407,7 @@ static void parse_query_string(const char* query, size_t len)
         {
             // This suggests a callback from the parser into this module is not made.
             format =
-                "qc_sqlite: Statement was classified only based on keywords, "
+                "Statement was classified only based on keywords, "
                 "even though the statement was parsed: \"%.*s%s\"";
 
             MXS_WARNING(format, l, query, suffix);
@@ -416,7 +417,7 @@ static void parse_query_string(const char* query, size_t len)
             // This suggests there are keywords that should be recognized but are not,
             // a tentative classification cannot be (or is not) made using the keywords
             // seen and/or a callback from the parser into this module is not made.
-            format = "qc_sqlite: Statement was parsed, but not classified: \"%.*s%s\"";
+            format = "Statement was parsed, but not classified: \"%.*s%s\"";
 
             MXS_ERROR(format, l, query, suffix);
         }
@@ -468,25 +469,25 @@ static bool parse_query(GWBUF* query)
                 }
                 else
                 {
-                    MXS_ERROR("qc_sqlite: Could not allocate structure for containing parse data.");
+                    MXS_ERROR("Could not allocate structure for containing parse data.");
                 }
             }
             else
             {
-                MXS_ERROR("qc_sqlite: The provided buffer does not contain a COM_QUERY, but a %s.",
+                MXS_ERROR("The provided buffer does not contain a COM_QUERY, but a %s.",
                           STRPACKETTYPE(MYSQL_GET_COMMAND(data)));
             }
         }
         else
         {
-            MXS_ERROR("qc_sqlite: Packet size %ld, provided buffer is %ld.",
+            MXS_ERROR("Packet size %ld, provided buffer is %ld.",
                       MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(data),
                       GWBUF_LENGTH(query));
         }
     }
     else
     {
-        MXS_ERROR("qc_sqlite: Provided buffer is not contiguous.");
+        MXS_ERROR("Provided buffer is not contiguous.");
     }
 
     return parsed;
@@ -589,7 +590,7 @@ static void log_invalid_data(GWBUF* query, const char* message)
                 length = GWBUF_LENGTH(query) - MYSQL_HEADER_LEN - 1;
             }
 
-            MXS_INFO("qc_sqlite: Parsing the query failed, %s: %*s", message, length, sql);
+            MXS_INFO("Parsing the query failed, %s: %*s", message, length, sql);
         }
     }
 }
@@ -727,13 +728,13 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
             }
             else if (zToken[0] != '?')
             {
-                MXS_WARNING("qc_sqlite: %s reported as VARIABLE.", zToken);
+                MXS_WARNING("%s reported as VARIABLE.", zToken);
             }
         }
         break;
 
     default:
-        MXS_DEBUG("qc_sqlite: Token %d not handled explicitly.", pExpr->op);
+        MXS_DEBUG("Token %d not handled explicitly.", pExpr->op);
         // Fallthrough intended.
     case TK_BETWEEN:
     case TK_CASE:
@@ -2407,18 +2408,18 @@ static bool qc_sqlite_init(const char* args)
                 }
                 else
                 {
-                    MXS_WARNING("qc_sqlite: '%s' is not a number between %d and %d.",
+                    MXS_WARNING("'%s' is not a number between %d and %d.",
                                 value, QC_LOG_NOTHING, QC_LOG_NON_TOKENIZED);
                 }
             }
             else
             {
-                MXS_WARNING("qc_sqlite: '%s' is not a recognized argument.", key);
+                MXS_WARNING("'%s' is not a recognized argument.", key);
             }
         }
         else
         {
-            MXS_WARNING("qc_sqlite: '%s' is not a recognized argument string.", args);
+            MXS_WARNING("'%s' is not a recognized argument string.", args);
         }
     }
 
@@ -2454,7 +2455,7 @@ static bool qc_sqlite_init(const char* args)
                     ss_dassert(!true);
                 }
 
-                MXS_NOTICE("qc_sqlite: %s", message);
+                MXS_NOTICE("%s", message);
             }
         }
         else
@@ -2497,12 +2498,12 @@ static bool qc_sqlite_thread_init(void)
     {
         this_thread.initialized = true;
 
-        MXS_INFO("qc_sqlite: In-memory sqlite database successfully opened for thread %lu.",
+        MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
     }
     else
     {
-        MXS_ERROR("qc_sqlite: Failed to open in-memory sqlite database for thread %lu: %d, %s",
+        MXS_ERROR("Failed to open in-memory sqlite database for thread %lu: %d, %s",
                   (unsigned long) pthread_self(), rc, sqlite3_errstr(rc));
     }
 
@@ -2520,7 +2521,7 @@ static void qc_sqlite_thread_end(void)
 
     if (rc != SQLITE_OK)
     {
-        MXS_WARNING("qc_sqlite: The closing of the thread specific sqlite database failed: %d, %s",
+        MXS_WARNING("The closing of the thread specific sqlite database failed: %d, %s",
                     rc, sqlite3_errstr(rc));
     }
 
@@ -2561,7 +2562,7 @@ static uint32_t qc_sqlite_get_type(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return types;
@@ -2589,7 +2590,7 @@ static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return op;
@@ -2621,7 +2622,7 @@ static char* qc_sqlite_get_created_table_name(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return created_table_name;
@@ -2649,7 +2650,7 @@ static bool qc_sqlite_is_drop_table_query(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return is_drop_table;
@@ -2677,7 +2678,7 @@ static bool qc_sqlite_is_real_query(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return is_real_query;
@@ -2721,7 +2722,7 @@ static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnam
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return table_names;
@@ -2733,7 +2734,7 @@ static char* qc_sqlite_get_canonical(GWBUF* query)
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    MXS_ERROR("qc_sqlite: qc_get_canonical not implemented yet.");
+    MXS_ERROR("qc_get_canonical not implemented yet.");
 
     return NULL;
 }
@@ -2760,7 +2761,7 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return has_clause;
@@ -2788,7 +2789,7 @@ static char* qc_sqlite_get_affected_fields(GWBUF* query)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     if (!affected_fields)
@@ -2827,7 +2828,7 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
     }
     else
     {
-        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+        MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
     return database_names;
