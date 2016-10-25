@@ -117,17 +117,18 @@ ostream& operator << (ostream& out, qc_parse_result_t x)
 
 GWBUF* create_gwbuf(const string& s)
 {
-    size_t len = s.length() + 1;
-    size_t gwbuf_len = len + MYSQL_HEADER_LEN + 1;
+    size_t len = s.length();
+    size_t payload_len = len + 1;
+    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (len >> 16);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), s.length() + 1);
+    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), len);
 
     return gwbuf;
 }

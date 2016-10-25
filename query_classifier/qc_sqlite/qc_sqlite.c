@@ -433,36 +433,60 @@ static bool parse_query(GWBUF* query)
     bool parsed = false;
     ss_dassert(!query_is_parsed(query));
 
-    QC_SQLITE_INFO* info = info_alloc();
-
-    if (info)
+    if (GWBUF_IS_CONTIGUOUS(query))
     {
-        this_thread.info = info;
-
-        // TODO: Somewhere it needs to be ensured that this buffer is contiguous.
-        // TODO: Where is it checked that the GWBUF really contains a query?
         uint8_t* data = (uint8_t*) GWBUF_DATA(query);
-        size_t len = MYSQL_GET_PACKET_LEN(data) - 1; // Subtract 1 for packet type byte.
 
-        const char* s = (const char*) &data[5]; // TODO: Are there symbolic constants somewhere?
+        if ((GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1) &&
+            (GWBUF_LENGTH(query) == MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(data)))
+        {
+            if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
+            {
+                QC_SQLITE_INFO* info = info_alloc();
 
-        this_thread.info->query = s;
-        this_thread.info->query_len = len;
-        parse_query_string(s, len);
-        this_thread.info->query = NULL;
-        this_thread.info->query_len = 0;
+                if (info)
+                {
+                    this_thread.info = info;
 
-        // TODO: Add return value to gwbuf_add_buffer_object.
-        // Always added; also when it was not recognized. If it was not recognized now,
-        // it won't be if we try a second time.
-        gwbuf_add_buffer_object(query, GWBUF_PARSING_INFO, info, buffer_object_free);
-        parsed = true;
+                    size_t len = MYSQL_GET_PACKET_LEN(data) - 1; // Subtract 1 for packet type byte.
 
-        this_thread.info = NULL;
+                    const char* s = (const char*) &data[MYSQL_HEADER_LEN + 1];
+
+                    this_thread.info->query = s;
+                    this_thread.info->query_len = len;
+                    parse_query_string(s, len);
+                    this_thread.info->query = NULL;
+                    this_thread.info->query_len = 0;
+
+                    // TODO: Add return value to gwbuf_add_buffer_object.
+                    // Always added; also when it was not recognized. If it was not recognized now,
+                    // it won't be if we try a second time.
+                    gwbuf_add_buffer_object(query, GWBUF_PARSING_INFO, info, buffer_object_free);
+                    parsed = true;
+
+                    this_thread.info = NULL;
+                }
+                else
+                {
+                    MXS_ERROR("qc_sqlite: Could not allocate structure for containing parse data.");
+                }
+            }
+            else
+            {
+                MXS_ERROR("qc_sqlite: The provided buffer does not contain a COM_QUERY, but a %s.",
+                          STRPACKETTYPE(MYSQL_GET_COMMAND(data)));
+            }
+        }
+        else
+        {
+            MXS_ERROR("qc_sqlite: Packet size %ld, provided buffer is %ld.",
+                      MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(data),
+                      GWBUF_LENGTH(query));
+        }
     }
     else
     {
-        MXS_ERROR("qc_sqlite: Could not allocate structure for containing parse data.");
+        MXS_ERROR("qc_sqlite: Provided buffer is not contiguous.");
     }
 
     return parsed;
