@@ -142,7 +142,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
      */
     session->state = SESSION_STATE_READY;
 
-    session->trx_state = SESSION_TRX_UNKNOWN;
+    session->trx_state = SESSION_TRX_INACTIVE;
     session->autocommit = true;
     /*
      * Only create a router session if we are not the listening
@@ -1081,8 +1081,6 @@ const char* session_trx_state_to_string(session_trx_state_t state)
 {
     switch (state)
     {
-    case SESSION_TRX_UNKNOWN:
-        return "SESSION_TRX_UNKNOWN";
     case SESSION_TRX_INACTIVE:
         return "SESSION_TRX_INACTIVE";
     case SESSION_TRX_ACTIVE:

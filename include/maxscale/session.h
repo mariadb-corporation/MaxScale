@@ -83,8 +83,6 @@ typedef enum
 
 typedef enum
 {
-    /*< The current transaction state is not known. */
-    SESSION_TRX_UNKNOWN     = 0,
     /*< There is no on-going transaction. */
     SESSION_TRX_INACTIVE    = SESSION_TRX_INACTIVE_BIT,
     /*< A transaction is active. */
@@ -241,6 +239,20 @@ void enable_session_timeouts();
 /**
  * Get the transaction state of the session.
  *
+ * Note that this tells only the state of @e explicitly started transactions.
+ * That is, if @e autocommit is OFF, which means that there is always an
+ * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+ * at which point a new transaction is started, this function will still
+ * return SESSION_TRX_INACTIVE, unless a transaction has explicitly been
+ * started with START TRANSACTION.
+ *
+ * Likewise, if @e autocommit is ON, which means that every statement is
+ * executed in a transaction of its own, this will return false, unless a
+ * transaction has explicitly been started with START TRANSACTION.
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
  * @param ses The SESSION object.
  * @return The transaction state.
  */
@@ -259,7 +271,12 @@ session_trx_state_t session_get_trx_state(const SESSION* ses);
 session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
 
 /**
- * Tells whether a transaction is active.
+ * Tells whether an explicit transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
  *
  * @return True if a transaction is active, false otherwise.
  */
@@ -271,6 +288,11 @@ static inline bool session_trx_is_active(const SESSION* ses)
 /**
  * Tells whether an explicit READ ONLY transaction is active.
  *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
  * @return True if an explicit READ ONLY transaction is active,
  *         false otherwise.
  */
@@ -281,6 +303,11 @@ static inline bool session_trx_is_read_only(const SESSION* ses)
 
 /**
  * Tells whether an explicit READ WRITE transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
  *
  * @return True if an explicit READ WRITE  transaction is active,
  *         false otherwise.
@@ -302,6 +329,8 @@ static inline bool session_trx_is_read_write(const SESSION* ses)
  * function will still return true.
  *
  * Note also that by default autocommit is ON.
+ *
+ * @see session_get_trx_state
  *
  * @return True if autocommit has been set ON, false otherwise.
  */

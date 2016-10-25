@@ -1439,25 +1439,28 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
 
                     if (type & QUERY_TYPE_BEGIN_TRX)
                     {
-                        session_trx_state_t trx_state;
-                        if (type & QUERY_TYPE_WRITE)
-                        {
-                            trx_state = SESSION_TRX_READ_WRITE;
-                        }
-                        else if (type & QUERY_TYPE_READ)
-                        {
-                            trx_state = SESSION_TRX_READ_ONLY;
-                        }
-                        else
-                        {
-                            trx_state = SESSION_TRX_ACTIVE;
-                        }
-
-                        session_set_trx_state(session, trx_state);
-
                         if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
                         {
                             session_set_autocommit(session, false);
+                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                        }
+                        else
+                        {
+                            session_trx_state_t trx_state;
+                            if (type & QUERY_TYPE_WRITE)
+                            {
+                                trx_state = SESSION_TRX_READ_WRITE;
+                            }
+                            else if (type & QUERY_TYPE_READ)
+                            {
+                                trx_state = SESSION_TRX_READ_ONLY;
+                            }
+                            else
+                            {
+                                trx_state = SESSION_TRX_ACTIVE;
+                            }
+
+                            session_set_trx_state(session, trx_state);
                         }
                     }
                     else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
