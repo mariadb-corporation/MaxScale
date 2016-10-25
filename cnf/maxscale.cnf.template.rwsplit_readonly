@@ -1,12 +1,13 @@
 [maxscale]
 threads=###threads###
+log_info=1
 
 [MySQL Monitor]
 type=monitor
 module=mysqlmon
 ###repl51###
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 monitor_interval=1000
 
@@ -14,7 +15,7 @@ monitor_interval=1000
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 router_options=master_failure_mode=fail_instantly
 
@@ -22,7 +23,7 @@ router_options=master_failure_mode=fail_instantly
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 router_options=master_failure_mode=error_on_write
 
@@ -30,7 +31,7 @@ router_options=master_failure_mode=error_on_write
 type=service
 router=readwritesplit
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 router_options=master_failure_mode=fail_on_write
 
@@ -54,7 +55,7 @@ router=cli
 type=listener
 service=CLI
 protocol=maxscaled
-port=6603
+socket=default
 
 [Read Connection Listener Master]
 type=listener
@@ -64,24 +65,24 @@ port=4008
 
 [server1]
 type=server
-address=###repl_server_IP_1###
-port=###repl_server_port_1###
+address=###node_server_IP_1###
+port=###node_server_port_1###
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=###repl_server_IP_2###
-port=###repl_server_port_2###
+address=###node_server_IP_2###
+port=###node_server_port_2###
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=###repl_server_IP_3###
-port=###repl_server_port_3###
+address=###node_server_IP_3###
+port=###node_server_port_3###
 protocol=MySQLBackend
 
 [server4]
 type=server
-address=###repl_server_IP_4###
-port=###repl_server_port_4###
+address=###node_server_IP_4###
+port=###node_server_port_4###
 protocol=MySQLBackend

@@ -30,7 +30,7 @@ module=galeramon
 servers=server1,server2,server3
 #user=maxmon
 #passwd=maxpwd
-user=skysql
+user=maxskysql
 passwd=skysql
 
 
@@ -64,7 +64,7 @@ router=readwritesplit
 servers=server1,server2,server3
 #user=maxpriv
 #passwd=maxpwd
-user=skysql
+user=maxskysql
 passwd=skysql
 filters=MyLogFilter
 version_string=MariaDBEC-10.0.14
@@ -81,7 +81,7 @@ router_options=synced
 servers=server1,server2,server3
 #user=maxpriv
 #passwd=maxpwd
-user=skysql
+user=maxskysql
 passwd=skysql
 
 [Debug Interface]
@@ -128,7 +128,7 @@ type=listener
 service=CLI
 protocol=maxscaled
 #address=localhost
-port=6603
+socket=default
 
 [MyLogFilter]
 type=filter

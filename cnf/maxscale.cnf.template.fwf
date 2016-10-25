@@ -10,6 +10,7 @@
 [maxscale]
 threads=###threads###
 log_warning=1
+query_classifier_args=log_unrecognized_statements=3
 
 # Define a monitor that can be used to determine the state and role of
 # the servers.
@@ -29,7 +30,7 @@ type=monitor
 module=mysqlmon
 ###repl51###
 servers= server1, server2,server3  ,server4
-user=skysql
+user=maxskysql
 passwd= skysql
 monitor_interval=100
 
@@ -52,7 +53,7 @@ monitor_interval=100
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA|Database Firewall
@@ -62,7 +63,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 filters=QLA
 
@@ -71,7 +72,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2,server3,server4
-user=skysql
+user=maxskysql
 passwd=skysql
 filters=QLA
 
@@ -125,33 +126,33 @@ type=listener
 service=CLI
 protocol=maxscaled
 #address=localhost
-port=6603
+socket=default
 
 
 # Definition of the servers
 
 [server1]
 type=server
-address=###repl_server_IP_1###
-port=###repl_server_port_1###
+address=###node_server_IP_1###
+port=###node_server_port_1###
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=###repl_server_IP_2###
-port=###repl_server_port_2###
+address=###node_server_IP_2###
+port=###node_server_port_2###
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=###repl_server_IP_3###
-port=###repl_server_port_3###
+address=###node_server_IP_3###
+port=###node_server_port_3###
 protocol=MySQLBackend
 
 [server4]
 type=server
-address=###repl_server_IP_4###
-port=###repl_server_port_4###
+address=###node_server_IP_4###
+port=###node_server_port_4###
 protocol=MySQLBackend
 
 [QLA]

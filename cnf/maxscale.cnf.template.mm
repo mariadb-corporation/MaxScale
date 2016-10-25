@@ -28,7 +28,7 @@ log_warning=1
 type=monitor
 module=mmmon
 servers= server1, server2
-user=skysql
+user=maxskysql
 passwd= skysql
 detect_stale_master=0
 monitor_interval=1000
@@ -52,7 +52,7 @@ monitor_interval=1000
 type=service
 router= readwritesplit
 servers=server1,     server2
-user=skysql
+user=maxskysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA
@@ -62,7 +62,7 @@ type=service
 router=readconnroute
 router_options= slave
 servers=server1,server2
-user=skysql
+user=maxskysql
 passwd=skysql
 filters=QLA
 
@@ -71,7 +71,7 @@ type=service
 router=readconnroute
 router_options=master
 servers=server1,server2
-user=skysql
+user=maxskysql
 passwd=skysql
 filters=QLA
 
@@ -125,34 +125,22 @@ type=listener
 service=CLI
 protocol=maxscaled
 #address=localhost
-port=6603
+socket=default
 
 
 # Definition of the servers
 
 [server1]
 type=server
-address=###repl_server_IP_1###
-port=###repl_server_port_1###
+address=###node_server_IP_1###
+port=###node_server_port_1###
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=###repl_server_IP_2###
-port=###repl_server_port_2###
+address=###node_server_IP_2###
+port=###node_server_port_2###
 protocol=MySQLBackend
-
-#[server3]
-#type=server
-#address=###repl_server_IP_3###
-#port=###repl_server_port_3###
-#protocol=MySQLBackend
-
-#[server4]
-#type=server
-#address=###repl_server_IP_4###
-#port=###repl_server_port_4###
-#protocol=MySQLBackend
 
 [QLA]
 type=filter
