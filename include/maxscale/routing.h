@@ -40,5 +40,18 @@ typedef enum routing_capability
 
 #define RCAP_TYPE_NONE 0
 
+/**
+ * Determines whether a particular capability type is required.
+ *
+ * @param capabilites The capability bits to be tested.
+ * @param type        A particular capability type or a bitmask of types.
+ *
+ * @return True, if @c type is present in @c capabilities.
+ */
+static inline bool rcap_type_required(uint64_t capabilities, uint64_t type)
+{
+    return (capabilities & type) == type;
+}
+
 MXS_END_DECLS
 
