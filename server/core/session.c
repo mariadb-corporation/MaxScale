@@ -42,6 +42,7 @@
 #include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/poll.h>
 
 /* This list of all sessions */
 LIST_CONFIG SESSIONlist =
@@ -927,7 +928,7 @@ void process_idle_sessions()
                 if (all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
                     hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
                 {
-                    dcb_close(all_session->client_dcb);
+                    poll_fake_hangup_event(all_session->client_dcb);
                 }
 
                 current = list_iterate(&SESSIONlist, current);
