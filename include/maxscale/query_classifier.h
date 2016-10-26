@@ -96,13 +96,12 @@ bool qc_is_real_query(GWBUF* querybuf);
 char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
 char* qc_get_canonical(GWBUF* querybuf);
 bool qc_query_has_clause(GWBUF* buf);
-char* qc_get_qtype_str(qc_query_type_t qtype);
 char* qc_get_affected_fields(GWBUF* buf);
 char** qc_get_database_names(GWBUF* querybuf, int* size);
 
 const char* qc_op_to_string(qc_query_op_t op);
 const char* qc_type_to_string(qc_query_type_t type);
-char* qc_types_to_string(uint32_t types);
+char* qc_typemask_to_string(uint32_t typemask);
 
 struct query_classifier
 {

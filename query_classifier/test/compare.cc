@@ -354,7 +354,7 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     if (rv1 == rv2)
     {
-        char* types = qc_types_to_string(rv1);
+        char* types = qc_typemask_to_string(rv1);
         ss << "Ok : " << types;
         free(types);
         success = true;
@@ -385,8 +385,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        char* types1 = qc_types_to_string(rv1);
-        char* types2 = qc_types_to_string(rv2);
+        char* types1 = qc_typemask_to_string(rv1);
+        char* types2 = qc_typemask_to_string(rv2);
 
         if (rv1b == rv2b)
         {

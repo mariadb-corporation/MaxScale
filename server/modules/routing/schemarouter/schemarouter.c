@@ -2007,7 +2007,7 @@ static int routeQuery(ROUTER* instance,
                          MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);
-        char* qtypestr = qc_get_qtype_str(qtype);
+        char* qtypestr = qc_typemask_to_string(qtype);
 
         MXS_INFO("> Cmd: %s, type: %s, "
                  "stmt: %s%s %s",
