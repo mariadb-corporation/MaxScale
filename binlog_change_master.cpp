@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     {
         if (Test->smoke)
         {
-            sleep(15);
+            sleep(45);
         } else {
             sleep(45);
         }
@@ -121,6 +121,9 @@ int main(int argc, char *argv[])
     char rep[256];
     int rep_d;
 
+    Test->tprintf("Sleeping to let replicatio happens\n");
+    sleep(60);
+
     Test->repl->connect();
 
     for (int i_n = 3; i_n < Test->repl->N; i_n++)
@@ -135,7 +138,7 @@ int main(int argc, char *argv[])
             {
                 Test->add_result(1, "Transaction %d did not put data into slave\n", j);
             }
-            if ((j == (failed_transaction_num - 1) && rep_d != 0))
+            if ((j == (failed_transaction_num - 1)) && (rep_d != 0) && (rep_d != 50000))
             {
                 Test->add_result(1, "Incomplete transaction detected - %d\n", j);
             }
@@ -172,6 +175,7 @@ int select_new_master(TestConnections * test)
     char maxscale_log_pos[256];
 
     // Stopping slave
+    test->tprintf("Connection to backend\n");
     test->repl->connect();
     test->tprintf("'stop slave' to node2\n");
     test->try_query(Test->repl->nodes[2], (char *) "stop slave;");
@@ -215,6 +219,12 @@ int select_new_master(TestConnections * test)
     // Set Maxscale to new master
     test->try_query(binlog, "stop slave");
     test->tprintf("configuring Maxscale binlog router\n");
+
+
+    test->tprintf("reconnect to binlog\n");
+    mysql_close(binlog);
+    binlog = open_conn_no_db(test->binlog_port, test->maxscale_IP, test->repl->user_name, test->repl->password, test->ssl);
+    test->add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
     char str[1024];
     //sprintf(str, setup_slave1, test->repl->IP[2], log_file_new, test->repl->port[2]);
@@ -263,7 +273,9 @@ void *transaction_thread( void *ptr )
         {
             Test->tprintf("Transaction %d failed, doing master failover\n", i_trans);
             failed_transaction_num = i_trans;
+            Test->tprintf("Closing connection\n");
             mysql_close(conn);
+            Test->tprintf("Callinjg select_new_master()\n");
             select_new_master(Test);
             master=2;
 

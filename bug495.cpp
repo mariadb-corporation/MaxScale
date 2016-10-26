@@ -6,6 +6,23 @@
  * - check if Maxscale is alive
  */
 
+/*
+
+Description Hartmut Holzgraefe 2014-08-31 21:32:09 UTC
+Only [server1] and [server2] are defined,
+service [test_service] and monitor [MySQL monitor]
+refer to a third server "server3" in their servers=...
+list though ...
+
+Nothing in the err or msg log hints towards a problem ...
+(which originally was caused by a copy/paste error that
+also lead to the "duplicate section name" error reported
+earlier ... and which would have been easy to track down
+if either of these problems would at least have raised a
+warning - took me almost an hour to track down the actual
+problem ... :(
+*/
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

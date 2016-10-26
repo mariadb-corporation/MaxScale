@@ -1,6 +1,6 @@
 /**
- * @file bug519.cpp
- * - fill t1 wuth data
+ * @file bug519.cpp - Jira task is MAX-345
+ * - fill t1 with data
  * - execute SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1; against all routers
  * - DROP TABLE t1
  * - LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using RWSplit
@@ -8,6 +8,54 @@
  * - DROP t1 again and repeat LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using ReadConn master
  */
 
+/*
+
+It seems that LOAD DATA LOCAL INFILE is not handled by readwritesplit? Maybe it's a bigger problem elsewhere in MaxScale?
+
+I can execute the command, it looks like it is getting sent to the master, but ... no data is actually loaded. Does/can MaxScale handle LOAD DATA LOCAL INFILE?
+Comment 1 Kolbe Kegel 2014-09-03 02:39:47 UTC
+The LOAD DATA LOCAL INFILE statement is stuck in "Reading from net" until some timeout is hit:
+
+| 22 | maxuser     | 192.168.30.38:59996 | test | Query   |   10 | Reading from net   | load data local infile '/Users/kolbe/Devel/seattleparking/Street_Parking_Signs.csv' into table parki |    0.000 |
+
+The client never sees the statement end, though, even after the server has long ago killed its connection...
+
+When I start a *new* connection to MaxScale and I try to execute the LOAD DATA LOCAL INFILE statement again, I have some problems:
+
+mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
+mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
+ERROR 2006 (HY000): MySQL server has gone away
+No connection. Trying to reconnect...
+Connection id:    1709
+Current database: test
+
++----------------------+
+| @@wsrep_node_address |
++----------------------+
+| 192.168.30.32        |
++----------------------+
+1 row in set (0.01 sec)
+
+mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
+mysql 5.5.38-MariaDB (maxuser) [test]> select @@wsrep_node_address;
+ERROR 2006 (HY000): MySQL server has gone away
+No connection. Trying to reconnect...
+Connection id:    1709
+Current database: test
+
++----------------------+
+| @@wsrep_node_address |
++----------------------+
+| 192.168.30.32        |
++----------------------+
+1 row in set (0.01 sec)
+
+mysql 5.5.38-MariaDB (maxuser) [test]> source /Users/kolbe/Devel/seattleparking/loaddata.sql
+ERROR 2013 (HY000) at line 1 in file: '/Users/kolbe/Devel/seattleparking/loaddata.sql': Lost connection to MySQL server during query
+mysql 5.5.38-MariaDB (maxuser) [test]> Bye
+*/
 
 #include <my_config.h>
 #include <iostream>
@@ -38,10 +86,10 @@ int main(int argc, char *argv[])
     sleep(30);
     Test->set_timeout(200);
 
-    sprintf(str, "%s rm /tmp/t*.csv; %s chmod 777 /tmp", Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
+    sprintf(str, "%s rm -f /tmp/t*.csv; %s chmod 777 /tmp", Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
     Test->tprintf("%s\n", str);
-    Test->repl->ssh_node(0, str, false);
-    system(str);
+    for (int k = 0; k < Test->repl->N; k++)  {Test->repl->ssh_node(k, str, false);}
+    //system(str);
 
     Test->tprintf("Copying data from t1 to file...\n");
     Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");

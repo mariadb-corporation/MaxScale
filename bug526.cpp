@@ -5,6 +5,30 @@
  * - check error log for proper error messages and checks if ReadConn services are alive
  */
 
+/*
+Hartmut Holzgraefe 2014-09-08 13:08:46 UTC
+I mistyped a module name (for a filter in this case)
+
+  [testfilter]
+  type=filter
+  module=foobar
+
+There were no warnings about this on startup at all, but at the first time trying to connect to a service this filter was used in maxscale crashed with a segmentation fault after writing the following error log entries:
+
+  2014 09/08 15:00:53   Error : Unable to find library for module: foobar.
+  2014 09/08 15:00:53   Failed to create filter 'testfilter' for service 'testrouter'.
+  2014 09/08 15:00:53   Error : Failed to create Read Connection Router session.
+  2014 09/08 15:00:53   Error : Invalid authentication message from backend. Error : 28000, Msg : Access denied for user 'maxuser'@'localhost' (using password: YES)
+  2014 09/08 15:00:53   Error : Backend server didn't accept authentication for user denied for user 'maxuser'@'localhost' (using password: YES).
+
+Two problems here:
+
+1) can't check up front that my configuration is valid / without errors without connecting to each defined service
+
+2) maxscale crashes instead of handling this situation gracefully (e.g. ignoring the misconfigured filter, or disabling the service that refers to it alltogether)
+*/
+
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

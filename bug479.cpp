@@ -5,6 +5,15 @@
  * - check if Maxscale is alive
  */
 
+
+/*
+Markus Mäkelä 2014-08-15 17:38:06 UTC
+Undefined filters in services cause a crash when the service is accessed.
+
+How to reproduce:
+Define a service with a filter not defined in the MaxScale.cnf file, start MaxScale and access the service.
+*/
+
 #include <my_config.h>
 #include <iostream>
 #include <unistd.h>

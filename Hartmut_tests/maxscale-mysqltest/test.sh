@@ -19,10 +19,8 @@ port=$1
 #        t/set_autocommit_disabled.test \
 #        t/test_after_autocommit_disabled.test t/test_sescmd.test"
 
-TESTS="t/test_transaction_routing1.test \
-        t/test_transaction_routing2.test \
+TESTS=" t/test_transaction_routing2.test \
         t/test_transaction_routing2b.test \
-        t/test_transaction_routing3b.test \
         t/test_transaction_routing4.test \
         t/test_transaction_routing4b.test t/select_for_var_set.test \
         t/test_implicit_commit1.test t/test_implicit_commit2.test \

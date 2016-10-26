@@ -1,5 +1,5 @@
 /**
- * @file fwf - Firewall filtyer test
+ * @file fwf - Firewall filter test (also regression test for MXS-683 "qc_mysqlembedded reports as-name instead of original-name")
  * - setup Firewall filter to use rules from rule file fw/ruleXX, where XX - number of sub-test
  * - execute queries for fw/passXX file, expect OK
  * - execute queries from fw/denyXX, expect Access Denied error (mysql_error 1141)
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     FILE* file;
 
     sprintf(rules_dir, "%s/fw/", Test->test_dir);
-    int N = 9;
+    int N = 10;
     int i;
 
     for (i = 1; i < N+1; i++){
@@ -49,6 +49,8 @@ int main(int argc, char *argv[])
 
         sprintf(pass_file, "%s/fw/pass%d", Test->test_dir, i);
         sprintf(deny_file, "%s/fw/deny%d", Test->test_dir, i);
+        Test->tprintf("Pass file: %s\n", pass_file);
+        Test->tprintf("Deny file: %s\n", deny_file);
 
         file = fopen(pass_file, "r");
         if (file != NULL) {
@@ -82,7 +84,13 @@ int main(int argc, char *argv[])
         } else {
             Test->add_result(1, "Error opening query file\n");
         }
-        Test->add_result(local_result, "********** rules%d test FAILED\n", i);
+        if (local_result != 0)
+        {
+            Test->add_result(1, "********** rules%d test FAILED\n", i);
+        }  else {
+            Test->tprintf("********** rules%d test PASSED\n", i);
+        }
+
         mysql_close(Test->conn_rwsplit);
     }
 

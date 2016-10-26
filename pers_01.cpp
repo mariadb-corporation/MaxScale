@@ -4,32 +4,32 @@
  * @verbatim
 [server1]
 type=server
-address=###repl_server_IP_1###
-port=###repl_server_port_1###
+address=###node_server_IP_1###
+port=###node_server_port_1###
 protocol=MySQLBackend
 persistpoolmax=1
 persistmaxtime=3660
 
 [server2]
 type=server
-address=###repl_server_IP_2###
-port=###repl_server_port_2###
+address=###node_server_IP_2###
+port=###node_server_port_2###
 protocol=MySQLBackend
 persistpoolmax=5
 persistmaxtime=60
 
 [server3]
 type=server
-address=###repl_server_IP_3###
-port=###repl_server_port_3###
+address=###node_server_IP_3###
+port=###node_server_port_3###
 protocol=MySQLBackend
 persistpoolmax=10
 persistmaxtime=60
 
 [server4]
 type=server
-address=###repl_server_IP_4###
-port=###repl_server_port_4###
+address=###node_server_IP_4###
+port=###node_server_port_4###
 protocol=MySQLBackend
 persistpoolmax=30
 persistmaxtime=30
@@ -112,7 +112,7 @@ void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * ser
         Test->tprintf("%s: %s\n", str, result);
         sscanf(result, "%d", &pers_conn[i]);
         if (pers_conn[i] != pers_conn_expected[i]) {
-            Test->add_result(1, "%s%d has %d, but expected %d\n", server, i+1, pers_conn[i], pers_conn_expected[i]);
+            Test->add_result(1, "Persistent measured pool size: %s%d has %d, but expected %d\n", server, i+1, pers_conn[i], pers_conn_expected[i]);
         }
     }
 }
