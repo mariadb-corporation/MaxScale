@@ -1912,7 +1912,17 @@ char* qc_get_prepare_name(GWBUF* stmt)
     {
         if (ensure_query_is_parsed(stmt))
         {
-            MXS_WARNING("qc_get_prepare_name not implemented yet.");
+            LEX* lex = get_lex(stmt);
+
+            if (lex->sql_command == SQLCOM_PREPARE)
+            {
+                name = (char*)malloc(lex->prepared_stmt_name.length + 1);
+                if (name)
+                {
+                    memcpy(name, lex->prepared_stmt_name.str, lex->prepared_stmt_name.length);
+                    name[lex->prepared_stmt_name.length] = 0;
+                }
+            }
         }
     }
 

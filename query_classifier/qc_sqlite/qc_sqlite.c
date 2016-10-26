@@ -78,6 +78,7 @@ typedef struct qc_sqlite_info
     size_t database_names_capacity;  // The capacity of database_names.
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
+    char* prepare_name;              // The name of a prepared statement.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -1961,6 +1962,13 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_PREPARE_NAMED_STMT;
     info->is_real_query = true;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
@@ -2847,7 +2855,10 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
     {
         if (qc_info_is_valid(info->status))
         {
-            MXS_WARNING("qc_get_prepare_name not implemented yet.");
+            if (info->prepare_name)
+            {
+                name = MXS_STRDUP(info->prepare_name);
+            }
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
