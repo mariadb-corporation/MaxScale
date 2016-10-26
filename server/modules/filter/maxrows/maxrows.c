@@ -25,7 +25,7 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "cache"
+#define MXS_MODULE_NAME "maxrows"
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
@@ -459,12 +459,10 @@ static void diagnostics(FILTER *instance, void *sdata, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
-//
-// API END
-//
+/* API END */
 
 /**
  * Reset cache response state
