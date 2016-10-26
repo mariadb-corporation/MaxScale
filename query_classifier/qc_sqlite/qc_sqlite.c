@@ -1625,6 +1625,13 @@ void maxscaleExecute(Parse* pParse, Token* pName)
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
     info->is_real_query = true;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
 }
 
 void maxscaleExplain(Parse* pParse, SrcList* pName)
