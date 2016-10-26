@@ -79,6 +79,8 @@ typedef struct qc_sqlite_info
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
     char* prepare_name;              // The name of a prepared statement.
+    size_t preparable_stmt_offset;   // The start of the preparable statement.
+    size_t preparable_stmt_length;   // The length of the preparable statement.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -328,6 +330,9 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->database_names_capacity = 0;
     info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
     info->keyword_2 = 0; // that we have not seen a keyword.
+    info->prepare_name = NULL;
+    info->preparable_stmt_offset = 0;
+    info->preparable_stmt_length = 0;
 
     return info;
 }
@@ -459,6 +464,31 @@ static bool parse_query(GWBUF* query)
                     parse_query_string(s, len);
                     this_thread.info->query = NULL;
                     this_thread.info->query_len = 0;
+
+                    if (info->types & QUERY_TYPE_PREPARE_NAMED_STMT)
+                    {
+                        QC_SQLITE_INFO* preparable_info = info_alloc();
+
+                        if (preparable_info)
+                        {
+                            this_thread.info = preparable_info;
+
+                            const char *preparable_s = s + info->preparable_stmt_offset;
+                            size_t preparable_len = info->preparable_stmt_length;
+
+                            this_thread.info->query = preparable_s;
+                            this_thread.info->query_len = preparable_len;
+                            parse_query_string(preparable_s, preparable_len);
+                            this_thread.info->query = NULL;
+                            this_thread.info->query_len = 0;
+
+                            // TODO: Perhaps the rest of the stuff should be
+                            // TODO: copied as well.
+                            info->operation = preparable_info->operation;
+
+                            info_free(preparable_info);
+                        }
+                    }
 
                     // TODO: Add return value to gwbuf_add_buffer_object.
                     // Always added; also when it was not recognized. If it was not recognized now,
@@ -1969,6 +1999,12 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
         memcpy(info->prepare_name, pName->z, pName->n);
         info->prepare_name[pName->n] = 0;
     }
+
+    // We store the position of the preparable statement inside the original
+    // statement. That will allow us to later create a new GWBUF of the
+    // parsable statment and parse that.
+    info->preparable_stmt_offset = pParse->sLastToken.z - pParse->zTail + 1; // Ignore starting quote.
+    info->preparable_stmt_length = pStmt->n - 2; // Remove starting and ending quotes.
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
