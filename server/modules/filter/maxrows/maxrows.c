@@ -360,6 +360,9 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
                     csdata->instance->config.max_resultset_size / 1024);
 
             csdata->state = MAXROWS_IGNORING_RESPONSE;
+
+            /* Send empty result set */
+            return send_ok_upstream(csdata);
         }
     }
 
