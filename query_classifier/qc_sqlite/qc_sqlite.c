@@ -1588,6 +1588,13 @@ void maxscaleDeallocate(Parse* pParse, Token* pName)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
 }
 
 void maxscaleDo(Parse* pParse, ExprList* pEList)
