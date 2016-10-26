@@ -131,7 +131,6 @@ typedef enum maxrows_session_state
     MAXROWS_EXPECTING_FIELDS,       // A select has been sent, and we want more fields.
     MAXROWS_EXPECTING_ROWS,         // A select has been sent, and we want more rows.
     MAXROWS_EXPECTING_NOTHING,      // We are not expecting anything from the server.
-    MAXROWS_EXPECTING_USE_RESPONSE, // A "USE DB" was issued.
     MAXROWS_IGNORING_RESPONSE,      // We are not interested in the data received from the server.
 } maxrows_session_state_t;
 
@@ -165,7 +164,6 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata);
-static int handle_expecting_use_response(MAXROWS_SESSION_DATA *csdata);
 static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
 static bool process_params(char **options, FILTER_PARAMETER **params, MAXROWS_CONFIG* config);
 
@@ -302,47 +300,16 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
 
     switch ((int)MYSQL_GET_COMMAND(data))
     {
-    case MYSQL_COM_INIT_DB:
-        {
-            ss_dassert(!csdata->use_db);
-            size_t len = MYSQL_GET_PACKET_LEN(data) - 1; // Remove the command byte.
-            csdata->use_db = MXS_MALLOC(len + 1);
-
-            if (csdata->use_db)
-            {
-                memcpy(csdata->use_db, data + MYSQL_HEADER_LEN + 1, len);
-                csdata->use_db[len] = 0;
-                csdata->state = MAXROWS_EXPECTING_USE_RESPONSE;
-            }
-            else
-            {
-                /* Do we need to handle it? */
-            }
-        }
-        break;
-
     case MYSQL_COM_QUERY:
         {
             /* Detect the SELECT statement only */
             if (qc_get_operation(packet) == QUERY_OP_SELECT)
             {
-                SESSION *session = csdata->session;
-
-                if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
-                    session_trx_is_read_only(session))
-                {
-                    /* Waiting for a reply:
-                     * Data will be stored in csdata->res->data via
-                     * clientReply routine
-                     */
-                    csdata->state = MAXROWS_EXPECTING_RESPONSE;
-                }
-                else
-                {
-                    C_DEBUG("autocommit = %s and transaction state %s => Not using memory buffer for resultset.",
-                            session_is_autocommit(csdata->session) ? "ON" : "OFF",
-                            session_trx_state_to_string(session_get_trx_state(csdata->session)));
-                }
+                /* Waiting for a reply:
+                 * Data will be stored in csdata->res->data via
+                 * clientReply routine
+                 */
+                 csdata->state = MAXROWS_EXPECTING_RESPONSE;
             }
             break;
 
@@ -412,10 +379,6 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
 
     case MAXROWS_EXPECTING_ROWS:
         rv = handle_expecting_rows(csdata);
-        break;
-
-    case MAXROWS_EXPECTING_USE_RESPONSE:
-        rv = handle_expecting_use_response(csdata);
         break;
 
     case MAXROWS_IGNORING_RESPONSE:
@@ -746,58 +709,6 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
             // We need more data
             insufficient = true;
         }
-    }
-
-    return rv;
-}
-
-/**
- * Called when a response to a "USE db" is received from the server.
- *
- * @param csdata The cache session data.
- */
-static int handle_expecting_use_response(MAXROWS_SESSION_DATA *csdata)
-{
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_USE_RESPONSE);
-    ss_dassert(csdata->res.data);
-
-    int rv = 1;
-
-    size_t buflen = gwbuf_length(csdata->res.data);
-
-    if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
-    {
-        uint8_t command;
-
-        gwbuf_copy_data(csdata->res.data, MYSQL_HEADER_LEN, 1, &command);
-
-        switch (command)
-        {
-        case 0x00: // OK
-            // In case csdata->use_db could not be allocated in routeQuery(), we will
-            // in fact reset the default db here. That's ok as it will prevent broken
-            // entries in the cache.
-            MXS_FREE(csdata->default_db);
-            csdata->default_db = csdata->use_db;
-            csdata->use_db = NULL;
-            break;
-
-        case 0xff: // ERR
-            MXS_FREE(csdata->use_db);
-            csdata->use_db = NULL;
-            break;
-
-        default:
-            MXS_ERROR("\"USE %s\" received unexpected server response %d.",
-                      csdata->use_db ? csdata->use_db : "<db>", command);
-            MXS_FREE(csdata->default_db);
-            MXS_FREE(csdata->use_db);
-            csdata->default_db = NULL;
-            csdata->use_db = NULL;
-        }
-
-        rv = send_upstream(csdata);
-        csdata->state = MAXROWS_IGNORING_RESPONSE;
     }
 
     return rv;

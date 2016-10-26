@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_MAXROWS_MAXROWS_H
-#define _MAXSCALE_FILTER_MAXROWS_MAXROWS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -39,5 +37,3 @@ MXS_BEGIN_DECLS
 #define MAXROWS_DEFAULT_DEBUG              0
 
 MXS_END_DECLS
-
-#endif
