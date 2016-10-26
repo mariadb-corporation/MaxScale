@@ -249,7 +249,6 @@ typedef struct dcb
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
     GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
-    SPINLOCK        authlock;       /**< Generic Authorization spinlock */
 
     DCBSTATS        stats;          /**< DCB related statistics */
     unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
@@ -285,7 +284,7 @@ typedef struct dcb
 #define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, .dcb_initlock = SPINLOCK_INIT, \
     .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
     .writeqlock = SPINLOCK_INIT, .delayqlock = SPINLOCK_INIT, \
-    .authlock = SPINLOCK_INIT, .stats = {0}, .memdata = DCBMM_INIT, \
+    .stats = {0}, .memdata = DCBMM_INIT, \
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
@@ -316,7 +315,13 @@ typedef enum
 
 #define DCB_POLL_BUSY(x)                ((x)->evq.next != NULL)
 
-DCB *dcb_get_zombies(void);
+/**
+ * @brief DCB system initialization function
+ *
+ * This function needs to be the first function call into this system.
+ */
+void dcb_global_init();
+
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs);
 bool dcb_pre_alloc(int number);
@@ -328,7 +333,17 @@ DCB *dcb_clone(DCB *);
 int dcb_read(DCB *, GWBUF **, int);
 int dcb_drain_writeq(DCB *);
 void dcb_close(DCB *);
-DCB *dcb_process_zombies(int);              /* Process Zombies except the one behind the pointer */
+
+/**
+ * @brief Process zombie DCBs
+ *
+ * This should only be called from a polling thread in poll.c when no events
+ * are being processed.
+ *
+ * @param threadid Thread ID of the poll thread
+ */
+void dcb_process_zombies(int threadid);
+
 void printAllDCBs();                         /* Debug to print all DCB in the system */
 void printDCB(DCB *);                        /* Debug print routine */
 void dprintDCBList(DCB *);                 /* Debug print DCB list statistics */
@@ -345,8 +360,6 @@ int dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, voi
 int dcb_isvalid(DCB *);                     /* Check the DCB is in the linked list */
 int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
 int dcb_persistent_clean_count(DCB *, bool);      /* Clean persistent and return count */
-
-void dcb_call_foreach (struct server* server, DCB_REASON reason);
 void dcb_hangup_foreach (struct server* server);
 size_t dcb_get_session_id(DCB* dcb);
 bool dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
