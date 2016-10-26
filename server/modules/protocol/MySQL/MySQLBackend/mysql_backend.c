@@ -884,13 +884,11 @@ static int gw_write_backend_event(DCB *dcb)
         uint8_t* data = NULL;
         bool com_quit = false;
 
-        spinlock_acquire(&dcb->writeqlock);
         if (dcb->writeq)
         {
             data = (uint8_t *) GWBUF_DATA(dcb->writeq);
             com_quit = MYSQL_IS_COM_QUIT(data);
         }
-        spinlock_release(&dcb->writeqlock);
 
         if (data)
         {
