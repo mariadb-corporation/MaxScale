@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_UTILS_H
-#define _MAXSCALE_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -79,5 +77,3 @@ bool mxs_mkdir_all(const char *path, int mask);
 long get_processor_count();
 
 MXS_END_DECLS
-
-#endif

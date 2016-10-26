@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SESSION_H
-#define _MAXSCALE_SESSION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -355,5 +353,3 @@ static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
 }
 
 MXS_END_DECLS
-
-#endif

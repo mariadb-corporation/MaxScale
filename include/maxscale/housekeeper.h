@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_HOUSEKEEPER_H
-#define _MAXSCALE_HOUSEKEEPER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -61,5 +59,3 @@ extern void hkshutdown();
 extern void hkshow_tasks(DCB *pdcb);
 
 MXS_END_DECLS
-
-#endif

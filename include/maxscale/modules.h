@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MODULES_H
-#define _MAXSCALE_MODULES_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -75,5 +73,3 @@ extern void module_feedback_send(void*);
 extern void moduleShowFeedbackReport(DCB *dcb);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_ADMINUSERS_H
-#define _MAXSCALE_ADMINUSERS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -69,5 +67,3 @@ extern bool        admin_verify_inet_user(const char *uname, const char *passwor
 extern void        dcb_PrintAdminUsers(DCB *dcb);
 
 MXS_END_DECLS
-
-#endif

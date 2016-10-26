@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_BUFFER_H
-#define _MAXSCALE_BUFFER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -219,5 +217,3 @@ extern void             dprintAllBuffers(void *pdcb);
 #endif
 
 MXS_END_DECLS
-
-#endif

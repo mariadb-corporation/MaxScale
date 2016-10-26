@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_DEBUG_H
-#define _MAXSCALE_DEBUG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -568,5 +566,3 @@ static bool conn_open[10240];
 #endif /* FAKE_CODE */
 
 MXS_END_DECLS
-
-#endif

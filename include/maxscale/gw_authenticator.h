@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_GW_AUTHENTICATOR_H
-#define _MAXSCALE_GW_AUTHENTICATOR_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -140,6 +138,3 @@ bool authenticator_init(void **instance, const char *authenticator, const char *
 const char* get_default_authenticator(const char *protocol);
 
 MXS_END_DECLS
-
-#endif /* GW_AUTHENTICATOR_H */
-

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_ROUTER_H
-#define _MAXSCALE_ROUTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -110,5 +108,3 @@ typedef enum router_capability
 } router_capability_t;
 
 MXS_END_DECLS
-
-#endif

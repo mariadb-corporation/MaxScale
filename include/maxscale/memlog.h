@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MEMLOG_H
-#define _MAXSCALE_MEMLOG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -65,5 +63,3 @@ extern void    memlog_flush_all();
 extern void    memlog_flush(MEMLOG *);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_RDTSC_H
-#define _MAXSCALE_RDTSC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -60,5 +58,3 @@ static __inline__ CYCLES rdtsc(void)
 }
 
 MXS_END_DECLS
-
-#endif

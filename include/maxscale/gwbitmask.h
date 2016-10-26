@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_GWBITMASK_H
-#define _MAXSCALE_GWBITMASK_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -60,5 +58,3 @@ extern void bitmask_copy(GWBITMASK *, GWBITMASK *);
 extern char *bitmask_render_readable(GWBITMASK *);
 
 MXS_END_DECLS
-
-#endif

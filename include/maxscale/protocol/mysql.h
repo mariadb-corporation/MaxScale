@@ -1,5 +1,4 @@
-#ifndef _MAXSCALE_PROTOCOL_MYSQL_H
-#define _MAXSCALE_PROTOCOL_MYSQL_H
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -388,5 +387,3 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, int affected_rows, const char* mes
 bool mxs_mysql_is_ok_packet(GWBUF *buffer);
 
 MXS_END_DECLS
-
-#endif /** _MYSQL_PROTOCOL_H */

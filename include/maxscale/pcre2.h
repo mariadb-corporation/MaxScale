@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_PCRE2_H
-#define _MAXSCALE_PCRE2_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -50,5 +48,3 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
                                           int options, int* error);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_LOG_MANAGER_H
-#define _MAXSCALE_LOG_MANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -203,5 +201,3 @@ enum
 };
 
 MXS_END_DECLS
-
-#endif /** LOG_MANAGER_H */

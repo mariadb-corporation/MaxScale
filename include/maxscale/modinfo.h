@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MODINFO_H
-#define _MAXSCALE_MODINFO_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -90,5 +88,3 @@ typedef struct
 } MODULE_INFO;
 
 MXS_END_DECLS
-
-#endif

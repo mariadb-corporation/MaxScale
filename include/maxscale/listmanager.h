@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_LISTMANAGER_H
-#define _MAXSCALE_LISTMANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -120,5 +118,3 @@ list_entry_t *list_remove_first(LIST_CONFIG *list_config);
 list_entry_t *list_remove_last(LIST_CONFIG *list_config);
 
 MXS_END_DECLS
-
-#endif /* LISTMANAGER_H */

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_STATISTICS_HG
-#define _MAXSCALE_STATISTICS_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -73,5 +71,3 @@ ts_stats_set(ts_stats_t stats, int value, int thread_id)
 }
 
 MXS_END_DECLS
-
-#endif

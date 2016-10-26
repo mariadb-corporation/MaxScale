@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SERVICE_H
-#define _MAXSCALE_SERVICE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -252,5 +250,3 @@ static inline uint64_t service_get_capabilities(const SERVICE *service)
 }
 
 MXS_END_DECLS
-
-#endif

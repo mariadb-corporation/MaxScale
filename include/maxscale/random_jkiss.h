@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_RANDOM_JKISS_H
-#define _MAXSCALE_RANDOM_JKISS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -28,5 +26,3 @@ MXS_BEGIN_DECLS
 extern unsigned int random_jkiss(void);
 
 MXS_END_DECLS
-
-#endif  /* RANDOM_H */

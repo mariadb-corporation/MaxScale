@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_QUERY_CLASSIFIER_HG
-#define _MAXSCALE_QUERY_CLASSIFIER_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -132,5 +130,3 @@ struct query_classifier
 #define QUERY_CLASSIFIER_VERSION {1, 0, 0}
 
 MXS_END_DECLS
-
-#endif

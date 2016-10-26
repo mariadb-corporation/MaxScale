@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_ALLOC_H
-#define _MAXSCALE_ALLOC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -79,5 +77,3 @@ char *mxs_strndup_a(const char *s, size_t n/*, const char *caller*/);
 #define MXS_ABORT_IF_FALSE(b) do { if (!b) { abort(); } } while (false)
 
 MXS_END_DECLS
-
-#endif

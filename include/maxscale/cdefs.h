@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_CDEFS_H
-#define _MAXSCALE_CDEFS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -73,5 +71,3 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_GW_SSL_H
-#define _MAXSCALE_GW_SSL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -83,5 +81,3 @@ bool ssl_required_but_not_negotiated(struct dcb *dcb);
 const char* ssl_method_type_to_string(ssl_method_type_t method_type);
 
 MXS_END_DECLS
-
-#endif /* _GW_SSL_H */

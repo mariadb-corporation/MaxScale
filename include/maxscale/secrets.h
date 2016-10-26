@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SECRETS_H
-#define _MAXSCALE_SECRETS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -60,5 +58,3 @@ extern char *decryptPassword(const char *);
 extern char *encryptPassword(const char*, const char *);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_QUEUEMANAGER_H
-#define _MAXSCALE_QUEUEMANAGER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -72,5 +70,3 @@ mxs_queue_count(QUEUE_CONFIG *queue_config)
 }
 
 MXS_END_DECLS
-
-#endif /* QUEUEMANAGER_H */

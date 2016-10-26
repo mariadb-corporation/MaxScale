@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MAXSCALE_H
-#define _MAXSCALE_MAXSCALE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -47,5 +45,3 @@ time_t maxscale_started(void);
 int maxscale_uptime(void);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MONITOR_H
-#define _MAXSCALE_MONITOR_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -232,5 +230,3 @@ void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_CONFIG_H
-#define _MAXSCALE_CONFIG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -166,5 +164,3 @@ void                free_config_parameter(CONFIG_PARAMETER* p1);
 bool                is_internal_service(const char *router);
 
 MXS_END_DECLS
-
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_H
-#define _MAXSCALE_FILTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -140,5 +138,3 @@ typedef enum filter_capability
 */
 
 MXS_END_DECLS
-
-#endif

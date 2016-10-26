@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_THREAD_H
-#define _MAXSCALE_THREAD_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -39,5 +37,3 @@ extern void thread_wait(THREAD thd);
 extern void thread_millisleep(int ms);
 
 MXS_END_DECLS
-
-#endif
