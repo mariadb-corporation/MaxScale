@@ -2834,6 +2834,34 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
     return database_names;
 }
 
+static char* qc_sqlite_get_prepare_name(GWBUF* query)
+{
+    QC_TRACE();
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    char* name = NULL;
+    QC_SQLITE_INFO* info = get_query_info(query);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            MXS_WARNING("qc_get_prepare_name not implemented yet.");
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(query, "cannot report the name of a prepared statement");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+
+    return name;
+}
+
 /**
  * EXPORTS
  */
@@ -2857,6 +2885,7 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_query_has_clause,
     qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
+    qc_sqlite_get_prepare_name,
 };
 
 

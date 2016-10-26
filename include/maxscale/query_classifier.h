@@ -17,7 +17,7 @@
 
 MXS_BEGIN_DECLS
 
-#define QUERY_CLASSIFIER_VERSION {1, 0, 0}
+#define QUERY_CLASSIFIER_VERSION {1, 1, 0}
 
 /**
  * qc_query_type_t defines bits that provide information about a
@@ -115,6 +115,7 @@ typedef struct query_classifier
     bool (*qc_query_has_clause)(GWBUF* stmt);
     char* (*qc_get_affected_fields)(GWBUF* stmt);
     char** (*qc_get_database_names)(GWBUF* stmt, int* size);
+    char* (*qc_get_prepare_name)(GWBUF* stmt);
 } QUERY_CLASSIFIER;
 
 /**
@@ -265,6 +266,24 @@ char** qc_get_database_names(GWBUF* stmt, int* size);
  * @return The operation of the statement.
  */
 qc_query_op_t qc_get_operation(GWBUF* stmt);
+
+/**
+ * Returns the name of the prepared statement, if the statement
+ * is a PREPARE or EXECUTE statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The name of the prepared statement, if the statement
+ *         is a PREPARE or EXECUTE statement; otherwise NULL.
+ *
+ * @note The returned string @b must be freed by the caller.
+ *
+ * @note Even though a COM_STMT_PREPARE can be given to the query
+ *       classifier for parsing, this function will in that case
+ *       return NULL since the id of the statement is provided by
+ *       the server.
+ */
+char* qc_get_prepare_name(GWBUF* stmt);
 
 /**
  * Returns the tables accessed by the statement.

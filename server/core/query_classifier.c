@@ -205,6 +205,14 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
     return classifier->qc_get_database_names(query, sizep);
 }
 
+char* qc_get_prepare_name(GWBUF* query)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    return classifier->qc_get_prepare_name(query);
+}
+
 const char* qc_op_to_string(qc_query_op_t op)
 {
     switch (op)

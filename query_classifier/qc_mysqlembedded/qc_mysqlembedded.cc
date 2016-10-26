@@ -1904,6 +1904,21 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
     return operation;
 }
 
+char* qc_get_prepare_name(GWBUF* stmt)
+{
+    char* name = NULL;
+
+    if (stmt)
+    {
+        if (ensure_query_is_parsed(stmt))
+        {
+            MXS_WARNING("qc_get_prepare_name not implemented yet.");
+        }
+    }
+
+    return name;
+}
+
 namespace
 {
 
@@ -2048,6 +2063,7 @@ static QUERY_CLASSIFIER qc =
     qc_query_has_clause,
     qc_get_affected_fields,
     qc_get_database_names,
+    qc_get_prepare_name,
 };
 
  /* @see function load_module in load_utils.c for explanation of the following
