@@ -97,7 +97,7 @@ static backend_ref_t *check_candidate_bref(backend_ref_t *candidate_bref,
                                            backend_ref_t *new_bref,
                                            select_criteria_t sc);
 
-static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+static bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                          GWBUF *querybuf, qc_query_type_t type);
 
 static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
@@ -1560,9 +1560,9 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+static bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                          GWBUF *querybuf,
-                                         qc_query_type_t type)
+                                         qc_query_type_t qtype)
 {
 
     bool target_tmp_table = false;
@@ -1571,20 +1571,20 @@ static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     char *dbname;
     char hkey[MYSQL_DATABASE_MAXLEN + MYSQL_TABLE_MAXLEN + 2];
     MYSQL_session *data;
-    qc_query_type_t qtype = type;
+    bool rval = false;
     rses_property_t *rses_prop_tmp;
 
     if (router_cli_ses == NULL || querybuf == NULL)
     {
         MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
                   router_cli_ses, querybuf);
-        return type;
+        return false;
     }
 
     if (router_cli_ses->client_dcb == NULL)
     {
         MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return type;
+        return false;
     }
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
@@ -1593,7 +1593,7 @@ static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     if (data == NULL)
     {
         MXS_ERROR("[%s] Error: User data in client DBC is NULL.", __FUNCTION__);
-        return qtype;
+        return false;
     }
 
     dbname = (char *)data->db;
@@ -1617,7 +1617,7 @@ static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                     if (hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey))
                     {
                         /**Query target is a temporary table*/
-                        qtype = QUERY_TYPE_READ_TMP_TABLE;
+                        rval = true;
                         MXS_INFO("Query targets a temporary table: %s", hkey);
                         break;
                     }
@@ -1635,7 +1635,7 @@ static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
         free(tbl);
     }
 
-    return qtype;
+    return rval;
 }
 
 /**
@@ -1969,9 +1969,9 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             (packet_type == MYSQL_COM_QUERY || packet_type == MYSQL_COM_DROP_DB))
         {
             check_drop_tmp_table(rses, querybuf, qtype);
-            if (packet_type == MYSQL_COM_QUERY)
+            if (packet_type == MYSQL_COM_QUERY && is_read_tmp_table(rses, querybuf, qtype))
             {
-                qtype = is_read_tmp_table(rses, querybuf, qtype);
+                qtype |= QUERY_TYPE_MASTER_READ;
             }
         }
         check_create_tmp_table(rses, querybuf, qtype);
