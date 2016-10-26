@@ -101,20 +101,6 @@ void qc_thread_end(void)
     return classifier->qc_thread_end();
 }
 
-/**
- * Parses the query in the provided buffer and returns a value specifying
- * to what extent the query could be parsed.
- *
- * There is no need to call this function explicitly before calling any of
- * the other functions; e.g. qc_get_type. When some particular property of
- * a query is asked for, the query will be parsed if it has not been parsed
- * yet. Also, if the query in the provided buffer has been parsed already
- * then this function will only return the result of that parsing; the query
- * will not be parsed again.
- *
- * @param query A GWBUF containing an SQL statement.
- * @result To what extent the query could be parsed.
- */
 qc_parse_result_t qc_parse(GWBUF* query)
 {
     QC_TRACE();
@@ -123,15 +109,6 @@ qc_parse_result_t qc_parse(GWBUF* query)
     return classifier->qc_parse(query);
 }
 
-/**
- * Returns a bitmask specifying the type(s) of the query.
- * The result should be tested against specific qc_query_type_t values
- * using the bitwise & operator, never using the == operator.
- *
- * @param query A buffer containing a query.
- *
- * @return A bitmask of type bits.
- */
 uint32_t qc_get_type(GWBUF* query)
 {
     QC_TRACE();
@@ -228,14 +205,6 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
     return classifier->qc_get_database_names(query, sizep);
 }
 
-/**
- * Returns the string representation of a query operation.
- *
- * @param op An operation.
- * @return The corresponding string.
- *         NOTE: The returned string is statically allocated
- *               and must *not* be freed.
- */
 const char* qc_op_to_string(qc_query_op_t op)
 {
     switch (op)
@@ -489,15 +458,6 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 }
 
 
-
-/**
- * Returns the string representation of a query type.
- *
- * @param type A specific type (not a bitmask of several).
- * @return The corresponding string.
- *         NOTE: The returned string is statically allocated
- *               and must *not* be freed.
- */
 const char* qc_type_to_string(qc_query_type_t type)
 {
     return type_to_type_name_info(type).name;
@@ -537,14 +497,6 @@ static const qc_query_type_t QUERY_TYPES[] =
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
 static const int QUERY_TYPE_MAX_LEN = 29; // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
 
-/**
- * Returns the string representation of a bitmask of query types.
- *
- * @param type Bitmask of several qc_query_type_t values.
- * @return The corresponding string.
- *         NOTE: The returned string is dynamically allocated
- *               and *must* be freed by the caller.
- */
 char* qc_typemask_to_string(uint32_t types)
 {
     int len = 0;

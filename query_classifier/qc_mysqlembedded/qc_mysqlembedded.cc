@@ -1083,15 +1083,6 @@ static void* skygw_get_affected_tables(void* lexptr)
     return (void*) lex->current_select->table_list.first;
 }
 
-/**
- * Reads the parsetree and lists all the affected tables and views in the query.
- * In the case of an error, the size of the table is set to zero and no memory
- * is allocated. The caller must free the allocated memory.
- *
- * @param querybuf GWBUF where the table names are extracted from
- * @param tblsize Pointer where the number of tables is written
- * @return Array of null-terminated strings with the table names
- */
 char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
 {
     LEX* lex;
@@ -1193,11 +1184,6 @@ retblock:
     return tables;
 }
 
-/**
- * Extract, allocate memory and copy the name of the created table.
- * @param querybuf Buffer to use.
- * @return A pointer to the name if a table was created, otherwise NULL
- */
 char* qc_get_created_table_name(GWBUF* querybuf)
 {
     if (querybuf == NULL)
@@ -1226,16 +1212,6 @@ char* qc_get_created_table_name(GWBUF* querybuf)
     return table_name;
 }
 
-/**
- * Checks whether the query is a "real" query ie. SELECT,UPDATE,INSERT,DELETE or
- * any variation of these. Queries that affect the underlying database are not
- * considered as real queries and the queries that target specific row or
- * variable data are regarded as the real queries.
- *
- * @param GWBUF to analyze
- *
- * @return true if the query is a real query, otherwise false
- */
 bool qc_is_real_query(GWBUF* querybuf)
 {
     bool succp;
@@ -1291,11 +1267,6 @@ retblock:
     return succp;
 }
 
-/**
- * Checks whether the buffer contains a DROP TABLE... query.
- * @param querybuf Buffer to inspect
- * @return true if it contains the query otherwise false
- */
 bool qc_is_drop_table_query(GWBUF* querybuf)
 {
     bool answer = false;
@@ -1522,11 +1493,6 @@ static void collect_affected_fields(collect_source_t source,
     }
 }
 
-/**
- * Returns all the fields that the query affects.
- * @param buf Buffer to parse
- * @return Pointer to newly allocated string or NULL if nothing was found
- */
 char* qc_get_affected_fields(GWBUF* buf)
 {
     LEX* lex;
@@ -1773,17 +1739,6 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
     pi->pi_query_plain_str = str;
 }
 
-/**
- * Returns an array of strings of databases that this query uses.
- * If the database isn't defined in the query, it is assumed that this query
- * only targets the current database.
- * The value of @p size is set to the number of allocated strings. The caller is
- * responsible for freeing all the allocated memory.
- * @param querybuf GWBUF containing the query
- * @param size Size of the resulting array
- * @return A new array of strings containing the database names or NULL if no
- * databases were found.
- */
 char** qc_get_database_names(GWBUF* querybuf, int* size)
 {
     LEX* lex;
