@@ -44,38 +44,25 @@
  *
  * @endverbatim
  */
-#include <my_config.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <ini.h>
 #include <maxscale/config.h>
-#include <maxscale/dcb.h>
-#include <maxscale/session.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/users.h>
-#include <maxscale/monitor.h>
-#include <maxscale/modules.h>
-#include <maxscale/utils.h>
-#include <maxscale/log_manager.h>
-#include <mysql.h>
-#include <sys/utsname.h>
-#include <sys/fcntl.h>
+#include <ctype.h>
 #include <glob.h>
-#include <sys/ioctl.h>
 #include <net/if.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/notification.h>
-#include <unistd.h>
-#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/utsname.h>
+#include <sys/ioctl.h>
+#include <ini.h>
 #include <maxscale/alloc.h>
+#include <maxscale/housekeeper.h>
 #include <maxscale/limits.h>
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/monitor.h>
+#include <maxscale/notification.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/service.h>
+#include <maxscale/utils.h>
 
 extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT   *);
@@ -105,7 +92,7 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
-static char          *config_file = NULL;
+static const char    *config_file = NULL;
 static GATEWAY_CONF  gateway;
 static FEEDBACK_CONF feedback;
 char                 *version_string = NULL;
@@ -215,7 +202,7 @@ static char *server_params[] =
  * @param strptr String to clean
  * @return pointer to a new string or NULL if an error occurred
  */
-char* config_clean_string_list(char* str)
+char* config_clean_string_list(const char* str)
 {
     size_t destsize = strlen(str) + 1;
     char *dest = MXS_MALLOC(destsize);
@@ -375,7 +362,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
  * @return True on success, false on fatal error
  */
 bool
-config_load(char *file)
+config_load(const char *file)
 {
     CONFIG_CONTEXT config = {.object = ""};
     int ini_rval;
@@ -665,16 +652,16 @@ CONFIG_PARAMETER* config_get_param(
 }
 
 config_param_type_t config_get_paramtype(
-    CONFIG_PARAMETER* param)
+    const CONFIG_PARAMETER* param)
 {
     return param->qfd_param_type;
 }
 
 bool config_get_valint(
-    int*                val,
-    CONFIG_PARAMETER*   param,
-    const char*         name, /*< if NULL examine current param only */
-    config_param_type_t ptype)
+    int*                    val,
+    const CONFIG_PARAMETER* param,
+    const char*             name, /*< if NULL examine current param only */
+    config_param_type_t     ptype)
 {
     bool succp = false;;
 
@@ -708,10 +695,10 @@ return_succp:
 
 
 bool config_get_valbool(
-    bool*               val,
-    CONFIG_PARAMETER*   param,
-    const char*         name,
-    config_param_type_t ptype)
+    bool*                   val,
+    const CONFIG_PARAMETER* param,
+    const char*             name,
+    config_param_type_t     ptype)
 {
     bool succp;
 
@@ -742,10 +729,10 @@ return_succp:
 
 
 bool config_get_valtarget(
-    target_t*           val,
-    CONFIG_PARAMETER*   param,
-    const char*         name,
-    config_param_type_t ptype)
+    target_t*               val,
+    const CONFIG_PARAMETER* param,
+    const char*             name,
+    config_param_type_t     ptype)
 {
     bool succp;
 
@@ -774,8 +761,7 @@ return_succp:
     return succp;
 }
 
-CONFIG_PARAMETER* config_clone_param(
-    CONFIG_PARAMETER* param)
+CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
 {
     CONFIG_PARAMETER* p2;
 
@@ -786,12 +772,12 @@ CONFIG_PARAMETER* config_clone_param(
         goto return_p2;
     }
     memcpy(p2, param, sizeof(CONFIG_PARAMETER));
-    p2->name = strndup(param->name, MAX_PARAM_LEN);
-    p2->value = strndup(param->value, MAX_PARAM_LEN);
+    p2->name = MXS_STRNDUP_A(param->name, MAX_PARAM_LEN);
+    p2->value = MXS_STRNDUP_A(param->value, MAX_PARAM_LEN);
 
     if (param->qfd_param_type == STRING_TYPE)
     {
-        p2->qfd.valstr = strndup(param->qfd.valstr, MAX_PARAM_LEN);
+        p2->qfd.valstr = MXS_STRNDUP_A(param->qfd.valstr, MAX_PARAM_LEN);
     }
 
 return_p2:
@@ -1693,7 +1679,7 @@ bool config_set_qualified_param(CONFIG_PARAMETER* param,
     switch (type)
     {
         case STRING_TYPE:
-            param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
+            param->qfd.valstr = MXS_STRNDUP_A((const char *)val, MAX_PARAM_LEN);
             succp = true;
             break;
 
@@ -1760,7 +1746,7 @@ config_truth_value(char *str)
  * @return      String converted to a floating point percentage
  */
 double
-config_percentage_value(char *str)
+config_percentage_value(const char *str)
 {
     double value = 0;
 
