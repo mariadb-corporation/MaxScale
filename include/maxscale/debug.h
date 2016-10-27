@@ -474,7 +474,6 @@ typedef enum skygw_chk_t
         ss_info_dassert(d->dcb_chk_top == CHK_NUM_DCB &&        \
                 d->dcb_chk_tail == CHK_NUM_DCB,                 \
                         "Dcb under- or overflow");              \
-        CHK_MANAGED_LIST(d)                                     \
         }
 
 #define CHK_PROTOCOL(p) {                                               \
@@ -487,7 +486,6 @@ typedef enum skygw_chk_t
             ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&        \
                             s->ses_chk_tail == CHK_NUM_SESSION,         \
                             "Session under- or overflow");              \
-            CHK_MANAGED_LIST(s)                                         \
     }
 
 #define CHK_SERVER(s) {                                          \
