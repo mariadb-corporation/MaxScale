@@ -116,15 +116,14 @@ session_pre_alloc(int number)
 SESSION *
 session_alloc(SERVICE *service, DCB *client_dcb)
 {
-    SESSION *session;
+    SESSION *session = (SESSION *)(MXS_MALLOC(sizeof(*session)));
 
-    session = (SESSION *)list_find_free(&SESSIONlist, session_initialize);
-    ss_info_dassert(session != NULL, "Allocating memory for session failed.");
     if (NULL == session)
     {
-        MXS_OOM();
         return NULL;
     }
+    session_initialize(session);
+
     /** Assign a session id and increase */
     session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
@@ -445,8 +444,7 @@ session_free(SESSION *session)
 static void
 session_final_free(SESSION *session)
 {
-    /* We never free the actual session, it is available for reuse*/
-    list_free_entry(&SESSIONlist, (list_entry_t *)session);
+    MXS_FREE(session);
 }
 
 /**

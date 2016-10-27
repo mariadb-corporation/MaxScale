@@ -1935,6 +1935,11 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    /* Temporary - should use configuration values and test return value (bool)
+     * TODO: Enable the list manager code */
+    dcb_pre_alloc(1);
+    session_pre_alloc(1);
+
     /** Initialize statistics */
     ts_stats_init();
 

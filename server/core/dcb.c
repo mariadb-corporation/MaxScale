@@ -229,11 +229,12 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
 {
     DCB *newdcb;
 
-    if ((newdcb = (DCB *)list_find_free(&DCBlist, dcb_initialize)) == NULL)
+    if ((newdcb = (DCB *)MXS_MALLOC(sizeof(*newdcb))) == NULL)
     {
         return NULL;
     }
 
+    dcb_initialize(newdcb);
     newdcb->dcb_role = role;
     newdcb->listener = listener;
     newdcb->entry_is_ready = true;
@@ -440,7 +441,7 @@ dcb_free_all_memory(DCB *dcb)
     bitmask_free(&dcb->memdata.bitmask);
 
     /* We never free the actual DCB, it is available for reuse*/
-    list_free_entry(&DCBlist, (list_entry_t *)dcb);
+    MXS_FREE(dcb);
 
 }
 
