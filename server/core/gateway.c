@@ -34,8 +34,8 @@
  * 19/01/16     Markus Makela           Set cwd to log directory
  * @endverbatim
  */
-#define _XOPEN_SOURCE 700
-#define OPENSSL_THREAD_DEFINES
+
+#include <maxscale/cdefs.h>
 #include <my_config.h>
 
 #include <openssl/opensslconf.h>
