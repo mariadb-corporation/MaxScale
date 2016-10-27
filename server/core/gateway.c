@@ -36,57 +36,43 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <my_config.h>
-
-#include <openssl/opensslconf.h>
-#if defined(OPENSSL_THREADS)
-#define HAVE_OPENSSL_THREADS 1
-#else
-#define HAVE_OPENSSL_THREADS 0
-#endif
-
+#include <execinfo.h>
 #include <ftw.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-#include <time.h>
 #include <getopt.h>
 #include <pwd.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/dcb.h>
-#include <maxscale/session.h>
-#include <maxscale/modules.h>
-#include <maxscale/config.h>
-#include <maxscale/poll.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/service.h>
-#include <maxscale/thread.h>
-#include <maxscale/memlog.h>
-
 #include <stdlib.h>
-#include <unistd.h>
-#include <mysql.h>
-#include <maxscale/monitor.h>
-#include <maxscale/version.h>
-#include <maxscale/maxscale.h>
-
+#include <string.h>
+#include <strings.h>
+#include <sys/file.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include <maxscale/utils.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
-
-#include <execinfo.h>
-
-#include <ini.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>
-#include <sys/file.h>
-#include <maxscale/statistics.h>
+#include <time.h>
+#include <unistd.h>
+#include <openssl/opensslconf.h>
+#include <mysql.h>
+#include <ini.h>
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
 #include <maxscale/gwdirs.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/memlog.h>
+#include <maxscale/modules.h>
+#include <maxscale/monitor.h>
+#include <maxscale/poll.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/statistics.h>
+#include <maxscale/thread.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -94,6 +80,12 @@
 /** for procname */
 #if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
+#endif
+
+#if defined(OPENSSL_THREADS)
+#define HAVE_OPENSSL_THREADS 1
+#else
+#define HAVE_OPENSSL_THREADS 0
 #endif
 
 extern char *program_invocation_name;
