@@ -292,26 +292,14 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
     ss_dassert(GWBUF_LENGTH(packet) >= MYSQL_HEADER_LEN + 1);
     ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
 
-    bool use_default = true;
-
     maxrows_response_state_reset(&csdata->res);
     csdata->state = MAXROWS_IGNORING_RESPONSE;
-
-    int rv;
 
     switch ((int)MYSQL_GET_COMMAND(data))
     {
     case MYSQL_COM_QUERY:
         {
-            /* Detect the SELECT statement only */
-            if (qc_get_operation(packet) == QUERY_OP_SELECT)
-            {
-                /* Waiting for a reply:
-                 * Data will be stored in csdata->res->data via
-                 * clientReply routine
-                 */
-                 csdata->state = MAXROWS_EXPECTING_RESPONSE;
-            }
+            csdata->state = MAXROWS_EXPECTING_RESPONSE;
             break;
 
         default:
@@ -319,13 +307,8 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
         }
     }
 
-    if (use_default)
-    {
-        C_DEBUG("Maxrows filter is sending data.");
-        rv = csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
-    }
-
-    return rv;
+    C_DEBUG("Maxrows filter is sending data.");
+    return csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
 }
 
 /**
