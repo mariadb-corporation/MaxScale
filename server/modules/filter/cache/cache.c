@@ -399,7 +399,7 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
                             else
                             {
                                 csdata->state = CACHE_EXPECTING_NOTHING;
-                                if (csdata->instance.config & CACHE_DEBUG_DECISIONS)
+                                if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
                                 {
                                     MXS_NOTICE("Using data from cache.");
                                 }
@@ -419,7 +419,7 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
                 }
                 else
                 {
-                    if (csdata->instance.config & CACHE_DEBUG_DECISIONS)
+                    if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
                     {
                         MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
                                    "storing to cache.",
@@ -470,7 +470,7 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
     {
         if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
         {
-            if (csdata->instance.config & CACHE_DEBUG_DECISIONS)
+            if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
             {
                 MXS_NOTICE("Current size %uB of resultset, at least as much "
                            "as maximum allowed size %uKiB. Not caching.",
@@ -817,7 +817,7 @@ static int handle_expecting_rows(CACHE_SESSION_DATA *csdata)
 
                 if (csdata->res.n_rows > csdata->instance->config.max_resultset_rows)
                 {
-                    if (csdata->instance.config & CACHE_DEBUG_DECISIONS)
+                    if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
                     {
                         MXS_NOTICE("Max rows %lu reached, not caching result.", csdata->res.n_rows);
                     }
