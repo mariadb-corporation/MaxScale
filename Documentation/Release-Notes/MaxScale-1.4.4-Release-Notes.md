@@ -10,6 +10,21 @@ For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
 ## New Features
+Binlog Server improvements:
+ - MXS-584:
+ 
+   SET autocommit = 0|1
+   and
+   SET @@session.autocommit = on|off
+   are handled.
+
+- SELECT USER()
+
+  this is a new command that returns 'user@host'
+- Charset:
+
+  In previous versions only 'latin' and 'utf8' were supported during registration phase.
+  Connecting clients can now request any SET NAMES XXX  option without receiving an error message from MaxScale
 
 ## Bug fixes
 
