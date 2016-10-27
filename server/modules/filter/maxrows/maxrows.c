@@ -170,7 +170,6 @@ static bool process_params(char **options, FILTER_PARAMETER **params, MAXROWS_CO
 
 static int send_upstream(MAXROWS_SESSION_DATA *csdata);
 static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
-static int handle_discarding_response(MAXROWS_SESSION_DATA *csdata);
 
 /* API BEGIN */
 
@@ -354,17 +353,17 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
 
     if (csdata->state != MAXROWS_IGNORING_RESPONSE)
     {
-        if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
+        if (csdata->state != MAXROWS_DISCARDING_RESPONSE)
         {
-            C_DEBUG("Current size %uB of resultset, at least as much "
-                    "as maximum allowed size %uKiB. Not returning data.",
-                    gwbuf_length(csdata->res.data),
-                    csdata->instance->config.max_resultset_size / 1024);
+            if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
+            {
+                C_DEBUG("Current size %uB of resultset, at least as much "
+                        "as maximum allowed size %uKiB. Not returning data.",
+                        gwbuf_length(csdata->res.data),
+                        csdata->instance->config.max_resultset_size / 1024);
 
-            csdata->state = MAXROWS_DISCARDING_RESPONSE;
-
-            /* Send empty result set */
-            return send_ok_upstream(csdata);
+                csdata->state = MAXROWS_DISCARDING_RESPONSE;
+            }
         }
     }
 
@@ -382,16 +381,13 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
         rv = handle_expecting_response(csdata);
         break;
 
+    case MAXROWS_DISCARDING_RESPONSE:
     case MAXROWS_EXPECTING_ROWS:
         rv = handle_expecting_rows(csdata);
         break;
 
     case MAXROWS_IGNORING_RESPONSE:
         rv = handle_ignoring_response(csdata);
-        break;
-
-    case MAXROWS_DISCARDING_RESPONSE:
-        rv = handle_discarding_response(csdata);
         break;
 
     default:
@@ -661,7 +657,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
  */
 static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
 {
-    ss_dassert(csdata->state == MAXROWS_EXPECTING_ROWS);
+    ss_dassert(csdata->state == MAXROWS_EXPECTING_ROWS || csdata->state == MAXROWS_DISCARDING_RESPONSE);
     ss_dassert(csdata->res.data);
 
     int rv = 1;
@@ -688,7 +684,14 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
                 csdata->res.offset += packetlen;
                 ss_dassert(csdata->res.offset == buflen);
 
-                rv = send_upstream(csdata);
+                if (csdata->state == MAXROWS_DISCARDING_RESPONSE)
+                {
+                    rv = send_ok_upstream(csdata);
+                }
+                else
+                {
+                    rv = send_upstream(csdata);
+                }
 
                 csdata->state = MAXROWS_EXPECTING_NOTHING;
                 break;
@@ -698,18 +701,14 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
                 csdata->res.offset += packetlen;
                 ++csdata->res.n_rows;
 
-                if (csdata->res.n_rows > csdata->instance->config.max_resultset_rows)
+                if (csdata->state != MAXROWS_DISCARDING_RESPONSE)
                 {
-                    C_DEBUG("max_resultset_rows %lu reached, not returning the result.", csdata->res.n_rows);
+                    if (csdata->res.n_rows > csdata->instance->config.max_resultset_rows)
+                    {
+                        C_DEBUG("max_resultset_rows %lu reached, not returning the result.", csdata->res.n_rows);
 
-                    /* Just return 0 result set */
-                    rv = send_ok_upstream(csdata);
-                    csdata->res.offset = buflen; // To abort the loop.
-
-                    /* If additional packets from server will come
-                     * they will be "consumed" and not sent to client
-                     */
-                    csdata->state = MAXROWS_DISCARDING_RESPONSE;
+                        csdata->state = MAXROWS_DISCARDING_RESPONSE;
+                    }
                 }
                 break;
             }
@@ -852,23 +851,5 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
     csdata->res.data = NULL;
 
     return rv;
-}
-
-/**
- * Called when all data from the server should be consumed and not sent.
- *
- * @param csdata The maxrows session data.
- */
-static int handle_discarding_response(MAXROWS_SESSION_DATA *csdata)
-{
-    ss_dassert(csdata->state == MAXROWS_DISCARDING_RESPONSE);
-    ss_dassert(csdata->res.data);
-
-    gwbuf_free(csdata->res.data);
-    csdata->res.data = NULL;
-
-    MXS_INFO("maxrows filter is receiving response packets from the backend in 'discarding_response' state.");
-
-    return 1;
 }
 
