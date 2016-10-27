@@ -105,6 +105,11 @@ void test_binlog(TestConnections* Test)
     Test->repl->connect();
 
     Test->set_timeout(100);
+    Test->try_query(Test->repl->nodes[0], (char *) "SET NAMES utf8mb4");
+    Test->try_query(Test->repl->nodes[0], (char *) "set autocommit=1");
+    Test->try_query(Test->repl->nodes[0], (char *) "select USER()");
+
+    Test->set_timeout(100);
     create_t1(Test->repl->nodes[0]);
     Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed\n");
     Test->stop_timeout();
