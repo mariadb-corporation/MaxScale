@@ -106,16 +106,17 @@ An integer value, using which the level of debug logging made by the cache
 can be controlled. The value is actually a bitfield with different bits
 denoting different logging.
 
-   * `0` (`0b0000`) No logging is made.
-   * `1` (`0b0001`) A matching rule is logged.
-   * `2` (`0b0010`) A non-matching rule is logged.
-   * `4` (`0b0100`) A decision to use data from the cache is logged.
-   * `8` (`0b1000`) A decision not to use data from the cache is logged.
+   * ` 0` (`0b00000`) No logging is made.
+   * ` 1` (`0b00001`) A matching rule is logged.
+   * ` 2` (`0b00010`) A non-matching rule is logged.
+   * ` 4` (`0b00100`) A decision to use data from the cache is logged.
+   * ` 8` (`0b01000`) A decision not to use data from the cache is logged.
+   * '16' (`0b10000`) Higher level decisions are logged.
 
-Default is `0`. To log everything, give `debug` a value of `15`.
+Default is `0`. To log everything, give `debug` a value of `31`.
 
 ```
-debug=2
+debug=31
 ```
 
 # Rules
