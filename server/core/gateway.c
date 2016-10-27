@@ -184,6 +184,7 @@ static bool change_cwd();
 void shutdown_server();
 static void log_exit_status();
 static bool daemonize();
+static bool sniff_configuration(const char* filepath);
 
 /** SSL multi-threading functions and structures */
 
@@ -1696,31 +1697,11 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if ((ini_rval = ini_parse(cnf_file_path, cnf_preparser, NULL)) != 0)
+    if (!sniff_configuration(cnf_file_path))
     {
-        char errorbuffer[STRING_BUFFER_SIZE];
-
-        if (ini_rval > 0)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Error on line %d.", ini_rval);
-        }
-        else if (ini_rval == -1)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Failed to open file.");
-        }
-        else
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Memory allocation failed.");
-        }
-
-        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
 
     /** Use the cache dir for the mysql folder of the embedded library */
     snprintf(mysql_home, PATH_MAX, "%s/mysql", get_cachedir());
@@ -2686,4 +2667,47 @@ static bool daemonize(void)
         exit(1);
     }
     return false;
+}
+
+/**
+ * Sniffs the configuration file, primarily for various directory paths,
+ * so that certain settings take effect immediately.
+ *
+ * @param filepath The path of the configuration file.
+ *
+ * @return True, if the sniffing succeeded, false otherwise.
+ */
+static bool sniff_configuration(const char* filepath)
+{
+    int rv = ini_parse(filepath, cnf_preparser, NULL);
+
+    if (rv != 0)
+    {
+        const char FORMAT_SYNTAX[] =
+            "Error: Failed to pre-parse configuration file %s. Error on line %d.";
+        const char FORMAT_OPEN[] =
+            "Error: Failed to pre-parse configuration file %s. Failed to open file.";
+        const char FORMAT_MALLOC[] =
+            "Error: Failed to pre-parse configuration file %s. Memory allocation failed.";
+
+        // We just use the largest one.
+        char errorbuffer[sizeof(FORMAT_MALLOC) + strlen(filepath) + UINTLEN(abs(rv))];
+
+        if (rv > 0)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+        }
+        else if (rv == -1)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_OPEN, filepath);
+        }
+        else
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
+        }
+
+        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
+    }
+
+    return rv == 0;
 }
