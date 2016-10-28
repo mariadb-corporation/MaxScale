@@ -77,8 +77,8 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Creating user 'user' \n");
 
-    Test->try_query(Test->conn_rwsplit, (char *) "CREATE USER user@'%'");
-    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
+    Test->try_query(Test->conn_rwsplit, (char *) "CREATE USER user@'%%'");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%%'  identified by 'pass2';  FLUSH PRIVILEGES;");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int)");
 
     /* Create independent threads each of them will create some load on Mastet */
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->tprintf("Drop t1\n");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1;");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%'");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%%'");
     Test->close_maxscale_connections();
     Test->set_timeout(160);
     Test->tprintf("Trying to connect Maxscale\n");
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     Test->check_log_err((char *) "due to authentication failure", FALSE);
     Test->check_log_err((char *) "fatal signal 11", FALSE);
     Test->check_log_err((char *) "due to handshake failure", FALSE);
-    Test->check_log_err((char *) "Refresh rate limit exceeded for load of users' table", FALSE);
+    //Test->check_log_err((char *) "Refresh rate limit exceeded for load of users' table", FALSE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }

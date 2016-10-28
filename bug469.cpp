@@ -5,6 +5,40 @@
  * - use maxadmin command "show server server1" and check "Current no. of conns" (should be 0) and "Number of connections" (should be 1)
  */
 
+
+/*
+Vilho Raatikka 2014-08-05 12:28:21 UTC
+Every connection is counted twice in master and decremented only once. As a result master seems always to have active connections after first connection is established.
+
+Server 0x21706e0 (server1)
+        Server:                         127.0.0.1
+        Status:                         Master, Running
+        Protocol:                       MySQLBackend
+        Port:                           3000
+        Server Version:                 5.5.37-MariaDB-debug-log
+        Node Id:                        3000
+        Master Id:                      -1
+        Slave Ids:                      3001, 3002 , 3003
+        Repl Depth:                     0
+        Number of connections:          6
+        Current no. of conns:           3
+        Current no. of operations:      0
+Server 0x21705e0 (server2)
+        Server:                         127.0.0.1
+        Status:                         Slave, Running
+        Protocol:                       MySQLBackend
+        Port:                           3001
+        Server Version:                 5.5.37-MariaDB-debug-log
+        Node Id:                        3001
+        Master Id:                      3000
+        Slave Ids:
+        Repl Depth:                     1
+        Number of connections:          3
+        Current no. of conns:           0
+        Current no. of operations:      0
+
+*/
+
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
