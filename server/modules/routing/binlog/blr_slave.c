@@ -86,6 +86,7 @@
 #include <version.h>
 #include <zlib.h>
 
+static char* get_next_token(char *str, const char* delim, char **saveptr);
 extern int load_mysql_users(SERVICE *service);
 extern int blr_save_dbusers(ROUTER_INSTANCE *router);
 extern void blr_master_close(ROUTER_INSTANCE* router);
@@ -4288,6 +4289,148 @@ blr_set_master_password(ROUTER_INSTANCE *router, char *password)
 }
 
 /**
+ * Get next token
+ *
+ * Works exactly like strtok_t except that a delim character which appears
+ * anywhere within quotes is ignored. For instance, if delim is "," then
+ * a string like "MASTER_USER='maxscale_repl_user',MASTER_PASSWORD='a,a'"
+ * will be tokenized into the following two tokens:
+ *
+ *   MASTER_USER='maxscale_repl_user'
+ *   MASTER_PASSWORD='a,a'
+ *
+ * @see strtok_r
+ */
+static char* get_next_token(char *str, const char* delim, char **saveptr)
+{
+    if (str)
+    {
+        *saveptr = str;
+    }
+
+    if (!*saveptr)
+    {
+        return NULL;
+    }
+
+    bool delim_found = true;
+
+    // Skip any delims in the beginning.
+    while (**saveptr && delim_found)
+    {
+        const char* d = delim;
+
+        while (*d)
+        {
+            if (*d == **saveptr)
+            {
+                break;
+            }
+
+            ++d;
+        }
+
+        if (*d == 0)
+        {
+            delim_found = false;
+        }
+        else
+        {
+            ++*saveptr;
+        }
+    }
+
+    if (!**saveptr)
+    {
+        return NULL;
+    }
+
+    delim_found = false;
+
+    char *token = *saveptr;
+    char *p = *saveptr;
+
+    char quote = 0;
+
+    while (*p && !delim_found)
+    {
+        switch (*p)
+        {
+        case '\'':
+        case '"':
+        case '`':
+            if (!quote)
+            {
+                quote = *p;
+            }
+            else if (quote == *p)
+            {
+                quote = 0;
+            }
+            break;
+
+        default:
+            if (!quote)
+            {
+                const char *d = delim;
+                while (*d && !delim_found)
+                {
+                    if (*p == *d)
+                    {
+                        delim_found = true;
+                        *p = 0;
+                    }
+                    else
+                    {
+                        ++d;
+                    }
+                }
+            }
+        }
+
+        ++p;
+    }
+
+    if (*p == 0)
+    {
+        *saveptr = NULL;
+    }
+    else if (delim_found)
+    {
+        *saveptr = p;
+
+        delim_found = true;
+
+        while (**saveptr && delim_found)
+        {
+            const char *d = delim;
+            while (*d)
+            {
+                if (**saveptr == *d)
+                {
+                    break;
+                }
+                else
+                {
+                    ++d;
+                }
+            }
+
+            if (*d == 0)
+            {
+                delim_found = false;
+            }
+            else
+            {
+                ++*saveptr;
+            }
+        }
+    }
+
+    return token;
+}
+
+/**
  * Parse a CHANGE MASTER TO SQL command
  *
  * @param input     The command to be parsed
@@ -4301,7 +4444,7 @@ blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_O
     char *sep = ",";
     char *word, *brkb;
 
-    if ((word = strtok_r(input, sep, &brkb)) == NULL)
+    if ((word = get_next_token(input, sep, &brkb)) == NULL)
     {
         sprintf(error_string, "Unable to parse query [%s]", input);
         return 1;
@@ -4315,7 +4458,7 @@ blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_O
         }
     }
 
-    while ((word = strtok_r(NULL, sep, &brkb)) != NULL)
+    while ((word = get_next_token(NULL, sep, &brkb)) != NULL)
     {
         /* parse options key=val */
         if (blr_handle_change_master_token(word, error_string, config))
@@ -4339,12 +4482,12 @@ static int
 blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config)
 {
     /* space+TAB+= */
-    char *sep = " 	=";
+    char *sep = " \t=";
     char *word, *brkb;
     char *value = NULL;
     char **option_field = NULL;
 
-    if ((word = strtok_r(input, sep, &brkb)) == NULL)
+    if ((word = get_next_token(input, sep, &brkb)) == NULL)
     {
         sprintf(error, "error parsing %s", brkb);
         return 1;
@@ -4383,7 +4526,7 @@ static char *
 blr_get_parsed_command_value(char *input)
 {
     /* space+TAB+= */
-    char *sep = "	 =";
+    char *sep = " \t=";
     char *ret = NULL;
     char *word;
     char *value = NULL;
@@ -4397,7 +4540,7 @@ blr_get_parsed_command_value(char *input)
         return ret;
     }
 
-    if ((word = strtok_r(NULL, sep, &input)) != NULL)
+    if ((word = get_next_token(NULL, sep, &input)) != NULL)
     {
         char *ptr;
 
