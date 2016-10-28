@@ -1,3 +1,4 @@
-SELECT sum(x1) FROM t1;
-SELECT concat(x1,sum(x1)) FROM t1;
-SELECT concat(sum(x1),avg(x1)) FROM t1;
+load data infile;
+LOAD data infile;
+LOAD DATA infile;
+LOAD DATA INFILE;

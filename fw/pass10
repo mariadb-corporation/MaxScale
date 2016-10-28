@@ -1,4 +1,2 @@
-DROP TABLE IF EXISTS t1; 
-CREATE TABLE t1 (x1 int, fl int);
-SELECT fl FROM t1;
+SELECT 1;
 
