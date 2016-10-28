@@ -759,6 +759,41 @@ gw_read_and_write(DCB *dcb)
         }
     }
 
+    MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
+
+    spinlock_acquire(&dcb->authlock);
+
+    if (proto->ignore_reply)
+    {
+
+        /** The reply to a COM_CHANGE_USER is in packet */
+        GWBUF *query = proto->stored_query;
+        uint8_t result = *((uint8_t*)GWBUF_DATA(read_buffer) + 4);
+        proto->stored_query = NULL;
+        proto->ignore_reply = false;
+        gwbuf_free(read_buffer);
+
+        spinlock_release(&dcb->authlock);
+
+        int rval = 0;
+
+        if (result == MYSQL_REPLY_OK)
+        {
+            rval = query ? dcb->func.write(dcb, query) : 1;
+        }
+        else if (query)
+        {
+            /** The COM_CHANGE USER failed, generate a fake hangup event to
+             * close the DCB and send an error to the client. */
+            gwbuf_free(query);
+            poll_fake_hangup_event(dcb);
+        }
+
+        return rval;
+    }
+
+    spinlock_release(&dcb->authlock);
+
     /**
      * If protocol has session command set, concatenate whole
      * response into one buffer.
@@ -911,6 +946,48 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     CHK_DCB(dcb);
     spinlock_acquire(&dcb->authlock);
+
+    if (dcb->was_persistent)
+    {
+        /**
+         * This is a DCB that was just taken out of the persistent connection pool.
+         * We need to sent a COM_CHANGE_USER query to the backend to reset the
+         * session state.
+         */
+        if (backend_protocol->stored_query)
+        {
+            /** It is possible that the client DCB is closed before the COM_CHANGE_USER
+             * response is received. */
+            gwbuf_free(backend_protocol->stored_query);
+        }
+        dcb->was_persistent = false;
+        backend_protocol->ignore_reply = true;
+        backend_protocol->stored_query = queue;
+
+        spinlock_release(&dcb->authlock);
+
+        GWBUF *buf = gw_create_change_user_packet(dcb->session->client_dcb->data, dcb->protocol);
+        return dcb_write(dcb, buf) ? 1 : 0;
+    }
+    else if (backend_protocol->ignore_reply)
+    {
+        if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
+        {
+            gwbuf_free(queue);
+        }
+        else
+        {
+            /**
+             * We're still waiting on the reply to the COM_CHANGE_USER, append the
+             * buffer to the stored query. This is possible if the client sends
+             * BLOB data on the first command.
+             */
+            backend_protocol->stored_query = gwbuf_append(backend_protocol->stored_query, queue);
+        }
+        spinlock_release(&dcb->authlock);
+        return 1;
+    }
+
     /**
      * Pick action according to state of protocol.
      * If auth failed, return value is 0, write and buffered write

@@ -772,6 +772,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
             MXS_DEBUG("%lu [dcb_connect] Reusing a persistent connection, dcb %p\n",
                       pthread_self(), dcb);
             dcb->persistentstart = 0;
+            dcb->was_persistent = true;
             return dcb;
         }
         else
@@ -866,6 +867,8 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     /** Copy status field to DCB */
     dcb->dcb_server_status = server->status;
     dcb->dcb_port = server->port;
+
+    dcb->was_persistent = false;
 
     /**
      * backend_dcb is connected to backend server, and once backend_dcb

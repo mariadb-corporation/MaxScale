@@ -276,6 +276,7 @@ typedef struct dcb
     bool            ssl_write_want_read;    /*< Flag */
     bool            ssl_write_want_write;    /*< Flag */
     int             dcb_port;       /**< port of target server */
+    bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 

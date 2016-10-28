@@ -262,28 +262,25 @@ typedef struct server_command_st
 typedef struct
 {
 #if defined(SS_DEBUG)
-    skygw_chk_t     protocol_chk_top;
+    skygw_chk_t            protocol_chk_top;
 #endif
-    int                 fd;                           /*< The socket descriptor */
-    struct dcb          *owner_dcb;                   /*< The DCB of the socket
-        * we are running on */
-    SPINLOCK            protocol_lock;
-    mysql_server_cmd_t  current_command;              /**< Current command being executed */
-    server_command_t    protocol_command;             /*< session command list */
-    server_command_t*   protocol_cmd_history;         /*< session command history */
-    mxs_auth_state_t  protocol_auth_state;            /*< Authentication status */
-    mysql_protocol_state_t protocol_state;            /*< Protocol struct status */
-    uint8_t             scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble,
-        * created or received */
-    uint32_t            server_capabilities;          /*< server capabilities,
-        * created or received */
-    uint32_t            client_capabilities;          /*< client capabilities,
-        * created or received */
-    unsigned        long tid;                         /*< MySQL Thread ID, in
-        * handshake */
-    unsigned int    charset;                          /*< MySQL character set at connect time */
+    int                    fd;                           /*< The socket descriptor */
+    struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
+    SPINLOCK               protocol_lock;                /*< Protocol lock */
+    mysql_server_cmd_t     current_command;              /*< Current command being executed */
+    server_command_t       protocol_command;             /*< session command list */
+    server_command_t*      protocol_cmd_history;         /*< session command history */
+    mxs_auth_state_t       protocol_auth_state;          /*< Authentication status */
+    mysql_protocol_state_t protocol_state;               /*< Protocol struct status */
+    uint8_t                scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble, created or received */
+    uint32_t               server_capabilities;          /*< server capabilities, created or received */
+    uint32_t               client_capabilities;          /*< client capabilities, created or received */
+    unsigned long          tid;                          /*< MySQL Thread ID, in handshake */
+    unsigned int           charset;                      /*< MySQL character set at connect time */
+    bool                   ignore_reply;                 /*< If the reply should be discarded */
+    GWBUF*                 stored_query;                 /*< Temporarily stored queries */
 #if defined(SS_DEBUG)
-    skygw_chk_t     protocol_chk_tail;
+    skygw_chk_t            protocol_chk_tail;
 #endif
 } MySQLProtocol;
 
