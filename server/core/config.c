@@ -268,7 +268,7 @@ char* config_clean_string_list(const char* str)
  * @return zero on error
  */
 static int
-handler(void *userdata, const char *section, const char *name, const char *value)
+ini_handler(void *userdata, const char *section, const char *name, const char *value)
 {
     CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT   *ptr = cntxt;
@@ -353,6 +353,47 @@ handler(void *userdata, const char *section, const char *name, const char *value
 }
 
 /**
+ * Load single configuration file.
+ *
+ * @param file     The file to load.
+ * @param context  The context used when parsing.
+ *
+ * @return True if the file could be parsed, false otherwise.
+ */
+static bool config_load_single_file(const char* file, CONFIG_CONTEXT* context)
+{
+    int rval = -1;
+
+    if (!config_has_duplicate_sections(file))
+    {
+        if ((rval = ini_parse(file, ini_handler, context)) != 0)
+        {
+            char errorbuffer[1024 + 1];
+
+            if (rval > 0)
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file. Error on line %d.", rval);
+            }
+            else if (rval == -1)
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file. Failed to open file.");
+            }
+            else
+            {
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Failed to parse configuration file. Memory allocation failed.");
+            }
+
+            MXS_ERROR("%s", errorbuffer);
+        }
+    }
+
+    return rval == 0;
+}
+
+/**
  * @brief Load the configuration file for the MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
@@ -364,14 +405,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
 bool
 config_load(const char *file)
 {
-    CONFIG_CONTEXT config = {.object = ""};
-    int ini_rval;
     bool rval = false;
-
-    if (config_has_duplicate_sections(file))
-    {
-        return false;
-    }
 
     /* Temporary - should use configuration values and test return value (bool) */
     dcb_pre_alloc(1000);
@@ -380,35 +414,16 @@ config_load(const char *file)
     global_defaults();
     feedback_defaults();
 
-    if ((ini_rval = ini_parse(file, handler, &config)) != 0)
+    CONFIG_CONTEXT config = {.object = ""};
+
+    if (config_load_single_file(file, &config))
     {
-        char errorbuffer[1024 + 1];
+        config_file = file;
 
-        if (ini_rval > 0)
+        if (check_config_objects(config.next) && process_config_context(config.next))
         {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Error on line %d.", ini_rval);
+            rval = true;
         }
-        else if (ini_rval == -1)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Failed to open file.");
-        }
-        else
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to parse configuration file. Memory allocation failed.");
-        }
-
-        MXS_ERROR("%s", errorbuffer);
-        return 0;
-    }
-
-    config_file = file;
-
-    if (check_config_objects(config.next) && process_config_context(config.next))
-    {
-        rval = true;
     }
 
     free_config_context(config.next);
@@ -446,7 +461,7 @@ config_reload()
     config.object = "";
     config.next = NULL;
 
-    if (ini_parse(config_file, handler, &config) < 0)
+    if (ini_parse(config_file, ini_handler, &config) < 0)
     {
         return 0;
     }
