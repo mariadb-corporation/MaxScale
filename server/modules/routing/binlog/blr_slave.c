@@ -882,9 +882,15 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 spinlock_acquire(&router->lock);
 
+                /* Set the BLRM_UNCONFIGURED state */
                 router->master_state = BLRM_UNCONFIGURED;
                 blr_master_set_empty_config(router);
                 blr_master_free_config(current_master);
+
+                /* Remove any error message and errno */
+                MXS_FREE(router->m_errmsg);
+                router->m_errmsg = NULL;
+                router->m_errno = 0;
 
                 spinlock_release(&router->lock);
 
