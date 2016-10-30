@@ -46,6 +46,7 @@
  */
 #include <maxscale/config.h>
 #include <ctype.h>
+#include <ftw.h>
 #include <glob.h>
 #include <net/if.h>
 #include <stdio.h>
@@ -62,6 +63,7 @@
 #include <maxscale/notification.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/service.h>
+#include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
 extern int setipaddress(struct in_addr *, char *);
@@ -373,24 +375,95 @@ static bool config_load_single_file(const char* file, CONFIG_CONTEXT* context)
             if (rval > 0)
             {
                 snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file. Error on line %d.", rval);
+                         "Failed to parse configuration file %s. Error on line %d.", file, rval);
             }
             else if (rval == -1)
             {
                 snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file. Failed to open file.");
+                         "Failed to parse configuration file %s. Could not open file.", file);
             }
             else
             {
                 snprintf(errorbuffer, sizeof(errorbuffer),
-                         "Failed to parse configuration file. Memory allocation failed.");
+                         "Failed to parse configuration file %s. Memory allocation failed.", file);
             }
 
             MXS_ERROR("%s", errorbuffer);
         }
     }
 
+    if (rval == 0)
+    {
+        MXS_NOTICE("Loaded %s.", file);
+    }
+
     return rval == 0;
+}
+
+/**
+ * The current parsing contex, must be managed explicitly since the ftw callback
+ * can not have user data.
+ */
+static CONFIG_CONTEXT *current_context;
+
+/**
+ * The nftw callback.
+ *
+ * @see man ftw
+ */
+int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+{
+    int rval = 0;
+
+    if (typeflag == FTW_F) // We are only interested in files,
+    {
+        const char* filename = fpath + ftwbuf->base;
+        const char* dot = strrchr(filename, '.');
+
+        if (dot) // that must have a suffix,
+        {
+            const char* suffix = dot + 1;
+
+            if (strcmp(suffix, "cnf") == 0) // that is ".cnf".
+            {
+                if (!config_load_single_file(fpath, current_context))
+                {
+                    rval = -1;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * Loads all configuration files in a directory hierarchy.
+ *
+ * Only files with the suffix ".cnf" are considered to be configuration files.
+ *
+ * @param dir     The directory.
+ * @param context The configuration context.
+ *
+ * @return True, if all configuration files in the directory hierarchy could be loaded,
+ *         otherwise false.
+ */
+static bool config_load_dir(const char *dir, CONFIG_CONTEXT *context)
+{
+    // Since there is no way to pass userdata to the callback, we need to store
+    // the current context into a static variable. Consequently, we need lock.
+    // Should not matter since config_load() is called once at startup.
+    static SPINLOCK lock = SPINLOCK_INIT;
+
+    int nopenfd = 5; // Maximum concurrently opened directory descriptors
+
+    spinlock_acquire(&lock);
+    current_context = context;
+    int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
+    current_context = NULL;
+    spinlock_release(&lock);
+
+    return rv == 0;
 }
 
 /**
@@ -399,11 +472,11 @@ static bool config_load_single_file(const char* file, CONFIG_CONTEXT* context)
  * This function will parse the configuration file, check for duplicate sections,
  * validate the module parameters and finally turn it into a set of objects.
  *
- * @param file The filename of the configuration file
+ * @param filename The filename of the configuration file
  * @return True on success, false on fatal error
  */
 bool
-config_load(const char *file)
+config_load(const char *filename)
 {
     bool rval = false;
 
@@ -416,13 +489,49 @@ config_load(const char *file)
 
     CONFIG_CONTEXT config = {.object = ""};
 
-    if (config_load_single_file(file, &config))
+    if (config_load_single_file(filename, &config))
     {
-        config_file = file;
+        const char DIR_SUFFIX[] = ".d";
 
-        if (check_config_objects(config.next) && process_config_context(config.next))
+        char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
+        strcpy(dir, filename);
+        strcat(dir, DIR_SUFFIX);
+
+        rval = true;
+
+        struct stat st;
+        if (stat(dir, &st) == -1)
         {
-            rval = true;
+            if (errno == ENOENT)
+            {
+                MXS_NOTICE("%s does not exist, not reading.", dir);
+            }
+            else
+            {
+                char errbuf[MXS_STRERROR_BUFLEN];
+                MXS_WARNING("Could not access %s, not reading: %s",
+                            dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+            }
+        }
+        else
+        {
+            if (S_ISDIR(st.st_mode))
+            {
+                rval = config_load_dir(dir, &config);
+            }
+            else
+            {
+                MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+            }
+        }
+
+        if (rval)
+        {
+            if (check_config_objects(config.next) && process_config_context(config.next))
+            {
+                config_file = filename;
+                rval = true;
+            }
         }
     }
 
