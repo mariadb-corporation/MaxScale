@@ -96,7 +96,7 @@ int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*, char*, char*);
-bool config_has_duplicate_sections(const char* config);
+bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
@@ -423,17 +423,24 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
  * Load single configuration file.
  *
  * @param file     The file to load.
- * @param context  The context used when parsing.
+ * @param dcontext The context object used when tracking duplicate sections.
+ * @param ccontext The context object used when parsing.
  *
  * @return True if the file could be parsed, false otherwise.
  */
-static bool config_load_single_file(const char* file, CONFIG_CONTEXT* context)
+static bool config_load_single_file(const char* file,
+                                    DUPLICATE_CONTEXT* dcontext,
+                                    CONFIG_CONTEXT* ccontext)
 {
     int rval = -1;
 
-    if (!config_has_duplicate_sections(file))
+    // With multiple configuration files being loaded, we need to log the file
+    // currently being loaded so that the context is clear in case of errors.
+    MXS_NOTICE("Loading %s.", file);
+
+    if (!config_has_duplicate_sections(file, dcontext))
     {
-        if ((rval = ini_parse(file, ini_handler, context)) != 0)
+        if ((rval = ini_parse(file, ini_handler, ccontext)) != 0)
         {
             char errorbuffer[1024 + 1];
 
@@ -457,19 +464,15 @@ static bool config_load_single_file(const char* file, CONFIG_CONTEXT* context)
         }
     }
 
-    if (rval == 0)
-    {
-        MXS_NOTICE("Loaded %s.", file);
-    }
-
     return rval == 0;
 }
 
 /**
- * The current parsing contex, must be managed explicitly since the ftw callback
+ * The current parsing contexts must be managed explicitly since the ftw callback
  * can not have user data.
  */
-static CONFIG_CONTEXT *current_context;
+static CONFIG_CONTEXT *current_ccontext;
+static DUPLICATE_CONTEXT *current_dcontext;
 
 /**
  * The nftw callback.
@@ -491,7 +494,10 @@ int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW
 
             if (strcmp(suffix, "cnf") == 0) // that is ".cnf".
             {
-                if (!config_load_single_file(fpath, current_context))
+                ss_dassert(current_dcontext);
+                ss_dassert(current_ccontext);
+
+                if (!config_load_single_file(fpath, current_dcontext, current_ccontext))
                 {
                     rval = -1;
                 }
@@ -507,13 +513,14 @@ int config_cb(const char* fpath, const struct stat *sb, int typeflag, struct FTW
  *
  * Only files with the suffix ".cnf" are considered to be configuration files.
  *
- * @param dir     The directory.
- * @param context The configuration context.
+ * @param dir      The directory.
+ * @param dcontext The duplicate section context.
+ * @param ccontext The configuration context.
  *
  * @return True, if all configuration files in the directory hierarchy could be loaded,
  *         otherwise false.
  */
-static bool config_load_dir(const char *dir, CONFIG_CONTEXT *context)
+static bool config_load_dir(const char *dir, DUPLICATE_CONTEXT *dcontext, CONFIG_CONTEXT *ccontext)
 {
     // Since there is no way to pass userdata to the callback, we need to store
     // the current context into a static variable. Consequently, we need lock.
@@ -523,9 +530,11 @@ static bool config_load_dir(const char *dir, CONFIG_CONTEXT *context)
     int nopenfd = 5; // Maximum concurrently opened directory descriptors
 
     spinlock_acquire(&lock);
-    current_context = context;
+    current_dcontext = dcontext;
+    current_ccontext = ccontext;
     int rv = nftw(dir, config_cb, nopenfd, FTW_PHYS);
-    current_context = NULL;
+    current_ccontext = NULL;
+    current_dcontext = NULL;
     spinlock_release(&lock);
 
     return rv == 0;
@@ -552,55 +561,62 @@ config_load(const char *filename)
     global_defaults();
     feedback_defaults();
 
-    CONFIG_CONTEXT config = {.object = ""};
+    DUPLICATE_CONTEXT dcontext;
 
-    if (config_load_single_file(filename, &config))
+    if (duplicate_context_init(&dcontext))
     {
-        const char DIR_SUFFIX[] = ".d";
+        CONFIG_CONTEXT ccontext = {.object = ""};
 
-        char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
-        strcpy(dir, filename);
-        strcat(dir, DIR_SUFFIX);
-
-        rval = true;
-
-        struct stat st;
-        if (stat(dir, &st) == -1)
+        if (config_load_single_file(filename, &dcontext, &ccontext))
         {
-            if (errno == ENOENT)
+            const char DIR_SUFFIX[] = ".d";
+
+            char dir[strlen(filename) + sizeof(DIR_SUFFIX)];
+            strcpy(dir, filename);
+            strcat(dir, DIR_SUFFIX);
+
+            rval = true;
+
+            struct stat st;
+            if (stat(dir, &st) == -1)
             {
-                MXS_NOTICE("%s does not exist, not reading.", dir);
+                if (errno == ENOENT)
+                {
+                    MXS_NOTICE("%s does not exist, not reading.", dir);
+                }
+                else
+                {
+                    char errbuf[MXS_STRERROR_BUFLEN];
+                    MXS_WARNING("Could not access %s, not reading: %s",
+                                dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+                }
             }
             else
             {
-                char errbuf[MXS_STRERROR_BUFLEN];
-                MXS_WARNING("Could not access %s, not reading: %s",
-                            dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+                if (S_ISDIR(st.st_mode))
+                {
+                    rval = config_load_dir(dir,  &dcontext, &ccontext);
+                }
+                else
+                {
+                    MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+                }
             }
-        }
-        else
-        {
-            if (S_ISDIR(st.st_mode))
+
+            if (rval)
             {
-                rval = config_load_dir(dir, &config);
-            }
-            else
-            {
-                MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+                if (check_config_objects(ccontext.next) && process_config_context(ccontext.next))
+                {
+                    config_file = filename;
+                    rval = true;
+                }
             }
         }
 
-        if (rval)
-        {
-            if (check_config_objects(config.next) && process_config_context(config.next))
-            {
-                config_file = filename;
-                rval = true;
-            }
-        }
+        free_config_context(ccontext.next);
+
+        duplicate_context_finish(&dcontext);
     }
-
-    free_config_context(config.next);
     return rval;
 }
 
@@ -612,15 +628,24 @@ config_load(const char *filename)
 int
 config_reload()
 {
-    CONFIG_CONTEXT  config;
-    int             rval;
+    int rval = 0;
 
-    if (!config_file)
+    if (config_file)
     {
         return 0;
     }
 
-    if (config_has_duplicate_sections(config_file))
+    DUPLICATE_CONTEXT dcontext;
+
+    if (!duplicate_context_init(&dcontext))
+    {
+        return 0;
+    }
+
+    bool duplicates = config_has_duplicate_sections(config_file, &dcontext);
+    duplicate_context_finish(&dcontext);
+
+    if (duplicates)
     {
         return 0;
     }
@@ -632,6 +657,7 @@ config_reload()
 
     global_defaults();
 
+    CONFIG_CONTEXT config;
     config.object = "";
     config.next = NULL;
 
@@ -2268,40 +2294,43 @@ GATEWAY_CONF* config_get_global_options()
 
 /**
  * Check if sections are defined multiple times in the configuration file.
- * @param config Path to the configuration file
+ *
+ * @param filename Path to the configuration file
+ * @param context  The context object used for tracking the duplication
+ *                 section information.
+ *
  * @return True if duplicate sections were found or an error occurred
  */
-bool config_has_duplicate_sections(const char* config)
+bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* context)
 {
     bool rval = false;
-    DUPLICATE_CONTEXT context;
 
     int size = 1024;
     char *buffer = MXS_MALLOC(size * sizeof(char));
 
-    if (buffer && duplicate_context_init(&context))
+    if (buffer)
     {
-        FILE* file = fopen(config, "r");
+        FILE* file = fopen(filename, "r");
 
         if (file)
         {
             while (maxscale_getline(&buffer, &size, file) > 0)
             {
-                if (pcre2_match(context.re, (PCRE2_SPTR) buffer,
+                if (pcre2_match(context->re, (PCRE2_SPTR) buffer,
                                 PCRE2_ZERO_TERMINATED, 0, 0,
-                                context.mdata, NULL) > 0)
+                                context->mdata, NULL) > 0)
                 {
                     /**
                      * Neither of the PCRE2 calls will fail since we know the pattern
                      * beforehand and we allocate enough memory from the stack
                      */
                     PCRE2_SIZE len;
-                    pcre2_substring_length_bynumber(context.mdata, 1, &len);
+                    pcre2_substring_length_bynumber(context->mdata, 1, &len);
                     len += 1; /** one for the null terminator */
                     PCRE2_UCHAR section[len];
-                    pcre2_substring_copy_bynumber(context.mdata, 1, section, &len);
+                    pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
 
-                    if (hashtable_add(context.hash, section, "") == 0)
+                    if (hashtable_add(context->hash, section, "") == 0)
                     {
                         MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
@@ -2313,12 +2342,10 @@ bool config_has_duplicate_sections(const char* config)
         else
         {
             char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Failed to open file '%s': %s", config,
+            MXS_ERROR("Failed to open file '%s': %s", filename,
                       strerror_r(errno, errbuf, sizeof(errbuf)));
             rval = true;
         }
-
-        duplicate_context_finish(&context);
     }
     else
     {
