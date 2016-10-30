@@ -66,6 +66,16 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 
+typedef struct duplicate_context
+{
+    HASHTABLE        *hash;
+    pcre2_code       *re;
+    pcre2_match_data *mdata;
+} DUPLICATE_CONTEXT;
+
+static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
+static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
+
 extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT   *);
 static int process_config_update(CONFIG_CONTEXT *);
@@ -197,6 +207,61 @@ static char *server_params[] =
     "ssl_cert_verify_depth",
     NULL
 };
+
+/**
+ * Initialize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ *
+ * @return True, if the object could be initialized.
+ */
+static bool duplicate_context_init(DUPLICATE_CONTEXT* context)
+{
+    bool rv = false;
+
+    const int table_size = 10;
+    HASHTABLE *hash = hashtable_alloc(table_size, hashtable_item_strhash, hashtable_item_strcmp);
+    int errcode;
+    PCRE2_SIZE erroffset;
+    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
+                                   0, &errcode, &erroffset, NULL);
+    pcre2_match_data *mdata = NULL;
+
+    if (hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    {
+        hashtable_memory_fns(hash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
+
+        context->hash = hash;
+        context->re = re;
+        context->mdata = mdata;
+        rv = true;
+    }
+    else
+    {
+        pcre2_match_data_free(mdata);
+        pcre2_code_free(re);
+        hashtable_free(hash);
+    }
+
+    return rv;
+}
+
+/**
+ * Finalize the context object used for tracking duplicate sections.
+ *
+ * @param context The context object to be initialized.
+ */
+static void duplicate_context_finish(DUPLICATE_CONTEXT* context)
+{
+    pcre2_match_data_free(context->mdata);
+    pcre2_code_free(context->re);
+    hashtable_free(context->hash);
+
+    context->mdata = NULL;
+    context->re = NULL;
+    context->hash = NULL;
+}
+
 
 /**
  * Remove extra commas and whitespace from a string. This string is interpreted
@@ -2209,40 +2274,34 @@ GATEWAY_CONF* config_get_global_options()
 bool config_has_duplicate_sections(const char* config)
 {
     bool rval = false;
-    const int table_size = 10;
-    int errcode;
-    PCRE2_SIZE erroffset;
-    HASHTABLE *hash = hashtable_alloc(table_size, hashtable_item_strhash, hashtable_item_strcmp);
-    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
-                                   0, &errcode, &erroffset, NULL);
-    pcre2_match_data *mdata = NULL;
+    DUPLICATE_CONTEXT context;
+
     int size = 1024;
     char *buffer = MXS_MALLOC(size * sizeof(char));
 
-    if (buffer && hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    if (buffer && duplicate_context_init(&context))
     {
-        hashtable_memory_fns(hash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
         FILE* file = fopen(config, "r");
 
         if (file)
         {
             while (maxscale_getline(&buffer, &size, file) > 0)
             {
-                if (pcre2_match(re, (PCRE2_SPTR) buffer,
+                if (pcre2_match(context.re, (PCRE2_SPTR) buffer,
                                 PCRE2_ZERO_TERMINATED, 0, 0,
-                                mdata, NULL) > 0)
+                                context.mdata, NULL) > 0)
                 {
                     /**
                      * Neither of the PCRE2 calls will fail since we know the pattern
                      * beforehand and we allocate enough memory from the stack
                      */
                     PCRE2_SIZE len;
-                    pcre2_substring_length_bynumber(mdata, 1, &len);
+                    pcre2_substring_length_bynumber(context.mdata, 1, &len);
                     len += 1; /** one for the null terminator */
                     PCRE2_UCHAR section[len];
-                    pcre2_substring_copy_bynumber(mdata, 1, section, &len);
+                    pcre2_substring_copy_bynumber(context.mdata, 1, section, &len);
 
-                    if (hashtable_add(hash, section, "") == 0)
+                    if (hashtable_add(context.hash, section, "") == 0)
                     {
                         MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
@@ -2258,6 +2317,8 @@ bool config_has_duplicate_sections(const char* config)
                       strerror_r(errno, errbuf, sizeof(errbuf)));
             rval = true;
         }
+
+        duplicate_context_finish(&context);
     }
     else
     {
@@ -2266,9 +2327,6 @@ bool config_has_duplicate_sections(const char* config)
         rval = true;
     }
 
-    hashtable_free(hash);
-    pcre2_code_free(re);
-    pcre2_match_data_free(mdata);
     MXS_FREE(buffer);
     return rval;
 }
