@@ -1941,7 +1941,65 @@ qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
 
             if (lex->sql_command == SQLCOM_PREPARE)
             {
-                MXS_WARNING("qc_get_prepare_operation not implemented yet.");
+                // This is terriby inefficient, but as qc_mysqlembedded is not used
+                // for anything else but comparisons it is ok.
+                const char* prepare_str = lex->prepared_stmt_code.str;
+                size_t prepare_str_len = lex->prepared_stmt_code.length;
+
+                // MySQL does not parse e.g. "select * from x where ?=5". To work
+                // around that we'll replace all "?":s with "@a":s. We might replace
+                // something unnecessarily, but that won't hurt the classification.
+                size_t n_questions = 0;
+                const char* p = prepare_str;
+                while (p < prepare_str + prepare_str_len)
+                {
+                    if (*p == '?')
+                    {
+                        ++n_questions;
+                    }
+
+                    ++p;
+                }
+
+                size_t payload_len = prepare_str_len + n_questions * 2 + 1;
+                size_t prepare_stmt_len = MYSQL_HEADER_LEN + payload_len;
+
+                GWBUF* prepare_stmt = gwbuf_alloc(prepare_stmt_len);
+
+                if (prepare_stmt)
+                {
+                    // Encode the length of the payload in the 3 first bytes.
+                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 0) = payload_len;
+                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 1) = (payload_len >> 8);
+                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 2) = (payload_len >> 16);
+                    // Sequence id
+                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 3) = 0x00;
+                    // Payload, starts with command.
+                    *((unsigned char*)GWBUF_DATA(prepare_stmt) + 4) = COM_QUERY;
+                    // Is followed by the statement.
+                    char *s = (char*)GWBUF_DATA(prepare_stmt) + 5;
+                    p = prepare_str;
+
+                    while (p < prepare_str + prepare_str_len)
+                    {
+                        switch (*p)
+                        {
+                        case '?':
+                            *s++ = '@';
+                            *s = 'a';
+                            break;
+
+                        default:
+                            *s = *p;
+                        }
+
+                        ++p;
+                        ++s;
+                    }
+
+                    operation = qc_get_operation(prepare_stmt);
+                    gwbuf_free(prepare_stmt);
+                }
             }
         }
     }
