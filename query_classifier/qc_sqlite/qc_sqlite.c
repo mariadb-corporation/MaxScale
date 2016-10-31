@@ -80,7 +80,7 @@ typedef struct qc_sqlite_info
     int keyword_2;                   // The second encountered keyword.
     char* prepare_name;              // The name of a prepared statement.
     qc_query_op_t prepare_operation; // The operation of a prepared statement.
-    size_t preparable_stmt_offset;   // The start of the preparable statement.
+    char* preparable_stmt;           // The preparable statement.
     size_t preparable_stmt_length;   // The length of the preparable statement.
 } QC_SQLITE_INFO;
 
@@ -294,6 +294,8 @@ static void info_finish(QC_SQLITE_INFO* info)
     free_string_array(info->table_fullnames);
     free(info->created_table_name);
     free_string_array(info->database_names);
+    free(info->prepare_name);
+    free(info->preparable_stmt);
 }
 
 static void info_free(QC_SQLITE_INFO* info)
@@ -333,7 +335,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->keyword_2 = 0; // that we have not seen a keyword.
     info->prepare_name = NULL;
     info->prepare_operation = QUERY_OP_UNDEFINED;
-    info->preparable_stmt_offset = 0;
+    info->preparable_stmt = NULL;
     info->preparable_stmt_length = 0;
 
     return info;
@@ -467,7 +469,7 @@ static bool parse_query(GWBUF* query)
                     this_thread.info->query = NULL;
                     this_thread.info->query_len = 0;
 
-                    if (info->types & QUERY_TYPE_PREPARE_NAMED_STMT)
+                    if ((info->types & QUERY_TYPE_PREPARE_NAMED_STMT) && info->preparable_stmt)
                     {
                         QC_SQLITE_INFO* preparable_info = info_alloc();
 
@@ -475,7 +477,7 @@ static bool parse_query(GWBUF* query)
                         {
                             this_thread.info = preparable_info;
 
-                            const char *preparable_s = s + info->preparable_stmt_offset;
+                            const char *preparable_s = info->preparable_stmt;
                             size_t preparable_len = info->preparable_stmt_length;
 
                             this_thread.info->query = preparable_s;
@@ -2014,11 +2016,12 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
         info->prepare_name[pName->n] = 0;
     }
 
-    // We store the position of the preparable statement inside the original
-    // statement. That will allow us to later create a new GWBUF of the
-    // parsable statment and parse that.
-    info->preparable_stmt_offset = pParse->sLastToken.z - pParse->zTail + 1; // Ignore starting quote.
-    info->preparable_stmt_length = pStmt->n - 2; // Remove starting and ending quotes.
+    info->preparable_stmt_length = pStmt->n - 2;
+    info->preparable_stmt = MXS_MALLOC(info->preparable_stmt_length);
+    if (info->preparable_stmt)
+    {
+        memcpy(info->preparable_stmt, pStmt->z + 1, pStmt->n - 2);
+    }
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
