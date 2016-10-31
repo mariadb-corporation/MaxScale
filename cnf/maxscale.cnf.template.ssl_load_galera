@@ -139,7 +139,7 @@ type=listener
 service=CLI
 protocol=maxscaled
 address=localhost
-socket=default
+port=6603
 
 
 # Definition of the servers
