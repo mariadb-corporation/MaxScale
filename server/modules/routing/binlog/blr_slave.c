@@ -1050,11 +1050,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                         {
                             MXS_INFO("%s: 'master.ini' created, binlog file '%s' created", router->service->name, router->binlog_name);
                         }
-                    }
-
-                    if (!router->trx_safe)
-                    {
                         blr_master_free_config(current_master);
+                        return blr_slave_send_ok(router, slave);
                     }
 
                     if (router->trx_safe && router->pending_transaction)
@@ -1070,17 +1067,24 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                             return blr_slave_send_warning_message(router, slave, message);
                         }
-                        else
-                        {
-                            blr_master_free_config(current_master);
-                            return blr_slave_send_ok(router, slave);
-                        }
+                    }
 
-                    }
-                    else
+                    blr_master_free_config(current_master);
+
+                    /*
+                     * The CHAMGE MASTER command might specify a new binlog file.
+                     * Let's create the binlogfile specified in MASTER_LOG_FILE
+                     */
+
+                    if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name))
                     {
-                        return blr_slave_send_ok(router, slave);
-                    }
+                        if (blr_file_new_binlog(router, router->binlog_name))
+                        {
+                            MXS_INFO("%s: created new binlog file '%s' by 'CHANGE MASTER TO' command",
+                                     router->service->name, router->binlog_name);
+                        }
+                     }
+                     return blr_slave_send_ok(router, slave);
                 }
             }
         }
@@ -3460,24 +3464,23 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             /* Send warning message to mysql command */
             blr_slave_send_warning_message(router, slave, msg);
         }
+    }
 
-        /* create new one */
+    /* No file has beem opened, create a new binlog file */
+    if (router->binlog_fd == -1)
+    {
         blr_file_new_binlog(router, router->binlog_name);
     }
     else
     {
-        if (router->binlog_fd == -1)
-        {
-            /* create new one */
-            blr_file_new_binlog(router, router->binlog_name);
-        }
-        else
-        {
-            /* use existing one */
-            blr_file_use_binlog(router, router->binlog_name);
-        }
+        /* A new binlog file has been created by CHANGE MASTER TO
+         * if no pending transaction is detected.
+         * use the existing one.
+         */
+        blr_file_use_binlog(router, router->binlog_name);
     }
 
+    /* Start the replication from Master server */
     blr_start_master(router);
 
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, "
