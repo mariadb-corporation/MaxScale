@@ -8,7 +8,19 @@ release 2.0.X.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
-## Changes Features
+## Changed Features
+
+### Configuration Files
+
+From 2.1.0 onwards MariaDB MaxScale supports hierarchical configuration
+files. When invoked with a configuration file, e.g. `maxscale.cnf`, MariaDB
+MaxScale looks for a directory `maxscale.cnf.d` in the same directory as the
+configuration file, and reads all `.cnf` files it finds in that directory
+hierarchy. All other files will be ignored.
+
+Please see the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md#configuration)
+for details.
 
 ### Logging
 

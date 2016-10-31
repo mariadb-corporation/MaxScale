@@ -41,16 +41,28 @@ connection failover| When a connection currently being used between MariaDB MaxS
 
 ## Configuration
 
-The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale will look for
-in a number of places.
+The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale
+will look for in the following places:
 
-1. Location given with the --configdir=<path> command line argument
+1. By default, the file `maxscale.cnf` in the directory `/etc`
+1. The location given with the `--configdir=<path>` command line argument.
 
-2. MariaDB MaxScale will look for a configuration file called `maxscale.cnf` in the directory `/etc/maxscale.cnf`
+MariaDB MaxScale will further look for a directory with the same name as the
+configuration file, followed by `.d` (for instance `/etc/maxscale.cnf.d`) and
+recursively read all files, having a `.cnf` suffix, it finds in the directory
+hierarchy. All other files will be ignored.
 
-An explicit path to a configuration file can be passed by using the `-f` option to MariaDB MaxScale.
+There are no restrictions on how different configuration sections are arranged,
+but the strong suggestion is to place global settings into the configuration
+file MariaDB MaxScale is invoked with, and then, if deemed necessary, create
+separate configuration files for _servers_, _filters_, etc.
 
-The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration; these sections define services, servers, listeners, monitors and global settings. Parameters, which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
+The configuration file itself is based on the [.ini](https://en.wikipedia.org/wiki/INI_file)
+file format and consists of various sections that are used to build the
+configuration; these sections define services, servers, listeners, monitors and
+global settings. Parameters, which expect a comma-separated list of values can
+be defined on multiple lines. The following is an example of a multi-line
+definition.
 
 ```
 [MyService]
