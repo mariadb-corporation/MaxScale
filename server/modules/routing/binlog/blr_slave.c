@@ -889,7 +889,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                 blr_master_free_config(current_master);
 
                 /* Remove any error message and errno */
-                MXS_FREE(router->m_errmsg);
+                free(router->m_errmsg);
                 router->m_errmsg = NULL;
                 router->m_errno = 0;
 
