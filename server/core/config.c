@@ -77,8 +77,8 @@ static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
 static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 
 extern int setipaddress(struct in_addr *, char *);
-static bool process_config_context(CONFIG_CONTEXT   *);
-static int process_config_update(CONFIG_CONTEXT *);
+static bool process_config_context(CONFIG_CONTEXT *);
+static bool process_config_update(CONFIG_CONTEXT *);
 static void free_config_context(CONFIG_CONTEXT      *);
 static char *config_get_value(CONFIG_PARAMETER *, const char *);
 static char *config_get_password(CONFIG_PARAMETER *);
@@ -541,25 +541,21 @@ static bool config_load_dir(const char *dir, DUPLICATE_CONTEXT *dcontext, CONFIG
 }
 
 /**
- * @brief Load the configuration file for the MaxScale
+ * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
  * validate the module parameters and finally turn it into a set of objects.
  *
- * @param filename The filename of the configuration file
+ * @param filename        The filename of the configuration file
+ * @param process_config  The function using which the successfully loaded
+ *                        configuration should be processed.
+ *
  * @return True on success, false on fatal error
  */
-bool
-config_load(const char *filename)
+static bool
+config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONTEXT*))
 {
     bool rval = false;
-
-    /* Temporary - should use configuration values and test return value (bool) */
-    dcb_pre_alloc(1000);
-    session_pre_alloc(250);
-
-    global_defaults();
-    feedback_defaults();
 
     DUPLICATE_CONTEXT dcontext;
 
@@ -605,9 +601,8 @@ config_load(const char *filename)
 
             if (rval)
             {
-                if (check_config_objects(ccontext.next) && process_config_context(ccontext.next))
+                if (check_config_objects(ccontext.next) && process_config(ccontext.next))
                 {
-                    config_file = filename;
                     rval = true;
                 }
             }
@@ -621,53 +616,60 @@ config_load(const char *filename)
 }
 
 /**
+ * @brief Load the configuration file for the MaxScale
+ *
+ * @param filename The filename of the configuration file
+ * @return True on success, false on fatal error
+ */
+bool
+config_load(const char *filename)
+{
+    ss_dassert(!config_file);
+
+    /* Temporary - should use configuration values and test return value (bool) */
+    dcb_pre_alloc(1000);
+    session_pre_alloc(250);
+
+    global_defaults();
+    feedback_defaults();
+
+    bool rval = config_load_and_process(filename, process_config_context);
+
+    if (rval)
+    {
+        config_file = filename;
+    }
+
+    return rval;
+}
+
+/**
  * Reload the configuration file for the MaxScale
  *
- * @return A zero return indicates a fatal error reading the configuration
+ * @return True on success, false on fatal error.
  */
-int
+bool
 config_reload()
 {
-    int rval = 0;
+    bool rval = false;
 
     if (config_file)
     {
-        return 0;
+        if (gateway.version_string)
+        {
+            MXS_FREE(gateway.version_string);
+        }
+
+        global_defaults();
+        feedback_defaults();
+
+        rval = config_load_and_process(config_file, process_config_update);
     }
-
-    DUPLICATE_CONTEXT dcontext;
-
-    if (!duplicate_context_init(&dcontext))
+    else
     {
-        return 0;
+        MXS_ERROR("config_reload() called without the configuration having "
+                  "been loaded first.");
     }
-
-    bool duplicates = config_has_duplicate_sections(config_file, &dcontext);
-    duplicate_context_finish(&dcontext);
-
-    if (duplicates)
-    {
-        return 0;
-    }
-
-    if (gateway.version_string)
-    {
-        MXS_FREE(gateway.version_string);
-    }
-
-    global_defaults();
-
-    CONFIG_CONTEXT config;
-    config.object = "";
-    config.next = NULL;
-
-    if (ini_parse(config_file, ini_handler, &config) < 0)
-    {
-        return 0;
-    }
-
-    rval = process_config_update(config.next);
-    free_config_context(config.next);
 
     return rval;
 }
@@ -1574,7 +1576,7 @@ feedback_defaults()
  *
  * @param context       The configuration data
  */
-static  int
+static bool
 process_config_update(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT *obj;
@@ -1816,7 +1818,7 @@ process_config_update(CONFIG_CONTEXT *context)
         obj = obj->next;
     }
 
-    return 1;
+    return true;
 }
 
 /**

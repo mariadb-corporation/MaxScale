@@ -153,7 +153,7 @@ bool                config_load(const char *);
 unsigned int        config_nbpolls();
 double              config_percentage_value(const char *str);
 unsigned int        config_pollsleep();
-int                 config_reload();
+bool                config_reload();
 bool                config_set_qualified_param(CONFIG_PARAMETER* param,
                                                void* val,
                                                config_param_type_t type);
