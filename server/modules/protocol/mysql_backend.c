@@ -1900,13 +1900,19 @@ static int gw_change_user(DCB *backend,
     }
     else
     {
-        rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
-        /*
-         * Now copy new data into user session
-         */
+        /** This assumes that authentication will succeed. If authentication fails,
+         * the internal session will represent the wrong user. This is wrong and
+         * a check whether the COM_CHANGE_USER succeeded should be done in the
+         * backend protocol reply handling.
+         *
+         * For the time being, it is simpler to assume a COM_CHANGE_USER will always
+         * succeed if the authentication in MaxScale is successful. In practice this
+         * might not be true but these cases are handled by the router modules
+         * and the servers that fail to execute the COM_CHANGE_USER are discarded. */
         strcpy(current_session->user, username);
         strcpy(current_session->db, database);
         memcpy(current_session->client_sha1, client_sha1, sizeof(current_session->client_sha1));
+        rv = gw_send_change_user_to_backend(database, username, client_sha1, backend_protocol);
     }
 
 retblock:
