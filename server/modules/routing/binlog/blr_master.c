@@ -1063,7 +1063,13 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 }
                 else
                 {
+                    /* Terminate replication and exit from main loop */
                     blr_terminate_master_replication(router, ptr, len);
+
+                    gwbuf_free(pkt);
+                    pkt = NULL;
+
+                    break;
                 }
 
                 if (hdr.ok == 0)
