@@ -1914,7 +1914,7 @@ char* qc_get_prepare_name(GWBUF* stmt)
         {
             LEX* lex = get_lex(stmt);
 
-            if (lex->sql_command == SQLCOM_PREPARE)
+            if ((lex->sql_command == SQLCOM_PREPARE) || (lex->sql_command == SQLCOM_EXECUTE))
             {
                 name = (char*)malloc(lex->prepared_stmt_name.length + 1);
                 if (name)
