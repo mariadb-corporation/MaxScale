@@ -1403,7 +1403,8 @@ int TestConnections::get_maxadmin_param(char *command, char *param, char *result
 {
     char		* buf;
 
-    buf = ssh_maxscale_output(TRUE, "maxadmin %s", command);
+    //buf = ssh_maxscale_output(TRUE, "maxadmin %s", command);
+    buf = ssh_maxscale_output(false, "maxadmin -uadmin -p%s %s", maxadmin_password, command);
 
     //printf("%s\n", buf);
 
