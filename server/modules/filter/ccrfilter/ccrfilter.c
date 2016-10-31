@@ -333,11 +333,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue))
     {
-        if (queue->next)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
-
         /**
          * Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement.
@@ -422,5 +417,5 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

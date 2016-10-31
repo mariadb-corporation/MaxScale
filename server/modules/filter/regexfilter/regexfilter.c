@@ -394,10 +394,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (my_session->active && modutil_is_SQL(queue))
     {
-        if (queue->next != NULL)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
         if ((sql = modutil_get_SQL(queue)) != NULL)
         {
             newsql = regex_replace(sql,
@@ -555,5 +551,5 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

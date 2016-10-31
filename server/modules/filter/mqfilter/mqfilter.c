@@ -1373,11 +1373,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 }
             }
 
-            if (queue->next != NULL)
-            {
-                queue = gwbuf_make_contiguous(queue);
-            }
-
             if (modutil_extract_SQL(queue, &ptr, &length))
             {
 
@@ -1713,5 +1708,5 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
