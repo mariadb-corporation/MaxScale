@@ -1929,6 +1929,26 @@ char* qc_get_prepare_name(GWBUF* stmt)
     return name;
 }
 
+qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
+{
+    qc_query_op_t operation = QUERY_OP_UNDEFINED;
+
+    if (stmt)
+    {
+        if (ensure_query_is_parsed(stmt))
+        {
+            LEX* lex = get_lex(stmt);
+
+            if (lex->sql_command == SQLCOM_PREPARE)
+            {
+                MXS_WARNING("qc_get_prepare_operation not implemented yet.");
+            }
+        }
+    }
+
+    return operation;
+}
+
 namespace
 {
 
@@ -2074,6 +2094,7 @@ static QUERY_CLASSIFIER qc =
     qc_get_affected_fields,
     qc_get_database_names,
     qc_get_prepare_name,
+    qc_get_prepare_operation,
 };
 
  /* @see function load_module in load_utils.c for explanation of the following

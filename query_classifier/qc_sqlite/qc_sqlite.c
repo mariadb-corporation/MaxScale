@@ -79,6 +79,7 @@ typedef struct qc_sqlite_info
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
     char* prepare_name;              // The name of a prepared statement.
+    qc_query_op_t prepare_operation; // The operation of a prepared statement.
     size_t preparable_stmt_offset;   // The start of the preparable statement.
     size_t preparable_stmt_length;   // The length of the preparable statement.
 } QC_SQLITE_INFO;
@@ -331,6 +332,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
     info->keyword_2 = 0; // that we have not seen a keyword.
     info->prepare_name = NULL;
+    info->prepare_operation = QUERY_OP_UNDEFINED;
     info->preparable_stmt_offset = 0;
     info->preparable_stmt_length = 0;
 
@@ -482,9 +484,7 @@ static bool parse_query(GWBUF* query)
                             this_thread.info->query = NULL;
                             this_thread.info->query_len = 0;
 
-                            // TODO: Perhaps the rest of the stuff should be
-                            // TODO: copied as well.
-                            info->operation = preparable_info->operation;
+                            info->prepare_operation = preparable_info->operation;
 
                             info_free(preparable_info);
                         }
@@ -2923,6 +2923,34 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
     return name;
 }
 
+static qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
+{
+    QC_TRACE();
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    QC_SQLITE_INFO* info = get_query_info(query);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            op = info->prepare_operation;
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(query, "cannot report the operation of a prepared statement");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+
+    return op;
+}
+
 /**
  * EXPORTS
  */
@@ -2947,6 +2975,7 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
     qc_sqlite_get_prepare_name,
+    qc_sqlite_get_prepare_operation,
 };
 
 
