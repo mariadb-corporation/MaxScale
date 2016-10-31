@@ -1033,6 +1033,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                         router->master_state = BLRM_SLAVE_STOPPED;
 
                         spinlock_release(&router->lock);
+
+                        /*
+                         * The binlog server has just been configured
+                         * master.ini file written in router->binlogdir.
+                         * Now create the binlogfile specified in MASTER_LOG_FILE
+                         */
+
+                        if (blr_file_new_binlog(router, router->binlog_name))
+                        {
+                            MXS_INFO("%s: 'master.ini' created, binlog file '%s' created", router->service->name, router->binlog_name);
+                        }
                     }
 
                     if (!router->trx_safe)
