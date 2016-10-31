@@ -166,7 +166,7 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
                 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
          char *data = (char *)&packet[5];
          char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
-         char *qtypestr = qc_get_qtype_str(qtype);
+         char *qtypestr = qc_typemask_to_string(qtype);
          MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
            (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
            (rses->rses_transaction_active ? "[open]" : "[not open]"),
@@ -221,7 +221,7 @@ handle_target_is_all(route_target_t route_target,
 
         /* NOTE: modutil_get_query is MySQL specific */
         char *query_str = modutil_get_query(querybuf);
-        char *qtype_str = qc_get_qtype_str(qtype);
+        char *qtype_str = qc_typemask_to_string(qtype);
 
         /* NOTE: packet_type is MySQL specific */
         MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "

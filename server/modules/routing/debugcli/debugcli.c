@@ -57,7 +57,7 @@ static  void   closeSession(ROUTER *instance, void *router_session);
 static  void   freeSession(ROUTER *instance, void *router_session);
 static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static  void   diagnostics(ROUTER *instance, DCB *dcb);
-static  int    getCapabilities ();
+static  uint64_t getCapabilities ();
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -333,7 +333,7 @@ diagnostics(ROUTER *instance, DCB *dcb)
     return; /* Nothing to do currently */
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return 0;
 }

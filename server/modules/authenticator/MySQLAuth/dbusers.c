@@ -42,7 +42,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
 #include <maxscale/users.h>
-#include <maxscale/dbusers.h>
+#include "dbusers.h"
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 #include <maxscale/protocol/mysql.h>
@@ -236,19 +236,6 @@ static bool host_matches_singlechar_wildcard(const char* user, const char* wild)
 }
 
 /**
- * Load the user/passwd form mysql.user table into the service users' hashtable
- * environment.
- *
- * @param service   The current service
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
- */
-int
-load_mysql_users(SERV_LISTENER *listener)
-{
-    return get_users(listener, listener->users);
-}
-
-/**
  * Replace the user/passwd form mysql.user table into the service users' hashtable
  * environment.
  * The replacement is succesful only if the users' table checksums differ
@@ -292,45 +279,19 @@ replace_mysql_users(SERV_LISTENER *listener)
         return i;
     }
 
-     USERS *oldusers = listener->users;
-
-    /**
-     * TODO: Comparing the checksum after loading users is not necessary. We
-     * have already queried the server, allocated memory and done the processing
-     * so comparing if a change was made is pointless since the end result is
-     * always the same. We end up with either the same users or a new set of
-     * users. If the new users would always be taken into use, we'd avoid
-     * the costly task of calculating the diff.
-     *
-     * An improvement to the diff calculation would be to push the calculation
-     * to the backend server. This way the bandwidth usage would be minimized
-     * and the backend server would tell us if we need to query for more data.
-     */
-    if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum,
-                                   SHA_DIGEST_LENGTH) == 0)
-    {
-        /* same data, nothing to do */
-        MXS_DEBUG("%lu [replace_mysql_users] users' tables not switched, checksum is the same",
-                  pthread_self());
-
-        /* free the new table */
-        users_free(newusers);
-        i = 0;
-    }
-    else
-    {
-        /* replace the service with effective new data */
-        MXS_DEBUG("%lu [replace_mysql_users] users' tables replaced, checksum differs",
-                  pthread_self());
-        listener->users = newusers;
-    }
+     /** TODO: Figure out a way to create a checksum function in the backend server
+      * so that we can avoid querying the complete list of users every time we
+      * need to refresh the users */
+    MXS_DEBUG("%lu [replace_mysql_users] users' tables replaced", pthread_self());
+    USERS *oldusers = listener->users;
+    listener->users = newusers;
 
     spinlock_release(&listener->lock);
 
     /* free old resources */
     resource_free(oldresources);
 
-    if (i && oldusers)
+    if (oldusers)
     {
         /* free the old table */
         users_free(oldusers);
@@ -1238,7 +1199,6 @@ get_users(SERV_LISTENER *listener, USERS *users)
                              MYSQL_PASSWORD_LEN +
                              sizeof(char) +
                              MYSQL_DATABASE_MAXLEN;
-    int dbnames = 0;
     int db_grants = 0;
     char dbnm[MYSQL_DATABASE_MAXLEN + 1];
     bool anon_user = false;
@@ -1493,7 +1453,7 @@ get_users(SERV_LISTENER *listener, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        dbnames = get_databases(listener, con);
+        ss_debug(int dbnames =) get_databases(listener, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }

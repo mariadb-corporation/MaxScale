@@ -142,6 +142,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
      */
     session->state = SESSION_STATE_READY;
 
+    session->trx_state = SESSION_TRX_INACTIVE;
+    session->autocommit = true;
     /*
      * Only create a router session if we are not the listening
      * DCB or an internal DCB. Creating a router session may create a connection to a
@@ -1061,3 +1063,34 @@ sessionGetList(SESSIONLISTFILTER filter)
 }
 /*lint +e429 */
 
+session_trx_state_t session_get_trx_state(const SESSION* ses)
+{
+    return ses->trx_state;
+}
+
+session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state)
+{
+    session_trx_state_t prev_state = ses->trx_state;
+
+    ses->trx_state = new_state;
+
+    return prev_state;
+}
+
+const char* session_trx_state_to_string(session_trx_state_t state)
+{
+    switch (state)
+    {
+    case SESSION_TRX_INACTIVE:
+        return "SESSION_TRX_INACTIVE";
+    case SESSION_TRX_ACTIVE:
+        return "SESSION_TRX_ACTIVE";
+    case SESSION_TRX_READ_ONLY:
+        return "SESSION_TRX_READ_ONLY";
+    case SESSION_TRX_READ_WRITE:
+        return "SESSION_TRX_READ_WRITE";
+    }
+
+    MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);
+    return "UNKNOWN";
+}

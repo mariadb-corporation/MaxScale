@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_GW_AUTHENTICATOR_H
-#define _MAXSCALE_GW_AUTHENTICATOR_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -72,7 +70,7 @@ struct servlistener;
  *      destroy         Destroy the unique DCB data returned by the `create`
  *                      entry point.
  *
- *      loadUsers       Load or update authenticator user data
+ *      loadusers       Load or update authenticator user data
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -102,7 +100,8 @@ typedef struct gw_authenticator
 
 /** Return values for the loadusers entry point */
 #define MXS_AUTH_LOADUSERS_OK    0 /**< Users loaded successfully */
-#define MXS_AUTH_LOADUSERS_ERROR 1 /**< Failed to load users */
+#define MXS_AUTH_LOADUSERS_ERROR 1 /**< Temporary error, service is started */
+#define MXS_AUTH_LOADUSERS_FATAL 2 /**< Fatal error, service is not started */
 
 /**
  * Authentication states
@@ -136,9 +135,6 @@ typedef enum
 
 
 bool authenticator_init(void **instance, const char *authenticator, const char *options);
-char* get_default_authenticator(const char *protocol);
+const char* get_default_authenticator(const char *protocol);
 
 MXS_END_DECLS
-
-#endif /* GW_AUTHENTICATOR_H */
-

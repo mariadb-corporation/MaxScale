@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_CONFIG_H
-#define _MAXSCALE_CONFIG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -31,10 +29,9 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <limits.h>
 #include <sys/utsname.h>
-#include <stdint.h>
 #include <openssl/sha.h>
-#include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS
 
@@ -132,31 +129,31 @@ typedef struct
 } GATEWAY_CONF;
 
 
-char*               config_clean_string_list(char* str);
-CONFIG_PARAMETER*   config_clone_param(CONFIG_PARAMETER* param);
+char*               config_clean_string_list(const char* str);
+CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
 void                config_enable_feedback_task(void);
 void                config_disable_feedback_task(void);
 unsigned long       config_get_gateway_id(void);
 GATEWAY_CONF*       config_get_global_options();
 CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
-config_param_type_t config_get_paramtype(CONFIG_PARAMETER* param);
-bool                config_get_valint(int*                val,
-                                      CONFIG_PARAMETER*   param,
-                                      const char*         name, /*< if NULL examine current param only */
+config_param_type_t config_get_paramtype(const CONFIG_PARAMETER* param);
+bool                config_get_valint(int* val,
+                                      const CONFIG_PARAMETER* param,
+                                      const char* name, /*< if NULL examine current param only */
                                       config_param_type_t ptype);
-bool                config_get_valbool(bool*               val,
-                                       CONFIG_PARAMETER*   param,
-                                       const char*         name, /*< if NULL examine current param only */
+bool                config_get_valbool(bool* val,
+                                       const CONFIG_PARAMETER* param,
+                                       const char* name, /*< if NULL examine current param only */
                                        config_param_type_t ptype);
-bool                config_get_valtarget(target_t*           val,
-                                         CONFIG_PARAMETER*   param,
-                                         const char*         name, /*< if NULL examine current param only */
+bool                config_get_valtarget(target_t* val,
+                                         const CONFIG_PARAMETER* param,
+                                         const char* name, /*< if NULL examine current param only */
                                          config_param_type_t ptype);
-bool                config_load(char *);
+bool                config_load(const char *);
 unsigned int        config_nbpolls();
-double              config_percentage_value(char *str);
+double              config_percentage_value(const char *str);
 unsigned int        config_pollsleep();
-int                 config_reload();
+bool                config_reload();
 bool                config_set_qualified_param(CONFIG_PARAMETER* param,
                                                void* val,
                                                config_param_type_t type);
@@ -166,5 +163,3 @@ void                free_config_parameter(CONFIG_PARAMETER* p1);
 bool                is_internal_service(const char *router);
 
 MXS_END_DECLS
-
-#endif

@@ -101,10 +101,9 @@ static  void    errorReply(ROUTER  *instance,
                            error_action_t     action,
                            bool    *succp);
 
-static  int getCapabilities();
+static uint64_t getCapabilities(void);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
-static int blr_set_service_mysql_user(SERVICE *service);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
@@ -579,18 +578,6 @@ createInstance(SERVICE *service, char **options)
         }
     }
 
-    /* Allocate dbusers for this router here instead of serviceStartPort() */
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        if ((port->users = mysql_users_alloc()) == NULL)
-        {
-            MXS_ERROR("%s: Error allocating dbusers in createInstance",
-                      inst->service->name);
-            free_instance(inst);
-            return NULL;
-        }
-    }
-
     /* Dynamically allocate master_host server struct, not written in any cnf file */
     if (service->dbref == NULL)
     {
@@ -675,19 +662,10 @@ createInstance(SERVICE *service, char **options)
                       inst->service->name, inst->binlogdir);
         }
 
-        /* Set service user or load db users */
-        blr_set_service_mysql_user(inst->service);
-
     }
     else
     {
         inst->master_state = BLRM_UNCONNECTED;
-
-        /* Try loading dbusers */
-        if (inst->service->ports)
-        {
-            blr_load_dbusers(inst);
-        }
     }
 
     /**
@@ -937,9 +915,8 @@ static void freeSession(ROUTER* router_instance,
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router->stats.n_slaves, -1);
+    ss_debug(int prev_val = ) atomic_add(&router->stats.n_slaves, -1);
     ss_dassert(prev_val > 0);
 
     /*
@@ -1790,9 +1767,9 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 }
 
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
-    return (int)(RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_USERS_INIT);
+    return RCAP_TYPE_NO_RSESSION;
 }
 
 /**
@@ -2134,140 +2111,6 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
     }
 
     return 1;
-}
-
-/**
- * Add the service user to mysql dbusers (service->users)
- * via mysql_users_alloc and add_mysql_users_with_host_ipv4
- * User is added for '%' and 'localhost' hosts
- *
- * @param service   The current service
- * @return      0 on success, 1 on failure
- */
-static int
-blr_set_service_mysql_user(SERVICE *service)
-{
-    char *dpwd = NULL;
-    char *newpasswd = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        MXS_ERROR("failed to get service user details for service %s",
-                  service->name);
-
-        return 1;
-    }
-
-    dpwd = decryptPassword(service->credentials.authdata);
-
-    if (!dpwd)
-    {
-        MXS_ERROR("decrypt password failed for service user %s, service %s",
-                  service_user,
-                  service->name);
-
-        return 1;
-    }
-
-    newpasswd = create_hex_sha1_sha1_passwd(dpwd);
-
-    if (!newpasswd)
-    {
-        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s",
-                  service_user);
-
-        MXS_FREE(dpwd);
-        return 1;
-    }
-
-    /** Add the service user for % and localhost to all listeners so that
-     * it can always be used. */
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                       "%", newpasswd, "Y", "");
-        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                       "localhost", newpasswd, "Y", "");
-    }
-
-    MXS_FREE(newpasswd);
-    MXS_FREE(dpwd);
-
-    return 0;
-}
-
-/**
- * Load mysql dbusers into (service->users)
- *
- * @param router    The router instance
- * @return              -1 on failure, 0 for no users found, > 0 for found users
- */
-static int
-blr_load_dbusers(const ROUTER_INSTANCE *router)
-{
-    int loaded_total = 0;
-    SERVICE *service;
-    char path[PATH_MAX];
-    service = router->service;
-
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
-
-        if (mxs_mkdir_all(path, 0775))
-        {
-            strcat(path, BLR_DBUSERS_FILE);
-        }
-
-        /* Try loading dbusers from configured backends */
-        int loaded = load_mysql_users(port);
-
-        if (loaded < 0)
-        {
-            MXS_ERROR("Unable to load users for service %s", service->name);
-
-            /* Try loading authentication data from file cache */
-            loaded = dbusers_load(port->users, path);
-
-            if (loaded != -1)
-            {
-                MXS_ERROR("Service %s, Listener %s, Using cached credential information file %s.",
-                          service->name, port->name, path);
-            }
-            else
-            {
-                MXS_ERROR("Service %s, Listener %s, Unable to read cache credential"
-                          " information from %s. No database user added to service users table.",
-                          service->name, port->name, path);
-            }
-        }
-        else
-        {
-            /* don't update cache if no user was loaded */
-            if (loaded == 0)
-            {
-                MXS_ERROR("Service %s, Listener %s: failed to load any user information."
-                          " Authentication will probably fail as a result.",
-                          service->name, port->name);
-            }
-            else
-            {
-                /* update cached data */
-                dbusers_save(port->users, path);
-            }
-        }
-        loaded_total += loaded;
-    }
-
-    /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
-     * This way MaxScale could try reloading users' just after startup
-     */
-    service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-    service->rate_limit.nloads = 1;
-
-    return loaded_total;
 }
 
 /**

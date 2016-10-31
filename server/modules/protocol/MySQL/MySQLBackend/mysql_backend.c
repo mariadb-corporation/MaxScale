@@ -794,7 +794,7 @@ gw_read_and_write(DCB *dcb)
         dcb->session->client_dcb != NULL &&
         dcb->session->client_dcb->state == DCB_STATE_POLLING &&
         (session->router_session ||
-         session->service->router->getCapabilities() & (int)RCAP_TYPE_NO_RSESSION))
+         service_get_capabilities(session->service) & RCAP_TYPE_NO_RSESSION))
     {
         MySQLProtocol *client_protocol = (MySQLProtocol *)dcb->session->client_dcb->protocol;
         if (client_protocol != NULL)

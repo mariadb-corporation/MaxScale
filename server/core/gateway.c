@@ -34,59 +34,45 @@
  * 19/01/16     Markus Makela           Set cwd to log directory
  * @endverbatim
  */
-#define _XOPEN_SOURCE 700
-#define OPENSSL_THREAD_DEFINES
-#include <my_config.h>
 
-#include <openssl/opensslconf.h>
-#if defined(OPENSSL_THREADS)
-#define HAVE_OPENSSL_THREADS 1
-#else
-#define HAVE_OPENSSL_THREADS 0
-#endif
-
+#include <maxscale/cdefs.h>
+#include <execinfo.h>
 #include <ftw.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
-#include <time.h>
 #include <getopt.h>
 #include <pwd.h>
-#include <maxscale/service.h>
-#include <maxscale/server.h>
-#include <maxscale/dcb.h>
-#include <maxscale/session.h>
-#include <maxscale/modules.h>
-#include <maxscale/config.h>
-#include <maxscale/poll.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/service.h>
-#include <maxscale/thread.h>
-#include <maxscale/memlog.h>
-
 #include <stdlib.h>
-#include <unistd.h>
-#include <mysql.h>
-#include <maxscale/monitor.h>
-#include <maxscale/version.h>
-#include <maxscale/maxscale.h>
-
+#include <string.h>
+#include <strings.h>
+#include <sys/file.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include <maxscale/utils.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
-
-#include <execinfo.h>
-
-#include <ini.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>
-#include <sys/file.h>
-#include <maxscale/statistics.h>
+#include <time.h>
+#include <unistd.h>
+#include <openssl/opensslconf.h>
+#include <mysql.h>
+#include <ini.h>
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
 #include <maxscale/gwdirs.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/memlog.h>
+#include <maxscale/modules.h>
+#include <maxscale/monitor.h>
+#include <maxscale/poll.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/statistics.h>
+#include <maxscale/thread.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -94,6 +80,12 @@
 /** for procname */
 #if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
+#endif
+
+#if defined(OPENSSL_THREADS)
+#define HAVE_OPENSSL_THREADS 1
+#else
+#define HAVE_OPENSSL_THREADS 0
 #endif
 
 extern char *program_invocation_name;
@@ -192,6 +184,7 @@ static bool change_cwd();
 void shutdown_server();
 static void log_exit_status();
 static bool daemonize();
+static bool sniff_configuration(const char* filepath);
 
 /** SSL multi-threading functions and structures */
 
@@ -1704,31 +1697,11 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if ((ini_rval = ini_parse(cnf_file_path, cnf_preparser, NULL)) != 0)
+    if (!sniff_configuration(cnf_file_path))
     {
-        char errorbuffer[STRING_BUFFER_SIZE];
-
-        if (ini_rval > 0)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Error on line %d.", ini_rval);
-        }
-        else if (ini_rval == -1)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Failed to open file.");
-        }
-        else
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Memory allocation failed.");
-        }
-
-        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
 
     /** Use the cache dir for the mysql folder of the embedded library */
     snprintf(mysql_home, PATH_MAX, "%s/mysql", get_cachedir());
@@ -1748,16 +1721,6 @@ int main(int argc, char **argv)
                     "Error: Cannot create log directory: %s\n",
                     default_logdir);
             goto return_main;
-        }
-
-        if (!(*syslog_enabled))
-        {
-            printf("Syslog logging is disabled.\n");
-        }
-
-        if (!(*maxlog_enabled))
-        {
-            printf("MaxScale logging is disabled.\n");
         }
 
         mxs_log_set_syslog_enabled(*syslog_enabled);
@@ -1824,6 +1787,11 @@ int main(int argc, char **argv)
                 get_datadir(),
                 get_libdir(),
                 get_cachedir());
+    }
+
+    if (!(*syslog_enabled) && !(*maxlog_enabled))
+    {
+        fprintf(stderr, "warning: Both MaxScale and Syslog logging disabled.\n");
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path);
@@ -2699,4 +2667,47 @@ static bool daemonize(void)
         exit(1);
     }
     return false;
+}
+
+/**
+ * Sniffs the configuration file, primarily for various directory paths,
+ * so that certain settings take effect immediately.
+ *
+ * @param filepath The path of the configuration file.
+ *
+ * @return True, if the sniffing succeeded, false otherwise.
+ */
+static bool sniff_configuration(const char* filepath)
+{
+    int rv = ini_parse(filepath, cnf_preparser, NULL);
+
+    if (rv != 0)
+    {
+        const char FORMAT_SYNTAX[] =
+            "Error: Failed to pre-parse configuration file %s. Error on line %d.";
+        const char FORMAT_OPEN[] =
+            "Error: Failed to pre-parse configuration file %s. Failed to open file.";
+        const char FORMAT_MALLOC[] =
+            "Error: Failed to pre-parse configuration file %s. Memory allocation failed.";
+
+        // We just use the largest one.
+        char errorbuffer[sizeof(FORMAT_MALLOC) + strlen(filepath) + UINTLEN(abs(rv))];
+
+        if (rv > 0)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+        }
+        else if (rv == -1)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_OPEN, filepath);
+        }
+        else
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
+        }
+
+        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
+    }
+
+    return rv == 0;
 }

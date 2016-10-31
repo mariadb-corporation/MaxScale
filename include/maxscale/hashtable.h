@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_HASTABLE_H
-#define _MAXSCALE_HASTABLE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -153,5 +151,3 @@ extern void* hashtable_item_strdup(const void *str);
 extern int hashtable_item_strhash(const void *str);
 
 MXS_END_DECLS
-
-#endif

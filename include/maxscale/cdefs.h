@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_CDEFS_H
-#define _MAXSCALE_CDEFS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -34,6 +32,9 @@
 # define MXS_BEGIN_DECLS
 # define MXS_END_DECLS
 #endif
+
+#define _XOPEN_SOURCE 700
+#define OPENSSL_THREAD_DEFINES
 
 /**
  * Define intended for use with strerror.
@@ -73,5 +74,3 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#endif

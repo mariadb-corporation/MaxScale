@@ -117,17 +117,18 @@ ostream& operator << (ostream& out, qc_parse_result_t x)
 
 GWBUF* create_gwbuf(const string& s)
 {
-    size_t len = s.length() + 1;
-    size_t gwbuf_len = len + MYSQL_HEADER_LEN + 1;
+    size_t len = s.length();
+    size_t payload_len = len + 1;
+    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
 
     GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
 
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (len >> 16);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
+    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
     *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), s.length() + 1);
+    memcpy((char*)GWBUF_DATA(gwbuf) + 5, s.c_str(), len);
 
     return gwbuf;
 }
@@ -353,7 +354,7 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     if (rv1 == rv2)
     {
-        char* types = qc_types_to_string(rv1);
+        char* types = qc_typemask_to_string(rv1);
         ss << "Ok : " << types;
         free(types);
         success = true;
@@ -384,8 +385,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
             rv2b &= ~(uint32_t)QUERY_TYPE_LOCAL_READ;
         }
 
-        char* types1 = qc_types_to_string(rv1);
-        char* types2 = qc_types_to_string(rv2);
+        char* types1 = qc_typemask_to_string(rv1);
+        char* types2 = qc_typemask_to_string(rv2);
 
         if (rv1b == rv2b)
         {
@@ -813,6 +814,36 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
+bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                              QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_prepare_name      : ";
+
+    char* rv1 = pClassifier1->qc_get_prepare_name(pCopy1);
+    char* rv2 = pClassifier2->qc_get_prepare_name(pCopy2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    if ((!rv1 && !rv2) || (rv1 && rv2 && (strcmp(rv1, rv2) == 0)))
+    {
+        ss << "Ok : " << (rv1 ? rv1 : "NULL");
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: " << (rv1 ? rv1 : "NULL") << " != " << (rv2 ? rv2 : "NULL");
+    }
+
+    report(success, ss.str());
+
+    free(rv1);
+    free(rv2);
+
+    return success;
+}
+
 bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
@@ -831,6 +862,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_affected_fields(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
+    errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
 
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);

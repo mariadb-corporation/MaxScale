@@ -11,6 +11,10 @@
  * Public License.
  */
 
+#ifndef SS_DEBUG
+#define SS_DEBUG
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

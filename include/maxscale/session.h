@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SESSION_H
-#define _MAXSCALE_SESSION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -72,6 +70,34 @@ typedef enum
     SESSION_STATE_FREE,             /*< for all sessions */
     SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } session_state_t;
+
+typedef enum
+{
+    SESSION_TRX_INACTIVE_BIT   = 1, /* 0b0001 */
+    SESSION_TRX_ACTIVE_BIT     = 2, /* 0b0010 */
+    SESSION_TRX_READ_ONLY_BIT  = 4, /* 0b0100 */
+    SESSION_TRX_READ_WRITE_BIT = 8, /* 0b1000 */
+} session_trx_state_bit_t;
+
+typedef enum
+{
+    /*< There is no on-going transaction. */
+    SESSION_TRX_INACTIVE    = SESSION_TRX_INACTIVE_BIT,
+    /*< A transaction is active. */
+    SESSION_TRX_ACTIVE      = SESSION_TRX_ACTIVE_BIT,
+    /*< An explicit READ ONLY transaction is active. */
+    SESSION_TRX_READ_ONLY   = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
+    /*< An explicit READ WRITE transaction is active. */
+    SESSION_TRX_READ_WRITE  = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT)
+} session_trx_state_t;
+
+/**
+ * Convert transaction state to string representation.
+ *
+ * @param state A transaction state.
+ * @return String representation of the state.
+ */
+const char* session_trx_state_to_string(session_trx_state_t state);
 
 /**
  * The downstream element in the filter chain. This may refer to
@@ -150,6 +176,8 @@ typedef struct session
     UPSTREAM        tail;             /*< The tail of the filter chain */
     int             refcount;         /*< Reference count on the session */
     bool            ses_is_child;     /*< this is a child session */
+    session_trx_state_t trx_state;    /*< The current transaction state. */
+    bool            autocommit;       /*< Whether autocommit is on. */
     skygw_chk_t     ses_chk_tail;
 } SESSION;
 
@@ -206,6 +234,122 @@ RESULTSET *sessionGetList(SESSIONLISTFILTER);
 void process_idle_sessions();
 void enable_session_timeouts();
 
-MXS_END_DECLS
+/**
+ * Get the transaction state of the session.
+ *
+ * Note that this tells only the state of @e explicitly started transactions.
+ * That is, if @e autocommit is OFF, which means that there is always an
+ * active transaction that is ended with an explicit COMMIT or ROLLBACK,
+ * at which point a new transaction is started, this function will still
+ * return SESSION_TRX_INACTIVE, unless a transaction has explicitly been
+ * started with START TRANSACTION.
+ *
+ * Likewise, if @e autocommit is ON, which means that every statement is
+ * executed in a transaction of its own, this will return false, unless a
+ * transaction has explicitly been started with START TRANSACTION.
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @param ses The SESSION object.
+ * @return The transaction state.
+ */
+session_trx_state_t session_get_trx_state(const SESSION* ses);
 
-#endif
+/**
+ * Set the transaction state of the session.
+ *
+ * NOTE: Only the protocol object may call this.
+ *
+ * @param ses       The SESSION object.
+ * @param new_state The new transaction state.
+ *
+ * @return The previous transaction state.
+ */
+session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
+
+/**
+ * Tells whether an explicit transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if a transaction is active, false otherwise.
+ */
+static inline bool session_trx_is_active(const SESSION* ses)
+{
+    return ses->trx_state & SESSION_TRX_ACTIVE_BIT;
+}
+
+/**
+ * Tells whether an explicit READ ONLY transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if an explicit READ ONLY transaction is active,
+ *         false otherwise.
+ */
+static inline bool session_trx_is_read_only(const SESSION* ses)
+{
+    return ses->trx_state == SESSION_TRX_READ_ONLY;
+}
+
+/**
+ * Tells whether an explicit READ WRITE transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if an explicit READ WRITE  transaction is active,
+ *         false otherwise.
+ */
+static inline bool session_trx_is_read_write(const SESSION* ses)
+{
+    return ses->trx_state == SESSION_TRX_READ_WRITE;
+}
+
+/**
+ * Tells whether autocommit is ON or not.
+ *
+ * Note that the returned value effectively only tells the last value
+ * of the statement "set autocommit=...".
+ *
+ * That is, if the statement "set autocommit=1" has been executed, then
+ * even if a transaction has been started, which implicitly will cause
+ * autocommit to be set to 0 for the duration of the transaction, this
+ * function will still return true.
+ *
+ * Note also that by default autocommit is ON.
+ *
+ * @see session_get_trx_state
+ *
+ * @return True if autocommit has been set ON, false otherwise.
+ */
+static inline bool session_is_autocommit(const SESSION* ses)
+{
+    return ses->autocommit;
+}
+
+/**
+ * Sets the autocommit state of the session.
+ *
+ * NOTE: Only the protocol object may call this.
+ *
+ * @param enable True if autocommit is enabled, false otherwise.
+ * @return The previous state.
+ */
+static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
+{
+    bool prev_autocommit = ses->autocommit;
+    ses->autocommit = autocommit;
+    return prev_autocommit;
+}
+
+MXS_END_DECLS

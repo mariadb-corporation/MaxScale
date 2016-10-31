@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_PLATFORM_H
-#define _MAXSCALE_PLATFORM_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -54,5 +52,3 @@ MXS_BEGIN_DECLS
 #endif // __cplusplus
 
 MXS_END_DECLS
-
-#endif // _PLATFORM_H

@@ -92,7 +92,7 @@ static route_target_t get_shard_route_target(qc_query_type_t qtype,
                                              bool            trx_active,
                                              HINT*           hint);
 
-static int getCapabilities();
+static uint64_t getCapabilities(void);
 
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
@@ -2007,7 +2007,7 @@ static int routeQuery(ROUTER* instance,
                          MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);
-        char* qtypestr = qc_get_qtype_str(qtype);
+        char* qtypestr = qc_typemask_to_string(qtype);
 
         MXS_INFO("> Cmd: %s, type: %s, "
                  "stmt: %s%s %s",
@@ -3578,17 +3578,14 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
     size_t buflen = GWBUF_LENGTH(buf);
     char* querystr;
     char* startpos = (char *)&packet[5];
-    BACKEND* b;
-    backend_type_t be_type;
-    DCB* dcb;
 
     CHK_BACKEND_REF(bref);
-    b = bref->bref_backend;
+    ss_debug(BACKEND *b = bref->bref_backend);
     CHK_BACKEND(b);
-    dcb = bref->bref_dcb;
+    ss_debug(DCB *dcb = bref->bref_dcb);
     CHK_DCB(dcb);
 
-    be_type = BACKEND_TYPE(b);
+    ss_debug(backend_type_t be_type = BACKEND_TYPE(b));
 
     if (GWBUF_IS_TYPE_MYSQL(buf))
     {
@@ -3642,7 +3639,7 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
 /**
  * Return RCAP_TYPE_STMT_INPUT.
  */
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

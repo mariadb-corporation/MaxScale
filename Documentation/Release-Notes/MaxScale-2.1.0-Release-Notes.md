@@ -8,7 +8,19 @@ release 2.0.X.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
-## Changes Features
+## Changed Features
+
+### Configuration Files
+
+From 2.1.0 onwards MariaDB MaxScale supports hierarchical configuration
+files. When invoked with a configuration file, e.g. `maxscale.cnf`, MariaDB
+MaxScale looks for a directory `maxscale.cnf.d` in the same directory as the
+configuration file, and reads all `.cnf` files it finds in that directory
+hierarchy. All other files will be ignored.
+
+Please see the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md#configuration)
+for details.
 
 ### Logging
 
@@ -46,6 +58,11 @@ For more information about this configuration entry, please see
 [Global Settings](../Getting-Started/Configuration-Guide.md#global-settings).
 
 ### User data cache
+
+The user data cache stores the cached credentials that are used by some router
+modules. In 2.1.0, the authenticator modules are responsible for the persisting
+of the user data cache. Currently, only the MySQLAuth module implements user
+data caching.
 
 The user data loaded from the backend databases is now stored on a per listener
 basis instead of a per service basis. In earlier versions, each service had its own

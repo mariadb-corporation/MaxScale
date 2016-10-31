@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SERVICE_H
-#define _MAXSCALE_SERVICE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -114,6 +112,15 @@ typedef struct server_ref_t
  */
 #define SERVICE_PARAM_UNINIT -1
 
+/* Refresh rate limits for load users from database */
+#define USERS_REFRESH_TIME         30           /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_MAX_PER_TIME 4    /* Max number of load calls within the time interval */
+
+/** Default timeout values used by the connections which fetch user authentication data */
+#define DEFAULT_AUTH_CONNECT_TIMEOUT 3
+#define DEFAULT_AUTH_READ_TIMEOUT    1
+#define DEFAULT_AUTH_WRITE_TIMEOUT   2
+
 /**
  * Defines a service within the gateway.
  *
@@ -158,6 +165,7 @@ typedef struct service
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /*< If starting of the service should be retried later */
     bool log_auth_warnings;            /*< Log authentication failures and warnings */
+    uint64_t capabilities;             /*< The capabilities of the service. */
 } SERVICE;
 
 typedef enum count_spec_t
@@ -228,6 +236,17 @@ extern RESULTSET *serviceGetList();
 extern RESULTSET *serviceGetListenerList();
 extern bool service_all_services_have_listeners();
 
-MXS_END_DECLS
+/**
+ * Get the capabilities of the servive.
+ *
+ * The capabilities of a service are the union of the capabilities of
+ * its router and all filters.
+ *
+ * @return The service capabilities.
+ */
+static inline uint64_t service_get_capabilities(const SERVICE *service)
+{
+    return service->capabilities;
+}
 
-#endif
+MXS_END_DECLS

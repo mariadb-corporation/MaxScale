@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_LISTENER_H
-#define _MAXSCALE_LISTENER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -70,5 +68,3 @@ void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key
 int listener_init_SSL(SSL_LISTENER *ssl_listener);
 
 MXS_END_DECLS
-
-#endif

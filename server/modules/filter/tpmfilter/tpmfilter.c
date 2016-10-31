@@ -81,6 +81,7 @@ static  void    setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream
 static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 static FILTER_OBJECT MyObject =
 {
@@ -93,6 +94,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     clientReply,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -392,10 +394,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (my_session->active)
     {
-        if (queue->next != NULL)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
             my_session->query_end = false;
@@ -556,4 +554,14 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     if (my_instance->query_delimiter)
         dcb_printf(dcb, "\t\tLogging with query delimiter %s.\n",
                    my_instance->query_delimiter);
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

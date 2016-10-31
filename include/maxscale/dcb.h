@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_DCB_H
-#define _MAXSCALE_DCB_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -375,5 +373,3 @@ void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
 #define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
 
 MXS_END_DECLS
-
-#endif /*  _DCB_H */

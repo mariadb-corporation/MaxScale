@@ -63,6 +63,7 @@ static  void   freeSession(FILTER *instance, void *session);
 static  void   setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static  int    routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  void   diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 
 static FILTER_OBJECT MyObject =
@@ -76,6 +77,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     NULL,
     diagnostic,
+    getCapabilities,
 };
 
 #define CCR_DEFAULT_TIME 60
@@ -331,11 +333,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue))
     {
-        if (queue->next)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
-
         /**
          * Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement.
@@ -411,4 +408,14 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     dcb_printf(dcb, "\tNo. of data modifications: %d\n", my_instance->stats.n_modified);
     dcb_printf(dcb, "\tNo. of hints added based on count: %d\n", my_instance->stats.n_add_count);
     dcb_printf(dcb, "\tNo. of hints added based on time: %d\n",  my_instance->stats.n_add_time);
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

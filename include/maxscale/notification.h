@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_NOTIFICATION_H
-#define _MAXSCALE_NOTIFICATION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -64,5 +62,3 @@ extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 extern FEEDBACK_CONF * config_get_feedback_data();
 
 MXS_END_DECLS
-
-#endif

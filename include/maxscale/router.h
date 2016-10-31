@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_ROUTER_H
-#define _MAXSCALE_ROUTER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -30,6 +28,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/routing.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/buffer.h>
@@ -82,7 +81,7 @@ typedef struct router_object
                            DCB*           backend_dcb,
                            error_action_t action,
                            bool*          succp);
-    int     (*getCapabilities)();
+    uint64_t (*getCapabilities)(void);
 } ROUTER_OBJECT;
 
 /**
@@ -90,21 +89,22 @@ typedef struct router_object
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define ROUTER_VERSION  { 1, 0, 0 }
+#define ROUTER_VERSION  { 2, 0, 0 }
 
 /**
- * Router capability type. Indicates what kind of input router accepts.
+ * Specifies capabilities specific for routers. Common capabilities
+ * are defined by @c routing_capability_t.
+ *
+ * @see routing_capability_t
+ *
+ * @note The values of the capabilities here *must* be between 0x00010000
+ *       and 0x80000000, that is, bits 16 to 31.
  */
-typedef enum router_capability_t
+typedef enum router_capability
 {
-    RCAP_TYPE_UNDEFINED     = 0x00,
-    RCAP_TYPE_STMT_INPUT    = 0x01, /**< Statement per buffer */
-    RCAP_TYPE_PACKET_INPUT  = 0x02, /**< Data as it was read from DCB */
-    RCAP_TYPE_NO_RSESSION   = 0x04, /**< Router does not use router sessions */
-    RCAP_TYPE_NO_USERS_INIT = 0x08  /**< Prevent the loading of authenticator
-                                       users when the service is started */
+    RCAP_TYPE_NO_RSESSION   = 0x00010000, /**< Router does not use router sessions */
+    RCAP_TYPE_NO_USERS_INIT = 0x00020000, /**< Prevent the loading of authenticator
+                                             users when the service is started */
 } router_capability_t;
 
 MXS_END_DECLS
-
-#endif

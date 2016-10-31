@@ -27,7 +27,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/mysql_binlog.h>
 #include <maxscale/users.h>
-#include <maxscale/dbusers.h>
 #include <avro.h>
 #include <cdc.h>
 #include <maxscale/pcre2.h>

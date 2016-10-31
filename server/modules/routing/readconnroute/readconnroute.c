@@ -111,7 +111,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, error_action_t action, bool *succp);
-static int getCapabilities();
+static uint64_t getCapabilities(void);
 
 
 /** The module object definition */
@@ -561,8 +561,6 @@ newSession(ROUTER *instance, SESSION *session)
         }
     }
 
-    client_rses->rses_capabilities = RCAP_TYPE_PACKET_INPUT;
-
     /*
      * We now have the server with the least connections.
      * Bump the connection count for this server
@@ -635,9 +633,8 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses =
         (ROUTER_CLIENT_SES *) router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
+    ss_debug(int prev_val = ) atomic_add(&router_cli_ses->backend->current_connection_count, -1);
     ss_dassert(prev_val > 0);
 
     spinlock_acquire(&router->lock);
@@ -987,9 +984,9 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
     spinlock_release(&rses->rses_lock);
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_PACKET_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /********************************

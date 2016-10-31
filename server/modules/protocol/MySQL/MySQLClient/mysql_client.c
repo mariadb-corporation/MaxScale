@@ -56,12 +56,13 @@
 #include <sys/stat.h>
 #include <maxscale/modutil.h>
 #include <netinet/tcp.h>
-
+#include <maxscale/query_classifier.h>
 #include <maxscale/gw_authenticator.h>
+#include <maxscale/session.h>
 
- /* @see function load_module in load_utils.c for explanation of the following
-  * lint directives.
- */
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+*/
 /*lint -e14 */
 MODULE_INFO info =
 {
@@ -85,12 +86,12 @@ static int gw_client_hangup_event(DCB *dcb);
 static char *gw_default_auth();
 static int gw_connection_limit(DCB *dcb, int limit);
 static int MySQLSendHandshake(DCB* dcb);
-static int route_by_statement(SESSION *, GWBUF **);
-static void mysql_client_auth_error_handling(DCB *dcb, int auth_val);
+static int route_by_statement(SESSION *, uint64_t, GWBUF **);
+static void mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number);
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
-static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
+static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int);
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 static void gw_process_one_new_client(DCB *client_dcb);
 
@@ -185,7 +186,7 @@ int MySQLSendHandshake(DCB* dcb)
     uint8_t mysql_scramble_len = 21;
     uint8_t mysql_filler_ten[10];
     /* uint8_t mysql_last_byte = 0x00; not needed */
-    char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
+    char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
     char *version_string;
     int len_version_string = 0;
     int id_num;
@@ -249,7 +250,7 @@ int MySQLSendHandshake(DCB* dcb)
     gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
 
     // write packet number, now is 0
-    mysql_packet_header[3]= mysql_packet_id;
+    mysql_packet_header[3] = mysql_packet_id;
     memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
 
     // current buffer pointer
@@ -427,19 +428,19 @@ int gw_read_client_event(DCB* dcb)
          * will be changed to MYSQL_IDLE (see below).
          *
          */
-    case MXS_AUTH_STATE_MESSAGE_READ:
-        /* After this call read_buffer will point to freed data */
-        if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
-            (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
-            (0 != max_bytes && nbytes_read < max_bytes))
-        {
-            spinlock_acquire(&dcb->authlock);
-            dcb->dcb_readqueue = read_buffer;
-            spinlock_release(&dcb->authlock);
-            return 0;
-        }
-        return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
-        break;
+        case MXS_AUTH_STATE_MESSAGE_READ:
+            /* After this call read_buffer will point to freed data */
+            if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
+                                    (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
+                (0 != max_bytes && nbytes_read < max_bytes))
+            {
+                spinlock_acquire(&dcb->authlock);
+                dcb->dcb_readqueue = read_buffer;
+                spinlock_release(&dcb->authlock);
+                return 0;
+            }
+            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+            break;
 
         /**
          *
@@ -448,22 +449,95 @@ int gw_read_client_event(DCB* dcb)
          * result in a call that comes to this section of code.
          *
          */
-    case MXS_AUTH_STATE_COMPLETE:
-        /* After this call read_buffer will point to freed data */
-        return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
-        break;
+        case MXS_AUTH_STATE_COMPLETE:
+            /* After this call read_buffer will point to freed data */
+            return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
+            break;
 
-    case MXS_AUTH_STATE_FAILED:
-        gwbuf_free(read_buffer);
-        return_code = 1;
-        break;
+        case MXS_AUTH_STATE_FAILED:
+            gwbuf_free(read_buffer);
+            return_code = 1;
+            break;
 
-    default:
-        MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
-        break;
+        default:
+            MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
+            break;
     }
 
     return return_code;
+}
+
+/**
+ * @brief Store client connection information into the DCB
+ * @param dcb Client DCB
+ * @param buffer Buffer containing the handshake response packet
+ */
+static void store_client_information(DCB *dcb, GWBUF *buffer)
+{
+    size_t len = gwbuf_length(buffer);
+    uint8_t data[len];
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    MYSQL_session *ses = (MYSQL_session*)dcb->data;
+
+    gwbuf_copy_data(buffer, 0, len, data);
+    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == len ||
+        len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
+
+    proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
+    proto->charset = data[MYSQL_CHARSET_OFFSET];
+
+    if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
+    {
+        strcpy(ses->user, (char*)data + MYSQL_AUTH_PACKET_BASE_SIZE);
+
+        if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+        {
+            /** Client supports default database on connect */
+            size_t userlen = strlen(ses->user) + 1;
+
+            /** Skip the authentication token, it is handled by the authenticators */
+            uint8_t authlen = data[MYSQL_AUTH_PACKET_BASE_SIZE + userlen];
+
+            size_t dboffset = MYSQL_AUTH_PACKET_BASE_SIZE + userlen + authlen + 1;
+
+            if (data[dboffset])
+            {
+                /** Client is connecting with a default database */
+                strcpy(ses->db, (char*)data + dboffset);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Debug check function for authentication packets
+ *
+ * Check that the packet is consistent with how the protocol works and that no
+ * unexpected data is processed.
+ *
+ * @param dcb Client DCB
+ * @param buf Buffer containing packet
+ * @param bytes Number of bytes available
+ */
+static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
+{
+    uint8_t hdr[MYSQL_HEADER_LEN];
+    ss_dassert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
+
+    int buflen = gwbuf_length(buf);
+    int pktlen = MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN;
+
+    if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
+    {
+        /** This is an SSL request packet */
+        ss_dassert(dcb->listener->ssl);
+        ss_dassert(buflen == bytes && pktlen >= buflen);
+    }
+    else
+    {
+        /** Normal packet */
+        ss_dassert(buflen == pktlen);
+    }
 }
 
 /**
@@ -477,9 +551,8 @@ int gw_read_client_event(DCB* dcb)
 static int
 gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
-    ss_debug(uint8_t hdr[MYSQL_HEADER_LEN]);
-    ss_dassert(gwbuf_copy_data(read_buffer, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN &&
-               MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN == gwbuf_length(read_buffer));
+    ss_debug(check_packet(dcb, read_buffer, nbytes_read));
+
     /** Allocate the shared session structure */
     if (dcb->data == NULL && (dcb->data = mysql_session_alloc()) == NULL)
     {
@@ -490,6 +563,19 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     /** Read the client's packet sequence and increment that by one */
     uint8_t next_sequence;
     gwbuf_copy_data(read_buffer, MYSQL_SEQ_OFFSET, 1, &next_sequence);
+
+    if (next_sequence == 1 || (ssl_required_by_dcb(dcb) && next_sequence == 2))
+    {
+        /** This is the first response from the client, read the connection
+         * information and store them in the shared structure. For SSL connections,
+         * this will be packet number two since the first packet will be the
+         * Protocol::SSLRequest packet.
+         *
+         * @see https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::SSLRequest
+         */
+        store_client_information(dcb, read_buffer);
+    }
+
     next_sequence++;
 
     /**
@@ -565,7 +651,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         MXS_AUTH_SSL_INCOMPLETE != auth_val)
     {
         protocol->protocol_auth_state = MXS_AUTH_STATE_FAILED;
-        mysql_client_auth_error_handling(dcb, auth_val);
+        mysql_client_auth_error_handling(dcb, auth_val, next_sequence);
         /**
          * Close DCB and which will release MYSQL_session
          */
@@ -734,7 +820,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
     SESSION *session;
     session_state_t session_state_value;
-    uint8_t capabilities = 0;
+    uint64_t capabilities = 0;
 
     session = dcb->session;
     CHK_SESSION(session);
@@ -751,9 +837,8 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         return 1;
     }
 
-    /** Ask what type of input the router expects */
-    capabilities = session->service->router->getCapabilities(
-        session->service->router_instance, session->router_session);
+    /** Ask what type of input the router/filter chain expects */
+    capabilities = service_get_capabilities(session->service);
 
     /** Update the current protocol command being executed */
     if (!process_client_commands(dcb, nbytes_read, &read_buffer))
@@ -763,7 +848,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
     /** If the router requires statement input or we are still authenticating
      * we need to make sure that a complete SQL packet is read before continuing */
-    if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         uint8_t* data;
         int packet_size;
@@ -790,7 +875,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
  * @return 0 if succeed, 1 otherwise
  */
 static int
-gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
+gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
 {
     SESSION *session = dcb->session;
     uint8_t *payload = GWBUF_DATA(read_buffer);
@@ -801,14 +886,14 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
     /** Reset error handler when routing of the new query begins */
     dcb->dcb_errhandle_called = false;
 
-    if (capabilities & (int)RCAP_TYPE_STMT_INPUT)
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
         /**
          * Feed each statement completely and separately
          * to router. The routing functions return 1 for
          * success or 0 for failure.
          */
-        return_code = route_by_statement(session, &read_buffer) ? 0 : 1;
+        return_code = route_by_statement(session, capabilities, &read_buffer) ? 0 : 1;
 
         if (read_buffer != NULL)
         {
@@ -819,7 +904,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
             spinlock_release(&dcb->authlock);
         }
     }
-    else if (NULL != session->router_session || (capabilities & (int)RCAP_TYPE_NO_RSESSION))
+    else if (NULL != session->router_session || (rcap_type_required(capabilities, RCAP_TYPE_NO_RSESSION)))
     {
         /** Feed whole packet to router, which will free it
          *  and return 1 for success, 0 for failure
@@ -878,93 +963,91 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities)
  * @note Authentication status codes are defined in maxscale/protocol/mysql.h
  */
 static void
-mysql_client_auth_error_handling(DCB *dcb, int auth_val)
+mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
 {
-    int packet_number, message_len;
+    int message_len;
     char *fail_str = NULL;
-
-    packet_number = ssl_required_by_dcb(dcb) ? 3 : 2;
 
     switch (auth_val)
     {
-    case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("%lu [gw_read_client_event] session "
-            "creation failed. fd %d, "
-            "state = MYSQL_AUTH_NO_SESSION.",
-            pthread_self(),
-            dcb->fd);
+        case MXS_AUTH_NO_SESSION:
+            MXS_DEBUG("%lu [gw_read_client_event] session "
+                      "creation failed. fd %d, "
+                      "state = MYSQL_AUTH_NO_SESSION.",
+                      pthread_self(),
+                      dcb->fd);
 
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-            packet_number,
-            0,
-            "failed to create new session");
-        break;
-    case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("%lu [gw_read_client_event] database "
-            "specified was not valid. fd %d, "
-            "state = MYSQL_FAILED_AUTH_DB.",
-            pthread_self(),
-            dcb->fd);
-        /** Send error 1049 to client */
-        message_len = 25 + MYSQL_DATABASE_MAXLEN;
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(dcb,
+                                  packet_number,
+                                  0,
+                                  "failed to create new session");
+            break;
+        case MXS_AUTH_FAILED_DB:
+            MXS_DEBUG("%lu [gw_read_client_event] database "
+                      "specified was not valid. fd %d, "
+                      "state = MYSQL_FAILED_AUTH_DB.",
+                      pthread_self(),
+                      dcb->fd);
+            /** Send error 1049 to client */
+            message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
-        fail_str = MXS_CALLOC(1, message_len+1);
-        MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'",
-        (char*)((MYSQL_session *)dcb->data)->db);
+            fail_str = MXS_CALLOC(1, message_len + 1);
+            MXS_ABORT_IF_NULL(fail_str);
+            snprintf(fail_str, message_len, "Unknown database '%s'",
+                     (char*)((MYSQL_session *)dcb->data)->db);
 
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
-        break;
-    case MXS_AUTH_FAILED_SSL:
-        MXS_DEBUG("%lu [gw_read_client_event] client is "
-            "not SSL capable for SSL listener. fd %d, "
-            "state = MYSQL_FAILED_AUTH_SSL.",
-            pthread_self(),
-            dcb->fd);
+            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
+            break;
+        case MXS_AUTH_FAILED_SSL:
+            MXS_DEBUG("%lu [gw_read_client_event] client is "
+                      "not SSL capable for SSL listener. fd %d, "
+                      "state = MYSQL_FAILED_AUTH_SSL.",
+                      pthread_self(),
+                      dcb->fd);
 
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-            packet_number,
-            0,
-            "failed to complete SSL authentication");
-        break;
-    case MXS_AUTH_SSL_INCOMPLETE:
-        MXS_DEBUG("%lu [gw_read_client_event] unable to "
-            "complete SSL authentication. fd %d, "
-            "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-            pthread_self(),
-            dcb->fd);
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(dcb,
+                                  packet_number,
+                                  0,
+                                  "Access without SSL denied");
+            break;
+        case MXS_AUTH_SSL_INCOMPLETE:
+            MXS_DEBUG("%lu [gw_read_client_event] unable to "
+                      "complete SSL authentication. fd %d, "
+                      "state = MYSQL_AUTH_SSL_INCOMPLETE.",
+                      pthread_self(),
+                      dcb->fd);
 
-        /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-            packet_number,
-            0,
-            "failed to complete SSL authentication");
-        break;
-    case MXS_AUTH_FAILED:
-        MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-            "state = MYSQL_FAILED_AUTH.",
-            pthread_self(),
-            dcb->fd);
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-            dcb->remote,
-            (char*)((MYSQL_session *)dcb->data)->client_sha1,
-            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-        break;
-    default:
-        MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-            "state unrecognized.",
-            pthread_self(),
-            dcb->fd);
-        /** Send error 1045 to client */
-        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-            dcb->remote,
-            (char*)((MYSQL_session *)dcb->data)->client_sha1,
-            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
-        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(dcb,
+                                  packet_number,
+                                  0,
+                                  "failed to complete SSL authentication");
+            break;
+        case MXS_AUTH_FAILED:
+            MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
+                      "state = MYSQL_FAILED_AUTH.",
+                      pthread_self(),
+                      dcb->fd);
+            /** Send error 1045 to client */
+            fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+                                            dcb->remote,
+                                            (char*)((MYSQL_session *)dcb->data)->client_sha1,
+                                            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+            break;
+        default:
+            MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
+                      "state unrecognized.",
+                      pthread_self(),
+                      dcb->fd);
+            /** Send error 1045 to client */
+            fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+                                            dcb->remote,
+                                            (char*)((MYSQL_session *)dcb->data)->client_sha1,
+                                            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
     MXS_FREE(fail_str);
 }
@@ -1099,8 +1182,8 @@ static void gw_process_one_new_client(DCB *client_dcb)
         /** delete client_dcb */
         dcb_close(client_dcb);
         MXS_ERROR("%lu [gw_MySQLAccept] Failed to create "
-              "protocol object for client connection.",
-              pthread_self());
+                  "protocol object for client connection.",
+                  pthread_self());
         return;
     }
     CHK_PROTOCOL(protocol);
@@ -1128,29 +1211,29 @@ static void gw_process_one_new_client(DCB *client_dcb)
     {
         /* Send a custom error as MySQL command reply */
         mysql_send_custom_error(client_dcb,
-                    1,
-                    0,
-                    "MaxScale encountered system limit while "
-                    "attempting to register on an epoll instance.");
+                                1,
+                                0,
+                                "MaxScale encountered system limit while "
+                                "attempting to register on an epoll instance.");
 
         /** close client_dcb */
         dcb_close(client_dcb);
 
         /** Previous state is recovered in poll_add_dcb. */
         MXS_ERROR("%lu [gw_MySQLAccept] Failed to add dcb %p for "
-              "fd %d to epoll set.",
-              pthread_self(),
-              client_dcb,
-              client_dcb->fd);
+                  "fd %d to epoll set.",
+                  pthread_self(),
+                  client_dcb,
+                  client_dcb->fd);
         return;
     }
     else
     {
         MXS_DEBUG("%lu [gw_MySQLAccept] Added dcb %p for fd "
-              "%d to epoll set.",
-              pthread_self(),
-              client_dcb,
-              client_dcb->fd);
+                  "%d to epoll set.",
+                  pthread_self(),
+                  client_dcb,
+                  client_dcb->fd);
     }
     return;
 }
@@ -1281,11 +1364,12 @@ retblock:
  * leave incomplete packet to readbuf.
  *
  * @param session       Session pointer
+ * @param capabilities  The capabilities of the service.
  * @param p_readbuf     Pointer to the address of GWBUF including the query
  *
  * @return 1 if succeed,
  */
-static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
+static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc;
     GWBUF* packetbuf;
@@ -1296,7 +1380,7 @@ static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
     while (tmpbuf != NULL)
     {
         ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
-        tmpbuf=tmpbuf->next;
+        tmpbuf = tmpbuf->next;
     }
 #endif
     do
@@ -1307,6 +1391,7 @@ static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
          * Collect incoming bytes to a buffer until complete packet has
          * arrived and then return the buffer.
          */
+        // TODO: This should be replaced with modutil_get_next_MySQL_packet.
         packetbuf = gw_MySQL_get_next_packet(p_readbuf);
 
         if (packetbuf != NULL)
@@ -1326,6 +1411,75 @@ static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
              * sure it is set to each (MySQL) packet.
              */
             gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
+
+            if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
+            {
+                if (!GWBUF_IS_CONTIGUOUS(packetbuf))
+                {
+                    // TODO: As long as gw_MySQL_get_next_packet is used above, the buffer
+                    // TODO: will be contiguous. That function should be replaced with
+                    // TODO: modutil_get_next_MySQL_packet.
+                    GWBUF* tmp = gwbuf_make_contiguous(packetbuf);
+                    if (tmp)
+                    {
+                        packetbuf = tmp;
+                    }
+                    else
+                    {
+                        // TODO: A memory allocation failure. We should close the dcb
+                        // TODO: and terminate the session.
+                        rc = 0;
+                        goto return_rc;
+                    }
+                }
+
+                if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
+                {
+                    uint32_t *data = GWBUF_DATA(packetbuf);
+
+                    if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
+                    {
+                        uint32_t type = qc_get_type(packetbuf);
+
+                        if (type & QUERY_TYPE_BEGIN_TRX)
+                        {
+                            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
+                            {
+                                session_set_autocommit(session, false);
+                                session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                            }
+                            else
+                            {
+                                session_trx_state_t trx_state;
+                                if (type & QUERY_TYPE_WRITE)
+                                {
+                                    trx_state = SESSION_TRX_READ_WRITE;
+                                }
+                                else if (type & QUERY_TYPE_READ)
+                                {
+                                    trx_state = SESSION_TRX_READ_ONLY;
+                                }
+                                else
+                                {
+                                    trx_state = SESSION_TRX_ACTIVE;
+                                }
+
+                                session_set_trx_state(session, trx_state);
+                            }
+                        }
+                        else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
+                        {
+                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
+
+                            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+                            {
+                                session_set_autocommit(session, true);
+                            }
+                        }
+                    }
+                }
+            }
+
             /** Route query */
             rc = SESSION_ROUTE_QUERY(session, packetbuf);
         }

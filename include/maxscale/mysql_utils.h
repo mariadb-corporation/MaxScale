@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MYSQL_UTILS_H
-#define _MAXSCALE_MYSQL_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -34,5 +32,3 @@ char* lestr_consume(uint8_t** c, size_t *size);
 MYSQL *mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
 
 MXS_END_DECLS
-
-#endif

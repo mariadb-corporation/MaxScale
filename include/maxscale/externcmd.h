@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_EXTERN_CMD_HG
-#define _MAXSCALE_EXTERN_CMD_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -42,5 +40,3 @@ bool externcmd_can_execute(const char* argstr);
 bool externcmd_matches(const EXTERNCMD* cmd, const char* match);
 
 MXS_END_DECLS
-
-#endif

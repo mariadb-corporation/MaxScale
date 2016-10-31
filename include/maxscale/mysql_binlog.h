@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MYSQL_BINLOG_H
-#define _MAXSCALE_MYSQL_BINLOG_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -96,5 +94,3 @@ uint64_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
 void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm);
 
 MXS_END_DECLS
-
-#endif /* MYSQL_BINLOG_H */

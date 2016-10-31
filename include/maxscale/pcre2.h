@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_PCRE2_H
-#define _MAXSCALE_PCRE2_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -29,13 +27,15 @@
 
 #include <maxscale/cdefs.h>
 
-#ifndef PCRE2_CODE_UNIT_WIDTH
+MXS_BEGIN_DECLS
+
+#if defined(PCRE2_CODE_UNIT_WIDTH)
+#error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
+#else
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
 #include <pcre2.h>
-
-MXS_BEGIN_DECLS
 
 typedef enum
 {
@@ -50,5 +50,3 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
                                           int options, int* error);
 
 MXS_END_DECLS
-
-#endif

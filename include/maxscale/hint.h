@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_HINT_H
-#define _MAXSCALE_HINT_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -68,5 +66,3 @@ extern  HINT    *hint_dup(HINT *);
 bool            hint_exists(HINT **, HINT_TYPE);
 
 MXS_END_DECLS
-
-#endif

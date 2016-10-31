@@ -2919,20 +2919,16 @@ dcb_create_SSL(DCB* dcb, SSL_LISTENER *ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int ssl_rval;
-    char *remote;
-    char *user;
-
     if ((NULL == dcb->listener || NULL == dcb->listener->ssl) ||
         (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->listener->ssl) != 0))
     {
         return -1;
     }
 
-    remote = dcb->remote ? dcb->remote : "";
-    user = dcb->user ? dcb->user : "";
+    ss_debug(char *remote = dcb->remote ? dcb->remote : "");
+    ss_debug(char *user = dcb->user ? dcb->user : "");
 
-    ssl_rval = SSL_accept(dcb->ssl);
+    int ssl_rval = SSL_accept(dcb->ssl);
 
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {

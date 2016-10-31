@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_UTILS_H
-#define _MAXSCALE_UTILS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -72,12 +70,10 @@ char* replace_literal(char* haystack,
                       const char* replacement);
 char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize);
 
-void clean_up_pathname(char *path);
+bool clean_up_pathname(char *path);
 
 bool mxs_mkdir_all(const char *path, int mask);
 
 long get_processor_count();
 
 MXS_END_DECLS
-
-#endif

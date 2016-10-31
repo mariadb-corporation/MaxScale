@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SPINLOCK_H
-#define _MAXSCALE_SPINLOCK_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -78,5 +76,3 @@ extern void spinlock_release(const SPINLOCK *lock);
 extern void spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
 
 MXS_END_DECLS
-
-#endif

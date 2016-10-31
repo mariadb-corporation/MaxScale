@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_GW_PROTOCOL_H
-#define _MAXSCALE_GW_PROTOCOL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -86,6 +84,3 @@ typedef struct gw_protocol
 #define GWPROTOCOL_VERSION      {1, 1, 0}
 
 MXS_END_DECLS
-
-#endif /* GW_PROTOCOL_H */
-

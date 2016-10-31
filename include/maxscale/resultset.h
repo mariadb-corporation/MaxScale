@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_RESULTSET_H
-#define _MAXSCALE_RESULTSET_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -90,5 +88,3 @@ extern void resultset_stream_mysql(RESULTSET *, DCB *);
 extern void resultset_stream_json(RESULTSET *, DCB *);
 
 MXS_END_DECLS
-
-#endif

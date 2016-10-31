@@ -22,6 +22,31 @@
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator
  */
 
+void* gssapi_backend_auth_alloc(void *instance)
+{
+    gssapi_auth_t* rval = MXS_MALLOC(sizeof(gssapi_auth_t));
+
+    if (rval)
+    {
+        rval->state = GSSAPI_AUTH_INIT;
+        rval->principal_name = NULL;
+        rval->principal_name_len = 0;
+        rval->sequence = 0;
+    }
+
+    return rval;
+}
+
+void gssapi_backend_auth_free(void *data)
+{
+    if (data)
+    {
+        gssapi_auth_t *auth = (gssapi_auth_t*)data;
+        MXS_FREE(auth->principal_name);
+        MXS_FREE(auth);
+    }
+}
+
 /**
  * @brief Create a new GSSAPI token
  * @param dcb Backend DCB
@@ -241,12 +266,12 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
 static GWAUTHENTICATOR MyObject =
 {
     NULL,                               /* No initialize entry point */
-    gssapi_auth_alloc,                  /* Allocate authenticator data */
+    gssapi_backend_auth_alloc,                  /* Allocate authenticator data */
     gssapi_backend_auth_extract,        /* Extract data into structure   */
     gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
     gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
     NULL,                               /* Client plugin will free shared data */
-    gssapi_auth_free,                   /* Free authenticator data */
+    gssapi_backend_auth_free,                   /* Free authenticator data */
     NULL                                /* Load users from backend databases */
 };
 

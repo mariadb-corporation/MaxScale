@@ -30,10 +30,17 @@
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <maxscale/dbusers.h>
+#include "dbusers.h"
 #include <maxscale/gwdirs.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
+
+typedef struct mysql_auth
+{
+    char *cache_dir;          /**< Custom cache directory location */
+    bool inject_service_user; /**< Inject the service user into the list of users */
+} MYSQL_AUTH;
+
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -50,6 +57,7 @@ MODULE_INFO info =
 
 static char *version_str = "V1.1.0";
 
+static void* mysql_auth_init(char **options);
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
@@ -61,7 +69,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    NULL,                             /* No initialize entry point */
+    mysql_auth_init,                  /* Initialize the authenticator */
     NULL,                             /* No create entry point */
     mysql_auth_set_protocol_data,     /* Extract data into structure   */
     mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
@@ -120,6 +128,66 @@ GWAUTHENTICATOR* GetModuleObject()
     return &MyObject;
 }
 /*lint +e14 */
+
+/**
+ * @brief Initialize the authenticator instance
+ *
+ * @param options Authenticator options
+ * @return New MYSQL_AUTH instance or NULL on error
+ */
+static void* mysql_auth_init(char **options)
+{
+    MYSQL_AUTH *instance = MXS_MALLOC(sizeof(*instance));
+
+    if (instance)
+    {
+        bool error = false;
+        instance->cache_dir = NULL;
+        instance->inject_service_user = true;
+
+        for (int i = 0; options[i]; i++)
+        {
+            char *value = strchr(options[i], '=');
+
+            if (value)
+            {
+                *value++ = '\0';
+
+                if (strcmp(options[i], "cache_dir") == 0)
+                {
+                    if ((instance->cache_dir = MXS_STRDUP(value)) == NULL ||
+                        !clean_up_pathname(instance->cache_dir))
+                    {
+                        error = true;
+                    }
+                }
+                else if (strcmp(options[i], "inject_service_user") == 0)
+                {
+                    instance->inject_service_user = config_truth_value(value);
+                }
+                else
+                {
+                    MXS_ERROR("Unknown authenticator option: %s", options[i]);
+                    error = true;
+                }
+            }
+            else
+            {
+                MXS_ERROR("Unknown authenticator option: %s", options[i]);
+                error = true;
+            }
+        }
+
+        if (error)
+        {
+            MXS_FREE(instance->cache_dir);
+            MXS_FREE(instance);
+            instance = NULL;
+        }
+    }
+
+    return instance;
+}
 
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
@@ -196,7 +264,7 @@ mysql_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            MXS_NOTICE("%s: login attempt for user '%s'@%s:%d, authentication failed.",
+            MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
                        dcb->service->name, client_data->user, dcb->remote, ntohs(dcb->ipv4.sin_port));
             if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
                 !dcb->service->localhost_match_wildcard_host)
@@ -298,46 +366,30 @@ mysql_auth_set_client_data(
     uint8_t client_auth_packet[client_auth_packet_size];
     gwbuf_copy_data(buffer, 0, client_auth_packet_size, client_auth_packet);
 
-    /* The numbers are the fixed elements in the client handshake packet */
-    int auth_packet_base_size = MYSQL_AUTH_PACKET_BASE_SIZE;
     int packet_length_used = 0;
 
-    /* Take data from fixed locations first */
-    memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
-    protocol->charset = 0;
-    memcpy(&protocol->charset, client_auth_packet + 4 + 4 + 4, 1);
-
-    /* Make username and database a null string in case none is provided */
-    client_data->user[0] = 0;
-    client_data->db[0] = 0;
     /* Make authentication token length 0 and token null in case none is provided */
     client_data->auth_token_len = 0;
     client_data->auth_token = NULL;
 
-    if (client_auth_packet_size > auth_packet_base_size)
+    if (client_auth_packet_size > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
         /* Should have a username */
-        char *first_letter_of_username = (char *)(client_auth_packet + auth_packet_base_size);
+        char *first_letter_of_username = (char *)(client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE);
         int user_length = strlen(first_letter_of_username);
-        if (client_auth_packet_size > (auth_packet_base_size + user_length)
-            && user_length <= MYSQL_USER_MAXLEN)
-        {
-            strcpy(client_data->user, first_letter_of_username);
-        }
-        else
-        {
-            /* Packet has incomplete or too long username */
-            return MXS_AUTH_FAILED;
-        }
-        if (client_auth_packet_size > (auth_packet_base_size + user_length + 1))
+
+        ss_dassert(client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length)
+                   && user_length <= MYSQL_USER_MAXLEN);
+
+        if (client_auth_packet_size > (MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1))
         {
             /* Extra 1 is for the terminating null after user name */
-            packet_length_used = auth_packet_base_size + user_length + 1;
+            packet_length_used = MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1;
             /* We should find an authentication token next */
             /* One byte of packet is the length of authentication token */
             memcpy(&client_data->auth_token_len,
-                   client_auth_packet + packet_length_used,
-                   1);
+                   client_auth_packet + packet_length_used, 1);
+
             if (client_auth_packet_size >
                 (packet_length_used + client_data->auth_token_len))
             {
@@ -346,7 +398,7 @@ mysql_auth_set_client_data(
                 {
                     /* The extra 1 is for the token length byte, just extracted*/
                     memcpy(client_data->auth_token,
-                           client_auth_packet + auth_packet_base_size + user_length + 1 + 1,
+                           client_auth_packet + MYSQL_AUTH_PACKET_BASE_SIZE + user_length + 1 + 1,
                            client_data->auth_token_len);
                 }
                 else
@@ -359,29 +411,6 @@ mysql_auth_set_client_data(
             {
                 /* Packet was too small to contain authentication token */
                 return MXS_AUTH_FAILED;
-            }
-            packet_length_used += 1 + client_data->auth_token_len;
-            /*
-             * Note: some clients may pass empty database, CONNECT_WITH_DB !=0 but database =""
-             */
-            if ((uint32_t)GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &
-                gw_mysql_get_byte4((uint8_t *)&protocol->client_capabilities)
-                && client_auth_packet_size > packet_length_used)
-            {
-                char *database = (char *)(client_auth_packet + packet_length_used);
-                int database_length = strlen(database);
-                if (client_auth_packet_size >
-                    (packet_length_used + database_length)
-                    && strlen(database) <= MYSQL_DATABASE_MAXLEN)
-                {
-                    strcpy(client_data->db, database);
-                }
-                else
-                {
-                    /* Packet is too short to contain database string */
-                    /* or database string in packet is too long */
-                    return MXS_AUTH_FAILED;
-                }
             }
         }
     }
@@ -809,49 +838,114 @@ mysql_auth_free_client_data(DCB *dcb)
 }
 
 /**
+ * @brief Inject the service user into the cache
+ *
+ * @param port Service listener
+ * @return True on success, false on error
+ */
+static bool add_service_user(SERV_LISTENER *port)
+{
+    char *user = NULL;
+    char *pw = NULL;
+    bool rval = false;
+
+    if (serviceGetUser(port->service, &user, &pw))
+    {
+        pw = decryptPassword(pw);
+
+        if (pw)
+        {
+            char *newpw = create_hex_sha1_sha1_passwd(pw);
+
+            if (newpw)
+            {
+                add_mysql_users_with_host_ipv4(port->users, user, "%", newpw, "Y", "");
+                add_mysql_users_with_host_ipv4(port->users, user, "localhost", newpw, "Y", "");
+                MXS_FREE(newpw);
+                rval = true;
+            }
+            MXS_FREE(pw);
+        }
+        else
+        {
+            MXS_ERROR("[%s] Failed to decrypt service user password.", port->service->name);
+        }
+    }
+    else
+    {
+        MXS_ERROR("[%s] Failed to retrieve service credentials.", port->service->name);
+    }
+
+    return rval;
+}
+
+/**
  * @brief Load MySQL authentication users
  *
  * This function loads MySQL users from the backend database.
  *
  * @param port Listener definition
- * @return AUTH_LOADUSERS_OK on success, AUTH_LOADUSERS_ERROR on error
+ * @return MXS_AUTH_LOADUSERS_OK on success, MXS_AUTH_LOADUSERS_ERROR and
+ * MXS_AUTH_LOADUSERS_FATAL on fatal error
  */
 static int mysql_auth_load_users(SERV_LISTENER *port)
 {
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+
+    if (port->users == NULL && !check_service_permissions(port->service))
+    {
+        return MXS_AUTH_LOADUSERS_FATAL;
+    }
+
     int loaded = replace_mysql_users(port);
+    char path[PATH_MAX];
+
+    if (instance->cache_dir)
+    {
+        snprintf(path, sizeof(path) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
+    }
+    else
+    {
+        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+    }
 
     if (loaded < 0)
     {
         MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
                   port->name, port->address ? port->address : "0.0.0.0", port->port);
 
-        /* Try loading authentication data from file cache */
-        char path[PATH_MAX];
-        sprintf(path, "%s/%s/%s/%s/%s", get_cachedir(), service->name, port->name,
-                DBUSERS_DIR, DBUSERS_FILE);
+        strcat(path, DBUSERS_FILE);
 
         if ((loaded = dbusers_load(port->users, path)) == -1)
         {
-            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);;
+            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
             rc = MXS_AUTH_LOADUSERS_ERROR;
         }
         else
         {
-            MXS_WARNING("Using cached credential information.");
+            MXS_WARNING("[%s] Using cached credential information from '%s'.", service->name, path);
+        }
+
+        if (instance->inject_service_user)
+        {
+            /** Inject the service user as a 'backup' user that's available
+             * if loading of the users fails */
+            if (!add_service_user(port))
+            {
+                MXS_ERROR("[%s] Failed to inject service user.", port->service->name);
+            }
         }
     }
     else
     {
         /* Users loaded successfully, save authentication data to file cache */
-        char path[PATH_MAX];
-        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
-
         if (mxs_mkdir_all(path, 0777))
         {
             strcat(path, DBUSERS_FILE);
             dbusers_save(port->users, path);
+            MXS_INFO("[%s] Storing cached credential information at '%s'.", service->name, path);
         }
     }
 

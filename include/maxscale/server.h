@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_SERVER_H
-#define _MAXSCALE_SERVER_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -228,5 +226,3 @@ extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
 
 MXS_END_DECLS
-
-#endif

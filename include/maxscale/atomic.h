@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_ATOMIC_H
-#define _MAXSCALE_ATOMIC_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -35,5 +33,3 @@ int atomic_add(int *variable, int value);
 int atomic_add(int *variable, int value);
 
 MXS_END_DECLS
-
-#endif

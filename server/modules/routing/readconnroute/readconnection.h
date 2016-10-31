@@ -59,7 +59,6 @@ typedef struct router_client_session
     DCB *backend_dcb; /*< DCB Connection to the backend      */
     DCB *client_dcb; /**< Client DCB */
     struct router_client_session *next;
-    int rses_capabilities; /*< input type, for example */
 #if defined(SS_DEBUG)
     skygw_chk_t rses_chk_tail;
 #endif

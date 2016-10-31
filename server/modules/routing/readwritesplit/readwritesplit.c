@@ -82,7 +82,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
 static void handleError(ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *backend_dcb,
                         error_action_t action, bool *succp);
-static int getCapabilities();
+static uint64_t getCapabilities(void);
 
 /*
  * End of the API functions; now the module structure that links to them.
@@ -1055,14 +1055,14 @@ lock_failed:
 
 /**
  * @brief Get router capabilities (API)
- * 
+ *
  * Return a bit map indicating the characteristics of this particular router.
  * In this case, the only bit set indicates that the router wants to receive
  * data for routing as whole SQL statements.
- * 
- * @return int RCAP_TYPE_STMT_INPUT.
+ *
+ * @return RCAP_TYPE_STMT_INPUT.
  */
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

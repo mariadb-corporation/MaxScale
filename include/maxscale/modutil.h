@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_MODUTIL_H
-#define _MAXSCALE_MODUTIL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -76,5 +74,3 @@ bool is_mysql_sp_end(const char* start, int len);
 char* modutil_get_canonical(GWBUF* querybuf);
 
 MXS_END_DECLS
-
-#endif

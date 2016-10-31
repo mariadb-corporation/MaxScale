@@ -40,6 +40,7 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 
 static FILTER_OBJECT MyObject =
@@ -53,6 +54,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     NULL,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -277,4 +279,14 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
     HINT_INSTANCE *my_instance = (HINT_INSTANCE *)instance;
     HINT_SESSION *my_session = (HINT_SESSION *)fsession;
 
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_STMT_INPUT;
 }

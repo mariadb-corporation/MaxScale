@@ -81,6 +81,7 @@ static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 
 static FILTER_OBJECT MyObject =
@@ -94,6 +95,7 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     clientReply,
     diagnostic,
+    getCapabilities,
 };
 
 /**
@@ -588,4 +590,14 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
             dcb_printf(dcb, "Session script: %s\n", my_instance->session_script);
         }
     }
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_STMT_INPUT;
 }

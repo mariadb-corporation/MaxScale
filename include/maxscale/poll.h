@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_POLL_H
-#define _MAXSCALE_POLL_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -75,5 +73,3 @@ extern  void            poll_fake_write_event(DCB *dcb);
 extern  void            poll_fake_read_event(DCB *dcb);
 
 MXS_END_DECLS
-
-#endif

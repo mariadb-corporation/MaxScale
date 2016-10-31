@@ -1,7 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_HK_HEARTBEAT_H
-#define _MAXSCALE_HK_HEARTBEAT_H
-
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -27,5 +24,3 @@ MXS_BEGIN_DECLS
 extern long hkheartbeat;
 
 MXS_END_DECLS
-
-#endif

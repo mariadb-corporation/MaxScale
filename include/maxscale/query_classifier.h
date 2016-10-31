@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_QUERY_CLASSIFIER_HG
-#define _MAXSCALE_QUERY_CLASSIFIER_HG
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -19,7 +17,15 @@
 
 MXS_BEGIN_DECLS
 
-typedef enum
+#define QUERY_CLASSIFIER_VERSION {1, 1, 0}
+
+/**
+ * qc_query_type_t defines bits that provide information about a
+ * particular statement.
+ *
+ * Note that more than one bit may be set for a single statement.
+ */
+typedef enum qc_query_type
 {
     QUERY_TYPE_UNKNOWN            = 0x000000, /*< Initial value, can't be tested bitwisely */
     QUERY_TYPE_LOCAL_READ         = 0x000001, /*< Read non-database data, execute in MaxScale:any */
@@ -49,7 +55,10 @@ typedef enum
     QUERY_TYPE_SHOW_TABLES        = 0x400000  /*< Show list of tables */
 } qc_query_type_t;
 
-typedef enum
+/**
+ * qc_query_op_t defines the operations a particular statement can perform.
+ */
+typedef enum qc_query_op
 {
     QUERY_OP_UNDEFINED     = 0,
     QUERY_OP_SELECT        = (1 << 0),
@@ -66,6 +75,9 @@ typedef enum
     QUERY_OP_REVOKE        = (1 << 11)
 } qc_query_op_t;
 
+/**
+ * qc_parse_result_t defines the possible outcomes when a statement is parsed.
+ */
 typedef enum qc_parse_result
 {
     QC_QUERY_INVALID          = 0, /*< The query was not recognized or could not be parsed. */
@@ -74,39 +86,15 @@ typedef enum qc_parse_result
     QC_QUERY_PARSED           = 3  /*< The query was fully parsed; completely classified. */
 } qc_parse_result_t;
 
-#define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
-bool qc_init(const char* plugin_name, const char* plugin_args);
-void qc_end(void);
-
-typedef struct query_classifier QUERY_CLASSIFIER;
-
-QUERY_CLASSIFIER* qc_load(const char* plugin_name);
-void qc_unload(QUERY_CLASSIFIER* classifier);
-
-bool qc_thread_init(void);
-void qc_thread_end(void);
-
-qc_parse_result_t qc_parse(GWBUF* querybuf);
-
-uint32_t qc_get_type(GWBUF* querybuf);
-qc_query_op_t qc_get_operation(GWBUF* querybuf);
-
-char* qc_get_created_table_name(GWBUF* querybuf);
-bool qc_is_drop_table_query(GWBUF* querybuf);
-bool qc_is_real_query(GWBUF* querybuf);
-char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
-char* qc_get_canonical(GWBUF* querybuf);
-bool qc_query_has_clause(GWBUF* buf);
-char* qc_get_qtype_str(qc_query_type_t qtype);
-char* qc_get_affected_fields(GWBUF* buf);
-char** qc_get_database_names(GWBUF* querybuf, int* size);
-
-const char* qc_op_to_string(qc_query_op_t op);
-const char* qc_type_to_string(qc_query_type_t type);
-char* qc_types_to_string(uint32_t types);
-
-struct query_classifier
+/**
+ * QUERY_CLASSIFIER defines the object a query classifier plugin must
+ * implement and return.
+ *
+ * To a user of the query classifier functionality, it can in general
+ * be ignored.
+ */
+typedef struct query_classifier
 {
     bool (*qc_init)(const char* args);
     void (*qc_end)(void);
@@ -114,23 +102,306 @@ struct query_classifier
     bool (*qc_thread_init)(void);
     void (*qc_thread_end)(void);
 
-    qc_parse_result_t (*qc_parse)(GWBUF* querybuf);
+    qc_parse_result_t (*qc_parse)(GWBUF* stmt);
 
-    uint32_t (*qc_get_type)(GWBUF* querybuf);
-    qc_query_op_t (*qc_get_operation)(GWBUF* querybuf);
+    uint32_t (*qc_get_type)(GWBUF* stmt);
+    qc_query_op_t (*qc_get_operation)(GWBUF* stmt);
 
-    char* (*qc_get_created_table_name)(GWBUF* querybuf);
-    bool (*qc_is_drop_table_query)(GWBUF* querybuf);
-    bool (*qc_is_real_query)(GWBUF* querybuf);
-    char** (*qc_get_table_names)(GWBUF* querybuf, int* tblsize, bool fullnames);
-    char* (*qc_get_canonical)(GWBUF* querybuf);
-    bool (*qc_query_has_clause)(GWBUF* buf);
-    char* (*qc_get_affected_fields)(GWBUF* buf);
-    char** (*qc_get_database_names)(GWBUF* querybuf, int* size);
-};
+    char* (*qc_get_created_table_name)(GWBUF* stmt);
+    bool (*qc_is_drop_table_query)(GWBUF* stmt);
+    bool (*qc_is_real_query)(GWBUF* stmt);
+    char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
+    char* (*qc_get_canonical)(GWBUF* stmt);
+    bool (*qc_query_has_clause)(GWBUF* stmt);
+    char* (*qc_get_affected_fields)(GWBUF* stmt);
+    char** (*qc_get_database_names)(GWBUF* stmt, int* size);
+    char* (*qc_get_prepare_name)(GWBUF* stmt);
+} QUERY_CLASSIFIER;
 
-#define QUERY_CLASSIFIER_VERSION {1, 0, 0}
+/**
+ * Loads and initializes the default query classifier.
+ *
+ * This must be called once during the execution of a process. The query
+ * classifier functions can only be used if this function returns true.
+ * MaxScale calls this function, so plugins should not do that.
+ *
+ * @param plugin_name  The name of the plugin from which the query classifier
+ *                     should be loaded.
+ * @param plugin_args  The arguments to be provided to the query classifier.
+ *
+ * @return True if the query classifier could be loaded and initialized,
+ *         false otherwise.
+ *
+ * @see qc_end qc_thread_init
+ */
+bool qc_init(const char* plugin_name, const char* plugin_args);
+
+/**
+ * Finalizes and unloads the query classifier.
+ *
+ * A successful call of qc_init() should before program exit be followed
+ * by a call to this function. MaxScale calls this function, so plugins
+ * should not do that.
+ *
+ * @see qc_init qc_thread_end
+ */
+void qc_end(void);
+
+/**
+ * Loads a particular query classifier.
+ *
+ * In general there is no need to use this function, but rely upon qc_init().
+ * However, if there is a need to use multiple query classifiers concurrently
+ * then this function provides the means for that. Note that after a query
+ * classifier has been loaded, it must explicitly be initialized before it
+ * can be used.
+ *
+ * @param plugin_name  The name of the plugin from which the query classifier
+ *                     should be loaded.
+ *
+ * @return A QUERY_CLASSIFIER object if successful, NULL otherwise.
+ *
+ * @see qc_unload
+ */
+QUERY_CLASSIFIER* qc_load(const char* plugin_name);
+
+/**
+ * Unloads an explicitly loaded query classifier.
+ *
+ * @see qc_load
+ */
+void qc_unload(QUERY_CLASSIFIER* classifier);
+
+/**
+ * Performs thread initialization needed by the query classifier.
+ * Should be called in every thread, except the one where qc_init()
+ * was called. MaxScale calls this function, so plugins should not
+ * do that.
+ *
+ * @return True if the initialization succeeded, false otherwise.
+ *
+ * @see qc_thread_end
+ */
+bool qc_thread_init(void);
+
+/**
+ * Performs thread finalization needed by the query classifier.
+ * A successful call to qc_thread_init() should at some point be followed
+ * by a call to this function. MaxScale calls this function, so plugins
+ * should not do that.
+ *
+ * @see qc_thread_init
+ */
+void qc_thread_end(void);
+
+/**
+ * Parses the statement in the provided buffer and returns a value specifying
+ * to what extent the statement could be parsed.
+ *
+ * There is no need to call this function explicitly before calling any of
+ * the other functions; e.g. qc_get_type(). When some particular property of
+ * a statement is asked for, the statement will be parsed if it has not been
+ * parsed yet. Also, if the statement in the provided buffer has been parsed
+ * already then this function will only return the result of that parsing;
+ * the statement will not be parsed again.
+ *
+ * @param stmt  A buffer containing an COM_QUERY packet.
+ *
+ * @return To what extent the statement could be parsed.
+ */
+qc_parse_result_t qc_parse(GWBUF* stmt);
+
+/**
+ * Returns the fields the statement affects, as a string of names separated
+ * by spaces. Note that the fields do not contain any table information.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return A string containing the fields or NULL if a memory allocation
+ *         failure occurs. The string must be freed by the caller.
+ */
+char* qc_get_affected_fields(GWBUF* stmt);
+
+/**
+ * Returns the statement, with literals replaced with question marks.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return A statement in its canonical form, or NULL if a memory
+ *         allocation fails. The string must be freed by the caller.
+ */
+char* qc_get_canonical(GWBUF* stmt);
+
+/**
+ * Returns the name of the created table.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The name of the created table or NULL if the statement
+ *         does not create a table or a memory allocation failed.
+ *         The string must be freed by the caller.
+ */
+char* qc_get_created_table_name(GWBUF* stmt);
+
+/**
+ * Returns the databases accessed by the statement. Note that a
+ * possible default database is not returned.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param size  Pointer to integer where the number of databases
+ *              is stored.
+ *
+ * @return Array of strings or NULL if a memory allocation fails.
+ *
+ * @note The returned array and the strings pointed to @b must be freed
+ *       by the caller.
+ */
+char** qc_get_database_names(GWBUF* stmt, int* size);
+
+/**
+ * Returns the operation of the statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The operation of the statement.
+ */
+qc_query_op_t qc_get_operation(GWBUF* stmt);
+
+/**
+ * Returns the name of the prepared statement, if the statement
+ * is a PREPARE or EXECUTE statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The name of the prepared statement, if the statement
+ *         is a PREPARE or EXECUTE statement; otherwise NULL.
+ *
+ * @note The returned string @b must be freed by the caller.
+ *
+ * @note Even though a COM_STMT_PREPARE can be given to the query
+ *       classifier for parsing, this function will in that case
+ *       return NULL since the id of the statement is provided by
+ *       the server.
+ */
+char* qc_get_prepare_name(GWBUF* stmt);
+
+/**
+ * Returns the tables accessed by the statement.
+ *
+ * @param stmt       A buffer containing a COM_QUERY packet.
+ * @param tblsize    Pointer to integer where the number of tables is stored.
+ * @param fullnames  If true, a table names will include the database name
+ *                   as well (if explicitly referred to in the statement).
+ *
+ * @return Array of strings or NULL if a memory allocation fails.
+ *
+ * @note The returned array and the strings pointed to @b must be freed
+ *       by the caller.
+ */
+char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
+
+
+/**
+ * Returns a bitmask specifying the type(s) of the statement. The result
+ * should be tested against specific qc_query_type_t values* using the
+ * bitwise & operator, never using the == operator.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return A bitmask with the type(s) the query.
+ *
+ * @see qc_query_is_type
+ */
+uint32_t qc_get_type(GWBUF* stmt);
+
+/**
+ * Returns whether the statement is a DROP TABLE statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return True if the statement is a DROP TABLE statement, false otherwise.
+ *
+ * @todo This function is far too specific.
+ */
+bool qc_is_drop_table_query(GWBUF* stmt);
+
+/**
+ * Returns whether the statement is a "real" statement. Statements that affect
+ * the underlying database are considered real statements, while statements that
+ * target specific rows or variable data are regarded as real statement. That is,
+ * a real statement is  SELECT, UPDATE, INSERT, DELETE or a variation thereof.
+ *
+ * @param stmt  A buffer containing a COM_QUERY.
+ *
+ * @return True if the statement is a real query, false otherwise.
+ *
+ * @todo Consider whether the function name should be changed or the function
+ *       removed altogether.
+ */
+bool qc_is_real_query(GWBUF* stmt);
+
+/**
+ * Returns the string representation of a query operation.
+ *
+ * @param op  A query operation.
+ *
+ * @return The corresponding string.
+ *
+ * @note The returned string is statically allocated and must *not* be freed.
+ */
+const char* qc_op_to_string(qc_query_op_t op);
+
+/**
+ * Returns whether the typemask contains a particular type.
+ *
+ * @param typemask  A bitmask of query types.
+ * @param type      A particular qc_query_type_t value.
+ *
+ * @return True, if the type is in the mask.
+ */
+static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
+{
+    return (typemask & type) == type;
+}
+
+/**
+ * Returns whether the statement has a WHERE or a USING clause.
+ *
+ * @param stmt  A buffer containing a COM_QUERY.
+ *
+ * @return True, if the statement has a WHERE or USING clause, false
+ *         otherwise.
+ */
+bool qc_query_has_clause(GWBUF* stmt);
+
+/**
+ * Returns the string representation of a query type.
+ *
+ * @param type  A query type (not a bitmask of several).
+ *
+ * @return The corresponding string.
+ *
+ * @note The returned string is statically allocated and must @b not be freed.
+ */
+const char* qc_type_to_string(qc_query_type_t type);
+
+/**
+ * Returns a string representation of a type bitmask.
+ *
+ * @param typemask  A bit mask of query types.
+ *
+ * @return The corresponding string or NULL if the allocation fails.
+ *
+ * @note The returned string is dynamically allocated and @b must be freed.
+ */
+char* qc_typemask_to_string(uint32_t typemask);
+
+/**
+ * @deprecated
+ * Synonym for qc_query_is_type().
+ *
+ * @see qc_query_is_type
+ */
+#define QUERY_IS_TYPE(typemask, type) qc_query_is_type(typemask, type)
 
 MXS_END_DECLS
-
-#endif

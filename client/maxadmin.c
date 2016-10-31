@@ -75,7 +75,9 @@ static void DoSource(int so, char *cmd);
 static void DoUsage(const char*);
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
-static void read_inifile(char **, int*);
+static void read_inifile(char **socket,
+                         char **hostname, char **port, char **user, char **passwd,
+                         int *editor);
 static bool getPassword(char *password, size_t length);
 
 #ifdef HISTORY
@@ -116,10 +118,6 @@ static struct option long_options[] =
 int
 main(int argc, char **argv)
 {
-    const char* vi = "vi";
-    const char* emacs = "emacs";
-
-    int i, num, rv;
 #ifdef HISTORY
     char *buf;
     EditLine *el = NULL;
@@ -133,39 +131,45 @@ main(int argc, char **argv)
     char *port = NULL;
     char *user = NULL;
     char *passwd = NULL;
-    char *conn_socket = NULL;
-    char *default_socket = MAXADMIN_DEFAULT_SOCKET;
+    char *socket_path = NULL;
     int use_emacs = 0;
-    int so;
+
+    read_inifile(&socket_path, &hostname, &port, &user, &passwd, &use_emacs);
+
+    bool use_inet_socket = false;
+    bool use_unix_socket = false;
+
     int option_index = 0;
     char c;
-
-    read_inifile(&conn_socket, &use_emacs);
-
     while ((c = getopt_long(argc, argv, "h:p:P:u:S:v?e",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
         {
             case 'h':
+                use_inet_socket = true;
                 hostname = strdup(optarg);
                 break;
 
             case 'p':
+                use_inet_socket = true;
                 passwd = strdup(optarg);
                 memset(optarg, '\0', strlen(optarg));
                 break;
 
             case 'P':
+                use_inet_socket = true;
                 port = strdup(optarg);
                 break;
 
             case 'u':
+                use_inet_socket = true;
                 user = strdup(optarg);
                 break;
 
             case 'S':
-                conn_socket = strdup(optarg);
+                use_unix_socket = true;
+                socket_path = strdup(optarg);
                 break;
 
             case 'v':
@@ -182,16 +186,20 @@ main(int argc, char **argv)
         }
     }
 
-    if ((hostname || port || user || passwd) && (conn_socket))
+    if (use_inet_socket && use_unix_socket)
     {
-        // Either socket or any parameters related to hostname/port.
+        // Both unix socket path and at least of the internet socket
+        // options have been provided.
         DoUsage(argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    if (hostname || port || user || passwd)
+    if (use_inet_socket || (!socket_path && (hostname || port || user || passwd)))
     {
-        assert(!conn_socket);
+        // If any of the internet socket options have explicitly been provided, or
+        // .maxadmin does not contain "socket" but does contain at least one of
+        // the internet socket options, we use an internet socket. Note that if
+        // -S is provided, then socket_path will be non-NULL.
 
         if (!hostname)
         {
@@ -210,23 +218,29 @@ main(int argc, char **argv)
     }
     else
     {
-        if (!conn_socket)
+        use_unix_socket = true;
+
+        if (!socket_path)
         {
-            conn_socket = MAXADMIN_DEFAULT_SOCKET;
+            socket_path = MAXADMIN_DEFAULT_SOCKET;
         }
     }
 
-    assert(!((hostname || port) && conn_socket));
+    int so;
 
-    if (conn_socket)
+    if (use_unix_socket)
     {
-        if ((so = connectUsingUnixSocket(conn_socket)) == -1)
+        assert(socket_path);
+
+        if ((so = connectUsingUnixSocket(socket_path)) == -1)
         {
             exit(EXIT_FAILURE);
         }
     }
     else
     {
+        assert(hostname && user && port);
+
         char password[MAX_PASSWORD_LEN];
 
         if (passwd == NULL)
@@ -301,11 +315,11 @@ main(int argc, char **argv)
 
     if (use_emacs)
     {
-        el_set(el, EL_EDITOR, emacs); /** Editor is emacs */
+        el_set(el, EL_EDITOR, "emacs"); /** Editor is emacs */
     }
     else
     {
-        el_set(el, EL_EDITOR, vi); /* Default editor is vi      */
+        el_set(el, EL_EDITOR, "vi"); /* Default editor is vi      */
     }
     el_set(el, EL_SIGNAL, 1); /* Handle signals gracefully  */
     el_set(el, EL_PROMPT, prompt); /* Set the prompt function */
@@ -325,15 +339,16 @@ main(int argc, char **argv)
      */
     el_source(el, NULL);
 
+    int num;
     while ((buf = (char *) el_gets(el, &num)) != NULL && num != 0)
     {
 #else
     while (printf("MaxScale> ") && fgets(buf, 1024, stdin) != NULL)
     {
-        num = strlen(buf);
+        int num = strlen(buf);
 #endif
         /* Strip trailing \n\r */
-        for (i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
+        for (int i = num - 1; buf[i] == '\r' || buf[i] == '\n'; i--)
         {
             buf[i] = 0;
         }
@@ -350,6 +365,7 @@ main(int argc, char **argv)
         else if (!strcasecmp(buf, "history"))
         {
 #ifdef HISTORY
+            int rv;
             for (rv = history(hist, &ev, H_LAST); rv != -1;
                  rv = history(hist, &ev, H_PREV))
             {
@@ -394,11 +410,11 @@ main(int argc, char **argv)
 /**
  * Connect to the MaxScale server
  *
- * @param conn_socket The UNIX socket to connect to
+ * @param socket_path The UNIX socket to connect to
  * @return       The connected socket or -1 on error
  */
 static int
-connectUsingUnixSocket(const char *conn_socket)
+connectUsingUnixSocket(const char *socket_path)
 {
     int so = -1;
 
@@ -408,7 +424,7 @@ connectUsingUnixSocket(const char *conn_socket)
 
         memset(&local_addr, 0, sizeof local_addr);
         local_addr.sun_family = AF_UNIX;
-        strncpy(local_addr.sun_path, conn_socket, sizeof(local_addr.sun_path) - 1);
+        strncpy(local_addr.sun_path, socket_path, sizeof(local_addr.sun_path) - 1);
 
         if (connect(so, (struct sockaddr *) &local_addr, sizeof(local_addr)) == 0)
         {
@@ -441,7 +457,7 @@ connectUsingUnixSocket(const char *conn_socket)
         {
             char errbuf[STRERROR_BUFLEN];
             fprintf(stderr, "Unable to connect to MaxScale at %s: %s\n",
-                    conn_socket, strerror_r(errno, errbuf, sizeof(errbuf)));
+                    socket_path, strerror_r(errno, errbuf, sizeof(errbuf)));
             close(so);
             so = -1;
         }
@@ -853,13 +869,16 @@ rtrim(char *str)
  * Read defaults for hostname, port, user and password from
  * the .maxadmin file in the users home directory.
  *
- * @param hostname  Pointer the hostname to be updated
+ * @param socket    Pointer to the socket to be updated.
+ * @param hostname  Pointer to the hostname to be updated
  * @param port      Pointer to the port to be updated
  * @param user      Pointer to the user to be updated
  * @param passwd    Pointer to the password to be updated
  */
 static void
-read_inifile(char **conn_socket, int* editor)
+read_inifile(char **socket,
+             char **hostname, char** port, char **user, char **passwd,
+             int* editor)
 {
     char pathname[400];
     char *home, *brkt;
@@ -893,11 +912,26 @@ read_inifile(char **conn_socket, int* editor)
         {
             if (strcmp(name, "socket") == 0)
             {
-                *conn_socket = strdup(value);
+                *socket = strdup(value);
+            }
+            else if (strcmp(name, "hostname") == 0)
+            {
+                *hostname = strdup(value);
+            }
+            else if (strcmp(name, "port") == 0)
+            {
+                *port = strdup(value);
+            }
+            else if (strcmp(name, "user") == 0)
+            {
+                *user = strdup(value);
+            }
+            else if ((strcmp(name, "passwd") == 0) || (strcmp(name, "password") == 0))
+            {
+                *passwd = strdup(value);
             }
             else if (strcmp(name, "editor") == 0)
             {
-
                 if (strcmp(value, "vi") == 0)
                 {
                     *editor = 0;

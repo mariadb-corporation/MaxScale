@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_USERS_H
-#define _MAXSCALE_USERS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -76,5 +74,3 @@ extern void usersPrint(USERS *);                  /**< Print data about the user
 extern void dcb_usersPrint(DCB *, USERS *);       /**< Print data about the users loaded */
 
 MXS_END_DECLS
-
-#endif

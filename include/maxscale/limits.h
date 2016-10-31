@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_LIMITS_H
-#define _MAXSCALE_LIMITS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -74,5 +72,3 @@ MXS_BEGIN_DECLS
 #define MXS_MAX_THREADS 255
 
 MXS_END_DECLS
-
-#endif
