@@ -1852,6 +1852,7 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 case SQLCOM_INSERT:
                 case SQLCOM_INSERT_SELECT:
                 case SQLCOM_REPLACE:
+                case SQLCOM_REPLACE_SELECT:
                     operation = QUERY_OP_INSERT;
                     break;
 
@@ -1914,7 +1915,9 @@ char* qc_get_prepare_name(GWBUF* stmt)
         {
             LEX* lex = get_lex(stmt);
 
-            if ((lex->sql_command == SQLCOM_PREPARE) || (lex->sql_command == SQLCOM_EXECUTE))
+            if ((lex->sql_command == SQLCOM_PREPARE) ||
+                (lex->sql_command == SQLCOM_EXECUTE) ||
+                (lex->sql_command == SQLCOM_DEALLOCATE_PREPARE))
             {
                 name = (char*)malloc(lex->prepared_stmt_name.length + 1);
                 if (name)
