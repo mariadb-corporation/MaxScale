@@ -408,12 +408,4 @@ const char* qc_type_to_string(qc_query_type_t type);
  */
 char* qc_typemask_to_string(uint32_t typemask);
 
-/**
- * @deprecated
- * Synonym for qc_query_is_type().
- *
- * @see qc_query_is_type
- */
-#define QUERY_IS_TYPE(typemask, type) qc_query_is_type(typemask, type)
-
 MXS_END_DECLS
