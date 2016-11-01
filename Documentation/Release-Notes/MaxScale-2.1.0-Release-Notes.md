@@ -57,6 +57,18 @@ by default, is configured using the new global configuration entry `log_throttli
 For more information about this configuration entry, please see
 [Global Settings](../Getting-Started/Configuration-Guide.md#global-settings).
 
+### Persistent Connections
+
+Starting with the 2.1 version of MariaDB MaxScale, when a MySQL protocol
+persistent connection is taken from the persistent connection pool, the
+state of the MySQL session will be reset when the the connection is used
+for the first time. This allows persistent connections to be used with no
+functional limitations and makes them behave like normal MySQL
+connections.
+
+For more information about persistent connections, please read the
+[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
+
 ### User data cache
 
 The user data cache stores the cached credentials that are used by some router

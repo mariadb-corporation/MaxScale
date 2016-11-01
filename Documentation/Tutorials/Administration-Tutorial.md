@@ -106,13 +106,22 @@ than `persistmaxtime` seconds.  It was also be discarded if it has been disconne
 by the back end server. Connections will be selected that match the user name and
 protocol for the new request.
 
-**Please note** that because persistent connections have previously been in use, they
-may give a different environment from a fresh connection. For example, if the
-previous use of the connection issued "use mydatabase" then this setting will be
-carried over into the reuse of the same connection. For many applications this will
-not be noticeable, since each request will assume that nothing has been set and
-will issue fresh requests such as "use" to establish the desired configuration.  In
-exceptional cases this feature could be a problem.
+Starting with the 2.1 version of MaxScale, when a MySQL protocol connection is
+taken from the pool the backend protocol module resets the session state. This
+allows persistent connections to be used with no functional limitations.
+
+The session state is reset when the first outgoing network transmission is
+done. This _lazy initialization_ of the persistent connections allows
+MaxScale to take multiple new connections into use but only initialize the
+ones that it actually needs.
+
+**Please note** that in versions before 2.1 the persistent connections may give
+a different environment when compared to a fresh connection. For example, if the
+previous use of the connection issued a "USE mydatabase;" statement then this
+setting will be carried over into the reuse of the same connection. For many
+applications this will not be noticeable, since each request will assume that
+nothing has been set and will issue fresh requests such as "USE" to establish
+the desired configuration. In exceptional cases this feature could be a problem.
 
 It is possible to have pools for as many servers as you wish, with configuration
 values in each server section.
