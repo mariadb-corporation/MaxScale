@@ -681,11 +681,15 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
 
             if (handle->use_priority && (value = serverGetParameter(moitor_servers->server, "priority")) != NULL)
             {
-                currval = atoi(value);
-                if (currval < minval && currval > 0)
+                /** The server has a priority  */
+                if ((currval = atoi(value)) > 0)
                 {
-                    minval = currval;
-                    candidate_master = moitor_servers;
+                    /** The priority is valid */
+                    if (currval < minval && currval > 0)
+                    {
+                        minval = currval;
+                        candidate_master = moitor_servers;
+                    }
                 }
             }
             else if (moitor_servers->server->node_id >= 0 &&
