@@ -3473,7 +3473,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
          * if no pending transaction is detected.
          * use the existing one.
          */
-        blr_file_use_binlog(router, router->binlog_name);
+        blr_file_append(router, router->binlog_name);
     }
 
     /* Start the replication from Master server */
