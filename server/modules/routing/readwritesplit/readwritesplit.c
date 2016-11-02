@@ -3394,7 +3394,7 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                 bref_clear_state(bref, BREF_QUERY_ACTIVE);
                 bref_clear_state(bref, BREF_IN_USE);
                 bref_set_state(bref, BREF_CLOSED);
-                bref_set_state(bref, BREF_SESCMD_FAILED);
+                bref_set_state(bref, BREF_FATAL_FAILURE);
                 if (bref->bref_dcb)
                 {
                     dcb_close(bref->bref_dcb);
@@ -3435,7 +3435,7 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                         bref_clear_state(&ses->rses_backend_ref[i], BREF_QUERY_ACTIVE);
                         bref_clear_state(&ses->rses_backend_ref[i], BREF_IN_USE);
                         bref_set_state(&ses->rses_backend_ref[i], BREF_CLOSED);
-                        bref_set_state(bref, BREF_SESCMD_FAILED);
+                        bref_set_state(bref, BREF_FATAL_FAILURE);
                         if (ses->rses_backend_ref[i].bref_dcb)
                         {
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
@@ -4329,6 +4329,13 @@ static void handleError(ROUTER *instance, void *router_session,
                          * case the safest thing to do is to close the client
                          * connection. */
                         can_continue = true;
+
+                        if (bref)
+                        {
+                            /** Mark the master as failed so that it won't be
+                             * taken into use if it comes back up. */
+                            bref_set_state(bref, BREF_FATAL_FAILURE);
+                        }
                     }
                     else if (!srv->master_err_is_logged)
                     {
