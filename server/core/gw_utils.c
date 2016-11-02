@@ -61,6 +61,12 @@ setipaddress(struct in_addr *a, char *p)
 
     hint.ai_socktype = SOCK_STREAM;
 
+    if (strchr(p, '%') != NULL)
+    {
+        MXS_INFO("Host %s contains wildcard, return", p);
+        return 0;
+    }
+
     /*
      * This is for the listening socket, matching INADDR_ANY only for now.
      * For future specific addresses bind, a dedicated routine woulbd be better
