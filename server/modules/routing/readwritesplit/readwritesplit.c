@@ -4314,23 +4314,7 @@ static void handleError(ROUTER *instance, void *router_session,
                     SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
                     backend_ref_t *bref;
                     bref = get_bref_from_dcb(rses, problem_dcb);
-                    if (bref != NULL)
-                    {
-                        CHK_BACKEND_REF(bref);
-                        bref_clear_state(bref, BREF_IN_USE);
-                        bref_set_state(bref, BREF_CLOSED);
-                        if (BREF_IS_WAITING_RESULT(bref))
-                        {
-                            bref_clear_state(bref, BREF_WAITING_RESULT);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("server %s:%d lost the "
-                                  "master status but could not locate the "
-                                  "corresponding backend ref.",
-                                  srv->name, srv->port);
-                    }
+                    bool can_continue = false;
 
                     if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
                         (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
@@ -4344,20 +4328,33 @@ static void handleError(ROUTER *instance, void *router_session,
                          * can't be sure whether it was executed or not. In this
                          * case the safest thing to do is to close the client
                          * connection. */
-                        *succp = true;
+                        can_continue = true;
+                    }
+                    else if (!srv->master_err_is_logged)
+                    {
+                        MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
+                                  "service can't locate the master. Client sessions "
+                                  "will be closed.", srv->name, srv->port);
+                        srv->master_err_is_logged = true;
+                    }
+
+                    *succp = can_continue;
+
+                    if (bref != NULL)
+                    {
+                        CHK_BACKEND_REF(bref);
+                        bref_clear_state(bref, BREF_IN_USE);
+                        bref_set_state(bref, BREF_CLOSED);
+
+                        if (BREF_IS_WAITING_RESULT(bref))
+                        {
+                            bref_clear_state(bref, BREF_WAITING_RESULT);
+                        }
                     }
                     else
                     {
-                        if (!srv->master_err_is_logged)
-                        {
-                            MXS_ERROR("server %s:%d lost the "
-                                      "master status. Readwritesplit "
-                                      "service can't locate the master. "
-                                      "Client sessions will be closed.",
-                                      srv->name, srv->port);
-                            srv->master_err_is_logged = true;
-                        }
-                        *succp = false;
+                        MXS_ERROR("Server %s:%d lost the master status but could not locate the "
+                                  "corresponding backend ref.", srv->name, srv->port);
                     }
                 }
                 else
