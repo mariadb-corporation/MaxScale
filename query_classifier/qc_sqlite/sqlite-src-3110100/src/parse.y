@@ -2827,7 +2827,7 @@ execute_variables ::= VARIABLE.
 execute_variables ::= execute_variables COMMA VARIABLE.
 
 execute_variables_opt ::= .
-execute_variables_opt ::= execute_variables.
+execute_variables_opt ::= USING execute_variables.
 
 execute ::= EXECUTE nm(X) execute_variables_opt. {
   maxscaleExecute(pParse, &X);

@@ -44,6 +44,7 @@ find_package(LibUUID)
 find_package(Jansson)
 find_package(Avro)
 find_package(GSSAPI)
+find_package(SQLite)
 
 # Find or build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target

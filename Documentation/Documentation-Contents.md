@@ -106,6 +106,15 @@ Documentation for MaxScale protocol modules.
  - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
  - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
 
+## Authenticators
+
+A short description of the authentication module type can be found in the
+[Authentication Modules](Authenticators/Authentication-Modules.md)
+document.
+
+ - [MySQL Authenticator](Authenticators/MySQL-Authenticator.md)
+ - [GSSAPI Authenticator](Authenticators/GSSAPI-Authenticator.md)
+
 ## Utilities
 
  - [RabbitMQ Consumer Client](Filters/RabbitMQ-Consumer-Client.md)

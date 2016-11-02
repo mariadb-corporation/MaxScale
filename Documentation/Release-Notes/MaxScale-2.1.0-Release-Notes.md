@@ -8,7 +8,19 @@ release 2.0.X.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
-## Changes Features
+## Changed Features
+
+### Configuration Files
+
+From 2.1.0 onwards MariaDB MaxScale supports hierarchical configuration
+files. When invoked with a configuration file, e.g. `maxscale.cnf`, MariaDB
+MaxScale looks for a directory `maxscale.cnf.d` in the same directory as the
+configuration file, and reads all `.cnf` files it finds in that directory
+hierarchy. All other files will be ignored.
+
+Please see the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md#configuration)
+for details.
 
 ### Logging
 
@@ -44,6 +56,18 @@ case the same error occurs over and over again. That mechanism, which is enabled
 by default, is configured using the new global configuration entry `log_throttling`.
 For more information about this configuration entry, please see
 [Global Settings](../Getting-Started/Configuration-Guide.md#global-settings).
+
+### Persistent Connections
+
+Starting with the 2.1 version of MariaDB MaxScale, when a MySQL protocol
+persistent connection is taken from the persistent connection pool, the
+state of the MySQL session will be reset when the the connection is used
+for the first time. This allows persistent connections to be used with no
+functional limitations and makes them behave like normal MySQL
+connections.
+
+For more information about persistent connections, please read the
+[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
 
 ### User data cache
 

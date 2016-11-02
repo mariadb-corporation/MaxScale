@@ -37,8 +37,6 @@ static int     clientReply(FILTER *instance, void *sdata, GWBUF *queue);
 static void    diagnostics(FILTER *instance, void *sdata, DCB *dcb);
 static uint64_t getCapabilities(void);
 
-#define C_DEBUG(format, ...) MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
-
 //
 // Global symbols of the Module
 //
@@ -401,7 +399,10 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
                             else
                             {
                                 csdata->state = CACHE_EXPECTING_NOTHING;
-                                C_DEBUG("Using data from cache.");
+                                if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
+                                {
+                                    MXS_NOTICE("Using data from cache.");
+                                }
                                 gwbuf_free(packet);
                                 DCB *dcb = csdata->session->client_dcb;
 
@@ -418,9 +419,13 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
                 }
                 else
                 {
-                    C_DEBUG("autocommit = %s and transaction state %s => Not using or storing to cache.",
-                            session_is_autocommit(csdata->session) ? "ON" : "OFF",
-                            session_trx_state_to_string(session_get_trx_state(csdata->session)));
+                    if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
+                    {
+                        MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
+                                   "storing to cache.",
+                                   session_is_autocommit(csdata->session) ? "ON" : "OFF",
+                                   session_trx_state_to_string(session_get_trx_state(csdata->session)));
+                    }
                 }
             }
             break;
@@ -432,7 +437,6 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
 
     if (use_default)
     {
-        C_DEBUG("Using default processing.");
         rv = csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
     }
 
@@ -466,10 +470,13 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
     {
         if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
         {
-            C_DEBUG("Current size %uB of resultset, at least as much "
-                    "as maximum allowed size %uKiB. Not caching.",
-                    gwbuf_length(csdata->res.data),
-                    csdata->instance->config.max_resultset_size / 1024);
+            if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
+            {
+                MXS_NOTICE("Current size %uB of resultset, at least as much "
+                           "as maximum allowed size %uKiB. Not caching.",
+                           gwbuf_length(csdata->res.data),
+                           csdata->instance->config.max_resultset_size / 1024);
+            }
 
             csdata->state = CACHE_IGNORING_RESPONSE;
         }
@@ -714,7 +721,6 @@ static int handle_expecting_response(CACHE_SESSION_DATA *csdata)
         {
         case 0x00: // OK
         case 0xff: // ERR
-            C_DEBUG("OK or ERR");
             store_result(csdata);
 
             rv = send_upstream(csdata);
@@ -722,14 +728,11 @@ static int handle_expecting_response(CACHE_SESSION_DATA *csdata)
             break;
 
         case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
-            C_DEBUG("GET_MORE_CLIENT_DATA");
             rv = send_upstream(csdata);
             csdata->state = CACHE_IGNORING_RESPONSE;
             break;
 
         default:
-            C_DEBUG("RESULTSET");
-
             if (csdata->res.n_totalfields != 0)
             {
                 // We've seen the header and have figured out how many fields there are.
@@ -814,7 +817,10 @@ static int handle_expecting_rows(CACHE_SESSION_DATA *csdata)
 
                 if (csdata->res.n_rows > csdata->instance->config.max_resultset_rows)
                 {
-                    C_DEBUG("Max rows %lu reached, not caching result.", csdata->res.n_rows);
+                    if (csdata->instance->config.debug & CACHE_DEBUG_DECISIONS)
+                    {
+                        MXS_NOTICE("Max rows %lu reached, not caching result.", csdata->res.n_rows);
+                    }
                     rv = send_upstream(csdata);
                     csdata->res.offset = buflen; // To abort the loop.
                     csdata->state = CACHE_IGNORING_RESPONSE;

@@ -27,13 +27,15 @@
 
 #include <maxscale/cdefs.h>
 
-#ifndef PCRE2_CODE_UNIT_WIDTH
+MXS_BEGIN_DECLS
+
+#if defined(PCRE2_CODE_UNIT_WIDTH)
+#error PCRE2_CODE_UNIT_WIDTH already defined. Do not define, and include <maxscale/pcre2.h>.
+#else
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
 #include <pcre2.h>
-
-MXS_BEGIN_DECLS
 
 typedef enum
 {

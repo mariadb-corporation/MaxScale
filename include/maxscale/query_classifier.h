@@ -116,6 +116,7 @@ typedef struct query_classifier
     char* (*qc_get_affected_fields)(GWBUF* stmt);
     char** (*qc_get_database_names)(GWBUF* stmt, int* size);
     char* (*qc_get_prepare_name)(GWBUF* stmt);
+    qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
 } QUERY_CLASSIFIER;
 
 /**
@@ -284,6 +285,17 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
  *       the server.
  */
 char* qc_get_prepare_name(GWBUF* stmt);
+
+/**
+ * Returns the operator of the prepared statement, if the statement
+ * is a PREPARE statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The operator of the prepared statement, if the statement
+ *         is a PREPARE statement; otherwise QUERY_OP_UNDEFINED.
+ */
+qc_query_op_t qc_get_prepare_operation(GWBUF* stmt);
 
 /**
  * Returns the tables accessed by the statement.

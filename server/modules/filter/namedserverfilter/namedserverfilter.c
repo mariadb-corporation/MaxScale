@@ -349,10 +349,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue) && my_session->active)
     {
-        if (queue->next != NULL)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
         if ((sql = modutil_get_SQL(queue)) != NULL)
         {
             if (regexec(&my_instance->re, sql, 0, NULL, 0) == 0)
@@ -420,5 +416,5 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

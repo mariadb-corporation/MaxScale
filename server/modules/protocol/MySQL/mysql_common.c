@@ -102,6 +102,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
     p->protocol_command.scom_nresponse_packets = 0;
     p->protocol_command.scom_nbytes_to_read = 0;
+    p->stored_query = NULL;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;
@@ -145,6 +146,9 @@ void mysql_protocol_done(DCB* dcb)
         MXS_FREE(scmd);
         scmd = scmd2;
     }
+
+    gwbuf_free(p->stored_query);
+
     p->protocol_state = MYSQL_PROTOCOL_DONE;
 
 retblock:

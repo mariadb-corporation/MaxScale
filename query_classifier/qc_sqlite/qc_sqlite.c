@@ -78,6 +78,10 @@ typedef struct qc_sqlite_info
     size_t database_names_capacity;  // The capacity of database_names.
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
+    char* prepare_name;              // The name of a prepared statement.
+    qc_query_op_t prepare_operation; // The operation of a prepared statement.
+    char* preparable_stmt;           // The preparable statement.
+    size_t preparable_stmt_length;   // The length of the preparable statement.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -290,6 +294,8 @@ static void info_finish(QC_SQLITE_INFO* info)
     free_string_array(info->table_fullnames);
     free(info->created_table_name);
     free_string_array(info->database_names);
+    free(info->prepare_name);
+    free(info->preparable_stmt);
 }
 
 static void info_free(QC_SQLITE_INFO* info)
@@ -327,6 +333,10 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->database_names_capacity = 0;
     info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
     info->keyword_2 = 0; // that we have not seen a keyword.
+    info->prepare_name = NULL;
+    info->prepare_operation = QUERY_OP_UNDEFINED;
+    info->preparable_stmt = NULL;
+    info->preparable_stmt_length = 0;
 
     return info;
 }
@@ -458,6 +468,29 @@ static bool parse_query(GWBUF* query)
                     parse_query_string(s, len);
                     this_thread.info->query = NULL;
                     this_thread.info->query_len = 0;
+
+                    if ((info->types & QUERY_TYPE_PREPARE_NAMED_STMT) && info->preparable_stmt)
+                    {
+                        QC_SQLITE_INFO* preparable_info = info_alloc();
+
+                        if (preparable_info)
+                        {
+                            this_thread.info = preparable_info;
+
+                            const char *preparable_s = info->preparable_stmt;
+                            size_t preparable_len = info->preparable_stmt_length;
+
+                            this_thread.info->query = preparable_s;
+                            this_thread.info->query_len = preparable_len;
+                            parse_query_string(preparable_s, preparable_len);
+                            this_thread.info->query = NULL;
+                            this_thread.info->query_len = 0;
+
+                            info->prepare_operation = preparable_info->operation;
+
+                            info_free(preparable_info);
+                        }
+                    }
 
                     // TODO: Add return value to gwbuf_add_buffer_object.
                     // Always added; also when it was not recognized. If it was not recognized now,
@@ -1557,6 +1590,13 @@ void maxscaleDeallocate(Parse* pParse, Token* pName)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
 }
 
 void maxscaleDo(Parse* pParse, ExprList* pEList)
@@ -1594,6 +1634,13 @@ void maxscaleExecute(Parse* pParse, Token* pName)
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
     info->is_real_query = true;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
 }
 
 void maxscaleExplain(Parse* pParse, SrcList* pName)
@@ -1961,6 +2008,20 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_PREPARE_NAMED_STMT;
     info->is_real_query = true;
+
+    info->prepare_name = MXS_MALLOC(pName->n + 1);
+    if (info->prepare_name)
+    {
+        memcpy(info->prepare_name, pName->z, pName->n);
+        info->prepare_name[pName->n] = 0;
+    }
+
+    info->preparable_stmt_length = pStmt->n - 2;
+    info->preparable_stmt = MXS_MALLOC(info->preparable_stmt_length);
+    if (info->preparable_stmt)
+    {
+        memcpy(info->preparable_stmt, pStmt->z + 1, pStmt->n - 2);
+    }
 }
 
 void maxscalePrivileges(Parse* pParse, int kind)
@@ -2847,7 +2908,10 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
     {
         if (qc_info_is_valid(info->status))
         {
-            MXS_WARNING("qc_get_prepare_name not implemented yet.");
+            if (info->prepare_name)
+            {
+                name = MXS_STRDUP(info->prepare_name);
+            }
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -2860,6 +2924,34 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
     }
 
     return name;
+}
+
+static qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
+{
+    QC_TRACE();
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    QC_SQLITE_INFO* info = get_query_info(query);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            op = info->prepare_operation;
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(query, "cannot report the operation of a prepared statement");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+
+    return op;
 }
 
 /**
@@ -2886,6 +2978,7 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
     qc_sqlite_get_prepare_name,
+    qc_sqlite_get_prepare_operation,
 };
 
 
