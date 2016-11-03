@@ -76,6 +76,9 @@ typedef struct parsing_info_st
     void* pi_handle; /*< parsing info object pointer */
     char* pi_query_plain_str; /*< query as plain string */
     void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
+    QC_FIELD_INFO* field_infos;
+    size_t field_infos_len;
+    size_t field_infos_capacity;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -1718,6 +1721,14 @@ static void parsing_info_done(void* ptr)
         {
             free(pi->pi_query_plain_str);
         }
+
+        for (size_t i = 0; i < pi->field_infos_len; ++i)
+        {
+            free(pi->field_infos[i].database);
+            free(pi->field_infos[i].table);
+            free(pi->field_infos[i].column);
+        }
+        free(pi->field_infos);
 
         free(pi);
     }
