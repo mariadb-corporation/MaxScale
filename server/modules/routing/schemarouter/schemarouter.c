@@ -84,8 +84,6 @@ static void handleError(ROUTER*        instance,
                         DCB*           backend_dcb,
                         error_action_t action,
                         bool*          succp);
-
-static int router_get_servercount(ROUTER_INSTANCE* router);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_shard_route_target(qc_query_type_t qtype,
@@ -306,7 +304,7 @@ char* get_lenenc_str(void* data)
 showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* bref, GWBUF** buffer)
 {
     unsigned char* ptr;
-    char* target = bref->bref_backend->backend_server->unique_name;
+    char* target = bref->bref_backend->server->unique_name;
     GWBUF* buf;
     bool duplicate_found = false;
     showdb_response_t rval = SHOWDB_PARTIAL_RESPONSE;
@@ -393,12 +391,12 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
     {
         atomic_add(&bref->n_mapping_eof, 1);
         MXS_INFO("schemarouter: SHOW DATABASES fully received from %s.",
-                 bref->bref_backend->backend_server->unique_name);
+                 bref->bref_backend->server->unique_name);
     }
     else
     {
         MXS_INFO("schemarouter: SHOW DATABASES partially received from %s.",
-                 bref->bref_backend->backend_server->unique_name);
+                 bref->bref_backend->server->unique_name);
     }
 
     gwbuf_free(buf);
@@ -453,13 +451,13 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
     {
         if (BREF_IS_IN_USE(&session->rses_backend_ref[i]) &&
             !BREF_IS_CLOSED(&session->rses_backend_ref[i]) &
-            SERVER_IS_RUNNING(session->rses_backend_ref[i].bref_backend->backend_server))
+            SERVER_IS_RUNNING(session->rses_backend_ref[i].bref_backend->server))
         {
             clone = gwbuf_clone(buffer);
             dcb = session->rses_backend_ref[i].bref_dcb;
             rval |= !dcb->func.write(dcb, clone);
             MXS_DEBUG("schemarouter: Wrote SHOW DATABASES to %s for session %p: returned %d",
-                      session->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                      session->rses_backend_ref[i].bref_backend->server->unique_name,
                       session->rses_client_dcb->session,
                       rval);
         }
@@ -560,7 +558,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
             for (i = 0; i < client->rses_nbackends; i++)
             {
 
-                char *srvnm = client->rses_backend_ref[i].bref_backend->backend_server->unique_name;
+                char *srvnm = client->rses_backend_ref[i].bref_backend->server->unique_name;
                 if (strcmp(srvnm, buffer->hint->data) == 0)
                 {
                     rval = srvnm;
@@ -596,21 +594,16 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
  */
 bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
 {
-    int i;
-    bool rval = false;
-
-    for (i = 0; router->servers[i]; i++)
+    for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
     {
-        if (strcmp(router->servers[i]->backend_server->unique_name, shard) == 0)
+        if (strcmp(ref->server->unique_name, shard) == 0 &&
+            SERVER_IS_RUNNING(ref->server))
         {
-            if (SERVER_IS_RUNNING(router->servers[i]->backend_server))
-            {
-                rval = true;
-            }
-            break;
+            return true;
         }
     }
-    return rval;
+
+    return false;
 }
 
 /**
@@ -694,22 +687,21 @@ ROUTER_OBJECT* GetModuleObject()
 static ROUTER* createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE* router;
-    SERVER_REF* server;
     CONFIG_PARAMETER* conf;
-    int nservers;
-    int i;
     CONFIG_PARAMETER* param;
 
     if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
     }
+
     if ((router->ignored_dbs = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun)) == NULL)
     {
         MXS_ERROR("Memory allocation failed when allocating schemarouter database ignore list.");
         MXS_FREE(router);
         return NULL;
     }
+
     hashtable_memory_fns(router->ignored_dbs, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
 
     if ((router->shard_maps = hashtable_alloc(SCHEMAROUTER_USERHASH_SIZE, hashkeyfun, hashcmpfun)) == NULL)
@@ -738,10 +730,6 @@ static ROUTER* createInstance(SERVICE *service, char **options)
     router->stats.ses_longest = 0;
     router->stats.ses_shortest = (double)((unsigned long)(~0));
     spinlock_init(&router->lock);
-
-    /** Calculate number of servers */
-    server = service->dbref;
-    nservers = 0;
 
     conf = service->svc_config_param;
     if ((config_get_param(conf, "auth_all_servers")) == NULL)
@@ -800,17 +788,20 @@ static ROUTER* createInstance(SERVICE *service, char **options)
 
     bool failure = false;
 
-    for (i = 0; options && options[i]; i++)
+    for (int i = 0; options && options[i]; i++)
     {
-        char* value;
-        if ((value = strchr(options[i], '=')) == NULL)
+        char* value = strchr(options[i], '=');
+
+        if (value == NULL)
         {
             MXS_ERROR("Unknown router options for Schemarouter: %s", options[i]);
             failure = true;
             break;
         }
+
         *value = '\0';
         value++;
+
         if (strcmp(options[i], "max_sescmd_history") == 0)
         {
             router->schemarouter_config.max_sescmd_hist = atoi(value);
@@ -848,94 +839,9 @@ static ROUTER* createInstance(SERVICE *service, char **options)
     if (failure)
     {
         MXS_FREE(router);
-        return NULL;
+        router = NULL;
     }
 
-    while (server != NULL)
-    {
-        nservers++;
-        server = server->next;
-    }
-    router->servers = (BACKEND **)MXS_CALLOC(nservers + 1, sizeof(BACKEND *));
-
-    if (router->servers == NULL)
-    {
-        MXS_FREE(router);
-        return NULL;
-    }
-    /**
-     * Create an array of the backend servers in the router structure to
-     * maintain a count of the number of connections to each
-     * backend server.
-     */
-    server = service->dbref;
-    nservers = 0;
-
-    while (server != NULL)
-    {
-        if ((router->servers[nservers] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
-        {
-            goto clean_up;
-        }
-        router->servers[nservers]->backend_server = server->server;
-        router->servers[nservers]->backend_conn_count = 0;
-        router->servers[nservers]->weight = 1;
-        router->servers[nservers]->be_valid = false;
-        router->servers[nservers]->stats.queries = 0;
-        if (server->server->monuser == NULL && service->credentials.name != NULL)
-        {
-            router->servers[nservers]->backend_server->monuser =
-                MXS_STRDUP_A(service->credentials.name);
-        }
-        if (server->server->monpw == NULL && service->credentials.authdata != NULL)
-        {
-            router->servers[nservers]->backend_server->monpw =
-                MXS_STRDUP_A(service->credentials.authdata);
-        }
-#if defined(SS_DEBUG)
-        router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
-        router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
-#endif
-        nservers += 1;
-        server = server->next;
-    }
-    router->servers[nservers] = NULL;
-
-    /**
-     * Process the options
-     */
-    router->bitmask = 0;
-    router->bitvalue = 0;
-
-    /**
-     * Read config version number from service to inform what configuration
-     * is used if any.
-     */
-    router->schemarouter_version = service->svc_config_version;
-
-    /**
-     * We have completed the creation of the router data, so now
-     * insert this router into the linked list of routers
-     * that have been created with this module.
-     */
-
-    spinlock_acquire(&instlock);
-    router->next = instances;
-    instances = router;
-    spinlock_release(&instlock);
-    goto retblock;
-
-clean_up:
-    /** clean up */
-    for (i = 0; i < nservers; i++)
-    {
-        MXS_FREE(router->servers[i]);
-    }
-    MXS_FREE(router->servers);
-    MXS_FREE(router);
-    router = NULL;
-    /** Fallthrough */
-retblock:
     return (ROUTER *)router;
 }
 
@@ -975,14 +881,11 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     ROUTER_INSTANCE* router      = (ROUTER_INSTANCE *)router_inst;
     bool succp;
     int router_nservers = 0; /*< # of servers in total */
-    int i;
-    char db[MYSQL_DATABASE_MAXLEN + 1];
+    char db[MYSQL_DATABASE_MAXLEN + 1] = "";
     MySQLProtocol* protocol = session->client_dcb->protocol;
     MYSQL_session* data = session->client_dcb->data;
     bool using_db = false;
     bool have_db = false;
-
-    *db = 0;
 
     spinlock_acquire(&session->ses_lock);
 
@@ -1010,8 +913,7 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
 
     if (client_rses == NULL)
     {
-        ss_dassert(false);
-        goto return_rses;
+        return NULL;
     }
 #if defined(SS_DEBUG)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
@@ -1079,47 +981,57 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
      * responding server.
      */
 
-    router_nservers = router_get_servercount(router);
+    router_nservers = router->service->n_dbref;
 
     /**
      * Create backend reference objects for this session.
      */
-    backend_ref = (backend_ref_t *)MXS_CALLOC(1, router_nservers * sizeof(backend_ref_t));
+    backend_ref = (backend_ref_t *)MXS_CALLOC(router_nservers, sizeof(backend_ref_t));
 
     if (backend_ref == NULL)
     {
-        /** log this */
         MXS_FREE(client_rses);
-        MXS_FREE(backend_ref);
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
     /**
      * Initialize backend references with BACKEND ptr.
      * Initialize session command cursors for each backend reference.
      */
-    for (i = 0; i < router_nservers; i++)
+
+    int i = 0;
+
+    for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
     {
+        if (ref->active)
+        {
 #if defined(SS_DEBUG)
-        backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
-        backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top  = CHK_NUM_SESCMD_CUR;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
+            backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
+            backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top  = CHK_NUM_SESCMD_CUR;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
-        backend_ref[i].bref_state = 0;
-        backend_ref[i].n_mapping_eof = 0;
-        backend_ref[i].map_queue = NULL;
-        backend_ref[i].bref_backend = router->servers[i];
-        /** store pointers to sescmd list to both cursors */
-        backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
-            &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;
+            backend_ref[i].bref_state = 0;
+            backend_ref[i].n_mapping_eof = 0;
+            backend_ref[i].map_queue = NULL;
+            backend_ref[i].bref_backend = ref;
+            /** store pointers to sescmd list to both cursors */
+            backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
+                &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
+            backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;
+            i++;
+        }
+    }
+
+    if (i < router_nservers)
+    {
+        router_nservers = i;
     }
 
     spinlock_init(&client_rses->rses_lock);
     client_rses->rses_backend_ref = backend_ref;
+    client_rses->rses_nbackends = router_nservers;
 
     /**
      * Find a backend servers to connect to.
@@ -1129,43 +1041,23 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     {
         MXS_FREE(client_rses->rses_backend_ref);
         MXS_FREE(client_rses);
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
     /**
      * Connect to all backend servers
      */
-    succp = connect_backend_servers(backend_ref,
-                                    router_nservers,
-                                    session,
-                                    router);
+    succp = connect_backend_servers(backend_ref, router_nservers, session, router);
 
     rses_end_locked_router_action(client_rses);
 
-    /**
-     * Master and at least <min_nslaves> slaves must be found
-     */
-    if (!succp)
+    if (!succp || !(succp = rses_begin_locked_router_action(client_rses)))
     {
         MXS_FREE(client_rses->rses_backend_ref);
         MXS_FREE(client_rses);
-        client_rses = NULL;
-        goto return_rses;
-    }
-    /** Copy backend pointers to router session. */
-    client_rses->rses_backend_ref = backend_ref;
-    client_rses->rses_nbackends = router_nservers; /*< # of backend servers */
-
-    if (!(succp = rses_begin_locked_router_action(client_rses)))
-    {
-        MXS_FREE(client_rses->rses_backend_ref);
-        MXS_FREE(client_rses);
-
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
 
-    if (db[0] != 0x0)
+    if (db[0])
     {
         /* Store the database the client is connecting to */
         snprintf(client_rses->connect_db, MYSQL_DATABASE_MAXLEN + 1, "%s", db);
@@ -1175,26 +1067,6 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
 
     atomic_add(&router->stats.sessions, 1);
 
-    /**
-     * Version is bigger than zero once initialized.
-     */
-    atomic_add(&client_rses->rses_versno, 2);
-    ss_dassert(client_rses->rses_versno == 2);
-    /**
-     * Add this session to end of the list of active sessions in router.
-     */
-    spinlock_acquire(&router->lock);
-    client_rses->next = router->connections;
-    router->connections = client_rses;
-    spinlock_release(&router->lock);
-
-return_rses:
-#if defined(SS_DEBUG)
-    if (client_rses != NULL)
-    {
-        CHK_CLIENT_RSES(client_rses);
-    }
-#endif
     return (void *)client_rses;
 }
 
@@ -1270,7 +1142,7 @@ static void closeSession(ROUTER* instance, void* router_session)
                  */
                 dcb_close(dcb);
                 /** decrease server current connection counters */
-                atomic_add(&bref->bref_backend->backend_conn_count, -1);
+                atomic_add(&bref->bref_backend->connections, -1);
             }
         }
 
@@ -1315,51 +1187,18 @@ static void closeSession(ROUTER* instance, void* router_session)
 
 static void freeSession(ROUTER* router_instance, void* router_client_session)
 {
-    ROUTER_CLIENT_SES* router_cli_ses;
-    ROUTER_INSTANCE* router;
-    int i;
-    backend_ref_t* bref;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
 
-    router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
-    router = (ROUTER_INSTANCE *)router_instance;
-
-    for (i = 0; i < router_cli_ses->rses_nbackends; i++)
+    for (int i = 0; i < router_cli_ses->rses_nbackends; i++)
     {
-        bref = &router_cli_ses->rses_backend_ref[i];
-        while (bref->bref_pending_cmd &&
-               (bref->bref_pending_cmd = gwbuf_consume(
-                                             bref->bref_pending_cmd, gwbuf_length(bref->bref_pending_cmd))))
-        {
-            ;
-        }
+        gwbuf_free(router_cli_ses->rses_backend_ref[i].bref_pending_cmd);
     }
-    spinlock_acquire(&router->lock);
-
-    if (router->connections == router_cli_ses)
-    {
-        router->connections = router_cli_ses->next;
-    }
-    else
-    {
-        ROUTER_CLIENT_SES* ptr = router->connections;
-
-        while (ptr && ptr->next != router_cli_ses)
-        {
-            ptr = ptr->next;
-        }
-
-        if (ptr)
-        {
-            ptr->next = router_cli_ses->next;
-        }
-    }
-    spinlock_release(&router->lock);
 
     /**
      * For each property type, walk through the list, finalize properties
      * and free the allocated memory.
      */
-    for (i = RSES_PROP_TYPE_FIRST; i < RSES_PROP_TYPE_COUNT; i++)
+    for (int i = RSES_PROP_TYPE_FIRST; i < RSES_PROP_TYPE_COUNT; i++)
     {
         rses_property_t* p = router_cli_ses->rses_properties[i];
         rses_property_t* q = p;
@@ -1415,15 +1254,15 @@ static bool get_shard_dcb(DCB**              p_dcb,
 
     for (i = 0; i < rses->rses_nbackends; i++)
     {
-        BACKEND* b = backend_ref[i].bref_backend;
+        SERVER_REF* b = backend_ref[i].bref_backend;
         /**
          * To become chosen:
          * backend must be in use, name must match, and
          * the backend state must be RUNNING
          */
         if (BREF_IS_IN_USE((&backend_ref[i])) &&
-            (strncasecmp(name, b->backend_server->unique_name, PATH_MAX) == 0) &&
-            SERVER_IS_RUNNING(b->backend_server))
+            (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
+            SERVER_IS_RUNNING(b->server))
         {
             *p_dcb = backend_ref[i].bref_dcb;
             succp = true;
@@ -2225,14 +2064,13 @@ static int routeQuery(ROUTER* instance,
 
     if (TARGET_IS_ANY(route_target))
     {
-        int z;
-
-        for (z = 0; inst->servers[z]; z++)
+        for (int i = 0; i < router_cli_ses->rses_nbackends; i++)
         {
-            if (SERVER_IS_RUNNING(inst->servers[z]->backend_server))
+            SERVER *server = router_cli_ses->rses_backend_ref[i].bref_backend->server;
+            if (SERVER_IS_RUNNING(server))
             {
                 route_target = TARGET_NAMED_SERVER;
-                targetserver = MXS_STRDUP_A(inst->servers[z]->backend_server->unique_name);
+                targetserver = MXS_STRDUP_A(server->unique_name);
                 break;
             }
         }
@@ -2240,9 +2078,7 @@ static int routeQuery(ROUTER* instance,
         if (TARGET_IS_ANY(route_target))
         {
             /**No valid backends alive*/
-            MXS_INFO("schemarouter: No backends are running");
-            MXS_ERROR("Schemarouter: Failed to route query, "
-                      "no backends are available.");
+            MXS_ERROR("Schemarouter: Failed to route query, no backends are available.");
             rses_end_locked_router_action(router_cli_ses);
             ret = 0;
             goto retblock;
@@ -2280,8 +2116,8 @@ static int routeQuery(ROUTER* instance,
         scur = &bref->bref_sescmd_cur;
 
         MXS_INFO("Route query to \t%s:%d <",
-                 bref->bref_backend->backend_server->name,
-                 bref->bref_backend->backend_server->port);
+                 bref->bref_backend->server->name,
+                 bref->bref_backend->server->port);
         /**
          * Store current stmt if execution of previous session command
          * haven't completed yet. Note that according to MySQL protocol
@@ -2310,7 +2146,6 @@ static int routeQuery(ROUTER* instance,
             bref = get_bref_from_dcb(router_cli_ses, target_dcb);
             bref_set_state(bref, BREF_QUERY_ACTIVE);
             bref_set_state(bref, BREF_WAITING_RESULT);
-            atomic_add(&bref->bref_backend->stats.queries, 1);
         }
         else
         {
@@ -2399,17 +2234,6 @@ static void diagnostic(ROUTER *instance, DCB *dcb)
     double sescmd_pct = router->stats.n_sescmd != 0 ?
                         100.0 * ((double)router->stats.n_sescmd / (double)router->stats.n_queries) :
                         0.0;
-
-    dcb_printf(dcb, "\33[1;4m%-16s%-16s%-16s\33[0m\n", "Server", "Queries", "State");
-    for (i = 0; router->servers[i]; i++)
-    {
-        dcb_printf(dcb, "%-16s%-16d%-16s\n",
-                   router->servers[i]->backend_server->unique_name,
-                   router->servers[i]->stats.queries,
-                   SERVER_IS_RUNNING(router->servers[i]->backend_server) ?
-                   "\33[30;42mRUNNING\33[0m" :
-                   "\33[30;41mDOWN\33[0m");
-    }
 
     /** Session command statistics */
     dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
@@ -2514,7 +2338,7 @@ static void clientReply(ROUTER* instance,
 
     MXS_DEBUG("schemarouter: Reply from [%s] session [%p]"
               " mapping [%s] queries queued [%s]",
-              bref->bref_backend->backend_server->unique_name,
+              bref->bref_backend->server->unique_name,
               router_cli_ses->rses_client_dcb->session,
               router_cli_ses->init & INIT_MAPPING ? "true" : "false",
               router_cli_ses->queue == NULL ? "none" :
@@ -2641,8 +2465,8 @@ static void clientReply(ROUTER* instance,
 
             MXS_ERROR("Failed to execute %s in %s:%d. %s %s",
                       cmdstr,
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port,
+                      bref->bref_backend->server->name,
+                      bref->bref_backend->server->port,
                       err,
                       replystr);
 
@@ -2709,8 +2533,8 @@ static void clientReply(ROUTER* instance,
 
         MXS_INFO("Backend %s:%d processed reply and starts to execute "
                  "active cursor.",
-                 bref->bref_backend->backend_server->name,
-                 bref->bref_backend->backend_server->port);
+                 bref->bref_backend->server->name,
+                 bref->bref_backend->server->port);
 
         execute_sescmd_in_backend(bref);
     }
@@ -2757,44 +2581,41 @@ static void clientReply(ROUTER* instance,
 /** Compare number of connections from this router in backend servers */
 int bref_cmp_router_conn(const void* bref1, const void* bref2)
 {
-    BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF* b1 = ((backend_ref_t *)bref1)->bref_backend;
+    SERVER_REF* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
-    return ((1000 * b1->backend_conn_count) / b1->weight)
-           - ((1000 * b2->backend_conn_count) / b2->weight);
+    return ((1000 * b1->connections) / b1->weight)
+           - ((1000 * b2->connections) / b2->weight);
 }
 
 /** Compare number of global connections in backend servers */
 int bref_cmp_global_conn(const void* bref1, const void* bref2)
 {
-    BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF* b1 = ((backend_ref_t *)bref1)->bref_backend;
+    SERVER_REF* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
-    return ((1000 * b1->backend_server->stats.n_current) / b1->weight)
-           - ((1000 * b2->backend_server->stats.n_current) / b2->weight);
+    return ((1000 * b1->server->stats.n_current) / b1->weight)
+           - ((1000 * b2->server->stats.n_current) / b2->weight);
 }
 
 
 /** Compare replication lag between backend servers */
 int bref_cmp_behind_master(const void* bref1, const void* bref2)
 {
-    BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF* b1 = ((backend_ref_t *)bref1)->bref_backend;
+    SERVER_REF* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
-    return ((b1->backend_server->rlag < b2->backend_server->rlag) ? -1 :
-            ((b1->backend_server->rlag > b2->backend_server->rlag) ? 1 : 0));
+    return b1->server->rlag - b2->server->rlag;
 }
 
 /** Compare number of current operations in backend servers */
 int bref_cmp_current_load(const void* bref1, const void* bref2)
 {
-    SERVER*  s1 = ((backend_ref_t *)bref1)->bref_backend->backend_server;
-    SERVER*  s2 = ((backend_ref_t *)bref2)->bref_backend->backend_server;
-    BACKEND* b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF* b1 = ((backend_ref_t *)bref1)->bref_backend;
+    SERVER_REF* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
-    return ((1000 * s1->stats.n_current_ops) - b1->weight)
-           - ((1000 * s2->stats.n_current_ops) - b2->weight);
+    return ((1000 * b1->server->stats.n_current_ops) - b1->weight)
+           - ((1000 * b2->server->stats.n_current_ops) - b2->weight);
 }
 
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state)
@@ -2823,14 +2644,14 @@ static void bref_clear_state(backend_ref_t* bref, bref_state_t state)
         else
         {
             /** Decrease global operation count */
-            prev2 = atomic_add(&bref->bref_backend->backend_server->stats.n_current_ops, -1);
+            prev2 = atomic_add(&bref->bref_backend->server->stats.n_current_ops, -1);
             ss_dassert(prev2 > 0);
             if (prev2 <= 0)
             {
                 MXS_ERROR("[%s] Error: negative current operation count in backend %s:%u",
                           __FUNCTION__,
-                          bref->bref_backend->backend_server->name,
-                          bref->bref_backend->backend_server->port);
+                          bref->bref_backend->server->name,
+                          bref->bref_backend->server->port);
             }
         }
     }
@@ -2860,18 +2681,18 @@ static void bref_set_state(backend_ref_t* bref, bref_state_t state)
             MXS_ERROR("[%s] Error: negative number of connections waiting "
                       "for results in backend %s:%u",
                       __FUNCTION__,
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
+                      bref->bref_backend->server->name,
+                      bref->bref_backend->server->port);
         }
         /** Increase global operation count */
-        prev2 = atomic_add(&bref->bref_backend->backend_server->stats.n_current_ops, 1);
+        prev2 = atomic_add(&bref->bref_backend->server->stats.n_current_ops, 1);
         ss_dassert(prev2 >= 0);
         if (prev2 < 0)
         {
             MXS_ERROR("[%s] Error: negative current operation count in backend %s:%u",
                       __FUNCTION__,
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
+                      bref->bref_backend->server->name,
+                      bref->bref_backend->server->port);
         }
     }
 }
@@ -2941,14 +2762,14 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
 
         for (i = 0; i < router_nservers; i++)
         {
-            BACKEND* b = backend_ref[i].bref_backend;
+            SERVER_REF* b = backend_ref[i].bref_backend;
 
             MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
-                     b->backend_conn_count,
-                     b->backend_server->stats.n_current,
-                     b->backend_server->name,
-                     b->backend_server->port,
-                     STRSRVSTATUS(b->backend_server));
+                     b->connections,
+                     b->server->stats.n_current,
+                     b->server->name,
+                     b->server->port,
+                     STRSRVSTATUS(b->server));
         }
     } /*< log only */
     /**
@@ -2957,9 +2778,9 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
      */
     for (i = 0; i < router_nservers; i++)
     {
-        BACKEND* b = backend_ref[i].bref_backend;
+        SERVER_REF* b = backend_ref[i].bref_backend;
 
-        if (SERVER_IS_RUNNING(b->backend_server))
+        if (SERVER_IS_RUNNING(b->server))
         {
             servers_found += 1;
 
@@ -2971,9 +2792,9 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
             /** New server connection */
             else
             {
-                backend_ref[i].bref_dcb = dcb_connect(b->backend_server,
+                backend_ref[i].bref_dcb = dcb_connect(b->server,
                                                       session,
-                                                      b->backend_server->protocol);
+                                                      b->server->protocol);
 
                 if (backend_ref[i].bref_dcb != NULL)
                 {
@@ -3000,7 +2821,7 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
                      * But decreased in the calling function
                      * of dcb_close.
                      */
-                    atomic_add(&b->backend_conn_count, 1);
+                    atomic_add(&b->connections, 1);
 
                     dcb_add_callback(backend_ref[i].bref_dcb,
                                      DCB_REASON_NOT_RESPONDING,
@@ -3012,8 +2833,8 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
                     succp = false;
                     MXS_ERROR("Unable to establish "
                               "connection with slave %s:%d",
-                              b->backend_server->name,
-                              b->backend_server->port);
+                              b->server->name,
+                              b->server->port);
                     /* handle connect error */
                     break;
                 }
@@ -3047,14 +2868,14 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
         {
             for (i = 0; i < router_nservers; i++)
             {
-                BACKEND* b = backend_ref[i].bref_backend;
+                SERVER_REF* b = backend_ref[i].bref_backend;
 
                 if (BREF_IS_IN_USE((&backend_ref[i])))
                 {
                     MXS_INFO("Connected %s in \t%s:%d",
-                             STRSRVSTATUS(b->backend_server),
-                             b->backend_server->name,
-                             b->backend_server->port);
+                             STRSRVSTATUS(b->server),
+                             b->server->name,
+                             b->server->port);
                 }
             } /* for */
         }
@@ -3437,28 +3258,7 @@ static bool execute_sescmd_in_backend(backend_ref_t* backend_ref)
         /** Cursor is left active when function returns. */
         sescmd_cursor_set_active(scur, true);
     }
-#if defined(SS_DEBUG)
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-    {
-        tracelog_routed_query(scur->scmd_cur_rses,
-                              "execute_sescmd_in_backend",
-                              backend_ref,
-                              sescmd_cursor_clone_querybuf(scur));
-    }
 
-    {
-        GWBUF* tmpbuf = sescmd_cursor_clone_querybuf(scur);
-        uint8_t* ptr = GWBUF_DATA(tmpbuf);
-        unsigned char cmd = MYSQL_GET_COMMAND(ptr);
-
-        MXS_DEBUG("%lu [execute_sescmd_in_backend] Just before write, fd "
-                  "%d : cmd %s.",
-                  pthread_self(),
-                  dcb->fd,
-                  STRPACKETTYPE(cmd));
-        gwbuf_free(tmpbuf);
-    }
-#endif /*< SS_DEBUG */
     switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
     {
         case MYSQL_COM_CHANGE_USER:
@@ -3567,75 +3367,6 @@ static rses_property_t* mysql_sescmd_get_property(mysql_sescmd_t* scmd)
     return scmd->my_sescmd_prop;
 }
 
-static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
-                                  char*              funcname,
-                                  backend_ref_t*     bref,
-                                  GWBUF*             buf)
-{
-    uint8_t* packet = GWBUF_DATA(buf);
-    unsigned char packet_type = packet[4];
-    size_t len;
-    size_t buflen = GWBUF_LENGTH(buf);
-    char* querystr;
-    char* startpos = (char *)&packet[5];
-
-    CHK_BACKEND_REF(bref);
-    ss_debug(BACKEND *b = bref->bref_backend);
-    CHK_BACKEND(b);
-    ss_debug(DCB *dcb = bref->bref_dcb);
-    CHK_DCB(dcb);
-
-    ss_debug(backend_type_t be_type = BACKEND_TYPE(b));
-
-    if (GWBUF_IS_TYPE_MYSQL(buf))
-    {
-        len  = packet[0];
-        len += 256 * packet[1];
-        len += 256 * 256 * packet[2];
-
-        if (packet_type == '\x03')
-        {
-            querystr = (char *)MXS_MALLOC(len);
-            MXS_ABORT_IF_NULL(querystr);
-            memcpy(querystr, startpos, len - 1);
-            querystr[len - 1] = '\0';
-            MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
-                      pthread_self(),
-                      funcname,
-                      (int)buflen,
-                      querystr,
-                      b->backend_server->name,
-                      b->backend_server->port,
-                      STRBETYPE(be_type),
-                      dcb);
-            MXS_FREE(querystr);
-        }
-        else if (packet_type == '\x22' ||
-                 packet_type == 0x22 ||
-                 packet_type == '\x26' ||
-                 packet_type == 0x26 ||
-                 true)
-        {
-            querystr = (char *)MXS_MALLOC(len);
-            MXS_ABORT_IF_NULL(querystr);
-            memcpy(querystr, startpos, len - 1);
-            querystr[len - 1] = '\0';
-            MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
-                      pthread_self(),
-                      funcname,
-                      (int)buflen,
-                      querystr,
-                      b->backend_server->name,
-                      b->backend_server->port,
-                      STRBETYPE(be_type),
-                      dcb);
-            MXS_FREE(querystr);
-        }
-    }
-    gwbuf_free(buf);
-}
-
-
 /**
  * Return RCAP_TYPE_STMT_INPUT.
  */
@@ -3699,17 +3430,16 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s\t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ?
+                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->server) ?
                           "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].bref_backend->server->name,
+                         backend_ref[i].bref_backend->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : ""));
             }
 
             if (BREF_IS_IN_USE((&backend_ref[i])))
             {
                 rc = dcb->func.write(dcb, gwbuf_clone(querybuf));
-                atomic_add(&backend_ref[i].bref_backend->stats.queries, 1);
                 if (rc != 1)
                 {
                     succp = false;
@@ -3807,10 +3537,10 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s\t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ?
+                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->server) ?
                           "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].bref_backend->server->name,
+                         backend_ref[i].bref_backend->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : ""));
             }
 
@@ -3832,8 +3562,8 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
                 succp = true;
 
                 MXS_INFO("Backend %s:%d already executing sescmd.",
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port);
+                         backend_ref[i].bref_backend->server->name,
+                         backend_ref[i].bref_backend->server->port);
             }
             else
             {
@@ -3843,12 +3573,8 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
                 {
                     MXS_ERROR("Failed to execute session "
                               "command in %s:%d",
-                              backend_ref[i].bref_backend->backend_server->name,
-                              backend_ref[i].bref_backend->backend_server->port);
-                }
-                else
-                {
-                    atomic_add(&backend_ref[i].bref_backend->stats.queries, 1);
+                              backend_ref[i].bref_backend->server->name,
+                              backend_ref[i].bref_backend->server->port);
                 }
             }
         }
@@ -4030,7 +3756,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
                                         GWBUF*             errmsg)
 {
     SESSION* ses;
-    int router_nservers, i;
     unsigned char cmd = *((unsigned char*)errmsg->start + 4);
 
     backend_ref_t* bref;
@@ -4087,13 +3812,12 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
                         &router_handle_state_switch,
                         (void *)bref);
 
-    router_nservers = router_get_servercount(inst);
     /**
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
     succp = connect_backend_servers(rses->rses_backend_ref,
-                                    router_nservers,
+                                    rses->rses_nbackends,
                                     ses,
                                     inst);
 
@@ -4106,24 +3830,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
 
 return_succp:
     return succp;
-}
-
-/**
- * Count the number of servers.
- * @param inst Router instance
- * @return Number of servers
- */
-static int router_get_servercount(ROUTER_INSTANCE* inst)
-{
-    int router_nservers = 0;
-    BACKEND** b = inst->servers;
-    /** count servers */
-    while (*(b++) != NULL)
-    {
-        router_nservers++;
-    }
-
-    return router_nservers;
 }
 
 /**
@@ -4190,7 +3896,7 @@ static int router_handle_state_switch(DCB* dcb,
     bref = (backend_ref_t *) data;
     CHK_BACKEND_REF(bref);
 
-    srv = bref->bref_backend->backend_server;
+    srv = bref->bref_backend->server;
 
     if (SERVER_IS_RUNNING(srv))
     {
@@ -4200,7 +3906,7 @@ static int router_handle_state_switch(DCB* dcb,
     switch (reason)
     {
         case DCB_REASON_NOT_RESPONDING:
-            atomic_add(&bref->bref_backend->backend_conn_count, -1);
+            atomic_add(&bref->bref_backend->connections, -1);
             MXS_INFO("schemarouter: server %s not responding", srv->unique_name);
             dcb->func.hangup(dcb);
             break;
@@ -4478,7 +4184,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
             {
                 router_cli_ses->rses_backend_ref[i].bref_mapped = true;
                 MXS_DEBUG("schemarouter: Received SHOW DATABASES reply from %s for session %p",
-                          router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                          router_cli_ses->rses_backend_ref[i].bref_backend->server->unique_name,
                           router_cli_ses->rses_client_dcb->session);
             }
             else if (rc == SHOWDB_PARTIAL_RESPONSE)
@@ -4486,7 +4192,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
                 bref->map_queue = writebuf;
                 writebuf = NULL;
                 MXS_DEBUG("schemarouter: Received partial SHOW DATABASES reply from %s for session %p",
-                          router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                          router_cli_ses->rses_backend_ref[i].bref_backend->server->unique_name,
                           router_cli_ses->rses_client_dcb->session);
             }
             else
@@ -4539,7 +4245,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
         {
             mapped = false;
             MXS_DEBUG("schemarouter: Still waiting for reply to SHOW DATABASES from %s for session %p",
-                      bkrf[i].bref_backend->backend_server->unique_name,
+                      bkrf[i].bref_backend->server->unique_name,
                       router_cli_ses->rses_client_dcb->session);
         }
     }
