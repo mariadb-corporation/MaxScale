@@ -100,6 +100,7 @@ typedef struct server_ref_t
     struct server_ref_t *next; /**< Next server reference */
     SERVER* server; /**< The actual server */
     int weight; /**< Weight of this server */
+    int connections; /**< Number of connections created through this reference */
 } SERVER_REF;
 
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */

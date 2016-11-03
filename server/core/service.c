@@ -751,6 +751,7 @@ static SERVER_REF* server_ref_alloc(SERVER *server)
         sref->next = NULL;
         sref->server = server;
         sref->weight = SERVICE_BASE_SERVER_WEIGHT;
+        sref->connections = 0;
     }
 
     return sref;

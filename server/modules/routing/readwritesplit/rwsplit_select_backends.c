@@ -38,7 +38,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
 static void log_server_connections(select_criteria_t select_criteria,
                             backend_ref_t *backend_ref, int router_nservers);
 
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers);
+static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers);
 
 static int bref_cmp_global_conn(const void *bref1, const void *bref2);
 
@@ -103,10 +103,10 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     }
 
     /* get the root Master */
-    BACKEND *master_host = get_root_master(backend_ref, router_nservers);
+    SERVER_REF *master_host = get_root_master(backend_ref, router_nservers);
 
     if (router->rwsplit_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
-        (master_host == NULL || SERVER_IS_DOWN(master_host->backend_server)))
+        (master_host == NULL || SERVER_IS_DOWN(master_host->server)))
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
         return false;
@@ -145,7 +145,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     for (int i = 0; i < router_nservers &&
          (slaves_connected < max_nslaves || !master_connected); i++)
     {
-        SERVER *serv = backend_ref[i].bref_backend->backend_server;
+        SERVER *serv = backend_ref[i].ref->server;
 
         if (!BREF_HAS_FAILED(&backend_ref[i]) && SERVER_IS_RUNNING(serv))
         {
@@ -155,7 +155,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                  (serv->rlag != MAX_RLAG_NOT_AVAILABLE &&
                   serv->rlag <= max_slave_rlag)) &&
                 (SERVER_IS_SLAVE(serv) || SERVER_IS_RELAY_SERVER(serv)) &&
-                (master_host == NULL || (serv != master_host->backend_server)))
+                (master_host == NULL || (serv != master_host->server)))
             {
                 slaves_found += 1;
 
@@ -166,7 +166,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                 }
             }
                 /* take the master_host for master */
-            else if (master_host && (serv == master_host->backend_server))
+            else if (master_host && (serv == master_host->server))
             {
                 /** p_master_ref must be assigned with this backend_ref pointer
                  * because its original value may have been lost when backend
@@ -205,9 +205,9 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                 if (BREF_IS_IN_USE((&backend_ref[i])))
                 {
                     MXS_INFO("Selected %s in \t%s:%d",
-                             STRSRVSTATUS(backend_ref[i].bref_backend->backend_server),
-                             backend_ref[i].bref_backend->backend_server->name,
-                             backend_ref[i].bref_backend->backend_server->port);
+                             STRSRVSTATUS(backend_ref[i].ref->server),
+                             backend_ref[i].ref->server->name,
+                             backend_ref[i].ref->server->port);
                 }
             } /* for */
         }
@@ -226,12 +226,12 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
         {
             if (BREF_IS_IN_USE((&backend_ref[i])))
             {
-                ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
+                ss_dassert(backend_ref[i].ref->connections > 0);
 
                 /** disconnect opened connections */
                 bref_clear_state(&backend_ref[i], BREF_IN_USE);
                 /** Decrease backend's connection counter. */
-                atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
+                atomic_add(&backend_ref[i].ref->connections, -1);
                 dcb_close(backend_ref[i].bref_dcb);
             }
         }
@@ -243,13 +243,12 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 /** Compare number of connections from this router in backend servers */
 static int bref_cmp_router_conn(const void *bref1, const void *bref2)
 {
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
+    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
 
     if (b1->weight == 0 && b2->weight == 0)
     {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
+        return b1->connections - b2->connections;
     }
     else if (b1->weight == 0)
     {
@@ -260,20 +259,20 @@ static int bref_cmp_router_conn(const void *bref1, const void *bref2)
         return -1;
     }
 
-    return ((1000 + 1000 * b1->backend_conn_count) / b1->weight) -
-           ((1000 + 1000 * b2->backend_conn_count) / b2->weight);
+    return ((1000 + 1000 * b1->connections) / b1->weight) -
+           ((1000 + 1000 * b2->connections) / b2->weight);
 }
 
 /** Compare number of global connections in backend servers */
 static int bref_cmp_global_conn(const void *bref1, const void *bref2)
 {
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
+    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
 
     if (b1->weight == 0 && b2->weight == 0)
     {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
+        return b1->server->stats.n_current -
+               b2->server->stats.n_current;
     }
     else if (b1->weight == 0)
     {
@@ -284,32 +283,29 @@ static int bref_cmp_global_conn(const void *bref1, const void *bref2)
         return -1;
     }
 
-    return ((1000 + 1000 * b1->backend_server->stats.n_current) / b1->weight) -
-           ((1000 + 1000 * b2->backend_server->stats.n_current) / b2->weight);
+    return ((1000 + 1000 * b1->server->stats.n_current) / b1->weight) -
+           ((1000 + 1000 * b2->server->stats.n_current) / b2->weight);
 }
 
 /** Compare replication lag between backend servers */
 static int bref_cmp_behind_master(const void *bref1, const void *bref2)
 {
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
+    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
 
-    return ((b1->backend_server->rlag < b2->backend_server->rlag) ? -1
-            : ((b1->backend_server->rlag > b2->backend_server->rlag) ? 1 : 0));
+    return b1->server->rlag - b2->server->rlag;
 }
 
 /** Compare number of current operations in backend servers */
 static int bref_cmp_current_load(const void *bref1, const void *bref2)
 {
-    SERVER *s1 = ((backend_ref_t *)bref1)->bref_backend->backend_server;
-    SERVER *s2 = ((backend_ref_t *)bref2)->bref_backend->backend_server;
-    BACKEND *b1 = ((backend_ref_t *)bref1)->bref_backend;
-    BACKEND *b2 = ((backend_ref_t *)bref2)->bref_backend;
+    SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
+    SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
 
     if (b1->weight == 0 && b2->weight == 0)
     {
-        return b1->backend_server->stats.n_current -
-               b2->backend_server->stats.n_current;
+        // TODO: Fix this so that operations are used instead of connections
+        return b1->server->stats.n_current - b2->server->stats.n_current;
     }
     else if (b1->weight == 0)
     {
@@ -320,8 +316,8 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
         return -1;
     }
 
-    return ((1000 * s1->stats.n_current_ops) - b1->weight) -
-           ((1000 * s2->stats.n_current_ops) - b2->weight);
+    return ((1000 * b1->server->stats.n_current_ops) - b1->weight) -
+           ((1000 * b2->server->stats.n_current_ops) - b2->weight);
 }
 
 /**
@@ -338,7 +334,7 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
  */
 static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
 {
-    SERVER *serv = bref->bref_backend->backend_server;
+    SERVER *serv = bref->ref->server;
     bool rval = false;
 
     bref->bref_dcb = dcb_connect(serv, session, serv->protocol);
@@ -354,16 +350,16 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
                              &router_handle_state_switch, (void *) bref);
             bref->bref_state = 0;
             bref_set_state(bref, BREF_IN_USE);
-            atomic_add(&bref->bref_backend->backend_conn_count, 1);
+            atomic_add(&bref->ref->connections, 1);
             rval = true;
         }
         else
         {
             MXS_ERROR("Failed to execute session command in %s (%s:%d). See earlier "
                       "errors for more details.",
-                      bref->bref_backend->backend_server->unique_name,
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
+                      bref->ref->server->unique_name,
+                      bref->ref->server->name,
+                      bref->ref->server->port);
             dcb_close(bref->bref_dcb);
             bref->bref_dcb = NULL;
         }
@@ -398,33 +394,33 @@ static void log_server_connections(select_criteria_t select_criteria,
 
         for (int i = 0; i < router_nservers; i++)
         {
-            BACKEND *b = backend_ref[i].bref_backend;
+            SERVER_REF *b = backend_ref[i].ref;
 
             switch (select_criteria)
             {
                 case LEAST_GLOBAL_CONNECTIONS:
                     MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
-                             b->backend_server->stats.n_current, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
+                             b->server->stats.n_current, b->server->name,
+                             b->server->port, STRSRVSTATUS(b->server));
                     break;
 
                 case LEAST_ROUTER_CONNECTIONS:
                     MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
-                             b->backend_conn_count, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
+                             b->connections, b->server->name,
+                             b->server->port, STRSRVSTATUS(b->server));
                     break;
 
                 case LEAST_CURRENT_OPERATIONS:
                     MXS_INFO("current operations : %d in \t%s:%d %s",
-                             b->backend_server->stats.n_current_ops,
-                             b->backend_server->name, b->backend_server->port,
-                             STRSRVSTATUS(b->backend_server));
+                             b->server->stats.n_current_ops,
+                             b->server->name, b->server->port,
+                             STRSRVSTATUS(b->server));
                     break;
 
                 case LEAST_BEHIND_MASTER:
                     MXS_INFO("replication lag : %d in \t%s:%d %s",
-                             b->backend_server->rlag, b->backend_server->name,
-                             b->backend_server->port, STRSRVSTATUS(b->backend_server));
+                             b->server->rlag, b->server->name,
+                             b->server->port, STRSRVSTATUS(b->server));
                 default:
                     break;
             }
@@ -445,27 +441,26 @@ static void log_server_connections(select_criteria_t select_criteria,
  * @return          The Master found
  *
  */
-static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers)
+static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers)
 {
     int i = 0;
-    BACKEND *master_host = NULL;
+    SERVER_REF *master_host = NULL;
 
     for (i = 0; i < router_nservers; i++)
     {
-        BACKEND *b;
-
-        if (servers[i].bref_backend == NULL)
+        if (servers[i].ref == NULL)
         {
+            /** This should not happen */
+            ss_dassert(false);
             continue;
         }
 
-        b = servers[i].bref_backend;
+        SERVER_REF *b = servers[i].ref;
 
-        if ((b->backend_server->status & (SERVER_MASTER | SERVER_MAINT)) ==
-            SERVER_MASTER)
+        if (SERVER_IS_MASTER(b->server))
         {
             if (master_host == NULL ||
-                (b->backend_server->depth < master_host->backend_server->depth))
+                (b->server->depth < master_host->server->depth))
             {
                 master_host = b;
             }

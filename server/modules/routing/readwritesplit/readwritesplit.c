@@ -183,12 +183,7 @@ ROUTER_OBJECT *GetModuleObject()
 static ROUTER *createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *router;
-    SERVER *server;
-    SERVER_REF *sref;
-    int nservers;
-    int i;
     CONFIG_PARAMETER *param;
-    char *weightby;
 
     if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
@@ -196,51 +191,6 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     }
     router->service = service;
     spinlock_init(&router->lock);
-
-    /** Calculate number of servers */
-    sref = service->dbref;
-    nservers = 0;
-
-    while (sref != NULL)
-    {
-        nservers++;
-        sref = sref->next;
-    }
-    router->servers = (BACKEND **)MXS_CALLOC(nservers + 1, sizeof(BACKEND *));
-
-    if (router->servers == NULL)
-    {
-        free_rwsplit_instance(router);
-        return NULL;
-    }
-    /**
-     * Create an array of the backend servers in the router structure to
-     * maintain a count of the number of connections to each
-     * backend server.
-     */
-
-    sref = service->dbref;
-    nservers = 0;
-
-    while (sref != NULL)
-    {
-        if ((router->servers[nservers] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
-        {
-            free_rwsplit_instance(router);
-            return NULL;
-        }
-        router->servers[nservers]->backend_server = sref->server;
-        router->servers[nservers]->backend_conn_count = 0;
-        router->servers[nservers]->be_valid = false;
-        router->servers[nservers]->weight = sref->weight;
-#if defined(SS_DEBUG)
-        router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
-        router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
-#endif
-        nservers += 1;
-        sref = sref->next;
-    }
-    router->servers[nservers] = NULL;
 
     /*
      * Until we know otherwise assume we have some available slaves.
@@ -266,6 +216,13 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         router->rwsplit_config.rw_max_sescmd_history_size > 0)
     {
         router->rwsplit_config.rw_max_sescmd_history_size = 0;
+    }
+
+    int nservers = 0;
+
+    for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+    {
+        nservers++;
     }
 
     /**
@@ -341,8 +298,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
  */
 static void *newSession(ROUTER *router_inst, SESSION *session)
 {
-    backend_ref_t
-    *backend_ref; /*< array of backend references (DCB,BACKEND,cursor) */
+    backend_ref_t *backend_ref; /*< array of backend references (DCB,BACKEND,cursor) */
     backend_ref_t *master_ref = NULL; /*< pointer to selected master */
     ROUTER_CLIENT_SES *client_rses = NULL;
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_inst;
@@ -417,7 +373,8 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
      * Initialize backend references with BACKEND ptr.
      * Initialize session command cursors for each backend reference.
      */
-    for (i = 0; i < router_nservers; i++)
+    i = 0;
+    for (SERVER_REF *sref = router->service->dbref; sref; sref = sref->next)
     {
 #if defined(SS_DEBUG)
         backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
@@ -426,13 +383,14 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
         backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
         backend_ref[i].bref_state = 0;
-        backend_ref[i].bref_backend = router->servers[i];
+        backend_ref[i].ref = sref;
         /** store pointers to sescmd list to both cursors */
         backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
         backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
         backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
             &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
         backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;
+        i++;
     }
     max_nslaves = rses_get_max_slavecount(client_rses, router_nservers);
     max_slave_rlag = rses_get_max_replication_lag(client_rses);
@@ -586,7 +544,7 @@ static void closeSession(ROUTER *instance, void *router_session)
                  */
                 dcb_close(dcb);
                 /** decrease server current connection counters */
-                atomic_add(&bref->bref_backend->backend_conn_count, -1);
+                atomic_add(&bref->ref->connections, -1);
             }
             else
             {
@@ -729,7 +687,6 @@ static void diagnostics(ROUTER *instance, DCB *dcb)
     ROUTER_CLIENT_SES *router_cli_ses;
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int i = 0;
-    BACKEND *backend;
     char *weightby;
 
     spinlock_acquire(&router->lock);
@@ -770,13 +727,12 @@ static void diagnostics(ROUTER *instance, DCB *dcb)
         dcb_printf(dcb, "\t\tServer               Target %%    Connections  "
                    "Operations\n");
         dcb_printf(dcb, "\t\t                               Global  Router\n");
-        for (i = 0; router->servers[i]; i++)
+        for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
         {
-            backend = router->servers[i];
             dcb_printf(dcb, "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
-                       backend->backend_server->unique_name, (float)backend->weight / 10,
-                       backend->backend_server->stats.n_current, backend->backend_conn_count,
-                       backend->backend_server->stats.n_current_ops);
+                      ref->server->unique_name, (float)ref->weight / 10,
+                      ref->server->stats.n_current, ref->connections,
+                      ref->server->stats.n_current_ops);
         }
     }
 }
@@ -923,17 +879,15 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
     {
         bool succp;
 
-        MXS_INFO("Backend %s:%d processed reply and starts to execute "
-                 "active cursor.", bref->bref_backend->backend_server->name,
-                 bref->bref_backend->backend_server->port);
+        MXS_INFO("Backend %s:%d processed reply and starts to execute active cursor.",
+                 bref->ref->server->name, bref->ref->server->port);
 
         succp = execute_sescmd_in_backend(bref);
 
         if (!succp)
         {
             MXS_INFO("Backend %s:%d failed to execute session command.",
-                     bref->bref_backend->backend_server->name,
-                     bref->bref_backend->backend_server->port);
+                     bref->ref->server->name, bref->ref->server->port);
         }
     }
     else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
@@ -1092,13 +1046,13 @@ void bref_clear_state(backend_ref_t *bref, bref_state_t state)
         else
         {
             /** Decrease global operation count */
-            prev2 = atomic_add(&bref->bref_backend->backend_server->stats.n_current_ops, -1);
+            prev2 = atomic_add(&bref->ref->server->stats.n_current_ops, -1);
             ss_dassert(prev2 > 0);
             if (prev2 <= 0)
             {
                 MXS_ERROR("[%s] Error: negative current operation count in backend %s:%u",
-                          __FUNCTION__, bref->bref_backend->backend_server->name,
-                          bref->bref_backend->backend_server->port);
+                          __FUNCTION__, bref->ref->server->name,
+                          bref->ref->server->port);
             }
         }
     }
@@ -1137,19 +1091,16 @@ void bref_set_state(backend_ref_t *bref, bref_state_t state)
         if (prev1 < 0)
         {
             MXS_ERROR("[%s] Error: negative number of connections waiting for "
-                      "results in backend %s:%u",
-                      __FUNCTION__, bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
+                      "results in backend %s:%u", __FUNCTION__,
+                      bref->ref->server->name, bref->ref->server->port);
         }
         /** Increase global operation count */
-        prev2 =
-            atomic_add(&bref->bref_backend->backend_server->stats.n_current_ops, 1);
+        prev2 = atomic_add(&bref->ref->server->stats.n_current_ops, 1);
         ss_dassert(prev2 >= 0);
         if (prev2 < 0)
         {
             MXS_ERROR("[%s] Error: negative current operation count in backend %s:%u",
-                      __FUNCTION__, bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port);
+                      __FUNCTION__, bref->ref->server->name, bref->ref->server->port);
         }
     }
 
@@ -1316,7 +1267,7 @@ int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
     bref = (backend_ref_t *)data;
     CHK_BACKEND_REF(bref);
 
-    srv = bref->bref_backend->backend_server;
+    srv = bref->ref->server;
 
     if (SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
     {
@@ -1531,9 +1482,9 @@ static void handleError(ROUTER *instance, void *router_session,
                  * handled so that session could continue.
                  */
                 if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
-                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
+                    !SERVER_IS_MASTER(rses->rses_master_ref->ref->server))
                 {
-                    SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
+                    SERVER *srv = rses->rses_master_ref->ref->server;
                     backend_ref_t *bref;
                     bref = get_bref_from_dcb(rses, problem_dcb);
                     if (bref != NULL)
@@ -1794,9 +1745,8 @@ return_succp:
 static int router_get_servercount(ROUTER_INSTANCE *inst)
 {
     int router_nservers = 0;
-    BACKEND **b = inst->servers;
-    /** count servers */
-    while (*(b++) != NULL)
+
+    for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
     {
         router_nservers++;
     }
@@ -2074,14 +2024,6 @@ static void free_rwsplit_instance(ROUTER_INSTANCE *router)
 {
     if (router)
     {
-        if (router->servers)
-        {
-            for (int i = 0; router->servers[i]; i++)
-            {
-                MXS_FREE(router->servers[i]);
-            }
-        }
-        MXS_FREE(router->servers);
         MXS_FREE(router);
     }
 }
