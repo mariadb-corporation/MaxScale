@@ -232,7 +232,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         router->servers[nservers]->backend_server = sref->server;
         router->servers[nservers]->backend_conn_count = 0;
         router->servers[nservers]->be_valid = false;
-        router->servers[nservers]->weight = 1000;
+        router->servers[nservers]->weight = sref->weight;
 #if defined(SS_DEBUG)
         router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
         router->servers[nservers]->be_chk_tail = CHK_NUM_BACKEND;
@@ -246,81 +246,6 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      * Until we know otherwise assume we have some available slaves.
      */
     router->available_slaves = true;
-
-    /*
-     * If server weighting has been defined calculate the percentage
-     * of load that will be sent to each server. This is only used for
-     * calculating the least connections, either globally or within a
-     * service, or the number of current operations on a server.
-     */
-    if ((weightby = serviceGetWeightingParameter(service)) != NULL)
-    {
-        int total = 0;
-
-        for (int n = 0; router->servers[n]; n++)
-        {
-            BACKEND *backend = router->servers[n];
-            char *param = serverGetParameter(backend->backend_server, weightby);
-            if (param)
-            {
-                total += atoi(param);
-            }
-        }
-        if (total == 0)
-        {
-            MXS_WARNING("Weighting Parameter for service '%s' "
-                        "will be ignored as no servers have values "
-                        "for the parameter '%s'.",
-                        service->name, weightby);
-        }
-        else if (total < 0)
-        {
-            MXS_ERROR("Sum of weighting parameter '%s' for service '%s' exceeds "
-                      "maximum value of %d. Weighting will be ignored.",
-                      weightby, service->name, INT_MAX);
-        }
-        else
-        {
-            for (int n = 0; router->servers[n]; n++)
-            {
-                BACKEND *backend = router->servers[n];
-                char *param = serverGetParameter(backend->backend_server, weightby);
-                if (param)
-                {
-                    int wght = atoi(param);
-                    int perc = (wght * 1000) / total;
-
-                    if (perc == 0)
-                    {
-                        MXS_ERROR("Weighting parameter '%s' with a value of %d for"
-                                  " server '%s' rounds down to zero with total weight"
-                                  " of %d for service '%s'. No queries will be "
-                                  "routed to this server as long as a server with"
-                                  " positive weight is available.",
-                                  weightby, wght, backend->backend_server->unique_name,
-                                  total, service->name);
-                    }
-                    else if (perc < 0)
-                    {
-                        MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
-                                  "maximum value is %d. No weighting will be used for this "
-                                  "server.",
-                                  weightby, backend->backend_server->unique_name,
-                                  INT_MAX / 1000);
-                        perc = 1000;
-                    }
-                    backend->weight = perc;
-                }
-                else
-                {
-                    MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
-                                " for service '%s'.",
-                                backend->backend_server->unique_name, weightby,
-                                service->name);
-                }
-            }
-        }
-    }
 
     /** Enable strict multistatement handling by default */
     router->rwsplit_config.rw_strict_multi_stmt = true;

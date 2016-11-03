@@ -66,6 +66,9 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 
+/** Base value for server weights */
+#define SERVICE_BASE_SERVER_WEIGHT 1000
+
 /** To be used with configuration type checks */
 typedef struct typelib_st
 {
@@ -96,6 +99,7 @@ static void service_add_qualified_param(SERVICE*          svc,
                                         CONFIG_PARAMETER* param);
 static void service_internal_restart(void *data);
 static void service_queue_check(void *data);
+static void service_calculate_weights(SERVICE *service);
 
 /**
  * Allocate a new service for the gateway to support
@@ -474,6 +478,9 @@ static void free_string_array(char** array)
 int
 serviceStart(SERVICE *service)
 {
+    /** Calculate the server weights */
+    service_calculate_weights(service);
+
     int listeners = 0;
     char **router_options = copy_string_array(service->routerOptions);
 
@@ -730,6 +737,26 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 }
 
 /**
+ * Allocate a new server reference
+ *
+ * @param server Server to refer to
+ * @return Server reference or NULL on error
+ */
+static SERVER_REF* server_ref_alloc(SERVER *server)
+{
+    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
+
+    if (sref)
+    {
+        sref->next = NULL;
+        sref->server = server;
+        sref->weight = SERVICE_BASE_SERVER_WEIGHT;
+    }
+
+    return sref;
+}
+
+/**
  * Add a backend database server to a service
  *
  * @param service       The service to add the server to
@@ -738,13 +765,10 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
+    SERVER_REF *sref = server_ref_alloc(server);
 
     if (sref)
     {
-        sref->next = NULL;
-        sref->server = server;
-
         spinlock_acquire(&service->spin);
         if (service->dbref)
         {
@@ -2026,4 +2050,77 @@ bool service_all_services_have_listeners()
 
     spinlock_release(&service_spin);
     return rval;
+}
+
+static void service_calculate_weights(SERVICE *service)
+{
+    char *weightby = serviceGetWeightingParameter(service);
+    if (weightby && service->dbref)
+    {
+        /** Service has a weighting parameter and at least one server */
+        int total = 0;
+
+        /** Calculate total weight */
+        for (SERVER_REF *server = service->dbref; server; server = server->next)
+        {
+            server->weight = SERVICE_BASE_SERVER_WEIGHT;
+            char *param = serverGetParameter(server->server, weightby);
+            if (param)
+            {
+                total += atoi(param);
+            }
+        }
+
+        if (total == 0)
+        {
+            MXS_WARNING("Weighting Parameter for service '%s' will be ignored as "
+                        "no servers have values for the parameter '%s'.",
+                        service->name, weightby);
+        }
+        else if (total < 0)
+        {
+            MXS_ERROR("Sum of weighting parameter '%s' for service '%s' exceeds "
+                      "maximum value of %d. Weighting will be ignored.",
+                      weightby, service->name, INT_MAX);
+        }
+        else
+        {
+            /** Calculate the relative weight of the servers */
+            for (SERVER_REF *server = service->dbref; server; server = server->next)
+            {
+                char *param = serverGetParameter(server->server, weightby);
+                if (param)
+                {
+                    int wght = atoi(param);
+                    int perc = (wght * SERVICE_BASE_SERVER_WEIGHT) / total;
+
+                    if (perc == 0)
+                    {
+                        MXS_ERROR("Weighting parameter '%s' with a value of %d for"
+                                  " server '%s' rounds down to zero with total weight"
+                                  " of %d for service '%s'. No queries will be "
+                                  "routed to this server as long as a server with"
+                                  " positive weight is available.",
+                                  weightby, wght, server->server->unique_name,
+                                  total, service->name);
+                    }
+                    else if (perc < 0)
+                    {
+                        MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
+                                  "maximum value is %d. No weighting will be used for this "
+                                  "server.", weightby, server->server->unique_name,
+                                  INT_MAX / SERVICE_BASE_SERVER_WEIGHT);
+                        perc = SERVICE_BASE_SERVER_WEIGHT;
+                    }
+                    server->weight = perc;
+                }
+                else
+                {
+                    MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
+                                " for service '%s'.", server->server->unique_name,
+                                weightby, service->name);
+                }
+            }
+        }
+    }
 }
