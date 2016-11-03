@@ -715,39 +715,76 @@ struct subcommand failoptions[] = {
 
 static void telnetdAddUser(DCB *, char *user, char *password);
 
+static void cmd_serviceAddBackend(DCB *dcb, void *a, void *b)
+{
+    SERVICE *service = (SERVICE*)a;
+    SERVER *server = (SERVER*)b;
+
+    serviceAddBackend(service, server);
+
+    MXS_NOTICE("Added server '%s' to service '%s'", server->unique_name, service->name);
+    dcb_printf(dcb, "Added server '%s' to service '%s'\n", server->unique_name, service->name);
+}
+
 /**
  * The subcommands of the add command
  */
 struct subcommand addoptions[] = {
-    { "user", 2, telnetdAddUser,
-      "Add insecure account for using maxadmin over the network. E.g.:\n"
-      "                 MaxScale> add user bob somepass",
-      "Add insecure account for using maxadmin over the network. E.g.:\n"
-      "                 MaxScale> add user bob somepass",
-      {ARG_TYPE_STRING, ARG_TYPE_STRING, 0} },
+    {
+     "user", 2, telnetdAddUser,
+     "Add insecure account for using maxadmin over the network. E.g.:\n"
+     "                 MaxScale> add user bob somepass",
+     "Add insecure account for using maxadmin over the network. E.g.:\n"
+     "                 MaxScale> add user bob somepass",
+        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+    },
+    {
+     "server", 2, cmd_serviceAddBackend,
+     "Add a new server to a service",
+     "Add a new server to a service. The server must exist in the configuration file.",
+        {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
+    },
     { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+        {0, 0, 0}}
 };
 
 
 static void telnetdRemoveUser(DCB *, char *user, char *password);
+
+static void cmd_serviceRemoveBackend(DCB *dcb, void *a, void *b)
+{
+    SERVICE *service = (SERVICE*)a;
+    SERVER *server = (SERVER*)b;
+
+    serviceRemoveBackend(service, server);
+
+    MXS_NOTICE("Removed server '%s' from service '%s'", server->unique_name, service->name);
+    dcb_printf(dcb, "Removed server '%s' from service '%s'\n", server->unique_name, service->name);
+}
 
 /**
  * The subcommands of the remove command
  */
 struct subcommand removeoptions[] = {
     {
-        "user",
-        2,
-        telnetdRemoveUser,
-        "Remove account for using maxadmin over the network. E.g.:\n"
-        "                 MaxAdmin> remove user bob somepass",
-        "Remove account for using maxadmin over the network. E.g.:\n"
-        "                 MaxAdmin> remove user bob somepass",
+     "user",
+     2,
+     telnetdRemoveUser,
+     "Remove account for using maxadmin over the network. E.g.:\n"
+     "                 MaxAdmin> remove user bob somepass",
+     "Remove account for using maxadmin over the network. E.g.:\n"
+     "                 MaxAdmin> remove user bob somepass",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
-        NULL, 0, NULL, NULL, NULL, {0, 0, 0}
+     "server", 2, cmd_serviceRemoveBackend,
+     "Remove a server from a service",
+     "Remove a server from a service. The server must exist in the configuration file.",
+        {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
+    },
+    {
+     NULL, 0, NULL, NULL, NULL,
+        {0, 0, 0}
     }
 };
 
