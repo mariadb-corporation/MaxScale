@@ -871,6 +871,123 @@ bool compare_get_prepare_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1
     return success;
 }
 
+bool operator == (const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
+{
+    bool rv = false;
+    if (lhs.column && rhs.column && (strcasecmp(lhs.column, rhs.column) == 0))
+    {
+        if (!lhs.table && !rhs.table)
+        {
+            rv = true;
+        }
+        else if (lhs.table && rhs.table && (strcmp(lhs.table, rhs.table) == 0))
+        {
+            if (!lhs.database && !rhs.database)
+            {
+                rv = true;
+            }
+            else if (lhs.database && rhs.database && (strcmp(lhs.database, rhs.database) == 0))
+            {
+                rv = true;
+            }
+        }
+    }
+
+    return rv;
+}
+
+ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
+{
+    if (x.database)
+    {
+        out << x.database;
+        out << ".";
+        ss_dassert(x.table);
+    }
+
+    if (x.table)
+    {
+        out << x.table;
+        out << ".";
+    }
+
+    ss_dassert(x.column);
+    out << x.column;
+
+    return out;
+}
+
+bool are_equal(const QC_FIELD_INFO* fields1, size_t n_fields1,
+               const QC_FIELD_INFO* fields2, size_t n_fields2)
+{
+    bool rv = (n_fields1 == n_fields2);
+
+    if (rv)
+    {
+        size_t i = 0;
+        while (rv && (i < n_fields1))
+        {
+            rv = *fields1 == *fields2;
+            ++i;
+        }
+    }
+
+    return rv;
+}
+
+ostream& print(ostream& out, const QC_FIELD_INFO* fields, size_t n_fields)
+{
+    size_t i = 0;
+    while (i < n_fields)
+    {
+        out << fields[i++];
+
+        if (i != n_fields)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                            QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_field_info        : ";
+
+    const QC_FIELD_INFO* infos1;
+    const QC_FIELD_INFO* infos2;
+    size_t n_infos1;
+    size_t n_infos2;
+
+    pClassifier1->qc_get_field_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->qc_get_field_info(pCopy2, &infos2, &n_infos2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    if (are_equal(infos1, n_infos1, infos2, n_infos2))
+    {
+        ss << "Ok : ";
+        print(ss, infos1, n_infos1);
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: ";
+        print(ss, infos1, n_infos1);
+        ss << " != ";
+        print(ss, infos2, n_infos2);
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+
 bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
@@ -891,6 +1008,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
+    //errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
 
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);
