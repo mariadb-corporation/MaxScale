@@ -401,7 +401,7 @@ const char* qc_op_to_string(qc_query_op_t op);
  */
 static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 {
-    return (typemask & type) == type;
+    return (typemask & (uint32_t)type) == (uint32_t)type;
 }
 
 /**
