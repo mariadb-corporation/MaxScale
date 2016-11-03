@@ -61,16 +61,16 @@ typedef struct users
     unsigned char cksum[SHA_DIGEST_LENGTH]; /**< The users' table ckecksum */
 } USERS;
 
-extern USERS *users_alloc();                      /**< Allocate a users table */
-extern void users_free(USERS *);                  /**< Free a users table */
-extern int users_add(USERS *, char *, char *);    /**< Add a user to the users table */
-extern int users_delete(USERS *, char *);         /**< Delete a user from the users table */
-extern char *users_fetch(USERS *, char *);        /**< Fetch the authentication data for a user */
-extern int users_update(USERS *, char *, char *); /**< Change the password data for a user in
-                                                     the users table */
-extern int users_default_loadusers(SERV_LISTENER *port); /**< A generic implementation of the authenticator
-                                                          * loadusers entry point */
-extern void usersPrint(USERS *);                  /**< Print data about the users loaded */
-extern void dcb_usersPrint(DCB *, USERS *);       /**< Print data about the users loaded */
+extern USERS *users_alloc();                                  /**< Allocate a users table */
+extern void users_free(USERS *);                              /**< Free a users table */
+extern int users_add(USERS *, const char *, const char *);    /**< Add a user to the users table */
+extern int users_delete(USERS *, const char *);               /**< Delete a user from the users table */
+extern const char *users_fetch(USERS *, const char *);        /**< Fetch the authentication data for a user*/
+extern int users_update(USERS *, const char *, const char *); /**< Change the password data for a user in
+                                                                   the users table */
+extern int users_default_loadusers(SERV_LISTENER *port);      /**< A generic implementation of the
+                                                                   authenticator loadusers entry point */
+extern void usersPrint(const USERS *);                        /**< Print data about the users loaded */
+extern void dcb_usersPrint(DCB *, const USERS *);             /**< Print data about the users loaded */
 
 MXS_END_DECLS
