@@ -281,7 +281,6 @@ struct router_client_session
     skygw_chk_t      rses_chk_top;
 #endif
     SPINLOCK         rses_lock;      /*< protects rses_deleted */
-    int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
     bool             rses_closed;    /*< true when closeSession is called */
     rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Properties listed by their type */
     backend_ref_t*   rses_master_ref;

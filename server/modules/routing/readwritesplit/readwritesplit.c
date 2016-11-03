@@ -65,6 +65,9 @@ MODULE_INFO info =
  * @endverbatim
  */
 
+/** Maximum number of slaves */
+#define MAX_SLAVE_COUNT 255
+
 static char *version_str = "V1.1.0";
 
 /*
@@ -126,7 +129,6 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
 static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                         ROUTER_CLIENT_SES **rses,
                                         DCB *backend_dcb, GWBUF *errmsg);
-static int router_get_servercount(ROUTER_INSTANCE *inst);
 static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
                                 int router_nsrv, ROUTER_INSTANCE *router);
 
@@ -218,19 +220,12 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         router->rwsplit_config.rw_max_sescmd_history_size = 0;
     }
 
-    int nservers = 0;
-
-    for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
-    {
-        nservers++;
-    }
-
     /**
      * Set default value for max_slave_connections as 100%. This way
      * LEAST_CURRENT_OPERATIONS allows us to balance evenly across all the
      * configured slaves.
      */
-    router->rwsplit_config.rw_max_slave_conn_count = nservers;
+    router->rwsplit_config.rw_max_slave_conn_count = MAX_SLAVE_COUNT;
 
     if (router->rwsplit_config.rw_slave_select_criteria == UNDEFINED_CRITERIA)
     {
@@ -306,7 +301,6 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     int router_nservers = 0; /*< # of servers in total */
     int max_nslaves;         /*< max # of slaves used in this session */
     int max_slave_rlag;      /*< max allowed replication lag for any slave */
-    int i;
     const int min_nservers = 1; /*< hard-coded for now */
 
     client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
@@ -350,7 +344,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     client_rses->have_tmp_tables = false;
     client_rses->forced_node = NULL;
 
-    router_nservers = router_get_servercount(router);
+    router_nservers = router->service->n_dbref;
 
     if (!have_enough_servers(&client_rses, min_nservers, router_nservers, router))
     {
@@ -373,25 +367,35 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
      * Initialize backend references with BACKEND ptr.
      * Initialize session command cursors for each backend reference.
      */
-    i = 0;
-    for (SERVER_REF *sref = router->service->dbref; sref; sref = sref->next)
+    int i = 0;
+    for (SERVER_REF *sref = router->service->dbref; sref && i < router_nservers; sref = sref->next)
     {
+        if (sref->active)
+        {
 #if defined(SS_DEBUG)
-        backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
-        backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top = CHK_NUM_SESCMD_CUR;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
+            backend_ref[i].bref_chk_top = CHK_NUM_BACKEND_REF;
+            backend_ref[i].bref_chk_tail = CHK_NUM_BACKEND_REF;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_chk_top = CHK_NUM_SESCMD_CUR;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
-        backend_ref[i].bref_state = 0;
-        backend_ref[i].ref = sref;
-        /** store pointers to sescmd list to both cursors */
-        backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
-        backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
-            &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;
-        i++;
+            backend_ref[i].bref_state = 0;
+            backend_ref[i].ref = sref;
+            /** store pointers to sescmd list to both cursors */
+            backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
+            backend_ref[i].bref_sescmd_cur.scmd_cur_ptr_property =
+                &client_rses->rses_properties[RSES_PROP_TYPE_SESCMD];
+            backend_ref[i].bref_sescmd_cur.scmd_cur_cmd = NULL;
+            i++;
+        }
     }
+
+    if (i < router_nservers)
+    {
+        /** The service reported more servers than we took into use */
+        router_nservers = i;
+    }
+
     max_nslaves = rses_get_max_slavecount(client_rses, router_nservers);
     max_slave_rlag = rses_get_max_replication_lag(client_rses);
 
@@ -434,7 +438,6 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     /** Copy backend pointers to router session. */
     client_rses->rses_master_ref = master_ref;
-    client_rses->rses_backend_ref = backend_ref;
     client_rses->rses_nbackends = router_nservers; /*< # of backend servers */
 
     if (client_rses->rses_config.rw_max_slave_conn_percent)
@@ -447,11 +450,6 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     router->stats.n_sessions += 1;
 
-    /**
-     * Version is bigger than zero once initialized.
-     */
-    atomic_add(&client_rses->rses_versno, 2);
-    ss_dassert(client_rses->rses_versno == 2);
     /**
      * Add this session to end of the list of active sessions in router.
      */
@@ -1656,7 +1654,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
 {
     ROUTER_CLIENT_SES *myrses;
     SESSION *ses;
-    int router_nservers;
     int max_nslaves;
     int max_slave_rlag;
     backend_ref_t *bref;
@@ -1710,8 +1707,8 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     dcb_remove_callback(backend_dcb, DCB_REASON_NOT_RESPONDING,
                         &router_handle_state_switch, (void *)bref);
-    router_nservers = router_get_servercount(inst);
-    max_nslaves = rses_get_max_slavecount(myrses, router_nservers);
+
+    max_nslaves = rses_get_max_slavecount(myrses, myrses->rses_nbackends);
     max_slave_rlag = rses_get_max_replication_lag(myrses);
     /**
      * Try to get replacement slave or at least the minimum
@@ -1719,13 +1716,13 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (inst->rwsplit_config.rw_disable_sescmd_hist)
     {
-        succp = have_enough_servers(&myrses, 1, router_nservers, inst) ? true : false;
+        succp = have_enough_servers(&myrses, 1, myrses->rses_nbackends, inst) ? true : false;
     }
     else
     {
         succp = select_connect_backend_servers(&myrses->rses_master_ref,
                                                myrses->rses_backend_ref,
-                                               router_nservers,
+                                               myrses->rses_nbackends,
                                                max_nslaves, max_slave_rlag,
                                                myrses->rses_config.rw_slave_select_criteria,
                                                ses, inst);
@@ -1733,25 +1730,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
 
 return_succp:
     return succp;
-}
-
-/**
- * @brief Calculate the number of backend servers
- *
- * @param inst      Router instance
- *
- * @return int - count of servers
- */
-static int router_get_servercount(ROUTER_INSTANCE *inst)
-{
-    int router_nservers = 0;
-
-    for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
-    {
-        router_nservers++;
-    }
-
-    return router_nservers;
 }
 
 /**
