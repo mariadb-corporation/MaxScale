@@ -1368,6 +1368,12 @@ static int gw_error_backend_event(DCB *dcb)
     CHK_SESSION(session);
     if (SESSION_STATE_DUMMY == session->state)
     {
+        if (dcb->persistentstart == 0)
+        {
+            /** Not a persistent connection, something is wrong. */
+            MXS_ERROR("EPOLLERR event on a non-persistent DCB with no session. "
+                      "Closing connection.");
+        }
         dcb_close(dcb);
         return 1;
     }

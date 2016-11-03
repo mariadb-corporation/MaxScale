@@ -3132,11 +3132,9 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
         /** Failure cases */
     else
     {
-        if (slaves_connected < min_nslaves)
-        {
-            MXS_ERROR("Couldn't establish required amount of "
-                      "slave connections for router session.");
-        }
+        MXS_ERROR("Couldn't establish required amount of slave connections for "
+                  "router session. Would need between %d and %d slaves but only have %d.",
+                  min_nslaves, max_nslaves, slaves_connected);
 
         /** Clean up connections */
         for (int i = 0; i < router_nservers; i++)
@@ -3441,11 +3439,11 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
                         }
                         *reconnect = true;
-                        MXS_INFO("Disabling slave %s:%d, result differs from "
-                                 "master's result. Master: %d Slave: %d",
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->name,
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->port,
-                                 bref->reply_cmd, ses->rses_backend_ref[i].reply_cmd);
+                        MXS_WARNING("Disabling slave %s:%d, result differs from "
+                                    "master's result. Master: %0x Slave: %0x",
+                                    ses->rses_backend_ref[i].bref_backend->backend_server->name,
+                                    ses->rses_backend_ref[i].bref_backend->backend_server->port,
+                                    bref->reply_cmd, ses->rses_backend_ref[i].reply_cmd);
                     }
                 }
             }
@@ -4368,18 +4366,14 @@ static void handleError(ROUTER *instance, void *router_session,
                 {
                     /**
                      * This is called in hope of getting replacement for
-                     * failed slave(s).  This call may free rses.
+                     * failed slave(s).
                      */
                     *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
 
                 dcb_close(problem_dcb);
                 close_dcb = false;
-                /* Free the lock if rses still exists */
-                if (rses)
-                {
-                    rses_end_locked_router_action(rses);
-                }
+                rses_end_locked_router_action(rses);
                 break;
             }
 
