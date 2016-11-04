@@ -524,7 +524,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
 
     /* Check if the query is a show tables query with a specific database */
 
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES))
+    if (qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES))
     {
         query = modutil_get_SQL(buffer);
         if ((tmp = strcasestr(query, "from")))
@@ -1457,19 +1457,19 @@ static route_target_t get_shard_route_target(qc_query_type_t qtype,
     /**
      * These queries are not affected by hints
      */
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
+    if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
+        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
         /** enable or disable autocommit are always routed to all */
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+        qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+        qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
     {
         /** hints don't affect on routing */
         target = TARGET_ALL;
     }
-    else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
+    else if (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+             qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         target = TARGET_ANY;
     }
@@ -1559,11 +1559,11 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
     dbname = router_cli_ses->current_db;
 
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         tbl = qc_get_table_names(querybuf, &tsize, false);
 
@@ -1633,7 +1633,7 @@ void check_create_tmp_table(ROUTER* instance,
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
     dbname = router_cli_ses->current_db;
 
-    if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
         bool  is_temp = true;
         char* tblname = NULL;
@@ -2081,7 +2081,7 @@ static int routeQuery(ROUTER* instance,
     }
 
     /** Create the response to the SHOW DATABASES from the mapped databases */
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
+    if (qc_query_is_type(qtype, QUERY_TYPE_SHOW_DATABASES))
     {
         if (send_database_list(inst, router_cli_ses))
         {

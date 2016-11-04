@@ -248,6 +248,21 @@ static bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
+void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
+{
+    if (infos)
+    {
+        for (int i = 0; i < n_infos; ++i)
+        {
+            MXS_FREE(infos[i].database);
+            MXS_FREE(infos[i].table);
+            MXS_FREE(infos[i].column);
+        }
+
+        MXS_FREE(infos);
+    }
+}
+
 static void free_string_array(char** sa)
 {
     if (sa)
@@ -2954,6 +2969,18 @@ static qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
     return op;
 }
 
+void qc_sqlite_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos)
+{
+    QC_TRACE();
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    MXS_ERROR("qc_get_field_info not implemented yet.");
+
+    *infos = NULL;
+    *n_infos = 0;
+}
+
 /**
  * EXPORTS
  */
@@ -2979,6 +3006,7 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_database_names,
     qc_sqlite_get_prepare_name,
     qc_sqlite_get_prepare_operation,
+    qc_sqlite_get_field_info,
 };
 
 

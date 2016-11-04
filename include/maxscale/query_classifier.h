@@ -88,6 +88,18 @@ typedef enum qc_parse_result
 
 
 /**
+ * QC_FIELD_INFO contains information about a field used in a statement.
+ */
+typedef struct qc_field_info
+{
+    char* database;  /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char* table;     /** Present if the field is of the form "a.b", NULL otherwise. */
+    char* column;    /** Always present. */
+    // TODO: Possibly add bits telling where the field is used; e.g. in the select
+    // TODO: part or the where part, or both.
+} QC_FIELD_INFO;
+
+/**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
  * implement and return.
  *
@@ -117,6 +129,7 @@ typedef struct query_classifier
     char** (*qc_get_database_names)(GWBUF* stmt, int* size);
     char* (*qc_get_prepare_name)(GWBUF* stmt);
     qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
+    void (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
 } QUERY_CLASSIFIER;
 
 /**
@@ -222,6 +235,21 @@ qc_parse_result_t qc_parse(GWBUF* stmt);
  *         failure occurs. The string must be freed by the caller.
  */
 char* qc_get_affected_fields(GWBUF* stmt);
+
+/**
+ * Returns information about affected fields.
+ *
+ * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param infos    Pointer to pointer that after the call will point to an
+ *                 array of QC_FIELD_INFO:s.
+ * @param n_infos  Pointer to size_t variable where the number of items
+ *                 in @c infos will be returned.
+ *
+ * @note The returned array belongs to the GWBUF and remains valid for as
+ *       long as the GWBUF is valid. If the data is needed for longer than
+ *       that, it must be copied.
+ */
+void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
 
 /**
  * Returns the statement, with literals replaced with question marks.
@@ -373,7 +401,7 @@ const char* qc_op_to_string(qc_query_op_t op);
  */
 static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 {
-    return (typemask & type) == type;
+    return (typemask & (uint32_t)type) == (uint32_t)type;
 }
 
 /**
@@ -407,13 +435,5 @@ const char* qc_type_to_string(qc_query_type_t type);
  * @note The returned string is dynamically allocated and @b must be freed.
  */
 char* qc_typemask_to_string(uint32_t typemask);
-
-/**
- * @deprecated
- * Synonym for qc_query_is_type().
- *
- * @see qc_query_is_type
- */
-#define QUERY_IS_TYPE(typemask, type) qc_query_is_type(typemask, type)
 
 MXS_END_DECLS

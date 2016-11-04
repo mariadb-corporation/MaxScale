@@ -45,9 +45,9 @@
 static int
 test1()
 {
-    USERS   *users;
-    char    *authdata;
-    int     result, count;
+    USERS      *users;
+    const char *authdata;
+    int        result, count;
 
     /* Poll tests */
     ss_dfprintf(stderr,

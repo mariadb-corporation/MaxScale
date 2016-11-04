@@ -147,11 +147,11 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 
     dbname = (char *)data->db;
 
-    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
+    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
         tbl = qc_get_table_names(querybuf, &tsize, false);
 
@@ -199,7 +199,7 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                    GWBUF *querybuf, qc_query_type_t type)
 {
-    if (!QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    if (!qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
         return;
     }

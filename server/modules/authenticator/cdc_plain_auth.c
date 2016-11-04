@@ -139,7 +139,7 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint
 {
     if (dcb->listener->users)
     {
-        char *user_password = users_fetch(dcb->listener->users, username);
+        const char *user_password = users_fetch(dcb->listener->users, username);
 
         if (user_password)
         {

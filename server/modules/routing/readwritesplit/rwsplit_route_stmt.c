@@ -84,7 +84,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          * transaction is committed and autocommit is enabled again.
          */
         if (rses->rses_autocommit_enabled &&
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+            qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
         {
             rses->rses_autocommit_enabled = false;
 
@@ -94,7 +94,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             }
         }
         else if (!rses->rses_transaction_active &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
+                 qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX))
         {
             rses->rses_transaction_active = true;
         }
@@ -102,13 +102,13 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          * Explicit COMMIT and ROLLBACK, implicit COMMIT.
          */
         if (rses->rses_autocommit_enabled && rses->rses_transaction_active &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK)))
+            (qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
+             qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK)))
         {
             rses->rses_transaction_active = false;
         }
         else if (!rses->rses_autocommit_enabled &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
+                 qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
         {
             rses->rses_autocommit_enabled = true;
             rses->rses_transaction_active = false;
@@ -727,13 +727,13 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
      * These queries are not affected by hints
      */
     else if (!load_active &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+             (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
               /** Configured to allow writing variables to all nodes */
               (use_sql_variables_in == TYPE_ALL &&
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+               qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
               /** enable or disable autocommit are always routed to all */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
+              qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
     {
         /**
          * This is problematic query because it would be routed to all
@@ -750,9 +750,9 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
          * the execution of the prepared statements to the right server would be
          * an easy one. Currently this is not supported.
          */
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) &&
-            !(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
+        if (qc_query_is_type(qtype, QUERY_TYPE_READ) &&
+            !(qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
         {
             MXS_WARNING("The query can't be routed to all "
                         "backend servers because it includes SELECT and "
@@ -770,40 +770,40 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
      * Hints may affect on routing of the following queries
      */
     else if (!trx_active && !load_active &&
-             !QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||        /*< any SELECT */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_USERVAR_READ) ||       /*< read user var */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) || /*< read sys var */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_EXEC_STMT) || /*< prepared stmt exec */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
+             !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
+             (qc_query_is_type(qtype, QUERY_TYPE_READ) ||        /*< any SELECT */
+              qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_USERVAR_READ) ||       /*< read user var */
+              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) || /*< read sys var */
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_EXEC_STMT) || /*< prepared stmt exec */
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
     {
         /** First set expected targets before evaluating hints */
-        if (!QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
+        if (!qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
+            (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+             qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
              /** Configured to allow reading variables from slaves */
              (use_sql_variables_in == TYPE_ALL &&
-              (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ)))))
+              (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+               qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+               qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))))
         {
             target = TARGET_SLAVE;
         }
 
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        if (qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
+            qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+            qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
             /** Configured not to allow reading variables from slaves */
             (use_sql_variables_in == TYPE_MASTER &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
+             (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ))))
         {
             target = TARGET_MASTER;
         }
@@ -818,26 +818,26 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     {
         /** hints don't affect on routing */
         ss_dassert(trx_active ||
-                   (QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
+                   (qc_query_is_type(qtype, QUERY_TYPE_WRITE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
+                    (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
+                    qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)));
         target = TARGET_MASTER;
     }
 

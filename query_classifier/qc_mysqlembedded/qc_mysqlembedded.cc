@@ -681,12 +681,12 @@ static uint32_t resolve_query_type(THD* thd)
 #endif
         // TODO: This test is meaningless, since at this point
         // TODO: qtype (not type) is QUERY_TYPE_UNKNOWN.
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
+        if (qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN) ||
+            qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
         {
             /**
              * These values won't change qtype more restrictive than write.
@@ -2010,6 +2010,14 @@ qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
     return operation;
 }
 
+void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos)
+{
+    MXS_ERROR("qc_get_field_info not implemented yet.");
+
+    *infos = NULL;
+    *n_infos = 0;
+}
+
 namespace
 {
 
@@ -2156,6 +2164,7 @@ static QUERY_CLASSIFIER qc =
     qc_get_database_names,
     qc_get_prepare_name,
     qc_get_prepare_operation,
+    qc_get_field_info,
 };
 
  /* @see function load_module in load_utils.c for explanation of the following
