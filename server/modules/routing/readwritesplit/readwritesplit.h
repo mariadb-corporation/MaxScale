@@ -304,12 +304,10 @@ typedef struct
 typedef struct router_instance
 {
     SERVICE*                service;     /*< Pointer to service */
-    ROUTER_CLIENT_SES*      connections; /*< List of client connections */
     SPINLOCK                lock;        /*< Lock for the instance data */
     rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
     int                     rwsplit_version; /*< version number for router's config */
     ROUTER_STATS            stats;       /*< Statistics for this router */
-    struct router_instance* next;        /*< Next router on the list */
     bool                    available_slaves; /*< The router has some slaves avialable */
 } ROUTER_INSTANCE;
 
