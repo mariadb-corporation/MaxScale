@@ -79,6 +79,7 @@ typedef struct parsing_info_st
     QC_FIELD_INFO* field_infos;
     size_t field_infos_len;
     size_t field_infos_capacity;
+    char* affected_fields;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -1304,313 +1305,58 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
     return answer;
 }
 
-inline void add_str(char** buf, int* buflen, int* bufsize, const char* str)
-{
-    int isize = strlen(str) + 1;
-
-    if (*buf == NULL || isize + *buflen >= *bufsize)
-    {
-        *bufsize = (*bufsize) * 2 + isize;
-        char *tmp = (char*) realloc(*buf, (*bufsize) * sizeof (char));
-
-        if (tmp == NULL)
-        {
-            MXS_ERROR("Error: memory reallocation failed.");
-            free(*buf);
-            *buf = NULL;
-            *bufsize = 0;
-        }
-
-        *buf = tmp;
-    }
-
-    if (*buflen > 0)
-    {
-        if (*buf)
-        {
-            strcat(*buf, " ");
-        }
-    }
-
-    if (*buf)
-    {
-        strcat(*buf, str);
-    }
-
-    *buflen += isize;
-
-}
-
-typedef enum collect_source
-{
-    COLLECT_SELECT,
-    COLLECT_WHERE,
-    COLLECT_HAVING,
-    COLLECT_GROUP_BY,
-} collect_source_t;
-
-
-static void collect_name(Item* item, char** bufp, int* buflenp, int* bufsizep, List<Item>* excludep)
-{
-    const char* full_name = item->full_name();
-    const char* name = strrchr(full_name, '.');
-
-    if (!name)
-    {
-        // No dot found.
-        name = full_name;
-    }
-    else
-    {
-        // Dot found, advance beyond it.
-        ++name;
-    }
-
-    bool exclude = false;
-
-    if (excludep)
-    {
-        List_iterator<Item> ilist(*excludep);
-        Item* exclude_item = (Item*) ilist.next();
-
-        for (; !exclude && (exclude_item != NULL); exclude_item = (Item*) ilist.next())
-        {
-            if (exclude_item->name && (strcasecmp(name, exclude_item->name) == 0))
-            {
-                exclude = true;
-            }
-        }
-    }
-
-    if (!exclude)
-    {
-        add_str(bufp, buflenp, bufsizep, name);
-    }
-}
-
-static void collect_affected_fields(collect_source_t source,
-                                    Item* item, char** bufp, int* buflenp, int* bufsizep,
-                                    List<Item>* excludep)
-{
-    switch (item->type())
-    {
-    case Item::COND_ITEM:
-        {
-            Item_cond* cond_item = static_cast<Item_cond*>(item);
-            List_iterator<Item> ilist(*cond_item->argument_list());
-            item = (Item*) ilist.next();
-
-            for (; item != NULL; item = (Item*) ilist.next())
-            {
-                collect_affected_fields(source, item, bufp, buflenp, bufsizep, excludep);
-            }
-        }
-        break;
-
-    case Item::FIELD_ITEM:
-        collect_name(item, bufp, buflenp, bufsizep, excludep);
-        break;
-
-    case Item::REF_ITEM:
-        {
-            if (source != COLLECT_SELECT)
-            {
-                Item_ref* ref_item = static_cast<Item_ref*>(item);
-
-                collect_name(item, bufp, buflenp, bufsizep, excludep);
-
-                size_t n_items = ref_item->cols();
-
-                for (size_t i = 0; i < n_items; ++i)
-                {
-                    Item* reffed_item = ref_item->element_index(i);
-
-                    if (reffed_item != ref_item)
-                    {
-                        collect_affected_fields(source,
-                                                ref_item->element_index(i), bufp, buflenp, bufsizep,
-                                                excludep);
-                    }
-                }
-            }
-        }
-        break;
-
-    case Item::ROW_ITEM:
-        {
-            Item_row* row_item = static_cast<Item_row*>(item);
-            size_t n_items = row_item->cols();
-
-            for (size_t i = 0; i < n_items; ++i)
-            {
-                collect_affected_fields(source, row_item->element_index(i), bufp, buflenp, bufsizep,
-                                        excludep);
-            }
-        }
-        break;
-
-    case Item::FUNC_ITEM:
-    case Item::SUM_FUNC_ITEM:
-        {
-            Item_func* func_item = static_cast<Item_func*>(item);
-            Item** items = func_item->arguments();
-            size_t n_items = func_item->argument_count();
-
-            for (size_t i = 0; i < n_items; ++i)
-            {
-                collect_affected_fields(source, items[i], bufp, buflenp, bufsizep, excludep);
-            }
-        }
-        break;
-
-    case Item::SUBSELECT_ITEM:
-        {
-            Item_subselect* subselect_item = static_cast<Item_subselect*>(item);
-
-            switch (subselect_item->substype())
-            {
-            case Item_subselect::IN_SUBS:
-            case Item_subselect::ALL_SUBS:
-            case Item_subselect::ANY_SUBS:
-                {
-                    Item_in_subselect* in_subselect_item = static_cast<Item_in_subselect*>(item);
-
-#if (((MYSQL_VERSION_MAJOR == 5) &&\
-      ((MYSQL_VERSION_MINOR > 5) ||\
-       ((MYSQL_VERSION_MINOR == 5) && (MYSQL_VERSION_PATCH >= 48))\
-      )\
-     ) ||\
-     (MYSQL_VERSION_MAJOR >= 10)\
-    )
-                    if (in_subselect_item->left_expr_orig)
-                    {
-                        collect_affected_fields(source,
-                                                in_subselect_item->left_expr_orig, bufp, buflenp, bufsizep,
-                                                excludep);
-                    }
-#else
-#pragma message "Figure out what to do with versions < 5.5.48."
-#endif
-                    // TODO: Anything else that needs to be looked into?
-                }
-                break;
-
-            case Item_subselect::EXISTS_SUBS:
-            case Item_subselect::SINGLEROW_SUBS:
-                // TODO: Handle these explicitly as well.
-                break;
-
-            case Item_subselect::UNKNOWN_SUBS:
-            default:
-                MXS_ERROR("Unknown subselect type: %d", subselect_item->substype());
-                break;
-            }
-        }
-        break;
-
-    default:
-        break;
-    }
-}
-
 char* qc_get_affected_fields(GWBUF* buf)
 {
-    LEX* lex;
-    int buffsz = 0, bufflen = 0;
-    char* where = NULL;
-    Item* item;
-    Item::Type itype;
+    char* affected_fields = NULL;
 
-    if (!buf)
+    if (ensure_query_is_parsed(buf))
     {
-        return NULL;
-    }
+        parsing_info_t *pi = get_pinfo(buf);
 
-    if (!ensure_query_is_parsed(buf))
-    {
-        return NULL;
-    }
-
-    if ((lex = get_lex(buf)) == NULL)
-    {
-        return NULL;
-    }
-
-    lex->current_select = lex->all_selects_list;
-
-    if ((where = (char*) malloc(sizeof (char)*1)) == NULL)
-    {
-        MXS_ERROR("Memory allocation failed.");
-        return NULL;
-    }
-
-    *where = '\0';
-
-    while (lex->current_select)
-    {
-
-        List_iterator<Item> ilist(lex->current_select->item_list);
-        item = (Item*) ilist.next();
-
-        for (; item != NULL; item = (Item*) ilist.next())
+        if (pi->affected_fields)
         {
-            collect_affected_fields(COLLECT_SELECT, item, &where, &buffsz, &bufflen, NULL);
+            affected_fields = pi->affected_fields;
         }
-
-        if (lex->current_select->group_list.first)
+        else
         {
-            ORDER* order = lex->current_select->group_list.first;
-            while (order)
+            const QC_FIELD_INFO* infos;
+            size_t n_infos;
+
+            qc_get_field_info(buf, &infos, &n_infos);
+
+            size_t buflen = 0;
+
+            for (size_t i = 0; i < n_infos; ++i)
             {
-                Item* item = *order->item;
-
-                collect_affected_fields(COLLECT_GROUP_BY, item, &where, &buffsz, &bufflen,
-                                        &lex->current_select->item_list);
-
-                order = order->next;
+                buflen += strlen(infos[i].column);
+                buflen += 1;
             }
-        }
 
-        if (lex->current_select->where)
-        {
-            collect_affected_fields(COLLECT_WHERE, lex->current_select->where, &where, &buffsz, &bufflen,
-                                    &lex->current_select->item_list);
-        }
+            buflen += 1;
 
-        if (lex->current_select->having)
-        {
-            collect_affected_fields(COLLECT_HAVING, lex->current_select->having, &where, &buffsz, &bufflen,
-                                    &lex->current_select->item_list);
-        }
+            affected_fields = (char*)malloc(buflen);
+            affected_fields[0] = 0;
 
-        lex->current_select = lex->current_select->next_select_in_list();
-    }
-
-    if ((lex->sql_command == SQLCOM_INSERT) ||
-        (lex->sql_command == SQLCOM_INSERT_SELECT) ||
-        (lex->sql_command == SQLCOM_REPLACE))
-    {
-        List_iterator<Item> ilist(lex->field_list);
-        item = (Item*) ilist.next();
-
-        for (; item != NULL; item = (Item*) ilist.next())
-        {
-            collect_affected_fields(COLLECT_SELECT, item, &where, &buffsz, &bufflen, NULL);
-        }
-
-        if (lex->insert_list)
-        {
-            List_iterator<Item> ilist(*lex->insert_list);
-            item = (Item*) ilist.next();
-
-            for (; item != NULL; item = (Item*) ilist.next())
+            for (size_t i = 0; i < n_infos; ++i)
             {
-                collect_affected_fields(COLLECT_SELECT, item, &where, &buffsz, &bufflen, NULL);
+                strcat(affected_fields, infos[i].column);
+                strcat(affected_fields, " ");
             }
+
+            pi->affected_fields = affected_fields;
         }
+
+        ss_dassert(affected_fields);
     }
 
-    return where;
+    if (!affected_fields)
+    {
+        affected_fields = (char*)"";
+    }
+
+    affected_fields = strdup(affected_fields);
+
+    return affected_fields;
 }
 
 bool qc_query_has_clause(GWBUF* buf)
@@ -1746,6 +1492,7 @@ static void parsing_info_done(void* ptr)
             free(pi->field_infos[i].column);
         }
         free(pi->field_infos);
+        free(pi->affected_fields);
 
         free(pi);
     }
@@ -2046,7 +1793,14 @@ static bool should_exclude(const char* name, List<Item>* excludep)
 
     while (!exclude && (exclude_item = ilist++))
     {
-        if (exclude_item->name && (strcasecmp(name, exclude_item->name) == 0))
+        const char* exclude_name = exclude_item->full_name();
+
+        if (strchr(exclude_name, '.') == NULL)
+        {
+            exclude_name = exclude_item->name;
+        }
+
+        if (exclude_name && (strcasecmp(name, exclude_name) == 0))
         {
             exclude = true;
         }
@@ -2237,6 +1991,14 @@ static void add_field_info(parsing_info_t* pi, Item* item, List<Item>* excludep)
 
     add_field_info(pi, database, table, column, excludep);
 }
+
+typedef enum collect_source
+{
+    COLLECT_SELECT,
+    COLLECT_WHERE,
+    COLLECT_HAVING,
+    COLLECT_GROUP_BY,
+} collect_source_t;
 
 static void update_field_infos(parsing_info_t* pi,
                                collect_source_t source,
