@@ -32,26 +32,6 @@
 
 MXS_BEGIN_DECLS
 
-#undef PREP_STMT_CACHING
-
-#if defined(PREP_STMT_CACHING)
-
-typedef enum prep_stmt_type
-{
-    PREP_STMT_NAME,
-    PREP_STMT_ID
-} prep_stmt_type_t;
-
-typedef enum prep_stmt_state
-{
-    PREP_STMT_ALLOC,
-    PREP_STMT_SENT,
-    PREP_STMT_RECV,
-    PREP_STMT_DROPPED
-} prep_stmt_state_t;
-
-#endif /*< PREP_STMT_CACHING */
-
 typedef enum bref_state
 {
     BREF_IN_USE           = 0x01,

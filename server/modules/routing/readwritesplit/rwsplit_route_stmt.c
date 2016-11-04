@@ -891,9 +891,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         hint = hint->next;
     } /*< while (hint != NULL) */
 
-#if defined(SS_EXTRA_DEBUG)
-    MXS_INFO("Selected target \"%s\"", STRTARGET(target));
-#endif
     return target;
 }
 
@@ -1098,9 +1095,6 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
      */
     if (rwsplit_get_dcb(target_dcb, rses, BE_SLAVE, NULL, rlag_max))
     {
-#if defined(SS_EXTRA_DEBUG)
-        MXS_INFO("Found DCB for slave.");
-#endif
         atomic_add(&inst->stats.n_slave, 1);
         return true;
     }

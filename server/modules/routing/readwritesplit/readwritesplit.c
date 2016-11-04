@@ -307,8 +307,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     if (client_rses == NULL)
     {
-        ss_dassert(false);
-        goto return_rses;
+        return NULL;
     }
 #if defined(SS_DEBUG)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
@@ -348,7 +347,8 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     if (!have_enough_servers(&client_rses, min_nservers, router_nservers, router))
     {
-        goto return_rses;
+        MXS_FREE(client_rses);
+        return NULL;
     }
     /**
      * Create backend reference objects for this session.
@@ -359,9 +359,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     {
         /** log this */
         MXS_FREE(client_rses);
-        MXS_FREE(backend_ref);
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
     /**
      * Initialize backend references with BACKEND ptr.
@@ -413,8 +411,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     {
         MXS_FREE(client_rses->rses_backend_ref);
         MXS_FREE(client_rses);
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
     succp = select_connect_backend_servers(&master_ref, backend_ref, router_nservers,
                                            max_nslaves, max_slave_rlag,
@@ -432,8 +429,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     {
         MXS_FREE(client_rses->rses_backend_ref);
         MXS_FREE(client_rses);
-        client_rses = NULL;
-        goto return_rses;
+        return NULL;
     }
 
     /** Copy backend pointers to router session. */
@@ -458,13 +454,6 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     router->connections = client_rses;
     spinlock_release(&router->lock);
 
-return_rses:
-#if defined(SS_DEBUG)
-    if (client_rses != NULL)
-    {
-        CHK_CLIENT_RSES(client_rses);
-    }
-#endif
     return (void *)client_rses;
 }
 
@@ -520,16 +509,8 @@ static void closeSession(ROUTER *instance, void *router_session)
             if (BREF_IS_IN_USE(bref))
             {
                 CHK_DCB(dcb);
-#if defined(SS_DEBUG)
-                /**
-                 * session must be moved to SESSION_STATE_STOPPING state before
-                 * router session is closed.
-                 */
-                if (dcb->session != NULL)
-                {
-                    ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
-                }
-#endif
+                ss_dassert(dcb->session->state == SESSION_STATE_STOPPING);
+
                 /** Clean operation counter in bref and in SERVER */
                 if (BREF_IS_WAITING_RESULT(bref))
                 {
@@ -764,7 +745,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
      */
     if (!rses_begin_locked_router_action(router_cli_ses))
     {
-        print_error_packet(router_cli_ses, writebuf, backend_dcb);
+        gwbuf_free(writebuf);
         goto lock_failed;
     }
     /** Holding lock ensures that router session remains open */
@@ -1795,57 +1776,6 @@ static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
     return succp;
 }
 
-#if defined(PREP_STMT_CACHING)
-#define MAX_STMT_LEN 1024
-
-static prep_stmt_t *prep_stmt_init(prep_stmt_type_t type, void *id)
-{
-    prep_stmt_t *pstmt;
-
-    pstmt = (prep_stmt_t *)MXS_CALLOC(1, sizeof(prep_stmt_t));
-
-    if (pstmt != NULL)
-    {
-#if defined(SS_DEBUG)
-        pstmt->pstmt_chk_top = CHK_NUM_PREP_STMT;
-        pstmt->pstmt_chk_tail = CHK_NUM_PREP_STMT;
-#endif
-        pstmt->pstmt_state = PREP_STMT_ALLOC;
-        pstmt->pstmt_type = type;
-
-        if (type == PREP_STMT_NAME)
-        {
-            pstmt->pstmt_id.name = strndup((char *)id, MAX_STMT_LEN);
-        }
-        else
-        {
-            pstmt->pstmt_id.seq = 0;
-        }
-    }
-    CHK_PREP_STMT(pstmt);
-    return pstmt;
-}
-
-static void prep_stmt_done(prep_stmt_t *pstmt)
-{
-    CHK_PREP_STMT(pstmt);
-
-    if (pstmt->pstmt_type == PREP_STMT_NAME)
-    {
-        MXS_FREE(pstmt->pstmt_id.name);
-    }
-    MXS_FREE(pstmt);
-}
-
-static bool prep_stmt_drop(prep_stmt_t *pstmt)
-{
-    CHK_PREP_STMT(pstmt);
-
-    pstmt->pstmt_state = PREP_STMT_DROPPED;
-    return true;
-}
-#endif /*< PREP_STMT_CACHING */
-
 /**
  * @brief Refresh the instance by the given parameter value.
  *
@@ -1950,44 +1880,6 @@ static void refreshInstance(ROUTER_INSTANCE *router,
         }
         param = param->next;
     }
-
-#if defined(NOT_USED) /*< can't read monitor config parameters */
-    if ((*router->servers)->backend_server->rlag == -2)
-    {
-        rlag_enabled = false;
-    }
-    else
-    {
-        rlag_enabled = true;
-    }
-    /**
-     * If replication lag detection is not enabled the measure can't be
-     * used in slave selection.
-     */
-    if (!rlag_enabled)
-    {
-        if (rlag_limited)
-        {
-            MXS_WARNING("Configuration Failed, max_slave_replication_lag "
-                        "is set to %d,\n\t\t      but detect_replication_lag "
-                        "is not enabled. Replication lag will not be checked.",
-                        router->rwsplit_config.rw_max_slave_replication_lag);
-        }
-
-        if (router->rwsplit_config.rw_slave_select_criteria ==
-            LEAST_BEHIND_MASTER)
-        {
-            MXS_WARNING("Configuration Failed, router option "
-                        "\n\t\t      slave_selection_criteria=LEAST_BEHIND_MASTER "
-                        "is specified, but detect_replication_lag "
-                        "is not enabled.\n\t\t      "
-                        "slave_selection_criteria=%s will be used instead.",
-                        STRCRITERIA(DEFAULT_CRITERIA));
-
-            router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
-        }
-    }
-#endif /*< NOT_USED */
 }
 
 /*
