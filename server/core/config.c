@@ -601,9 +601,9 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             if (rval)
             {
-                if (check_config_objects(ccontext.next) && process_config(ccontext.next))
+                if (!check_config_objects(ccontext.next) || !process_config(ccontext.next))
                 {
-                    rval = true;
+                    rval = false;
                 }
             }
         }
@@ -633,12 +633,8 @@ config_load(const char *filename)
     global_defaults();
     feedback_defaults();
 
+    config_file = filename;
     bool rval = config_load_and_process(filename, process_config_context);
-
-    if (rval)
-    {
-        config_file = filename;
-    }
 
     return rval;
 }
