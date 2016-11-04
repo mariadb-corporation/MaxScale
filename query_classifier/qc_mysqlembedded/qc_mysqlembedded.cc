@@ -1033,6 +1033,35 @@ char* qc_get_stmtname(GWBUF* buf)
 #endif
 
 /**
+ * Get the parsing info structure from a GWBUF
+ *
+ * @param querybuf A GWBUF
+ *
+ * @return The parsing info object, or NULL
+ */
+parsing_info_t* get_pinfo(GWBUF* querybuf)
+{
+    parsing_info_t *pi = NULL;
+
+    if ((querybuf != NULL) && GWBUF_IS_PARSED(querybuf))
+    {
+        pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
+    }
+
+    return pi;
+}
+
+LEX* get_lex(parsing_info_t* pi)
+{
+    MYSQL* mysql = (MYSQL *) pi->pi_handle;
+    ss_dassert(mysql);
+    THD* thd = (THD *) mysql->thd;
+    ss_dassert(thd);
+
+    return thd->lex;
+}
+
+/**
  * Get the parse tree from parsed querybuf.
  * @param querybuf  The parsed GWBUF
  *
@@ -1041,31 +1070,19 @@ char* qc_get_stmtname(GWBUF* buf)
  */
 LEX* get_lex(GWBUF* querybuf)
 {
+    LEX* lex = NULL;
+    parsing_info_t* pi = get_pinfo(querybuf);
 
-    parsing_info_t* pi;
-    MYSQL* mysql;
-    THD* thd;
-
-    if (querybuf == NULL || !GWBUF_IS_PARSED(querybuf))
+    if (pi)
     {
-        return NULL;
+        MYSQL* mysql = (MYSQL *) pi->pi_handle;
+        ss_dassert(mysql);
+        THD* thd = (THD *) mysql->thd;
+        ss_dassert(thd);
+        lex = thd->lex;
     }
 
-    pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
-
-    if (pi == NULL)
-    {
-        return NULL;
-    }
-
-    if ((mysql = (MYSQL *) pi->pi_handle) == NULL ||
-        (thd = (THD *) mysql->thd) == NULL)
-    {
-        ss_dassert(mysql != NULL && thd != NULL);
-        return NULL;
-    }
-
-    return thd->lex;
+    return lex;
 }
 
 /**
@@ -2021,12 +2038,423 @@ qc_query_op_t qc_get_prepare_operation(GWBUF* stmt)
     return operation;
 }
 
-void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos)
+static bool should_exclude(const char* name, List<Item>* excludep)
 {
-    MXS_ERROR("qc_get_field_info not implemented yet.");
+    bool exclude = false;
+    List_iterator<Item> ilist(*excludep);
+    Item* exclude_item;
 
-    *infos = NULL;
-    *n_infos = 0;
+    while (!exclude && (exclude_item = ilist++))
+    {
+        if (exclude_item->name && (strcasecmp(name, exclude_item->name) == 0))
+        {
+            exclude = true;
+        }
+    }
+
+    return exclude;
+}
+
+static void add_field_info(parsing_info_t* info,
+                           const char* database,
+                           const char* table,
+                           const char* column,
+                           List<Item>* excludep)
+{
+    ss_dassert(column);
+
+    // If only a column is specified, but not a table or database and we
+    // have a list of expressions that should be excluded, we check if the column
+    // value is present in that list. This is in order to exclude the second "d" in
+    // a statement like "select a as d from x where d = 2".
+    if (column && !table && !database && excludep && should_exclude(column, excludep))
+    {
+        return;
+    }
+
+    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column };
+
+    size_t i;
+    for (i = 0; i < info->field_infos_len; ++i)
+    {
+        QC_FIELD_INFO* field_info = info->field_infos + i;
+
+        if (strcasecmp(item.column, field_info->column) == 0)
+        {
+            if (!item.table && !field_info->table)
+            {
+                ss_dassert(!item.database && !field_info->database);
+                break;
+            }
+            else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
+            {
+                if (!item.database && !field_info->database)
+                {
+                    break;
+                }
+                else if (item.database &&
+                         field_info->database &&
+                         (strcmp(item.database, field_info->database) == 0))
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    QC_FIELD_INFO* field_infos = NULL;
+
+    if (i == info->field_infos_len) // If true, the field was not present already.
+    {
+        if (info->field_infos_len < info->field_infos_capacity)
+        {
+            field_infos = info->field_infos;
+        }
+        else
+        {
+            size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
+            field_infos = (QC_FIELD_INFO*)realloc(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
+
+            if (field_infos)
+            {
+                info->field_infos = field_infos;
+                info->field_infos_capacity = capacity;
+            }
+        }
+    }
+
+    // If field_infos is NULL, then the field was found and has already been noted.
+    if (field_infos)
+    {
+        item.database = item.database ? strdup(item.database) : NULL;
+        item.table = item.table ? strdup(item.table) : NULL;
+        ss_dassert(item.column);
+        item.column = strdup(item.column);
+
+        // We are happy if we at least could dup the column.
+
+        if (item.column)
+        {
+            field_infos[info->field_infos_len++] = item;
+        }
+    }
+}
+
+static void add_field_info(parsing_info_t* pi, Item_field* item, List<Item>* excludep)
+{
+    const char* database = item->db_name;
+    const char* table = item->table_name;
+    const char* column = item->field_name;
+
+    LEX* lex = get_lex(pi);
+
+    switch (lex->sql_command)
+    {
+    case SQLCOM_SHOW_FIELDS:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "COLUMNS";
+        }
+        break;
+
+    case SQLCOM_SHOW_KEYS:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "STATISTICS";
+        }
+        break;
+
+    case SQLCOM_SHOW_STATUS:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "SESSION_STATUS";
+        }
+        break;
+
+    case SQLCOM_SHOW_TABLES:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "TABLE_NAMES";
+        }
+        break;
+
+    case SQLCOM_SHOW_TABLE_STATUS:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "TABLES";
+        }
+        break;
+
+    case SQLCOM_SHOW_VARIABLES:
+        if (!database)
+        {
+            database = "information_schema";
+        }
+
+        if (!table)
+        {
+            table = "SESSION_STATUS";
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    add_field_info(pi, database, table, column, excludep);
+}
+
+static void add_field_info(parsing_info_t* pi, Item* item, List<Item>* excludep)
+{
+    const char* database = NULL;
+    const char* table = NULL;
+    const char* column = item->name;
+
+    add_field_info(pi, database, table, column, excludep);
+}
+
+static void update_field_infos(parsing_info_t* pi,
+                               collect_source_t source,
+                               Item* item,
+                               List<Item>* excludep)
+{
+    switch (item->type())
+    {
+    case Item::COND_ITEM:
+        {
+            Item_cond* cond_item = static_cast<Item_cond*>(item);
+            List_iterator<Item> ilist(*cond_item->argument_list());
+
+            while (Item *i = ilist++)
+            {
+                update_field_infos(pi, source, i, excludep);
+            }
+        }
+        break;
+
+    case Item::FIELD_ITEM:
+        add_field_info(pi, static_cast<Item_field*>(item), excludep);
+        break;
+
+    case Item::REF_ITEM:
+        {
+            if (source != COLLECT_SELECT)
+            {
+                Item_ref* ref_item = static_cast<Item_ref*>(item);
+
+                add_field_info(pi, item, excludep);
+
+                size_t n_items = ref_item->cols();
+
+                for (size_t i = 0; i < n_items; ++i)
+                {
+                    Item* reffed_item = ref_item->element_index(i);
+
+                    if (reffed_item != ref_item)
+                    {
+                        update_field_infos(pi, source, ref_item->element_index(i), excludep);
+                    }
+                }
+            }
+        }
+        break;
+
+    case Item::ROW_ITEM:
+        {
+            Item_row* row_item = static_cast<Item_row*>(item);
+            size_t n_items = row_item->cols();
+
+            for (size_t i = 0; i < n_items; ++i)
+            {
+                update_field_infos(pi, source, row_item->element_index(i), excludep);
+            }
+        }
+        break;
+
+    case Item::FUNC_ITEM:
+    case Item::SUM_FUNC_ITEM:
+        {
+            Item_func* func_item = static_cast<Item_func*>(item);
+            Item** items = func_item->arguments();
+            size_t n_items = func_item->argument_count();
+
+            for (size_t i = 0; i < n_items; ++i)
+            {
+                update_field_infos(pi, source, items[i], excludep);
+            }
+        }
+        break;
+
+    case Item::SUBSELECT_ITEM:
+        {
+            Item_subselect* subselect_item = static_cast<Item_subselect*>(item);
+
+            switch (subselect_item->substype())
+            {
+            case Item_subselect::IN_SUBS:
+            case Item_subselect::ALL_SUBS:
+            case Item_subselect::ANY_SUBS:
+                {
+                    Item_in_subselect* in_subselect_item = static_cast<Item_in_subselect*>(item);
+
+#if (((MYSQL_VERSION_MAJOR == 5) &&\
+      ((MYSQL_VERSION_MINOR > 5) ||\
+       ((MYSQL_VERSION_MINOR == 5) && (MYSQL_VERSION_PATCH >= 48))\
+      )\
+     ) ||\
+     (MYSQL_VERSION_MAJOR >= 10)\
+    )
+                    if (in_subselect_item->left_expr_orig)
+                    {
+                        update_field_infos(pi, source,
+                                                 in_subselect_item->left_expr_orig, excludep);
+                    }
+#else
+#pragma message "Figure out what to do with versions < 5.5.48."
+#endif
+                    // TODO: Anything else that needs to be looked into?
+                }
+                break;
+
+            case Item_subselect::EXISTS_SUBS:
+            case Item_subselect::SINGLEROW_SUBS:
+                // TODO: Handle these explicitly as well.
+                break;
+
+            case Item_subselect::UNKNOWN_SUBS:
+            default:
+                MXS_ERROR("Unknown subselect type: %d", subselect_item->substype());
+                break;
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
+void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
+{
+    if (!buf)
+    {
+        return;
+    }
+
+    if (!ensure_query_is_parsed(buf))
+    {
+        return;
+    }
+
+    parsing_info_t* pi = get_pinfo(buf);
+
+    if (!pi->field_infos)
+    {
+        ss_dassert(pi);
+        LEX* lex = get_lex(buf);
+        ss_dassert(lex);
+
+        if (!lex)
+        {
+            return;
+        }
+
+        lex->current_select = lex->all_selects_list;
+
+        while (lex->current_select)
+        {
+            List_iterator<Item> ilist(lex->current_select->item_list);
+
+            while (Item *item = ilist++)
+            {
+                update_field_infos(pi, COLLECT_SELECT, item, NULL);
+            }
+
+            if (lex->current_select->group_list.first)
+            {
+                ORDER* order = lex->current_select->group_list.first;
+                while (order)
+                {
+                    Item* item = *order->item;
+
+                    update_field_infos(pi, COLLECT_GROUP_BY, item, &lex->current_select->item_list);
+
+                    order = order->next;
+                }
+            }
+
+            if (lex->current_select->where)
+            {
+                update_field_infos(pi, COLLECT_WHERE,
+                                         lex->current_select->where,
+                                         &lex->current_select->item_list);
+            }
+
+            if (lex->current_select->having)
+            {
+                update_field_infos(pi, COLLECT_HAVING,
+                                         lex->current_select->having,
+                                         &lex->current_select->item_list);
+            }
+
+            lex->current_select = lex->current_select->next_select_in_list();
+        }
+
+
+        List_iterator<Item> ilist(lex->value_list);
+        while (Item* item = ilist++)
+        {
+            update_field_infos(pi, COLLECT_SELECT, item, NULL);
+        }
+
+        if ((lex->sql_command == SQLCOM_INSERT) ||
+            (lex->sql_command == SQLCOM_INSERT_SELECT) ||
+            (lex->sql_command == SQLCOM_REPLACE))
+        {
+            List_iterator<Item> ilist(lex->field_list);
+            while (Item *item = ilist++)
+            {
+                update_field_infos(pi, COLLECT_SELECT, item, NULL);
+            }
+
+            if (lex->insert_list)
+            {
+                List_iterator<Item> ilist(*lex->insert_list);
+                while (Item *item = ilist++)
+                {
+                    update_field_infos(pi, COLLECT_SELECT, item, NULL);
+                }
+            }
+        }
+    }
+
+    *infos = pi->field_infos;
+    *n_infos = pi->field_infos_len;
 }
 
 namespace

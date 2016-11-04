@@ -917,6 +917,113 @@ ostream& operator << (ostream& out, const QC_FIELD_INFO& x)
     return out;
 }
 
+class QcFieldInfo
+{
+public:
+    QcFieldInfo(const QC_FIELD_INFO& info)
+        : m_database(info.database ? info.database : "")
+        , m_table(info.table ? info.table : "")
+        , m_column(info.column ? info.column : "")
+    {}
+
+    bool eq(const QcFieldInfo& rhs) const
+    {
+        return
+            m_database == rhs.m_database &&
+            m_table == rhs.m_table &&
+            m_column == rhs.m_column;
+    }
+
+    bool lt(const QcFieldInfo& rhs) const
+    {
+        bool rv = false;
+
+        if (m_database < rhs.m_database)
+        {
+            rv = true;
+        }
+        else if (m_database > rhs.m_database)
+        {
+            rv = false;
+        }
+        else
+        {
+            if (m_table < rhs.m_table)
+            {
+                rv = true;
+            }
+            else if (m_table > rhs.m_table)
+            {
+                rv = false;
+            }
+            else
+            {
+                if (m_column < rhs.m_column)
+                {
+                    rv = true;
+                }
+            }
+        }
+
+        return rv;
+    }
+
+    void print(ostream& out) const
+    {
+        if (!m_database.empty())
+        {
+            out << m_database;
+            out << ".";
+        }
+
+        if (!m_table.empty())
+        {
+            out << m_table;
+            out << ".";
+        }
+
+        out << m_column;
+    }
+
+private:
+    std::string m_database;
+    std::string m_table;
+    std::string m_column;
+};
+
+ostream& operator << (ostream& out, const QcFieldInfo& x)
+{
+    x.print(out);
+    return out;
+}
+
+ostream& operator << (ostream& out, std::set<QcFieldInfo>& x)
+{
+    std::set<QcFieldInfo>::iterator i = x.begin();
+    std::set<QcFieldInfo>::iterator end = x.end();
+
+    while (i != end)
+    {
+        out << *i++;
+        if (i != end)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool operator < (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+{
+    return lhs.lt(rhs);
+}
+
+bool operator == (const QcFieldInfo& lhs, const QcFieldInfo& rhs)
+{
+    return lhs.eq(rhs);
+}
+
 bool are_equal(const QC_FIELD_INFO* fields1, size_t n_fields1,
                const QC_FIELD_INFO* fields2, size_t n_fields2)
 {
@@ -924,6 +1031,7 @@ bool are_equal(const QC_FIELD_INFO* fields1, size_t n_fields1,
 
     if (rv)
     {
+
         size_t i = 0;
         while (rv && (i < n_fields1))
         {
@@ -968,18 +1076,23 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     stringstream ss;
     ss << HEADING;
 
-    if (are_equal(infos1, n_infos1, infos2, n_infos2))
+    int i;
+
+    std::set<QcFieldInfo> f1;
+    f1.insert(infos1, infos1 + n_infos1);
+
+    std::set<QcFieldInfo> f2;
+    f2.insert(infos2, infos2 + n_infos2);
+
+    if (f1 == f2)
     {
         ss << "Ok : ";
-        print(ss, infos1, n_infos1);
+        ss << f1;
         success = true;
     }
     else
     {
-        ss << "ERR: ";
-        print(ss, infos1, n_infos1);
-        ss << " != ";
-        print(ss, infos2, n_infos2);
+        ss << "ERR: " << f1 << " != " << f2;
     }
 
     report(success, ss.str());
@@ -1008,7 +1121,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    //errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
+    errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
 
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);
