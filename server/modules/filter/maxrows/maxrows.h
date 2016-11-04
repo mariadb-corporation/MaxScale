@@ -17,6 +17,13 @@
 MXS_BEGIN_DECLS
 
 #define MAXROWS_OK_PACKET_LEN              11
+#define MAXROWS_EOF_PACKET_LEN             9
+
+/*
+ * The EOF packet 2 bytes flags start after:
+ * network header (4 bytes) + eof indicator (1) + 2 bytes warnings count)
+ */
+#define MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET (MYSQL_HEADER_LEN + 1 + 2)
 
 #define MAXROWS_DEBUG_NONE         0
 #define MAXROWS_DEBUG_MATCHING     1

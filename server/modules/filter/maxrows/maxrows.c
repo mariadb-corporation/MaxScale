@@ -21,6 +21,8 @@
  *
  * Date         Who                   Description
  * 26/10/2016   Massimiliano Pinto    Initial implementation
+ * 04/11/2016   Massimiliano Pinto    Addition of SERVER_MORE_RESULTS_EXIST flag (0x0008)
+ *                                    detection in handle_expecting_rows().
  *
  * @endverbatim
  */
@@ -551,7 +553,7 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata)
 {
     ss_dassert(csdata->state == MAXROWS_EXPECTING_NOTHING);
     ss_dassert(csdata->res.data);
-    MXS_ERROR("Received data from the backend althoug we were expecting nothing.");
+    MXS_ERROR("Received data from the backend although we were expecting nothing.");
     ss_dassert(!true);
 
     return send_upstream(csdata);
@@ -651,8 +653,8 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
 
     while (!insufficient && (buflen - csdata->res.offset >= MYSQL_HEADER_LEN))
     {
-        uint8_t header[MYSQL_HEADER_LEN + 1];
-        gwbuf_copy_data(csdata->res.data, csdata->res.offset, MYSQL_HEADER_LEN + 1, header);
+        uint8_t header[MAXROWS_EOF_PACKET_LEN]; //it holds a full EOF packet
+        gwbuf_copy_data(csdata->res.data, csdata->res.offset, MAXROWS_EOF_PACKET_LEN, header);
 
         size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
 
@@ -660,13 +662,17 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
         {
             // We have at least one complete packet.
             int command = (int)MYSQL_GET_COMMAND(header);
+            int flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
 
             switch (command)
             {
-            case 0xfe: // EOF, the one after the rows.
+            case 0xff: // ERR packet after the rows.
                 csdata->res.offset += packetlen;
                 ss_dassert(csdata->res.offset == buflen);
-
+                /*
+                 * This is the ERR packet that could terminate a Multi-Resultset.
+                 * Reply to client is the same as in case 0x0
+                 */
                 if (csdata->state == MAXROWS_DISCARDING_RESPONSE)
                 {
                     rv = send_ok_upstream(csdata);
@@ -675,8 +681,46 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
                 {
                     rv = send_upstream(csdata);
                 }
-
                 csdata->state = MAXROWS_EXPECTING_NOTHING;
+
+                break;
+
+            case 0x0: // OK packet after the rows.
+                /* OK could the last packet in the Multi-Resultset transmission:
+                 * handle DISCARD or send all the data.
+                 * But it could also be sent instead of EOF from as in MySQL 5.7.5
+                 * if client sends CLIENT_DEPRECATE_EOF capability OK packet could
+                 * have the SERVER_MORE_RESULTS_EXIST flag.
+                 * Note: Flags in the OK packet are at the same offset as in EOF.
+                 */
+            case 0xfe: // EOF, the one after the rows.
+                csdata->res.offset += packetlen;
+                ss_dassert(csdata->res.offset == buflen);
+
+                /* EOF could be the last packet in the transmission:
+                 * check first whether SERVER_MORE_RESULTS_EXIST flag is set.
+                 * If so more results set could come. The end of stream
+                 * will be an OK packet.
+                 */
+
+                if (!(flags & SERVER_MORE_RESULTS_EXIST))
+                {
+                    if (csdata->state == MAXROWS_DISCARDING_RESPONSE)
+                    {
+                        rv = send_ok_upstream(csdata);
+                    }
+                    else
+                    {
+                        rv = send_upstream(csdata);
+                    }
+
+                    csdata->state = MAXROWS_EXPECTING_NOTHING;
+                }
+                else
+                {
+                    C_DEBUG("EOF or OK seen with SERVER_MORE_RESULTS_EXIST flag: waiting for more data");
+                }
+
                 break;
 
             case 0xfb: // NULL
