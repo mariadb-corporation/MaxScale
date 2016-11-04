@@ -1062,6 +1062,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                     gwbuf_free(pkt);
                     pkt = NULL;
+                    pkt_length = 0;
 
                     break;
                 }
