@@ -145,7 +145,8 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                            int max_rlag,
                                            select_criteria_t select_criteria,
                                            SESSION *session,
-                                           ROUTER_INSTANCE *router);
+                                           ROUTER_INSTANCE *router,
+                                           bool new_session);
 
 static bool get_dcb(DCB **dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                     char *name, int max_rlag);
@@ -829,7 +830,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     succp = select_connect_backend_servers(&master_ref, backend_ref, router_nservers,
                                            max_nslaves, max_slave_rlag,
                                            client_rses->rses_config.rw_slave_select_criteria,
-                                           session, router);
+                                           session, router, false);
 
     rses_end_locked_router_action(client_rses);
 
@@ -2624,7 +2625,8 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
                     router_cli_ses->rses_config.rw_max_slave_replication_lag,
                     router_cli_ses->rses_config.rw_slave_select_criteria,
                     router_cli_ses->rses_master_ref->bref_dcb->session,
-                    router_cli_ses->router);
+                    router_cli_ses->router,
+                    true);
             }
         }
         /**
@@ -3011,7 +3013,8 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                            int max_slave_rlag,
                                            select_criteria_t select_criteria,
                                            SESSION *session,
-                                           ROUTER_INSTANCE *router)
+                                           ROUTER_INSTANCE *router,
+                                           bool active_session)
 {
     if (p_master_ref == NULL || backend_ref == NULL)
     {
@@ -3032,11 +3035,16 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     }
 
     /**
-     * Existing session : master is already chosen and connected.
-     * The function was called because new slave must be selected to replace
-     * failed one.
+     * New session:
+     *
+     * Connect to both master and slaves
+     *
+     * Existing session:
+     *
+     * Master is already connected or we don't have a master. The function was
+     * called because new slaves must be selected to replace failed ones.
      */
-    bool master_connected = *p_master_ref != NULL;
+    bool master_connected = active_session || *p_master_ref != NULL;
 
     /** Check slave selection criteria and set compare function */
     int (*p)(const void *, const void *) = criteria_cmpfun[select_criteria];
@@ -3085,19 +3093,12 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                 }
             }
                 /* take the master_host for master */
-            else if (master_host && (serv == master_host->backend_server))
+            else if (!master_connected && master_host && serv == master_host->backend_server)
             {
-                /** p_master_ref must be assigned with this backend_ref pointer
-                 * because its original value may have been lost when backend
-                 * references were sorted with qsort. */
-                *p_master_ref = &backend_ref[i];
-
-                if (!master_connected)
+                if (connect_server(&backend_ref[i], session, false))
                 {
-                    if (connect_server(&backend_ref[i], session, false))
-                    {
-                        master_connected = true;
-                    }
+                    *p_master_ref = &backend_ref[i];
+                    master_connected = true;
                 }
             }
         }
@@ -4547,7 +4548,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                                router_nservers,
                                                max_nslaves, max_slave_rlag,
                                                myrses->rses_config.rw_slave_select_criteria,
-                                               ses, inst);
+                                               ses, inst, true);
     }
 
 return_succp:
