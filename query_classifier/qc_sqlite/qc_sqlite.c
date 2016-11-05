@@ -663,18 +663,16 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
 
         Expr* pExpr = item->pExpr;
 
-        if (pExpr->op == TK_DOT)
+        if (pExpr->op == TK_ID)
         {
-            pExpr = pExpr->pRight;
-        }
-
-        // We need to ensure that we do not report fields where there
-        // is only a difference in case. E.g.
-        //     SELECT A FROM tbl WHERE a = "foo";
-        // Affected fields is "A" and not "A a".
-        if ((pExpr->op == TK_ID) && (strcasecmp(pExpr->u.zToken, zName) == 0))
-        {
-            break;
+            // We need to ensure that we do not report fields where there
+            // is only a difference in case. E.g.
+            //     SELECT A FROM tbl WHERE a = "foo";
+            // Affected fields is "A" and not "A a".
+            if (strcasecmp(pExpr->u.zToken, zName) == 0)
+            {
+                break;
+            }
         }
     }
 
