@@ -402,7 +402,6 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             if (*endchar != '\0' ||
                 (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
             {
-                ss_dassert(false);
                 local_index = -1;
             }
             database->server->node_id = local_index;
