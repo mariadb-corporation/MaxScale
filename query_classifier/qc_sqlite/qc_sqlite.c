@@ -1029,7 +1029,11 @@ static void update_fields_infos_from_select(QC_SQLITE_INFO* info,
     if (pSelect->pHaving)
     {
         info->has_clause = true;
+#if defined(COLLECT_HAVING_AS_WELL)
+        // A HAVING clause can only refer to fields that already have been
+        // mentioned. Consequently, they need not be collected.
         update_fields_infos(info, 0, pSelect->pHaving, QC_TOKEN_MIDDLE, pSelect->pEList);
+#endif
     }
 }
 

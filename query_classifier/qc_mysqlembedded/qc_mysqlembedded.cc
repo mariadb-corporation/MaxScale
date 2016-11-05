@@ -2173,16 +2173,20 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
             if (lex->current_select->where)
             {
                 update_field_infos(pi, COLLECT_WHERE,
-                                         lex->current_select->where,
-                                         &lex->current_select->item_list);
+                                   lex->current_select->where,
+                                   &lex->current_select->item_list);
             }
 
+#if defined(COLLECT_HAVING_AS_WELL)
+            // A HAVING clause can only refer to fields that already have been
+            // mentioned. Consequently, they need not be collected.
             if (lex->current_select->having)
             {
                 update_field_infos(pi, COLLECT_HAVING,
-                                         lex->current_select->having,
-                                         &lex->current_select->item_list);
+                                   lex->current_select->having,
+                                   &lex->current_select->item_list);
             }
+#endif
 
             lex->current_select = lex->current_select->next_select_in_list();
         }
