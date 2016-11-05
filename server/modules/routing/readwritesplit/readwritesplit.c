@@ -1096,7 +1096,8 @@ static bool get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
             {
                 *p_dcb = backend_ref[i].bref_dcb;
                 succp = true;
-                ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
+                ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE ||
+                           backend_ref[i].bref_dcb->state != DCB_STATE_DISCONNECTED);
                 break;
             }
         }
@@ -1228,7 +1229,8 @@ static bool get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 *p_dcb = master_bref->bref_dcb;
                 succp = true;
                 /** if bref is in use DCB should not be closed */
-                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE ||
+                           master_bref->bref_dcb->state != DCB_STATE_DISCONNECTED);
             }
             else
             {

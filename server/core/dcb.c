@@ -1747,6 +1747,38 @@ dcb_grab_writeq(DCB *dcb, bool first_time)
     return local_writeq;
 }
 
+static void log_illegal_dcb(DCB *dcb)
+{
+    const char *connected_to;
+
+    switch (dcb->dcb_role)
+    {
+        case DCB_ROLE_BACKEND_HANDLER:
+            connected_to = dcb->server->unique_name;
+            break;
+
+        case DCB_ROLE_CLIENT_HANDLER:
+            connected_to = dcb->remote;
+            break;
+
+        case DCB_ROLE_INTERNAL:
+            connected_to = "Internal DCB";
+            break;
+
+        case DCB_ROLE_SERVICE_LISTENER:
+            connected_to = dcb->service->name;
+            break;
+
+        default:
+            connected_to = "Illegal DCB role";
+            break;
+    }
+
+    MXS_ERROR("[dcb_close] Error : Removing DCB %p but it is in state %s "
+              "which is not legal for a call to dcb_close. The DCB is connected to: %s",
+              dcb, STRDCBSTATE(dcb->state), connected_to);
+}
+
 /**
  * Removes dcb from poll set, and adds it to zombies list. As a consequence,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
@@ -1766,11 +1798,7 @@ dcb_close(DCB *dcb)
     if (DCB_STATE_UNDEFINED == dcb->state
         || DCB_STATE_DISCONNECTED == dcb->state)
     {
-        MXS_ERROR("%lu [dcb_close] Error : Removing DCB %p but was in state %s "
-                  "which is not legal for a call to dcb_close. ",
-                  pthread_self(),
-                  dcb,
-                  STRDCBSTATE(dcb->state));
+        log_illegal_dcb(dcb);
         raise(SIGABRT);
     }
 

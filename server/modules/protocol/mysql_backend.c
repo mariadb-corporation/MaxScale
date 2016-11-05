@@ -1032,9 +1032,6 @@ gw_read_and_write(DCB *dcb, MYSQL_session local_session)
         {
             GWBUF* errbuf;
             bool succp;
-#if defined(SS_DEBUG)
-            MXS_ERROR("Backend read error handling #2.");
-#endif
             errbuf = mysql_create_custom_error(1,
                                                0,
                                                "Read from backend failed");
@@ -1554,12 +1551,6 @@ static int gw_backend_hangup(DCB *dcb)
         /* dcb_close(dcb); */
         goto retblock;
     }
-#if defined(SS_DEBUG)
-    if (ses_state != SESSION_STATE_STOPPING)
-    {
-        MXS_ERROR("Backend hangup error handling.");
-    }
-#endif
 
     router->handleError(router_instance,
                         rsession,
@@ -1572,9 +1563,6 @@ static int gw_backend_hangup(DCB *dcb)
     /** There are no required backends available, close session. */
     if (!succp)
     {
-#if defined(SS_DEBUG)
-        MXS_ERROR("Backend hangup -> closing session.");
-#endif
         spinlock_acquire(&session->ses_lock);
         session->state = SESSION_STATE_STOPPING;
         spinlock_release(&session->ses_lock);
