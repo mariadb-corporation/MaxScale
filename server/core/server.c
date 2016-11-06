@@ -35,6 +35,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -86,6 +89,12 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
         return NULL;
     }
 
+    if (auth_options && (auth_options = MXS_STRDUP(auth_options)) == NULL)
+    {
+        MXS_FREE(authenticator);
+        return NULL;
+    }
+
     servname = MXS_STRNDUP(servname, MAX_SERVER_NAME_LEN);
     protocol = MXS_STRDUP(protocol);
 
@@ -108,6 +117,7 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->protocol = protocol;
     server->authenticator = authenticator;
     server->auth_instance = auth_instance;
+    server->auth_options = auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;
@@ -1069,4 +1079,104 @@ bool server_set_version_string(SERVER* server, const char* string)
     }
 
     return rval;
+}
+
+bool server_serialize(SERVER *server, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
+                  filename, server->unique_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    // TODO: Check for return values on all of the dprintf calls
+    dprintf(file, "[%s]\n", server->unique_name);
+    dprintf(file, "type=server\n");
+    dprintf(file, "protocol=%s\n", server->protocol);
+    dprintf(file, "address=%s\n", server->name);
+    dprintf(file, "port=%u\n", server->port);
+    dprintf(file, "authenticator=%s\n", server->authenticator);
+
+    if (server->auth_options)
+    {
+        dprintf(file, "authenticator_options=%s\n", server->auth_options);
+    }
+
+    if (server->monpw && server->monuser)
+    {
+        dprintf(file, "monitoruser=%s\n", server->monuser);
+        dprintf(file, "monitorpw=%s\n", server->monpw);
+    }
+
+    if (server->persistpoolmax)
+    {
+        dprintf(file, "persistpoolmax=%ld\n", server->persistpoolmax);
+    }
+
+    if (server->persistmaxtime)
+    {
+        dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+    }
+
+    if (server->server_ssl)
+    {
+        dprintf(file, "ssl=required\n");
+
+        if (server->server_ssl->ssl_cert)
+        {
+            dprintf(file, "ssl_cert=%s\n", server->server_ssl->ssl_cert);
+        }
+
+        if (server->server_ssl->ssl_key)
+        {
+            dprintf(file, "ssl_key=%s\n", server->server_ssl->ssl_key);
+        }
+
+        if (server->server_ssl->ssl_ca_cert)
+        {
+            dprintf(file, "ssl_ca_cert=%s\n", server->server_ssl->ssl_ca_cert);
+        }
+        if (server->server_ssl->ssl_cert_verify_depth)
+        {
+            dprintf(file, "ssl_cert_verify_depth=%d\n", server->server_ssl->ssl_cert_verify_depth);
+        }
+
+        const char *version = NULL;
+
+        switch (server->server_ssl->ssl_method_type)
+        {
+            case SERVICE_TLS10:
+                version = "TLSV10";
+                break;
+
+#ifdef OPENSSL_1_0
+            case SERVICE_TLS11:
+                version = "TLSV11";
+                break;
+
+            case SERVICE_TLS12:
+                version = "TLSV12";
+                break;
+#endif
+            case SERVICE_SSL_TLS_MAX:
+                version = "MAX";
+                break;
+
+            default:
+                break;
+        }
+
+        if (version)
+        {
+            dprintf(file, "ssl_version=%s\n", version);
+        }
+    }
+
+    close(file);
+
+    return true;
 }

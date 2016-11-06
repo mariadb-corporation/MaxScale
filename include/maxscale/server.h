@@ -91,6 +91,7 @@ typedef struct server
     char           *protocol;      /**< Protocol module to use */
     char           *authenticator; /**< Authenticator module name */
     void           *auth_instance; /**< Authenticator instance */
+    char           *auth_options;  /**< Authenticator options */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
     char           *monuser;       /**< User name to use to monitor the db */
@@ -224,5 +225,18 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
+
+/**
+ * @brief Serialize a server to a file
+ *
+ * This converts @c server into an INI format file. This allows created servers
+ * to be persisted to disk. A new file is only created if the file pointed by
+ * @c filename does not exist at the time this function is called.
+ *
+ * @param server Server to serialize
+ * @param filename Path to a file where the server is persisted
+ * @return False if the serialization of the server fails, true if it was successful
+ */
+bool server_serialize(SERVER *server, const char *filename);
 
 MXS_END_DECLS
