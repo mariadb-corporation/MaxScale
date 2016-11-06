@@ -3152,6 +3152,7 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                     bref_clear_state(&backend_ref[i], BREF_WAITING_RESULT);
                 }
                 bref_clear_state(&backend_ref[i], BREF_IN_USE);
+                bref_set_state(&backend_ref[i], BREF_CLOSED);
                 /** Decrease backend's connection counter. */
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
                 dcb_close(backend_ref[i].bref_dcb);
@@ -4891,8 +4892,7 @@ static BACKEND *get_root_master(backend_ref_t *servers, int router_nservers)
 
         b = servers[i].bref_backend;
 
-        if ((b->backend_server->status & (SERVER_MASTER | SERVER_MAINT)) ==
-            SERVER_MASTER)
+        if (SERVER_IS_MASTER(b->backend_server))
         {
             if (master_host == NULL ||
                 (b->backend_server->depth < master_host->backend_server->depth))
@@ -4927,13 +4927,14 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
         bref = &rses->rses_backend_ref[i];
         if (bref && BREF_IS_IN_USE(bref))
         {
+            ss_dassert(!BREF_IS_CLOSED(bref) && !BREF_HAS_FAILED(bref));
             if (bref == rses->rses_master_ref)
             {
                 /** Store master state for better error reporting */
                 master.status = bref->bref_backend->backend_server->status;
             }
 
-            if (bref->bref_backend->backend_server->status & SERVER_MASTER)
+            if (SERVER_IS_MASTER(bref->bref_backend->backend_server))
             {
                 if (candidate_bref == NULL ||
                     (bref->bref_backend->backend_server->depth <
