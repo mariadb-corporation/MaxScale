@@ -1793,16 +1793,26 @@ static bool should_exclude(const char* name, List<Item>* excludep)
 
     while (!exclude && (exclude_item = ilist++))
     {
-        const char* exclude_name = exclude_item->full_name();
-
-        if (strchr(exclude_name, '.') == NULL)
-        {
-            exclude_name = exclude_item->name;
-        }
+        const char* exclude_name = exclude_item->name;
 
         if (exclude_name && (strcasecmp(name, exclude_name) == 0))
         {
             exclude = true;
+        }
+
+        if (!exclude)
+        {
+            exclude_name = strrchr(exclude_item->full_name(), '.');
+
+            if (exclude_name)
+            {
+                ++exclude_name; // Char after the '.'
+
+                if (strcasecmp(name, exclude_name) == 0)
+                {
+                    exclude = true;
+                }
+            }
         }
     }
 

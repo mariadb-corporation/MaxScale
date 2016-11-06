@@ -663,6 +663,18 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
 
         Expr* pExpr = item->pExpr;
 
+        if (pExpr->op == TK_EQ)
+        {
+            // We end up here e.g with "UPDATE t set t.col = 5 ..."
+            // So, we pick the left branch.
+            pExpr = pExpr->pLeft;
+        }
+
+        while (pExpr->op == TK_DOT)
+        {
+            pExpr = pExpr->pRight;
+        }
+
         if (pExpr->op == TK_ID)
         {
             // We need to ensure that we do not report fields where there
@@ -1596,7 +1608,7 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
 
     if (pWhere)
     {
-        update_fields_infos(info, 0, pWhere, QC_TOKEN_MIDDLE, NULL);
+        update_fields_infos(info, 0, pWhere, QC_TOKEN_MIDDLE, pChanges);
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTabList);
