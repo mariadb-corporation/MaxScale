@@ -1855,6 +1855,60 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
 }
 
 /**
+ * @brief Log master write failure
+ *
+ * @param rses Router session
+ */
+static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, DCB *master_dcb,
+                                       DCB *curr_master_dcb)
+{
+    char errmsg[MAX_SERVER_NAME_LEN * 2 + 100]; // Extra space for error message
+
+    if (master_dcb && curr_master_dcb)
+    {
+        /** We found a master but it's not the same connection */
+        ss_dassert(master_dcb != curr_master_dcb);
+        if (master_dcb->server != curr_master_dcb->server)
+        {
+            sprintf(errmsg, "Master server changed from '%s' to '%s'",
+                    master_dcb->server->unique_name,
+                    curr_master_dcb->server->unique_name);
+        }
+        else
+        {
+            ss_dassert(false); // Currently we don't reconnect to the master
+            sprintf(errmsg, "Connection to master '%s' was recreated",
+                    curr_master_dcb->server->unique_name);
+        }
+    }
+    else if (master_dcb)
+    {
+        /** We have an original master connection but we couldn't find it */
+        sprintf(errmsg, "The connection to master server '%s' is not available",
+                master_dcb->server->unique_name);
+    }
+    else
+    {
+        /** We never had a master connection, the session must be in read-only mode */
+        if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY)
+        {
+            sprintf(errmsg, "Session is in read-only mode because it was created "
+                    "when no master was available");
+        }
+        else
+        {
+            ss_dassert(false); // A session should always have a master reference
+            sprintf(errmsg, "Was supposed to route to master but couldn't "
+                    "find master in a suitable state");
+        }
+    }
+
+    MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
+                rses->router->service->name, rses->client_dcb->user,
+                rses->client_dcb->remote, errmsg);
+}
+
+/**
  * Routing function. Find out query type, backend type, and target DCB(s).
  * Then route query to found target(s).
  * @param inst      router instance
@@ -2277,26 +2331,14 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         else
         {
-            if (succp && master_dcb != curr_master_dcb)
-            {
-                MXS_INFO("Was supposed to route to master but master has changed.");
-            }
-            else
-            {
-                MXS_INFO("Was supposed to route to master but couldn't find master"
-                         " in a suitable state.");
-            }
-
+            /** The original master is not available, we can't route the write */
             if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
             {
-                /** Old master is no longer available */
                 succp = send_readonly_error(rses->client_dcb);
             }
             else
             {
-                MXS_WARNING("[%s] Write query received from %s@%s when no master is "
-                            "available, closing client connection.", inst->service->name,
-                            rses->client_dcb->user, rses->client_dcb->remote);
+                log_master_routing_failure(rses, master_dcb, curr_master_dcb);
                 succp = false;
             }
 
