@@ -57,8 +57,6 @@ static int     clientReply(FILTER *instance, void *sdata, GWBUF *queue);
 static void    diagnostics(FILTER *instance, void *sdata, DCB *dcb);
 static uint64_t getCapabilities(void);
 
-#define C_DEBUG(format, ...) MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
-
 /* Global symbols of the Module */
 
 MODULE_INFO info =
@@ -310,7 +308,11 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
         }
     }
 
-    C_DEBUG("Maxrows filter is sending data.");
+    if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+    {
+        MXS_NOTICE("Maxrows filter is sending data.");
+    }
+
     return csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
 }
 
@@ -343,10 +345,13 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
         {
             if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
             {
-                C_DEBUG("Current size %uB of resultset, at least as much "
-                        "as maximum allowed size %uKiB. Not returning data.",
-                        gwbuf_length(csdata->res.data),
-                        csdata->instance->config.max_resultset_size / 1024);
+                if (csdata->instance->config.debug & MAXROWS_DEBUG_DISCARDING)
+                {
+                    MXS_NOTICE("Current size %uB of resultset, at least as much "
+                               "as maximum allowed size %uKiB. Not returning data.",
+                               gwbuf_length(csdata->res.data),
+                               csdata->instance->config.max_resultset_size / 1024);
+                }
 
                 csdata->state = MAXROWS_DISCARDING_RESPONSE;
             }
@@ -585,19 +590,28 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
         {
         case 0x00: // OK
         case 0xff: // ERR
-            C_DEBUG("OK or ERR");
+            if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+            {
+                MXS_NOTICE("OK or ERR");
+            }
             rv = send_upstream(csdata);
             csdata->state = MAXROWS_IGNORING_RESPONSE;
             break;
 
         case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
-            C_DEBUG("GET_MORE_CLIENT_DATA");
+            if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+            {
+                MXS_NOTICE("GET_MORE_CLIENT_DATA");
+            }
             rv = send_upstream(csdata);
             csdata->state = MAXROWS_IGNORING_RESPONSE;
             break;
 
         default:
-            C_DEBUG("RESULTSET");
+            if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+            {
+                MXS_NOTICE("RESULTSET");
+            }
 
             if (csdata->res.n_totalfields != 0)
             {
@@ -669,9 +683,13 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
             case 0xff: // ERR packet after the rows.
                 csdata->res.offset += packetlen;
                 ss_dassert(csdata->res.offset == buflen);
+
+                if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+                {
+                    MXS_NOTICE("Error packet seen while handling result set");
+                }
                 /*
                  * This is the ERR packet that could terminate a Multi-Resultset.
-                 * Reply to client is the same as in case 0x0
                  */
                 if (csdata->state == MAXROWS_DISCARDING_RESPONSE)
                 {
@@ -702,11 +720,23 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                  * If so more results set could come. The end of stream
                  * will be an OK packet.
                  */
+                if (packetlen < MAXROWS_EOF_PACKET_LEN)
+                {
+                    MXS_ERROR("EOF packet has size of %lu instead of %d", packetlen, MAXROWS_EOF_PACKET_LEN);
+                    rv = send_ok_upstream(csdata);
+                    csdata->state = MAXROWS_EXPECTING_NOTHING;
+                    break;
+                }
 
                 int flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
 
                 if (!(flags & SERVER_MORE_RESULTS_EXIST))
                 {
+                    if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+                    {
+                        MXS_NOTICE("OK or EOF packet seen terminating the resultset");
+                    }
+
                     if (csdata->state == MAXROWS_DISCARDING_RESPONSE)
                     {
                         rv = send_ok_upstream(csdata);
@@ -720,7 +750,10 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 }
                 else
                 {
-                    C_DEBUG("EOF or OK seen with SERVER_MORE_RESULTS_EXIST flag: waiting for more data");
+                    if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
+                    {
+                        MXS_NOTICE("EOF or OK packet seen with SERVER_MORE_RESULTS_EXIST flag: waiting for more data");
+                    }
                 }
 
                 break;
@@ -734,7 +767,10 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 {
                     if (csdata->res.n_rows > csdata->instance->config.max_resultset_rows)
                     {
-                        C_DEBUG("max_resultset_rows %lu reached, not returning the result.", csdata->res.n_rows);
+                        if (csdata->instance->config.debug & MAXROWS_DEBUG_DISCARDING)
+                        {
+                            MXS_INFO("max_resultset_rows %lu reached, not returning the result.", csdata->res.n_rows);
+                        }
 
                         csdata->state = MAXROWS_DISCARDING_RESPONSE;
                     }
