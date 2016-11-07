@@ -189,14 +189,6 @@ bool qc_query_has_clause(GWBUF* query)
     return classifier->qc_query_has_clause(query);
 }
 
-char* qc_get_affected_fields(GWBUF* query)
-{
-    QC_TRACE();
-    ss_dassert(classifier);
-
-    return classifier->qc_get_affected_fields(query);
-}
-
 void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();

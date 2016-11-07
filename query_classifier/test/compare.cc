@@ -715,68 +715,6 @@ ostream& operator << (ostream& o, const std::set<string>& s)
     return o;
 }
 
-bool compare_get_affected_fields(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                 QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_get_affected_fields   : ";
-
-    char* rv1 = pClassifier1->qc_get_affected_fields(pCopy1);
-    char* rv2 = pClassifier2->qc_get_affected_fields(pCopy2);
-
-    std::set<string> fields1;
-    std::set<string> fields2;
-
-    if (rv1)
-    {
-        add_fields(fields1, rv1);
-    }
-
-    if (rv2)
-    {
-        add_fields(fields2, rv2);
-    }
-
-    stringstream ss;
-    ss << HEADING;
-
-    if ((!rv1 && !rv2) || (rv1 && rv2 && (fields1 == fields2)))
-    {
-        ss << "Ok : " << fields1;
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: ";
-        if (rv1)
-        {
-            ss << fields1;
-        }
-        else
-        {
-            ss << "NULL";
-        }
-
-        ss << " != ";
-
-        if (rv2)
-        {
-            ss << fields2;
-        }
-        else
-        {
-            ss << "NULL";
-        }
-    }
-
-    report(success, ss.str());
-
-    free(rv1);
-    free(rv2);
-
-    return success;
-}
-
 bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
                                 QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
@@ -1117,7 +1055,6 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, false);
     errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, true);
     errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_affected_fields(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);

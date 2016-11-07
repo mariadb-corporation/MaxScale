@@ -60,7 +60,6 @@ typedef struct qc_sqlite_info
 
     uint32_t types;                  // The types of the query.
     qc_query_op_t operation;         // The operation in question.
-    char* affected_fields;           // The affected fields.
     bool is_real_query;              // SELECT, UPDATE, INSERT, DELETE or a variation.
     bool has_clause;                 // Has WHERE or HAVING.
     char** table_names;              // Array of table names used in the query.
@@ -305,7 +304,6 @@ static QC_SQLITE_INFO* info_alloc(void)
 
 static void info_finish(QC_SQLITE_INFO* info)
 {
-    free(info->affected_fields);
     free_string_array(info->table_names);
     free_string_array(info->table_fullnames);
     free(info->created_table_name);
@@ -332,7 +330,6 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
 
     info->types = QUERY_TYPE_UNKNOWN;
     info->operation = QUERY_OP_UNDEFINED;
-    info->affected_fields = NULL;
     info->is_real_query = false;
     info->has_clause = false;
     info->table_names = NULL;
@@ -2587,7 +2584,6 @@ static bool qc_sqlite_is_real_query(GWBUF* query);
 static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames);
 static char* qc_sqlite_get_canonical(GWBUF* query);
 static bool qc_sqlite_query_has_clause(GWBUF* query);
-static char* qc_sqlite_get_affected_fields(GWBUF* query);
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -2995,74 +2991,6 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
     return has_clause;
 }
 
-static char* qc_sqlite_get_affected_fields(GWBUF* query)
-{
-    QC_TRACE();
-    ss_dassert(this_unit.initialized);
-    ss_dassert(this_thread.initialized);
-
-    char* affected_fields = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
-    if (info)
-    {
-        if (qc_info_is_valid(info->status))
-        {
-            if (!info->affected_fields)
-            {
-                if (info->field_infos_len != 0)
-                {
-                    // The first time qc_sqlite_get_affected_fields() is called
-                    // we copy the column data from info->fields_infos into
-                    // info->affected_fields.
-                    QC_FIELD_INFO* fis = info->field_infos;
-                    size_t fis_len = info->field_infos_len;
-                    size_t buflen = 0;
-
-                    for (size_t i = 0; i < fis_len; ++i)
-                    {
-                        buflen += strlen(fis[i].column);
-                        buflen += 1;
-                    }
-
-                    buflen += 1;
-
-                    affected_fields = MXS_MALLOC(buflen);
-                    MXS_ABORT_IF_NULL(affected_fields);
-
-                    affected_fields[0] = 0;
-
-                    for (size_t i = 0; i < fis_len; ++i)
-                    {
-                        strcat(affected_fields, fis[i].column);
-                        strcat(affected_fields, " ");
-                    }
-
-                    info->affected_fields = affected_fields;
-                }
-            }
-        }
-        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            log_invalid_data(query, "cannot report what fields are affected");
-        }
-    }
-    else
-    {
-        MXS_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    if (!affected_fields)
-    {
-        affected_fields = "";
-    }
-
-    affected_fields = MXS_STRDUP(affected_fields);
-    MXS_ABORT_IF_NULL(affected_fields);
-
-    return affected_fields;
-}
-
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
 {
     QC_TRACE();
@@ -3203,7 +3131,6 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_table_names,
     NULL,
     qc_sqlite_query_has_clause,
-    qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
     qc_sqlite_get_prepare_name,
     qc_sqlite_get_prepare_operation,

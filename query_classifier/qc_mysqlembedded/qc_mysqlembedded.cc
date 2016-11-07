@@ -79,7 +79,6 @@ typedef struct parsing_info_st
     QC_FIELD_INFO* field_infos;
     size_t field_infos_len;
     size_t field_infos_capacity;
-    char* affected_fields;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -1305,60 +1304,6 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
     return answer;
 }
 
-char* qc_get_affected_fields(GWBUF* buf)
-{
-    char* affected_fields = NULL;
-
-    if (ensure_query_is_parsed(buf))
-    {
-        parsing_info_t *pi = get_pinfo(buf);
-
-        if (pi->affected_fields)
-        {
-            affected_fields = pi->affected_fields;
-        }
-        else
-        {
-            const QC_FIELD_INFO* infos;
-            size_t n_infos;
-
-            qc_get_field_info(buf, &infos, &n_infos);
-
-            size_t buflen = 0;
-
-            for (size_t i = 0; i < n_infos; ++i)
-            {
-                buflen += strlen(infos[i].column);
-                buflen += 1;
-            }
-
-            buflen += 1;
-
-            affected_fields = (char*)malloc(buflen);
-            affected_fields[0] = 0;
-
-            for (size_t i = 0; i < n_infos; ++i)
-            {
-                strcat(affected_fields, infos[i].column);
-                strcat(affected_fields, " ");
-            }
-
-            pi->affected_fields = affected_fields;
-        }
-
-        ss_dassert(affected_fields);
-    }
-
-    if (!affected_fields)
-    {
-        affected_fields = (char*)"";
-    }
-
-    affected_fields = strdup(affected_fields);
-
-    return affected_fields;
-}
-
 bool qc_query_has_clause(GWBUF* buf)
 {
     bool clause = false;
@@ -1492,7 +1437,6 @@ static void parsing_info_done(void* ptr)
             free(pi->field_infos[i].column);
         }
         free(pi->field_infos);
-        free(pi->affected_fields);
 
         free(pi);
     }
@@ -2375,7 +2319,6 @@ static QUERY_CLASSIFIER qc =
     qc_get_table_names,
     NULL,
     qc_query_has_clause,
-    qc_get_affected_fields,
     qc_get_database_names,
     qc_get_prepare_name,
     qc_get_prepare_operation,
