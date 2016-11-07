@@ -23,6 +23,7 @@
  * 26/10/2016   Massimiliano Pinto    Initial implementation
  * 04/11/2016   Massimiliano Pinto    Addition of SERVER_MORE_RESULTS_EXIST flag (0x0008)
  *                                    detection in handle_expecting_rows().
+ * 07/11/2016   Massimiliano Pinto    handle_expecting_rows renamed to handle_rows
  *
  * @endverbatim
  */
@@ -166,7 +167,7 @@ static void maxrows_session_data_free(MAXROWS_SESSION_DATA *data);
 static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata);
-static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata);
+static int handle_rows(MAXROWS_SESSION_DATA *csdata);
 static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
 static bool process_params(char **options, FILTER_PARAMETER **params, MAXROWS_CONFIG* config);
 
@@ -368,7 +369,7 @@ static int clientReply(FILTER *instance, void *sdata, GWBUF *data)
 
     case MAXROWS_DISCARDING_RESPONSE:
     case MAXROWS_EXPECTING_ROWS:
-        rv = handle_expecting_rows(csdata);
+        rv = handle_rows(csdata);
         break;
 
     case MAXROWS_IGNORING_RESPONSE:
@@ -524,7 +525,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
             case 0xfe: // EOF, the one after the fields.
                 csdata->res.offset += packetlen;
                 csdata->state = MAXROWS_EXPECTING_ROWS;
-                rv = handle_expecting_rows(csdata);
+                rv = handle_rows(csdata);
                 break;
 
             default: // Field information.
@@ -640,7 +641,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
  *
  * @param csdata The maxrows session data.
  */
-static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
+static int handle_rows(MAXROWS_SESSION_DATA *csdata)
 {
     ss_dassert(csdata->state == MAXROWS_EXPECTING_ROWS || csdata->state == MAXROWS_DISCARDING_RESPONSE);
     ss_dassert(csdata->res.data);
@@ -662,7 +663,6 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
         {
             // We have at least one complete packet.
             int command = (int)MYSQL_GET_COMMAND(header);
-            int flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
 
             switch (command)
             {
@@ -702,6 +702,8 @@ static int handle_expecting_rows(MAXROWS_SESSION_DATA *csdata)
                  * If so more results set could come. The end of stream
                  * will be an OK packet.
                  */
+
+                int flags = gw_mysql_get_byte2(header + MAXROWS_MYSQL_EOF_PACKET_FLAGS_OFFSET);
 
                 if (!(flags & SERVER_MORE_RESULTS_EXIST))
                 {
