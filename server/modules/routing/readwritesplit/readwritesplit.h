@@ -200,27 +200,6 @@ typedef struct sescmd_cursor_st
 } sescmd_cursor_t;
 
 /**
- * Internal structure used to define the set of backend servers we are routing
- * connections to. This provides the storage for routing module specific data
- * that is required for each of the backend servers.
- *
- * Owned by router_instance, referenced by each routing session.
- */
-typedef struct backend_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t     be_chk_top;
-#endif
-    SERVER*         backend_server;      /*< The server itself */
-    int             backend_conn_count;  /*< Number of connections to the server */
-    bool            be_valid; /*< Valid when belongs to the router's configuration */
-    int             weight; /*< Desired weighting on the load. Expressed in .1% increments */
-#if defined(SS_DEBUG)
-    skygw_chk_t     be_chk_tail;
-#endif
-} BACKEND;
-
-/**
  * Reference to BACKEND.
  *
  * Owned by router client session.
@@ -230,7 +209,7 @@ typedef struct backend_ref_st
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_top;
 #endif
-    BACKEND*        bref_backend;
+    SERVER_REF*     ref;
     DCB*            bref_dcb;
     bref_state_t    bref_state;
     int             bref_num_result_wait;
@@ -348,8 +327,6 @@ typedef struct router_instance
     SERVICE*                service;     /*< Pointer to service */
     ROUTER_CLIENT_SES*      connections; /*< List of client connections */
     SPINLOCK                lock;        /*< Lock for the instance data */
-    BACKEND**               servers;     /*< Backend servers */
-    BACKEND*                master;      /*< NULL or pointer */
     rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
     int                     rwsplit_version; /*< version number for router's config */
     ROUTER_STATS            stats;       /*< Statistics for this router */

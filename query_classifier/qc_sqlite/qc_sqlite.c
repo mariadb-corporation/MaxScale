@@ -60,9 +60,6 @@ typedef struct qc_sqlite_info
 
     uint32_t types;                  // The types of the query.
     qc_query_op_t operation;         // The operation in question.
-    char* affected_fields;           // The affected fields.
-    size_t affected_fields_len;      // The used length of affected_fields.
-    size_t affected_fields_capacity; // The capacity of affected_fields.
     bool is_real_query;              // SELECT, UPDATE, INSERT, DELETE or a variation.
     bool has_clause;                 // Has WHERE or HAVING.
     char** table_names;              // Array of table names used in the query.
@@ -82,6 +79,9 @@ typedef struct qc_sqlite_info
     qc_query_op_t prepare_operation; // The operation of a prepared statement.
     char* preparable_stmt;           // The preparable statement.
     size_t preparable_stmt_length;   // The length of the preparable statement.
+    QC_FIELD_INFO *field_infos;      // Pointer to array of QC_FIELD_INFOs.
+    size_t field_infos_len;          // The used entries in field_infos.
+    size_t field_infos_capacity;     // The capacity of the field_infos array.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -123,11 +123,11 @@ typedef enum qc_token_position
     QC_TOKEN_RIGHT,  // To the right, e.g: "b" in "a = b".
 } qc_token_position_t;
 
-static void append_affected_field(QC_SQLITE_INFO* info, const char* s);
 static void buffer_object_free(void* data);
 static char** copy_string_array(char** strings, int* pn);
 static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_t* pCapacity);
 static bool ensure_query_is_parsed(GWBUF* query);
+static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos);
 static void free_string_array(char** sa);
 static QC_SQLITE_INFO* get_query_info(GWBUF* query);
 static QC_SQLITE_INFO* info_alloc(void);
@@ -140,17 +140,17 @@ static bool parse_query(GWBUF* query);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query);
 static bool should_exclude(const char* zName, const ExprList* pExclude);
-static void update_affected_fields(QC_SQLITE_INFO* info,
-                                   int prev_token,
-                                   const Expr* pExpr,
-                                   qc_token_position_t pos,
-                                   const ExprList* pExclude);
-static void update_affected_fields_from_exprlist(QC_SQLITE_INFO* info,
-                                                 const ExprList* pEList, const ExprList* pExclude);
-static void update_affected_fields_from_idlist(QC_SQLITE_INFO* info,
-                                               const IdList* pIds, const ExprList* pExclude);
-static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
-                                               const Select* pSelect, const ExprList* pExclude);
+static void update_fields_infos(QC_SQLITE_INFO* info,
+                                int prev_token,
+                                const Expr* pExpr,
+                                qc_token_position_t pos,
+                                const ExprList* pExclude);
+static void update_fields_infos_from_exprlist(QC_SQLITE_INFO* info,
+                                              const ExprList* pEList, const ExprList* pExclude);
+static void update_fields_infos_from_idlist(QC_SQLITE_INFO* info,
+                                            const IdList* pIds, const ExprList* pExclude);
+static void update_fields_infos_from_select(QC_SQLITE_INFO* info,
+                                            const Select* pSelect, const ExprList* pExclude);
 static void update_database_names(QC_SQLITE_INFO* info, const char* name);
 static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable);
 static void update_names_from_srclist(QC_SQLITE_INFO* info, const SrcList* pSrc);
@@ -248,7 +248,7 @@ static bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
-void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
+static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
 {
     if (infos)
     {
@@ -304,13 +304,13 @@ static QC_SQLITE_INFO* info_alloc(void)
 
 static void info_finish(QC_SQLITE_INFO* info)
 {
-    free(info->affected_fields);
     free_string_array(info->table_names);
     free_string_array(info->table_fullnames);
     free(info->created_table_name);
     free_string_array(info->database_names);
     free(info->prepare_name);
     free(info->preparable_stmt);
+    free_field_infos(info->field_infos, info->field_infos_len);
 }
 
 static void info_free(QC_SQLITE_INFO* info)
@@ -330,9 +330,6 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
 
     info->types = QUERY_TYPE_UNKNOWN;
     info->operation = QUERY_OP_UNDEFINED;
-    info->affected_fields = NULL;
-    info->affected_fields_len = 0;
-    info->affected_fields_capacity = 0;
     info->is_real_query = false;
     info->has_clause = false;
     info->table_names = NULL;
@@ -352,6 +349,9 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->prepare_operation = QUERY_OP_UNDEFINED;
     info->preparable_stmt = NULL;
     info->preparable_stmt_length = 0;
+    info->field_infos = NULL;
+    info->field_infos_len = 0;
+    info->field_infos_capacity = 0;
 
     return info;
 }
@@ -643,42 +643,6 @@ static void log_invalid_data(GWBUF* query, const char* message)
     }
 }
 
-static void append_affected_field(QC_SQLITE_INFO* info, const char* s)
-{
-    size_t len = strlen(s);
-    size_t required_len = info->affected_fields_len + len + 1; // 1 for NULL
-
-    if (info->affected_fields_len != 0)
-    {
-        required_len += 1; // " " between fields
-    }
-
-    if (required_len > info->affected_fields_capacity)
-    {
-        if (info->affected_fields_capacity == 0)
-        {
-            info->affected_fields_capacity = 32;
-        }
-
-        while (required_len > info->affected_fields_capacity)
-        {
-            info->affected_fields_capacity *= 2;
-        }
-
-        info->affected_fields = MXS_REALLOC(info->affected_fields, info->affected_fields_capacity);
-        MXS_ABORT_IF_NULL(info->affected_fields);
-    }
-
-    if (info->affected_fields_len != 0)
-    {
-        strcpy(info->affected_fields + info->affected_fields_len, " ");
-        info->affected_fields_len += 1;
-    }
-
-    strcpy(info->affected_fields + info->affected_fields_len, s);
-    info->affected_fields_len += len;
-}
-
 static bool should_exclude(const char* zName, const ExprList* pExclude)
 {
     int i;
@@ -696,54 +660,209 @@ static bool should_exclude(const char* zName, const ExprList* pExclude)
 
         Expr* pExpr = item->pExpr;
 
-        if (pExpr->op == TK_DOT)
+        if (pExpr->op == TK_EQ)
+        {
+            // We end up here e.g with "UPDATE t set t.col = 5 ..."
+            // So, we pick the left branch.
+            pExpr = pExpr->pLeft;
+        }
+
+        while (pExpr->op == TK_DOT)
         {
             pExpr = pExpr->pRight;
         }
 
-        // We need to ensure that we do not report fields where there
-        // is only a difference in case. E.g.
-        //     SELECT A FROM tbl WHERE a = "foo";
-        // Affected fields is "A" and not "A a".
-        if ((pExpr->op == TK_ID) && (strcasecmp(pExpr->u.zToken, zName) == 0))
+        if (pExpr->op == TK_ID)
         {
-            break;
+            // We need to ensure that we do not report fields where there
+            // is only a difference in case. E.g.
+            //     SELECT A FROM tbl WHERE a = "foo";
+            // Affected fields is "A" and not "A a".
+            if (strcasecmp(pExpr->u.zToken, zName) == 0)
+            {
+                break;
+            }
         }
     }
 
     return i != pExclude->nExpr;
 }
 
-static void update_affected_fields(QC_SQLITE_INFO* info,
-                                   int prev_token,
-                                   const Expr* pExpr,
-                                   qc_token_position_t pos,
-                                   const ExprList* pExclude)
+static void update_field_infos(QC_SQLITE_INFO* info,
+                               const char* database,
+                               const char* table,
+                               const char* column,
+                               const ExprList* pExclude)
+{
+    ss_dassert(column);
+
+    // If only a column is specified, but not a table or database and we
+    // have a list of expressions that should be excluded, we check if the column
+    // value is present in that list. This is in order to exclude the second "d" in
+    // a statement like "select a as d from x where d = 2".
+    if (column && !table && !database && pExclude && should_exclude(column, pExclude))
+    {
+        return;
+    }
+
+    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column };
+
+    int i;
+    for (i = 0; i < info->field_infos_len; ++i)
+    {
+        QC_FIELD_INFO* field_info = info->field_infos + i;
+
+        if (strcasecmp(item.column, field_info->column) == 0)
+        {
+            if (!item.table && !field_info->table)
+            {
+                ss_dassert(!item.database && !field_info->database);
+                break;
+            }
+            else if (item.table && field_info->table && (strcmp(item.table, field_info->table) == 0))
+            {
+                if (!item.database && !field_info->database)
+                {
+                    break;
+                }
+                else if (item.database &&
+                         field_info->database &&
+                         (strcmp(item.database, field_info->database) == 0))
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    QC_FIELD_INFO* field_infos = NULL;
+
+    if (i == info->field_infos_len) // If true, the field was not present already.
+    {
+        if (info->field_infos_len < info->field_infos_capacity)
+        {
+            field_infos = info->field_infos;
+        }
+        else
+        {
+            size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
+            field_infos = MXS_REALLOC(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
+
+            if (field_infos)
+            {
+                info->field_infos = field_infos;
+                info->field_infos_capacity = capacity;
+            }
+        }
+    }
+
+    // If field_infos is NULL, then the field was found and has already been noted.
+    if (field_infos)
+    {
+        item.database = item.database ? MXS_STRDUP(item.database) : NULL;
+        item.table = item.table ? MXS_STRDUP(item.table) : NULL;
+        ss_dassert(item.column);
+        item.column = MXS_STRDUP(item.column);
+
+        // We are happy if we at least could dup the column.
+
+        if (item.column)
+        {
+            field_infos[info->field_infos_len++] = item;
+        }
+    }
+}
+
+static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
+                                         const struct Expr* pExpr,
+                                         const ExprList* pExclude)
+{
+    QC_FIELD_INFO item = {};
+
+    if (pExpr->op == TK_ASTERISK)
+    {
+        item.column = "*";
+    }
+    else if (pExpr->op == TK_ID)
+    {
+        // select a from...
+        item.column = pExpr->u.zToken;
+    }
+    else if (pExpr->op == TK_DOT)
+    {
+        if (pExpr->pLeft->op == TK_ID &&
+            (pExpr->pRight->op == TK_ID || pExpr->pRight->op == TK_ASTERISK))
+        {
+            // select a.b from...
+            item.table = pExpr->pLeft->u.zToken;
+            if (pExpr->pRight->op == TK_ID)
+            {
+                item.column = pExpr->pRight->u.zToken;
+            }
+            else
+            {
+                item.column = "*";
+            }
+        }
+        else if (pExpr->pLeft->op == TK_ID &&
+                 pExpr->pRight->op == TK_DOT &&
+                 pExpr->pRight->pLeft->op == TK_ID &&
+                 (pExpr->pRight->pRight->op == TK_ID || pExpr->pRight->pRight->op == TK_ASTERISK))
+        {
+            // select a.b.c from...
+            item.database = pExpr->pLeft->u.zToken;
+            item.table = pExpr->pRight->pLeft->u.zToken;
+            if (pExpr->pRight->pRight->op == TK_ID)
+            {
+                item.column = pExpr->pRight->pRight->u.zToken;
+            }
+            else
+            {
+                item.column = "*";
+            }
+        }
+    }
+
+    if (item.column)
+    {
+        bool should_update = true;
+
+        if ((pExpr->flags & EP_DblQuoted) == 0)
+        {
+            if ((strcasecmp(item.column, "true") == 0) || (strcasecmp(item.column, "false") == 0))
+            {
+                should_update = false;
+            }
+        }
+
+        if (should_update)
+        {
+            update_field_infos(info, item.database, item.table, item.column, pExclude);
+        }
+    }
+}
+
+
+static void update_fields_infos(QC_SQLITE_INFO* info,
+                                int prev_token,
+                                const Expr* pExpr,
+                                qc_token_position_t pos,
+                                const ExprList* pExclude)
 {
     const char* zToken = pExpr->u.zToken;
 
     switch (pExpr->op)
     {
-    case TK_ASTERISK: // "select *"
-        append_affected_field(info, "*");
+    case TK_ASTERISK: // select *
+        update_field_infos_from_expr(info, pExpr, pExclude);
         break;
 
-    case TK_DOT:
-        // In case of "X.Y" qc_mysqlembedded returns "Y".
-        update_affected_fields(info, TK_DOT, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
+    case TK_DOT: // select a.b ... select a.b.c
+        update_field_infos_from_expr(info, pExpr, pExclude);
         break;
 
-    case TK_ID:
-        if ((pExpr->flags & EP_DblQuoted) == 0)
-        {
-            if ((strcasecmp(zToken, "true") != 0) && (strcasecmp(zToken, "false") != 0))
-            {
-                if (!pExclude || !should_exclude(zToken, pExclude))
-                {
-                    append_affected_field(info, zToken);
-                }
-            }
-        }
+    case TK_ID: // select a
+        update_field_infos_from_expr(info, pExpr, pExclude);
         break;
 
     case TK_VARIABLE:
@@ -804,12 +923,12 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
 
         if (pExpr->pLeft)
         {
-            update_affected_fields(info, pExpr->op, pExpr->pLeft, QC_TOKEN_LEFT, pExclude);
+            update_fields_infos(info, pExpr->op, pExpr->pLeft, QC_TOKEN_LEFT, pExclude);
         }
 
         if (pExpr->pRight)
         {
-            update_affected_fields(info, pExpr->op, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
+            update_fields_infos(info, pExpr->op, pExpr->pRight, QC_TOKEN_RIGHT, pExclude);
         }
 
         if (pExpr->x.pList)
@@ -819,7 +938,7 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
             case TK_BETWEEN:
             case TK_CASE:
             case TK_FUNCTION:
-                update_affected_fields_from_exprlist(info, pExpr->x.pList, pExclude);
+                update_fields_infos_from_exprlist(info, pExpr->x.pList, pExclude);
                 break;
 
             case TK_EXISTS:
@@ -827,11 +946,11 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
             case TK_SELECT:
                 if (pExpr->flags & EP_xIsSelect)
                 {
-                    update_affected_fields_from_select(info, pExpr->x.pSelect, pExclude);
+                    update_fields_infos_from_select(info, pExpr->x.pSelect, pExclude);
                 }
                 else
                 {
-                    update_affected_fields_from_exprlist(info, pExpr->x.pList, pExclude);
+                    update_fields_infos_from_exprlist(info, pExpr->x.pList, pExclude);
                 }
                 break;
             }
@@ -840,19 +959,19 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
     }
 }
 
-static void update_affected_fields_from_exprlist(QC_SQLITE_INFO* info,
-                                               const ExprList* pEList,
-                                               const ExprList* pExclude)
+static void update_fields_infos_from_exprlist(QC_SQLITE_INFO* info,
+                                              const ExprList* pEList,
+                                              const ExprList* pExclude)
 {
     for (int i = 0; i < pEList->nExpr; ++i)
     {
         struct ExprList_item* pItem = &pEList->a[i];
 
-        update_affected_fields(info, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
+        update_fields_infos(info, 0, pItem->pExpr, QC_TOKEN_MIDDLE, pExclude);
     }
 }
 
-static void update_affected_fields_from_idlist(QC_SQLITE_INFO* info,
+static void update_fields_infos_from_idlist(QC_SQLITE_INFO* info,
                                                const IdList* pIds,
                                                const ExprList* pExclude)
 {
@@ -860,14 +979,11 @@ static void update_affected_fields_from_idlist(QC_SQLITE_INFO* info,
     {
         struct IdList_item* pItem = &pIds->a[i];
 
-        if (!pExclude || !should_exclude(pItem->zName, pExclude))
-        {
-            append_affected_field(info, pItem->zName);
-        }
+        update_field_infos(info, NULL, NULL, pItem->zName, pExclude);
     }
 }
 
-static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
+static void update_fields_infos_from_select(QC_SQLITE_INFO* info,
                                                const Select* pSelect,
                                                const ExprList* pExclude)
 {
@@ -885,7 +1001,7 @@ static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
 
             if (pSrc->a[i].pSelect)
             {
-                update_affected_fields_from_select(info, pSrc->a[i].pSelect, pExclude);
+                update_fields_infos_from_select(info, pSrc->a[i].pSelect, pExclude);
             }
 
 #ifdef QC_COLLECT_NAMES_FROM_USING
@@ -895,7 +1011,7 @@ static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
             // does not reveal its value, right?
             if (pSrc->a[i].pUsing)
             {
-                update_affected_fields_from_idlist(info, pSrc->a[i].pUsing, pSelect->pEList);
+                update_fields_infos_from_idlist(info, pSrc->a[i].pUsing, pSelect->pEList);
             }
 #endif
         }
@@ -903,24 +1019,28 @@ static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
 
     if (pSelect->pEList)
     {
-        update_affected_fields_from_exprlist(info, pSelect->pEList, NULL);
+        update_fields_infos_from_exprlist(info, pSelect->pEList, NULL);
     }
 
      if (pSelect->pWhere)
     {
         info->has_clause = true;
-        update_affected_fields(info, 0, pSelect->pWhere, QC_TOKEN_MIDDLE, pSelect->pEList);
+        update_fields_infos(info, 0, pSelect->pWhere, QC_TOKEN_MIDDLE, pSelect->pEList);
     }
 
     if (pSelect->pGroupBy)
     {
-        update_affected_fields_from_exprlist(info, pSelect->pGroupBy, pSelect->pEList);
+        update_fields_infos_from_exprlist(info, pSelect->pGroupBy, pSelect->pEList);
     }
 
     if (pSelect->pHaving)
     {
         info->has_clause = true;
-        update_affected_fields(info, 0, pSelect->pHaving, QC_TOKEN_MIDDLE, pSelect->pEList);
+#if defined(COLLECT_HAVING_AS_WELL)
+        // A HAVING clause can only refer to fields that already have been
+        // mentioned. Consequently, they need not be collected.
+        update_fields_infos(info, 0, pSelect->pHaving, QC_TOKEN_MIDDLE, pSelect->pEList);
+#endif
     }
 }
 
@@ -1165,7 +1285,7 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
 
     if (pSelect)
     {
-        update_affected_fields_from_select(info, pSelect, NULL);
+        update_fields_infos_from_select(info, pSelect, NULL);
         info->is_real_query = false;
     }
 
@@ -1235,7 +1355,7 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
 
     if (pWhere)
     {
-        update_affected_fields(info, 0, pWhere, QC_TOKEN_MIDDLE, 0);
+        update_fields_infos(info, 0, pWhere, QC_TOKEN_MIDDLE, 0);
     }
 
     exposed_sqlite3ExprDelete(pParse->db, pWhere);
@@ -1299,7 +1419,7 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
     {
         if (pSelect)
         {
-            update_affected_fields_from_select(info, pSelect, NULL);
+            update_fields_infos_from_select(info, pSelect, NULL);
             info->is_real_query = false;
         }
         else if (pOldTable)
@@ -1345,17 +1465,17 @@ void mxs_sqlite3Insert(Parse* pParse,
 
     if (pColumns)
     {
-        update_affected_fields_from_idlist(info, pColumns, NULL);
+        update_fields_infos_from_idlist(info, pColumns, NULL);
     }
 
     if (pSelect)
     {
-        update_affected_fields_from_select(info, pSelect, NULL);
+        update_fields_infos_from_select(info, pSelect, NULL);
     }
 
     if (pSet)
     {
-        update_affected_fields_from_exprlist(info, pSet, NULL);
+        update_fields_infos_from_exprlist(info, pSet, NULL);
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTabList);
@@ -1479,18 +1599,13 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
         {
             struct ExprList_item* pItem = &pChanges->a[i];
 
-            if (pItem->zName)
-            {
-                append_affected_field(info, pItem->zName);
-            }
-
-            update_affected_fields(info, 0, pItem->pExpr, QC_TOKEN_MIDDLE, NULL);
+            update_fields_infos(info, 0, pItem->pExpr, QC_TOKEN_MIDDLE, NULL);
         }
     }
 
     if (pWhere)
     {
-        update_affected_fields(info, 0, pWhere, QC_TOKEN_MIDDLE, NULL);
+        update_fields_infos(info, 0, pWhere, QC_TOKEN_MIDDLE, pChanges);
     }
 
     exposed_sqlite3SrcListDelete(pParse->db, pTabList);
@@ -1516,7 +1631,7 @@ void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect)
         info->types = QUERY_TYPE_READ;
     }
 
-    update_affected_fields_from_select(info, pSelect, NULL);
+    update_fields_infos_from_select(info, pSelect, NULL);
 }
 
 void maxscaleAlterTable(Parse *pParse,            /* Parser context. */
@@ -1668,9 +1783,12 @@ void maxscaleExplain(Parse* pParse, SrcList* pName)
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_READ;
     update_names(info, "information_schema", "COLUMNS");
-    append_affected_field(info,
-                          "COLUMN_DEFAULT COLUMN_KEY COLUMN_NAME "
-                          "COLUMN_TYPE EXTRA IS_NULLABLE");
+    update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", NULL);
+    update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_KEY", NULL);
+    update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_NAME", NULL);
+    update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_TYPE", NULL);
+    update_field_infos(info, "information_schema", "COLUMNS", "EXTRA", NULL);
+    update_field_infos(info, "information_schema", "COLUMNS", "IS_NULLABLE", NULL);
 
     exposed_sqlite3SrcListDelete(pParse->db, pName);
 }
@@ -2190,7 +2308,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 
                         if (pValue->op == TK_SELECT)
                         {
-                            update_affected_fields_from_select(info, pValue->x.pSelect, NULL);
+                            update_fields_infos_from_select(info, pValue->x.pSelect, NULL);
                             info->is_real_query = false; // TODO: This is what qc_mysqlembedded claims.
                         }
                     }
@@ -2246,16 +2364,24 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
             update_names(info, "information_schema", "COLUMNS");
             if (pShow->data == MXS_SHOW_COLUMNS_FULL)
             {
-                append_affected_field(info,
-                                      "COLLATION_NAME COLUMN_COMMENT COLUMN_DEFAULT "
-                                      "COLUMN_KEY COLUMN_NAME COLUMN_TYPE EXTRA "
-                                      "IS_NULLABLE PRIVILEGES");
+                update_field_infos(info, "information_schema", "COLUMNS", "COLLATION_NAME", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_COMMENT", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_KEY", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_NAME", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_TYPE", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "EXTRA", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "IS_NULLABLE", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "PRIVILEGES", NULL);
             }
             else
             {
-                append_affected_field(info,
-                                      "COLUMN_DEFAULT COLUMN_KEY COLUMN_NAME "
-                                      "COLUMN_TYPE EXTRA IS_NULLABLE");
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_KEY", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_NAME", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "COLUMN_TYPE", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "EXTRA", NULL);
+                update_field_infos(info, "information_schema", "COLUMNS", "IS_NULLABLE", NULL);
             }
         }
         break;
@@ -2278,7 +2404,7 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
         {
             info->types = QUERY_TYPE_SHOW_DATABASES;
             update_names(info, "information_schema", "SCHEMATA");
-            append_affected_field(info, "SCHEMA_NAME");
+            update_field_infos(info, "information_schema", "SCHEMATA", "SCHEMA_NAME", NULL);
         }
         break;
 
@@ -2288,10 +2414,19 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
         {
             info->types = QUERY_TYPE_WRITE;
             update_names(info, "information_schema", "STATISTICS");
-            append_affected_field(info,
-                                  "CARDINALITY COLLATION COLUMN_NAME COMMENT INDEX_COMMENT "
-                                  "INDEX_NAME INDEX_TYPE NON_UNIQUE NULLABLE PACKED SEQ_IN_INDEX "
-                                  "SUB_PART TABLE_NAME");
+            update_field_infos(info, "information_schema", "STATISTICS", "CARDINALITY", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "COLLATION", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "COLUMN_NAME", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "COMMENT", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "INDEX_COMMENT", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "INDEX_NAME", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "INDEX_TYPE", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "NON_UNIQUE", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "NULLABLE", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "PACKED", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "SEQ_IN_INDEX", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "SUB_PART", NULL);
+            update_field_infos(info, "information_schema", "STATISTICS", "TABLE_NAME", NULL);
         }
         break;
 
@@ -2299,12 +2434,24 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
         {
             info->types = QUERY_TYPE_WRITE;
             update_names(info, "information_schema", "TABLES");
-            append_affected_field(info,
-                                  "AUTO_INCREMENT AVG_ROW_LENGTH CHECKSUM CHECK_TIME "
-                                  "CREATE_OPTIONS CREATE_TIME DATA_FREE DATA_LENGTH "
-                                  "ENGINE INDEX_LENGTH MAX_DATA_LENGTH ROW_FORMAT "
-                                  "TABLE_COLLATION TABLE_COMMENT TABLE_NAME "
-                                  "TABLE_ROWS UPDATE_TIME VERSION");
+            update_field_infos(info, "information_schema", "TABLES", "AUTO_INCREMENT", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "AVG_ROW_LENGTH", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "CHECKSUM", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "CHECK_TIME", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "CREATE_OPTIONS", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "CREATE_TIME", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "DATA_FREE", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "DATA_LENGTH", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "ENGINE", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "INDEX_LENGTH", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "MAX_DATA_LENGTH", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "ROW_FORMAT", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "TABLE_COLLATION", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "TABLE_COMMENT", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "TABLE_NAME", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "TABLE_ROWS", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "UPDATE_TIME", NULL);
+            update_field_infos(info, "information_schema", "TABLES", "VERSION", NULL);
         }
         break;
 
@@ -2318,7 +2465,8 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
                 // TODO: qc_mysqlembedded does not set the type bit.
                 info->types = QUERY_TYPE_UNKNOWN;
                 update_names(info, "information_schema", "SESSION_STATUS");
-                append_affected_field(info, "VARIABLE_NAME VARIABLE_VALUE");
+                update_field_infos(info, "information_schema", "SESSION_STATUS", "VARIABLE_NAME", NULL);
+                update_field_infos(info, "information_schema", "SESSION_STATUS", "VARIABLE_VALUE", NULL);
                 break;
 
             case MXS_SHOW_STATUS_MASTER:
@@ -2343,7 +2491,7 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
         {
             info->types = QUERY_TYPE_SHOW_TABLES;
             update_names(info, "information_schema", "TABLE_NAMES");
-            append_affected_field(info, "TABLE_NAME");
+            update_field_infos(info, "information_schema", "TABLE_NAMES", "TABLE_NAME", NULL);
         }
         break;
 
@@ -2358,7 +2506,8 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
                 info->types = QUERY_TYPE_SYSVAR_READ;
             }
             update_names(info, "information_schema", "SESSION_VARIABLES");
-            append_affected_field(info, "VARIABLE_NAME VARIABLE_VALUE");
+            update_field_infos(info, "information_schema", "SESSION_STATUS", "VARIABLE_NAME", NULL);
+            update_field_infos(info, "information_schema", "SESSION_STATUS", "VARIABLE_VALUE", NULL);
         }
         break;
 
@@ -2435,7 +2584,6 @@ static bool qc_sqlite_is_real_query(GWBUF* query);
 static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames);
 static char* qc_sqlite_get_canonical(GWBUF* query);
 static bool qc_sqlite_query_has_clause(GWBUF* query);
-static char* qc_sqlite_get_affected_fields(GWBUF* query);
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
@@ -2843,42 +2991,6 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
     return has_clause;
 }
 
-static char* qc_sqlite_get_affected_fields(GWBUF* query)
-{
-    QC_TRACE();
-    ss_dassert(this_unit.initialized);
-    ss_dassert(this_thread.initialized);
-
-    char* affected_fields = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
-    if (info)
-    {
-        if (qc_info_is_valid(info->status))
-        {
-            affected_fields = info->affected_fields;
-        }
-        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            log_invalid_data(query, "cannot report what fields are affected");
-        }
-    }
-    else
-    {
-        MXS_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    if (!affected_fields)
-    {
-        affected_fields = "";
-    }
-
-    affected_fields = MXS_STRDUP(affected_fields);
-    MXS_ABORT_IF_NULL(affected_fields);
-
-    return affected_fields;
-}
-
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
 {
     QC_TRACE();
@@ -2969,16 +3081,33 @@ static qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
     return op;
 }
 
-void qc_sqlite_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos)
+void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    MXS_ERROR("qc_get_field_info not implemented yet.");
-
     *infos = NULL;
     *n_infos = 0;
+
+    QC_SQLITE_INFO* info = get_query_info(query);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            *infos = info->field_infos;
+            *n_infos = info->field_infos_len;
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(query, "cannot report field info");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
 }
 
 /**
@@ -3002,7 +3131,6 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_table_names,
     NULL,
     qc_sqlite_query_has_clause,
-    qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
     qc_sqlite_get_prepare_name,
     qc_sqlite_get_prepare_operation,

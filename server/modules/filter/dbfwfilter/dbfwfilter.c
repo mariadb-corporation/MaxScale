@@ -1701,13 +1701,12 @@ bool rule_matches(FW_INSTANCE* my_instance,
                   RULELIST *rulelist,
                   char* query)
 {
-    char *ptr, *where, *msg = NULL;
+    char *ptr, *msg = NULL;
     char emsg[512];
 
     unsigned char* memptr = (unsigned char*) queue->start;
     bool is_sql, is_real, matches;
     qc_query_op_t optype = QUERY_OP_UNDEFINED;
-    STRLINK* strln = NULL;
     QUERYSPEED* queryspeed = NULL;
     QUERYSPEED* rule_qs = NULL;
     time_t time_now;
@@ -1745,7 +1744,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                     case QUERY_OP_UPDATE:
                     case QUERY_OP_INSERT:
                     case QUERY_OP_DELETE:
-                        // In these cases, we have to be able to trust what qc_get_affected_fields
+                        // In these cases, we have to be able to trust what qc_get_field_info
                         // returns. Unless the query was parsed completely, we cannot do that.
                         msg = create_parse_error(my_instance, "parsed completely", query, &matches);
                         goto queryresolved;
@@ -1817,32 +1816,29 @@ bool rule_matches(FW_INSTANCE* my_instance,
             case RT_COLUMN:
                 if (is_sql && is_real)
                 {
-                    where = qc_get_affected_fields(queue);
-                    if (where != NULL)
-                    {
-                        char* saveptr;
-                        char* tok = strtok_r(where, " ", &saveptr);
-                        while (tok)
-                        {
-                            strln = (STRLINK*) rulelist->rule->data;
-                            while (strln)
-                            {
-                                if (strcasecmp(tok, strln->value) == 0)
-                                {
-                                    matches = true;
+                    const QC_FIELD_INFO* infos;
+                    size_t n_infos;
+                    qc_get_field_info(queue, &infos, &n_infos);
 
-                                    sprintf(emsg, "Permission denied to column '%s'.", strln->value);
-                                    MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
-                                             rulelist->rule->name, strln->value);
-                                    msg = MXS_STRDUP_A(emsg);
-                                    MXS_FREE(where);
-                                    goto queryresolved;
-                                }
-                                strln = strln->next;
+                    for (size_t i = 0; i < n_infos; ++i)
+                    {
+                        const char* tok = infos[i].column;
+
+                        STRLINK* strln = (STRLINK*) rulelist->rule->data;
+                        while (strln)
+                        {
+                            if (strcasecmp(tok, strln->value) == 0)
+                            {
+                                matches = true;
+
+                                sprintf(emsg, "Permission denied to column '%s'.", strln->value);
+                                MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                                         rulelist->rule->name, strln->value);
+                                msg = MXS_STRDUP_A(emsg);
+                                goto queryresolved;
                             }
-                            tok = strtok_r(NULL, ",", &saveptr);
+                            strln = strln->next;
                         }
-                        MXS_FREE(where);
                     }
                 }
                 break;
@@ -1850,23 +1846,22 @@ bool rule_matches(FW_INSTANCE* my_instance,
             case RT_WILDCARD:
                 if (is_sql && is_real)
                 {
-                    char * strptr;
-                    where = qc_get_affected_fields(queue);
+                    const QC_FIELD_INFO* infos;
+                    size_t n_infos;
+                    qc_get_field_info(queue, &infos, &n_infos);
 
-                    if (where != NULL)
+                    for (size_t i = 0; i < n_infos; ++i)
                     {
-                        strptr = where;
+                        const char* column = infos[i].column;
 
-                        if (strchr(strptr, '*'))
+                        if (strcmp(column, "*") == 0)
                         {
                             matches = true;
                             msg = MXS_STRDUP_A("Usage of wildcard denied.");
                             MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
                                      rulelist->rule->name);
-                            MXS_FREE(where);
                             goto queryresolved;
                         }
-                        MXS_FREE(where);
                     }
                 }
                 break;

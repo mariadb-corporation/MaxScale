@@ -125,7 +125,6 @@ typedef struct query_classifier
     char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
     char* (*qc_get_canonical)(GWBUF* stmt);
     bool (*qc_query_has_clause)(GWBUF* stmt);
-    char* (*qc_get_affected_fields)(GWBUF* stmt);
     char** (*qc_get_database_names)(GWBUF* stmt, int* size);
     char* (*qc_get_prepare_name)(GWBUF* stmt);
     qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
@@ -224,17 +223,6 @@ void qc_thread_end(void);
  * @return To what extent the statement could be parsed.
  */
 qc_parse_result_t qc_parse(GWBUF* stmt);
-
-/**
- * Returns the fields the statement affects, as a string of names separated
- * by spaces. Note that the fields do not contain any table information.
- *
- * @param stmt  A buffer containing a COM_QUERY packet.
- *
- * @return A string containing the fields or NULL if a memory allocation
- *         failure occurs. The string must be freed by the caller.
- */
-char* qc_get_affected_fields(GWBUF* stmt);
 
 /**
  * Returns information about affected fields.

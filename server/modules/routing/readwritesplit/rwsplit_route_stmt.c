@@ -253,10 +253,10 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 BREF_IS_IN_USE((&backend_ref[i])))
             {
                 MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
+                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
             }
 
@@ -368,10 +368,10 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
+                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
             }
 
@@ -391,8 +391,8 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             {
                 nsucc += 1;
                 MXS_INFO("Backend %s:%d already executing sescmd.",
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port);
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port);
             }
             else
             {
@@ -403,8 +403,8 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 else
                 {
                     MXS_ERROR("Failed to execute session command in %s:%d",
-                              backend_ref[i].bref_backend->backend_server->name,
-                              backend_ref[i].bref_backend->backend_server->port);
+                              backend_ref[i].ref->server->name,
+                              backend_ref[i].ref->server->port);
                 }
             }
         }
@@ -533,9 +533,9 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
 
         for (i = 0; i < rses->rses_nbackends; i++)
         {
-            BACKEND *b = backend_ref[i].bref_backend;
+            SERVER_REF *b = backend_ref[i].ref;
             SERVER server;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
+            server.status = b->server->status;
             /**
              * To become chosen:
              * backend must be in use, name must match,
@@ -543,7 +543,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * server, or master.
              */
             if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                (strncasecmp(name, b->backend_server->unique_name, PATH_MAX) == 0) &&
+                (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
                 (SERVER_IS_SLAVE(&server) || SERVER_IS_RELAY_SERVER(&server) ||
                  SERVER_IS_MASTER(&server)))
             {
@@ -569,10 +569,10 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
 
         for (i = 0; i < rses->rses_nbackends; i++)
         {
-            BACKEND *b = (&backend_ref[i])->bref_backend;
+            SERVER_REF *b = backend_ref[i].ref;
             SERVER server;
             SERVER candidate;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
+            server.status = b->server->status;
             /**
              * Unused backend or backend which is not master nor
              * slave can't be used
@@ -596,7 +596,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 {
                     /** found master */
                     candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
+                    candidate.status = candidate_bref->ref->server->status;
                     succp = true;
                 }
                 /**
@@ -605,12 +605,12 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  * maximum allowed replication lag.
                  */
                 else if (max_rlag == MAX_RLAG_UNDEFINED ||
-                         (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                          b->backend_server->rlag <= max_rlag))
+                         (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                          b->server->rlag <= max_rlag))
                 {
                     /** found slave */
                     candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
+                    candidate.status = candidate_bref->ref->server->status;
                     succp = true;
                 }
             }
@@ -620,13 +620,13 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              */
             else if (SERVER_IS_MASTER(&candidate) && SERVER_IS_SLAVE(&server) &&
                      (max_rlag == MAX_RLAG_UNDEFINED ||
-                      (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                       b->backend_server->rlag <= max_rlag)) &&
+                      (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                       b->server->rlag <= max_rlag)) &&
                      !rses->rses_config.rw_master_reads)
             {
                 /** found slave */
                 candidate_bref = &backend_ref[i];
-                candidate.status = candidate_bref->bref_backend->backend_server->status;
+                candidate.status = candidate_bref->ref->server->status;
                 succp = true;
             }
             /**
@@ -637,21 +637,17 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
             else if (SERVER_IS_SLAVE(&server))
             {
                 if (max_rlag == MAX_RLAG_UNDEFINED ||
-                    (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                     b->backend_server->rlag <= max_rlag))
+                    (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                     b->server->rlag <= max_rlag))
                 {
-                    candidate_bref =
-                        check_candidate_bref(candidate_bref, &backend_ref[i],
-                                             rses->rses_config.rw_slave_select_criteria);
-                    candidate.status =
-                        candidate_bref->bref_backend->backend_server->status;
+                    candidate_bref = check_candidate_bref(candidate_bref, &backend_ref[i],
+                                                          rses->rses_config.rw_slave_select_criteria);
+                    candidate.status = candidate_bref->ref->server->status;
                 }
                 else
                 {
-                    MXS_INFO("Server %s:%d is too much behind the "
-                             "master, %d s. and can't be chosen.",
-                             b->backend_server->name, b->backend_server->port,
-                             b->backend_server->rlag);
+                    MXS_INFO("Server %s:%d is too much behind the master, %d s. and can't be chosen.",
+                             b->server->name, b->server->port, b->server->rlag);
                 }
             }
         } /*<  for */
@@ -675,7 +671,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * so copying it locally will make possible error messages
              * easier to understand */
             SERVER server;
-            server.status = master_bref->bref_backend->backend_server->status;
+            server.status = master_bref->ref->server->status;
             if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
             {
                 *p_dcb = master_bref->bref_dcb;
@@ -687,8 +683,8 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
             {
                 MXS_ERROR("Server at %s:%d should be master but "
                           "is %s instead and can't be chosen to master.",
-                          master_bref->bref_backend->backend_server->name,
-                          master_bref->bref_backend->backend_server->port,
+                          master_bref->ref->server->name,
+                          master_bref->ref->server->port,
                           STRSRVSTATUS(&server));
                 succp = false;
             }
@@ -1191,9 +1187,8 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(target_dcb != NULL);
 
     MXS_INFO("Route query to %s \t%s:%d <",
-         (SERVER_IS_MASTER(bref->bref_backend->backend_server) ? "master"
-          : "slave"), bref->bref_backend->backend_server->name,
-         bref->bref_backend->backend_server->port);
+         (SERVER_IS_MASTER(bref->ref->server) ? "master"
+          : "slave"), bref->ref->server->name, bref->ref->server->port);
     /**
      * Store current stmt if execution of previous session command
      * haven't completed yet.
@@ -1372,14 +1367,13 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
             if (bref == rses->rses_master_ref)
             {
                 /** Store master state for better error reporting */
-                master.status = bref->bref_backend->backend_server->status;
+                master.status = bref->ref->server->status;
             }
 
-            if (bref->bref_backend->backend_server->status & SERVER_MASTER)
+            if (SERVER_IS_MASTER(bref->ref->server))
             {
                 if (candidate_bref == NULL ||
-                    (bref->bref_backend->backend_server->depth <
-                     candidate_bref->bref_backend->backend_server->depth))
+                    (bref->ref->server->depth < candidate_bref->ref->server->depth))
                 {
                     candidate_bref = bref;
                 }
