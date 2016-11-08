@@ -58,7 +58,7 @@ const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
 static MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
-static void monitor_servers_free(MONITOR_SERVERS *servers);
+static void monitor_server_free_all(MONITOR_SERVERS *servers);
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
@@ -142,7 +142,7 @@ monitor_free(MONITOR *mon)
     }
     spinlock_release(&monLock);
     free_config_parameter(mon->parameters);
-    monitor_servers_free(mon->databases);
+    monitor_server_free_all(mon->databases);
     MXS_FREE(mon->name);
     MXS_FREE(mon);
 }
@@ -304,7 +304,7 @@ static void monitor_server_free(MONITOR_SERVERS *tofree)
  * Free monitor server list
  * @param servers Servers to free
  */
-static void monitor_servers_free(MONITOR_SERVERS *servers)
+static void monitor_server_free_all(MONITOR_SERVERS *servers)
 {
     while (servers)
     {
@@ -357,7 +357,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     if (ptr)
     {
-      monitor_servers_free(ptr);
+      monitor_server_free(ptr);
     }
 
     if (old_state == MONITOR_STATE_RUNNING)
@@ -608,13 +608,8 @@ monitorGetList()
  */
 bool check_monitor_permissions(MONITOR* monitor, const char* query)
 {
-    if (monitor->databases == NULL)
-    {
-        MXS_ERROR("[%s] Monitor is missing the servers parameter.", monitor->name);
-        return false;
-    }
-
-    if (config_get_global_options()->skip_permission_checks)
+    if (monitor->databases == NULL || // No servers to check
+        config_get_global_options()->skip_permission_checks)
     {
         return true;
     }

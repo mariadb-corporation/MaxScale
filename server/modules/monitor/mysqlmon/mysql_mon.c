@@ -215,7 +215,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
     while (database)
     {
         /** Delete any existing structures and replace them with empty ones */
-        hashtable_delete(handle->server_info, database->server);
+        hashtable_delete(handle->server_info, database->server->unique_name);
 
         if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
         {

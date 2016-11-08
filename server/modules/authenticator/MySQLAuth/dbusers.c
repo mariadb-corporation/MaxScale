@@ -2649,15 +2649,10 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 bool check_service_permissions(SERVICE* service)
 {
     if (is_internal_service(service->routerModule) ||
-        config_get_global_options()->skip_permission_checks)
+        config_get_global_options()->skip_permission_checks ||
+        service->dbref == NULL) // No servers to check
     {
         return true;
-    }
-
-    if (service->dbref == NULL)
-    {
-        MXS_ERROR("[%s] Service is missing the servers parameter.", service->name);
-        return false;
     }
 
     char *user, *password;

@@ -2824,12 +2824,6 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 s = strtok_r(NULL, ",", &lasts);
             }
         }
-        else if (servers == NULL && !is_internal_service(router))
-        {
-            MXS_ERROR("The service '%s' is missing a definition of the servers "
-                      "that provide the service.", obj->object);
-            error_count++;
-        }
 
         if (roptions)
         {
@@ -2882,12 +2876,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     }
 
     char *servers = config_get_value(obj->parameters, "servers");
-    if (servers == NULL)
-    {
-        MXS_ERROR("Monitor '%s' is missing the 'servers' parameter that "
-                  "lists the servers that it monitors.", obj->object);
-        error_count++;
-    }
 
     if (error_count == 0)
     {
@@ -2934,36 +2922,39 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             }
         }
 
-        /* get the servers to monitor */
-        char *s, *lasts;
-        s = strtok_r(servers, ",", &lasts);
-        while (s)
+        if (servers)
         {
-            CONFIG_CONTEXT *obj1 = context;
-            int found = 0;
-            while (obj1)
+            /* get the servers to monitor */
+            char *s, *lasts;
+            s = strtok_r(servers, ",", &lasts);
+            while (s)
             {
-                if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
+                CONFIG_CONTEXT *obj1 = context;
+                int found = 0;
+                while (obj1)
                 {
-                    found = 1;
-                    if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                    if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
                     {
-                        MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                                    "This will cause undefined behavior.",
-                                    obj1->object);
+                        found = 1;
+                        if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                        {
+                            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                                        "This will cause undefined behavior.",
+                                        obj1->object);
+                        }
+                        monitorAddServer(obj->element, obj1->element);
                     }
-                    monitorAddServer(obj->element, obj1->element);
+                    obj1 = obj1->next;
                 }
-                obj1 = obj1->next;
-            }
-            if (!found)
-            {
-                MXS_ERROR("Unable to find server '%s' that is "
-                          "configured in the monitor '%s'.", s, obj->object);
-                error_count++;
-            }
+                if (!found)
+                {
+                    MXS_ERROR("Unable to find server '%s' that is "
+                              "configured in the monitor '%s'.", s, obj->object);
+                    error_count++;
+                }
 
-            s = strtok_r(NULL, ",", &lasts);
+                s = strtok_r(NULL, ",", &lasts);
+            }
         }
 
         char *user = config_get_value(obj->parameters, "user");

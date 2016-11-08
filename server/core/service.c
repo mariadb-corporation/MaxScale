@@ -821,13 +821,12 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server)
 {
     spinlock_acquire(&service->spin);
 
-    service->n_dbref--;
-
     for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
     {
         if (ref->server == server)
         {
             ref->active = false;
+            service->n_dbref--;
             break;
         }
     }
