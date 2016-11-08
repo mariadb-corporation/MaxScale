@@ -50,6 +50,7 @@
  *                                  for connection error and authentication failure.
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
+ * 08/11/2016   Massimiliano Pinto  Added destroyInstance()
  *
  * @endverbatim
  */
@@ -108,6 +109,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
+static void destroyInstance(SERVICE *service);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -120,7 +122,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     errorReply,
-    getCapabilities
+    getCapabilities,
+    destroyInstance
 };
 
 static void stats_func(void *);
@@ -2290,4 +2293,66 @@ blr_free_ssl_data(ROUTER_INSTANCE *inst)
         MXS_FREE(inst->service->dbref->server->server_ssl);
         inst->service->dbref->server->server_ssl = NULL;
     }
+}
+
+/**
+ * destroy binlog server instance
+ *
+ * @param service   The service this router instance belongs to
+ */
+static void
+destroyInstance(SERVICE *service)
+{
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) service->router_instance;
+
+    MXS_DEBUG("Destroying instance of router %s for service %s",
+              service->routerModule, service->name);
+
+    /* Check whether master connection is active */
+    if (inst->master)
+    {
+        if (inst->master->fd != -1 && inst->master->state == DCB_STATE_POLLING)
+        {
+            blr_master_close(inst);
+        }
+    }
+
+    spinlock_acquire(&inst->lock);
+
+    if (inst->master_state != BLRM_UNCONFIGURED)
+    {
+        inst->master_state = BLRM_SLAVE_STOPPED;
+    }
+
+    if (inst->client)
+    {
+        if (inst->client->state == DCB_STATE_POLLING)
+        {
+            dcb_close(inst->client);
+            inst->client = NULL;
+        }
+    }
+
+    /* Discard the queued residual data */
+    while (inst->residual)
+    {
+        inst->residual = gwbuf_consume(inst->residual, GWBUF_LENGTH(inst->residual));
+    }
+    inst->residual = NULL;
+
+    MXS_NOTICE("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
+               "read up to log %s, pos %lu, transaction safe pos %lu",
+               service->name,
+               service->dbref->server->name,
+               service->dbref->server->port,
+               inst->binlog_name, inst->current_pos, inst->binlog_position);
+
+    if (inst->trx_safe && inst->pending_transaction)
+    {
+        MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
+                    "pos %lu, incomplete transaction starts at pos %lu",
+                    service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
+    }
+
+    spinlock_release(&inst->lock);
 }

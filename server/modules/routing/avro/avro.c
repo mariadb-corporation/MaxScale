@@ -105,7 +105,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     errorReply,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static SPINLOCK instlock;

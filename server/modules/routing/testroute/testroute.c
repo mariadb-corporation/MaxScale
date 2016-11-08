@@ -50,7 +50,8 @@ static ROUTER_OBJECT MyObject =
     diagnostic,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 typedef struct

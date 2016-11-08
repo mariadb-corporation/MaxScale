@@ -101,7 +101,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 /*

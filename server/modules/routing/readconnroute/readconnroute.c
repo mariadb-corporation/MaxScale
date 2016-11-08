@@ -125,7 +125,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);

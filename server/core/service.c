@@ -34,6 +34,7 @@
  * 03/03/15     Massimiliano Pinto      Added config_enable_feedback_task() call in serviceStartAll
  * 19/06/15     Martin Brampton         More meaningful names for temp variables
  * 31/05/16     Martin Brampton         Implement connection throttling
+ * 08/11/16     Massimiliano Pinto      Added: service_shutdown() calls destroyInstance() hoosk for routers
  *
  * @endverbatim
  */
@@ -1827,6 +1828,11 @@ void service_shutdown()
     while (svc != NULL)
     {
         svc->svc_do_shutdown = true;
+        /* Call destroyInstance hook for routers */
+        if (svc->router->destroyInstance)
+        {
+           svc->router->destroyInstance(svc);
+        }
         svc = svc->next;
     }
     spinlock_release(&service_spin);
