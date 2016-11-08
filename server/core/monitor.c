@@ -258,6 +258,13 @@ monitorAddServer(MONITOR *mon, SERVER *server)
     /* pending status is updated by get_replication_tree */
     db->pending_status = 0;
 
+    monitor_state_t old_state = mon->state;
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStop(mon);
+    }
+
     spinlock_acquire(&mon->lock);
 
     if (mon->databases == NULL)
@@ -274,6 +281,23 @@ monitorAddServer(MONITOR *mon, SERVER *server)
         ptr->next = db;
     }
     spinlock_release(&mon->lock);
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStart(mon, mon->parameters);
+    }
+}
+
+static void monitor_server_free(MONITOR_SERVERS *tofree)
+{
+    if (tofree)
+    {
+        if (tofree->con)
+        {
+            mysql_close(tofree->con);
+        }
+        MXS_FREE(tofree);
+    }
 }
 
 /**
@@ -286,11 +310,59 @@ static void monitor_servers_free(MONITOR_SERVERS *servers)
     {
         MONITOR_SERVERS *tofree = servers;
         servers = servers->next;
-        if (tofree->con)
+        monitor_server_free(tofree);
+    }
+}
+
+/**
+ * Remove a server from a monitor.
+ *
+ * @param mon           The Monitor instance
+ * @param server        The Server to remove
+ */
+void monitorRemoveServer(MONITOR *mon, SERVER *server)
+{
+    monitor_state_t old_state = mon->state;
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStop(mon);
+    }
+
+    spinlock_acquire(&mon->lock);
+
+    ss_dassert(mon->databases);
+    MONITOR_SERVERS *ptr = mon->databases;
+
+    if (ptr->server == server)
+    {
+        mon->databases = mon->databases->next;
+    }
+    else
+    {
+        MONITOR_SERVERS *prev = ptr;
+
+        while (ptr)
         {
-            mysql_close(tofree->con);
+            if (ptr->server == server)
+            {
+                prev->next = ptr->next;
+                break;
+            }
+            prev = ptr;
+            ptr = ptr->next;
         }
-        MXS_FREE(tofree);
+    }
+    spinlock_release(&mon->lock);
+
+    if (ptr)
+    {
+      monitor_servers_free(ptr);
+    }
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStart(mon, mon->parameters);
     }
 }
 

@@ -779,15 +779,36 @@ struct subcommand failoptions[] =
 
 static void telnetdAddUser(DCB *, char *user, char *password);
 
-static void cmd_serviceAddBackend(DCB *dcb, void *a, void *b)
+static void cmd_AddServer(DCB *dcb, void *a, void *b)
 {
-    SERVICE *service = (SERVICE*)a;
-    SERVER *server = (SERVER*)b;
+    SERVER *server = (SERVER*)a;
+    char *name = (char*)b;
 
-    serviceAddBackend(service, server);
+    SERVICE *service = service_find(name);
+    MONITOR *monitor = monitor_find(name);
 
-    MXS_NOTICE("Added server '%s' to service '%s'", server->unique_name, service->name);
-    dcb_printf(dcb, "Added server '%s' to service '%s'\n", server->unique_name, service->name);
+    if (service || monitor)
+    {
+        ss_dassert(service == NULL || monitor == NULL);
+
+        if (service)
+        {
+            serviceAddBackend(service, server);
+        }
+        else if (monitor)
+        {
+            monitorAddServer(monitor, server);
+        }
+
+        const char *target = service ? "service" : "monitor";
+
+        MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, target, name);
+        dcb_printf(dcb, "Added server '%s' to %s '%s'\n", server->unique_name, target, name);
+    }
+    else
+    {
+        dcb_printf(dcb, "No service or monitor with the name '%s'\n", name);
+    }
 }
 
 /**
@@ -803,26 +824,46 @@ struct subcommand addoptions[] =
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
-        "server", 2, 2, cmd_serviceAddBackend,
+        "server", 2, 2, cmd_AddServer,
         "Add a new server to a service",
-        "Takes a server name as the parameter. The server must exist in the configuration file.",
-        {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
+        "Usage: add server SERVER TARGET\n"
+        "The TARGET must be either a service or a monitor",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0}
     },
-    { EMPTY_OPTION }
+    { EMPTY_OPTION}
 };
 
 
 static void telnetdRemoveUser(DCB *, char *user, char *password);
 
-static void cmd_serviceRemoveBackend(DCB *dcb, void *a, void *b)
+static void cmd_RemoveServer(DCB *dcb, void *a, void *b)
 {
-    SERVICE *service = (SERVICE*)a;
-    SERVER *server = (SERVER*)b;
+    SERVER *server = (SERVER*)a;
+    char *name = (char*)b;
+    SERVICE *service = service_find(name);
+    MONITOR *monitor = monitor_find(name);
 
-    serviceRemoveBackend(service, server);
+    if (service || monitor)
+    {
+        ss_dassert(service == NULL || monitor == NULL);
 
-    MXS_NOTICE("Removed server '%s' from service '%s'", server->unique_name, service->name);
-    dcb_printf(dcb, "Removed server '%s' from service '%s'\n", server->unique_name, service->name);
+        if (service)
+        {
+            serviceRemoveBackend(service, server);
+        }
+        else if (monitor)
+        {
+            monitorRemoveServer(monitor, server);
+        }
+
+        const char *target = service ? "service" : "monitor";
+        MXS_NOTICE("Removed server '%s' from %s '%s'", server->unique_name, target, name);
+        dcb_printf(dcb, "Removed server '%s' from %s '%s'\n", server->unique_name, target, name);
+    }
+    else
+    {
+        dcb_printf(dcb, "No service or monitor with the name '%s'\n", name);
+    }
 }
 
 /**
@@ -837,13 +878,14 @@ struct subcommand removeoptions[] =
         "Remove account from maxadmin",
         "Remove account for using maxadmin over the network. E.g.:\n"
         "                 MaxAdmin> remove user bob somepass",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
-        "server", 2, 2, cmd_serviceRemoveBackend,
-        "Remove a server from a service",
-        "Takes a server name as the parameter. The server must exist in the configuration file.",
-        {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
+        "server", 2, 2, cmd_RemoveServer,
+        "Remove a server from a service or a monitor",
+        "Usage: remove server SERVER TARGET\n"
+        "The TARGET must be either a service or a monitor",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION
@@ -1331,7 +1373,7 @@ execute_cmd(CLI_SESSION *cli)
                                 }
                             }
 
-                            switch (argc)
+                            switch (cmds[i].options[j].argc_max)
                             {
                                 case 0:
                                     cmds[i].options[j].fn(dcb);

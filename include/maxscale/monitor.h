@@ -201,7 +201,8 @@ struct monitor
 extern MONITOR *monitor_alloc(char *, char *);
 extern void monitor_free(MONITOR *);
 extern MONITOR *monitor_find(char *);
-extern void monitorAddServer(MONITOR *, SERVER *);
+extern void monitorAddServer(MONITOR *mon, SERVER *server);
+extern void monitorRemoveServer(MONITOR *mon, SERVER *server);
 extern void monitorAddUser(MONITOR *, char *, char *);
 extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
 extern void monitorStop(MONITOR *);
