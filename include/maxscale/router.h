@@ -83,7 +83,7 @@ typedef struct router_object
                            error_action_t action,
                            bool*          succp);
     uint64_t (*getCapabilities)(void);
-    void    (*destroyInstance)(SERVICE *service);
+    void    (*destroyInstance)(ROUTER *instance);
 } ROUTER_OBJECT;
 
 /**

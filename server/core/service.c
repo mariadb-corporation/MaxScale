@@ -1831,7 +1831,7 @@ void service_shutdown()
         /* Call destroyInstance hook for routers */
         if (svc->router->destroyInstance)
         {
-           svc->router->destroyInstance(svc);
+           svc->router->destroyInstance(svc->router_instance);
         }
         svc = svc->next;
     }
