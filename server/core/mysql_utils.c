@@ -161,15 +161,7 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
 
     if (listener)
     {
-#ifdef CONNECTOR_C_SSL_AND_OPENSSL_INTERFERENCE_SORTED_OUT
-        // TODO: No conclusive evidence yet, but tentatively it seems that when OpenSSL is
-        // TODO: used explicitly (backend SSL) and in conjunction with Connector-C, the
-        // TODO: latter SSL becomes unstable. So for the time being the monitors and
-        // TODO: services (fetch users) do not use SSL when connecting to the backend.
-
-        // mysql_ssl_set always returns true.
         mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
-#endif
     }
 
     return mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
