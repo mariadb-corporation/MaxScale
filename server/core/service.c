@@ -1833,6 +1833,18 @@ void service_shutdown()
         {
            svc->router->destroyInstance(svc->router_instance);
         }
+        if (svc->n_filters)
+        {
+            FILTER_DEF **filters = svc->filters;
+            for (int i=0; i < svc->n_filters; i++)
+            {
+                if (filters[i]->obj->destroyInstance)
+                {
+                    /* Call destroyInstance hook for filters */
+                    filters[i]->obj->destroyInstance(filters[i]->filter);
+                }
+            }
+        }
         svc = svc->next;
     }
     spinlock_release(&service_spin);

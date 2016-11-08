@@ -98,7 +98,8 @@ FILTER_OBJECT *GetModuleObject()
             routeQuery,
             clientReply,
             diagnostics,
-            getCapabilities
+            getCapabilities,
+            NULL, // No destroyInstance
         };
 
     return &object;
@@ -917,4 +918,3 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
 
     return rv;
 }
-

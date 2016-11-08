@@ -87,6 +87,7 @@ static FILTER_OBJECT MyObject =
     NULL, // No client reply
     diagnostic,
     getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**

@@ -114,11 +114,12 @@ static FILTER_OBJECT MyObject =
     closeSession,
     freeSession,
     setDownstream,
-    NULL,
+    NULL, // No setUpStream
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
     getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**

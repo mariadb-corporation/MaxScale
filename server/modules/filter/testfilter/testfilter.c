@@ -37,7 +37,7 @@ MODULE_INFO     info =
     "A simple query counting filter"
 };
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V2.0.0";
 
 static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static  void    *newSession(FILTER *instance, SESSION *session);
@@ -47,6 +47,7 @@ static  void    setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *down
 static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
+static void destroyInstance(FILTER *instance);
 
 
 static FILTER_OBJECT MyObject =
@@ -56,11 +57,12 @@ static FILTER_OBJECT MyObject =
     closeSession,
     freeSession,
     setDownstream,
-    NULL,       // No upstream requirement
+    NULL,  // No upstream requirement
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
     getCapabilities,
+    destroyInstance,
 };
 
 /**
@@ -68,7 +70,8 @@ static FILTER_OBJECT MyObject =
  */
 typedef struct
 {
-    int sessions;
+    const char *name;
+    int     sessions;
 } TEST_INSTANCE;
 
 /**
@@ -135,6 +138,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
     if ((my_instance = MXS_CALLOC(1, sizeof(TEST_INSTANCE))) != NULL)
     {
         my_instance->sessions = 0;
+        my_instance->name = name;
     }
     return (FILTER *)my_instance;
 }
@@ -257,4 +261,16 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_NONE;
+}
+
+/**
+ * destroyInstance routine.
+ *
+ * @param The filter instance.
+ */
+static void destroyInstance(FILTER *instance)
+{
+    TEST_INSTANCE *cinstance = (TEST_INSTANCE *)instance;
+
+    MXS_INFO("Destroying filter %s", cinstance->name);
 }
