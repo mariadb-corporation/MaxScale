@@ -1767,20 +1767,12 @@ static void add_field_info(parsing_info_t* info,
                            const char* database,
                            const char* table,
                            const char* column,
+                           uint32_t usage,
                            List<Item>* excludep)
 {
     ss_dassert(column);
 
-    // If only a column is specified, but not a table or database and we
-    // have a list of expressions that should be excluded, we check if the column
-    // value is present in that list. This is in order to exclude the second "d" in
-    // a statement like "select a as d from x where d = 2".
-    if (column && !table && !database && excludep && should_exclude(column, excludep))
-    {
-        return;
-    }
-
-    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column };
+    QC_FIELD_INFO item = { (char*)database, (char*)table, (char*)column, usage };
 
     size_t i;
     for (i = 0; i < info->field_infos_len; ++i)
@@ -1814,21 +1806,32 @@ static void add_field_info(parsing_info_t* info,
 
     if (i == info->field_infos_len) // If true, the field was not present already.
     {
-        if (info->field_infos_len < info->field_infos_capacity)
+        // If only a column is specified, but not a table or database and we
+        // have a list of expressions that should be excluded, we check if the column
+        // value is present in that list. This is in order to exclude the second "d" in
+        // a statement like "select a as d from x where d = 2".
+        if (!(column && !table && !database && excludep && should_exclude(column, excludep)))
         {
-            field_infos = info->field_infos;
-        }
-        else
-        {
-            size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
-            field_infos = (QC_FIELD_INFO*)realloc(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
-
-            if (field_infos)
+            if (info->field_infos_len < info->field_infos_capacity)
             {
-                info->field_infos = field_infos;
-                info->field_infos_capacity = capacity;
+                field_infos = info->field_infos;
+            }
+            else
+            {
+                size_t capacity = info->field_infos_capacity ? 2 * info->field_infos_capacity : 8;
+                field_infos = (QC_FIELD_INFO*)realloc(info->field_infos, capacity * sizeof(QC_FIELD_INFO));
+
+                if (field_infos)
+                {
+                    info->field_infos = field_infos;
+                    info->field_infos_capacity = capacity;
+                }
             }
         }
+    }
+    else
+    {
+        info->field_infos[i].usage |= usage;
     }
 
     // If field_infos is NULL, then the field was found and has already been noted.
@@ -1848,7 +1851,7 @@ static void add_field_info(parsing_info_t* info,
     }
 }
 
-static void add_field_info(parsing_info_t* pi, Item_field* item, List<Item>* excludep)
+static void add_field_info(parsing_info_t* pi, Item_field* item, uint32_t usage, List<Item>* excludep)
 {
     const char* database = item->db_name;
     const char* table = item->table_name;
@@ -1934,16 +1937,16 @@ static void add_field_info(parsing_info_t* pi, Item_field* item, List<Item>* exc
         break;
     }
 
-    add_field_info(pi, database, table, column, excludep);
+    add_field_info(pi, database, table, column, usage, excludep);
 }
 
-static void add_field_info(parsing_info_t* pi, Item* item, List<Item>* excludep)
+static void add_field_info(parsing_info_t* pi, Item* item, uint32_t usage, List<Item>* excludep)
 {
     const char* database = NULL;
     const char* table = NULL;
     const char* column = item->name;
 
-    add_field_info(pi, database, table, column, excludep);
+    add_field_info(pi, database, table, column, usage, excludep);
 }
 
 typedef enum collect_source
@@ -1955,8 +1958,15 @@ typedef enum collect_source
 } collect_source_t;
 
 static void update_field_infos(parsing_info_t* pi,
+                               LEX* lex,
+                               st_select_lex* select,
+                               uint32_t usage,
+                               List<Item>* excludep);
+
+static void update_field_infos(parsing_info_t* pi,
                                collect_source_t source,
                                Item* item,
+                               uint32_t usage,
                                List<Item>* excludep)
 {
     switch (item->type())
@@ -1968,13 +1978,13 @@ static void update_field_infos(parsing_info_t* pi,
 
             while (Item *i = ilist++)
             {
-                update_field_infos(pi, source, i, excludep);
+                update_field_infos(pi, source, i, usage, excludep);
             }
         }
         break;
 
     case Item::FIELD_ITEM:
-        add_field_info(pi, static_cast<Item_field*>(item), excludep);
+        add_field_info(pi, static_cast<Item_field*>(item), usage, excludep);
         break;
 
     case Item::REF_ITEM:
@@ -1983,7 +1993,7 @@ static void update_field_infos(parsing_info_t* pi,
             {
                 Item_ref* ref_item = static_cast<Item_ref*>(item);
 
-                add_field_info(pi, item, excludep);
+                add_field_info(pi, item, usage, excludep);
 
                 size_t n_items = ref_item->cols();
 
@@ -1993,7 +2003,7 @@ static void update_field_infos(parsing_info_t* pi,
 
                     if (reffed_item != ref_item)
                     {
-                        update_field_infos(pi, source, ref_item->element_index(i), excludep);
+                        update_field_infos(pi, source, ref_item->element_index(i), usage, excludep);
                     }
                 }
             }
@@ -2007,7 +2017,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, source, row_item->element_index(i), excludep);
+                update_field_infos(pi, source, row_item->element_index(i), usage, excludep);
             }
         }
         break;
@@ -2021,7 +2031,7 @@ static void update_field_infos(parsing_info_t* pi,
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                update_field_infos(pi, source, items[i], excludep);
+                update_field_infos(pi, source, items[i], usage, excludep);
             }
         }
         break;
@@ -2048,7 +2058,21 @@ static void update_field_infos(parsing_info_t* pi,
                     if (in_subselect_item->left_expr_orig)
                     {
                         update_field_infos(pi, source,
-                                                 in_subselect_item->left_expr_orig, excludep);
+                                           in_subselect_item->left_expr_orig, usage, excludep);
+                    }
+                    st_select_lex* ssl = in_subselect_item->get_select_lex();
+                    if (ssl)
+                    {
+                        uint32_t sub_usage = usage;
+
+                        sub_usage &= ~QC_USED_IN_SELECT;
+                        sub_usage |= QC_USED_IN_SUBSELECT;
+
+                        update_field_infos(pi,
+                                           get_lex(pi),
+                                           ssl,
+                                           sub_usage,
+                                           excludep);
                     }
 #else
 #pragma message "Figure out what to do with versions < 5.5.48."
@@ -2058,8 +2082,19 @@ static void update_field_infos(parsing_info_t* pi,
                 break;
 
             case Item_subselect::EXISTS_SUBS:
-            case Item_subselect::SINGLEROW_SUBS:
                 // TODO: Handle these explicitly as well.
+                break;
+
+            case Item_subselect::SINGLEROW_SUBS:
+                {
+                    Item_singlerow_subselect* ss_item = static_cast<Item_singlerow_subselect*>(item);
+                    st_select_lex *ssl = ss_item->get_select_lex();
+
+                    usage &= ~QC_USED_IN_SELECT;
+                    usage |= QC_USED_IN_SUBSELECT;
+
+                    update_field_infos(pi, get_lex(pi), ssl, usage, excludep);
+                }
                 break;
 
             case Item_subselect::UNKNOWN_SUBS:
@@ -2072,6 +2107,69 @@ static void update_field_infos(parsing_info_t* pi,
 
     default:
         break;
+    }
+}
+
+static void update_field_infos(parsing_info_t* pi,
+                               LEX* lex,
+                               st_select_lex* select,
+                               uint32_t usage,
+                               List<Item>* excludep)
+{
+    List_iterator<Item> ilist(select->item_list);
+
+    while (Item *item = ilist++)
+    {
+        update_field_infos(pi, COLLECT_SELECT, item, usage, NULL);
+    }
+
+    if (select->group_list.first)
+    {
+        ORDER* order = select->group_list.first;
+        while (order)
+        {
+            Item* item = *order->item;
+
+            update_field_infos(pi, COLLECT_GROUP_BY, item, QC_USED_IN_GROUP_BY,
+                               &select->item_list);
+
+            order = order->next;
+        }
+    }
+
+    if (select->where)
+    {
+        update_field_infos(pi, COLLECT_WHERE,
+                           select->where,
+                           QC_USED_IN_WHERE,
+                           &select->item_list);
+    }
+
+#if defined(COLLECT_HAVING_AS_WELL)
+    // A HAVING clause can only refer to fields that already have been
+    // mentioned. Consequently, they need not be collected.
+    if (select->having)
+    {
+        update_field_infos(pi, COLLECT_HAVING,
+                           select->having,
+                           0,
+                           &select->item_list);
+    }
+#endif
+
+    TABLE_LIST* table_list = select->get_table_list();
+
+    if (table_list)
+    {
+        st_select_lex *sl = table_list->get_single_select();
+
+        if (sl)
+        {
+            // This is for "SELECT 1 FROM (SELECT ...)"
+            usage &= ~QC_USED_IN_SELECT;
+            usage |= QC_USED_IN_SUBSELECT;
+            update_field_infos(pi, get_lex(pi), sl, usage, excludep);
+        }
     }
 }
 
@@ -2088,10 +2186,10 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
     }
 
     parsing_info_t* pi = get_pinfo(buf);
+    ss_dassert(pi);
 
     if (!pi->field_infos)
     {
-        ss_dassert(pi);
         LEX* lex = get_lex(buf);
         ss_dassert(lex);
 
@@ -2100,56 +2198,27 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
             return;
         }
 
-        lex->current_select = lex->all_selects_list;
+        uint32_t usage = 0;
 
-        while (lex->current_select)
+        switch (lex->sql_command)
         {
-            List_iterator<Item> ilist(lex->current_select->item_list);
+        case SQLCOM_UPDATE:
+        case SQLCOM_UPDATE_MULTI:
+            usage |= QC_USED_IN_SET;
+            break;
 
-            while (Item *item = ilist++)
-            {
-                update_field_infos(pi, COLLECT_SELECT, item, NULL);
-            }
-
-            if (lex->current_select->group_list.first)
-            {
-                ORDER* order = lex->current_select->group_list.first;
-                while (order)
-                {
-                    Item* item = *order->item;
-
-                    update_field_infos(pi, COLLECT_GROUP_BY, item, &lex->current_select->item_list);
-
-                    order = order->next;
-                }
-            }
-
-            if (lex->current_select->where)
-            {
-                update_field_infos(pi, COLLECT_WHERE,
-                                   lex->current_select->where,
-                                   &lex->current_select->item_list);
-            }
-
-#if defined(COLLECT_HAVING_AS_WELL)
-            // A HAVING clause can only refer to fields that already have been
-            // mentioned. Consequently, they need not be collected.
-            if (lex->current_select->having)
-            {
-                update_field_infos(pi, COLLECT_HAVING,
-                                   lex->current_select->having,
-                                   &lex->current_select->item_list);
-            }
-#endif
-
-            lex->current_select = lex->current_select->next_select_in_list();
+        default:
+            usage |= QC_USED_IN_SELECT;
         }
 
+        lex->current_select = &lex->select_lex;
+
+        update_field_infos(pi, lex, &lex->select_lex, usage, NULL);
 
         List_iterator<Item> ilist(lex->value_list);
         while (Item* item = ilist++)
         {
-            update_field_infos(pi, COLLECT_SELECT, item, NULL);
+            update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
         }
 
         if ((lex->sql_command == SQLCOM_INSERT) ||
@@ -2159,7 +2228,7 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
             List_iterator<Item> ilist(lex->field_list);
             while (Item *item = ilist++)
             {
-                update_field_infos(pi, COLLECT_SELECT, item, NULL);
+                update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
             }
 
             if (lex->insert_list)
@@ -2167,8 +2236,42 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
                 List_iterator<Item> ilist(*lex->insert_list);
                 while (Item *item = ilist++)
                 {
-                    update_field_infos(pi, COLLECT_SELECT, item, NULL);
+                    update_field_infos(pi, COLLECT_SELECT, item, 0, NULL);
                 }
+            }
+        }
+
+        if (lex->sql_command == SQLCOM_SET_OPTION)
+        {
+#if defined(WAY_TO_DOWNCAST_SET_VAR_BASE_EXISTS)
+            // The list of set_var_base contains the value of variables.
+            // However, the actual type is a derived type of set_var_base
+            // and there is no information using which we could do the
+            // downcast...
+            List_iterator<set_var_base> ilist(lex->var_list);
+            while (set_var_base* var = ilist++)
+            {
+                // Is set_var_base a set_var, set_var_user, set_var_password
+                // set_var_role
+                ...
+            }
+#endif
+            // ...so, we will simply assume that any nested selects are
+            // from statements like "set @a:=(SELECT a from t1)".
+
+            usage &= ~QC_USED_IN_SELECT;
+            usage |= QC_USED_IN_SUBSELECT;
+
+            st_select_lex* select = lex->all_selects_list;
+
+            while (select)
+            {
+                if (select->nest_level != 0) // Not the top-level select.
+                {
+                    update_field_infos(pi, lex, select, usage, NULL);
+                }
+
+                select = select->next_select_in_list();
             }
         }
     }

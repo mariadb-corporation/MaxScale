@@ -86,17 +86,37 @@ typedef enum qc_parse_result
     QC_QUERY_PARSED           = 3  /*< The query was fully parsed; completely classified. */
 } qc_parse_result_t;
 
+/**
+ * qc_field_usage_t defines where a particular field appears.
+ *
+ * QC_USED_IN_SELECT   : The field appears on the left side of FROM in a top-level SELECT statement.
+ * QC_USED_IN_SUBSELECT: The field appears on the left side of FROM in a sub-select SELECT statement.
+ * QC_USED_IN_WHERE    : The field appears in a WHERE clause.
+ * QC_USED_IN_SET      : The field appears in the SET clause of an UPDATE statement.
+ * QC_USED_IN_GROUP_BY : The field appears in a GROUP BY clause.
+ *
+ * Note that multiple bits may be set at the same time. For instance, for a statement like
+ * "SELECT fld FROM tbl WHERE fld = 1 GROUP BY fld", the bits QC_USED_IN_SELECT, QC_USED_IN_WHERE
+ * and QC_USED_IN_GROUP_BY will be set.
+ */
+typedef enum qc_field_usage
+{
+    QC_USED_IN_SELECT    = 0x01, /*< SELECT fld FROM... */
+    QC_USED_IN_SUBSELECT = 0x02, /*< SELECT 1 FROM ... SELECT fld ... */
+    QC_USED_IN_WHERE     = 0x04, /*< SELECT ... FROM ... WHERE fld = ... */
+    QC_USED_IN_SET       = 0x08, /*< UPDATE ... SET fld = ... */
+    QC_USED_IN_GROUP_BY  = 0x10, /*< ... GROUP BY fld */
+} qc_field_usage_t;
 
 /**
  * QC_FIELD_INFO contains information about a field used in a statement.
  */
 typedef struct qc_field_info
 {
-    char* database;  /** Present if the field is of the form "a.b.c", NULL otherwise. */
-    char* table;     /** Present if the field is of the form "a.b", NULL otherwise. */
-    char* column;    /** Always present. */
-    // TODO: Possibly add bits telling where the field is used; e.g. in the select
-    // TODO: part or the where part, or both.
+    char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
+    char* column;   /** Always present. */
+    uint32_t usage; /** Bitfield denoting where the column appears. */
 } QC_FIELD_INFO;
 
 /**
@@ -223,6 +243,25 @@ void qc_thread_end(void);
  * @return To what extent the statement could be parsed.
  */
 qc_parse_result_t qc_parse(GWBUF* stmt);
+
+/**
+ * Convert a qc_field_usage_t enum to corresponding string.
+ *
+ * @param usage The value to be converted
+ *
+ * @return The corresponding string. Must @b not be freed.
+ */
+const char* qc_field_usage_to_string(qc_field_usage_t usage);
+
+/**
+ * Convert a mask of qc_field_usage_t enum values to corresponding string.
+ *
+ * @param usage_mask  Mask of qc_field_usage_t values.
+ *
+ * @return The corresponding string, or NULL if memory allocation fails.
+ *         @b Must be freed by the caller.
+ */
+char* qc_field_usage_mask_to_string(uint32_t usage_mask);
 
 /**
  * Returns information about affected fields.

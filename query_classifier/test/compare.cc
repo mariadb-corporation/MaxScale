@@ -862,6 +862,7 @@ public:
         : m_database(info.database ? info.database : "")
         , m_table(info.table ? info.table : "")
         , m_column(info.column ? info.column : "")
+        , m_usage(info.usage)
     {}
 
     bool eq(const QcFieldInfo& rhs) const
@@ -869,7 +870,8 @@ public:
         return
             m_database == rhs.m_database &&
             m_table == rhs.m_table &&
-            m_column == rhs.m_column;
+            m_column == rhs.m_column &&
+            m_usage == rhs.m_usage;
     }
 
     bool lt(const QcFieldInfo& rhs) const
@@ -900,6 +902,14 @@ public:
                 {
                     rv = true;
                 }
+                else if (m_column > rhs.m_column)
+                {
+                    rv = false;
+                }
+                else
+                {
+                    rv = (m_usage < rhs.m_usage);
+                }
             }
         }
 
@@ -921,12 +931,19 @@ public:
         }
 
         out << m_column;
+
+        out << "(";
+        char* s = qc_field_usage_mask_to_string(m_usage);
+        out << s;
+        free(s);
+        out << ")";
     }
 
 private:
     std::string m_database;
     std::string m_table;
     std::string m_column;
+    uint32_t    m_usage;
 };
 
 ostream& operator << (ostream& out, const QcFieldInfo& x)

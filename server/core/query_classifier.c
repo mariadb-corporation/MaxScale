@@ -27,6 +27,12 @@
 #define QC_TRACE()
 #endif
 
+struct type_name_info
+{
+    const char* name;
+    size_t name_len;
+};
+
 static const char default_qc_name[] = "qc_sqlite";
 
 static QUERY_CLASSIFIER* classifier;
@@ -213,6 +219,141 @@ char* qc_get_prepare_name(GWBUF* query)
     return classifier->qc_get_prepare_name(query);
 }
 
+struct type_name_info field_usage_to_type_name_info(qc_field_usage_t usage)
+{
+    struct type_name_info info;
+
+    switch (usage)
+    {
+    case QC_USED_IN_SELECT:
+        {
+            static const char name[] = "QC_USED_IN_SELECT";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_SUBSELECT:
+        {
+            static const char name[] = "QC_USED_IN_SUBSELECT";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_WHERE:
+        {
+            static const char name[] = "QC_USED_IN_WHERE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_SET:
+        {
+            static const char name[] = "QC_USED_IN_SET";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_GROUP_BY:
+        {
+            static const char name[] = "QC_USED_IN_GROUP_BY";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    default:
+        {
+            static const char name[] = "UNKNOWN_FIELD_USAGE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+    }
+
+    return info;
+}
+
+
+
+const char* qc_field_usage_to_string(qc_field_usage_t usage)
+{
+    return field_usage_to_type_name_info(usage).name;
+}
+
+static const qc_field_usage_t FIELD_USAGE_VALUES[] =
+{
+    QC_USED_IN_SELECT,
+    QC_USED_IN_SUBSELECT,
+    QC_USED_IN_WHERE,
+    QC_USED_IN_SET,
+    QC_USED_IN_GROUP_BY,
+};
+
+static const int N_FIELD_USAGE_VALUES =
+    sizeof(FIELD_USAGE_VALUES) / sizeof(FIELD_USAGE_VALUES[0]);
+static const int FIELD_USAGE_MAX_LEN = 20; // strlen("QC_USED_IN_SUBSELECT");
+
+char* qc_field_usage_mask_to_string(uint32_t mask)
+{
+    size_t len = 0;
+
+    // First calculate how much space will be needed.
+    for (int i = 0; i < N_FIELD_USAGE_VALUES; ++i)
+    {
+        if (mask & FIELD_USAGE_VALUES[i])
+        {
+            if (len != 0)
+            {
+                ++len; // strlen("|");
+            }
+
+            len += FIELD_USAGE_MAX_LEN;
+        }
+    }
+
+    ++len;
+
+    // Then make one allocation and build the string.
+    char* s = (char*) MXS_MALLOC(len);
+
+    if (s)
+    {
+        if (len > 1)
+        {
+            char* p = s;
+
+            for (int i = 0; i < N_FIELD_USAGE_VALUES; ++i)
+            {
+                qc_field_usage_t value = FIELD_USAGE_VALUES[i];
+
+                if (mask & value)
+                {
+                    if (p != s)
+                    {
+                        strcpy(p, "|");
+                        ++p;
+                    }
+
+                    struct type_name_info info = field_usage_to_type_name_info(value);
+
+                    strcpy(p, info.name);
+                    p += info.name_len;
+                }
+            }
+        }
+        else
+        {
+            *s = 0;
+        }
+    }
+
+    return s;
+}
+
 const char* qc_op_to_string(qc_query_op_t op)
 {
     switch (op)
@@ -260,12 +401,6 @@ const char* qc_op_to_string(qc_query_op_t op)
         return "UNKNOWN_QUERY_OP";
     }
 }
-
-struct type_name_info
-{
-    const char* name;
-    size_t name_len;
-};
 
 struct type_name_info type_to_type_name_info(qc_query_type_t type)
 {

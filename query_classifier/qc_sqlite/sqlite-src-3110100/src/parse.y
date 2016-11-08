@@ -94,7 +94,7 @@ extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void mxs_sqlite3StartTable(Parse*,Token*,Token*,int,int,int,int);
 extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
-extern void maxscaleCollectInfoFromSelect(Parse*, Select*);
+extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
 extern void maxscaleAlterTable(Parse*, mxs_alter_t command, SrcList*, Token*);
 extern void maxscaleCall(Parse*, SrcList* pName);
@@ -1444,7 +1444,7 @@ table_factor(A) ::= nm(X) DOT nm(Y) as_opt id(Z). {
 }
 
 table_factor(A) ::= LP oneselect(S) RP as_opt id. {
-  maxscaleCollectInfoFromSelect(pParse, S);
+    maxscaleCollectInfoFromSelect(pParse, S, 1);
   sqlite3SelectDelete(pParse->db, S);
   A = 0;
 }
