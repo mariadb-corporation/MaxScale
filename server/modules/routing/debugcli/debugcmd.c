@@ -75,8 +75,9 @@
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
 
-#define MAXARGS 6
+#define MAXARGS 12
 
+#define ARG_TYPE_NONE           0
 #define ARG_TYPE_ADDRESS        1
 #define ARG_TYPE_STRING         2
 #define ARG_TYPE_SERVICE        3
@@ -95,14 +96,18 @@ extern LIST_CONFIG SESSIONlist;
  *
  * These are the options that may be passed to a command
  */
-struct subcommand {
+struct subcommand
+{
     char    *arg1;
-    int     n_args;
+    int     argc_min;
+    int     argc_max;
     void    (*fn)();
     char    *help;
     char    *devhelp;
-    int     arg_types[3];
+    int     arg_types[MAXARGS];
 };
+
+#define EMPTY_OPTION
 
 static void telnetdShowUsers(DCB *);
 static void show_log_throttling(DCB *);
@@ -110,171 +115,242 @@ static void show_log_throttling(DCB *);
 /**
  * The subcommands of the show command
  */
-struct subcommand showoptions[] = {
+struct subcommand showoptions[] =
+{
 #if defined(BUFFER_TRACE)
-    { "buffers",	0, dprintAllBuffers,
-	  "Show all buffers with backtrace",
-      "Show all buffers with backtrace",
-      {0, 0, 0} },
+    {
+        "buffers",    0, dprintAllBuffers,
+        "Show all buffers with backtrace",
+        "Show all buffers with backtrace",
+        {0, 0, 0}
+    },
 #endif
-    { "dcblist", 0, dprintDCBList,
-      "Show statistics for the list of all descriptor control blocks",    
-      "Show statistics for the list of all descriptor control blocks",    
-      {0, 0, 0} },
-    { "dcbs", 0, dprintAllDCBs,
-      "Show all descriptor control blocks (network connections)",
-      "Show all descriptor control blocks (network connections)",
-      {0, 0, 0} },
-    { "dcb", 1, dprintDCB,
-      "Show a single descriptor control block e.g. show dcb 0x493340",
-      "Show a single descriptor control block e.g. show dcb 0x493340",
-      {ARG_TYPE_DCB, 0, 0} },
-    { "dbusers", 1, dcb_usersPrint,
-      "Show statistics and user names for a service's user table.\n"
-      "\t\tExample : show dbusers <service name>",
-      "Show statistics and user names for a service's user table.\n"
-      "\t\tExample : show dbusers <ptr of 'User's data' from services list>|<service name>",
-      {ARG_TYPE_DBUSERS, 0, 0} },
-    { "epoll", 0, dprintPollStats,
-      "Show the poll statistics",
-      "Show the poll statistics",
-      {0, 0, 0} },
-    { "eventq", 0, dShowEventQ,
-      "Show the queue of events waiting to be processed",
-      "Show the queue of events waiting to be processed",
-      {0, 0, 0} },
-    { "eventstats", 0, dShowEventStats,
-      "Show the event statistics",
-      "Show the event statistics",
-      {0, 0, 0} },
-    { "feedbackreport", 0, moduleShowFeedbackReport,
-      "Show the report of MaxScale loaded modules, suitable for Notification Service",
-      "Show the report of MaxScale loaded modules, suitable for Notification Service",
-      {0, 0, 0} },
-    { "filter", 1, dprintFilter,
-      "Show details of a filter, called with a filter name",
-      "Show details of a filter, called with the address of a filter",
-      {ARG_TYPE_FILTER, 0, 0} },
-    { "filters", 0, dprintAllFilters,
-      "Show all filters",
-      "Show all filters",
-      {0, 0, 0} },
-    { "log_throttling", 0, show_log_throttling,
-      "Show the current log throttling setting (count, window (ms), suppression (ms))",
-      "Show the current log throttling setting (count, window (ms), suppression (ms))",
-      {0, 0, 0} },
-    { "modules", 0, dprintAllModules,
-      "Show all currently loaded modules",
-      "Show all currently loaded modules",
-      {0, 0, 0} },
-    { "monitor", 1, monitorShow,
-      "Show the monitor details",
-      "Show the monitor details",
-      {ARG_TYPE_MONITOR, 0, 0} },
-    { "monitors", 0, monitorShowAll,
-      "Show the monitors that are configured",
-      "Show the monitors that are configured",
-      {0, 0, 0} },
-    { "persistent", 1, dprintPersistentDCBs,
-      "Show persistent pool for a named server, e.g. show persistent dbnode1",
-      "Show persistent pool for a server, e.g. show persistent 0x485390. "
-      "The address may also be replaced with the server name from the configuration file",
-      {ARG_TYPE_SERVER, 0, 0} },
-    { "server", 1, dprintServer,
-      "Show details for a named server, e.g. show server dbnode1",
-      "Show details for a server, e.g. show server 0x485390. The address may also be "
-      "repalced with the server name from the configuration file",
-      {ARG_TYPE_SERVER, 0, 0} },
-    { "servers", 0, dprintAllServers,
-      "Show all configured servers",
-      "Show all configured servers",
-      {0, 0, 0} },
-    { "serversjson", 0, dprintAllServersJson,
-      "Show all configured servers in JSON format",
-      "Show all configured servers in JSON format",
-      {0, 0, 0} },
-    { "services", 0, dprintAllServices,
-      "Show all configured services in MaxScale",
-      "Show all configured services in MaxScale",
-      {0, 0, 0} },
-    { "service", 1, dprintService,
-      "Show a single service in MaxScale, may be passed a service name",
-      "Show a single service in MaxScale, may be passed a service name or address of a service object",
-      {ARG_TYPE_SERVICE, 0, 0} },
-    { "session", 1, dprintSession,
-      "Show a single session in MaxScale, e.g. show session 0x284830",
-      "Show a single session in MaxScale, e.g. show session 0x284830",
-      {ARG_TYPE_SESSION, 0, 0} },
-    { "sessionlist", 0, dprintSessionList,
-      "Show statistics for the list of all sessions",    
-      "Show statistics for the list of all sessions",    
-      {0, 0, 0} },
-    { "sessions", 0, dprintAllSessions,
-      "Show all active sessions in MaxScale",
-      "Show all active sessions in MaxScale",
-      {0, 0, 0} },
-    { "tasks", 0, hkshow_tasks,
-      "Show all active housekeeper tasks in MaxScale",
-      "Show all active housekeeper tasks in MaxScale",
-      {0, 0, 0} },
-    { "threads", 0, dShowThreads,
-      "Show the status of the polling threads in MaxScale",
-      "Show the status of the polling threads in MaxScale",
-      {0, 0, 0} },
-    { "users", 0, telnetdShowUsers,
-      "Show all maxadmin enabled Linux accounts and created maxadmin users",
-      "Show all maxadmin enabled Linux accounts and created maxadmin users",
-      {0, 0, 0} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+    {
+        "dcblist", 0, 0, dprintDCBList,
+        "Show DCB statistics",
+        "Show statistics for the list of all DCBs(descriptor control blocks)",
+        {0}
+    },
+    {
+        "dcbs", 0, 0, dprintAllDCBs,
+        "Show all DCBs",
+        "Show all descriptor control blocks (network connections)",
+        {0}
+    },
+    {
+        "dcb", 1, 1, dprintDCB,
+        "Show a DCB",
+        "Show a single descriptor control block e.g. show dcb 0x493340",
+        {ARG_TYPE_DCB, 0, 0}
+    },
+    {
+        "dbusers", 1, 1, dcb_usersPrint,
+        "Show user statistics",
+        "Show statistics and user names for a service's user table.\n"
+        "\t\tExample : show dbusers <ptr of 'User's data' from services list>|<service name>",
+        {ARG_TYPE_DBUSERS, 0, 0}
+    },
+    {
+        "epoll", 0, 0, dprintPollStats,
+        "Show the poll statistics",
+        "Show the epoll polling system statistics",
+        {0, 0, 0}
+    },
+    {
+        "eventq", 0, 0, dShowEventQ,
+        "Show event queue",
+        "Show the queue of events waiting to be processed",
+        {0, 0, 0}
+    },
+    {
+        "eventstats", 0, 0, dShowEventStats,
+        "Show event queue statistics",
+        "Show event queue statistics",
+        {0, 0, 0}
+    },
+    {
+        "feedbackreport", 0, 0, moduleShowFeedbackReport,
+        "Show feedback report",
+        "Show the report of MaxScale loaded modules, suitable for Notification Service",
+        {0, 0, 0}
+    },
+    {
+        "filter", 1, 1, dprintFilter,
+        "Show filter details",
+        "Show details of a filter, the parameter is filter name",
+        {ARG_TYPE_FILTER, 0, 0}
+    },
+    {
+        "filters", 0, 0, dprintAllFilters,
+        "Show all filters",
+        "Show all filters that were read from the configuration file",
+        {0, 0, 0}
+    },
+    {
+        "log_throttling", 0, 0, show_log_throttling,
+        "Show log throttling setting",
+        "Show the current log throttling setting (count, window (ms), suppression (ms))",
+        {0, 0, 0}
+    },
+    {
+        "modules", 0, 0, dprintAllModules,
+        "Show loaded modules",
+        "Show all currently loaded modules",
+        {0, 0, 0}
+    },
+    {
+        "monitor", 1, 1, monitorShow,
+        "Show monitor details",
+        "Show details about a specific monitor, the parameter is monitor name",
+        {ARG_TYPE_MONITOR, 0, 0}
+    },
+    {
+        "monitors", 0, 0, monitorShowAll,
+        "Show all monitors",
+        "Show all the monitors",
+        {0, 0, 0}
+    },
+    {
+        "persistent", 1, 1, dprintPersistentDCBs,
+        "Show persistent connection pool",
+        "Show persistent pool for a server, e.g. show persistent dbnode1. ",
+        {ARG_TYPE_SERVER, 0, 0}
+    },
+    {
+        "server", 1, 1, dprintServer,
+        "Show server details",
+        "Show details for a server, e.g. show server dbnode1",
+        {ARG_TYPE_SERVER, 0, 0}
+    },
+    {
+        "servers", 0, 0, dprintAllServers,
+        "Show all servers",
+        "Show all configured servers",
+        {0, 0, 0}
+    },
+    {
+        "serversjson", 0, 0, dprintAllServersJson,
+        "Show all servers in JSON",
+        "Show all configured servers in JSON format",
+        {0, 0, 0}
+    },
+    {
+        "services", 0, 0, dprintAllServices,
+        "Show all service",
+        "Show all configured services in MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "service", 1, 1, dprintService,
+        "Show service details",
+        "Show a single service in MaxScale, the parameter is the service name",
+        {ARG_TYPE_SERVICE, 0, 0}
+    },
+    {
+        "session", 1, 1, dprintSession,
+        "Show session details",
+        "Show a single session in MaxScale, e.g. show session 0x284830",
+        {ARG_TYPE_SESSION, 0, 0}
+    },
+    {
+        "sessionlist", 0, 0, dprintSessionList,
+        "Show session list statistics",
+        "Show statistics for the list of all sessions",
+        {0, 0, 0}
+    },
+    {
+        "sessions", 0, 0, dprintAllSessions,
+        "Show all sessions",
+        "Show all active sessions in MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "tasks", 0, 0, hkshow_tasks,
+        "Show housekeeper tasks",
+        "Show all active housekeeper tasks in MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "threads", 0, 0, dShowThreads,
+        "Show workter thread status",
+        "Show the status of the worker threads in MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "users", 0, 0, telnetdShowUsers,
+        "Show enabled Linux accounts",
+        "Show all maxadmin enabled Linux accounts and created maxadmin users",
+        {0, 0, 0}
+    },
+    { EMPTY_OPTION}
 };
 
 /**
  * The subcommands of the list command
  */
-struct subcommand listoptions[] = {
-    { "clients", 0, dListClients,
-      "List all the client connections to MaxScale",
-      "List all the client connections to MaxScale",
-      {0, 0, 0} },
-    { "dcbs", 0, dListDCBs,
-      "List all the DCBs active within MaxScale",
-      "List all the DCBs active within MaxScale",
-      {0, 0, 0} },
-    { "filters", 0, dListFilters,
-      "List all the filters defined within MaxScale",
-      "List all the filters defined within MaxScale",
-      {0, 0, 0} },
-    { "listeners", 0, dListListeners,
-      "List all the listeners defined within MaxScale",
-      "List all the listeners defined within MaxScale",
-      {0, 0, 0} },
-    { "modules", 0, dprintAllModules,
-      "List all currently loaded modules",
-      "List all currently loaded modules",
-      {0, 0, 0} },
-    { "monitors", 0, monitorList,
-      "List all monitors",
-      "List all monitors",
-      {0, 0, 0} },
-    { "services", 0, dListServices,
-      "List all the services defined within MaxScale",
-      "List all the services defined within MaxScale",
-      {0, 0, 0} },
-    { "servers", 0, dListServers,
-      "List all the servers defined within MaxScale",
-      "List all the servers defined within MaxScale",
-      {0, 0, 0} },
-    { "sessions", 0, dListSessions,
-      "List all the active sessions within MaxScale",
-      "List all the active sessions within MaxScale",
-      {0, 0, 0} },
-    { "threads", 0, dShowThreads,
-      "List the status of the polling threads in MaxScale",
-      "List the status of the polling threads in MaxScale",
-      {0, 0, 0} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+struct subcommand listoptions[] =
+{
+    {
+        "clients", 0, 0, dListClients,
+        "List all clients",
+        "List all the client connections to MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "dcbs", 0, 0, dListDCBs,
+        "List all DCBs",
+        "List all the DCBs active within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "filters", 0, 0, dListFilters,
+        "List all filters",
+        "List all the filters defined within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "listeners", 0, 0, dListListeners,
+        "List all listeners",
+        "List all the listeners defined within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "modules", 0, 0, dprintAllModules,
+        "List all currently loaded modules",
+        "List all currently loaded modules",
+        {0, 0, 0}
+    },
+    {
+        "monitors", 0, 0, monitorList,
+        "List all monitors",
+        "List all monitors",
+        {0, 0, 0}
+    },
+    {
+        "services", 0, 0, dListServices,
+        "List all the services",
+        "List all the services defined within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "servers", 0, 0, dListServers,
+        "List all servers",
+        "List all the servers defined within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "sessions", 0, 0, dListSessions,
+        "List all sessions",
+        "List all the active sessions within MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "threads", 0, 0, dShowThreads,
+        "List polling threads",
+        "List the status of the polling threads in MaxScale",
+        {0, 0, 0}
+    },
+    { EMPTY_OPTION}
 };
 
 static void shutdown_server()
@@ -288,38 +364,34 @@ static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 /**
  * The subcommands of the shutdown command
  */
-struct subcommand shutdownoptions[] = {
+struct subcommand shutdownoptions[] =
+{
     {
         "maxscale",
-        0,
+        0, 0,
         shutdown_server,
         "Shutdown MaxScale",
-        "Shutdown MaxScale",
+        "Initiate a controlled shutdown of MaxScale",
         {0, 0, 0}
     },
     {
         "monitor",
-        1,
+        1, 1,
         shutdown_monitor,
-        "Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
-        "Shutdown a monitor, e.g. shutdown monitor 0x48381e0",
+        "Shutdown a monitor",
+        "E.g. shutdown monitor db-cluster-monitor",
         {ARG_TYPE_MONITOR, 0, 0}
     },
     {
         "service",
-        1,
+        1, 1,
         shutdown_service,
-        "Shutdown a service, e.g. shutdown service \"Sales Database\"",
-        "Shutdown a service, e.g. shutdown service 0x4838320 or shutdown service \"Sales Database\"",
+        "Stop a service",
+        "E.g. shutdown service \"Sales Database\"",
         {ARG_TYPE_SERVICE, 0, 0}
     },
     {
-        NULL,
-        0,
-        NULL,
-        NULL,
-        NULL,
-        {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -332,7 +404,7 @@ static void sync_logs(DCB *dcb)
     else
     {
         dcb_printf(dcb, "Failed to flush logs to disk. Read the error log for "
-            "more details.\n");
+                   "more details.\n");
     }
 }
 
@@ -340,19 +412,14 @@ struct subcommand syncoptions[] =
 {
     {
         "logs",
-        0,
+        0, 0,
         sync_logs,
         "Flush log files to disk",
         "Flush log files to disk",
         {0, 0, 0}
     },
     {
-        NULL,
-        0,
-        NULL,
-        NULL,
-        NULL,
-        {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -361,17 +428,21 @@ static void restart_monitor(DCB *dcb, MONITOR *monitor);
 /**
  * The subcommands of the restart command
  */
-struct subcommand restartoptions[] = {
-    { "monitor", 1, restart_monitor,
-      "Restart a monitor, e.g. restart monitor 0x48181e0",
-      "Restart a monitor, e.g. restart monitor 0x48181e0",
-      {ARG_TYPE_MONITOR, 0, 0} },
-    { "service", 1, restart_service,
-      "Restart a service, e.g. restart service \"Test Service\"",
-      "Restart a service, e.g. restart service 0x4838320",
-      {ARG_TYPE_SERVICE, 0, 0} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+struct subcommand restartoptions[] =
+{
+    {
+        "monitor", 1, 1, restart_monitor,
+        "Restart a monitor",
+        "E.g. restart monitor db-cluster-monitor",
+        {ARG_TYPE_MONITOR, 0, 0}
+    },
+    {
+        "service", 1, 1, restart_service,
+        "Restart a service",
+        "E.g. restart service \"Sales Database\"",
+        {ARG_TYPE_SERVICE, 0, 0}
+    },
+    { EMPTY_OPTION }
 };
 
 static void set_server(DCB *dcb, SERVER *server, char *bit);
@@ -381,38 +452,48 @@ static void set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_
 /**
  * The subcommands of the set command
  */
-struct subcommand setoptions[] = {
-    { "server", 2, set_server,
-      "Set the status of a server. E.g. set server dbnode4 master",
-      "Set the status of a server. E.g. set server 0x4838320 master",
-      {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
-    { "pollsleep", 1, set_pollsleep,
-      "Set the maximum poll sleep period in milliseconds",
-      "Set the maximum poll sleep period in milliseconds",
-      {ARG_TYPE_NUMERIC, 0, 0} },
-    { "nbpolls", 1, set_nbpoll,
-      "Set the number of non-blocking polls",
-      "Set the number of non-blocking polls",
-      {ARG_TYPE_NUMERIC, 0, 0} },
-    { "log_throttling", 3, set_log_throttling,
-      "Set the log throttling configuration",
-      "Set the log throttling configuration",
-      {ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+struct subcommand setoptions[] =
+{
+    {
+        "server", 2, 2, set_server,
+        "Set the status of a server",
+        "Set the status of a server. E.g. set server dbnode4 master",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0}
+    },
+    {
+        "pollsleep", 1, 1, set_pollsleep,
+        "Set poll sleep period",
+        "Set the maximum poll sleep period in milliseconds",
+        {ARG_TYPE_NUMERIC, 0, 0}
+    },
+    {
+        "nbpolls", 1, 1, set_nbpoll,
+        "Set non-blocking polls",
+        "Set the number of non-blocking polls",
+        {ARG_TYPE_NUMERIC, 0, 0}
+    },
+    {
+        "log_throttling", 3, 3, set_log_throttling,
+        "Set log throttling",
+        "Set the log throttling configuration",
+        {ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC}
+    },
+    { EMPTY_OPTION }
 };
 
 static void clear_server(DCB *dcb, SERVER *server, char *bit);
 /**
  * The subcommands of the clear command
  */
-struct subcommand clearoptions[] = {
-    { "server", 2, clear_server,
-      "Clear the status of a server. E.g. clear server dbnode2 master",
-      "Clear the status of a server. E.g. clear server 0x4838320 master",
-      {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+struct subcommand clearoptions[] =
+{
+    {
+        "server", 2, 2, clear_server,
+        "Clear server status",
+        "Clear the status of a server. E.g. clear server dbnode2 master",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0}
+    },
+    { EMPTY_OPTION }
 };
 
 static void reload_dbusers(DCB *dcb, SERVICE *service);
@@ -421,17 +502,21 @@ static void reload_config(DCB *dcb);
 /**
  * The subcommands of the reload command
  */
-struct subcommand reloadoptions[] = {
-    { "config", 0, reload_config,
-      "Reload the configuration data for MaxScale.",
-      "Reload the configuration data for MaxScale.",
-      {0, 0, 0} },
-    { "dbusers", 1, reload_dbusers,
-      "Reload the dbuser data for a service. E.g. reload dbusers \"splitter service\"",
-      "Reload the dbuser data for a service. E.g. reload dbusers 0x849420",
-      {ARG_TYPE_SERVICE, 0, 0} },
-    { NULL, 0, NULL, NULL, NULL,
-      {0, 0, 0} }
+struct subcommand reloadoptions[] =
+{
+    {
+        "config", 0, 0, reload_config,
+        "Reload the configuration",
+        "Reload the configuration data for MaxScale",
+        {0, 0, 0}
+    },
+    {
+        "dbusers", 1, 1, reload_dbusers,
+        "Reload users table",
+        "Reload the users for a service. E.g. reload dbusers \"splitter service\"",
+        {ARG_TYPE_SERVICE, 0, 0}
+    },
+    { EMPTY_OPTION }
 };
 
 static void enable_log_action(DCB *, char *);
@@ -458,106 +543,95 @@ static void disable_account(DCB *, char *user);
 /**
  *  * The subcommands of the enable command
  *   */
-struct subcommand enableoptions[] = {
+struct subcommand enableoptions[] =
+{
     {
         "heartbeat",
-        1,
+        1, 1,
         enable_monitor_replication_heartbeat,
-        "Enable the monitor replication heartbeat, pass a monitor name as argument",
-        "Enable the monitor replication heartbeat, pass a monitor name as argument",
+        "Enable monitor replication heartbeat",
+        "Enable the monitor replication heartbeat, the parameter is the monitor name",
         {ARG_TYPE_MONITOR, 0, 0}
     },
     {
         "log",
-        1,
+        1, 1,
         enable_log_action,
-        "[deprecated] Enable Log options for MaxScale, options 'trace' | 'error' | 'message'."
-        "E.g. 'enable log message'.",
-        "[deprecated] Enable Log options for MaxScale, options 'trace' | 'error' | 'message'."
-        "E.g. 'enable log message'.",
+        "[deprecated] Enable a logging level",
+        "Options 'trace' | 'error' | 'message'. E.g. 'enable log message'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "log-priority",
-        1,
+        1, 1,
         enable_log_priority,
-        "Enable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
-        "E.g.: 'enable log-priority info'.",
-        "Enable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "Enable a logging priority",
+        "Enable a logging priority for MaxScale, parameters must be one of "
+        "'err', 'warning', 'notice', 'info' or 'debug'. "
         "E.g.: 'enable log-priority info'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "sessionlog",
-        2,
+        2, 2,
         enable_sess_log_action,
-        "[deprecated] Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
-        "message | debug] <session id>\t E.g. enable sessionlog message 123.",
-        "[deprecated] Enable Log options for a single session. Usage: enable sessionlog [trace | error | "
+        "[deprecated] Enable a logging level for a single session",
+        "Usage: enable sessionlog [trace | error | "
         "message | debug] <session id>\t E.g. enable sessionlog message 123.",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "sessionlog-priority",
-        2,
+        2, 2,
         enable_sess_log_priority,
-        "Enable a logging priority for a particular session. "
-        "Usage: enable sessionlog-priority [err | warning | notice | info | debug] <session id>"
-        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
-        "Enable a logging priority for a particular session. "
+        "Enable a logging priority for a session",
         "Usage: enable sessionlog-priority [err | warning | notice | info | debug] <session id>"
         "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "root",
-        1,
+        1, 1,
         enable_service_root,
-        "Enable root access to a service, pass a service name to enable root access",
+        "Enable root user access",
         "Enable root access to a service, pass a service name to enable root access",
         {ARG_TYPE_SERVICE, 0, 0}
     },
     {
         "feedback",
-        0,
+        0, 0,
         enable_feedback_action,
-        "Enable MaxScale modules list sending via http to notification service",
+        "Enable MaxScale feedback",
         "Enable MaxScale modules list sending via http to notification service",
         {0, 0, 0}
     },
     {
         "syslog",
-        0,
+        0, 0,
         enable_syslog,
-        "Enable syslog logging",
+        "Enable syslog",
         "Enable syslog logging",
         {0, 0, 0}
     },
     {
         "maxlog",
-        0,
+        0, 0,
         enable_maxlog,
-        "Enable maxlog logging",
-        "Enable maxlog logging",
+        "Enable MaxScale logging",
+        "Enable MaxScale logging",
         {0, 0, 0}
     },
     {
         "account",
-        1,
+        1, 1,
         enable_account,
-        "Enable maxadmin usage for Linux user. E.g.:\n"
-        "                 MaxScale> enable account alice",
-        "Enable maxadmin usage for Linux user. E.g.:\n"
+        "Activate a Linux user",
+        "Enable maxadmin usage for a Linux user. E.g.:\n"
         "                 MaxScale> enable account alice",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
-        NULL,
-        0,
-        NULL,
-        NULL,
-        NULL,
-        {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -566,106 +640,95 @@ struct subcommand enableoptions[] = {
 /**
  *  * The subcommands of the disable command
  *   */
-struct subcommand disableoptions[] = {
+struct subcommand disableoptions[] =
+{
     {
         "heartbeat",
-        1,
+        1, 1,
         disable_monitor_replication_heartbeat,
-        "Disable the monitor replication heartbeat",
+        "Disable replication heartbeat",
         "Disable the monitor replication heartbeat",
         {ARG_TYPE_MONITOR, 0, 0}
     },
     {
         "log",
-        1,
+        1, 1,
         disable_log_action,
-        "[deprecated] Disable Log for MaxScale, Options: 'debug' | 'trace' | 'error' | 'message'."
-        "E.g. 'disable log debug'.",
-        "[deprecated] Disable Log for MaxScale, Options: 'debug' | 'trace' | 'error' | 'message'."
-        "E.g. 'disable log debug'.",
+        "[deprecated] Disable log for MaxScale",
+        "Options: 'debug' | 'trace' | 'error' | 'message'."
+        "E.g. 'disable log debug'",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "log-priority",
-        1,
+        1, 1,
         disable_log_priority,
-        "Disable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
-        "E.g.: 'disable log-priority info'.",
-        "Disable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
-        "E.g.: 'disable log-priority info'.",
+        "Disable a logging priority",
+        "Options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "E.g.: 'disable log-priority info'",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "sessionlog",
-        2,
+        2, 2,
         disable_sess_log_action,
-        "[deprecated] Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
-        "message | debug] <session id>\t E.g. disable sessionlog message 123.",
-        "[deprecated] Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
-        "message | debug] <session id>\t E.g. disable sessionlog message 123.",
+        "[deprecated] Disable log options",
+        "Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
+        "message | debug] <session id>\t E.g. disable sessionlog message 123",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "sessionlog-priority",
-        2,
+        2, 2,
         disable_sess_log_priority,
-        "Disable a logging priority for a particular session. "
+        "Disable a logging priority for a particular session",
         "Usage: disable sessionlog-priority [err | warning | notice | info | debug] <session id>"
-        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
-        "Enable a logging priority for a particular session. "
-        "Usage: disable sessionlog-priority [err | warning | notice | info | debug] <session id>"
-        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
+        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "root",
-        1,
+        1, 1,
         disable_service_root,
-        "Disable root access to a service",
+        "Disable root access",
         "Disable root access to a service",
         {ARG_TYPE_SERVICE, 0, 0}
     },
     {
         "feedback",
-        0,
+        0, 0,
         disable_feedback_action,
-        "Disable MaxScale modules list sending via http to notification service",
+        "Disable feedback",
         "Disable MaxScale modules list sending via http to notification service",
         {0, 0, 0}
     },
     {
         "syslog",
-        0,
+        0, 0,
         disable_syslog,
-        "Disable syslog logging",
+        "Disable syslog",
         "Disable syslog logging",
         {0, 0, 0}
     },
     {
         "maxlog",
-        0,
+        0, 0,
         disable_maxlog,
-        "Disable maxlog logging",
-        "Disable maxlog logging",
+        "Disable MaxScale logging",
+        "Disable MaxScale logging",
         {0, 0, 0}
     },
     {
         "account",
-        1,
+        1, 1,
         disable_account,
-        "Disable maxadmin usage for Linux user. E.g.:\n"
-        "                 MaxScale> disable account alice",
+        "Disable Linux user",
         "Disable maxadmin usage for Linux user. E.g.:\n"
         "                 MaxScale> disable account alice",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
-        NULL,
-        0,
-        NULL,
-        NULL,
-        NULL,
-        {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -677,7 +740,8 @@ static void fail_accept(DCB* dcb, char* arg1, char* arg2);
 /**
  *  * The subcommands of the fail command
  *   */
-struct subcommand failoptions[] = {
+struct subcommand failoptions[] =
+{
     {
         "backendfd",
         0,
@@ -729,23 +793,22 @@ static void cmd_serviceAddBackend(DCB *dcb, void *a, void *b)
 /**
  * The subcommands of the add command
  */
-struct subcommand addoptions[] = {
+struct subcommand addoptions[] =
+{
     {
-     "user", 2, telnetdAddUser,
-     "Add insecure account for using maxadmin over the network. E.g.:\n"
-     "                 MaxScale> add user bob somepass",
-     "Add insecure account for using maxadmin over the network. E.g.:\n"
-     "                 MaxScale> add user bob somepass",
+        "user", 2, 2, telnetdAddUser,
+        "Add account for maxadmin",
+        "Add insecure account for using maxadmin over the network. E.g.:\n"
+        "                 MaxScale> add user bob somepass",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
-     "server", 2, cmd_serviceAddBackend,
-     "Add a new server to a service",
-     "Add a new server to a service. The server must exist in the configuration file.",
+        "server", 2, 2, cmd_serviceAddBackend,
+        "Add a new server to a service",
+        "Takes a server name as the parameter. The server must exist in the configuration file.",
         {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
     },
-    { NULL, 0, NULL, NULL, NULL,
-        {0, 0, 0}}
+    { EMPTY_OPTION }
 };
 
 
@@ -765,26 +828,25 @@ static void cmd_serviceRemoveBackend(DCB *dcb, void *a, void *b)
 /**
  * The subcommands of the remove command
  */
-struct subcommand removeoptions[] = {
+struct subcommand removeoptions[] =
+{
     {
-     "user",
-     2,
-     telnetdRemoveUser,
-     "Remove account for using maxadmin over the network. E.g.:\n"
-     "                 MaxAdmin> remove user bob somepass",
-     "Remove account for using maxadmin over the network. E.g.:\n"
-     "                 MaxAdmin> remove user bob somepass",
+        "user",
+        2, 2,
+        telnetdRemoveUser,
+        "Remove account from maxadmin",
+        "Remove account for using maxadmin over the network. E.g.:\n"
+        "                 MaxAdmin> remove user bob somepass",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
-     "server", 2, cmd_serviceRemoveBackend,
-     "Remove a server from a service",
-     "Remove a server from a service. The server must exist in the configuration file.",
+        "server", 2, 2, cmd_serviceRemoveBackend,
+        "Remove a server from a service",
+        "Takes a server name as the parameter. The server must exist in the configuration file.",
         {ARG_TYPE_SERVICE, ARG_TYPE_SERVER, 0}
     },
     {
-     NULL, 0, NULL, NULL, NULL,
-        {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -857,25 +919,26 @@ flushlogs(DCB *pdcb)
 /**
  * The subcommands of the flush command
  */
-struct subcommand flushoptions[] = {
+struct subcommand flushoptions[] =
+{
     {
         "log",
-        1,
+        1, 1,
         flushlog,
-        "Flush the content of a log file, close that log, rename it and open a new log file",
+        "Flush log files",
         "Flush the content of a log file, close that log, rename it and open a new log file",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "logs",
-        0,
+        0, 0,
         flushlogs,
-        "Flush the content of all log files, close those logs, rename them and open a new log files",
+        "Flush log files",
         "Flush the content of all log files, close those logs, rename them and open a new log files",
         {0, 0, 0}
     },
     {
-        NULL, 0, NULL, NULL, NULL, {0, 0, 0}
+        EMPTY_OPTION
     }
 };
 
@@ -883,11 +946,15 @@ struct subcommand flushoptions[] = {
 /**
  * The debug command table
  */
-static struct {
+static struct
+{
     char               *cmd;
     struct  subcommand *options;
-} cmds[] = {
+} cmds[] =
+{
     { "add",        addoptions },
+    { "remove",     removeoptions },
+    { "set",        setoptions },
     { "clear",      clearoptions },
     { "disable",    disableoptions },
     { "enable",     enableoptions },
@@ -897,11 +964,9 @@ static struct {
     { "flush",      flushoptions },
     { "list",       listoptions },
     { "reload",     reloadoptions },
-    { "remove",     removeoptions },
     { "restart",    restartoptions },
-    { "set",        setoptions },
-    { "show",       showoptions },
     { "shutdown",   shutdownoptions },
+    { "show",       showoptions },
     { "sync",   syncoptions },
     { NULL,         NULL    }
 };
@@ -924,63 +989,63 @@ convert_arg(int mode, char *arg, int arg_type)
 
     switch (arg_type)
     {
-    case ARG_TYPE_ADDRESS:
-        return (unsigned long)strtol(arg, NULL, 0);
-    case ARG_TYPE_STRING:
-        return (unsigned long)arg;
-    case ARG_TYPE_SERVICE:
-        if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-        {
-            rval = (unsigned long)service_find(arg);
-        }
-        return rval;
-    case ARG_TYPE_SERVER:
-        if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-        {
-            rval = (unsigned long)server_find_by_unique_name(arg);
-        }
-        return rval;
-    case ARG_TYPE_DBUSERS:
-        if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-        {
-            service = service_find(arg);
-            if (service)
+        case ARG_TYPE_ADDRESS:
+            return (unsigned long)strtol(arg, NULL, 0);
+        case ARG_TYPE_STRING:
+            return (unsigned long)arg;
+        case ARG_TYPE_SERVICE:
+            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
             {
-                return (unsigned long)(service->ports->users);
+                rval = (unsigned long)service_find(arg);
             }
-            else
+            return rval;
+        case ARG_TYPE_SERVER:
+            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
             {
-                return 0;
+                rval = (unsigned long)server_find_by_unique_name(arg);
             }
-        }
-        return rval;
-    case ARG_TYPE_DCB:
-        rval = (unsigned long)strtol(arg, NULL, 0);
-        if (mode == CLIM_USER && dcb_isvalid((DCB *)rval) == 0)
-        {
-            rval = 0;
-        }
-        return rval;
-    case ARG_TYPE_SESSION:
-        rval = (unsigned long)strtol(arg, NULL, 0);
-        if (mode == CLIM_USER && session_isvalid((SESSION *)rval) == 0)
-        {
-            rval = 0;
-        }
-        return rval;
-    case ARG_TYPE_MONITOR:
-        if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-        {
-            rval = (unsigned long)monitor_find(arg);
-        }
-        return rval;
-    case ARG_TYPE_FILTER:
-        if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-        {
-            rval = (unsigned long)filter_find(arg);
-        }
-        return rval;
-    case ARG_TYPE_NUMERIC:
+            return rval;
+        case ARG_TYPE_DBUSERS:
+            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+            {
+                service = service_find(arg);
+                if (service)
+                {
+                    return (unsigned long)(service->ports->users);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            return rval;
+        case ARG_TYPE_DCB:
+            rval = (unsigned long)strtol(arg, NULL, 0);
+            if (mode == CLIM_USER && dcb_isvalid((DCB *)rval) == 0)
+            {
+                rval = 0;
+            }
+            return rval;
+        case ARG_TYPE_SESSION:
+            rval = (unsigned long)strtol(arg, NULL, 0);
+            if (mode == CLIM_USER && session_isvalid((SESSION *)rval) == 0)
+            {
+                rval = 0;
+            }
+            return rval;
+        case ARG_TYPE_MONITOR:
+            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+            {
+                rval = (unsigned long)monitor_find(arg);
+            }
+            return rval;
+        case ARG_TYPE_FILTER:
+            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
+            {
+                rval = (unsigned long)filter_find(arg);
+            }
+            return rval;
+        case ARG_TYPE_NUMERIC:
         {
             int i;
             for (i = 0; arg[i]; i++)
@@ -1016,7 +1081,6 @@ execute_cmd(CLI_SESSION *cli)
     DCB           *dcb = cli->session->client_dcb;
     int            argc, i, j, found = 0;
     char          *args[MAXARGS + 1];
-    unsigned long  arg1, arg2, arg3;
     int            in_quotes = 0, escape_next = 0;
     char          *ptr, *lptr;
     bool           in_space = false;
@@ -1139,8 +1203,9 @@ execute_cmd(CLI_SESSION *cli)
                     dcb_printf(dcb, "Available options to the %s command:\n", args[1]);
                     for (j = 0; cmds[i].options[j].arg1; j++)
                     {
-                        dcb_printf(dcb, "    %-12s %s\n", cmds[i].options[j].arg1,
-                                   cmds[i].options[j].help);
+                        dcb_printf(dcb, "'%s' - %s\n\n\t%s\n\n", cmds[i].options[j].arg1,
+                                   cmds[i].options[j].help, cmds[i].options[j].devhelp);
+
                     }
                 }
             }
@@ -1166,73 +1231,88 @@ execute_cmd(CLI_SESSION *cli)
                     if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
                     {
                         found = 1; /**< command and sub-command match */
-                        if (argc != cmds[i].options[j].n_args)
+                        if (argc < cmds[i].options[j].argc_min)
                         {
-                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects %d arguments\n",
+                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at least %d arguments\n",
                                        cmds[i].cmd, cmds[i].options[j].arg1,
-                                       cmds[i].options[j].n_args);
+                                       cmds[i].options[j].argc_min);
                         }
                         else
                         {
-                            switch (cmds[i].options[j].n_args)
-                            {
-                            case 0:
-                                cmds[i].options[j].fn(dcb);
-                                break;
-                            case 1:
-                                arg1 = convert_arg(cli->mode, args[2], cmds[i].options[j].arg_types[0]);
+                            unsigned long arg_list[MAXARGS] = {};
 
-                                if (arg1)
+                            for (int k = 0; k < cmds[i].options[j].argc_max && k < argc; k++)
+                            {
+                                arg_list[k] = convert_arg(cli->mode, args[k + 2], cmds[i].options[j].arg_types[k]);
+                                if (arg_list[k] == 0)
                                 {
-                                    cmds[i].options[j].fn(dcb, arg1);
+                                    dcb_printf(dcb, "Invalid argument: %s\n", args[k + 2]);
+                                    return 0;
                                 }
-                                else
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[2]);
-                                }
-                                break;
-                            case 2:
-                                arg1 = convert_arg(cli->mode, args[2], cmds[i].options[j].arg_types[0]);
-                                arg2 = convert_arg(cli->mode, args[3], cmds[i].options[j].arg_types[1]);
-                                if (arg1 && arg2)
-                                {
-                                    cmds[i].options[j].fn(dcb, arg1, arg2);
-                                }
-                                else if (arg1 == 0)
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[2]);
-                                }
-                                else
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[3]);
-                                }
-                                break;
-                            case 3:
-                                arg1 = convert_arg(cli->mode, args[2], cmds[i].options[j].arg_types[0]);
-                                arg2 = convert_arg(cli->mode, args[3], cmds[i].options[j].arg_types[1]);
-                                arg3 = convert_arg(cli->mode, args[4], cmds[i].options[j].arg_types[2]);
-                                if (arg1 && arg2 && arg3)
-                                {
-                                    cmds[i].options[j].fn(dcb, arg1, arg2, arg3);
-                                }
-                                else if (arg1 == 0)
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[2]);
-                                }
-                                else if (arg2 == 0)
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[3]);
-                                }
-                                else if (arg3 == 0)
-                                {
-                                    dcb_printf(dcb, "Invalid argument: %s\n",
-                                               args[4]);
-                                }
+                            }
+
+                            switch (argc)
+                            {
+                                case 0:
+                                    cmds[i].options[j].fn(dcb);
+                                    break;
+                                case 1:
+                                    cmds[i].options[j].fn(dcb, arg_list[0]);
+                                    break;
+                                case 2:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
+                                    break;
+                                case 3:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
+                                    break;
+                                case 4:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3]);
+                                    break;
+                                case 5:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4]);
+                                    break;
+                                case 6:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5]);
+                                    break;
+                                case 7:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6]);
+                                    break;
+                                case 8:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7]);
+                                    break;
+                                case 9:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8]);
+                                    break;
+                                case 10:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9]);
+                                    break;
+                                case 11:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10]);
+                                    break;
+                                case 12:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10], arg_list[11]);
+                                    break;
+                                default:
+                                    dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
+                                    break;
                             }
                         }
                     }
@@ -1546,11 +1626,11 @@ struct log_action_entry
 static bool get_log_action(const char* name, struct log_action_entry* entryp)
 {
     static const struct log_action_entry entries[] =
-        {
-            { "debug",   LOG_DEBUG,  "debug" },
-            { "trace",   LOG_INFO,   "info" },
-            { "message", LOG_NOTICE, "notice" },
-        };
+    {
+        { "debug",   LOG_DEBUG,  "debug" },
+        { "trace",   LOG_INFO,   "info" },
+        { "message", LOG_NOTICE, "notice" },
+    };
     const int n_entries = sizeof(entries) / sizeof(entries[0]);
 
     bool found = false;
@@ -1661,13 +1741,13 @@ static int compare_log_priority_entries(const void* l, const void* r)
 static int string_to_priority(const char* name)
 {
     static const struct log_priority_entry LOG_PRIORITY_ENTRIES[] =
-        {
-            // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
-            { "debug",   LOG_DEBUG },
-            { "info",    LOG_INFO },
-            { "notice",  LOG_NOTICE },
-            { "warning", LOG_WARNING },
-        };
+    {
+        // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
+        { "debug",   LOG_DEBUG },
+        { "info",    LOG_INFO },
+        { "notice",  LOG_NOTICE },
+        { "warning", LOG_WARNING },
+    };
 
     const size_t N_LOG_PRIORITY_ENTRIES = sizeof(LOG_PRIORITY_ENTRIES) / sizeof(LOG_PRIORITY_ENTRIES[0]);
 
@@ -2008,28 +2088,29 @@ static void fail_accept(
     fail_accept_errno = atoi(arg1);
     char errbuf[MXS_STRERROR_BUFLEN];
 
-    switch(fail_accept_errno) {
-    case EAGAIN:
+    switch (fail_accept_errno)
+    {
+        case EAGAIN:
 //    case EWOULDBLOCK:
-    case EBADF:
-    case EINTR:
-    case EINVAL:
-    case EMFILE:
-    case ENFILE:
-    case ENOTSOCK:
-    case EOPNOTSUPP:
-    case ENOBUFS:
-    case ENOMEM:
-    case EPROTO:
-        fail_next_accept = failcount;
-        break;
+        case EBADF:
+        case EINTR:
+        case EINVAL:
+        case EMFILE:
+        case ENFILE:
+        case ENOTSOCK:
+        case EOPNOTSUPP:
+        case ENOBUFS:
+        case ENOMEM:
+        case EPROTO:
+            fail_next_accept = failcount;
+            break;
 
-    default:
-        dcb_printf(dcb,
-                   "[%d, %s] is not valid errno for accept.\n",
-                   fail_accept_errno,
-                   strerror_r(fail_accept_errno, errbuf, sizeof(errbuf)));
-        return ;
+        default:
+            dcb_printf(dcb,
+                       "[%d, %s] is not valid errno for accept.\n",
+                       fail_accept_errno,
+                       strerror_r(fail_accept_errno, errbuf, sizeof(errbuf)));
+            return ;
     }
 }
 #endif /* FAKE_CODE */
