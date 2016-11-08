@@ -947,8 +947,9 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
     CHK_DCB(dcb);
     spinlock_acquire(&dcb->authlock);
 
-    if (dcb->was_persistent)
+    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING)
     {
+        ss_dassert(dcb->persistentstart == 0);
         /**
          * This is a DCB that was just taken out of the persistent connection pool.
          * We need to sent a COM_CHANGE_USER query to the backend to reset the

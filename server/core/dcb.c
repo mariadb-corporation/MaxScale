@@ -1827,6 +1827,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
                   pthread_self(),
                   dcb->user);
+        dcb->was_persistent = false;
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
         if (dcb->session)
