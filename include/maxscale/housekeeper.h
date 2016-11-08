@@ -51,11 +51,34 @@ typedef struct hktask
     struct hktask *next;      /*< Next task in the list */
 } HKTASK;
 
-extern void hkinit();
+/**
+ * Initialises the housekeeper mechanism.
+ *
+ * A call to any of the other housekeeper functions can be made only if
+ * this function returns successfully.
+ *
+ * @return True if the housekeeper mechanism was initialized, false otherwise.
+ */
+extern bool hkinit();
+
+/**
+ * Shuts down the housekeeper mechanism.
+ *
+ * Should be called @b only if @c hkinit() returned successfully.
+ *
+ * @see hkinit hkfinish
+ */
+extern void hkshutdown();
+
+/**
+ * Waits for the housekeeper thread to finish. Should be called only after
+ * hkshutdown() has been called.
+ */
+extern void hkfinish();
+
 extern int  hktask_add(const char *name, void (*task)(void *), void *data, int frequency);
 extern int  hktask_oneshot(const char *name, void (*task)(void *), void *data, int when);
 extern int  hktask_remove(const char *name);
-extern void hkshutdown();
 extern void hkshow_tasks(DCB *pdcb);
 
 MXS_END_DECLS
