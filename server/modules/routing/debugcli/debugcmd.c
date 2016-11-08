@@ -942,6 +942,84 @@ struct subcommand flushoptions[] =
     }
 };
 
+/** This is used to prevent concurrent creation or removal of servers */
+static SPINLOCK server_mod_lock = SPINLOCK_INIT;
+
+static void createServer(DCB *dcb, char *name, char *address, char *port,
+                         char *protocol, char *authenticator, char *authenticator_options)
+{
+    spinlock_acquire(&server_mod_lock);
+
+    if (server_find_by_unique_name(name) == NULL)
+    {
+        if (protocol == NULL)
+        {
+            protocol = "MySQLBackend";
+        }
+
+        SERVER *server = server_alloc(address, protocol, atoi(port), authenticator,
+                                      authenticator_options);
+
+        if (server)
+        {
+            server_set_unique_name(server, name);
+            // TODO: Serialize the server to disk
+            dcb_printf(dcb, "Created server '%s'\n", name);
+        }
+        else
+        {
+            dcb_printf(dcb, "Failed to create new server, see log file for more details\n");
+        }
+    }
+    else
+    {
+        dcb_printf(dcb, "Server '%s' already exists.\n", name);
+    }
+
+    spinlock_release(&server_mod_lock);
+}
+
+struct subcommand createoptions[] =
+{
+    {
+        "server", 3, 6, createServer,
+        "Create a new server",
+        "Usage: create server NAME HOST PORT [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "Create a new server from the following parameters.\n"
+        "NAME          Server name\n"
+        "HOST          Server host address\n"
+        "PORT          Server port\n"
+        "PROTOCOL      Server protocol (default MySQLBackend)\n"
+        "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"
+        "OPTIONS       Options for the authenticator module\n\n"
+        "The first three parameters are required, the others are optional.\n",
+        {
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
+    },
+    {
+        EMPTY_OPTION
+    }
+};
+
+static void destroyServer(DCB *dcb, SERVER *server)
+{
+    dcb_printf(dcb, "Not yet implemented.\n");
+}
+
+struct subcommand destroyoptions[] =
+{
+    {
+        "server", 1, 1, destroyServer,
+        "Destroy a server",
+        "Usage: destroy server NAME",
+        {ARG_TYPE_STRING}
+    },
+    {
+        EMPTY_OPTION
+    }
+};
 
 /**
  * The debug command table
@@ -954,6 +1032,8 @@ static struct
 {
     { "add",        addoptions },
     { "remove",     removeoptions },
+    { "create",     createoptions },
+    { "destroy",    destroyoptions },
     { "set",        setoptions },
     { "clear",      clearoptions },
     { "disable",    disableoptions },
