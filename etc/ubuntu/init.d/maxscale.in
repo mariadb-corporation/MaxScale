@@ -124,8 +124,8 @@ maxscale_wait_stop() {
                 local i=0
                 while kill -0 "${PIDTMP:-}" 2> /dev/null;  do
                         if [ $i = '60' ]; then
-                                break
                                 STATUS=2
+                                break
                         fi
                         [ "$VERBOSE" != no ] && log_progress_msg "."
                         sleep 1
