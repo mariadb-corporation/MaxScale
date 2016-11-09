@@ -1859,12 +1859,16 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
  *
  * @param rses Router session
  */
-static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, DCB *master_dcb,
-                                       DCB *curr_master_dcb)
+static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
+                                       DCB *master_dcb, DCB *curr_master_dcb)
 {
     char errmsg[MAX_SERVER_NAME_LEN * 2 + 100]; // Extra space for error message
 
-    if (master_dcb && curr_master_dcb)
+    if (!found)
+    {
+            sprintf(errmsg, "Could not find a valid master connection");
+    }
+    else if (master_dcb && curr_master_dcb)
     {
         /** We found a master but it's not the same connection */
         ss_dassert(master_dcb != curr_master_dcb);
@@ -2338,7 +2342,7 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             }
             else
             {
-                log_master_routing_failure(rses, master_dcb, curr_master_dcb);
+                log_master_routing_failure(rses, succp, master_dcb, curr_master_dcb);
                 succp = false;
             }
 
