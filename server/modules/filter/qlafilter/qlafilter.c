@@ -62,6 +62,10 @@ static char *version_str = "V1.1.1";
 /** Formatting buffer size */
 #define QLA_STRING_BUFFER_SIZE 1024
 
+/** Log file settings flags */
+#define CONFIG_FILE_SESSION (1 << 0) // Default value, session specific files
+#define CONFIG_FILE_UNIFIED (1 << 1) // One file shared by all sessions
+
 /*
  * The filter entry points
  */
@@ -108,6 +112,10 @@ typedef struct
     regex_t re; /* Compiled regex text */
     char *nomatch; /* Optional text to match against for exclusion */
     regex_t nore; /* Compiled regex nomatch text */
+    uint32_t log_mode_flags; /* Log file mode settings */
+    FILE *unified_fp; /* Unified log file. The pointer needs to be shared here
+                       * to avoid garbled printing. */
+    bool flush_writes; /* Flush log file after every write */
 } QLA_INSTANCE;
 
 /**
@@ -126,6 +134,7 @@ typedef struct
     int active;
     char *user;
     char *remote;
+    size_t ses_id; /* The session this filter serves */
 } QLA_SESSION;
 
 /**
@@ -187,6 +196,9 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->match = NULL;
         my_instance->nomatch = NULL;
         my_instance->filebase = NULL;
+        my_instance->log_mode_flags = 0;
+        my_instance->unified_fp = NULL;
+        my_instance->flush_writes = false;
         bool error = false;
 
         if (params)
@@ -240,6 +252,18 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
                 {
                     cflags |= REG_EXTENDED;
                 }
+                else if (!strcasecmp(options[i], "session_file"))
+                {
+                    my_instance->log_mode_flags |= CONFIG_FILE_SESSION;
+                }
+                else if (!strcasecmp(options[i], "unified_file"))
+                {
+                    my_instance->log_mode_flags |= CONFIG_FILE_UNIFIED;
+                }
+                else if (!strcasecmp(options[i], "flush_writes"))
+                {
+                    my_instance->flush_writes = true;
+                }
                 else
                 {
                     MXS_ERROR("qlafilter: Unsupported option '%s'.",
@@ -248,7 +272,11 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
                 }
             }
         }
-
+        if (my_instance->log_mode_flags == 0)
+        {
+            // If nothing has been set, set a default value
+            my_instance->log_mode_flags = CONFIG_FILE_SESSION;
+        }
         if (my_instance->filebase == NULL)
         {
             MXS_ERROR("qlafilter: No 'filebase' parameter defined.");
@@ -276,6 +304,35 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             my_instance->nomatch = NULL;
             error = true;
         }
+        // Try to open the unified log file
+        if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED &&
+            my_instance->filebase != NULL)
+        {
+            // First calculate filename length
+            const char UNIFIED[] = ".unified";
+            int namelen = strlen(my_instance->filebase) + sizeof(UNIFIED);
+            char *filename = NULL;
+            if ((filename = MXS_CALLOC(namelen, sizeof(char))) != NULL)
+            {
+                snprintf(filename, namelen, "%s.unified", my_instance->filebase);
+                // Open the file. It is only closed at program exit
+                my_instance->unified_fp = fopen(filename, "w");
+                if (my_instance->unified_fp == NULL)
+                {
+                    char errbuf[MXS_STRERROR_BUFLEN];
+                    MXS_ERROR("Opening output file for qla "
+                              "filter failed due to %d, %s",
+                              errno,
+                              strerror_r(errno, errbuf, sizeof(errbuf)));
+                    error = true;
+                }
+                MXS_FREE(filename);
+            }
+            else
+            {
+                error = true;
+            }
+        }
 
         if (error)
         {
@@ -289,6 +346,10 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             {
                 MXS_FREE(my_instance->nomatch);
                 regfree(&my_instance->nore);
+            }
+            if (my_instance->unified_fp != NULL)
+            {
+                fclose(my_instance->unified_fp);
             }
             MXS_FREE(my_instance->filebase);
             MXS_FREE(my_instance->source);
@@ -339,15 +400,17 @@ newSession(FILTER *instance, SESSION *session)
 
         my_session->user = userName;
         my_session->remote = remote;
+        my_session->ses_id = session->ses_id;
 
-        sprintf(my_session->filename, "%s.%d",
+        sprintf(my_session->filename, "%s.%lu",
                 my_instance->filebase,
-                my_instance->sessions);
+                my_session->ses_id); // Fixed possible race condition
 
         // Multiple sessions can try to update my_instance->sessions simultaneously
         atomic_add(&(my_instance->sessions), 1);
 
-        if (my_session->active)
+        // Only open the session file if the corresponding mode setting is used
+        if (my_session->active && (my_instance->log_mode_flags | CONFIG_FILE_SESSION))
         {
             my_session->fp = fopen(my_session->filename, "w");
 
@@ -355,7 +418,7 @@ newSession(FILTER *instance, SESSION *session)
             {
                 char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Opening output file for qla "
-                          "fileter failed due to %d, %s",
+                          "filter failed due to %d, %s",
                           errno,
                           strerror_r(errno, errbuf, sizeof(errbuf)));
                 MXS_FREE(my_session->filename);
@@ -363,14 +426,6 @@ newSession(FILTER *instance, SESSION *session)
                 my_session = NULL;
             }
         }
-    }
-    else
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation for qla filter failed due to "
-                  "%d, %s.",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
     }
     return my_session;
 }
@@ -459,8 +514,31 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 gettimeofday(&tv, NULL);
                 localtime_r(&tv.tv_sec, &t);
                 strftime(buffer, sizeof(buffer), "%F %T", &t);
-                fprintf(my_session->fp, "%s,%s@%s,%s\n", buffer, my_session->user,
-                        my_session->remote, trim(squeeze_whitespace(ptr)));
+
+                /**
+                 * Loop over all the possible log file modes and write to
+                 * the enabled files.
+                 */
+                char *sql_string = trim(squeeze_whitespace(ptr));
+                if (my_instance->log_mode_flags & CONFIG_FILE_SESSION)
+                {
+                    fprintf(my_session->fp, "%s,%s@%s,%s\n", buffer, my_session->user,
+                            my_session->remote, sql_string);
+                    if (my_instance->flush_writes)
+                    {
+                        fflush(my_session->fp);
+                    }
+                }
+                if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED)
+                {
+                    fprintf(my_instance->unified_fp, "S%zd,%s,%s@%s,%s\n",
+                            my_session->ses_id, buffer, my_session->user,
+                            my_session->remote, sql_string);
+                    if (my_instance->flush_writes)
+                    {
+                        fflush(my_instance->unified_fp);
+                    }
+                }
             }
             MXS_FREE(ptr);
         }

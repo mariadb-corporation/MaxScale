@@ -1936,7 +1936,13 @@ int main(int argc, char **argv)
     /*
      * Start the housekeeper thread
      */
-    hkinit();
+    if (!hkinit())
+    {
+        char* logerr = "Failed to start housekeeper thread.";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
 
     /*<
      * Start the polling threads, note this is one less than is
@@ -1973,6 +1979,11 @@ int main(int argc, char **argv)
      * Serve clients.
      */
     poll_waitevents((void *)0);
+
+    /*<
+     * Wait for the housekeeper to finish.
+     */
+    hkfinish();
 
     /*<
      * Wait server threads' completion.
