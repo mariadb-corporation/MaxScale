@@ -1055,3 +1055,16 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     free(prev);
     free(next);
 }
+
+void mon_hangup_failed_servers(MONITOR *monitor)
+{
+    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr) &&
+            (!(SERVER_IS_RUNNING(ptr->server)) ||
+             !(SERVER_IS_IN_CLUSTER(ptr->server))))
+        {
+            dcb_hangup_foreach(ptr->server);
+        }
+    }
+}

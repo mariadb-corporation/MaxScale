@@ -222,4 +222,13 @@ connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
 
+/**
+ * @brief Hangup connections to failed servers
+ *
+ * Injects hangup events for DCB that are connected to servers that are down.
+ *
+ * @param monitor Monitor object
+ */
+void mon_hangup_failed_servers(MONITOR *monitor);
+
 #endif
