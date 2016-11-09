@@ -3092,10 +3092,25 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     int (*p)(const void *, const void *) = criteria_cmpfun[select_criteria];
     ss_dassert(p);
 
+    SERVER *old_master = *p_master_ref ? (*p_master_ref)->bref_backend->backend_server : NULL;
+
     /** Sort the pointer list to servers according to slave selection criteria.
      * The servers that match the criteria the best are at the beginning of
      * the list. */
     qsort(backend_ref, (size_t) router_nservers, sizeof(backend_ref_t), p);
+
+    if (master_connected && old_master)
+    {
+        /** We sorted the array so the pointer to the old master was changed and
+         * we need to find the old master again. */
+        for (int i = 0; i < router_nservers; i++)
+        {
+            if (backend_ref[i].bref_backend->backend_server == old_master)
+            {
+                *p_master_ref = &backend_ref[i];
+            }
+        }
+    }
 
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
     {
