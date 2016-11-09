@@ -181,7 +181,6 @@ static int set_user(const char* user);
 bool pid_file_exists();
 void write_child_exit_code(int fd, int code);
 static bool change_cwd();
-void shutdown_server();
 static void log_exit_status();
 static bool daemonize();
 static bool sniff_configuration(const char* filepath);
@@ -288,20 +287,45 @@ static void sigusr1_handler (int i)
 }
 
 static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
+static const char patience_msg[] =
+    "\n"
+    "Patience is a virtue...\n"
+    "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
+    "no questions asked.\n";
 
 static void sigterm_handler(int i)
 {
     last_signal = i;
-    shutdown_server();
-    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    int n_shutdowns = maxscale_shutdown();
+
+    if (n_shutdowns == 1)
+    {
+        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    }
+    else
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void
 sigint_handler(int i)
 {
     last_signal = i;
-    shutdown_server();
-    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    int n_shutdowns = maxscale_shutdown();
+
+    if (n_shutdowns == 1)
+    {
+        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    }
+    else if (n_shutdowns == 2)
+    {
+        write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1);
+    }
+    else
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void
@@ -2041,14 +2065,22 @@ return_main:
 /*<
  * Shutdown MaxScale server
  */
-void
-shutdown_server()
+int maxscale_shutdown()
 {
-    service_shutdown();
-    poll_shutdown();
-    hkshutdown();
-    memlog_flush_all();
-    log_flush_shutdown();
+    static int n_shutdowns = 0;
+
+    int n = atomic_add(&n_shutdowns, 1);
+
+    if (n == 0)
+    {
+        service_shutdown();
+        poll_shutdown();
+        hkshutdown();
+        memlog_flush_all();
+        log_flush_shutdown();
+    }
+
+    return n + 1;
 }
 
 static void log_flush_shutdown(void)

@@ -44,4 +44,14 @@ void maxscale_reset_starttime(void);
 time_t maxscale_started(void);
 int maxscale_uptime(void);
 
+/**
+ * Initiate shutdown of MaxScale.
+ *
+ * This functions informs all threads that they should stop the
+ * processing and exit.
+ *
+ * @return How many times maxscale_shutdown() has been called.
+ */
+int maxscale_shutdown(void);
+
 MXS_END_DECLS

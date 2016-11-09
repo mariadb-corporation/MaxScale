@@ -70,6 +70,7 @@
 #include <debugcli.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
+#include <maxscale/maxscale.h>
 
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
@@ -276,7 +277,11 @@ struct subcommand listoptions[] = {
       {0, 0, 0} }
 };
 
-extern void shutdown_server();
+static void shutdown_server()
+{
+    maxscale_shutdown();
+}
+
 static void shutdown_service(DCB *dcb, SERVICE *service);
 static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 
