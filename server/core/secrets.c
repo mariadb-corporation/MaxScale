@@ -175,8 +175,8 @@ secrets_readKeys(const char* path)
     if (secret_stats.st_mode != (S_IRUSR | S_IFREG))
     {
         close(fd);
-        MXS_ERROR("Ignoring secrets file "
-                  "%s, invalid permissions.",
+        MXS_ERROR("Ignoring secrets file %s, invalid permissions."
+                  "The only permission on the file should be owner:read.",
                   secret_file);
         return NULL;
     }
