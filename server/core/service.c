@@ -270,8 +270,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
                 }
                 if (loaded == -1)
                 {
-                    users_free(service->users);
-                    service->users = NULL;
                     dcb_close(port->listener);
                     port->listener = NULL;
                     goto retblock;
@@ -353,10 +351,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
-        users_free(service->users);
-        service->users = NULL;
         dcb_close(port->listener);
-        service->users = NULL;
         port->listener = NULL;
         MXS_ERROR("Unable to load protocol module %s. Listener "
                   "for service %s not started.",
@@ -389,11 +384,8 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
             MXS_ERROR("Failed to create session to service %s.",
                       service->name);
 
-            users_free(service->users);
-            service->users = NULL;
             dcb_close(port->listener);
             port->listener = NULL;
-            service->users = NULL;
             goto retblock;
         }
     }
@@ -403,8 +395,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
                   port->port,
                   port->protocol,
                   service->name);
-        users_free(service->users);
-        service->users = NULL;
         dcb_close(port->listener);
         port->listener = NULL;
     }
