@@ -95,12 +95,11 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
         return NULL;
     }
 
-    servname = MXS_STRNDUP(servname, MAX_SERVER_NAME_LEN);
     protocol = MXS_STRDUP(protocol);
 
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
 
-    if (!servname || !protocol || !server || !authenticator)
+    if (!protocol || !server || !authenticator)
     {
         MXS_FREE(servname);
         MXS_FREE(protocol);
@@ -113,7 +112,7 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    server->name = servname;
+    snprintf(server->name, sizeof(server->name), "%s", servname);
     server->protocol = protocol;
     server->authenticator = authenticator;
     server->auth_instance = auth_instance;
@@ -131,6 +130,8 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->persistmax = 0;
     server->persistmaxtime = 0;
     server->persistpoolmax = 0;
+    server->monuser[0] = '\0';
+    server->monpw[0] = '\0';
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
@@ -785,8 +786,8 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    server->monuser = MXS_STRDUP_A(user);
-    server->monpw = MXS_STRDUP_A(passwd);
+    snprintf(server->monuser, sizeof(server->monuser), "%s", user);
+    snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
 }
 
 /**
@@ -803,28 +804,13 @@ serverAddMonUser(SERVER *server, char *user, char *passwd)
  * @param passwd        The password to use for the monitor user
  */
 void
-server_update(SERVER *server, char *protocol, char *user, char *passwd)
+server_update_credentials(SERVER *server, char *user, char *passwd)
 {
-    if (!strcmp(server->protocol, protocol))
-    {
-        MXS_NOTICE("Update server protocol for server %s to protocol %s.",
-                   server->name,
-                   protocol);
-        MXS_FREE(server->protocol);
-        server->protocol = MXS_STRDUP_A(protocol);
-    }
-
     if (user != NULL && passwd != NULL)
     {
-        if (strcmp(server->monuser, user) == 0 ||
-            strcmp(server->monpw, passwd) == 0)
-        {
-            MXS_NOTICE("Update server monitor credentials for server %s",
-                       server->name);
-            MXS_FREE(server->monuser);
-            MXS_FREE(server->monpw);
-            serverAddMonUser(server, user, passwd);
-        }
+        snprintf(server->monuser, sizeof(server->monuser), "%s", user);
+        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
+        MXS_NOTICE("Updated monitor credentials for server '%s'", server->name);
     }
 }
 
@@ -989,11 +975,7 @@ server_update_address(SERVER *server, char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
-        if (server->name)
-        {
-            MXS_FREE(server->name);
-        }
-        server->name = MXS_STRDUP_A(address);
+        strcpy(server->name, address);
     }
     spinlock_release(&server_spin);
 }
@@ -1179,4 +1161,15 @@ bool server_serialize(SERVER *server, const char *filename)
     close(file);
 
     return true;
+}
+
+bool server_is_ssl_parameter(const char *key)
+{
+    // TODO: Implement this
+    return false;
+}
+
+void server_update_ssl(SERVER *server, const char *key, const char *value)
+{
+    // TODO: Implement this
 }

@@ -48,6 +48,8 @@
 MXS_BEGIN_DECLS
 
 #define MAX_SERVER_NAME_LEN 1024
+#define MAX_SERVER_MONUSER_LEN 512
+#define MAX_SERVER_MONPW_LEN 512
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
@@ -86,7 +88,7 @@ typedef struct server
 #endif
     SPINLOCK       lock;           /**< Common access lock */
     char           *unique_name;   /**< Unique name for the server */
-    char           *name;          /**< Server name/IP address*/
+    char           name[MAX_SERVER_NAME_LEN]; /**< Server name/IP address*/
     unsigned short port;           /**< Port to listen on */
     char           *protocol;      /**< Protocol module to use */
     char           *authenticator; /**< Authenticator module name */
@@ -94,8 +96,8 @@ typedef struct server
     char           *auth_options;  /**< Authenticator options */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
-    char           *monuser;       /**< User name to use to monitor the db */
-    char           *monpw;         /**< Password to use to monitor the db */
+    char           monuser[MAX_SERVER_MONUSER_LEN]; /**< User name to use to monitor the db */
+    char           monpw[MAX_SERVER_MONPW_LEN]; /**< Password to use to monitor the db */
     SERVER_STATS   stats;          /**< The server statistics */
     struct  server *next;          /**< Next server */
     struct  server *nextdb;        /**< Next server in list attached to a service */
@@ -217,7 +219,7 @@ extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void serverAddMonUser(SERVER *, char *, char *);
 extern void serverAddParameter(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
-extern void server_update(SERVER *, char *, char *, char *);
+extern void server_update_credentials(SERVER *, char *, char *);
 extern void server_set_unique_name(SERVER *, char *);
 extern DCB  *server_get_persistent(SERVER *, char *, const char *);
 extern void server_update_address(SERVER *, char *);
@@ -225,6 +227,8 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
+extern bool server_is_ssl_parameter(const char *key);
+extern void server_update_ssl(SERVER *server, const char *key, const char *value);
 
 /**
  * @brief Serialize a server to a file

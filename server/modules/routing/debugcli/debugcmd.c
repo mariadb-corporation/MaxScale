@@ -1063,6 +1063,56 @@ struct subcommand destroyoptions[] =
     }
 };
 
+static void alterServer(DCB *dcb, SERVER *server, char *key, char *value)
+{
+    bool unknown = false;
+
+    if (strcmp(key, "address") == 0)
+    {
+        server_update_address(server, value);
+    }
+    else if (strcmp(key, "port") == 0)
+    {
+        server_update_port(server, atoi(value));
+    }
+    else if (strcmp(key, "monuser") == 0)
+    {
+        server_update_credentials(server, value, server->monpw);
+    }
+    else if (strcmp(key, "monpw") == 0)
+    {
+        server_update_credentials(server, server->monuser, value);
+    }
+    else if (server_is_ssl_parameter(key))
+    {
+        server_update_ssl(server, key, value);
+    }
+    else
+    {
+        unknown = true;
+    }
+
+    if (unknown)
+    {
+        dcb_printf(dcb, "Unknown parameter '%s'", key);
+    }
+}
+
+struct subcommand alteroptions[] =
+{
+    {
+        "server", 3, 3, alterServer,
+        "Alter server parameters",
+        "Usage: alter server NAME KEY VALUE\n"
+        "This will alter an existing parameter of a server. The accepted values\n"
+        "for KEY are: 'address', 'port', 'monuser', 'monpw'",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING}
+    },
+    {
+        EMPTY_OPTION
+    }
+};
+
 /**
  * The debug command table
  */
@@ -1076,6 +1126,7 @@ static struct
     { "remove",     removeoptions },
     { "create",     createoptions },
     { "destroy",    destroyoptions },
+    { "alter",      alteroptions },
     { "set",        setoptions },
     { "clear",      clearoptions },
     { "disable",    disableoptions },

@@ -1800,10 +1800,9 @@ process_config_update(CONFIG_CONTEXT *context)
             if (address && port &&
                 (server = server_find(address, atoi(port))) != NULL)
             {
-                char *protocol = config_get_value(obj->parameters, "protocol");
                 char *monuser = config_get_value(obj->parameters, "monuser");
                 char *monpw = config_get_value(obj->parameters, "monpw");
-                server_update(server, protocol, monuser, monpw);
+                server_update_credentials(server, monuser, monpw);
                 obj->element = server;
             }
             else

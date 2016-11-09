@@ -692,12 +692,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     unsigned long int server_version = 0;
     char *server_string;
 
-    if (database->server->monuser != NULL)
-    {
-        uname = database->server->monuser;
-    }
-
-    if (uname == NULL)
+    if (!database->server->monuser[0])
     {
         return;
     }
