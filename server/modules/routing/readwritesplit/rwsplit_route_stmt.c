@@ -543,6 +543,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * server, or master.
              */
             if (BREF_IS_IN_USE((&backend_ref[i])) &&
+                SERVER_REF_IS_ACTIVE(b) &&
                 (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
                 (SERVER_IS_SLAVE(&server) || SERVER_IS_RELAY_SERVER(&server) ||
                  SERVER_IS_MASTER(&server)))
@@ -577,7 +578,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * Unused backend or backend which is not master nor
              * slave can't be used
              */
-            if (!BREF_IS_IN_USE(&backend_ref[i]) ||
+            if (!BREF_IS_IN_USE(&backend_ref[i]) || !SERVER_REF_IS_ACTIVE(b) ||
                 (!SERVER_IS_MASTER(&server) && !SERVER_IS_SLAVE(&server)))
             {
                 continue;
@@ -665,27 +666,37 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
      */
     if (btype == BE_MASTER)
     {
-        if (master_bref)
+        if (master_bref && SERVER_REF_IS_ACTIVE(master_bref->ref))
         {
             /** It is possible for the server status to change at any point in time
              * so copying it locally will make possible error messages
              * easier to understand */
             SERVER server;
             server.status = master_bref->ref->server->status;
-            if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
+
+            if (BREF_IS_IN_USE(master_bref))
             {
-                *p_dcb = master_bref->bref_dcb;
-                succp = true;
-                /** if bref is in use DCB should not be closed */
-                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                if (SERVER_IS_MASTER(&server))
+                {
+                    *p_dcb = master_bref->bref_dcb;
+                    succp = true;
+                    /** if bref is in use DCB should not be closed */
+                    ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                }
+                else
+                {
+                    MXS_ERROR("Server '%s' should be master but "
+                              "is %s instead and can't be chosen as the master.",
+                              master_bref->ref->server->unique_name,
+                              STRSRVSTATUS(&server));
+                    succp = false;
+                }
             }
             else
             {
-                MXS_ERROR("Server at %s:%d should be master but "
-                          "is %s instead and can't be chosen to master.",
-                          master_bref->ref->server->name,
-                          master_bref->ref->server->port,
-                          STRSRVSTATUS(&server));
+                MXS_ERROR("Server '%s' is not in use and can't be "
+                          "chosen as the master.",
+                          master_bref->ref->server->unique_name);
                 succp = false;
             }
         }
@@ -891,9 +902,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         hint = hint->next;
     } /*< while (hint != NULL) */
 
-#if defined(SS_EXTRA_DEBUG)
-    MXS_INFO("Selected target \"%s\"", STRTARGET(target));
-#endif
     return target;
 }
 
@@ -1098,9 +1106,6 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
      */
     if (rwsplit_get_dcb(target_dcb, rses, BE_SLAVE, NULL, rlag_max))
     {
-#if defined(SS_EXTRA_DEBUG)
-        MXS_INFO("Found DCB for slave.");
-#endif
         atomic_add(&inst->stats.n_slave, 1);
         return true;
     }

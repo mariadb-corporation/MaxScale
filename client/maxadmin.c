@@ -108,6 +108,7 @@ static struct option long_options[] =
 #define MAXADMIN_DEFAULT_HOST "localhost"
 #define MAXADMIN_DEFAULT_PORT "6603"
 #define MAXADMIN_DEFAULT_USER "admin"
+#define MAXADMIN_BUFFER_SIZE 2048
 
 /**
  * The main for the maxadmin client
@@ -125,7 +126,7 @@ main(int argc, char **argv)
     History *hist;
     HistEvent ev;
 #else
-    char buf[1024];
+    char buf[MAXADMIN_BUFFER_SIZE];
 #endif
     char *hostname = NULL;
     char *port = NULL;

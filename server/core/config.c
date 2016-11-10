@@ -65,6 +65,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/gwdirs.h>
 
 typedef struct duplicate_context
 {
@@ -541,6 +542,46 @@ static bool config_load_dir(const char *dir, DUPLICATE_CONTEXT *dcontext, CONFIG
 }
 
 /**
+ * Check if a directory exists
+ *
+ * This function also logs warnings if the directory cannot be accessed or if
+ * the file is not a directory.
+ * @param dir Directory to check
+ * @return True if the file is an existing directory
+ */
+static bool is_directory(const char *dir)
+{
+    bool rval = false;
+    struct stat st;
+    if (stat(dir, &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            MXS_NOTICE("%s does not exist, not reading.", dir);
+        }
+        else
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_WARNING("Could not access %s, not reading: %s",
+                        dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+    }
+    else
+    {
+        if (S_ISDIR(st.st_mode))
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+        }
+    }
+
+    return rval;
+}
+
+/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
@@ -573,30 +614,18 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             rval = true;
 
-            struct stat st;
-            if (stat(dir, &st) == -1)
+            if (is_directory(dir))
             {
-                if (errno == ENOENT)
-                {
-                    MXS_NOTICE("%s does not exist, not reading.", dir);
-                }
-                else
-                {
-                    char errbuf[MXS_STRERROR_BUFLEN];
-                    MXS_WARNING("Could not access %s, not reading: %s",
-                                dir, strerror_r(errno, errbuf, sizeof(errbuf)));
-                }
+                rval = config_load_dir(dir, &dcontext, &ccontext);
             }
-            else
+
+            /** Create the persisted configuration directory if it doesn't exist */
+            const char* persist_cnf = get_config_persistdir();
+            mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+            if (is_directory(persist_cnf))
             {
-                if (S_ISDIR(st.st_mode))
-                {
-                    rval = config_load_dir(dir,  &dcontext, &ccontext);
-                }
-                else
-                {
-                    MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
-                }
+                rval = config_load_dir(persist_cnf, &dcontext, &ccontext);
             }
 
             if (rval)
@@ -1800,10 +1829,9 @@ process_config_update(CONFIG_CONTEXT *context)
             if (address && port &&
                 (server = server_find(address, atoi(port))) != NULL)
             {
-                char *protocol = config_get_value(obj->parameters, "protocol");
                 char *monuser = config_get_value(obj->parameters, "monuser");
                 char *monpw = config_get_value(obj->parameters, "monpw");
-                server_update(server, protocol, monuser, monpw);
+                server_update_credentials(server, monuser, monpw);
                 obj->element = server;
             }
             else
@@ -2824,12 +2852,6 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 s = strtok_r(NULL, ",", &lasts);
             }
         }
-        else if (servers == NULL && !is_internal_service(router))
-        {
-            MXS_ERROR("The service '%s' is missing a definition of the servers "
-                      "that provide the service.", obj->object);
-            error_count++;
-        }
 
         if (roptions)
         {
@@ -2882,12 +2904,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     }
 
     char *servers = config_get_value(obj->parameters, "servers");
-    if (servers == NULL)
-    {
-        MXS_ERROR("Monitor '%s' is missing the 'servers' parameter that "
-                  "lists the servers that it monitors.", obj->object);
-        error_count++;
-    }
 
     if (error_count == 0)
     {
@@ -2934,36 +2950,39 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             }
         }
 
-        /* get the servers to monitor */
-        char *s, *lasts;
-        s = strtok_r(servers, ",", &lasts);
-        while (s)
+        if (servers)
         {
-            CONFIG_CONTEXT *obj1 = context;
-            int found = 0;
-            while (obj1)
+            /* get the servers to monitor */
+            char *s, *lasts;
+            s = strtok_r(servers, ",", &lasts);
+            while (s)
             {
-                if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
+                CONFIG_CONTEXT *obj1 = context;
+                int found = 0;
+                while (obj1)
                 {
-                    found = 1;
-                    if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                    if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
                     {
-                        MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                                    "This will cause undefined behavior.",
-                                    obj1->object);
+                        found = 1;
+                        if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                        {
+                            MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                                        "This will cause undefined behavior.",
+                                        obj1->object);
+                        }
+                        monitorAddServer(obj->element, obj1->element);
                     }
-                    monitorAddServer(obj->element, obj1->element);
+                    obj1 = obj1->next;
                 }
-                obj1 = obj1->next;
-            }
-            if (!found)
-            {
-                MXS_ERROR("Unable to find server '%s' that is "
-                          "configured in the monitor '%s'.", s, obj->object);
-                error_count++;
-            }
+                if (!found)
+                {
+                    MXS_ERROR("Unable to find server '%s' that is "
+                              "configured in the monitor '%s'.", s, obj->object);
+                    error_count++;
+                }
 
-            s = strtok_r(NULL, ",", &lasts);
+                s = strtok_r(NULL, ",", &lasts);
+            }
         }
 
         char *user = config_get_value(obj->parameters, "user");

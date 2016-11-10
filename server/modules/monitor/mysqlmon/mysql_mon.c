@@ -215,7 +215,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
     while (database)
     {
         /** Delete any existing structures and replace them with empty ones */
-        hashtable_delete(handle->server_info, database->server);
+        hashtable_delete(handle->server_info, database->server->unique_name);
 
         if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
         {
@@ -688,19 +688,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_MONITOR* handle = mon->handle;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    char *uname = mon->user;
     unsigned long int server_version = 0;
     char *server_string;
-
-    if (database->server->monuser != NULL)
-    {
-        uname = database->server->monuser;
-    }
-
-    if (uname == NULL)
-    {
-        return;
-    }
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))

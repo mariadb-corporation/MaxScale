@@ -55,7 +55,7 @@ typedef struct cli_instance
  * The CLI_SESSION structure. As CLI_SESSION is created for each user that logs into
  * the DEBUG CLI.
  */
-enum { CMDBUFLEN = 80 };
+#define CMDBUFLEN  2048
 
 typedef struct cli_session
 {

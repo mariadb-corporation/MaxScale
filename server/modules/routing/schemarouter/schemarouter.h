@@ -261,7 +261,7 @@ typedef struct backend_ref_st
 #endif
     int             n_mapping_eof;
     GWBUF*          map_queue;
-    BACKEND*        bref_backend; /*< Backend server */
+    SERVER_REF*     bref_backend; /*< Backend server */
     DCB*            bref_dcb; /*< Backend DCB */
     bref_state_t    bref_state; /*< State of the backend */
     bool            bref_mapped; /*< Whether the backend has been mapped */
@@ -357,8 +357,6 @@ typedef struct router_instance
     SERVICE*                service;     /*< Pointer to service                 */
     ROUTER_CLIENT_SES*      connections; /*< List of client connections         */
     SPINLOCK                lock;        /*< Lock for the instance data         */
-    BACKEND**               servers;     /*< Backend servers                    */
-    BACKEND*                master;      /*< NULL or pointer                    */
     schemarouter_config_t        schemarouter_config; /*< expanded config info from SERVICE */
     int                     schemarouter_version;/*< version number for router's config */
     unsigned int            bitmask;     /*< Bitmask to apply to server->status */

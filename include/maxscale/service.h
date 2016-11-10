@@ -101,7 +101,11 @@ typedef struct server_ref_t
     SERVER* server; /**< The actual server */
     int weight; /**< Weight of this server */
     int connections; /**< Number of connections created through this reference */
+    bool active;     /**< Whether this reference is valid and in use*/
 } SERVER_REF;
+
+/** Macro to check whether a SERVER_REF is active */
+#define SERVER_REF_IS_ACTIVE(ref) (ref->active)
 
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
@@ -146,6 +150,7 @@ typedef struct service
     void *router_instance;             /**< The router instance for this service */
     char *version_string;              /** version string for this service listeners */
     SERVER_REF *dbref;                 /** server references */
+    int         n_dbref;               /** Number of server references */
     SERVICE_USER credentials;          /**< The cedentials of the service user */
     SPINLOCK spin;                     /**< The service spinlock */
     SERVICE_STATS stats;               /**< The service statistics */
@@ -194,6 +199,7 @@ extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
 extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);
+extern void serviceRemoveBackend(SERVICE *, const SERVER *);
 extern int serviceHasBackend(SERVICE *, SERVER *);
 extern void serviceAddRouterOption(SERVICE *, char *);
 extern void serviceClearRouterOptions(SERVICE *);

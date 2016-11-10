@@ -32,10 +32,12 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_LANG_SUBPATH   "@DEFAULT_LANG_SUBPATH@"
 #define MXS_DEFAULT_EXEC_SUBPATH   "@DEFAULT_EXEC_SUBPATH@"
 #define MXS_DEFAULT_CONFIG_SUBPATH "@DEFAULT_CONFIG_SUBPATH@"
+#define MXS_DEFAULT_CONFIG_PERSIST_SUBPATH "@DEFAULT_CONFIG_PERSIST_SUBPATH@"
 
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "@DEFAULT_CONFIGDIR@";
+
 /*< This should be changed to just /run eventually,
  * the /var/run folder is an old standard and the newer FSH 3.0
  * uses /run for PID files.*/
@@ -46,8 +48,10 @@ static const char* default_libdir   = "@DEFAULT_LIBDIR@";
 static const char* default_cachedir = "@DEFAULT_CACHEDIR@";
 static const char* default_langdir  = "@DEFAULT_LANGDIR@";
 static const char* default_execdir  = "@DEFAULT_EXECDIR@";
+static const char* default_config_persistdir = "@DEFAULT_CONFIG_PERSISTDIR@";
 
-static char* configdir = NULL;
+static char* configdir = NULL; /*< Where the config file is found e.g. /etc/ */
+static char* config_persistdir = NULL;/*< Persisted configs e.g. /var/lib/maxscale.cnf.d/ */
 static char* logdir = NULL;
 static char* libdir = NULL;
 static char* cachedir = NULL;
@@ -62,6 +66,7 @@ void set_datadir(char* param);
 void set_process_datadir(char* param);
 void set_cachedir(char* param);
 void set_configdir(char* param);
+void set_config_persistdir(char* param);
 void set_logdir(char* param);
 void set_langdir(char* param);
 void set_piddir(char* param);
@@ -71,6 +76,7 @@ char* get_datadir();
 char* get_process_datadir();
 char* get_cachedir();
 char* get_configdir();
+char* get_config_persistdir();
 char* get_piddir();
 char* get_logdir();
 char* get_langdir();

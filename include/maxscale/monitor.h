@@ -137,6 +137,9 @@ typedef enum
 #define MONITOR_INTERVAL 10000 // in milliseconds
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
 
+#define MAX_MONITOR_USER_LEN     512
+#define MAX_MONITOR_PASSWORD_LEN 512
+
 /*
  * Create declarations of the enum for monitor events and also the array of
  * structs containing the matching names. The data is taken from def_monitor_event.h
@@ -177,8 +180,8 @@ typedef struct monitor_servers
 struct monitor
 {
     char *name;                   /**< The name of the monitor module */
-    char *user;                   /*< Monitor username */
-    char *password;               /*< Monitor password */
+    char user[MAX_MONITOR_USER_LEN]; /*< Monitor username */
+    char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
     SPINLOCK lock;
     CONFIG_PARAMETER* parameters; /*< configuration parameters */
     MONITOR_SERVERS* databases;   /*< List of databases the monitor monitors */
@@ -201,7 +204,8 @@ struct monitor
 extern MONITOR *monitor_alloc(char *, char *);
 extern void monitor_free(MONITOR *);
 extern MONITOR *monitor_find(char *);
-extern void monitorAddServer(MONITOR *, SERVER *);
+extern void monitorAddServer(MONITOR *mon, SERVER *server);
+extern void monitorRemoveServer(MONITOR *mon, SERVER *server);
 extern void monitorAddUser(MONITOR *, char *, char *);
 extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
 extern void monitorStop(MONITOR *);

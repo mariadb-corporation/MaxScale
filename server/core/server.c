@@ -35,6 +35,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -44,6 +47,7 @@
 #include <maxscale/gw_ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modules.h>
+#include <maxscale/gwdirs.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -86,12 +90,17 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
         return NULL;
     }
 
-    servname = MXS_STRNDUP(servname, MAX_SERVER_NAME_LEN);
+    if (auth_options && (auth_options = MXS_STRDUP(auth_options)) == NULL)
+    {
+        MXS_FREE(authenticator);
+        return NULL;
+    }
+
     protocol = MXS_STRDUP(protocol);
 
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
 
-    if (!servname || !protocol || !server || !authenticator)
+    if (!protocol || !server || !authenticator)
     {
         MXS_FREE(servname);
         MXS_FREE(protocol);
@@ -104,10 +113,11 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    server->name = servname;
+    snprintf(server->name, sizeof(server->name), "%s", servname);
     server->protocol = protocol;
     server->authenticator = authenticator;
     server->auth_instance = auth_instance;
+    server->auth_options = auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;
@@ -121,6 +131,8 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->persistmax = 0;
     server->persistmaxtime = 0;
     server->persistpoolmax = 0;
+    server->monuser[0] = '\0';
+    server->monpw[0] = '\0';
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
@@ -164,7 +176,6 @@ server_free(SERVER *tofreeserver)
     spinlock_release(&server_spin);
 
     /* Clean up session and free the memory */
-    MXS_FREE(tofreeserver->name);
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->server_string);
@@ -775,8 +786,8 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    server->monuser = MXS_STRDUP_A(user);
-    server->monpw = MXS_STRDUP_A(passwd);
+    snprintf(server->monuser, sizeof(server->monuser), "%s", user);
+    snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
 }
 
 /**
@@ -793,28 +804,13 @@ serverAddMonUser(SERVER *server, char *user, char *passwd)
  * @param passwd        The password to use for the monitor user
  */
 void
-server_update(SERVER *server, char *protocol, char *user, char *passwd)
+server_update_credentials(SERVER *server, char *user, char *passwd)
 {
-    if (!strcmp(server->protocol, protocol))
-    {
-        MXS_NOTICE("Update server protocol for server %s to protocol %s.",
-                   server->name,
-                   protocol);
-        MXS_FREE(server->protocol);
-        server->protocol = MXS_STRDUP_A(protocol);
-    }
-
     if (user != NULL && passwd != NULL)
     {
-        if (strcmp(server->monuser, user) == 0 ||
-            strcmp(server->monpw, passwd) == 0)
-        {
-            MXS_NOTICE("Update server monitor credentials for server %s",
-                       server->name);
-            MXS_FREE(server->monuser);
-            MXS_FREE(server->monpw);
-            serverAddMonUser(server, user, passwd);
-        }
+        snprintf(server->monuser, sizeof(server->monuser), "%s", user);
+        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
+        MXS_NOTICE("Updated monitor credentials for server '%s'", server->name);
     }
 }
 
@@ -979,11 +975,7 @@ server_update_address(SERVER *server, char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
-        if (server->name)
-        {
-            MXS_FREE(server->name);
-        }
-        server->name = MXS_STRDUP_A(address);
+        strcpy(server->name, address);
     }
     spinlock_release(&server_spin);
 }
@@ -1069,4 +1061,159 @@ bool server_set_version_string(SERVER* server, const char* string)
     }
 
     return rval;
+}
+
+/**
+ * Creates a server configuration at the location pointed by @c filename
+ *
+ * @param server Server to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_server_config(SERVER *server, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
+                  filename, server->unique_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    // TODO: Check for return values on all of the dprintf calls
+    dprintf(file, "[%s]\n", server->unique_name);
+    dprintf(file, "type=server\n");
+    dprintf(file, "protocol=%s\n", server->protocol);
+    dprintf(file, "address=%s\n", server->name);
+    dprintf(file, "port=%u\n", server->port);
+    dprintf(file, "authenticator=%s\n", server->authenticator);
+
+    if (server->auth_options)
+    {
+        dprintf(file, "authenticator_options=%s\n", server->auth_options);
+    }
+
+    if (*server->monpw && *server->monuser)
+    {
+        dprintf(file, "monitoruser=%s\n", server->monuser);
+        dprintf(file, "monitorpw=%s\n", server->monpw);
+    }
+
+    if (server->persistpoolmax)
+    {
+        dprintf(file, "persistpoolmax=%ld\n", server->persistpoolmax);
+    }
+
+    if (server->persistmaxtime)
+    {
+        dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+    }
+
+    if (server->server_ssl)
+    {
+        dprintf(file, "ssl=required\n");
+
+        if (server->server_ssl->ssl_cert)
+        {
+            dprintf(file, "ssl_cert=%s\n", server->server_ssl->ssl_cert);
+        }
+
+        if (server->server_ssl->ssl_key)
+        {
+            dprintf(file, "ssl_key=%s\n", server->server_ssl->ssl_key);
+        }
+
+        if (server->server_ssl->ssl_ca_cert)
+        {
+            dprintf(file, "ssl_ca_cert=%s\n", server->server_ssl->ssl_ca_cert);
+        }
+        if (server->server_ssl->ssl_cert_verify_depth)
+        {
+            dprintf(file, "ssl_cert_verify_depth=%d\n", server->server_ssl->ssl_cert_verify_depth);
+        }
+
+        const char *version = NULL;
+
+        switch (server->server_ssl->ssl_method_type)
+        {
+            case SERVICE_TLS10:
+                version = "TLSV10";
+                break;
+
+#ifdef OPENSSL_1_0
+            case SERVICE_TLS11:
+                version = "TLSV11";
+                break;
+
+            case SERVICE_TLS12:
+                version = "TLSV12";
+                break;
+#endif
+            case SERVICE_SSL_TLS_MAX:
+                version = "MAX";
+                break;
+
+            default:
+                break;
+        }
+
+        if (version)
+        {
+            dprintf(file, "ssl_version=%s\n", version);
+        }
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool server_serialize(SERVER *server)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             server->unique_name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_server_config(server, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
+}
+
+bool server_is_ssl_parameter(const char *key)
+{
+    // TODO: Implement this
+    return false;
+}
+
+void server_update_ssl(SERVER *server, const char *key, const char *value)
+{
+    // TODO: Implement this
 }

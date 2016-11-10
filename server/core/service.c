@@ -150,6 +150,7 @@ service_alloc(const char *servname, const char *router)
 
     service->capabilities = service->router->getCapabilities();
     service->client_count = 0;
+    service->n_dbref = 0;
     service->name = (char*)servname;
     service->routerModule = (char*)router;
     service->users_from_all = false;
@@ -743,7 +744,7 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
  * @param server Server to refer to
  * @return Server reference or NULL on error
  */
-static SERVER_REF* server_ref_alloc(SERVER *server)
+static SERVER_REF* server_ref_create(SERVER *server)
 {
     SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
 
@@ -753,6 +754,7 @@ static SERVER_REF* server_ref_alloc(SERVER *server)
         sref->server = server;
         sref->weight = SERVICE_BASE_SERVER_WEIGHT;
         sref->connections = 0;
+        sref->active = true;
     }
 
     return sref;
@@ -767,28 +769,71 @@ static SERVER_REF* server_ref_alloc(SERVER *server)
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    SERVER_REF *sref = server_ref_alloc(server);
+    SERVER_REF *new_ref = server_ref_create(server);
 
-    if (sref)
+    if (new_ref)
     {
         spinlock_acquire(&service->spin);
+
+        service->n_dbref++;
+
         if (service->dbref)
         {
             SERVER_REF *ref = service->dbref;
-            while (ref->next)
+            SERVER_REF *prev = ref;
+
+            while (ref)
             {
+                if (ref->server == server)
+                {
+                    ref->active = true;
+                    break;
+                }
+                prev = ref;
                 ref = ref->next;
             }
-            ref->next = sref;
+
+            if (ref == NULL)
+            {
+                /** A new server that hasn't been used by this service */
+                atomic_synchronize();
+                prev->next = new_ref;
+            }
         }
         else
         {
-            service->dbref = sref;
+            atomic_synchronize();
+            service->dbref = new_ref;
         }
         spinlock_release(&service->spin);
     }
 }
 
+/**
+ * @brief Remove a server from a service
+ *
+ * This function sets the server reference into an inactive state. This does not
+ * remove the server from the list or free any of the memory.
+ *
+ * @param service Service to modify
+ * @param server  Server to remove
+ */
+void serviceRemoveBackend(SERVICE *service, const SERVER *server)
+{
+    spinlock_acquire(&service->spin);
+
+    for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+    {
+        if (ref->server == server)
+        {
+            ref->active = false;
+            service->n_dbref--;
+            break;
+        }
+    }
+
+    spinlock_release(&service->spin);
+}
 /**
  * Test if a server is part of a service
  *

@@ -37,6 +37,10 @@
 #include <maxscale/server.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/gwdirs.h>
+
+// This is pretty ugly but it's required to test internal functions
+#include "../config.c"
+
 /**
  * test1    Allocate a server and do lots of other things
  *
@@ -103,11 +107,84 @@ test1()
 
 }
 
+#define TEST(A, B) do { if(!(A)){ printf(B"\n"); return false; }} while(false)
+
+bool test_load_config(const char *input, SERVER *server)
+{
+    DUPLICATE_CONTEXT dcontext;
+
+    if (duplicate_context_init(&dcontext))
+    {
+        CONFIG_CONTEXT ccontext = {.object = ""};
+
+        if (config_load_single_file(input, &dcontext, &ccontext))
+        {
+            CONFIG_CONTEXT *obj = ccontext.next;
+            CONFIG_PARAMETER *param = obj->parameters;
+
+            TEST(strcmp(obj->object, server->unique_name) == 0, "Server names differ");
+            TEST(strcmp(server->name, config_get_param(param, "address")->value) == 0, "Server addresses differ");
+            TEST(strcmp(server->protocol, config_get_param(param, "protocol")->value) == 0, "Server protocols differ");
+            TEST(strcmp(server->authenticator, config_get_param(param, "authenticator")->value) == 0,
+                 "Server authenticators differ");
+            TEST(strcmp(server->auth_options, config_get_param(param, "authenticator_options")->value) == 0,
+                 "Server authenticator options differ");
+            TEST(server->port == atoi(config_get_param(param, "port")->value), "Server ports differ");
+            TEST(create_new_server(obj) == 0, "Failed to create server from loaded config");
+        }
+    }
+
+    return true;
+}
+
+bool test_serialize()
+{
+    char name[] = "serialized-server";
+    char config_name[] = "serialized-server.cnf";
+    char old_config_name[] = "serialized-server.cnf.old";
+    char *persist_dir = MXS_STRDUP_A("./");
+    set_config_persistdir(persist_dir);
+    SERVER *server = server_alloc("127.0.0.1", "HTTPD", 9876, "NullAuthAllow", "fake=option");
+    TEST(server, "Server allocation failed");
+    server_set_unique_name(server, name);
+
+    /** Make sure the files don't exist */
+    unlink(config_name);
+    unlink(old_config_name);
+
+    /** Serialize server to disk */
+    TEST(server_serialize(server), "Failed to synchronize original server");
+
+    /** Load it again */
+    TEST(test_load_config(config_name, server), "Failed to load the serialized server");
+
+    /** We should have two identical servers */
+    SERVER *created = server_find_by_unique_name(name);
+    TEST(created->next == server, "We should end up with two servers");
+
+    rename(config_name, old_config_name);
+
+    /** Serialize the loaded server to disk */
+    TEST(server_serialize(created), "Failed to synchronize the copied server");
+
+    /** Check that they serialize to identical files */
+    char cmd[1024];
+    sprintf(cmd, "diff ./%s ./%s", config_name, old_config_name);
+    TEST(system(cmd) == 0, "The files are not identical");
+
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     int result = 0;
 
     result += test1();
+
+    if (!test_serialize())
+    {
+        result++;
+    }
 
     exit(result);
 }

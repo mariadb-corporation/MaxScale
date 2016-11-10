@@ -33,18 +33,6 @@
 MXS_BEGIN_DECLS
 
 /**
- * Internal structure used to define the set of backend servers we are routing
- * connections to. This provides the storage for routing module specific data
- * that is required for each of the backend servers.
- */
-typedef struct backend
-{
-    SERVER *server; /*< The server itself */
-    int current_connection_count; /*< Number of connections to the server */
-    int weight; /*< Desired routing weight */
-} BACKEND;
-
-/**
  * The client session structure used within this router.
  */
 typedef struct router_client_session
@@ -55,7 +43,7 @@ typedef struct router_client_session
     SPINLOCK rses_lock; /*< protects rses_deleted              */
     int rses_versno; /*< even = no active update, else odd  */
     bool rses_closed; /*< true when closeSession is called   */
-    BACKEND *backend; /*< Backend used by the client session */
+    SERVER_REF *backend; /*< Backend used by the client session */
     DCB *backend_dcb; /*< DCB Connection to the backend      */
     DCB *client_dcb; /**< Client DCB */
     struct router_client_session *next;
@@ -79,9 +67,7 @@ typedef struct
 typedef struct router_instance
 {
     SERVICE *service; /*< Pointer to the service using this router */
-    ROUTER_CLIENT_SES *connections; /*< Link list of all the client connections  */
     SPINLOCK lock; /*< Spinlock for the instance data           */
-    BACKEND **servers; /*< List of backend servers                  */
     unsigned int bitmask; /*< Bitmask to apply to server->status       */
     unsigned int bitvalue; /*< Required value of server->status         */
     ROUTER_STATS stats; /*< Statistics for this router               */
