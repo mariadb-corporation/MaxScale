@@ -133,6 +133,7 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->persistpoolmax = 0;
     server->monuser[0] = '\0';
     server->monpw[0] = '\0';
+    server->is_active = true;
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
@@ -283,7 +284,7 @@ server_find_by_unique_name(char *name)
     server = allServers;
     while (server)
     {
-        if (server->unique_name && strcmp(server->unique_name, name) == 0)
+        if (server->is_active && server->unique_name && strcmp(server->unique_name, name) == 0)
         {
             break;
         }
@@ -309,7 +310,7 @@ server_find(char *servname, unsigned short port)
     server = allServers;
     while (server)
     {
-        if (strcmp(server->name, servname) == 0 && server->port == port)
+        if (server->is_active && strcmp(server->name, servname) == 0 && server->port == port)
         {
             break;
         }
@@ -352,7 +353,10 @@ printAllServers()
     server = allServers;
     while (server)
     {
-        printServer(server);
+        if (server->is_active)
+        {
+            printServer(server);
+        }
         server = server->next;
     }
     spinlock_release(&server_spin);
@@ -373,7 +377,10 @@ dprintAllServers(DCB *dcb)
     server = allServers;
     while (server)
     {
-        dprintServer(dcb, server);
+        if (server->is_active)
+        {
+            dprintServer(dcb, server);
+        }
         server = server->next;
     }
     spinlock_release(&server_spin);
@@ -404,6 +411,11 @@ dprintAllServersJson(DCB *dcb)
     dcb_printf(dcb, "[\n");
     while (server)
     {
+        if (!server->is_active)
+        {
+            server = server->next;
+            continue;
+        }
         dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
                    server->name);
         stat = server_status(server);
@@ -484,6 +496,11 @@ dprintAllServersJson(DCB *dcb)
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
+    if (!server->is_active)
+    {
+        return;
+    }
+
     dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->name);
     char* stat = server_status(server);
@@ -618,25 +635,38 @@ dListServers(DCB *dcb)
 
     spinlock_acquire(&server_spin);
     server = allServers;
+
+    while (server && !server->is_active)
+    {
+        server = server->next;
+    }
+
+    bool have_servers = false;
+
     if (server)
     {
+        have_servers = true;
         dcb_printf(dcb, "Servers.\n");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
         dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
                    "Server", "Address", "Status");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
     }
+
     while (server)
     {
-        stat = server_status(server);
-        dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
-                   server->unique_name, server->name,
-                   server->port,
-                   server->stats.n_current, stat);
-        MXS_FREE(stat);
+        if (server->is_active)
+        {
+            stat = server_status(server);
+            dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
+                       server->unique_name, server->name,
+                       server->port,
+                       server->stats.n_current, stat);
+            MXS_FREE(stat);
+        }
         server = server->next;
     }
-    if (allServers)
+    if (have_servers)
     {
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
     }
@@ -918,16 +948,19 @@ serverRowCallback(RESULTSET *set, void *data)
         return NULL;
     }
     (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, server->unique_name);
-    resultset_row_set(row, 1, server->name);
-    sprintf(buf, "%d", server->port);
-    resultset_row_set(row, 2, buf);
-    sprintf(buf, "%d", server->stats.n_current);
-    resultset_row_set(row, 3, buf);
-    stat = server_status(server);
-    resultset_row_set(row, 4, stat);
-    MXS_FREE(stat);
+    if (server->is_active)
+    {
+        row = resultset_make_row(set);
+        resultset_row_set(row, 0, server->unique_name);
+        resultset_row_set(row, 1, server->name);
+        sprintf(buf, "%d", server->port);
+        resultset_row_set(row, 2, buf);
+        sprintf(buf, "%d", server->stats.n_current);
+        resultset_row_set(row, 3, buf);
+        stat = server_status(server);
+        resultset_row_set(row, 4, stat);
+        MXS_FREE(stat);
+    }
     spinlock_release(&server_spin);
     return row;
 }
