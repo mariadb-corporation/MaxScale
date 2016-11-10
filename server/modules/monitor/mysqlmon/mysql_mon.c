@@ -688,14 +688,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_MONITOR* handle = mon->handle;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    char *uname = mon->user;
     unsigned long int server_version = 0;
     char *server_string;
-
-    if (!database->server->monuser[0])
-    {
-        return;
-    }
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))

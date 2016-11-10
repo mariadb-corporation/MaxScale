@@ -1058,8 +1058,15 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
 
     if ((database->con = mysql_init(NULL)))
     {
-        char *uname = database->server->monuser ? database->server->monuser : mon->user;
-        char *passwd = database->server->monpw ? database->server->monpw : mon->password;
+        char *uname = mon->user;
+        char *passwd = mon->password;
+
+        if (database->server->monuser[0] && database->server->monpw[0])
+        {
+            uname = database->server->monuser;
+            passwd = database->server->monpw;
+        }
+
         char *dpwd = decryptPassword(passwd);
 
         mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
