@@ -1098,6 +1098,83 @@ static void alterServer(DCB *dcb, SERVER *server, char *key, char *value)
     }
 }
 
+/**
+ * @brief Convert a string value to a positive integer
+ *
+ * If the value is not a positive integer, an error is printed to @c dcb.
+ *
+ * @param dcb Client DCB
+ * @param value String value
+ * @return 0 on error, otherwise a positive integer
+ */
+static long get_positive_int(DCB *dcb, const char *value)
+{
+    char *endptr;
+    long ival = strtol(value, &endptr, 10);
+
+    if (*endptr == '\0' && ival > 0)
+    {
+        return ival;
+    }
+
+    dcb_printf(dcb, "Invalid value: %s", value);
+    return 0;
+}
+
+static void alterMonitor(DCB *dcb, MONITOR *monitor, char *key, char *value)
+{
+    bool unknown = false;
+    if (strcmp(key, "user") == 0)
+    {
+        monitorAddUser(monitor, value, monitor->password);
+    }
+    else if (strcmp(key, "password") == 0)
+    {
+        monitorAddUser(monitor, monitor->user, value);
+    }
+    else if (strcmp(key, "monitor_interval") == 0)
+    {
+        long ival = get_positive_int(dcb, value);
+        if (ival)
+        {
+            monitorSetInterval(monitor, ival);
+        }
+    }
+    else if (strcmp(key, "backend_connect_timeout") == 0)
+    {
+        long ival = get_positive_int(dcb, value);
+        if (ival)
+        {
+            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
+        }
+    }
+    else if (strcmp(key, "backend_write_timeout") == 0)
+    {
+        long ival = get_positive_int(dcb, value);
+        if (ival)
+        {
+            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
+        }
+    }
+    else if (strcmp(key, "backend_read_timeout") == 0)
+    {
+        long ival = get_positive_int(dcb, value);
+        if (ival)
+        {
+            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
+        }
+    }
+    else
+    {
+        unknown = true;
+    }
+
+    if (unknown)
+    {
+        dcb_printf(dcb, "Unknown parameter '%s'", key);
+    }
+}
+
 struct subcommand alteroptions[] =
 {
     {
@@ -1107,6 +1184,15 @@ struct subcommand alteroptions[] =
         "This will alter an existing parameter of a server. The accepted values\n"
         "for KEY are: 'address', 'port', 'monuser', 'monpw'",
         {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING}
+    },
+    {
+        "monitor", 3, 3, alterMonitor,
+        "Alter monitor parameters",
+        "Usage: alter monitor NAME KEY VALUE\n"
+        "This will alter an existing parameter of a monitor. The accepted values\n"
+        "for KEY are: 'user', 'password', 'monitor_interval',\n"
+        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'",
+        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION

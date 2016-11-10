@@ -93,9 +93,8 @@ monitor_alloc(char *name, char *module)
     mon->name = name;
     mon->handle = NULL;
     mon->databases = NULL;
-    mon->password = NULL;
-    mon->user = NULL;
-    mon->password = NULL;
+    *mon->password = '\0';
+    *mon->user = '\0';
     mon->read_timeout = DEFAULT_READ_TIMEOUT;
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
@@ -377,8 +376,8 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    mon->user = MXS_STRDUP_A(user);
-    mon->password = MXS_STRDUP_A(passwd);
+    snprintf(mon->user, sizeof(mon->user), "%s", user);
+    snprintf(mon->password, sizeof(mon->password), "%s", passwd);
 }
 
 /**
