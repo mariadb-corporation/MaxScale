@@ -65,6 +65,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/gwdirs.h>
 
 typedef struct duplicate_context
 {
