@@ -1242,8 +1242,10 @@ bool server_serialize(SERVER *server)
     return rval;
 }
 
-void server_destroy(SERVER *server)
+bool server_destroy(SERVER *server)
 {
+    bool rval = false;
+
     if (service_server_in_use(server) || monitor_server_in_use(server))
     {
         MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
@@ -1265,14 +1267,26 @@ void server_destroy(SERVER *server)
             }
             else
             {
+                rval = true;
                 MXS_WARNING("Server '%s' was not created at runtime. Remove the "
                             "server manually from the correct configuration file.",
                             server->unique_name);
             }
         }
+        else
+        {
+            rval = true;
+        }
 
-        server->is_active = false;
+        if (rval)
+        {
+            MXS_NOTICE("Destroyed server '%s' at %s:%u", server->unique_name,
+                       server->name, server->port);
+            server->is_active = false;
+        }
     }
+
+    return rval;
 }
 
 bool server_is_ssl_parameter(const char *key)

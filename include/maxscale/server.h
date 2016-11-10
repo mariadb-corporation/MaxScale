@@ -249,7 +249,8 @@ bool server_serialize(SERVER *server);
  * This removes any created server configuration files and marks the server removed
  * If the server is not in use.
  * @param server Server to destroy
+ * @return True if server was destroyed
  */
-void server_destroy(SERVER *server);
+bool server_destroy(SERVER *server);
 
 MXS_END_DECLS

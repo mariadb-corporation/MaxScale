@@ -1023,9 +1023,9 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
             }
             else
             {
-                dcb_printf(dcb, "WARNING: The server was added to the runtime "
-                           "configuration but persisting the new server to disk "
-                           "failed. This server will NOT be loaded when MaxScale "
+                dcb_printf(dcb, "WARNING: The server was added to the runtime \n"
+                           "configuration but persisting the new server to disk \n"
+                           "failed. This server will NOT be loaded when MaxScale \n"
                            "is restarted. See log file for more details on why it failed.\n");
             }
         }
@@ -1068,7 +1068,20 @@ struct subcommand createoptions[] =
 
 static void destroyServer(DCB *dcb, SERVER *server)
 {
-    dcb_printf(dcb, "Not yet implemented.\n");
+    /** Do this so that we don't directly access the server. Currently, the
+     * destruction of a server does not free any memory and the server stays
+     * valid. */
+    char name[strlen(server->unique_name) + 1];
+    strcpy(name, server->unique_name);
+
+    if (server_destroy(server))
+    {
+        dcb_printf(dcb, "Destroyed server '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to destroy server '%s', see log file for more details\n", name);
+    }
 }
 
 struct subcommand destroyoptions[] =
@@ -1077,7 +1090,7 @@ struct subcommand destroyoptions[] =
         "server", 1, 1, destroyServer,
         "Destroy a server",
         "Usage: destroy server NAME",
-        {ARG_TYPE_STRING}
+        {ARG_TYPE_SERVER}
     },
     {
         EMPTY_OPTION
