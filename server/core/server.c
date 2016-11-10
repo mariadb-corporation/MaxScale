@@ -175,7 +175,6 @@ server_free(SERVER *tofreeserver)
     spinlock_release(&server_spin);
 
     /* Clean up session and free the memory */
-    MXS_FREE(tofreeserver->name);
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->server_string);
@@ -1088,7 +1087,7 @@ bool server_serialize(SERVER *server, const char *filename)
         dprintf(file, "authenticator_options=%s\n", server->auth_options);
     }
 
-    if (server->monpw && server->monuser)
+    if (*server->monpw && *server->monuser)
     {
         dprintf(file, "monitoruser=%s\n", server->monuser);
         dprintf(file, "monitorpw=%s\n", server->monpw);
