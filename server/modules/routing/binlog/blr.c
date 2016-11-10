@@ -2306,7 +2306,7 @@ destroyInstance(ROUTER *instance)
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
 
     MXS_DEBUG("Destroying instance of router %s for service %s",
-              service->routerModule, service->name);
+              inst->service->routerModule, inst->service->name);
 
     /* Check whether master connection is active */
     if (inst->master)
