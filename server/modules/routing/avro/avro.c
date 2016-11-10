@@ -231,7 +231,6 @@ static bool add_conversion_task(AVRO_INSTANCE *inst)
     if (inst->service->svc_do_shutdown)
     {
         MXS_INFO("AVRO converter task is not added due to MaxScale shutdown");
-        avro_close_binlog(inst->binlog_fd);
         return false;
     }
     MXS_INFO("Setting task for converter_func");
@@ -1017,15 +1016,9 @@ void converter_func(void* data)
     bool ok = true;
     avro_binlog_end_t binlog_end = AVRO_OK;
 
-    while (ok && binlog_end == AVRO_OK)
+    while (!router->service->svc_do_shutdown && ok && binlog_end == AVRO_OK)
     {
         uint64_t start_pos = router->current_pos;
-        if (router->service->svc_do_shutdown)
-        {
-            MXS_INFO("AVRO converter task is not handling events due to MaxScale shutdown");
-            break;
-        }
-
         if (avro_open_binlog(router->binlogdir, router->binlog_name, &router->binlog_fd))
         {
             binlog_end = avro_read_all_events(router);
@@ -1047,11 +1040,6 @@ void converter_func(void* data)
     /** We reached end of file, flush unwritten records to disk */
     if (router->task_delay == 1)
     {
-        if (router->service->svc_do_shutdown)
-        {
-            MXS_INFO("AVRO converter task is not indexing due to MaxScale shutdown");
-            return;
-        }
         avro_flush_all_tables(router);
         avro_save_conversion_state(router);
     }
