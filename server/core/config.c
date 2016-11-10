@@ -2767,22 +2767,32 @@ int create_new_server(CONFIG_CONTEXT *obj)
         const char *poolmax = config_get_value_string(obj->parameters, "persistpoolmax");
         if (poolmax)
         {
-            server->persistpoolmax = strtol(poolmax, &endptr, 0);
-            if (*endptr != '\0')
+            long int persistpoolmax = strtol(poolmax, &endptr, 0);
+            if (*endptr != '\0' || persistpoolmax < 0)
             {
                 MXS_ERROR("Invalid value for 'persistpoolmax' for server %s: %s",
                           server->unique_name, poolmax);
+                error_count++;
+            }
+            else
+            {
+                server->persistpoolmax = persistpoolmax;
             }
         }
 
         const char *persistmax = config_get_value_string(obj->parameters, "persistmaxtime");
         if (persistmax)
         {
-            server->persistmaxtime = strtol(persistmax, &endptr, 0);
-            if (*endptr != '\0')
+            long int persistmaxtime = strtol(persistmax, &endptr, 0);
+            if (*endptr != '\0' || persistmaxtime < 0)
             {
                 MXS_ERROR("Invalid value for 'persistmaxtime' for server %s: %s",
                           server->unique_name, persistmax);
+                error_count++;
+            }
+            else
+            {
+                server->persistmaxtime = persistmaxtime;
             }
         }
 
@@ -2899,7 +2909,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     else
     {
         obj->element = NULL;
-        MXS_ERROR("Monitor '%s' is missing the require 'module' parameter.", obj->object);
+        MXS_ERROR("Monitor '%s' is missing the required 'module' parameter.", obj->object);
         error_count++;
     }
 
@@ -2909,15 +2919,29 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     {
         monitorAddParameters(obj->element, obj->parameters);
 
-        char *interval = config_get_value(obj->parameters, "monitor_interval");
-        if (interval)
+        char *interval_str = config_get_value(obj->parameters, "monitor_interval");
+        if (interval_str)
         {
-            monitorSetInterval(obj->element, atoi(interval));
+            char *endptr;
+            long interval = strtol(interval_str, &endptr, 0);
+            /* The interval must be >0 because it is used as a divisor.
+                Perhaps a greater minimum value should be added? */
+            if (*endptr == '\0' && interval > 0)
+            {
+                monitorSetInterval(obj->element, (unsigned long)interval);
+            }
+            else
+            {
+                MXS_NOTICE("Invalid 'monitor_interval' parameter for monitor '%s', "
+                           "using default value of %d milliseconds.",
+                           obj->object, MONITOR_INTERVAL);
+            }
         }
         else
         {
             MXS_NOTICE("Monitor '%s' is missing the 'monitor_interval' parameter, "
-                       "using default value of 10000 milliseconds.", obj->object);
+                       "using default value of %d milliseconds.",
+                       obj->object, MONITOR_INTERVAL);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
