@@ -128,6 +128,7 @@ static struct option long_options[] =
     {"configdir",        required_argument, 0, 'C'},
     {"datadir",          required_argument, 0, 'D'},
     {"execdir",          required_argument, 0, 'E'},
+    {"persistdir",       required_argument, 0, 'F'},
     {"language",         required_argument, 0, 'N'},
     {"piddir",           required_argument, 0, 'P'},
     {"basedir",          required_argument, 0, 'R'},
@@ -919,8 +920,9 @@ static void usage(void)
             "  -B, --libdir=PATH           path to module directory\n"
             "  -C, --configdir=PATH        path to configuration file directory\n"
             "  -D, --datadir=PATH          path to data directory,\n"
-            "                              stored embedded mysql tables\n"
+            "                              stores internal MaxScale data\n"
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
+            "  -F, --persistdir=PATH       path to persisted configuration directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -944,6 +946,7 @@ static void usage(void)
             "  execdir    : %s\n"
             "  language   : %s\n"
             "  piddir     : %s\n"
+            "  persistdir : %s\n"
             "\n"
             "If '--basedir' is provided then all other paths, including the default\n"
             "configuration file path, are defined relative to that. As an example,\n"
@@ -954,7 +957,8 @@ static void usage(void)
             progname,
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
-            get_datadir(), get_execdir(), get_langdir(), get_piddir());
+            get_datadir(), get_execdir(), get_langdir(), get_piddir(),
+            get_config_persistdir());
 }
 
 
@@ -1229,6 +1233,12 @@ bool set_dirs(const char *basedir)
         set_piddir(path);
     }
 
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_DATA_SUBPATH "/"
+                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH, true, true)))
+    {
+        set_config_persistdir(path);
+    }
+
     return rv;
 }
 
@@ -1327,7 +1337,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:",
+    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1471,6 +1481,16 @@ int main(int argc, char **argv)
                 if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
                 {
                     set_execdir(tmp_path);
+                }
+                else
+                {
+                    succp = false;
+                }
+                break;
+            case 'F':
+                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+                {
+                    set_config_persistdir(tmp_path);
                 }
                 else
                 {
@@ -2517,6 +2537,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_execdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "persistdir") == 0)
+        {
+            if (strcmp(get_config_persistdir(), default_config_persistdir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_config_persistdir(tmp);
                 }
                 else
                 {
