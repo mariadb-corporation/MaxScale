@@ -47,6 +47,7 @@
 #include <maxscale/gw_ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modules.h>
+#include <maxscale/gwdirs.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -1062,7 +1063,14 @@ bool server_set_version_string(SERVER* server, const char* string)
     return rval;
 }
 
-bool server_serialize(SERVER *server, const char *filename)
+/**
+ * Creates a server configuration at the location pointed by @c filename
+ *
+ * @param server Server to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_server_config(SERVER *server, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1160,6 +1168,43 @@ bool server_serialize(SERVER *server, const char *filename)
     close(file);
 
     return true;
+}
+
+bool server_serialize(SERVER *server)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             server->unique_name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_server_config(server, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
 }
 
 bool server_is_ssl_parameter(const char *key)

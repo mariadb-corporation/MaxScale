@@ -140,31 +140,37 @@ bool test_load_config(const char *input, SERVER *server)
 bool test_serialize()
 {
     char name[] = "serialized-server";
+    char config_name[] = "serialized-server.cnf";
+    char old_config_name[] = "serialized-server.cnf.old";
+    char *persist_dir = MXS_STRDUP_A("./");
+    set_config_persistdir(persist_dir);
     SERVER *server = server_alloc("127.0.0.1", "HTTPD", 9876, "NullAuthAllow", "fake=option");
     TEST(server, "Server allocation failed");
     server_set_unique_name(server, name);
 
-    /** Make sure the file doesn't exist */
-    unlink("./server.cnf");
+    /** Make sure the files don't exist */
+    unlink(config_name);
+    unlink(old_config_name);
 
     /** Serialize server to disk */
-    TEST(server_serialize(server, "./server.cnf"), "Failed to synchronize original server");
+    TEST(server_serialize(server), "Failed to synchronize original server");
 
     /** Load it again */
-    TEST(test_load_config("./server.cnf", server), "Failed to load the serialized server");
+    TEST(test_load_config(config_name, server), "Failed to load the serialized server");
 
     /** We should have two identical servers */
     SERVER *created = server_find_by_unique_name(name);
     TEST(created->next == server, "We should end up with two servers");
 
-    /** Make sure the file doesn't exist */
-    unlink("./server-created.cnf");
+    rename(config_name, old_config_name);
 
     /** Serialize the loaded server to disk */
-    TEST(server_serialize(created, "./server-created.cnf"), "Failed to synchronize the copied server");
+    TEST(server_serialize(created), "Failed to synchronize the copied server");
 
     /** Check that they serialize to identical files */
-    TEST(system("diff ./server.cnf ./server-created.cnf") == 0, "The files are not identical");
+    char cmd[1024];
+    sprintf(cmd, "diff ./%s ./%s", config_name, old_config_name);
+    TEST(system(cmd) == 0, "The files are not identical");
 
     return true;
 }

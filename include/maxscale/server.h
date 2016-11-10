@@ -234,13 +234,12 @@ extern void server_update_ssl(SERVER *server, const char *key, const char *value
  * @brief Serialize a server to a file
  *
  * This converts @c server into an INI format file. This allows created servers
- * to be persisted to disk. A new file is only created if the file pointed by
- * @c filename does not exist at the time this function is called.
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
  *
  * @param server Server to serialize
- * @param filename Path to a file where the server is persisted
  * @return False if the serialization of the server fails, true if it was successful
  */
-bool server_serialize(SERVER *server, const char *filename);
+bool server_serialize(SERVER *server);
 
 MXS_END_DECLS

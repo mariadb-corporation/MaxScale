@@ -987,6 +987,17 @@ struct subcommand flushoptions[] =
 /** This is used to prevent concurrent creation or removal of servers */
 static SPINLOCK server_mod_lock = SPINLOCK_INIT;
 
+/**
+ * Create a new server
+ *
+ * @param dcb Client DCB
+ * @param name Server name
+ * @param address Server network address
+ * @param port Server port
+ * @param protocol Protocol, NULL for default (MySQLBackend)
+ * @param authenticator Authenticator module, NULL for default (MySQLBackendAuth)
+ * @param authenticator_options Authenticator options, NULL for no options
+ */
 static void createServer(DCB *dcb, char *name, char *address, char *port,
                          char *protocol, char *authenticator, char *authenticator_options)
 {
@@ -1005,8 +1016,18 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
         if (server)
         {
             server_set_unique_name(server, name);
-            // TODO: Serialize the server to disk
-            dcb_printf(dcb, "Created server '%s'\n", name);
+
+            if (server_serialize(server))
+            {
+                dcb_printf(dcb, "Created server '%s'\n", name);
+            }
+            else
+            {
+                dcb_printf(dcb, "WARNING: The server was added to the runtime "
+                           "configuration but persisting the new server to disk "
+                           "failed. This server will NOT be loaded when MaxScale "
+                           "is restarted. See log file for more details on why it failed.\n");
+            }
         }
         else
         {
