@@ -1130,3 +1130,29 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     MXS_FREE(prev);
     MXS_FREE(next);
 }
+
+bool monitor_server_in_use(const SERVER *server)
+{
+    bool rval = false;
+
+    spinlock_acquire(&monLock);
+
+    for (MONITOR *mon = allMonitors; mon && !rval; mon = mon->next)
+    {
+        spinlock_acquire(&mon->lock);
+
+        for (MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
+        {
+            if (db->server == server)
+            {
+                rval = true;
+            }
+        }
+
+        spinlock_release(&mon->lock);
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
+}

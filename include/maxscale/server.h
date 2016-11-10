@@ -243,4 +243,13 @@ extern void server_update_ssl(SERVER *server, const char *key, const char *value
  */
 bool server_serialize(SERVER *server);
 
+/**
+ * @brief Destroy a server
+ *
+ * This removes any created server configuration files and marks the server removed
+ * If the server is not in use.
+ * @param server Server to destroy
+ */
+void server_destroy(SERVER *server);
+
 MXS_END_DECLS

@@ -2188,3 +2188,29 @@ static void service_calculate_weights(SERVICE *service)
         }
     }
 }
+
+bool service_server_in_use(const SERVER *server)
+{
+    bool rval = false;
+
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (SERVER_REF *ref = service->dbref; ref && !rval; ref = ref->next)
+        {
+            if (ref->server == server)
+            {
+                rval = true;
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}

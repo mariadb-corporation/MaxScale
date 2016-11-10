@@ -257,4 +257,11 @@ static inline uint64_t service_get_capabilities(const SERVICE *service)
     return service->capabilities;
 }
 
+/**
+ * Check if a service uses @c servers
+ * @param server Server that is queried
+ * @return True if server is used by at least one service
+ */
+bool service_server_in_use(const SERVER *server);
+
 MXS_END_DECLS

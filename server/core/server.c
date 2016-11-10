@@ -38,6 +38,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <maxscale/service.h>
+#include <maxscale/monitor.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -1238,6 +1240,39 @@ bool server_serialize(SERVER *server)
     }
 
     return rval;
+}
+
+void server_destroy(SERVER *server)
+{
+    if (service_server_in_use(server) || monitor_server_in_use(server))
+    {
+        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
+                  "service or monitor", server->unique_name);
+    }
+    else
+    {
+        char filename[PATH_MAX];
+        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
+                 server->unique_name);
+
+        if (unlink(filename) == -1)
+        {
+            if (errno != ENOENT)
+            {
+                char err[MXS_STRERROR_BUFLEN];
+                MXS_ERROR("Failed to remove persisted server configuration '%s': %d, %s",
+                          filename, errno, strerror_r(errno, err, sizeof(err)));
+            }
+            else
+            {
+                MXS_WARNING("Server '%s' was not created at runtime. Remove the "
+                            "server manually from the correct configuration file.",
+                            server->unique_name);
+            }
+        }
+
+        server->is_active = false;
+    }
 }
 
 bool server_is_ssl_parameter(const char *key)

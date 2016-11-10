@@ -233,4 +233,11 @@ connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
 
+/**
+ * Check if a monitor uses @c servers
+ * @param server Server that is queried
+ * @return True if server is used by at least one monitor
+ */
+bool monitor_server_in_use(const SERVER *server);
+
 MXS_END_DECLS
