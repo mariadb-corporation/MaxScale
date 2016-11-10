@@ -542,6 +542,46 @@ static bool config_load_dir(const char *dir, DUPLICATE_CONTEXT *dcontext, CONFIG
 }
 
 /**
+ * Check if a directory exists
+ *
+ * This function also logs warnings if the directory cannot be accessed or if
+ * the file is not a directory.
+ * @param dir Directory to check
+ * @return True if the file is an existing directory
+ */
+static bool is_directory(const char *dir)
+{
+    bool rval = false;
+    struct stat st;
+    if (stat(dir, &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            MXS_NOTICE("%s does not exist, not reading.", dir);
+        }
+        else
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_WARNING("Could not access %s, not reading: %s",
+                        dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+    }
+    else
+    {
+        if (S_ISDIR(st.st_mode))
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
+        }
+    }
+
+    return rval;
+}
+
+/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
@@ -574,30 +614,18 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             rval = true;
 
-            struct stat st;
-            if (stat(dir, &st) == -1)
+            if (is_directory(dir))
             {
-                if (errno == ENOENT)
-                {
-                    MXS_NOTICE("%s does not exist, not reading.", dir);
-                }
-                else
-                {
-                    char errbuf[MXS_STRERROR_BUFLEN];
-                    MXS_WARNING("Could not access %s, not reading: %s",
-                                dir, strerror_r(errno, errbuf, sizeof(errbuf)));
-                }
+                rval = config_load_dir(dir, &dcontext, &ccontext);
             }
-            else
+
+            /** Create the persisted configuration directory if it doesn't exist */
+            const char* persist_cnf = get_config_persistdir();
+            mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+            if (is_directory(persist_cnf))
             {
-                if (S_ISDIR(st.st_mode))
-                {
-                    rval = config_load_dir(dir,  &dcontext, &ccontext);
-                }
-                else
-                {
-                    MXS_WARNING("%s exists, but it is not a directory. Ignoring.", dir);
-                }
+                rval = config_load_dir(persist_cnf, &dcontext, &ccontext);
             }
 
             if (rval)
