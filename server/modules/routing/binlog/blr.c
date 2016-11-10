@@ -109,7 +109,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
-static void destroyInstance(SERVICE *service);
+static void destroyInstance(ROUTER *instance);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -2301,9 +2301,9 @@ blr_free_ssl_data(ROUTER_INSTANCE *inst)
  * @param service   The service this router instance belongs to
  */
 static void
-destroyInstance(SERVICE *service)
+destroyInstance(ROUTER *instance)
 {
-    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) service->router_instance;
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
 
     MXS_DEBUG("Destroying instance of router %s for service %s",
               service->routerModule, service->name);
@@ -2340,18 +2340,18 @@ destroyInstance(SERVICE *service)
     }
     inst->residual = NULL;
 
-    MXS_NOTICE("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
+    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
-               service->name,
-               service->dbref->server->name,
-               service->dbref->server->port,
+               inst->service->name,
+               inst->service->dbref->server->name,
+               inst->service->dbref->server->port,
                inst->binlog_name, inst->current_pos, inst->binlog_position);
 
     if (inst->trx_safe && inst->pending_transaction)
     {
         MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
                     "pos %lu, incomplete transaction starts at pos %lu",
-                    service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
+                    inst->service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
     }
 
     spinlock_release(&inst->lock);
