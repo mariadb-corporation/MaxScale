@@ -105,7 +105,7 @@ typedef struct server_ref_t
 } SERVER_REF;
 
 /** Macro to check whether a SERVER_REF is active */
-#define SERVER_REF_IS_ACTIVE(ref) (ref->active)
+#define SERVER_REF_IS_ACTIVE(ref) (ref->active && SERVER_IS_ACTIVE(ref->server))
 
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 

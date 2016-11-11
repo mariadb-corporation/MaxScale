@@ -250,6 +250,16 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
     return NULL;
 }
 
+static inline SERVER* next_active_server(SERVER *server)
+{
+    while (server && !server->is_active)
+    {
+        server = server->next;
+    }
+
+    return server;
+}
+
 /**
  * @brief Find a server with the specified name
  *
@@ -259,16 +269,17 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 SERVER * server_find_by_unique_name(const char *name)
 {
     spinlock_acquire(&server_spin);
-    SERVER *server = allServers;
+    SERVER *server = next_active_server(allServers);
 
     while (server)
     {
-        if (server->is_active && server->unique_name && strcmp(server->unique_name, name) == 0)
+        if (server->unique_name && strcmp(server->unique_name, name) == 0)
         {
             break;
         }
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
 
     return server;
@@ -284,19 +295,20 @@ SERVER * server_find_by_unique_name(const char *name)
 SERVER *
 server_find(char *servname, unsigned short port)
 {
-    SERVER  *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
-        if (server->is_active && strcmp(server->name, servname) == 0 && server->port == port)
+        if (strcmp(server->name, servname) == 0 && server->port == port)
         {
             break;
         }
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
+
     return server;
 }
 
@@ -327,18 +339,15 @@ printServer(SERVER *server)
 void
 printAllServers()
 {
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
-        if (server->is_active)
-        {
-            printServer(server);
-        }
-        server = server->next;
+        printServer(server);
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
 }
 
@@ -351,18 +360,15 @@ printAllServers()
 void
 dprintAllServers(DCB *dcb)
 {
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
-        if (server->is_active)
-        {
-            dprintServer(dcb, server);
-        }
-        server = server->next;
+        dprintServer(dcb, server);
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
 }
 
@@ -375,27 +381,23 @@ dprintAllServers(DCB *dcb)
 void
 dprintAllServersJson(DCB *dcb)
 {
-    SERVER *server;
     char *stat;
     int len = 0;
     int el = 1;
 
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
     while (server)
     {
-        server = server->next;
+        server = next_active_server(server->next);
         len++;
     }
-    server = allServers;
+
+    server = next_active_server(allServers);
+
     dcb_printf(dcb, "[\n");
     while (server)
     {
-        if (!server->is_active)
-        {
-            server = server->next;
-            continue;
-        }
         dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
                    server->name);
         stat = server_status(server);
@@ -459,9 +461,10 @@ dprintAllServersJson(DCB *dcb)
         {
             dcb_printf(dcb, "  }\n");
         }
-        server = server->next;
+        server = next_active_server(server->next);
         el++;
     }
+
     dcb_printf(dcb, "]\n");
     spinlock_release(&server_spin);
 }
@@ -476,7 +479,7 @@ dprintAllServersJson(DCB *dcb)
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
-    if (!server->is_active)
+    if (!SERVER_IS_ACTIVE(server))
     {
         return;
     }
@@ -610,17 +613,8 @@ dprintPersistentDCBs(DCB *pdcb, SERVER *server)
 void
 dListServers(DCB *dcb)
 {
-    SERVER  *server;
-    char    *stat;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
-
-    while (server && !server->is_active)
-    {
-        server = server->next;
-    }
-
+    SERVER  *server = next_active_server(allServers);
     bool have_servers = false;
 
     if (server)
@@ -635,17 +629,15 @@ dListServers(DCB *dcb)
 
     while (server)
     {
-        if (server->is_active)
-        {
-            stat = server_status(server);
-            dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
-                       server->unique_name, server->name,
-                       server->port,
-                       server->stats.n_current, stat);
-            MXS_FREE(stat);
-        }
-        server = server->next;
+        char *stat = server_status(server);
+        dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
+                   server->unique_name, server->name,
+                   server->port,
+                   server->stats.n_current, stat);
+        MXS_FREE(stat);
+        server = next_active_server(server->next);
     }
+
     if (have_servers)
     {
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
@@ -935,7 +927,7 @@ serverRowCallback(RESULTSET *set, void *data)
         return NULL;
     }
     (*rowno)++;
-    if (server->is_active)
+    if (SERVER_IS_ACTIVE(server))
     {
         row = resultset_make_row(set);
         resultset_row_set(row, 0, server->unique_name);

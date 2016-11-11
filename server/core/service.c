@@ -1365,7 +1365,7 @@ void dprintService(DCB *dcb, SERVICE *service)
     dcb_printf(dcb, "\tBackend databases:\n");
     while (server)
     {
-        if (server->active && server->server->is_active)
+        if (SERVER_REF_IS_ACTIVE(server))
         {
             dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name,
                        server->server->port, server->server->protocol);

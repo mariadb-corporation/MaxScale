@@ -141,6 +141,11 @@ typedef struct server
 #define SERVER_RELAY_MASTER      0x4000  /**<< Server is a relay master */
 
 /**
+ * Is the server valid and active
+ */
+#define SERVER_IS_ACTIVE(server) (server->is_active)
+
+/**
  * Is the server running - the macro returns true if the server is marked as running
  * regardless of it's state as a master or slave
  */
