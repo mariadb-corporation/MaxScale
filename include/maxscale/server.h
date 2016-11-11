@@ -201,9 +201,57 @@ typedef struct server
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
 
-extern SERVER *server_alloc(char *, char *, unsigned short, char*, char*);
+/**
+ * @brief Allocate a new server
+ *
+ * This will create a new server that represents a backend server that services
+ * can use. This function will add the server to the running configuration but
+ * will not persist the changes.
+ *
+ * @param name          Unique server name
+ * @param address       The server address
+ * @param port          The port to connect to
+ * @param protocol      The protocol to use to connect to the server
+ * @param authenticator The server authenticator module
+ * @param auth_options  Options for the authenticator module
+ * @return              The newly created server or NULL if an error occurred
+ */
+extern SERVER* server_alloc(const char *name, const char *address, unsigned short port,
+                            const char *protocol, const char *authenticator,
+                            const char *auth_options);
+
+/**
+ * @brief Create a new server
+ *
+ * This function creates a new, persistent server by first allocating a new
+ * server and then storing the resulting configuration file on disk. This
+ * function should be used only from administrative interface modules and internal
+ * modules should use server_alloc() instead.
+ *
+ * @param name          Server name
+ * @param address       Network address
+ * @param port          Network port
+ * @param protocol      Protocol module name
+ * @param authenticator Authenticator module name
+ * @param options       Options for the authenticator module
+ * @return True on success, false if an error occurred
+ */
+extern bool server_create(const char *name, const char *address, const char *port,
+                          const char *protocol, const char *authenticator,
+                          const char *options);
+
+/**
+ * @brief Destroy a server
+ *
+ * This removes any created server configuration files and marks the server removed
+ * If the server is not in use.
+ * @param server Server to destroy
+ * @return True if server was destroyed
+ */
+bool server_destroy(SERVER *server);
+
 extern int server_free(SERVER *);
-extern SERVER *server_find_by_unique_name(char *);
+extern SERVER *server_find_by_unique_name(const char *name);
 extern SERVER *server_find(char *, unsigned short);
 extern void printServer(SERVER *);
 extern void printAllServers();
@@ -221,7 +269,6 @@ extern void serverAddMonUser(SERVER *, char *, char *);
 extern void serverAddParameter(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
 extern void server_update_credentials(SERVER *, char *, char *);
-extern void server_set_unique_name(SERVER *, char *);
 extern DCB  *server_get_persistent(SERVER *, char *, const char *);
 extern void server_update_address(SERVER *, char *);
 extern void server_update_port(SERVER *,  unsigned short);
@@ -230,27 +277,5 @@ extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
 extern bool server_is_ssl_parameter(const char *key);
 extern void server_update_ssl(SERVER *server, const char *key, const char *value);
-
-/**
- * @brief Serialize a server to a file
- *
- * This converts @c server into an INI format file. This allows created servers
- * to be persisted to disk. This will replace any existing files with the same
- * name.
- *
- * @param server Server to serialize
- * @return False if the serialization of the server fails, true if it was successful
- */
-bool server_serialize(SERVER *server);
-
-/**
- * @brief Destroy a server
- *
- * This removes any created server configuration files and marks the server removed
- * If the server is not in use.
- * @param server Server to destroy
- * @return True if server was destroyed
- */
-bool server_destroy(SERVER *server);
 
 MXS_END_DECLS

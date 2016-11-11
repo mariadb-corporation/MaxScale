@@ -2730,11 +2730,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
 
     if (address && port && protocol)
     {
-        if ((obj->element = server_alloc(address, protocol, atoi(port), auth, auth_opts)))
-        {
-            server_set_unique_name(obj->element, obj->object);
-        }
-        else
+        if ((obj->element = server_alloc(obj->object, address, atoi(port), protocol, auth, auth_opts)) == NULL)
         {
             MXS_ERROR("Failed to create a new server, memory allocation failed.");
             error_count++;

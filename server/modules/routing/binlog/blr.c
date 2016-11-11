@@ -585,7 +585,8 @@ createInstance(SERVICE *service, char **options)
     {
         SERVER *server;
         SSL_LISTENER *ssl_cfg;
-        server = server_alloc("_none_", "MySQLBackend", 3306, "MySQLBackendAuth", NULL);
+        server = server_alloc("binlog_router_master_host", "_none_", 3306,
+                              "MySQLBackend", "MySQLBackendAuth", NULL);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
@@ -617,7 +618,6 @@ createInstance(SERVICE *service, char **options)
         server->server_ssl = ssl_cfg;
 
         /* Set server unique name */
-        server_set_unique_name(server, "binlog_router_master_host");
         /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
     }

@@ -40,6 +40,7 @@
 
 // This is pretty ugly but it's required to test internal functions
 #include "../config.c"
+#include "../server.c"
 
 /**
  * test1    Allocate a server and do lots of other things
@@ -55,7 +56,7 @@ test1()
     /* Server tests */
     ss_dfprintf(stderr, "testserver : creating server called MyServer");
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/"));
-    server = server_alloc("MyServer", "HTTPD", 9876, "NullAuthAllow", NULL);
+    server = server_alloc("uniquename", "127.0.0.1", 9876, "HTTPD", "NullAuthAllow", NULL);
     ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
 
@@ -71,7 +72,6 @@ test1()
     ss_dfprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     ss_info_dassert(NULL == server_find_by_unique_name("uniquename"),
                     "Should not find non-existent unique name.");
-    server_set_unique_name(server, "uniquename");
     mxs_log_flush_sync();
     ss_info_dassert(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");
     ss_dfprintf(stderr, "\t..done\nTesting Status Setting for Server.");
@@ -144,9 +144,8 @@ bool test_serialize()
     char old_config_name[] = "serialized-server.cnf.old";
     char *persist_dir = MXS_STRDUP_A("./");
     set_config_persistdir(persist_dir);
-    SERVER *server = server_alloc("127.0.0.1", "HTTPD", 9876, "NullAuthAllow", "fake=option");
+    SERVER *server = server_alloc(name, "127.0.0.1", 9876, "HTTPD", "NullAuthAllow", "fake=option");
     TEST(server, "Server allocation failed");
-    server_set_unique_name(server, name);
 
     /** Make sure the files don't exist */
     unlink(config_name);

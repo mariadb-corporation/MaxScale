@@ -57,57 +57,44 @@ static SERVER *allServers = NULL;
 static void spin_reporter(void *, char *, int);
 static void server_parameter_free(SERVER_PARAM *tofree);
 
-/**
- * Allocate a new server withn the gateway
- *
- *
- * @param servname      The server name
- * @param protocol      The protocol to use to connect to the server
- * @param port          The port to connect to
- *
- * @return              The newly created server or NULL if an error occured
- */
-SERVER *
-server_alloc(char *servname, char *protocol, unsigned short port, char *authenticator,
-             char *auth_options)
+
+SERVER* server_alloc(const char *name, const char *address, unsigned short port,
+                     const char *protocol, const char *authenticator, const char *auth_options)
 {
-    if (authenticator)
+    if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
     {
-        authenticator = MXS_STRDUP(authenticator);
-    }
-    else if ((authenticator = (char*)get_default_authenticator(protocol)) == NULL ||
-             (authenticator = MXS_STRDUP(authenticator)) == NULL)
-    {
-        MXS_ERROR("No authenticator defined for server at %s:%u and no default "
-                  "authenticator for protocol '%s'.", servname, port, protocol);
+        MXS_ERROR("No authenticator defined for server '%s' and no default "
+                  "authenticator for protocol '%s'.", name, protocol);
+        return NULL;
     }
 
     void *auth_instance = NULL;
 
     if (!authenticator_init(&auth_instance, authenticator, auth_options))
     {
-        MXS_ERROR("Failed to initialize authenticator module '%s' for server"
-                  " at %s:%u.", authenticator, servname, port);
-        MXS_FREE(authenticator);
+        MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
+                  authenticator, name);
         return NULL;
     }
 
-    if (auth_options && (auth_options = MXS_STRDUP(auth_options)) == NULL)
+    char *my_auth_options = NULL;
+
+    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
     {
-        MXS_FREE(authenticator);
         return NULL;
     }
-
-    protocol = MXS_STRDUP(protocol);
 
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
+    char *my_name = MXS_STRDUP(name);
+    char *my_protocol = MXS_STRDUP(protocol);
+    char *my_authenticator = MXS_STRDUP(authenticator);
 
-    if (!protocol || !server || !authenticator)
+    if (!server || !my_name || !my_protocol || !my_authenticator)
     {
-        MXS_FREE(servname);
-        MXS_FREE(protocol);
         MXS_FREE(server);
-        MXS_FREE(authenticator);
+        MXS_FREE(my_name);
+        MXS_FREE(my_protocol);
+        MXS_FREE(my_authenticator);
         return NULL;
     }
 
@@ -115,11 +102,12 @@ server_alloc(char *servname, char *protocol, unsigned short port, char *authenti
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    snprintf(server->name, sizeof(server->name), "%s", servname);
-    server->protocol = protocol;
-    server->authenticator = authenticator;
+    server->unique_name = my_name;
+    snprintf(server->name, sizeof(server->name), "%s", address);
+    server->protocol = my_protocol;
+    server->authenticator = my_authenticator;
     server->auth_instance = auth_instance;
-    server->auth_options = auth_options;
+    server->auth_options = my_auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;
@@ -258,32 +246,16 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 }
 
 /**
- * Set a unique name for the server
+ * @brief Find a server with the specified name
  *
- * @param       server  The server to set the name on
- * @param       name    The unique name for the server
+ * @param name Name of the server
+ * @return The server or NULL if not found
  */
-void
-server_set_unique_name(SERVER *server, char *name)
+SERVER * server_find_by_unique_name(const char *name)
 {
-    server->unique_name = MXS_STRDUP_A(name);
-}
-
-/**
- * Find an existing server using the unique section name in
- * configuration file
- *
- * @param       servname        The Server name or address
- * @param       port            The server port
- * @return      The server or NULL if not found
- */
-SERVER *
-server_find_by_unique_name(char *name)
-{
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = allServers;
+
     while (server)
     {
         if (server->is_active && server->unique_name && strcmp(server->unique_name, name) == 0)
@@ -293,6 +265,7 @@ server_find_by_unique_name(char *name)
         server = server->next;
     }
     spinlock_release(&server_spin);
+
     return server;
 }
 
@@ -1205,7 +1178,17 @@ static bool create_server_config(SERVER *server, const char *filename)
     return true;
 }
 
-bool server_serialize(SERVER *server)
+/**
+ * @brief Serialize a server to a file
+ *
+ * This converts @c server into an INI format file. This allows created servers
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
+ *
+ * @param server Server to serialize
+ * @return False if the serialization of the server fails, true if it was successful
+ */
+static bool server_serialize(SERVER *server)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1236,6 +1219,78 @@ bool server_serialize(SERVER *server)
             char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
                       filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
+}
+
+/** Try to find a server with a matching name that has been destroyed */
+static SERVER* find_destroyed_server(const char *name, const char *protocol,
+                                     const char *authenticator, const char *auth_options)
+{
+    spinlock_acquire(&server_spin);
+    SERVER *server = allServers;
+    while (server)
+    {
+        CHK_SERVER(server);
+        if (strcmp(server->unique_name, name) == 0 &&
+            strcmp(server->protocol, protocol) == 0 &&
+            strcmp(server->authenticator, authenticator) == 0)
+        {
+            if ((auth_options == NULL && server->auth_options == NULL) ||
+                (auth_options && server->auth_options &&
+                 strcmp(server->auth_options, auth_options) == 0))
+            {
+                break;
+            }
+        }
+        server = server->next;
+    }
+    spinlock_release(&server_spin);
+
+    return server;
+}
+
+bool server_create(const char *name, const char *address, const char *port,
+                   const char *protocol, const char *authenticator,
+                   const char *authenticator_options)
+{
+    bool rval = false;
+
+    if (server_find_by_unique_name(name) == NULL)
+    {
+        if (port == NULL)
+        {
+            port = "3306";
+        }
+        if (protocol == NULL)
+        {
+            protocol = "MySQLBackend";
+        }
+
+        /** First check if this service has been created before */
+        SERVER *server = find_destroyed_server(name, protocol, authenticator,
+                                               authenticator_options);
+
+        if (server)
+        {
+            /** Found old server, replace network details with new ones and
+             * reactivate it */
+            snprintf(server->name, sizeof(server->name), "%s", address);
+            server->port = atoi(port);
+            server->is_active = true;
+            rval = true;
+        }
+        else if ((server = server_alloc(name, address, atoi(port), protocol, authenticator,
+                                        authenticator_options)))
+        {
+            if (server_serialize(server))
+            {
+                /** server_alloc will add the server to the global list of
+                 * servers so we don't need to manually add it. */
+                rval = true;
+            }
         }
     }
 

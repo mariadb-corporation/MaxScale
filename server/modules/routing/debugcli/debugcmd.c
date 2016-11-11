@@ -1005,29 +1005,9 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 
     if (server_find_by_unique_name(name) == NULL)
     {
-        if (protocol == NULL)
+        if (server_create(name, address, port, protocol, authenticator, authenticator_options))
         {
-            protocol = "MySQLBackend";
-        }
-
-        SERVER *server = server_alloc(address, protocol, atoi(port), authenticator,
-                                      authenticator_options);
-
-        if (server)
-        {
-            server_set_unique_name(server, name);
-
-            if (server_serialize(server))
-            {
-                dcb_printf(dcb, "Created server '%s'\n", name);
-            }
-            else
-            {
-                dcb_printf(dcb, "WARNING: The server was added to the runtime \n"
-                           "configuration but persisting the new server to disk \n"
-                           "failed. This server will NOT be loaded when MaxScale \n"
-                           "is restarted. See log file for more details on why it failed.\n");
-            }
+            dcb_printf(dcb, "Created server '%s'\n", name);
         }
         else
         {

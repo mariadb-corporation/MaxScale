@@ -103,12 +103,12 @@ int main(int argc, char **argv) {
 			s = strtok_r(NULL, ",", &lasts);
 		}
 		set_libdir(MXS_STRDUP_A("../../../authenticator/"));
-		server = server_alloc("_none_", "MySQLBackend", 3306, "MySQLBackendAuth", NULL);
+		server = server_alloc("binlog_router_master_host", "_none_", 3306,
+                             "MySQLBackend", "MySQLBackendAuth", NULL);
 		if (server == NULL) {
 			return 1;
 		}
 
-		server_set_unique_name(server, "binlog_router_master_host");
 		serviceAddBackend(service, server);
 	}
 
