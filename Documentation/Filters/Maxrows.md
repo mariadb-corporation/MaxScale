@@ -1,10 +1,12 @@
 # Maxrows
 
 ## Overview
-The maxrows filter is capable of restricting the amount of rows that a SELECT, a prepared statement or stored procedure
-could return to the client application.
-If a resultset from a backend server has more rows than the configured limit or the resultset size exceeds the configured size,
-an empty result will be  sent to the client.
+The maxrows filter is capable of restricting the amount of rows that a SELECT,
+ a prepared statement or stored procedure could return to the client application.
+
+If a resultset from a backend server has more rows than the configured limit
+or the resultset size exceeds the configured size,
+ an empty result will be  sent to the client.
 
 ## Configuration
 
@@ -28,8 +30,10 @@ Optional parameters are:
 
 #### `max_resultset_rows`
 
-Specifies the maximum number of rows a resultset can have in order to be
-returned to the usere. If a resultset is larger than this an empty result will be sent instead.
+Specifies the maximum number of rows a resultset can have in order to be returned
+ to the user.
+
+If a resultset is larger than this an empty result will be sent instead.
 
 ```
 max_resultset_rows=1000
@@ -57,7 +61,7 @@ denoting different logging.
 
    * ` 0` (`0b00000`) No logging is made.
    * ` 1` (`0b00001`) A decision to handle data form server is logged.
-   * ` 2` (`0b00010`) Reached max_resultset_rows or max_resultset_size limit is logged.
+   * ` 2` (`0b00010`) Reached max_resultset_rows or max_resultset_size is logged.
 
 Default is `0`. To log everything, give `debug` a value of `3`.
 
