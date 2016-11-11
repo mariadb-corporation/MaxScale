@@ -98,12 +98,17 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         return NULL;
     }
 
+    if (snprintf(server->name, sizeof(server->name), "%s", address) > sizeof(server->name))
+    {
+        MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
+                    address, sizeof(server->name));
+    }
+
 #if defined(SS_DEBUG)
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
     server->unique_name = my_name;
-    snprintf(server->name, sizeof(server->name), "%s", address);
     server->protocol = my_protocol;
     server->authenticator = my_authenticator;
     server->auth_instance = auth_instance;
@@ -791,8 +796,16 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    snprintf(server->monuser, sizeof(server->monuser), "%s", user);
-    snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
+    if (snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
+    {
+        MXS_WARNING("Truncated monitor user for server '%s', maximum username "
+                    "length is %lu characters.", server->unique_name, sizeof(server->monuser));
+    }
+    if (snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > sizeof(server->monpw))
+    {
+        MXS_WARNING("Truncated monitor password for server '%s', maximum password "
+                    "length is %lu characters.", server->unique_name, sizeof(server->monpw));
+    }
 }
 
 /**
@@ -813,8 +826,7 @@ server_update_credentials(SERVER *server, char *user, char *passwd)
 {
     if (user != NULL && passwd != NULL)
     {
-        snprintf(server->monuser, sizeof(server->monuser), "%s", user);
-        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd);
+        serverAddMonUser(server, user, passwd);
         MXS_NOTICE("Updated monitor credentials for server '%s'", server->name);
     }
 }
