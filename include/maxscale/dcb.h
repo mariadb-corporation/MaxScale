@@ -302,15 +302,6 @@ typedef enum
     DCB_USAGE_ALL
 } DCB_USAGE;
 
-#if defined(FAKE_CODE)
-extern unsigned char dcb_fake_write_errno[10240];
-extern __int32_t     dcb_fake_write_ev[10240];
-extern bool          fail_next_backend_fd;
-extern bool          fail_next_client_fd;
-extern int           fail_next_accept;
-extern int           fail_accept_errno;
-#endif /* FAKE_CODE */
-
 /* A few useful macros */
 #define DCB_SESSION(x)                  (x)->session
 #define DCB_PROTOCOL(x, type)           (type *)((x)->protocol)

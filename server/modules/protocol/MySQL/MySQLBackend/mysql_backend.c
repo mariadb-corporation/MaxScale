@@ -402,9 +402,6 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
     MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
               "%s:%d, fd %d.",
               pthread_self(), host, port, so);
-#if defined(FAKE_CODE)
-    conn_open[so] = true;
-#endif /* FAKE_CODE */
 
 return_rv:
     return rv;

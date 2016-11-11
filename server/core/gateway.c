@@ -1310,15 +1310,6 @@ int main(int argc, char **argv)
     progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
-#if defined(FAKE_CODE)
-    memset(conn_open, 0, sizeof(bool) * 10240);
-    memset(dcb_fake_write_errno, 0, sizeof(unsigned char) * 10240);
-    memset(dcb_fake_write_ev, 0, sizeof(__int32_t) * 10240);
-    fail_next_backend_fd = false;
-    fail_next_client_fd = false;
-    fail_next_accept = 0;
-    fail_accept_errno = 0;
-#endif /* FAKE_CODE */
     file_write_header(stderr);
     /*<
      * Register functions which are called at exit except libmysqld-related,

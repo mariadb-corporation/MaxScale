@@ -732,51 +732,6 @@ struct subcommand disableoptions[] =
     }
 };
 
-#if defined(FAKE_CODE)
-
-static void fail_backendfd(void);
-static void fail_clientfd(void);
-static void fail_accept(DCB* dcb, char* arg1, char* arg2);
-/**
- *  * The subcommands of the fail command
- *   */
-struct subcommand failoptions[] =
-{
-    {
-        "backendfd",
-        0,
-        fail_backendfd,
-        "Fail backend socket for next operation.",
-        "Fail backend socket for next operation.",
-        {ARG_TYPE_STRING, 0, 0}
-    },
-    {
-        "clientfd",
-        0,
-        fail_clientfd,
-        "Fail client socket for next operation.",
-        "Fail client socket for next operation.",
-        {ARG_TYPE_STRING, 0, 0}
-    },
-    {
-        "accept",
-        2,
-        fail_accept,
-        "Fail to accept next client connection.",
-        "Fail to accept next client connection.",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
-    },
-    {
-        NULL,
-        0,
-        NULL,
-        NULL,
-        NULL,
-        {0, 0, 0}
-    }
-};
-#endif /* FAKE_CODE */
-
 static void telnetdAddUser(DCB *, char *user, char *password);
 
 static void cmd_AddServer(DCB *dcb, void *a, void *b)
@@ -1231,9 +1186,6 @@ static struct
     { "clear",      clearoptions },
     { "disable",    disableoptions },
     { "enable",     enableoptions },
-#if defined(FAKE_CODE)
-    { "fail",       failoptions },
-#endif /* FAKE_CODE */
     { "flush",      flushoptions },
     { "list",       listoptions },
     { "reload",     reloadoptions },
@@ -2340,50 +2292,3 @@ disable_account(DCB *dcb, char *user)
         dcb_printf(dcb, "Failed to disable the Linux user %s: %s\n", user, err);
     }
 }
-
-#if defined(FAKE_CODE)
-static void fail_backendfd(void)
-{
-    fail_next_backend_fd = true;
-}
-
-static void fail_clientfd(void)
-{
-    fail_next_client_fd = true;
-}
-
-static void fail_accept(
-    DCB*  dcb,
-    char* arg1,
-    char* arg2)
-{
-    int failcount = MXS_MIN(atoi(arg2), 100);
-    fail_accept_errno = atoi(arg1);
-    char errbuf[MXS_STRERROR_BUFLEN];
-
-    switch (fail_accept_errno)
-    {
-        case EAGAIN:
-//    case EWOULDBLOCK:
-        case EBADF:
-        case EINTR:
-        case EINVAL:
-        case EMFILE:
-        case ENFILE:
-        case ENOTSOCK:
-        case EOPNOTSUPP:
-        case ENOBUFS:
-        case ENOMEM:
-        case EPROTO:
-            fail_next_accept = failcount;
-            break;
-
-        default:
-            dcb_printf(dcb,
-                       "[%d, %s] is not valid errno for accept.\n",
-                       fail_accept_errno,
-                       strerror_r(fail_accept_errno, errbuf, sizeof(errbuf)));
-            return ;
-    }
-}
-#endif /* FAKE_CODE */
