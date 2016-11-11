@@ -330,7 +330,6 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     spinlock_acquire(&mon->lock);
 
-    ss_dassert(mon->databases);
     MONITOR_SERVERS *ptr = mon->databases;
 
     if (ptr->server == server)
@@ -1109,12 +1108,9 @@ void
 mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-              "Monitor timed out when connecting to "
-              "server %s:%d : \"%s\"" :
-              "Monitor was unable to connect to "
-              "server %s:%d : \"%s\"",
-              database->server->name,
-              database->server->port,
+              "Monitor timed out when connecting to server %s:%d : \"%s\"" :
+              "Monitor was unable to connect to server %s:%d : \"%s\"",
+              database->server->name, database->server->port,
               mysql_error(database->con));
 }
 

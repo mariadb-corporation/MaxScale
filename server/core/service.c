@@ -1365,8 +1365,11 @@ void dprintService(DCB *dcb, SERVICE *service)
     dcb_printf(dcb, "\tBackend databases:\n");
     while (server)
     {
-        dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
-                   server->server->protocol);
+        if (server->active && server->server->is_active)
+        {
+            dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name,
+                       server->server->port, server->server->protocol);
+        }
         server = server->next;
     }
     if (service->weightby)
@@ -2201,7 +2204,7 @@ bool service_server_in_use(const SERVER *server)
 
         for (SERVER_REF *ref = service->dbref; ref && !rval; ref = ref->next)
         {
-            if (ref->server == server)
+            if (ref->active && ref->server == server)
             {
                 rval = true;
             }

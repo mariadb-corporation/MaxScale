@@ -270,7 +270,6 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->replicationHeartbeat = 0;
         handle->detectStaleMaster = true;
         handle->detectStaleSlave = true;
-        handle->master = NULL;
         handle->script = NULL;
         handle->multimaster = false;
         handle->mysql51_replication = false;
@@ -280,6 +279,9 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
+
+    /** This should always be reset to NULL */
+    handle->master = NULL;
 
     while (params)
     {
