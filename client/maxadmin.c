@@ -91,12 +91,11 @@ prompt(EditLine *el __attribute__((__unused__)))
 }
 
 #endif
-
 static struct option long_options[] =
 {
     {"host", required_argument, 0, 'h'},
     {"user", required_argument, 0, 'u'},
-    {"password", required_argument, 0, 'p'},
+    {"password", optional_argument, 0, 'p'},
     {"port", required_argument, 0, 'P'},
     {"socket", required_argument, 0, 'S'},
     {"version", no_argument, 0, 'v'},
@@ -142,7 +141,7 @@ main(int argc, char **argv)
 
     int option_index = 0;
     char c;
-    while ((c = getopt_long(argc, argv, "h:p:P:u:S:v?e",
+    while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?e",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
@@ -154,8 +153,12 @@ main(int argc, char **argv)
 
             case 'p':
                 use_inet_socket = true;
-                passwd = strdup(optarg);
-                memset(optarg, '\0', strlen(optarg));
+                // If password was not given, ask for it later
+                if (optarg != NULL)
+                {
+                    passwd = strdup(optarg);
+                    memset(optarg, '\0', strlen(optarg));
+                }
                 break;
 
             case 'P':
