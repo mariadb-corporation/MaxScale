@@ -1264,6 +1264,7 @@ bool server_create(const char *name, const char *address, const char *port,
 
     if (server_find_by_unique_name(name) == NULL)
     {
+        // TODO: Get default values from the protocol module
         if (port == NULL)
         {
             port = "3306";
@@ -1271,6 +1272,12 @@ bool server_create(const char *name, const char *address, const char *port,
         if (protocol == NULL)
         {
             protocol = "MySQLBackend";
+        }
+        if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
+        {
+            MXS_ERROR("No authenticator defined for server '%s' and no default "
+                      "authenticator for protocol '%s'.", name, protocol);
+            return false;
         }
 
         /** First check if this service has been created before */
