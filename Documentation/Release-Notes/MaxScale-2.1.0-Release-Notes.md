@@ -87,6 +87,23 @@ removed if they are no longer used by older versions of MaxScale.
 
 ## New Features
 
+### Dynamic server configuration
+
+MaxScale can now change the servers of a service or a monitor at run-time. New
+servers can also be created and they will persisted even after a restart. The
+following new commands were added to maxadmin, see output of `maxadmin help
+<command>` for more details.
+
+- `create server`: Creates a new server
+- `destroy server`: Destroys a created server
+- `add server`: Adds a server to a service or a monitor
+- `remove server`: Removes a server from a service or a monitor
+- `alter server`: Alter server configuration
+- `alter monitor`: Alter monitor configuration
+
+With these new features, you can start MaxScale without the servers and define
+them later.
+
 ### Amazon RDS Aurora monitor
 
 The new [Aurora Monitor](../Monitors/Aurora-Monitor.md) module allows monitoring
