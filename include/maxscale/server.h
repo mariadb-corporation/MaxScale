@@ -246,6 +246,18 @@ extern bool server_create(const char *name, const char *address, const char *por
                           const char *options);
 
 /**
+ * @brief Serialize a server to a file
+ *
+ * This converts @c server into an INI format file. This allows created servers
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
+ *
+ * @param server Server to serialize
+ * @return False if the serialization of the server fails, true if it was successful
+ */
+bool server_serialize(const SERVER *server);
+
+/**
  * @brief Destroy a server
  *
  * This removes any created server configuration files and marks the server removed
