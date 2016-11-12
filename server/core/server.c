@@ -1287,15 +1287,19 @@ bool server_create(const char *name, const char *address, const char *port,
             server->is_active = true;
             rval = true;
         }
-        else if ((server = server_alloc(name, address, atoi(port), protocol, authenticator,
-                                        authenticator_options)))
+        else
         {
-            if (server_serialize(server))
-            {
-                /** server_alloc will add the server to the global list of
-                 * servers so we don't need to manually add it. */
-                rval = true;
-            }
+            /**
+             * server_alloc will add the server to the global list of
+             * servers so we don't need to manually add it.
+             */
+            server = server_alloc(name, address, atoi(port), protocol,
+                                  authenticator, authenticator_options);
+        }
+
+        if (server && server_serialize(server))
+        {
+            rval = true;
         }
     }
 
