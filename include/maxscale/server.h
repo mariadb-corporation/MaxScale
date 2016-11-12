@@ -280,7 +280,5 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
-extern bool server_is_ssl_parameter(const char *key);
-extern void server_update_ssl(SERVER *server, const char *key, const char *value);
 
 MXS_END_DECLS

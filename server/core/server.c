@@ -1354,14 +1354,3 @@ bool server_destroy(SERVER *server)
 
     return rval;
 }
-
-bool server_is_ssl_parameter(const char *key)
-{
-    // TODO: Implement this
-    return false;
-}
-
-void server_update_ssl(SERVER *server, const char *key, const char *value)
-{
-    // TODO: Implement this
-}

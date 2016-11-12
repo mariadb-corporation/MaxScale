@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
+#include <maxscale/gw_ssl.h>
 
 MXS_BEGIN_DECLS
 
@@ -129,13 +130,91 @@ typedef struct
 } GATEWAY_CONF;
 
 
+/**
+ * @brief Creates an empty configuration context
+ *
+ * @param section Context name
+ * @return New context or NULL on memory allocation failure
+ */
+CONFIG_CONTEXT* config_context_create(const char *section);
+
+/**
+ * @brief Free a configuration context
+ *
+ * @param context The context to free
+ */
+void config_context_free(CONFIG_CONTEXT *context);
+
+/**
+ * @brief Get a configuration parameter
+ *
+ * @param params List of parameters
+ * @param name Name of parameter to get
+ * @return The parameter or NULL if the parameter was not found
+ */
+CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name);
+
+/**
+ * @brief Add a parameter to a configuration context
+ *
+ * @param obj Context where the parameter should be added
+ * @param key Key to add
+ * @param value Value for the key
+ * @return True on success, false on memory allocation error
+ */
+bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+
+/**
+ * @brief Append to an existing parameter
+ *
+ * @param obj Configuration context
+ * @param key Parameter name
+ * @param value Value to append to the parameter
+ * @return True on success, false on memory allocation error
+ */
+bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+
+/**
+ * @brief Check if all SSL parameters are defined
+ *
+ * Helper function to check whether all of the required SSL parameters are defined
+ * in the configuration context. The checked parameters are 'ssl', 'ssl_key',
+ * 'ssl_cert' and 'ssl_ca_cert'. The 'ssl' parameter must also have a value of
+ * 'required'.
+ *
+ * @param obj Configuration context
+ * @return True if all required parameters are present
+ */
+bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
+
+/**
+ * @brief Helper function for checking SSL parameters
+ *
+ * @param key Parameter name
+ * @return True if the parameter is an SSL parameter
+ */
+bool config_is_ssl_parameter(const char *key);
+
+/**
+ * @brief Construct an SSL structure
+ *
+ * The SSL structure is used by both listeners and servers.
+ *
+ * TODO: Rename to something like @c config_construct_ssl
+ *
+ * @param obj Configuration context
+ * @param require_cert Whether certificates are required
+ * @param error_count Pointer to an int which is incremented for each error
+ * @return New SSL_LISTENER structure or NULL on error
+ */
+SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
+
 char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
 void                config_enable_feedback_task(void);
 void                config_disable_feedback_task(void);
 unsigned long       config_get_gateway_id(void);
 GATEWAY_CONF*       config_get_global_options();
-CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
 config_param_type_t config_get_paramtype(const CONFIG_PARAMETER* param);
 bool                config_get_valint(int* val,
                                       const CONFIG_PARAMETER* param,
