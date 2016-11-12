@@ -1553,11 +1553,28 @@ execute_cmd(CLI_SESSION *cli)
                     if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
                     {
                         found = 1; /**< command and sub-command match */
-                        if (argc < cmds[i].options[j].argc_min)
+
+                        if (cmds[i].options[j].argc_min == cmds[i].options[j].argc_max &&
+                            argc != cmds[i].options[j].argc_min)
                         {
+                            /** Wrong number of arguments */
+                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects %d arguments\n",
+                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                                       cmds[i].options[j].argc_min);
+                        }
+                        else if (argc < cmds[i].options[j].argc_min)
+                        {
+                            /** Not enough arguments */
                             dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at least %d arguments\n",
                                        cmds[i].cmd, cmds[i].options[j].arg1,
                                        cmds[i].options[j].argc_min);
+                        }
+                        else if (argc > cmds[i].options[j].argc_max)
+                        {
+                            /** Too many arguments */
+                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at most %d arguments\n",
+                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                                       cmds[i].options[j].argc_max);
                         }
                         else
                         {
