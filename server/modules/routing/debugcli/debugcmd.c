@@ -749,6 +749,7 @@ static void cmd_AddServer(DCB *dcb, void *a, void *b)
         if (service)
         {
             serviceAddBackend(service, server);
+            service_serialize_servers(service);
         }
         else if (monitor)
         {
@@ -806,6 +807,7 @@ static void cmd_RemoveServer(DCB *dcb, void *a, void *b)
         if (service)
         {
             serviceRemoveBackend(service, server);
+            service_serialize_servers(service);
         }
         else if (monitor)
         {
