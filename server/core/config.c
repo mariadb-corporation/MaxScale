@@ -562,6 +562,47 @@ static bool is_directory(const char *dir)
 }
 
 /**
+ * @brief Check if a directory contains .cnf files
+ *
+ * @param path Path to a directory
+ * @return True if the directory contained one or more .cnf files
+ */
+static bool contains_cnf_files(const char *path)
+{
+    bool rval = false;
+    glob_t matches;
+    const char suffix[] = "/*.cnf";
+    char pattern[strlen(path) + sizeof(suffix)];
+
+    strcpy(pattern, path);
+    strcat(pattern, suffix);
+    int rc = glob(pattern, GLOB_NOSORT, NULL, &matches);
+
+    switch (rc)
+    {
+        case 0:
+            rval = true;
+            break;
+
+        case GLOB_NOSPACE:
+            MXS_OOM();
+            break;
+
+        case GLOB_ABORTED:
+            MXS_ERROR("Failed to read directory '%s'", path);
+            break;
+
+        default:
+            ss_dassert(rc == GLOB_NOMATCH);
+            break;
+    }
+
+    globfree(&matches);
+
+    return rval;
+}
+
+/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
@@ -605,7 +646,23 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             if (is_directory(persist_cnf))
             {
-                rval = config_load_dir(persist_cnf, &dcontext, &ccontext);
+                DUPLICATE_CONTEXT p_dcontext;
+                /**
+                 * We need to initialize a second duplicate context for the
+                 * generated configuration files as the monitors and services will
+                 * have duplicate sections. The duplicate sections are used to
+                 * store changes to the list of servers the services and monitors
+                 * use, and thus should not be treated as errors.
+                 */
+                if (duplicate_context_init(&p_dcontext))
+                {
+                    rval = config_load_dir(persist_cnf, &p_dcontext, &ccontext);
+                    duplicate_context_finish(&p_dcontext);
+                }
+                else
+                {
+                    rval = false;
+                }
             }
 
             if (rval)
@@ -613,6 +670,13 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
                 if (!check_config_objects(ccontext.next) || !process_config(ccontext.next))
                 {
                     rval = false;
+                    if (contains_cnf_files(persist_cnf))
+                    {
+                        MXS_WARNING("One or more generated configurations were found at '%s'. "
+                                    "If the error relates to any of the files located there, "
+                                    "remove the offending configurations from this directory.",
+                                    persist_cnf);
+                    }
                 }
             }
         }

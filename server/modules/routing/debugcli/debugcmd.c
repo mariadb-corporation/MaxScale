@@ -753,6 +753,7 @@ static void cmd_AddServer(DCB *dcb, void *a, void *b)
         else if (monitor)
         {
             monitorAddServer(monitor, server);
+            monitor_serialize_servers(monitor);
         }
 
         const char *target = service ? "service" : "monitor";
@@ -809,6 +810,7 @@ static void cmd_RemoveServer(DCB *dcb, void *a, void *b)
         else if (monitor)
         {
             monitorRemoveServer(monitor, server);
+            monitor_serialize_servers(monitor);
         }
 
         const char *target = service ? "service" : "monitor";

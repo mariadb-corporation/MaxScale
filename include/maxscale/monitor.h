@@ -234,6 +234,22 @@ void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
 
 /**
+ * @brief Serialize a monitor to a file
+ *
+ * This partially converts @c monitor into an INI format file. Only the servers
+ * of the monitor are serialized. This allows the monitor to keep monitoring
+ * the servers that were added at runtime even after a restart.
+ *
+ * NOTE: This does not persist the complete monitor configuration and requires
+ * that an existing monitor configuration is in the main configuration file.
+ * Changes to monitor parameters are not persisted.
+ *
+ * @param monitor Monitor to serialize
+ * @return False if the serialization of the monitor fails, true if it was successful
+ */
+bool monitor_serialize_servers(const MONITOR *monitor);
+
+/**
  * Check if a monitor uses @c servers
  * @param server Server that is queried
  * @return True if server is used by at least one monitor
