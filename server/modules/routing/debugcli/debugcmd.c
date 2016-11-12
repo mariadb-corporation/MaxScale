@@ -984,9 +984,9 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 struct subcommand createoptions[] =
 {
     {
-        "server", 3, 6, createServer,
+        "server", 2, 6, createServer,
         "Create a new server",
-        "Usage: create server NAME HOST PORT [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "Create a new server from the following parameters.\n"
         "NAME          Server name\n"
         "HOST          Server host address\n"
