@@ -1143,7 +1143,7 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
                 }
                 else if (!handle_alter_server(server, key, value))
                 {
-                    dcb_printf(dcb, "Error: Unknown key-value parameter: %s=%s\n", key, value);
+                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
                 }
             }
             else
@@ -1166,11 +1166,10 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
  *
  * If the value is not a positive integer, an error is printed to @c dcb.
  *
- * @param dcb Client DCB
  * @param value String value
  * @return 0 on error, otherwise a positive integer
  */
-static long get_positive_int(DCB *dcb, const char *value)
+static long get_positive_int(const char *value)
 {
     char *endptr;
     long ival = strtol(value, &endptr, 10);
@@ -1180,62 +1179,93 @@ static long get_positive_int(DCB *dcb, const char *value)
         return ival;
     }
 
-    dcb_printf(dcb, "Invalid value: %s", value);
     return 0;
 }
 
-static void alterMonitor(DCB *dcb, MONITOR *monitor, char *key, char *value)
+static bool handle_alter_monitor(MONITOR *monitor, char *key, char *value)
 {
-    bool unknown = false;
+    bool valid = false;
+
     if (strcmp(key, "user") == 0)
     {
+        valid = true;
         monitorAddUser(monitor, value, monitor->password);
     }
     else if (strcmp(key, "password") == 0)
     {
+        valid = true;
         monitorAddUser(monitor, monitor->user, value);
     }
     else if (strcmp(key, "monitor_interval") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
+            valid = true;
             monitorSetInterval(monitor, ival);
         }
     }
     else if (strcmp(key, "backend_connect_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
+            valid = true;
             monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
         }
     }
     else if (strcmp(key, "backend_write_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
+            valid = true;
+            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
         }
     }
     else if (strcmp(key, "backend_read_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
+            valid = true;
+            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
-    else
+
+    return valid;
+}
+
+static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
+                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                        char *v10, char *v11)
+{
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 0; i < items; i++)
     {
-        unknown = true;
+        if (values[i])
+        {
+            char *key = values[i];
+            char *value = strchr(key, '=');
+
+            if (value)
+            {
+                *value++ = '\0';
+
+                if (!handle_alter_monitor(monitor, key, value))
+                {
+                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+                }
+            }
+            else
+            {
+                dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+            }
+        }
     }
 
-    if (unknown)
-    {
-        dcb_printf(dcb, "Unknown parameter '%s'", key);
-    }
 }
 
 struct subcommand alteroptions[] =
@@ -1246,19 +1276,22 @@ struct subcommand alteroptions[] =
         "Usage: alter server NAME KEY=VALUE ...\n"
         "This will alter an existing parameter of a server. The accepted values\n"
         "for KEY are: 'address', 'port', 'monuser', 'monpw'\n"
-        "A maximum of 11 parameters can be changed at one time\n",
+        "A maximum of 11 parameters can be changed at one time",
         { ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
-        "monitor", 3, 3, alterMonitor,
+        "monitor", 2, 12, alterMonitor,
         "Alter monitor parameters",
-        "Usage: alter monitor NAME KEY VALUE\n"
+        "Usage: alter monitor NAME KEY=VALUE ...\n"
         "This will alter an existing parameter of a monitor. The accepted values\n"
         "for KEY are: 'user', 'password', 'monitor_interval',\n"
-        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'",
-        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING}
+        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'\n"
+        "A maximum of 11 parameters can be changed at one time",
+        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION
