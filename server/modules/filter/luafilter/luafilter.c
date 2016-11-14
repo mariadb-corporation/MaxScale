@@ -96,6 +96,7 @@ static FILTER_OBJECT MyObject =
     clientReply,
     diagnostic,
     getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**
@@ -570,7 +571,7 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
                 lua_gettop(my_instance->global_lua_state);
                 if (lua_isstring(my_instance->global_lua_state, -1))
                 {
-                    dcb_printf(dcb, lua_tostring(my_instance->global_lua_state, -1));
+                    dcb_printf(dcb, "%s", lua_tostring(my_instance->global_lua_state, -1));
                     dcb_printf(dcb, "\n");
                 }
             }

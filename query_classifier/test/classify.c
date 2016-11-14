@@ -196,10 +196,12 @@ int test(FILE* input, FILE* expected)
         {
             tok = strpbrk(strbuff, ";");
             unsigned int qlen = tok - strbuff + 1;
-            GWBUF* buff = gwbuf_alloc(qlen + 6);
-            *((unsigned char*)(GWBUF_DATA(buff))) = qlen;
-            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (qlen >> 8);
-            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (qlen >> 16);
+            unsigned int payload_len = qlen + 1;
+            unsigned int buf_len = payload_len + 4;
+            GWBUF* buff = gwbuf_alloc(buf_len);
+            *((unsigned char*)(GWBUF_DATA(buff))) = payload_len;
+            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (payload_len >> 8);
+            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (payload_len >> 16);
             *((unsigned char*)(GWBUF_DATA(buff) + 3)) = 0x00;
             *((unsigned char*)(GWBUF_DATA(buff) + 4)) = 0x03;
             memcpy(GWBUF_DATA(buff) + 5, strbuff, qlen);

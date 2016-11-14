@@ -137,6 +137,9 @@ typedef enum
 #define MONITOR_INTERVAL 10000 // in milliseconds
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
 
+#define MAX_MONITOR_USER_LEN     512
+#define MAX_MONITOR_PASSWORD_LEN 512
+
 /*
  * Create declarations of the enum for monitor events and also the array of
  * structs containing the matching names. The data is taken from def_monitor_event.h
@@ -177,8 +180,8 @@ typedef struct monitor_servers
 struct monitor
 {
     char *name;                   /**< The name of the monitor module */
-    char *user;                   /*< Monitor username */
-    char *password;               /*< Monitor password */
+    char user[MAX_MONITOR_USER_LEN]; /*< Monitor username */
+    char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
     SPINLOCK lock;
     CONFIG_PARAMETER* parameters; /*< configuration parameters */
     MONITOR_SERVERS* databases;   /*< List of databases the monitor monitors */
@@ -201,7 +204,8 @@ struct monitor
 extern MONITOR *monitor_alloc(char *, char *);
 extern void monitor_free(MONITOR *);
 extern MONITOR *monitor_find(char *);
-extern void monitorAddServer(MONITOR *, SERVER *);
+extern void monitorAddServer(MONITOR *mon, SERVER *server);
+extern void monitorRemoveServer(MONITOR *mon, SERVER *server);
 extern void monitorAddUser(MONITOR *, char *, char *);
 extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
 extern void monitorStop(MONITOR *);
@@ -228,5 +232,12 @@ int mon_parse_event_string(bool* events, size_t count, char* string);
 connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
+
+/**
+ * Check if a monitor uses @c servers
+ * @param server Server that is queried
+ * @return True if server is used by at least one monitor
+ */
+bool monitor_server_in_use(const SERVER *server);
 
 MXS_END_DECLS

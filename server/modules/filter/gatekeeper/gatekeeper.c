@@ -103,9 +103,10 @@ static FILTER_OBJECT MyObject =
     setDownstream,
     NULL, // No upstream requirement
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
     getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**

@@ -48,6 +48,8 @@
 MXS_BEGIN_DECLS
 
 #define MAX_SERVER_NAME_LEN 1024
+#define MAX_SERVER_MONUSER_LEN 512
+#define MAX_SERVER_MONPW_LEN 512
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
@@ -86,15 +88,16 @@ typedef struct server
 #endif
     SPINLOCK       lock;           /**< Common access lock */
     char           *unique_name;   /**< Unique name for the server */
-    char           *name;          /**< Server name/IP address*/
+    char           name[MAX_SERVER_NAME_LEN]; /**< Server name/IP address*/
     unsigned short port;           /**< Port to listen on */
     char           *protocol;      /**< Protocol module to use */
     char           *authenticator; /**< Authenticator module name */
     void           *auth_instance; /**< Authenticator instance */
+    char           *auth_options;  /**< Authenticator options */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
-    char           *monuser;       /**< User name to use to monitor the db */
-    char           *monpw;         /**< Password to use to monitor the db */
+    char           monuser[MAX_SERVER_MONUSER_LEN]; /**< User name to use to monitor the db */
+    char           monpw[MAX_SERVER_MONPW_LEN]; /**< Password to use to monitor the db */
     SERVER_STATS   stats;          /**< The server statistics */
     struct  server *next;          /**< Next server */
     struct  server *nextdb;        /**< Next server in list attached to a service */
@@ -112,6 +115,7 @@ typedef struct server
     long           persistpoolmax; /**< Maximum size of persistent connections pool */
     long           persistmaxtime; /**< Maximum number of seconds connection can live */
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
+    bool           is_active;      /**< Server is active and has not been "destroyed" */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
@@ -135,6 +139,11 @@ typedef struct server
 #define SERVER_AUTH_ERROR        0x1000  /**<< Authentication error from monitor */
 #define SERVER_STALE_SLAVE       0x2000  /**<< Slave status is possible even without a master */
 #define SERVER_RELAY_MASTER      0x4000  /**<< Server is a relay master */
+
+/**
+ * Is the server valid and active
+ */
+#define SERVER_IS_ACTIVE(server) (server->is_active)
 
 /**
  * Is the server running - the macro returns true if the server is marked as running
@@ -197,9 +206,57 @@ typedef struct server
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
 
-extern SERVER *server_alloc(char *, char *, unsigned short, char*, char*);
+/**
+ * @brief Allocate a new server
+ *
+ * This will create a new server that represents a backend server that services
+ * can use. This function will add the server to the running configuration but
+ * will not persist the changes.
+ *
+ * @param name          Unique server name
+ * @param address       The server address
+ * @param port          The port to connect to
+ * @param protocol      The protocol to use to connect to the server
+ * @param authenticator The server authenticator module
+ * @param auth_options  Options for the authenticator module
+ * @return              The newly created server or NULL if an error occurred
+ */
+extern SERVER* server_alloc(const char *name, const char *address, unsigned short port,
+                            const char *protocol, const char *authenticator,
+                            const char *auth_options);
+
+/**
+ * @brief Create a new server
+ *
+ * This function creates a new, persistent server by first allocating a new
+ * server and then storing the resulting configuration file on disk. This
+ * function should be used only from administrative interface modules and internal
+ * modules should use server_alloc() instead.
+ *
+ * @param name          Server name
+ * @param address       Network address
+ * @param port          Network port
+ * @param protocol      Protocol module name
+ * @param authenticator Authenticator module name
+ * @param options       Options for the authenticator module
+ * @return True on success, false if an error occurred
+ */
+extern bool server_create(const char *name, const char *address, const char *port,
+                          const char *protocol, const char *authenticator,
+                          const char *options);
+
+/**
+ * @brief Destroy a server
+ *
+ * This removes any created server configuration files and marks the server removed
+ * If the server is not in use.
+ * @param server Server to destroy
+ * @return True if server was destroyed
+ */
+bool server_destroy(SERVER *server);
+
 extern int server_free(SERVER *);
-extern SERVER *server_find_by_unique_name(char *);
+extern SERVER *server_find_by_unique_name(const char *name);
 extern SERVER *server_find(char *, unsigned short);
 extern void printServer(SERVER *);
 extern void printAllServers();
@@ -216,13 +273,14 @@ extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void serverAddMonUser(SERVER *, char *, char *);
 extern void serverAddParameter(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
-extern void server_update(SERVER *, char *, char *, char *);
-extern void server_set_unique_name(SERVER *, char *);
+extern void server_update_credentials(SERVER *, char *, char *);
 extern DCB  *server_get_persistent(SERVER *, char *, const char *);
 extern void server_update_address(SERVER *, char *);
 extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
+extern bool server_is_ssl_parameter(const char *key);
+extern void server_update_ssl(SERVER *server, const char *key, const char *value);
 
 MXS_END_DECLS

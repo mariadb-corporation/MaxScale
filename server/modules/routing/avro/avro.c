@@ -105,7 +105,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     errorReply,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static SPINLOCK instlock;
@@ -223,14 +224,22 @@ bool create_tables(sqlite3* handle)
     return true;
 }
 
-static void add_conversion_task(AVRO_INSTANCE *inst)
+static bool add_conversion_task(AVRO_INSTANCE *inst)
 {
     char tasknm[strlen(avro_task_name) + strlen(inst->service->name) + 2];
     snprintf(tasknm, sizeof(tasknm), "%s-%s", inst->service->name, avro_task_name);
+    if (inst->service->svc_do_shutdown)
+    {
+        MXS_INFO("AVRO converter task is not added due to MaxScale shutdown");
+        return false;
+    }
+    MXS_INFO("Setting task for converter_func");
     if (hktask_oneshot(tasknm, converter_func, inst, inst->task_delay) == 0)
     {
         MXS_ERROR("Failed to add binlog to Avro conversion task to housekeeper.");
+        return false;
     }
+    return true;
 }
 
 /**
@@ -1006,7 +1015,8 @@ void converter_func(void* data)
     AVRO_INSTANCE* router = (AVRO_INSTANCE*) data;
     bool ok = true;
     avro_binlog_end_t binlog_end = AVRO_OK;
-    while (ok && binlog_end == AVRO_OK)
+
+    while (!router->service->svc_do_shutdown && ok && binlog_end == AVRO_OK)
     {
         uint64_t start_pos = router->current_pos;
         if (avro_open_binlog(router->binlogdir, router->binlog_name, &router->binlog_fd))
@@ -1037,10 +1047,12 @@ void converter_func(void* data)
     if (binlog_end == AVRO_LAST_FILE)
     {
         router->task_delay = MXS_MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
-        add_conversion_task(router);
-        MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
-                 " more data is written before continuing. Next check in %d seconds.",
-                 router->binlog_name, router->current_pos, router->task_delay);
+        if (add_conversion_task(router))
+        {
+            MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
+                     " more data is written before continuing. Next check in %d seconds.",
+                     router->binlog_name, router->current_pos, router->task_delay);
+        }
     }
 }
 

@@ -57,6 +57,18 @@ by default, is configured using the new global configuration entry `log_throttli
 For more information about this configuration entry, please see
 [Global Settings](../Getting-Started/Configuration-Guide.md#global-settings).
 
+### Persistent Connections
+
+Starting with the 2.1 version of MariaDB MaxScale, when a MySQL protocol
+persistent connection is taken from the persistent connection pool, the
+state of the MySQL session will be reset when the the connection is used
+for the first time. This allows persistent connections to be used with no
+functional limitations and makes them behave like normal MySQL
+connections.
+
+For more information about persistent connections, please read the
+[Administration Tutorial](../Tutorials/Administration-Tutorial.md).
+
 ### User data cache
 
 The user data cache stores the cached credentials that are used by some router
@@ -74,6 +86,23 @@ directory. The old caches in `/var/cache/maxscale` will need to be manually
 removed if they are no longer used by older versions of MaxScale.
 
 ## New Features
+
+### Dynamic server configuration
+
+MaxScale can now change the servers of a service or a monitor at run-time. New
+servers can also be created and they will persisted even after a restart. The
+following new commands were added to maxadmin, see output of `maxadmin help
+<command>` for more details.
+
+- `create server`: Creates a new server
+- `destroy server`: Destroys a created server
+- `add server`: Adds a server to a service or a monitor
+- `remove server`: Removes a server from a service or a monitor
+- `alter server`: Alter server configuration
+- `alter monitor`: Alter monitor configuration
+
+With these new features, you can start MaxScale without the servers and define
+them later.
 
 ### Amazon RDS Aurora monitor
 

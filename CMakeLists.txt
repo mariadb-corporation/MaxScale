@@ -154,10 +154,6 @@ if(GCOV)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
 endif()
 
-if(FAKE_CODE)
-  set(FLAGS "${FLAGS} -DFAKE_CODE" CACHE STRING "Compilation flags"  FORCE)
-endif()
-
 if(PROFILE)
   message(STATUS "Profiling executables")
   set(FLAGS "${FLAGS} -pg " CACHE STRING "Compilation flags" FORCE)

@@ -378,6 +378,16 @@ Configure the directory where the executable files reside. All internal processe
 execdir=/usr/local/bin/
 ```
 
+#### `persistdir`
+
+Configure the directory where persisted configurations are stored. When a new
+server is created via MaxAdmin, it will be stored in this directory. Do not use
+or modify the contents of this directory, use _/etc/maxscale.cnf.d/_ instead.
+
+```
+persistdir=/var/lib/maxscale/maxscale.cnf.d/
+```
+
 #### `language`
 
 Set the folder where the errmsg.sys file is located in. MariaDB MaxScale will look for the errmsg.sys file installed with MariaDB MaxScale from this folder.

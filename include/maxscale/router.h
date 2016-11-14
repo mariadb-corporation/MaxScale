@@ -24,6 +24,7 @@
  * 16/07/2013   Massimiliano Pinto  Added router commands values
  * 22/10/2013   Massimiliano Pinto  Added router errorReply entry point
  * 27/10/2015   Martin Brampton     Add RCAP_TYPE_NO_RSESSION
+ * 08/11/2016   Massimiliano Pinto  Add destroyInstance() entry point
  *
  */
 
@@ -82,6 +83,7 @@ typedef struct router_object
                            error_action_t action,
                            bool*          succp);
     uint64_t (*getCapabilities)(void);
+    void    (*destroyInstance)(ROUTER *instance);
 } ROUTER_OBJECT;
 
 /**

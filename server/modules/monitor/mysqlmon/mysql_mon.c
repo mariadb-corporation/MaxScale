@@ -215,7 +215,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
     while (database)
     {
         /** Delete any existing structures and replace them with empty ones */
-        hashtable_delete(handle->server_info, database->server);
+        hashtable_delete(handle->server_info, database->server->unique_name);
 
         if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
         {
@@ -270,7 +270,6 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->replicationHeartbeat = 0;
         handle->detectStaleMaster = true;
         handle->detectStaleSlave = true;
-        handle->master = NULL;
         handle->script = NULL;
         handle->multimaster = false;
         handle->mysql51_replication = false;
@@ -280,6 +279,9 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
+
+    /** This should always be reset to NULL */
+    handle->master = NULL;
 
     while (params)
     {
@@ -688,19 +690,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_MONITOR* handle = mon->handle;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    char *uname = mon->user;
     unsigned long int server_version = 0;
     char *server_string;
-
-    if (database->server->monuser != NULL)
-    {
-        uname = database->server->monuser;
-    }
-
-    if (uname == NULL)
-    {
-        return;
-    }
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))

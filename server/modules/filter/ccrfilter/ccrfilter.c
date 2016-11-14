@@ -75,9 +75,10 @@ static FILTER_OBJECT MyObject =
     setDownstream,
     NULL,               // No Upstream requirement
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
     getCapabilities,
+    NULL, // No destroyInstance
 };
 
 #define CCR_DEFAULT_TIME 60

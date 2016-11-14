@@ -71,7 +71,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     NULL,
     NULL,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 extern int execute_cmd(CLI_SESSION *cli);

@@ -45,11 +45,6 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
     return false;
 }
 
-char* qc_get_affected_fields(GWBUF* buf)
-{
-    return NULL;
-}
-
 bool qc_query_has_clause(GWBUF* buf)
 {
     return false;
@@ -64,6 +59,22 @@ char** qc_get_database_names(GWBUF* querybuf, int* size)
 qc_query_op_t qc_get_operation(GWBUF* querybuf)
 {
     return QUERY_OP_UNDEFINED;
+}
+
+char* qc_sqlite_get_prepare_name(GWBUF* query)
+{
+    return NULL;
+}
+
+qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
+{
+    return QUERY_OP_UNDEFINED;
+}
+
+void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
+{
+    *infos = NULL;
+    *n_infos = 0;
 }
 
 bool qc_init(const char* args)
@@ -125,8 +136,10 @@ extern "C"
         qc_get_table_names,
         NULL,
         qc_query_has_clause,
-        qc_get_affected_fields,
         qc_get_database_names,
+        qc_get_prepare_name,
+        qc_get_prepare_operation,
+        qc_get_field_info,
     };
 
     QUERY_CLASSIFIER* GetModuleObject()

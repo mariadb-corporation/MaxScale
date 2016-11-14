@@ -93,15 +93,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 
-#if defined(FAKE_CODE)
-unsigned char dcb_fake_write_errno[10240];
-__int32_t     dcb_fake_write_ev[10240];
-bool          fail_next_backend_fd;
-bool          fail_next_client_fd;
-int           fail_next_accept;
-int           fail_accept_errno;
-#endif /* FAKE_CODE */
-
 /* The list of all DCBs */
 static LIST_CONFIG DCBlist =
 {LIST_TYPE_RECYCLABLE, sizeof(DCB), SPINLOCK_INIT};
@@ -130,9 +121,6 @@ static int dcb_create_SSL(DCB* dcb, SSL_LISTENER *ssl);
 static int dcb_read_SSL(DCB *dcb, GWBUF **head);
 static GWBUF *dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *nsingleread);
 static GWBUF *dcb_basic_read_SSL(DCB *dcb, int *nsingleread);
-#if defined(FAKE_CODE)
-static inline void dcb_write_fake_code(DCB *dcb);
-#endif
 static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
 static int gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing);
@@ -684,9 +672,6 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
             else
             {
-#if defined(FAKE_CODE)
-                conn_open[dcb->fd] = false;
-#endif /* FAKE_CODE */
                 dcb->fd = DCBFD_CLOSED;
 
                 MXS_DEBUG("%lu [dcb_process_victim_queue] Closed socket "
@@ -772,6 +757,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
             MXS_DEBUG("%lu [dcb_connect] Reusing a persistent connection, dcb %p\n",
                       pthread_self(), dcb);
             dcb->persistentstart = 0;
+            dcb->was_persistent = true;
             return dcb;
         }
         else
@@ -866,6 +852,8 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     /** Copy status field to DCB */
     dcb->dcb_server_status = server->status;
     dcb->dcb_port = server->port;
+
+    dcb->was_persistent = false;
 
     /**
      * backend_dcb is connected to backend server, and once backend_dcb
@@ -1384,34 +1372,6 @@ dcb_write(DCB *dcb, GWBUF *queue)
     return 1;
 }
 
-#if defined(FAKE_CODE)
-/**
- * Fake code for dcb_write
- * (Should have fuller description)
- *
- * @param dcb   The DCB of the client
- */
-static inline void
-dcb_write_fake_code(DCB *dcb)
-{
-    if (dcb->session != NULL)
-    {
-        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER && fail_next_client_fd)
-        {
-            dcb_fake_write_errno[dcb->fd] = 32;
-            dcb_fake_write_ev[dcb->fd] = 29;
-            fail_next_client_fd = false;
-        }
-        else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && fail_next_backend_fd)
-        {
-            dcb_fake_write_errno[dcb->fd] = 32;
-            dcb_fake_write_ev[dcb->fd] = 29;
-            fail_next_backend_fd = false;
-        }
-    }
-}
-#endif /* FAKE_CODE */
-
 /**
  * Check the parameters for dcb_write
  *
@@ -1824,6 +1784,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
                   pthread_self(),
                   dcb->user);
+        dcb->was_persistent = false;
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
         if (dcb->session)
@@ -2421,28 +2382,10 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
 
     errno = 0;
 
-#if defined(FAKE_CODE)
-    if (fd > 0 && dcb_fake_write_errno[fd] != 0)
-    {
-        ss_dassert(dcb_fake_write_ev[fd] != 0);
-        written = write(fd, buf, nbytes / 2); /*< leave peer to read missing bytes */
-
-        if (written > 0)
-        {
-            written = -1;
-            errno = dcb_fake_write_errno[fd];
-        }
-    }
-    else if (fd > 0)
-    {
-        written = write(fd, buf, nbytes);
-    }
-#else
     if (fd > 0)
     {
         written = write(fd, buf, nbytes);
     }
-#endif /* FAKE_CODE */
 
     saved_errno = errno;
     errno = 0;
@@ -3089,14 +3032,9 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
     if ((c_sock = dcb_accept_one_connection(listener, (struct sockaddr *)&client_conn)) >= 0)
     {
         listener->stats.n_accepts++;
-#if defined(SS_DEBUG)
         MXS_DEBUG("%lu [gw_MySQLAccept] Accepted fd %d.",
                   pthread_self(),
                   c_sock);
-#endif /* SS_DEBUG */
-#if defined(FAKE_CODE)
-        conn_open[c_sock] = true;
-#endif /* FAKE_CODE */
         /* set nonblocking  */
         sendbuf = MXS_CLIENT_SO_SNDBUF;
 
@@ -3229,27 +3167,12 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
         socklen_t client_len = sizeof(struct sockaddr_storage);
         int eno = 0;
 
-#if defined(FAKE_CODE)
-        if (fail_next_accept > 0)
-        {
-            c_sock = -1;
-            eno = fail_accept_errno;
-            fail_next_accept -= 1;
-        }
-        else
-        {
-            fail_accept_errno = 0;
-#endif /* FAKE_CODE */
-
-            /* new connection from client */
-            c_sock = accept(listener->fd,
-                            client_conn,
-                            &client_len);
-            eno = errno;
-            errno = 0;
-#if defined(FAKE_CODE)
-        }
-#endif /* FAKE_CODE */
+        /* new connection from client */
+        c_sock = accept(listener->fd,
+                        client_conn,
+                        &client_len);
+        eno = errno;
+        errno = 0;
 
         if (c_sock == -1)
         {
@@ -3367,9 +3290,6 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
                   "attempting to register on an epoll instance.");
         return -1;
     }
-#if defined(FAKE_CODE)
-    conn_open[listener_socket] = true;
-#endif /* FAKE_CODE */
     return 0;
 }
 

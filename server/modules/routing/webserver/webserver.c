@@ -64,7 +64,8 @@ static ROUTER_OBJECT MyObject =
     diagnostic,
     NULL,
     NULL,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 

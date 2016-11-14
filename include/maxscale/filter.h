@@ -83,6 +83,7 @@ typedef struct filter_object
     int    (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
     void   (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
     uint64_t (*getCapabilities)(void);
+    void   (*destroyInstance)(FILTER *instance);
 } FILTER_OBJECT;
 
 /**

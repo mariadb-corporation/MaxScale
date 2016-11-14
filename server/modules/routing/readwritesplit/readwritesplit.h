@@ -32,26 +32,6 @@
 
 MXS_BEGIN_DECLS
 
-#undef PREP_STMT_CACHING
-
-#if defined(PREP_STMT_CACHING)
-
-typedef enum prep_stmt_type
-{
-    PREP_STMT_NAME,
-    PREP_STMT_ID
-} prep_stmt_type_t;
-
-typedef enum prep_stmt_state
-{
-    PREP_STMT_ALLOC,
-    PREP_STMT_SENT,
-    PREP_STMT_RECV,
-    PREP_STMT_DROPPED
-} prep_stmt_state_t;
-
-#endif /*< PREP_STMT_CACHING */
-
 typedef enum bref_state
 {
     BREF_IN_USE           = 0x01,
@@ -200,27 +180,6 @@ typedef struct sescmd_cursor_st
 } sescmd_cursor_t;
 
 /**
- * Internal structure used to define the set of backend servers we are routing
- * connections to. This provides the storage for routing module specific data
- * that is required for each of the backend servers.
- *
- * Owned by router_instance, referenced by each routing session.
- */
-typedef struct backend_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t     be_chk_top;
-#endif
-    SERVER*         backend_server;      /*< The server itself */
-    int             backend_conn_count;  /*< Number of connections to the server */
-    bool            be_valid; /*< Valid when belongs to the router's configuration */
-    int             weight; /*< Desired weighting on the load. Expressed in .1% increments */
-#if defined(SS_DEBUG)
-    skygw_chk_t     be_chk_tail;
-#endif
-} BACKEND;
-
-/**
  * Reference to BACKEND.
  *
  * Owned by router client session.
@@ -230,7 +189,7 @@ typedef struct backend_ref_st
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_top;
 #endif
-    BACKEND*        bref_backend;
+    SERVER_REF*     ref;
     DCB*            bref_dcb;
     bref_state_t    bref_state;
     int             bref_num_result_wait;
@@ -302,7 +261,6 @@ struct router_client_session
     skygw_chk_t      rses_chk_top;
 #endif
     SPINLOCK         rses_lock;      /*< protects rses_deleted */
-    int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
     bool             rses_closed;    /*< true when closeSession is called */
     rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Properties listed by their type */
     backend_ref_t*   rses_master_ref;
@@ -346,14 +304,10 @@ typedef struct
 typedef struct router_instance
 {
     SERVICE*                service;     /*< Pointer to service */
-    ROUTER_CLIENT_SES*      connections; /*< List of client connections */
     SPINLOCK                lock;        /*< Lock for the instance data */
-    BACKEND**               servers;     /*< Backend servers */
-    BACKEND*                master;      /*< NULL or pointer */
     rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
     int                     rwsplit_version; /*< version number for router's config */
     ROUTER_STATS            stats;       /*< Statistics for this router */
-    struct router_instance* next;        /*< Next router on the list */
     bool                    available_slaves; /*< The router has some slaves avialable */
 } ROUTER_INSTANCE;
 

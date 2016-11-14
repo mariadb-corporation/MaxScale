@@ -86,6 +86,38 @@ typedef enum qc_parse_result
     QC_QUERY_PARSED           = 3  /*< The query was fully parsed; completely classified. */
 } qc_parse_result_t;
 
+/**
+ * qc_field_usage_t defines where a particular field appears.
+ *
+ * QC_USED_IN_SELECT   : The field appears on the left side of FROM in a top-level SELECT statement.
+ * QC_USED_IN_SUBSELECT: The field appears on the left side of FROM in a sub-select SELECT statement.
+ * QC_USED_IN_WHERE    : The field appears in a WHERE clause.
+ * QC_USED_IN_SET      : The field appears in the SET clause of an UPDATE statement.
+ * QC_USED_IN_GROUP_BY : The field appears in a GROUP BY clause.
+ *
+ * Note that multiple bits may be set at the same time. For instance, for a statement like
+ * "SELECT fld FROM tbl WHERE fld = 1 GROUP BY fld", the bits QC_USED_IN_SELECT, QC_USED_IN_WHERE
+ * and QC_USED_IN_GROUP_BY will be set.
+ */
+typedef enum qc_field_usage
+{
+    QC_USED_IN_SELECT    = 0x01, /*< SELECT fld FROM... */
+    QC_USED_IN_SUBSELECT = 0x02, /*< SELECT 1 FROM ... SELECT fld ... */
+    QC_USED_IN_WHERE     = 0x04, /*< SELECT ... FROM ... WHERE fld = ... */
+    QC_USED_IN_SET       = 0x08, /*< UPDATE ... SET fld = ... */
+    QC_USED_IN_GROUP_BY  = 0x10, /*< ... GROUP BY fld */
+} qc_field_usage_t;
+
+/**
+ * QC_FIELD_INFO contains information about a field used in a statement.
+ */
+typedef struct qc_field_info
+{
+    char* database; /** Present if the field is of the form "a.b.c", NULL otherwise. */
+    char* table;    /** Present if the field is of the form "a.b", NULL otherwise. */
+    char* column;   /** Always present. */
+    uint32_t usage; /** Bitfield denoting where the column appears. */
+} QC_FIELD_INFO;
 
 /**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
@@ -113,9 +145,10 @@ typedef struct query_classifier
     char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
     char* (*qc_get_canonical)(GWBUF* stmt);
     bool (*qc_query_has_clause)(GWBUF* stmt);
-    char* (*qc_get_affected_fields)(GWBUF* stmt);
     char** (*qc_get_database_names)(GWBUF* stmt, int* size);
     char* (*qc_get_prepare_name)(GWBUF* stmt);
+    qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
+    void (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
 } QUERY_CLASSIFIER;
 
 /**
@@ -212,15 +245,38 @@ void qc_thread_end(void);
 qc_parse_result_t qc_parse(GWBUF* stmt);
 
 /**
- * Returns the fields the statement affects, as a string of names separated
- * by spaces. Note that the fields do not contain any table information.
+ * Convert a qc_field_usage_t enum to corresponding string.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param usage The value to be converted
  *
- * @return A string containing the fields or NULL if a memory allocation
- *         failure occurs. The string must be freed by the caller.
+ * @return The corresponding string. Must @b not be freed.
  */
-char* qc_get_affected_fields(GWBUF* stmt);
+const char* qc_field_usage_to_string(qc_field_usage_t usage);
+
+/**
+ * Convert a mask of qc_field_usage_t enum values to corresponding string.
+ *
+ * @param usage_mask  Mask of qc_field_usage_t values.
+ *
+ * @return The corresponding string, or NULL if memory allocation fails.
+ *         @b Must be freed by the caller.
+ */
+char* qc_field_usage_mask_to_string(uint32_t usage_mask);
+
+/**
+ * Returns information about affected fields.
+ *
+ * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param infos    Pointer to pointer that after the call will point to an
+ *                 array of QC_FIELD_INFO:s.
+ * @param n_infos  Pointer to size_t variable where the number of items
+ *                 in @c infos will be returned.
+ *
+ * @note The returned array belongs to the GWBUF and remains valid for as
+ *       long as the GWBUF is valid. If the data is needed for longer than
+ *       that, it must be copied.
+ */
+void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
 
 /**
  * Returns the statement, with literals replaced with question marks.
@@ -284,6 +340,17 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
  *       the server.
  */
 char* qc_get_prepare_name(GWBUF* stmt);
+
+/**
+ * Returns the operator of the prepared statement, if the statement
+ * is a PREPARE statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The operator of the prepared statement, if the statement
+ *         is a PREPARE statement; otherwise QUERY_OP_UNDEFINED.
+ */
+qc_query_op_t qc_get_prepare_operation(GWBUF* stmt);
 
 /**
  * Returns the tables accessed by the statement.
@@ -361,7 +428,7 @@ const char* qc_op_to_string(qc_query_op_t op);
  */
 static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 {
-    return (typemask & type) == type;
+    return (typemask & (uint32_t)type) == (uint32_t)type;
 }
 
 /**
@@ -395,13 +462,5 @@ const char* qc_type_to_string(qc_query_type_t type);
  * @note The returned string is dynamically allocated and @b must be freed.
  */
 char* qc_typemask_to_string(uint32_t typemask);
-
-/**
- * @deprecated
- * Synonym for qc_query_is_type().
- *
- * @see qc_query_is_type
- */
-#define QUERY_IS_TYPE(typemask, type) qc_query_is_type(typemask, type)
 
 MXS_END_DECLS

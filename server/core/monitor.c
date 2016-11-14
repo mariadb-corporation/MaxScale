@@ -58,7 +58,7 @@ const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
 static MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
-static void monitor_servers_free(MONITOR_SERVERS *servers);
+static void monitor_server_free_all(MONITOR_SERVERS *servers);
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
@@ -93,9 +93,8 @@ monitor_alloc(char *name, char *module)
     mon->name = name;
     mon->handle = NULL;
     mon->databases = NULL;
-    mon->password = NULL;
-    mon->user = NULL;
-    mon->password = NULL;
+    *mon->password = '\0';
+    *mon->user = '\0';
     mon->read_timeout = DEFAULT_READ_TIMEOUT;
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
@@ -142,7 +141,7 @@ monitor_free(MONITOR *mon)
     }
     spinlock_release(&monLock);
     free_config_parameter(mon->parameters);
-    monitor_servers_free(mon->databases);
+    monitor_server_free_all(mon->databases);
     MXS_FREE(mon->name);
     MXS_FREE(mon);
 }
@@ -258,6 +257,13 @@ monitorAddServer(MONITOR *mon, SERVER *server)
     /* pending status is updated by get_replication_tree */
     db->pending_status = 0;
 
+    monitor_state_t old_state = mon->state;
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStop(mon);
+    }
+
     spinlock_acquire(&mon->lock);
 
     if (mon->databases == NULL)
@@ -274,23 +280,87 @@ monitorAddServer(MONITOR *mon, SERVER *server)
         ptr->next = db;
     }
     spinlock_release(&mon->lock);
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStart(mon, mon->parameters);
+    }
+}
+
+static void monitor_server_free(MONITOR_SERVERS *tofree)
+{
+    if (tofree)
+    {
+        if (tofree->con)
+        {
+            mysql_close(tofree->con);
+        }
+        MXS_FREE(tofree);
+    }
 }
 
 /**
  * Free monitor server list
  * @param servers Servers to free
  */
-static void monitor_servers_free(MONITOR_SERVERS *servers)
+static void monitor_server_free_all(MONITOR_SERVERS *servers)
 {
     while (servers)
     {
         MONITOR_SERVERS *tofree = servers;
         servers = servers->next;
-        if (tofree->con)
+        monitor_server_free(tofree);
+    }
+}
+
+/**
+ * Remove a server from a monitor.
+ *
+ * @param mon           The Monitor instance
+ * @param server        The Server to remove
+ */
+void monitorRemoveServer(MONITOR *mon, SERVER *server)
+{
+    monitor_state_t old_state = mon->state;
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStop(mon);
+    }
+
+    spinlock_acquire(&mon->lock);
+
+    MONITOR_SERVERS *ptr = mon->databases;
+
+    if (ptr->server == server)
+    {
+        mon->databases = mon->databases->next;
+    }
+    else
+    {
+        MONITOR_SERVERS *prev = ptr;
+
+        while (ptr)
         {
-            mysql_close(tofree->con);
+            if (ptr->server == server)
+            {
+                prev->next = ptr->next;
+                break;
+            }
+            prev = ptr;
+            ptr = ptr->next;
         }
-        MXS_FREE(tofree);
+    }
+    spinlock_release(&mon->lock);
+
+    if (ptr)
+    {
+      monitor_server_free(ptr);
+    }
+
+    if (old_state == MONITOR_STATE_RUNNING)
+    {
+        monitorStart(mon, mon->parameters);
     }
 }
 
@@ -305,8 +375,8 @@ static void monitor_servers_free(MONITOR_SERVERS *servers)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    mon->user = MXS_STRDUP_A(user);
-    mon->password = MXS_STRDUP_A(passwd);
+    snprintf(mon->user, sizeof(mon->user), "%s", user);
+    snprintf(mon->password, sizeof(mon->password), "%s", passwd);
 }
 
 /**
@@ -536,13 +606,8 @@ monitorGetList()
  */
 bool check_monitor_permissions(MONITOR* monitor, const char* query)
 {
-    if (monitor->databases == NULL)
-    {
-        MXS_ERROR("[%s] Monitor is missing the servers parameter.", monitor->name);
-        return false;
-    }
-
-    if (config_get_global_options()->skip_permission_checks)
+    if (monitor->databases == NULL || // No servers to check
+        config_get_global_options()->skip_permission_checks)
     {
         return true;
     }
@@ -992,8 +1057,15 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
 
     if ((database->con = mysql_init(NULL)))
     {
-        char *uname = database->server->monuser ? database->server->monuser : mon->user;
-        char *passwd = database->server->monpw ? database->server->monpw : mon->password;
+        char *uname = mon->user;
+        char *passwd = mon->password;
+
+        if (database->server->monuser[0] && database->server->monpw[0])
+        {
+            uname = database->server->monuser;
+            passwd = database->server->monpw;
+        }
+
         char *dpwd = decryptPassword(passwd);
 
         mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
@@ -1036,12 +1108,9 @@ void
 mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-              "Monitor timed out when connecting to "
-              "server %s:%d : \"%s\"" :
-              "Monitor was unable to connect to "
-              "server %s:%d : \"%s\"",
-              database->server->name,
-              database->server->port,
+              "Monitor timed out when connecting to server %s:%d : \"%s\"" :
+              "Monitor was unable to connect to server %s:%d : \"%s\"",
+              database->server->name, database->server->port,
               mysql_error(database->con));
 }
 
@@ -1056,4 +1125,30 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
                mon_get_event_name(ptr), prev, next);
     MXS_FREE(prev);
     MXS_FREE(next);
+}
+
+bool monitor_server_in_use(const SERVER *server)
+{
+    bool rval = false;
+
+    spinlock_acquire(&monLock);
+
+    for (MONITOR *mon = allMonitors; mon && !rval; mon = mon->next)
+    {
+        spinlock_acquire(&mon->lock);
+
+        for (MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
+        {
+            if (db->server == server)
+            {
+                rval = true;
+            }
+        }
+
+        spinlock_release(&mon->lock);
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
 }

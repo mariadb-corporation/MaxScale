@@ -561,8 +561,4 @@ typedef enum skygw_chk_t
 }
 
 
-#if defined(FAKE_CODE)
-static bool conn_open[10240];
-#endif /* FAKE_CODE */
-
 MXS_END_DECLS

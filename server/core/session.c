@@ -124,6 +124,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         MXS_OOM();
         return NULL;
     }
+    /** Assign a session id and increase */
+    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
     session->service = service;
     session->client_dcb = client_dcb;
@@ -221,8 +223,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                  session->client_dcb->user,
                  session->client_dcb->remote);
     }
-    /** Assign a session id and increase, insert session into list */
-    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
     CHK_SESSION(session);

@@ -80,7 +80,8 @@ FILTER_OBJECT *GetModuleObject()
             routeQuery,
             clientReply,
             diagnostics,
-            getCapabilities
+            getCapabilities,
+            NULL, // destroyInstance
         };
 
     return &object;

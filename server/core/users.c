@@ -87,12 +87,12 @@ users_free(USERS *users)
  * @return      The number of users added to the table
  */
 int
-users_add(USERS *users, char *user, char *auth)
+users_add(USERS *users, const char *user, const char *auth)
 {
     int add;
 
     atomic_add(&users->stats.n_adds, 1);
-    add = hashtable_add(users->data, user, auth);
+    add = hashtable_add(users->data, (char*)user, (char*)auth);
     atomic_add(&users->stats.n_entries, add);
     return add;
 }
@@ -105,12 +105,12 @@ users_add(USERS *users, char *user, char *auth)
  * @return      The number of users deleted from the table
  */
 int
-users_delete(USERS *users, char *user)
+users_delete(USERS *users, const char *user)
 {
     int del;
 
     atomic_add(&users->stats.n_deletes, 1);
-    del = hashtable_delete(users->data, user);
+    del = hashtable_delete(users->data, (char*)user);
     atomic_add(&users->stats.n_entries, -del);
     return del;
 }
@@ -122,11 +122,12 @@ users_delete(USERS *users, char *user)
  * @param user          The user name
  * @return      The authentication data or NULL on error
  */
-char
-*users_fetch(USERS *users, char *user)
+const char
+*users_fetch(USERS *users, const char *user)
 {
     atomic_add(&users->stats.n_fetches, 1);
-    return hashtable_fetch(users->data, user);
+    // TODO: Returning data from the hashtable is not threadsafe.
+    return hashtable_fetch(users->data, (char*)user);
 }
 
 /**
@@ -139,13 +140,13 @@ char
  * @return Number of users updated
  */
 int
-users_update(USERS *users, char *user, char *auth)
+users_update(USERS *users, const char *user, const char *auth)
 {
-    if (hashtable_delete(users->data, user) == 0)
+    if (hashtable_delete(users->data, (char*)user) == 0)
     {
         return 0;
     }
-    return hashtable_add(users->data, user, auth);
+    return hashtable_add(users->data, (char*)user, (char*)auth);
 }
 
 /**
@@ -154,7 +155,7 @@ users_update(USERS *users, char *user, char *auth)
  * @param users         The users table
  */
 void
-usersPrint(USERS *users)
+usersPrint(const USERS *users)
 {
     printf("Users table data\n");
     hashtable_stats(users->data);
@@ -167,7 +168,7 @@ usersPrint(USERS *users)
  * @param users         The users table
  */
 void
-dcb_usersPrint(DCB *dcb, USERS *users)
+dcb_usersPrint(DCB *dcb, const USERS *users)
 {
     if (users == NULL || users->data == NULL)
     {
