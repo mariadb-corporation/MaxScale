@@ -327,7 +327,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     if (!select_connect_backend_servers(&master_ref, backend_ref, router_nservers,
                                         max_nslaves, max_slave_rlag,
                                         client_rses->rses_config.rw_slave_select_criteria,
-                                        session, router))
+                                        session, router, false))
     {
         /**
          * Master and at least <min_nslaves> slaves must be found if the router is
@@ -456,6 +456,40 @@ static void freeSession(ROUTER *router_instance, void *router_client_session)
     MXS_FREE(router_cli_ses->rses_backend_ref);
     MXS_FREE(router_cli_ses);
     return;
+}
+
+/**
+ * @brief Mark a backend reference as failed
+ *
+ * @param bref Backend reference to close
+ * @param fatal Whether the failure was fatal
+ */
+void close_failed_bref(backend_ref_t *bref, bool fatal)
+{
+    if (BREF_IS_WAITING_RESULT(bref))
+    {
+        bref_clear_state(bref, BREF_WAITING_RESULT);
+    }
+
+    bref_clear_state(bref, BREF_QUERY_ACTIVE);
+    bref_clear_state(bref, BREF_IN_USE);
+    bref_set_state(bref, BREF_CLOSED);
+
+    if (fatal)
+    {
+        bref_set_state(bref, BREF_FATAL_FAILURE);
+    }
+
+    if (sescmd_cursor_is_active(&bref->bref_sescmd_cur))
+    {
+        sescmd_cursor_set_active(&bref->bref_sescmd_cur, false);
+    }
+
+    if (bref->bref_pending_cmd)
+    {
+        gwbuf_free(bref->bref_pending_cmd);
+        bref->bref_pending_cmd = NULL;
+    }
 }
 
 /**
@@ -652,7 +686,8 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
                     router_cli_ses->rses_config.rw_max_slave_replication_lag,
                     router_cli_ses->rses_config.rw_slave_select_criteria,
                     router_cli_ses->rses_master_ref->bref_dcb->session,
-                    router_cli_ses->router);
+                    router_cli_ses->router,
+                    true);
             }
         }
         /**
@@ -1302,23 +1337,7 @@ static void handleError(ROUTER *instance, void *router_session,
                     SERVER *srv = rses->rses_master_ref->ref->server;
                     backend_ref_t *bref;
                     bref = get_bref_from_dcb(rses, problem_dcb);
-                    if (bref != NULL)
-                    {
-                        CHK_BACKEND_REF(bref);
-                        if (BREF_IS_WAITING_RESULT(bref))
-                        {
-                            bref_clear_state(bref, BREF_WAITING_RESULT);
-                        }
-                        bref_clear_state(bref, BREF_IN_USE);
-                        bref_set_state(bref, BREF_CLOSED);
-                    }
-                    else
-                    {
-                        MXS_ERROR("server %s:%d lost the "
-                                  "master status but could not locate the "
-                                  "corresponding backend ref.",
-                                  srv->name, srv->port);
-                    }
+                    bool can_continue = false;
 
                     if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
                         (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
@@ -1332,38 +1351,41 @@ static void handleError(ROUTER *instance, void *router_session,
                          * can't be sure whether it was executed or not. In this
                          * case the safest thing to do is to close the client
                          * connection. */
-                        *succp = true;
+                        can_continue = true;
+                    }
+                    else if (!srv->master_err_is_logged)
+                    {
+                        MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
+                                  "service can't locate the master. Client sessions "
+                                  "will be closed.", srv->name, srv->port);
+                            srv->master_err_is_logged = true;
+                        }
+
+                    *succp = can_continue;
+
+                    if (bref != NULL)
+                    {
+                        CHK_BACKEND_REF(bref);
+                        close_failed_bref(bref, true);
                     }
                     else
                     {
-                        if (!srv->master_err_is_logged)
-                        {
-                            MXS_ERROR("server %s:%d lost the "
-                                      "master status. Readwritesplit "
-                                      "service can't locate the master. "
-                                      "Client sessions will be closed.",
-                                      srv->name, srv->port);
-                            srv->master_err_is_logged = true;
-                        }
-                        *succp = false;
-                    }
+                        MXS_ERROR("Server %s:%d lost the master status but could not locate the "
+                                  "corresponding backend ref.", srv->name, srv->port);
+                }
                 }
                 else
                 {
                     /**
                      * This is called in hope of getting replacement for
-                     * failed slave(s).  This call may free rses.
+                     * failed slave(s).
                      */
                     *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
 
                 dcb_close(problem_dcb);
                 close_dcb = false;
-                /* Free the lock if rses still exists */
-                if (rses)
-                {
-                    rses_end_locked_router_action(rses);
-                }
+                rses_end_locked_router_action(rses);
                 break;
             }
 
@@ -1419,13 +1441,7 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
 
             if (BREF_IS_IN_USE(bref))
             {
-                bref_clear_state(bref, BREF_IN_USE);
-                bref_set_state(bref, BREF_CLOSED);
-                if (BREF_IS_WAITING_RESULT(bref))
-                {
-                    bref_clear_state(bref, BREF_WAITING_RESULT);
-                }
-
+                close_failed_bref(bref, false);
                 dcb_close(backend_dcb);
             }
         }
@@ -1499,13 +1515,11 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (BREF_IS_WAITING_RESULT(bref))
     {
-        DCB *client_dcb;
-        client_dcb = ses->client_dcb;
+        DCB *client_dcb = ses->client_dcb;
         client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
-        bref_clear_state(bref, BREF_WAITING_RESULT);
     }
-    bref_clear_state(bref, BREF_IN_USE);
-    bref_set_state(bref, BREF_CLOSED);
+
+    close_failed_bref(bref, false);
 
     /**
      * Error handler is already called for this DCB because
@@ -1542,7 +1556,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                                myrses->rses_nbackends,
                                                max_nslaves, max_slave_rlag,
                                                myrses->rses_config.rw_slave_select_criteria,
-                                               ses, inst);
+                                               ses, inst, true);
     }
 
 return_succp:

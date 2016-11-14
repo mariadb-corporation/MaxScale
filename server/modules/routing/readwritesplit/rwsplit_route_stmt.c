@@ -974,9 +974,9 @@ handle_multi_temp_and_load(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
             if (rses->have_tmp_tables)
             {
                 check_drop_tmp_table(rses, querybuf, packet_type);
-                if (is_packet_a_query(packet_type))
+                if (is_packet_a_query(packet_type) && is_read_tmp_table(rses, querybuf, *qtype))
                 {
-                    *qtype = is_read_tmp_table(rses, querybuf, *qtype);
+                    *qtype |= QUERY_TYPE_MASTER_READ;
                 }
             }
             check_create_tmp_table(rses, querybuf, *qtype);
@@ -1117,6 +1117,64 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 }
 
 /**
+ * @brief Log master write failure
+ *
+ * @param rses Router session
+ */
+static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
+                                       DCB *master_dcb, DCB *curr_master_dcb)
+{
+    char errmsg[MAX_SERVER_NAME_LEN * 2 + 100]; // Extra space for error message
+
+    if (!found)
+    {
+            sprintf(errmsg, "Could not find a valid master connection");
+    }
+    else if (master_dcb && curr_master_dcb)
+    {
+        /** We found a master but it's not the same connection */
+        ss_dassert(master_dcb != curr_master_dcb);
+        if (master_dcb->server != curr_master_dcb->server)
+        {
+            sprintf(errmsg, "Master server changed from '%s' to '%s'",
+                    master_dcb->server->unique_name,
+                    curr_master_dcb->server->unique_name);
+        }
+        else
+        {
+            ss_dassert(false); // Currently we don't reconnect to the master
+            sprintf(errmsg, "Connection to master '%s' was recreated",
+                    curr_master_dcb->server->unique_name);
+        }
+    }
+    else if (master_dcb)
+    {
+        /** We have an original master connection but we couldn't find it */
+        sprintf(errmsg, "The connection to master server '%s' is not available",
+                master_dcb->server->unique_name);
+    }
+    else
+    {
+        /** We never had a master connection, the session must be in read-only mode */
+        if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY)
+        {
+            sprintf(errmsg, "Session is in read-only mode because it was created "
+                    "when no master was available");
+        }
+        else
+        {
+            ss_dassert(false); // A session should always have a master reference
+            sprintf(errmsg, "Was supposed to route to master but couldn't "
+                    "find master in a suitable state");
+        }
+    }
+
+    MXS_WARNING("[%s] Write query received from %s@%s. %s. Closing client connection.",
+                rses->router->service->name, rses->client_dcb->user,
+                rses->client_dcb->remote, errmsg);
+}
+
+/**
  * @brief Handle master is the target
  * 
  * One of the possible types of handling required when a request is routed
@@ -1128,7 +1186,7 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  *  @return bool - true if succeeded, false otherwise
  */
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-        DCB **target_dcb)
+                             DCB **target_dcb)
 {
     DCB *master_dcb = rses->rses_master_ref ? rses->rses_master_ref->bref_dcb : NULL;
     DCB *curr_master_dcb = NULL;
@@ -1141,29 +1199,26 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     }
     else
     {
-        if (succp && master_dcb != curr_master_dcb)
+        if (succp && master_dcb == curr_master_dcb)
         {
-            MXS_INFO("Was supposed to route to master but master has changed.");
+            atomic_add(&inst->stats.n_master, 1);
+            *target_dcb = master_dcb;
         }
         else
         {
-            MXS_INFO("Was supposed to route to master but couldn't find master"
-                 " in a suitable state.");
-        }
-
-        if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
-        {
-            /** Old master is no longer available */
-            succp = send_readonly_error(rses->client_dcb);
-        }
-        else
-        {
-            MXS_WARNING("[%s] Write query received from %s@%s when no master is "
-                "available, closing client connection.", inst->service->name,
-                rses->client_dcb->user, rses->client_dcb->remote);
-            succp = false;
+            /** The original master is not available, we can't route the write */
+            if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
+            {
+                succp = send_readonly_error(rses->client_dcb);
+            }
+            else
+            {
+                log_master_routing_failure(rses, succp, master_dcb, curr_master_dcb);
+                succp = false;
+            }
         }
     }
+
     return succp;
 }
 
@@ -1369,6 +1424,7 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
         bref = &rses->rses_backend_ref[i];
         if (bref && BREF_IS_IN_USE(bref))
         {
+            ss_dassert(!BREF_IS_CLOSED(bref) && !BREF_HAS_FAILED(bref));
             if (bref == rses->rses_master_ref)
             {
                 /** Store master state for better error reporting */
@@ -1386,13 +1442,11 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
         }
     }
 
-    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY)
+    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
+        rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
     {
-        MXS_ERROR("Could not find master among the backend "
-                  "servers. Previous master's state : %s",
-                  rses->rses_master_ref == NULL ? "No master found" :
-                  (!BREF_IS_IN_USE(rses->rses_master_ref) ? "Master is not in use" :
-                   STRSRVSTATUS(&master)));
+        MXS_ERROR("Could not find master among the backend servers. "
+                  "Previous master's state : %s", STRSRVSTATUS(&master));
     }
 
     return candidate_bref;

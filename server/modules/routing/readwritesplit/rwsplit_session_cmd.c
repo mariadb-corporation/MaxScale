@@ -169,16 +169,13 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
             /** Set response status received */
             bref_clear_state(bref, BREF_WAITING_RESULT);
 
-            if (bref->reply_cmd != scmd->reply_cmd)
+            if (bref->reply_cmd != scmd->reply_cmd && BREF_IS_IN_USE(bref))
             {
                 MXS_ERROR("Slave server '%s': response differs from master's response. "
                           "Closing connection due to inconsistent session state.",
                           bref->ref->server->unique_name);
-                sescmd_cursor_set_active(scur, false);
-                bref_clear_state(bref, BREF_QUERY_ACTIVE);
-                bref_clear_state(bref, BREF_IN_USE);
-                bref_set_state(bref, BREF_CLOSED);
-                bref_set_state(bref, BREF_SESCMD_FAILED);
+                close_failed_bref(bref, true);                
+
                 if (bref->bref_dcb)
                 {
                     dcb_close(bref->bref_dcb);
@@ -213,12 +210,11 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                 {
                     /** This backend has already received a response */
                     if (ses->rses_backend_ref[i].reply_cmd != scmd->reply_cmd &&
-                        !BREF_IS_CLOSED(&ses->rses_backend_ref[i]))
+                        !BREF_IS_CLOSED(&ses->rses_backend_ref[i]) &&
+                        BREF_IS_IN_USE(&ses->rses_backend_ref[i]))
                     {
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_QUERY_ACTIVE);
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_IN_USE);
-                        bref_set_state(&ses->rses_backend_ref[i], BREF_CLOSED);
-                        bref_set_state(bref, BREF_SESCMD_FAILED);
+                        close_failed_bref(&ses->rses_backend_ref[i], true);
+
                         if (ses->rses_backend_ref[i].bref_dcb)
                         {
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);

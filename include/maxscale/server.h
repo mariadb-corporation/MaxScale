@@ -115,6 +115,7 @@ typedef struct server
     long           persistpoolmax; /**< Maximum size of persistent connections pool */
     long           persistmaxtime; /**< Maximum number of seconds connection can live */
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
+    uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;

@@ -121,10 +121,11 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
 bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                            backend_ref_t *backend_ref,
                                            int router_nservers, int max_nslaves,
-                                           int max_rlag,
+                                           int max_slave_rlag,
                                            select_criteria_t select_criteria,
                                            SESSION *session,
-                                           ROUTER_INSTANCE *router);
+                                           ROUTER_INSTANCE *router,
+                                           bool active_session);
 
 /*
  * The following are implemented in rwsplit_tmp_table_multi.c
@@ -132,13 +133,14 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, 
         GWBUF *querybuf,
         mysql_server_cmd_t packet_type);
-qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                          GWBUF *querybuf,
                                          qc_query_type_t type);
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                    GWBUF *querybuf, qc_query_type_t type);
 bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_type);
 qc_query_type_t determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet);
+void close_failed_bref(backend_ref_t *bref, bool fatal);
 
 #ifdef __cplusplus
 }
