@@ -34,9 +34,9 @@
 #include <string.h>
 #include <errno.h>
 #include <maxscale/poll.h>
-#include <dcb.h>
-#include <test_utils.h>
-#include <listener.h>
+#include <maxscale/dcb.h>
+#include <maxscale/listener.h>
+#include "test_utils.h"
 
 /**
  * test1    Allocate a service and do lots of other things
@@ -69,7 +69,7 @@ test1()
 
     if (dcb->fd < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n", errno, strerror_r(errno, errbuf,
                                                                                                       sizeof(errbuf)));
         return 1;

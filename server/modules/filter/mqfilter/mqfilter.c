@@ -59,23 +59,23 @@
 #include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 #include <amqp.h>
 #include <amqp_framing.h>
 #include <amqp_tcp_socket.h>
 #include <amqp_ssl_socket.h>
-#include <mysql_client_server_protocol.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-#include <spinlock.h>
-#include <session.h>
-#include <housekeeper.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/session.h>
+#include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
 
 MODULE_INFO info =
@@ -101,6 +101,7 @@ static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 
 static FILTER_OBJECT MyObject =
@@ -114,6 +115,8 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     clientReply,
     diagnostic,
+    getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**
@@ -1371,11 +1374,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 }
             }
 
-            if (queue->next != NULL)
-            {
-                queue = gwbuf_make_contiguous(queue);
-            }
-
             if (modutil_extract_SQL(queue, &ptr, &length))
             {
 
@@ -1702,4 +1700,14 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
                    my_instance->stats.n_queued,
                    my_instance->stats.n_sent);
     }
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

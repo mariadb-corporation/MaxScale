@@ -28,17 +28,31 @@
  * @endverbatim
  */
 
-
-#include <gw.h>
-#include <dcb.h>
-#include <session.h>
+#include <maxscale/utils.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <regex.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <openssl/sha.h>
 #include <maxscale/alloc.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/poll.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <random_jkiss.h>
+#include <maxscale/random_jkiss.h>
+#include <maxscale/secrets.h>
+#include <maxscale/session.h>
+
+#if !defined(PATH_MAX)
+# if defined(__USE_POSIX)
+#   define PATH_MAX _POSIX_PATH_MAX
+# else
+#   define PATH_MAX 256
+# endif
+#endif
+
+#define MAX_ERROR_MSG PATH_MAX
 
 /* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :     \
@@ -50,6 +64,29 @@
 char hex_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 char hex_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
+/**
+ * Check if the provided pathname is POSIX-compliant. The valid characters
+ * are [a-z A-Z 0-9._-].
+ * @param path A null-terminated string
+ * @return true if it is a POSIX-compliant pathname, otherwise false
+ */
+bool is_valid_posix_path(char* path)
+{
+    char* ptr = path;
+    while (*ptr != '\0')
+    {
+        if (isalnum(*ptr) || *ptr == '/' || *ptr == '.' || *ptr == '-' || *ptr == '_')
+        {
+            ptr++;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 /*****************************************
  * backend read event triggered by EPOLLIN
  *****************************************/
@@ -60,7 +97,7 @@ int setnonblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
@@ -70,7 +107,7 @@ int setnonblocking(int fd)
 
     if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
@@ -278,14 +315,15 @@ char *create_hex_sha1_sha1_passwd(char *passwd)
  * Remove duplicate and trailing forward slashes from a path.
  * @param path Path to clean up
  */
-void clean_up_pathname(char *path)
+bool clean_up_pathname(char *path)
 {
     char *data = path;
     size_t len = strlen(path);
 
     if (len > PATH_MAX)
     {
-        MXS_WARNING("Pathname too long: %s", path);
+        MXS_ERROR("Pathname too long: %s", path);
+        return false;
     }
 
     while (*data != '\0')
@@ -313,6 +351,8 @@ void clean_up_pathname(char *path)
             len--;
         }
     }
+
+    return true;
 }
 
 /**
@@ -346,7 +386,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
                     }
                     else
                     {
-                        char err[STRERROR_BUFLEN];
+                        char err[MXS_STRERROR_BUFLEN];
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
                                   path, errno, strerror_r(errno, err, sizeof(err)));
                     }
@@ -355,7 +395,7 @@ static bool mkdir_all_internal(char *path, mode_t mask)
         }
         else
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to create directory '%s': %d, %s",
                       path, errno, strerror_r(errno, err, sizeof(err)));
         }
@@ -387,4 +427,630 @@ bool mxs_mkdir_all(const char *path, int mask)
     }
 
     return mkdir_all_internal(local_path, (mode_t)mask);
+}
+
+/**
+ * Trim leading and trailing whitespace from a string
+ *
+ * @param str String to trim
+ * @return    Trimmed string
+ */
+char* trim(char *str)
+{
+    char* ptr = strchr(str, '\0') - 1;
+
+    while (ptr > str && isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    if (isspace(*(ptr + 1)))
+    {
+        *(ptr + 1) = '\0';
+    }
+
+    ptr = str;
+
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    if (ptr != str)
+    {
+        memmove(str, ptr, strlen(ptr) + 1);
+    }
+
+    return str;
+}
+
+/**
+ * Replace all whitespace with spaces and squeeze repeating whitespace characters
+ *
+ * @param str String to squeeze
+ * @return Squeezed string
+ */
+char* squeeze_whitespace(char* str)
+{
+    char* store = str;
+    char* ptr = str;
+
+    /** Remove leading whitespace */
+    while (isspace(*ptr) && *ptr != '\0')
+    {
+        ptr++;
+    }
+
+    /** Squeeze all repeating whitespace */
+    while (*ptr != '\0')
+    {
+        while (isspace(*ptr) && isspace(*(ptr + 1)))
+        {
+            ptr++;
+        }
+
+        if (isspace(*ptr))
+        {
+            *store++ = ' ';
+            ptr++;
+        }
+        else
+        {
+            *store++ = *ptr++;
+        }
+    }
+
+    *store = '\0';
+
+    /** Remove trailing whitespace */
+    while (store > str && isspace(*(store - 1)))
+    {
+        store--;
+        *store = '\0';
+    }
+
+    return str;
+}
+
+/**
+ * Strip escape characters from a character string.
+ * @param String to parse.
+ * @return True if parsing was successful, false on errors.
+ */
+bool
+strip_escape_chars(char* val)
+{
+    int cur, end;
+
+    if (val == NULL)
+    {
+        return false;
+    }
+
+    end = strlen(val) + 1;
+    cur = 0;
+
+    while (cur < end)
+    {
+        if (val[cur] == '\\')
+        {
+            memmove(val + cur, val + cur + 1, end - cur - 1);
+            end--;
+        }
+        cur++;
+    }
+    return true;
+}
+
+#define BUFFER_GROWTH_RATE 1.2
+static pcre2_code* remove_comments_re = NULL;
+static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
+    "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
+
+/**
+ * Remove SQL comments from the end of a string
+ *
+ * The inline executable comments are not removed due to the fact that they can
+ * alter the behavior of the query.
+ * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
+ */
+char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
+{
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "";
+    pcre2_match_data* mdata;
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
+
+    if (orig_len > 0)
+    {
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
+            (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
+        {
+            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+            {
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
+            }
+            pcre2_match_data_free(mdata);
+        }
+        else
+        {
+            free(output);
+            output = NULL;
+        }
+    }
+    else if (output == NULL)
+    {
+        output = strdup(*src);
+    }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
+
+    return output;
+}
+
+static pcre2_code* replace_values_re = NULL;
+static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
+    "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
+
+/**
+ * Replace literal numbers and user variables with a question mark.
+ * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
+ */
+char* replace_values(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
+{
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
+    pcre2_match_data* mdata;
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
+
+    if (orig_len > 0)
+    {
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
+            (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
+        {
+            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) * src, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+            {
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
+            }
+            pcre2_match_data_free(mdata);
+        }
+        else
+        {
+            free(output);
+            output = NULL;
+        }
+    }
+    else if (output == NULL)
+    {
+        output = strdup(*src);
+    }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
+
+    return output;
+}
+
+/**
+ * Find the given needle - user-provided literal -  and replace it with
+ * replacement string. Separate user-provided literals from matching table names
+ * etc. by searching only substrings preceded by non-letter and non-number.
+ *
+ * @param haystack      Plain text query string, not to be freed
+ * @param needle        Substring to be searched, not to be freed
+ * @param replacement   Replacement text, not to be freed
+ *
+ * @return newly allocated string where needle is replaced
+ */
+char* replace_literal(char* haystack, const char* needle, const char* replacement)
+{
+    const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
+    const char* suffix = "([^[:alnum:]]|$)"; /*< alpha-num chars aren't allowed after the needle */
+    char* search_re;
+    char* newstr;
+    regex_t re;
+    regmatch_t match;
+    int rc;
+    size_t rlen = strlen(replacement);
+    size_t nlen = strlen(needle);
+    size_t hlen = strlen(haystack);
+
+    search_re = (char *) malloc(strlen(prefix) + nlen + strlen(suffix) + 1);
+
+    if (search_re == NULL)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "Regex memory allocation failed : %s\n",
+                strerror_r(errno, errbuf, sizeof (errbuf)));
+        newstr = haystack;
+        goto retblock;
+    }
+
+    sprintf(search_re, "%s%s%s", prefix, needle, suffix);
+    /** Allocate memory for new string +1 for terminating byte */
+    newstr = (char *) malloc(hlen - nlen + rlen + 1);
+
+    if (newstr == NULL)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "Regex memory allocation failed : %s\n",
+                strerror_r(errno, errbuf, sizeof (errbuf)));
+        free(search_re);
+        free(newstr);
+        newstr = haystack;
+        goto retblock;
+    }
+
+    rc = regcomp(&re, search_re, REG_EXTENDED | REG_ICASE);
+    ss_info_dassert(rc == 0, "Regex check");
+
+    if (rc != 0)
+    {
+        char error_message[MAX_ERROR_MSG];
+        regerror(rc, &re, error_message, MAX_ERROR_MSG);
+        fprintf(stderr, "Regex error compiling '%s': %s\n",
+                search_re, error_message);
+        free(search_re);
+        free(newstr);
+        newstr = haystack;
+        goto retblock;
+    }
+    rc = regexec(&re, haystack, 1, &match, 0);
+
+    if (rc != 0)
+    {
+        free(search_re);
+        free(newstr);
+        regfree(&re);
+        newstr = haystack;
+        goto retblock;
+    }
+    memcpy(newstr, haystack, match.rm_so + 1);
+    memcpy(newstr + match.rm_so + 1, replacement, rlen);
+    /** +1 is terminating byte */
+    memcpy(newstr + match.rm_so + 1 + rlen, haystack + match.rm_so + 1 + nlen, hlen - (match.rm_so + 1) - nlen + 1);
+
+    regfree(&re);
+    free(haystack);
+    free(search_re);
+retblock:
+    return newstr;
+}
+
+static pcre2_code* replace_quoted_re = NULL;
+static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
+    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
+
+/**
+ * Replace contents of single or double quoted strings with question marks.
+ * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
+ */
+char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
+{
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "?$1";
+    pcre2_match_data* mdata;
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
+
+    if (orig_len > 0)
+    {
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
+            (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
+        {
+            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) * src, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+            {
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
+            }
+            pcre2_match_data_free(mdata);
+        }
+        else
+        {
+            free(output);
+            output = NULL;
+        }
+    }
+    else if (output == NULL)
+    {
+        output = strdup(*src);
+    }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
+    else
+    {
+        *dest = NULL;
+    }
+
+    return output;
+}
+
+/**
+ * Initialize the utils library
+ *
+ * This function initializes structures used in various functions.
+ * @return true on success, false on error
+ */
+bool utils_init()
+{
+    bool rval = true;
+
+    PCRE2_SIZE erroffset;
+    int errcode;
+
+    ss_info_dassert(remove_comments_re == NULL, "utils_init called multiple times");
+    remove_comments_re = pcre2_compile(remove_comments_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
+                                       &erroffset, NULL);
+    if (remove_comments_re == NULL)
+    {
+        rval = false;
+    }
+
+    ss_info_dassert(replace_quoted_re == NULL, "utils_init called multiple times");
+    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
+                                      &erroffset, NULL);
+    if (replace_quoted_re == NULL)
+    {
+        rval = false;
+    }
+
+    ss_info_dassert(replace_values_re == NULL, "utils_init called multiple times");
+    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
+                                      &erroffset, NULL);
+    if (replace_values_re == NULL)
+    {
+        rval = false;
+    }
+
+    return rval;
+}
+
+/**
+ * Close the utils library. This should be the last call to this library.
+ */
+void utils_end()
+{
+    pcre2_code_free(remove_comments_re);
+    remove_comments_re = NULL;
+    pcre2_code_free(replace_quoted_re);
+    replace_quoted_re = NULL;
+    pcre2_code_free(replace_values_re);
+    replace_values_re = NULL;
+}
+
+SPINLOCK tmplock = SPINLOCK_INIT;
+
+/*
+ * Set IP address in socket structure in_addr
+ *
+ * @param a     Pointer to a struct in_addr into which the address is written
+ * @param p     The hostname to lookup
+ * @return      1 on success, 0 on failure
+ */
+int
+setipaddress(struct in_addr *a, char *p)
+{
+#ifdef __USE_POSIX
+    struct addrinfo *ai = NULL, hint;
+    int rc;
+    struct sockaddr_in *res_addr;
+    memset(&hint, 0, sizeof (hint));
+
+    hint.ai_socktype = SOCK_STREAM;
+
+    /*
+     * This is for the listening socket, matching INADDR_ANY only for now.
+     * For future specific addresses bind, a dedicated routine woulbd be better
+     */
+
+    if (strcmp(p, "0.0.0.0") == 0)
+    {
+        hint.ai_flags = AI_PASSIVE;
+        hint.ai_family = AF_UNSPEC;
+        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
+        {
+            MXS_ERROR("Failed to obtain address for host %s, %s",
+                      p,
+                      gai_strerror(rc));
+
+            return 0;
+        }
+    }
+    else
+    {
+        hint.ai_flags = AI_CANONNAME;
+        hint.ai_family = AF_INET;
+
+        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
+        {
+            MXS_ERROR("Failed to obtain address for host %s, %s",
+                      p,
+                      gai_strerror(rc));
+
+            return 0;
+        }
+    }
+
+    /* take the first one */
+    if (ai != NULL)
+    {
+        res_addr = (struct sockaddr_in *)(ai->ai_addr);
+        memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
+
+        freeaddrinfo(ai);
+
+        return 1;
+    }
+#else
+    struct hostent *h;
+
+    spinlock_acquire(&tmplock);
+    h = gethostbyname(p);
+    spinlock_release(&tmplock);
+
+    if (h == NULL)
+    {
+        if ((a->s_addr = inet_addr(p)) == -1)
+        {
+            MXS_ERROR("gethostbyname failed for [%s]", p);
+
+            return 0;
+        }
+    }
+    else
+    {
+        /* take the first one */
+        memcpy(a, h->h_addr, h->h_length);
+
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+
+/**
+ * Parse the bind config data. This is passed in a string as address:port.
+ *
+ * The address may be either a . separated IP address or a hostname to
+ * lookup. The address 0.0.0.0 is the wildcard address for SOCKADR_ANY.
+ * The ':' and port are required.
+ *
+ * @param config        The bind address and port separated by a ':'
+ * @param addr          The sockaddr_in in which the data is written
+ * @return              0 on failure
+ */
+int
+parse_bindconfig(const char *config, struct sockaddr_in *addr)
+{
+    char buf[strlen(config) + 1];
+    strcpy(buf, config);
+
+    char *port = strrchr(buf, ':');
+    short pnum;
+    if (port)
+    {
+        *port = 0;
+        port++;
+        pnum = atoi(port);
+    }
+    else
+    {
+        return 0;
+    }
+
+    if (!strcmp(buf, "0.0.0.0"))
+    {
+        addr->sin_addr.s_addr = htonl(INADDR_ANY);
+    }
+    else
+    {
+        if (!inet_aton(buf, &addr->sin_addr))
+        {
+            struct hostent *hp = gethostbyname(buf);
+
+            if (hp)
+            {
+                bcopy(hp->h_addr, &(addr->sin_addr.s_addr), hp->h_length);
+            }
+            else
+            {
+                MXS_ERROR("Failed to lookup host '%s'.", buf);
+                return 0;
+            }
+        }
+    }
+
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(pnum);
+    return 1;
+}
+
+/**
+ * Return the number of processors available.
+ * @return Number of processors or 1 if the required definition of _SC_NPROCESSORS_CONF
+ * is not found
+ */
+long get_processor_count()
+{
+    long processors = 1;
+#ifdef _SC_NPROCESSORS_ONLN
+    if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
+    {
+        MXS_WARNING("Unable to establish the number of available cores. Defaulting to 1.");
+        processors = 1;
+    }
+#else
+#error _SC_NPROCESSORS_ONLN not available.
+#endif
+    return processors;
 }

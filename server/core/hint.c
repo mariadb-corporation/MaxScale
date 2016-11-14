@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hint.h>
+#include <maxscale/hint.h>
 #include <maxscale/alloc.h>
 
 /**

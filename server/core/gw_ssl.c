@@ -29,9 +29,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <dcb.h>
-#include <service.h>
-#include <log_manager.h>
+#include <maxscale/dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/log_manager.h>
 #include <sys/ioctl.h>
 
 /**

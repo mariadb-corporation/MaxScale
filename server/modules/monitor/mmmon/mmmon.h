@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _MMMON_H
 #define _MMMON_H
 /*
@@ -13,25 +14,27 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <monitor.h>
-#include <spinlock.h>
-#include <thread.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
-#include <externcmd.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/config.h>
+#include <maxscale/externcmd.h>
 
 /**
  * @file mmmon.h - The Multi-Master monitor
  */
+
+MXS_BEGIN_DECLS
 
 /**
  * The handle for an instance of a Multi-Master Monitor module
@@ -48,5 +51,7 @@ typedef struct
     char* script; /*< Script to call when state changes occur on servers */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } MM_MONITOR;
+
+MXS_END_DECLS
 
 #endif

@@ -30,8 +30,10 @@ The QLA filter accepts the following options.
 |ignorecase|Use case-insensitive matching |
 |case |Use case-sensitive matching |
 |extended |Use extended regular expression syntax (ERE)|
-
-To use multiple filter options, list them in a comma-separated list.
+|session_file| Use session-specific file (default)|
+|unified_file| Use one file for all sessions|
+|flush_writes| Flush after every write|
+To use multiple filter options, list them in a comma-separated list. If no file settings are given, default will be used. Multiple file settings can be enabled simultaneously.
 
 ```
 options=case,extended

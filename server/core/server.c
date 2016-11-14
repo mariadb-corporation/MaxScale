@@ -35,15 +35,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <session.h>
-#include <server.h>
-#include <spinlock.h>
-#include <dcb.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <maxscale/service.h>
+#include <maxscale/monitor.h>
+#include <maxscale/session.h>
+#include <maxscale/server.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gw_ssl.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gw_ssl.h>
 #include <maxscale/alloc.h>
+#include <maxscale/modules.h>
+#include <maxscale/gwdirs.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -51,38 +57,62 @@ static SERVER *allServers = NULL;
 static void spin_reporter(void *, char *, int);
 static void server_parameter_free(SERVER_PARAM *tofree);
 
-/**
- * Allocate a new server withn the gateway
- *
- *
- * @param servname      The server name
- * @param protocol      The protocol to use to connect to the server
- * @param port          The port to connect to
- *
- * @return              The newly created server or NULL if an error occured
- */
-SERVER *
-server_alloc(char *servname, char *protocol, unsigned short port)
+
+SERVER* server_alloc(const char *name, const char *address, unsigned short port,
+                     const char *protocol, const char *authenticator, const char *auth_options)
 {
-    servname = MXS_STRNDUP(servname, MAX_SERVER_NAME_LEN);
-    protocol = MXS_STRDUP(protocol);
+    if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
+    {
+        MXS_ERROR("No authenticator defined for server '%s' and no default "
+                  "authenticator for protocol '%s'.", name, protocol);
+        return NULL;
+    }
+
+    void *auth_instance = NULL;
+
+    if (!authenticator_init(&auth_instance, authenticator, auth_options))
+    {
+        MXS_ERROR("Failed to initialize authenticator module '%s' for server '%s' ",
+                  authenticator, name);
+        return NULL;
+    }
+
+    char *my_auth_options = NULL;
+
+    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
+    {
+        return NULL;
+    }
 
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
+    char *my_name = MXS_STRDUP(name);
+    char *my_protocol = MXS_STRDUP(protocol);
+    char *my_authenticator = MXS_STRDUP(authenticator);
 
-    if (!servname || !protocol || !server)
+    if (!server || !my_name || !my_protocol || !my_authenticator)
     {
-        MXS_FREE(servname);
-        MXS_FREE(protocol);
         MXS_FREE(server);
+        MXS_FREE(my_name);
+        MXS_FREE(my_protocol);
+        MXS_FREE(my_authenticator);
         return NULL;
+    }
+
+    if (snprintf(server->name, sizeof(server->name), "%s", address) > sizeof(server->name))
+    {
+        MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
+                    address, sizeof(server->name));
     }
 
 #if defined(SS_DEBUG)
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    server->name = servname;
-    server->protocol = protocol;
+    server->unique_name = my_name;
+    server->protocol = my_protocol;
+    server->authenticator = my_authenticator;
+    server->auth_instance = auth_instance;
+    server->auth_options = my_auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;
@@ -96,6 +126,9 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     server->persistmax = 0;
     server->persistmaxtime = 0;
     server->persistpoolmax = 0;
+    server->monuser[0] = '\0';
+    server->monpw[0] = '\0';
+    server->is_active = true;
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
@@ -139,7 +172,6 @@ server_free(SERVER *tofreeserver)
     spinlock_release(&server_spin);
 
     /* Clean up session and free the memory */
-    MXS_FREE(tofreeserver->name);
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->server_string);
@@ -218,42 +250,38 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
     return NULL;
 }
 
-/**
- * Set a unique name for the server
- *
- * @param       server  The server to set the name on
- * @param       name    The unique name for the server
- */
-void
-server_set_unique_name(SERVER *server, char *name)
+static inline SERVER* next_active_server(SERVER *server)
 {
-    server->unique_name = MXS_STRDUP_A(name);
+    while (server && !server->is_active)
+    {
+        server = server->next;
+    }
+
+    return server;
 }
 
 /**
- * Find an existing server using the unique section name in
- * configuration file
+ * @brief Find a server with the specified name
  *
- * @param       servname        The Server name or address
- * @param       port            The server port
- * @return      The server or NULL if not found
+ * @param name Name of the server
+ * @return The server or NULL if not found
  */
-SERVER *
-server_find_by_unique_name(char *name)
+SERVER * server_find_by_unique_name(const char *name)
 {
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
         if (server->unique_name && strcmp(server->unique_name, name) == 0)
         {
             break;
         }
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
+
     return server;
 }
 
@@ -267,19 +295,20 @@ server_find_by_unique_name(char *name)
 SERVER *
 server_find(char *servname, unsigned short port)
 {
-    SERVER  *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
         if (strcmp(server->name, servname) == 0 && server->port == port)
         {
             break;
         }
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
+
     return server;
 }
 
@@ -310,15 +339,15 @@ printServer(SERVER *server)
 void
 printAllServers()
 {
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
         printServer(server);
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
 }
 
@@ -331,15 +360,15 @@ printAllServers()
 void
 dprintAllServers(DCB *dcb)
 {
-    SERVER *server;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
+
     while (server)
     {
         dprintServer(dcb, server);
-        server = server->next;
+        server = next_active_server(server->next);
     }
+
     spinlock_release(&server_spin);
 }
 
@@ -352,19 +381,20 @@ dprintAllServers(DCB *dcb)
 void
 dprintAllServersJson(DCB *dcb)
 {
-    SERVER *server;
     char *stat;
     int len = 0;
     int el = 1;
 
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER *server = next_active_server(allServers);
     while (server)
     {
-        server = server->next;
+        server = next_active_server(server->next);
         len++;
     }
-    server = allServers;
+
+    server = next_active_server(allServers);
+
     dcb_printf(dcb, "[\n");
     while (server)
     {
@@ -431,9 +461,10 @@ dprintAllServersJson(DCB *dcb)
         {
             dcb_printf(dcb, "  }\n");
         }
-        server = server->next;
+        server = next_active_server(server->next);
         el++;
     }
+
     dcb_printf(dcb, "]\n");
     spinlock_release(&server_spin);
 }
@@ -448,6 +479,11 @@ dprintAllServersJson(DCB *dcb)
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
+    if (!SERVER_IS_ACTIVE(server))
+    {
+        return;
+    }
+
     dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->name);
     char* stat = server_status(server);
@@ -577,30 +613,32 @@ dprintPersistentDCBs(DCB *pdcb, SERVER *server)
 void
 dListServers(DCB *dcb)
 {
-    SERVER  *server;
-    char    *stat;
-
     spinlock_acquire(&server_spin);
-    server = allServers;
+    SERVER  *server = next_active_server(allServers);
+    bool have_servers = false;
+
     if (server)
     {
+        have_servers = true;
         dcb_printf(dcb, "Servers.\n");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
         dcb_printf(dcb, "%-18s | %-15s | Port  | Connections | %-20s\n",
                    "Server", "Address", "Status");
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
     }
+
     while (server)
     {
-        stat = server_status(server);
+        char *stat = server_status(server);
         dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
                    server->unique_name, server->name,
                    server->port,
                    server->stats.n_current, stat);
         MXS_FREE(stat);
-        server = server->next;
+        server = next_active_server(server->next);
     }
-    if (allServers)
+
+    if (have_servers)
     {
         dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
     }
@@ -750,8 +788,16 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    server->monuser = MXS_STRDUP_A(user);
-    server->monpw = MXS_STRDUP_A(passwd);
+    if (snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
+    {
+        MXS_WARNING("Truncated monitor user for server '%s', maximum username "
+                    "length is %lu characters.", server->unique_name, sizeof(server->monuser));
+    }
+    if (snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > sizeof(server->monpw))
+    {
+        MXS_WARNING("Truncated monitor password for server '%s', maximum password "
+                    "length is %lu characters.", server->unique_name, sizeof(server->monpw));
+    }
 }
 
 /**
@@ -768,28 +814,12 @@ serverAddMonUser(SERVER *server, char *user, char *passwd)
  * @param passwd        The password to use for the monitor user
  */
 void
-server_update(SERVER *server, char *protocol, char *user, char *passwd)
+server_update_credentials(SERVER *server, char *user, char *passwd)
 {
-    if (!strcmp(server->protocol, protocol))
-    {
-        MXS_NOTICE("Update server protocol for server %s to protocol %s.",
-                   server->name,
-                   protocol);
-        MXS_FREE(server->protocol);
-        server->protocol = MXS_STRDUP_A(protocol);
-    }
-
     if (user != NULL && passwd != NULL)
     {
-        if (strcmp(server->monuser, user) == 0 ||
-            strcmp(server->monpw, passwd) == 0)
-        {
-            MXS_NOTICE("Update server monitor credentials for server %s",
-                       server->name);
-            MXS_FREE(server->monuser);
-            MXS_FREE(server->monpw);
-            serverAddMonUser(server, user, passwd);
-        }
+        serverAddMonUser(server, user, passwd);
+        MXS_NOTICE("Updated monitor credentials for server '%s'", server->name);
     }
 }
 
@@ -897,16 +927,19 @@ serverRowCallback(RESULTSET *set, void *data)
         return NULL;
     }
     (*rowno)++;
-    row = resultset_make_row(set);
-    resultset_row_set(row, 0, server->unique_name);
-    resultset_row_set(row, 1, server->name);
-    sprintf(buf, "%d", server->port);
-    resultset_row_set(row, 2, buf);
-    sprintf(buf, "%d", server->stats.n_current);
-    resultset_row_set(row, 3, buf);
-    stat = server_status(server);
-    resultset_row_set(row, 4, stat);
-    MXS_FREE(stat);
+    if (SERVER_IS_ACTIVE(server))
+    {
+        row = resultset_make_row(set);
+        resultset_row_set(row, 0, server->unique_name);
+        resultset_row_set(row, 1, server->name);
+        sprintf(buf, "%d", server->port);
+        resultset_row_set(row, 2, buf);
+        sprintf(buf, "%d", server->stats.n_current);
+        resultset_row_set(row, 3, buf);
+        stat = server_status(server);
+        resultset_row_set(row, 4, stat);
+        MXS_FREE(stat);
+    }
     spinlock_release(&server_spin);
     return row;
 }
@@ -954,11 +987,7 @@ server_update_address(SERVER *server, char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
-        if (server->name)
-        {
-            MXS_FREE(server->name);
-        }
-        server->name = MXS_STRDUP_A(address);
+        strcpy(server->name, address);
     }
     spinlock_release(&server_spin);
 }
@@ -1044,4 +1073,295 @@ bool server_set_version_string(SERVER* server, const char* string)
     }
 
     return rval;
+}
+
+/**
+ * Creates a server configuration at the location pointed by @c filename
+ *
+ * @param server Server to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_server_config(SERVER *server, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
+                  filename, server->unique_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    // TODO: Check for return values on all of the dprintf calls
+    dprintf(file, "[%s]\n", server->unique_name);
+    dprintf(file, "type=server\n");
+    dprintf(file, "protocol=%s\n", server->protocol);
+    dprintf(file, "address=%s\n", server->name);
+    dprintf(file, "port=%u\n", server->port);
+    dprintf(file, "authenticator=%s\n", server->authenticator);
+
+    if (server->auth_options)
+    {
+        dprintf(file, "authenticator_options=%s\n", server->auth_options);
+    }
+
+    if (*server->monpw && *server->monuser)
+    {
+        dprintf(file, "monitoruser=%s\n", server->monuser);
+        dprintf(file, "monitorpw=%s\n", server->monpw);
+    }
+
+    if (server->persistpoolmax)
+    {
+        dprintf(file, "persistpoolmax=%ld\n", server->persistpoolmax);
+    }
+
+    if (server->persistmaxtime)
+    {
+        dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+    }
+
+    if (server->server_ssl)
+    {
+        dprintf(file, "ssl=required\n");
+
+        if (server->server_ssl->ssl_cert)
+        {
+            dprintf(file, "ssl_cert=%s\n", server->server_ssl->ssl_cert);
+        }
+
+        if (server->server_ssl->ssl_key)
+        {
+            dprintf(file, "ssl_key=%s\n", server->server_ssl->ssl_key);
+        }
+
+        if (server->server_ssl->ssl_ca_cert)
+        {
+            dprintf(file, "ssl_ca_cert=%s\n", server->server_ssl->ssl_ca_cert);
+        }
+        if (server->server_ssl->ssl_cert_verify_depth)
+        {
+            dprintf(file, "ssl_cert_verify_depth=%d\n", server->server_ssl->ssl_cert_verify_depth);
+        }
+
+        const char *version = NULL;
+
+        switch (server->server_ssl->ssl_method_type)
+        {
+            case SERVICE_TLS10:
+                version = "TLSV10";
+                break;
+
+#ifdef OPENSSL_1_0
+            case SERVICE_TLS11:
+                version = "TLSV11";
+                break;
+
+            case SERVICE_TLS12:
+                version = "TLSV12";
+                break;
+#endif
+            case SERVICE_SSL_TLS_MAX:
+                version = "MAX";
+                break;
+
+            default:
+                break;
+        }
+
+        if (version)
+        {
+            dprintf(file, "ssl_version=%s\n", version);
+        }
+    }
+
+    close(file);
+
+    return true;
+}
+
+/**
+ * @brief Serialize a server to a file
+ *
+ * This converts @c server into an INI format file. This allows created servers
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
+ *
+ * @param server Server to serialize
+ * @return False if the serialization of the server fails, true if it was successful
+ */
+static bool server_serialize(SERVER *server)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             server->unique_name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_server_config(server, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
+}
+
+/** Try to find a server with a matching name that has been destroyed */
+static SERVER* find_destroyed_server(const char *name, const char *protocol,
+                                     const char *authenticator, const char *auth_options)
+{
+    spinlock_acquire(&server_spin);
+    SERVER *server = allServers;
+    while (server)
+    {
+        CHK_SERVER(server);
+        if (strcmp(server->unique_name, name) == 0 &&
+            strcmp(server->protocol, protocol) == 0 &&
+            strcmp(server->authenticator, authenticator) == 0)
+        {
+            if ((auth_options == NULL && server->auth_options == NULL) ||
+                (auth_options && server->auth_options &&
+                 strcmp(server->auth_options, auth_options) == 0))
+            {
+                break;
+            }
+        }
+        server = server->next;
+    }
+    spinlock_release(&server_spin);
+
+    return server;
+}
+
+bool server_create(const char *name, const char *address, const char *port,
+                   const char *protocol, const char *authenticator,
+                   const char *authenticator_options)
+{
+    bool rval = false;
+
+    if (server_find_by_unique_name(name) == NULL)
+    {
+        // TODO: Get default values from the protocol module
+        if (port == NULL)
+        {
+            port = "3306";
+        }
+        if (protocol == NULL)
+        {
+            protocol = "MySQLBackend";
+        }
+        if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
+        {
+            MXS_ERROR("No authenticator defined for server '%s' and no default "
+                      "authenticator for protocol '%s'.", name, protocol);
+            return false;
+        }
+
+        /** First check if this service has been created before */
+        SERVER *server = find_destroyed_server(name, protocol, authenticator,
+                                               authenticator_options);
+
+        if (server)
+        {
+            /** Found old server, replace network details with new ones and
+             * reactivate it */
+            snprintf(server->name, sizeof(server->name), "%s", address);
+            server->port = atoi(port);
+            server->is_active = true;
+            rval = true;
+        }
+        else if ((server = server_alloc(name, address, atoi(port), protocol, authenticator,
+                                        authenticator_options)))
+        {
+            if (server_serialize(server))
+            {
+                /** server_alloc will add the server to the global list of
+                 * servers so we don't need to manually add it. */
+                rval = true;
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool server_destroy(SERVER *server)
+{
+    bool rval = false;
+
+    if (service_server_in_use(server) || monitor_server_in_use(server))
+    {
+        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
+                  "service or monitor", server->unique_name);
+    }
+    else
+    {
+        char filename[PATH_MAX];
+        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
+                 server->unique_name);
+
+        if (unlink(filename) == -1)
+        {
+            if (errno != ENOENT)
+            {
+                char err[MXS_STRERROR_BUFLEN];
+                MXS_ERROR("Failed to remove persisted server configuration '%s': %d, %s",
+                          filename, errno, strerror_r(errno, err, sizeof(err)));
+            }
+            else
+            {
+                rval = true;
+                MXS_WARNING("Server '%s' was not created at runtime. Remove the "
+                            "server manually from the correct configuration file.",
+                            server->unique_name);
+            }
+        }
+        else
+        {
+            rval = true;
+        }
+
+        if (rval)
+        {
+            MXS_NOTICE("Destroyed server '%s' at %s:%u", server->unique_name,
+                       server->name, server->port);
+            server->is_active = false;
+        }
+    }
+
+    return rval;
+}
+
+bool server_is_ssl_parameter(const char *key)
+{
+    // TODO: Implement this
+    return false;
+}
+
+void server_update_ssl(SERVER *server, const char *key, const char *value)
+{
+    // TODO: Implement this
 }

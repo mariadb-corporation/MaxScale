@@ -34,10 +34,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gwdirs.h>
-#include <adminusers.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
-
+#include <maxscale/utils.h>
 
 /**
  * test1    default user

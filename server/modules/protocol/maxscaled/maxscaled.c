@@ -14,27 +14,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <dcb.h>
-#include <buffer.h>
-#include <gw_protocol.h>
-#include <service.h>
-#include <session.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <pwd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <router.h>
+#include <maxscale/router.h>
 #include <maxscale/poll.h>
-#include <atomic.h>
-#include <gw.h>
-#include <adminusers.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <modinfo.h>
-#include <maxscaled.h>
-#include <maxadmin.h>
+#include <maxscale/atomic.h>
+#include <maxscale/adminusers.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
+#include "maxscaled.h"
+#include <maxscale/maxadmin.h>
 #include <maxscale/alloc.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
@@ -162,7 +162,7 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
 
         MXS_ERROR("Could not get socket family of client connection: %s",
                   strerror_r(errno, errbuf, sizeof(errbuf)));

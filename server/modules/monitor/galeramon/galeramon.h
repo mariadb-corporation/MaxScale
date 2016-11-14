@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _GALERAMON_H
 #define _GALERAMON_H
 /*
@@ -13,22 +14,6 @@
  * Public License.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <monitor.h>
-#include <spinlock.h>
-#include <externcmd.h>
-#include <thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
-
 /**
  * @file galeramon.h - The Galera cluster monitor
  *
@@ -39,6 +24,24 @@
  * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <maxscale/monitor.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/externcmd.h>
+#include <maxscale/thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/config.h>
+
+MXS_BEGIN_DECLS
 
 /**
  * The handle for an instance of a Galera Monitor module
@@ -58,5 +61,7 @@ typedef struct
     bool use_priority; /*< Use server priorities */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } GALERA_MONITOR;
+
+MXS_END_DECLS
 
 #endif

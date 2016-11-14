@@ -41,16 +41,28 @@ connection failover| When a connection currently being used between MariaDB MaxS
 
 ## Configuration
 
-The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale will look for
-in a number of places.
+The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale
+will look for in the following places:
 
-1. Location given with the --configdir=<path> command line argument
+1. By default, the file `maxscale.cnf` in the directory `/etc`
+1. The location given with the `--configdir=<path>` command line argument.
 
-2. MariaDB MaxScale will look for a configuration file called `maxscale.cnf` in the directory `/etc/maxscale.cnf`
+MariaDB MaxScale will further look for a directory with the same name as the
+configuration file, followed by `.d` (for instance `/etc/maxscale.cnf.d`) and
+recursively read all files, having a `.cnf` suffix, it finds in the directory
+hierarchy. All other files will be ignored.
 
-An explicit path to a configuration file can be passed by using the `-f` option to MariaDB MaxScale.
+There are no restrictions on how different configuration sections are arranged,
+but the strong suggestion is to place global settings into the configuration
+file MariaDB MaxScale is invoked with, and then, if deemed necessary, create
+separate configuration files for _servers_, _filters_, etc.
 
-The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration; these sections define services, servers, listeners, monitors and global settings. Parameters, which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
+The configuration file itself is based on the [.ini](https://en.wikipedia.org/wiki/INI_file)
+file format and consists of various sections that are used to build the
+configuration; these sections define services, servers, listeners, monitors and
+global settings. Parameters, which expect a comma-separated list of values can
+be defined on multiple lines. The following is an example of a multi-line
+definition.
 
 ```
 [MyService]
@@ -247,7 +259,11 @@ To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_debug`
 
-Enable or disable the logging of messages whose syslog priority is *debug*. This kind of messages are intended for development purposes and are disabled by default.
+Enable or disable the logging of messages whose syslog priority is *debug*.
+This kind of messages are intended for development purposes and are disabled
+by default. Note that if MariaDB MaxScale has been built in release mode, then
+debug messages are excluded from the build and this setting will not have any
+effect.
 
 ```
 # Valid options are:
@@ -362,6 +378,16 @@ Configure the directory where the executable files reside. All internal processe
 execdir=/usr/local/bin/
 ```
 
+#### `persistdir`
+
+Configure the directory where persisted configurations are stored. When a new
+server is created via MaxAdmin, it will be stored in this directory. Do not use
+or modify the contents of this directory, use _/etc/maxscale.cnf.d/_ instead.
+
+```
+persistdir=/var/lib/maxscale/maxscale.cnf.d/
+```
+
 #### `language`
 
 Set the folder where the errmsg.sys file is located in. MariaDB MaxScale will look for the errmsg.sys file installed with MariaDB MaxScale from this folder.
@@ -434,6 +460,12 @@ router_options=master,slave
 ```
 
 A more complete description of router options and what is available for a given router is included with the documentation of the router itself.
+
+#### `router_options`
+
+Option string given to the router module. The value of this parameter
+should be a comma-separated list of key-value pairs. See router specific
+documentation for more details.
 
 #### `filters`
 
@@ -832,6 +864,18 @@ The port to use to listen for incoming connections to MariaDB MaxScale from the 
 The `socket` option may be included in a listener definition, this configures the listener to use Unix domain sockets to listen for incoming connections. The parameter value given is the name of the socket to use.
 
 If a socket option and an address option is given then the listener will listen on both the specific IP address and the Unix socket.
+
+#### `authenticator`
+
+The authenticator module to use. Each protocol module defines a default
+authentication module which is used if no `authenticator` parameter is
+found from the configuration.
+
+#### `authenticator_options`
+
+Option string given to the authenticator module. The value of this
+parameter should be a comma-separated list of key-value pairs. See
+authenticator specific documentation for more details.
 
 #### Available Protocols
 

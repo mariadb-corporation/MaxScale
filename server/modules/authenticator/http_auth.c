@@ -24,15 +24,15 @@
  * @endverbatim
  */
 
-#include <gw_authenticator.h>
+#include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
-#include <modinfo.h>
-#include <dcb.h>
-#include <buffer.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/dcb.h>
+#include <maxscale/buffer.h>
 #include <openssl/bio.h>
-#include <service.h>
-#include <secrets.h>
-#include <users.h>
+#include <maxscale/service.h>
+#include <maxscale/secrets.h>
+#include <maxscale/users.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -59,12 +59,14 @@ static void http_auth_free_client_data(DCB *dcb);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    http_auth_set_protocol_data,           /* Extract data into structure   */
-    http_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-    http_auth_authenticate,                /* Authenticate user credentials */
-    http_auth_free_client_data,            /* Free the client data held in DCB */
-    users_default_loadusers,
-    NULL
+    NULL,                            /* No initialize entry point */
+    NULL,                            /* No create entry point */
+    http_auth_set_protocol_data,     /* Extract data into structure   */
+    http_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+    http_auth_authenticate,          /* Authenticate user credentials */
+    http_auth_free_client_data,      /* Free the client data held in DCB */
+    NULL,                            /* No destroy entry point */
+    users_default_loadusers          /* Load generic users */
 };
 
 typedef struct http_auth

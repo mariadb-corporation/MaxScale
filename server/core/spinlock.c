@@ -23,10 +23,10 @@
  * @endverbatim
  */
 
-#include <spinlock.h>
-#include <atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/atomic.h>
 #include <time.h>
-#include <skygw_debug.h>
+#include <maxscale/debug.h>
 
 /**
  * Initialise a spinlock.

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _ROCKSDBSTORAGE_H
 #define _ROCKSDBSTORAGE_H
 /*
@@ -13,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include "storage_rocksdb.h"
 #include <memory>
 #include <string>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <sharding_common.h>
+#include "sharding_common.h"
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 

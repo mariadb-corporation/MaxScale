@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _STORAGE_ROCKSDB_H
 #define _STORAGE_ROCKSDB_H
 /*
@@ -14,6 +15,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
-#include <log_manager.h>
+#include <maxscale/cdefs.h>
+#include <maxscale/log_manager.h>
 
 #endif

@@ -15,14 +15,13 @@
  * @file mysql_binlog.c - Extracting information from binary logs
  */
 
-#include <mysql_binlog.h>
-#include <mysql_utils.h>
+#include <maxscale/mysql_binlog.h>
+#include <maxscale/mysql_utils.h>
 #include <stdlib.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <string.h>
-#include <skygw_debug.h>
-#include <users.h>
-#include <dbusers.h>
+#include <maxscale/debug.h>
+#include <maxscale/users.h>
 #include <strings.h>
 
 /**

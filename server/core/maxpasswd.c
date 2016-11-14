@@ -23,10 +23,9 @@
  * @endverbatim
  */
 #include <stdio.h>
-#include <gwdirs.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <skygw_utils.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/secrets.h>
 
 struct option options[] =
 {

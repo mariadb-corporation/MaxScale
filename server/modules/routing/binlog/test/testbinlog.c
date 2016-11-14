@@ -26,28 +26,26 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include "../blr.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <time.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gwdirs.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <ini.h>
 #include <sys/stat.h>
 #include <getopt.h>
 
-#include <version.h>
+#include <maxscale/version.h>
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
@@ -104,13 +102,13 @@ int main(int argc, char **argv) {
 			serviceAddRouterOption(service, s);
 			s = strtok_r(NULL, ",", &lasts);
 		}
-
-		server = server_alloc("_none_", "MySQLBackend", (int)3306);
+		set_libdir(MXS_STRDUP_A("../../../authenticator/"));
+		server = server_alloc("binlog_router_master_host", "_none_", 3306,
+                             "MySQLBackend", "MySQLBackendAuth", NULL);
 		if (server == NULL) {
 			return 1;
 		}
 
-		server_set_unique_name(server, "binlog_router_master_host");
 		serviceAddBackend(service, server);
 	}
 

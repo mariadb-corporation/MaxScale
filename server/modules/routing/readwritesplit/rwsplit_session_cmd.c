@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -16,9 +16,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <router.h>
-#include <readwritesplit.h>
-#include <rwsplit_internal.h>
+#include <maxscale/router.h>
+#include "readwritesplit.h"
+#include "rwsplit_internal.h"
 
 /**
  * @file rwsplit_session_cmd.c   The functions that provide session command
@@ -173,7 +173,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
             {
                 MXS_ERROR("Slave server '%s': response differs from master's response. "
                           "Closing connection due to inconsistent session state.",
-                          bref->bref_backend->backend_server->unique_name);
+                          bref->ref->server->unique_name);
                 sescmd_cursor_set_active(scur, false);
                 bref_clear_state(bref, BREF_QUERY_ACTIVE);
                 bref_clear_state(bref, BREF_IN_USE);
@@ -205,7 +205,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
             scmd->reply_cmd = *((unsigned char *)replybuf->start + 4);
 
             MXS_INFO("Server '%s' responded to a session command, sending the response "
-                     "to the client.", bref->bref_backend->backend_server->unique_name);
+                     "to the client.", bref->ref->server->unique_name);
 
             for (int i = 0; i < ses->rses_nbackends; i++)
             {
@@ -226,8 +226,8 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                         *reconnect = true;
                         MXS_INFO("Disabling slave %s:%d, result differs from "
                                  "master's result. Master: %d Slave: %d",
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->name,
-                                 ses->rses_backend_ref[i].bref_backend->backend_server->port,
+                                 ses->rses_backend_ref[i].ref->server->name,
+                                 ses->rses_backend_ref[i].ref->server->port,
                                  bref->reply_cmd, ses->rses_backend_ref[i].reply_cmd);
                     }
                 }
@@ -237,11 +237,11 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
         else
         {
             MXS_INFO("Slave '%s' responded before master to a session command. Result: %d",
-                     bref->bref_backend->backend_server->unique_name,
+                     bref->ref->server->unique_name,
                      (int)bref->reply_cmd);
             if (bref->reply_cmd == 0xff)
             {
-                SERVER *serv = bref->bref_backend->backend_server;
+                SERVER *serv = bref->ref->server;
                 MXS_ERROR("Slave '%s' (%s:%u) failed to execute session command.",
                           serv->unique_name, serv->name, serv->port);
             }

@@ -11,18 +11,17 @@
  * Public License.
  */
 
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <stdio.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/cdefs.h>
 #include <string.h>
-#include <pcre2.h>
-#include <atomic.h>
+#include <stdio.h>
 #include <maxscale/alloc.h>
-#include "maxconfig.h"
+#include <maxscale/atomic.h>
+#include <maxscale/config.h>
+#include <maxscale/filter.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/pcre2.h>
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
@@ -58,6 +57,7 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
                            const char *replace);
@@ -71,8 +71,10 @@ static FILTER_OBJECT MyObject =
     setDownstream,
     NULL, // No Upstream requirement
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
+    getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**
@@ -393,10 +395,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (my_session->active && modutil_is_SQL(queue))
     {
-        if (queue->next != NULL)
-        {
-            queue = gwbuf_make_contiguous(queue);
-        }
         if ((sql = modutil_get_SQL(queue)) != NULL)
         {
             newsql = regex_replace(sql,
@@ -545,4 +543,14 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
     {
         MXS_INFO("No match %s: [%s]", re, old);
     }
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

@@ -36,8 +36,8 @@
 #include <time.h>
 
 #include <maxscale/alloc.h>
-#include <atomic.h>
-#include <hashtable.h>
+#include <maxscale/atomic.h>
+#include <maxscale/hashtable.h>
 
 static void
 read_lock(HASHTABLE *table)

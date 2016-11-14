@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -17,9 +17,9 @@
 #include <stdint.h>
 #include <maxscale/alloc.h>
 
-#include <router.h>
-#include <readwritesplit.h>
-#include <rwsplit_internal.h>
+#include <maxscale/router.h>
+#include "readwritesplit.h"
+#include "rwsplit_internal.h"
 /**
  * @file rwsplit_route_stmt.c   The functions that support the routing of
  * queries to back end servers. All the functions in this module are internal
@@ -84,7 +84,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          * transaction is committed and autocommit is enabled again.
          */
         if (rses->rses_autocommit_enabled &&
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+            qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
         {
             rses->rses_autocommit_enabled = false;
 
@@ -94,7 +94,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             }
         }
         else if (!rses->rses_transaction_active &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX))
+                 qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX))
         {
             rses->rses_transaction_active = true;
         }
@@ -102,13 +102,13 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          * Explicit COMMIT and ROLLBACK, implicit COMMIT.
          */
         if (rses->rses_autocommit_enabled && rses->rses_transaction_active &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK)))
+            (qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
+             qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK)))
         {
             rses->rses_transaction_active = false;
         }
         else if (!rses->rses_autocommit_enabled &&
-                 QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
+                 qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
         {
             rses->rses_autocommit_enabled = true;
             rses->rses_transaction_active = false;
@@ -253,10 +253,10 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 BREF_IS_IN_USE((&backend_ref[i])))
             {
                 MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
+                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
             }
 
@@ -368,10 +368,10 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s \t%s:%d%s",
-                         (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server)
+                         (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port,
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port,
                          (i + 1 == router_cli_ses->rses_nbackends ? " <" : " "));
             }
 
@@ -391,8 +391,8 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             {
                 nsucc += 1;
                 MXS_INFO("Backend %s:%d already executing sescmd.",
-                         backend_ref[i].bref_backend->backend_server->name,
-                         backend_ref[i].bref_backend->backend_server->port);
+                         backend_ref[i].ref->server->name,
+                         backend_ref[i].ref->server->port);
             }
             else
             {
@@ -403,8 +403,8 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 else
                 {
                     MXS_ERROR("Failed to execute session command in %s:%d",
-                              backend_ref[i].bref_backend->backend_server->name,
-                              backend_ref[i].bref_backend->backend_server->port);
+                              backend_ref[i].ref->server->name,
+                              backend_ref[i].ref->server->port);
                 }
             }
         }
@@ -533,9 +533,9 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
 
         for (i = 0; i < rses->rses_nbackends; i++)
         {
-            BACKEND *b = backend_ref[i].bref_backend;
+            SERVER_REF *b = backend_ref[i].ref;
             SERVER server;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
+            server.status = b->server->status;
             /**
              * To become chosen:
              * backend must be in use, name must match,
@@ -543,7 +543,8 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * server, or master.
              */
             if (BREF_IS_IN_USE((&backend_ref[i])) &&
-                (strncasecmp(name, b->backend_server->unique_name, PATH_MAX) == 0) &&
+                SERVER_REF_IS_ACTIVE(b) &&
+                (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
                 (SERVER_IS_SLAVE(&server) || SERVER_IS_RELAY_SERVER(&server) ||
                  SERVER_IS_MASTER(&server)))
             {
@@ -569,15 +570,15 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
 
         for (i = 0; i < rses->rses_nbackends; i++)
         {
-            BACKEND *b = (&backend_ref[i])->bref_backend;
+            SERVER_REF *b = backend_ref[i].ref;
             SERVER server;
             SERVER candidate;
-            server.status = backend_ref[i].bref_backend->backend_server->status;
+            server.status = b->server->status;
             /**
              * Unused backend or backend which is not master nor
              * slave can't be used
              */
-            if (!BREF_IS_IN_USE(&backend_ref[i]) ||
+            if (!BREF_IS_IN_USE(&backend_ref[i]) || !SERVER_REF_IS_ACTIVE(b) ||
                 (!SERVER_IS_MASTER(&server) && !SERVER_IS_SLAVE(&server)))
             {
                 continue;
@@ -596,7 +597,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 {
                     /** found master */
                     candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
+                    candidate.status = candidate_bref->ref->server->status;
                     succp = true;
                 }
                 /**
@@ -605,12 +606,12 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                  * maximum allowed replication lag.
                  */
                 else if (max_rlag == MAX_RLAG_UNDEFINED ||
-                         (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                          b->backend_server->rlag <= max_rlag))
+                         (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                          b->server->rlag <= max_rlag))
                 {
                     /** found slave */
                     candidate_bref = &backend_ref[i];
-                    candidate.status = candidate_bref->bref_backend->backend_server->status;
+                    candidate.status = candidate_bref->ref->server->status;
                     succp = true;
                 }
             }
@@ -620,13 +621,13 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              */
             else if (SERVER_IS_MASTER(&candidate) && SERVER_IS_SLAVE(&server) &&
                      (max_rlag == MAX_RLAG_UNDEFINED ||
-                      (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                       b->backend_server->rlag <= max_rlag)) &&
+                      (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                       b->server->rlag <= max_rlag)) &&
                      !rses->rses_config.rw_master_reads)
             {
                 /** found slave */
                 candidate_bref = &backend_ref[i];
-                candidate.status = candidate_bref->bref_backend->backend_server->status;
+                candidate.status = candidate_bref->ref->server->status;
                 succp = true;
             }
             /**
@@ -637,21 +638,17 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
             else if (SERVER_IS_SLAVE(&server))
             {
                 if (max_rlag == MAX_RLAG_UNDEFINED ||
-                    (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                     b->backend_server->rlag <= max_rlag))
+                    (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
+                     b->server->rlag <= max_rlag))
                 {
-                    candidate_bref =
-                        check_candidate_bref(candidate_bref, &backend_ref[i],
-                                             rses->rses_config.rw_slave_select_criteria);
-                    candidate.status =
-                        candidate_bref->bref_backend->backend_server->status;
+                    candidate_bref = check_candidate_bref(candidate_bref, &backend_ref[i],
+                                                          rses->rses_config.rw_slave_select_criteria);
+                    candidate.status = candidate_bref->ref->server->status;
                 }
                 else
                 {
-                    MXS_INFO("Server %s:%d is too much behind the "
-                             "master, %d s. and can't be chosen.",
-                             b->backend_server->name, b->backend_server->port,
-                             b->backend_server->rlag);
+                    MXS_INFO("Server %s:%d is too much behind the master, %d s. and can't be chosen.",
+                             b->server->name, b->server->port, b->server->rlag);
                 }
             }
         } /*<  for */
@@ -669,27 +666,37 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
      */
     if (btype == BE_MASTER)
     {
-        if (master_bref)
+        if (master_bref && SERVER_REF_IS_ACTIVE(master_bref->ref))
         {
             /** It is possible for the server status to change at any point in time
              * so copying it locally will make possible error messages
              * easier to understand */
             SERVER server;
-            server.status = master_bref->bref_backend->backend_server->status;
-            if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
+            server.status = master_bref->ref->server->status;
+
+            if (BREF_IS_IN_USE(master_bref))
             {
-                *p_dcb = master_bref->bref_dcb;
-                succp = true;
-                /** if bref is in use DCB should not be closed */
-                ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                if (SERVER_IS_MASTER(&server))
+                {
+                    *p_dcb = master_bref->bref_dcb;
+                    succp = true;
+                    /** if bref is in use DCB should not be closed */
+                    ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
+                }
+                else
+                {
+                    MXS_ERROR("Server '%s' should be master but "
+                              "is %s instead and can't be chosen as the master.",
+                              master_bref->ref->server->unique_name,
+                              STRSRVSTATUS(&server));
+                    succp = false;
+                }
             }
             else
             {
-                MXS_ERROR("Server at %s:%d should be master but "
-                          "is %s instead and can't be chosen to master.",
-                          master_bref->bref_backend->backend_server->name,
-                          master_bref->bref_backend->backend_server->port,
-                          STRSRVSTATUS(&server));
+                MXS_ERROR("Server '%s' is not in use and can't be "
+                          "chosen as the master.",
+                          master_bref->ref->server->unique_name);
                 succp = false;
             }
         }
@@ -727,13 +734,13 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
      * These queries are not affected by hints
      */
     else if (!load_active &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+             (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
               /** Configured to allow writing variables to all nodes */
               (use_sql_variables_in == TYPE_ALL &&
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
+               qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
               /** enable or disable autocommit are always routed to all */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
+              qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
     {
         /**
          * This is problematic query because it would be routed to all
@@ -750,9 +757,9 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
          * the execution of the prepared statements to the right server would be
          * an easy one. Currently this is not supported.
          */
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) &&
-            !(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
+        if (qc_query_is_type(qtype, QUERY_TYPE_READ) &&
+            !(qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)))
         {
             MXS_WARNING("The query can't be routed to all "
                         "backend servers because it includes SELECT and "
@@ -770,40 +777,40 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
      * Hints may affect on routing of the following queries
      */
     else if (!trx_active && !load_active &&
-             !QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||        /*< any SELECT */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_USERVAR_READ) ||       /*< read user var */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) || /*< read sys var */
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_EXEC_STMT) || /*< prepared stmt exec */
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-              QUERY_IS_TYPE(qtype,
-                            QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
+             !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
+             (qc_query_is_type(qtype, QUERY_TYPE_READ) ||        /*< any SELECT */
+              qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_USERVAR_READ) ||       /*< read user var */
+              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) || /*< read sys var */
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_EXEC_STMT) || /*< prepared stmt exec */
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+              qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+              qc_query_is_type(qtype,
+                               QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
     {
         /** First set expected targets before evaluating hints */
-        if (!QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
-            (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
-             QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
+        if (!qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
+            (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
+             qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
              /** Configured to allow reading variables from slaves */
              (use_sql_variables_in == TYPE_ALL &&
-              (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-               QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ)))))
+              (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+               qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
+               qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ)))))
         {
             target = TARGET_SLAVE;
         }
 
-        if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-            QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+        if (qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
+            qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
+            qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
+            qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
             /** Configured not to allow reading variables from slaves */
             (use_sql_variables_in == TYPE_MASTER &&
-             (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-              QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ))))
+             (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
+              qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ))))
         {
             target = TARGET_MASTER;
         }
@@ -818,26 +825,26 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     {
         /** hints don't affect on routing */
         ss_dassert(trx_active ||
-                   (QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) &&
+                   (qc_query_is_type(qtype, QUERY_TYPE_WRITE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
+                    (qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
+                    (qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) &&
                      use_sql_variables_in == TYPE_MASTER) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_BEGIN_TRX) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_ROLLBACK) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_COMMIT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
-                    QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
+                    qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_CREATE_TMP_TABLE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_READ_TMP_TABLE) ||
+                    qc_query_is_type(qtype, QUERY_TYPE_UNKNOWN)));
         target = TARGET_MASTER;
     }
 
@@ -895,9 +902,6 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         hint = hint->next;
     } /*< while (hint != NULL) */
 
-#if defined(SS_EXTRA_DEBUG)
-    MXS_INFO("Selected target \"%s\"", STRTARGET(target));
-#endif
     return target;
 }
 
@@ -1102,9 +1106,6 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
      */
     if (rwsplit_get_dcb(target_dcb, rses, BE_SLAVE, NULL, rlag_max))
     {
-#if defined(SS_EXTRA_DEBUG)
-        MXS_INFO("Found DCB for slave.");
-#endif
         atomic_add(&inst->stats.n_slave, 1);
         return true;
     }
@@ -1191,9 +1192,8 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     ss_dassert(target_dcb != NULL);
 
     MXS_INFO("Route query to %s \t%s:%d <",
-         (SERVER_IS_MASTER(bref->bref_backend->backend_server) ? "master"
-          : "slave"), bref->bref_backend->backend_server->name,
-         bref->bref_backend->backend_server->port);
+         (SERVER_IS_MASTER(bref->ref->server) ? "master"
+          : "slave"), bref->ref->server->name, bref->ref->server->port);
     /**
      * Store current stmt if execution of previous session command
      * haven't completed yet.
@@ -1372,14 +1372,13 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
             if (bref == rses->rses_master_ref)
             {
                 /** Store master state for better error reporting */
-                master.status = bref->bref_backend->backend_server->status;
+                master.status = bref->ref->server->status;
             }
 
-            if (bref->bref_backend->backend_server->status & SERVER_MASTER)
+            if (SERVER_IS_MASTER(bref->ref->server))
             {
                 if (candidate_bref == NULL ||
-                    (bref->bref_backend->backend_server->depth <
-                     candidate_bref->bref_backend->backend_server->depth))
+                    (bref->ref->server->depth < candidate_bref->ref->server->depth))
                 {
                     candidate_bref = bref;
                 }

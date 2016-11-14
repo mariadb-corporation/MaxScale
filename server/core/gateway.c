@@ -34,58 +34,45 @@
  * 19/01/16     Markus Makela           Set cwd to log directory
  * @endverbatim
  */
-#define _XOPEN_SOURCE 700
-#define OPENSSL_THREAD_DEFINES
-#include <my_config.h>
 
-#include <openssl/opensslconf.h>
-#if defined(OPENSSL_THREADS)
-#define HAVE_OPENSSL_THREADS 1
-#else
-#define HAVE_OPENSSL_THREADS 0
-#endif
-
+#include <maxscale/cdefs.h>
+#include <execinfo.h>
 #include <ftw.h>
+#include <getopt.h>
+#include <pwd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <gw.h>
-#include <unistd.h>
-#include <time.h>
-#include <getopt.h>
-#include <service.h>
-#include <server.h>
-#include <dcb.h>
-#include <session.h>
-#include <modules.h>
-#include <maxconfig.h>
-#include <maxscale/poll.h>
-#include <housekeeper.h>
-#include <service.h>
-#include <thread.h>
-#include <memlog.h>
-
-#include <stdlib.h>
-#include <unistd.h>
-#include <mysql.h>
-#include <monitor.h>
-#include <version.h>
-#include <maxscale.h>
-
+#include <sys/file.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-
-#include <execinfo.h>
-
-#include <ini.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>
-#include <sys/file.h>
-#include <statistics.h>
+#include <time.h>
+#include <unistd.h>
+#include <openssl/opensslconf.h>
+#include <mysql.h>
+#include <ini.h>
 #include <maxscale/alloc.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/memlog.h>
+#include <maxscale/modules.h>
+#include <maxscale/monitor.h>
+#include <maxscale/poll.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/server.h>
+#include <maxscale/service.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/statistics.h>
+#include <maxscale/thread.h>
+#include <maxscale/utils.h>
+#include <maxscale/version.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -93,6 +80,12 @@
 /** for procname */
 #if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
+#endif
+
+#if defined(OPENSSL_THREADS)
+#define HAVE_OPENSSL_THREADS 1
+#else
+#define HAVE_OPENSSL_THREADS 0
 #endif
 
 extern char *program_invocation_name;
@@ -135,6 +128,7 @@ static struct option long_options[] =
     {"configdir",        required_argument, 0, 'C'},
     {"datadir",          required_argument, 0, 'D'},
     {"execdir",          required_argument, 0, 'E'},
+    {"persistdir",       required_argument, 0, 'F'},
     {"language",         required_argument, 0, 'N'},
     {"piddir",           required_argument, 0, 'P'},
     {"basedir",          required_argument, 0, 'R'},
@@ -188,8 +182,9 @@ static int set_user(const char* user);
 bool pid_file_exists();
 void write_child_exit_code(int fd, int code);
 static bool change_cwd();
-void shutdown_server();
 static void log_exit_status();
+static bool daemonize();
+static bool sniff_configuration(const char* filepath);
 
 /** SSL multi-threading functions and structures */
 
@@ -293,20 +288,45 @@ static void sigusr1_handler (int i)
 }
 
 static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
+static const char patience_msg[] =
+    "\n"
+    "Patience is a virtue...\n"
+    "Shutdown in progress, but one more Ctrl-C or SIGTERM and MaxScale goes down,\n"
+    "no questions asked.\n";
 
 static void sigterm_handler(int i)
 {
     last_signal = i;
-    shutdown_server();
-    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    int n_shutdowns = maxscale_shutdown();
+
+    if (n_shutdowns == 1)
+    {
+        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    }
+    else
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void
 sigint_handler(int i)
 {
     last_signal = i;
-    shutdown_server();
-    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    int n_shutdowns = maxscale_shutdown();
+
+    if (n_shutdowns == 1)
+    {
+        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+    }
+    else if (n_shutdowns == 2)
+    {
+        write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1);
+    }
+    else
+    {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void
@@ -317,7 +337,7 @@ sigchld_handler (int i)
 
     if ((child = wait(&exit_status)) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to wait child process: %d %s",
                   errno, strerror_r(errno, errbuf, sizeof(errbuf)));
     }
@@ -416,25 +436,30 @@ sigfatal_handler(int i)
  */
 static int signal_set(int sig, void (*handler)(int))
 {
-    static struct sigaction sigact;
-    static int err;
     int rc = 0;
 
-    memset(&sigact, 0, sizeof(struct sigaction));
+    struct sigaction sigact = {};
     sigact.sa_handler = handler;
-    GW_NOINTR_CALL(err = sigaction(sig, &sigact, NULL));
+
+    int err;
+
+    do
+    {
+        errno = 0;
+        err = sigaction(sig, &sigact, NULL);
+    }
+    while (errno == EINTR);
 
     if (err < 0)
     {
-        int eno = errno;
-        errno = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         rc = 1;
     }
+
     return rc;
 }
 
@@ -463,7 +488,7 @@ static bool create_datadir(const char* base, char* datadir)
             }
             else
             {
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Cannot create data directory '%s': %d %s\n",
                           datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             }
@@ -473,7 +498,7 @@ static bool create_datadir(const char* base, char* datadir)
     {
         if (len < PATH_MAX)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "Error: Cannot create data directory '%s': %d %s\n",
                     datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         }
@@ -501,7 +526,7 @@ int ntfw_cb(const char*        filename,
     {
         int eno = errno;
         errno = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
                   datadir, eno, strerror_r(eno, errbuf, sizeof(errbuf)));
     }
@@ -702,7 +727,7 @@ static void print_log_n_stderr(
     {
         if (mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS))
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("%s%s%s%s",
                       logstr,
                       eno == 0 ? "" : " (",
@@ -712,7 +737,7 @@ static void print_log_n_stderr(
     }
     if (do_stderr)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr,
                 "* Error: %s%s%s%s\n",
                 fprstr,
@@ -895,8 +920,9 @@ static void usage(void)
             "  -B, --libdir=PATH           path to module directory\n"
             "  -C, --configdir=PATH        path to configuration file directory\n"
             "  -D, --datadir=PATH          path to data directory,\n"
-            "                              stored embedded mysql tables\n"
+            "                              stores internal MaxScale data\n"
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
+            "  -F, --persistdir=PATH       path to persisted configuration directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -920,6 +946,7 @@ static void usage(void)
             "  execdir    : %s\n"
             "  language   : %s\n"
             "  piddir     : %s\n"
+            "  persistdir : %s\n"
             "\n"
             "If '--basedir' is provided then all other paths, including the default\n"
             "configuration file path, are defined relative to that. As an example,\n"
@@ -930,7 +957,8 @@ static void usage(void)
             progname,
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
-            get_datadir(), get_execdir(), get_langdir(), get_piddir());
+            get_datadir(), get_execdir(), get_langdir(), get_piddir(),
+            get_config_persistdir());
 }
 
 
@@ -1205,6 +1233,12 @@ bool set_dirs(const char *basedir)
         set_piddir(path);
     }
 
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_DATA_SUBPATH "/"
+                                    MXS_DEFAULT_CONFIG_PERSIST_SUBPATH, true, true)))
+    {
+        set_config_persistdir(path);
+    }
+
     return rv;
 }
 
@@ -1276,15 +1310,6 @@ int main(int argc, char **argv)
     progname = *argv;
     snprintf(datadir, PATH_MAX, "%s", default_datadir);
     datadir[PATH_MAX] = '\0';
-#if defined(FAKE_CODE)
-    memset(conn_open, 0, sizeof(bool) * 10240);
-    memset(dcb_fake_write_errno, 0, sizeof(unsigned char) * 10240);
-    memset(dcb_fake_write_ev, 0, sizeof(__int32_t) * 10240);
-    fail_next_backend_fd = false;
-    fail_next_client_fd = false;
-    fail_next_accept = 0;
-    fail_accept_errno = 0;
-#endif /* FAKE_CODE */
     file_write_header(stderr);
     /*<
      * Register functions which are called at exit except libmysqld-related,
@@ -1303,7 +1328,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:",
+    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1453,6 +1478,16 @@ int main(int argc, char **argv)
                     succp = false;
                 }
                 break;
+            case 'F':
+                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+                {
+                    set_config_persistdir(tmp_path);
+                }
+                else
+                {
+                    succp = false;
+                }
+                break;
             case 'R':
                 if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
                 {
@@ -1573,7 +1608,7 @@ int main(int argc, char **argv)
 
         /** Daemonize the process and wait for the child process to notify
          * the parent process of its exit status. */
-        parent_process = gw_daemonize();
+        parent_process = daemonize();
 
         if (parent_process)
         {
@@ -1697,31 +1732,11 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if ((ini_rval = ini_parse(cnf_file_path, cnf_preparser, NULL)) != 0)
+    if (!sniff_configuration(cnf_file_path))
     {
-        char errorbuffer[STRING_BUFFER_SIZE];
-
-        if (ini_rval > 0)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Error on line %d.", ini_rval);
-        }
-        else if (ini_rval == -1)
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Failed to open file.");
-        }
-        else
-        {
-            snprintf(errorbuffer, sizeof(errorbuffer),
-                     "Error: Failed to pre-parse configuration file. Memory allocation failed.");
-        }
-
-        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
 
     /** Use the cache dir for the mysql folder of the embedded library */
     snprintf(mysql_home, PATH_MAX, "%s/mysql", get_cachedir());
@@ -1741,16 +1756,6 @@ int main(int argc, char **argv)
                     "Error: Cannot create log directory: %s\n",
                     default_logdir);
             goto return_main;
-        }
-
-        if (!(*syslog_enabled))
-        {
-            printf("Syslog logging is disabled.\n");
-        }
-
-        if (!(*maxlog_enabled))
-        {
-            printf("MaxScale logging is disabled.\n");
         }
 
         mxs_log_set_syslog_enabled(*syslog_enabled);
@@ -1798,7 +1803,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Cannot create data directory '%s': %d %s\n",
                   datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         goto return_main;
@@ -1817,6 +1822,11 @@ int main(int argc, char **argv)
                 get_datadir(),
                 get_libdir(),
                 get_cachedir());
+    }
+
+    if (!(*syslog_enabled) && !(*maxlog_enabled))
+    {
+        fprintf(stderr, "warning: Both MaxScale and Syslog logging disabled.\n");
     }
 
     MXS_NOTICE("Configuration file: %s", cnf_file_path);
@@ -1961,7 +1971,13 @@ int main(int argc, char **argv)
     /*
      * Start the housekeeper thread
      */
-    hkinit();
+    if (!hkinit())
+    {
+        char* logerr = "Failed to start housekeeper thread.";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
 
     /*<
      * Start the polling threads, note this is one less than is
@@ -1998,6 +2014,11 @@ int main(int argc, char **argv)
      * Serve clients.
      */
     poll_waitevents((void *)0);
+
+    /*<
+     * Wait for the housekeeper to finish.
+     */
+    hkfinish();
 
     /*<
      * Wait server threads' completion.
@@ -2055,14 +2076,22 @@ return_main:
 /*<
  * Shutdown MaxScale server
  */
-void
-shutdown_server()
+int maxscale_shutdown()
 {
-    service_shutdown();
-    poll_shutdown();
-    hkshutdown();
-    memlog_flush_all();
-    log_flush_shutdown();
+    static int n_shutdowns = 0;
+
+    int n = atomic_add(&n_shutdowns, 1);
+
+    if (n == 0)
+    {
+        service_shutdown();
+        poll_shutdown();
+        hkshutdown();
+        memlog_flush_all();
+        log_flush_shutdown();
+    }
+
+    return n + 1;
 }
 
 static void log_flush_shutdown(void)
@@ -2121,7 +2150,7 @@ static void unlink_pidfile(void)
     {
         if (unlink(pidfile))
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr,
                     "MaxScale failed to remove pidfile %s: error %d, %s\n",
                     pidfile,
@@ -2506,6 +2535,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 }
             }
         }
+        else if (strcmp(name, "persistdir") == 0)
+        {
+            if (strcmp(get_config_persistdir(), default_config_persistdir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_config_persistdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
         else if (strcmp(name, "syslog") == 0)
         {
             if (!syslog_configured)
@@ -2545,7 +2588,7 @@ static int set_user(const char* user)
     pwname = getpwnam(user);
     if (pwname == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to retrieve user information for '%s': %d %s\n",
                user, errno, errno == 0 ? "User not found" : strerror_r(errno, errbuf, sizeof(errbuf)));
         return -1;
@@ -2554,7 +2597,7 @@ static int set_user(const char* user)
     rval = setgid(pwname->pw_gid);
     if (rval != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to change group to '%d': %d %s\n",
                pwname->pw_gid, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         return rval;
@@ -2563,7 +2606,7 @@ static int set_user(const char* user)
     rval = setuid(pwname->pw_uid);
     if (rval != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to change user to '%s': %d %s\n",
                pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         return rval;
@@ -2572,7 +2615,7 @@ static int set_user(const char* user)
     {
         if (prctl(PR_SET_DUMPABLE , 1) == -1)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
                    pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             return -1;
@@ -2615,7 +2658,7 @@ static bool change_cwd()
 
     if (chdir(get_logdir()) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
                   "Trying to change working directory to '/'.",
                   get_logdir(), errno, strerror_r(errno, errbuf, sizeof (errbuf)));
@@ -2657,4 +2700,82 @@ static void log_exit_status()
         default:
             break;
     }
+}
+
+/**
+ * Daemonize the process by forking and putting the process into the
+ * background.
+ *
+ * @return True if context is that of the parent process, false if that of the
+ *         child process.
+ */
+static bool daemonize(void)
+{
+    pid_t pid;
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "fork() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+
+    if (pid != 0)
+    {
+        /* exit from main */
+        return true;
+    }
+
+    if (setsid() < 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        exit(1);
+    }
+    return false;
+}
+
+/**
+ * Sniffs the configuration file, primarily for various directory paths,
+ * so that certain settings take effect immediately.
+ *
+ * @param filepath The path of the configuration file.
+ *
+ * @return True, if the sniffing succeeded, false otherwise.
+ */
+static bool sniff_configuration(const char* filepath)
+{
+    int rv = ini_parse(filepath, cnf_preparser, NULL);
+
+    if (rv != 0)
+    {
+        const char FORMAT_SYNTAX[] =
+            "Error: Failed to pre-parse configuration file %s. Error on line %d.";
+        const char FORMAT_OPEN[] =
+            "Error: Failed to pre-parse configuration file %s. Failed to open file.";
+        const char FORMAT_MALLOC[] =
+            "Error: Failed to pre-parse configuration file %s. Memory allocation failed.";
+
+        // We just use the largest one.
+        char errorbuffer[sizeof(FORMAT_MALLOC) + strlen(filepath) + UINTLEN(abs(rv))];
+
+        if (rv > 0)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_SYNTAX, filepath, rv);
+        }
+        else if (rv == -1)
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_OPEN, filepath);
+        }
+        else
+        {
+            snprintf(errorbuffer, sizeof(errorbuffer), FORMAT_MALLOC, filepath);
+        }
+
+        print_log_n_stderr(true, true, errorbuffer, errorbuffer, 0);
+    }
+
+    return rv == 0;
 }

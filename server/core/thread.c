@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <thread.h>
+#include <maxscale/thread.h>
 
 /**
  * @file thread.c  - Implementation of thread related operations

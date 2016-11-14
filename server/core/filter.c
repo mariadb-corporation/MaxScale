@@ -26,12 +26,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <filter.h>
-#include <session.h>
-#include <modules.h>
-#include <spinlock.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/session.h>
+#include <maxscale/modules.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */

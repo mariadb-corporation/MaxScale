@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -17,24 +17,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include <router.h>
-#include <readwritesplit.h>
-#include <rwsplit_internal.h>
+#include <maxscale/router.h>
+#include "readwritesplit.h"
+#include "rwsplit_internal.h"
 
 #include <mysql.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/protocol/mysql.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 
 #if defined(SS_DEBUG)
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #endif
 
 #define RWSPLIT_TRACE_MSG_LEN 1000
@@ -163,11 +162,11 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
      {
          uint8_t *packet = GWBUF_DATA(querybuf);
          unsigned char ptype = packet[4];
-         size_t len = MIN(GWBUF_LENGTH(querybuf),
+         size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
                 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
          char *data = (char *)&packet[5];
-         char *contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
-         char *qtypestr = qc_get_qtype_str(qtype);
+         char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
+         char *qtypestr = qc_typemask_to_string(qtype);
          MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
            (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
            (rses->rses_transaction_active ? "[open]" : "[not open]"),
@@ -222,7 +221,7 @@ handle_target_is_all(route_target_t route_target,
 
         /* NOTE: modutil_get_query is MySQL specific */
         char *query_str = modutil_get_query(querybuf);
-        char *qtype_str = qc_get_qtype_str(qtype);
+        char *qtype_str = qc_typemask_to_string(qtype);
 
         /* NOTE: packet_type is MySQL specific */
         MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
@@ -371,66 +370,6 @@ void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
  * Uses MySQL specific mechanisms
  */
 /**
- * @brief Write an error message to the log for session lock failure
- * 
- * This happens when processing a client reply and the session cannot be
- * locked.
- *
- * @param rses          Router session
- * @param buf           Query buffer containing reply data
- * @param dcb           The backend DCB that sent the reply
- */
-void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb)
-{
-#if defined(SS_DEBUG)
-    if (GWBUF_IS_TYPE_MYSQL(buf))
-    {
-        while (gwbuf_length(buf) > 0)
-        {
-            /**
-             * This works with MySQL protocol only !
-             * Protocol specific packet print functions would be nice.
-             */
-            uint8_t *ptr = GWBUF_DATA(buf);
-            size_t len = MYSQL_GET_PACKET_LEN(ptr);
-
-            if (MYSQL_GET_COMMAND(ptr) == 0xff)
-            {
-                SERVER *srv = NULL;
-                backend_ref_t *bref = rses->rses_backend_ref;
-                int i;
-                char *bufstr;
-
-                for (i = 0; i < rses->rses_nbackends; i++)
-                {
-                    if (bref[i].bref_dcb == dcb)
-                    {
-                        srv = bref[i].bref_backend->backend_server;
-                    }
-                }
-                ss_dassert(srv != NULL);
-                char *str = (char *)&ptr[7];
-                bufstr = strndup(str, len - 3);
-
-                MXS_ERROR("Backend server %s:%d responded with "
-                          "error : %s",
-                          srv->name, srv->port, bufstr);
-                MXS_FREE(bufstr);
-            }
-            buf = gwbuf_consume(buf, len + 4);
-        }
-    }
-    else
-    {
-        gwbuf_free(buf);
-    }
-#endif /*< SS_DEBUG */
-}
-
-/*
- * Uses MySQL specific mechanisms
- */
-/**
  * @brief Check the reply from a backend server to a session command
  * 
  * If the reply is an error, a message may be logged.
@@ -454,8 +393,8 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
             ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
 
             MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
-                      bref->bref_backend->backend_server->name,
-                      bref->bref_backend->backend_server->port, err, replystr);
+                      bref->ref->server->name,
+                      bref->ref->server->port, err, replystr);
             MXS_FREE(err);
             MXS_FREE(replystr);
         }

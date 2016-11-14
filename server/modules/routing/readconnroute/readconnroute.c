@@ -47,7 +47,7 @@
  *					and necessary headers.
  * 17/07/2013	Massimiliano Pinto	Added clientReply routine:
  *					called by backend server to send data to client
- *					Included mysql_client_server_protocol.h
+ *					Included maxscale/protocol/mysql.h
  *					with macros and MySQL commands with MYSQL_ prefix
  *					avoiding any conflict with the standard ones
  *					in mysql.h
@@ -74,23 +74,21 @@
 #include <string.h>
 #include <signal.h>
 #include <maxscale/alloc.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <readconnection.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <modinfo.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include "readconnection.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/modinfo.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 
-#include "modutil.h"
+#include <maxscale/modutil.h>
 
 MODULE_INFO info =
 {
@@ -113,7 +111,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, error_action_t action, bool *succp);
-static int getCapabilities();
+static uint64_t getCapabilities(void);
 
 
 /** The module object definition */
@@ -127,14 +125,15 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 
-static BACKEND *get_root_master(BACKEND **servers);
+static SERVER_REF *get_root_master(SERVER_REF *servers);
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -180,14 +179,6 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
 {
     if (router)
     {
-        if (router->servers)
-        {
-            for (int i = 0; router->servers[i]; i++)
-            {
-                MXS_FREE(router->servers[i]);
-            }
-        }
-        MXS_FREE(router->servers);
         MXS_FREE(router);
     }
 }
@@ -205,11 +196,8 @@ static ROUTER *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
-    SERVER *server;
     SERVER_REF *sref;
     int i, n;
-    BACKEND *backend;
-    char *weightby;
 
     if ((inst = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
@@ -218,103 +206,6 @@ createInstance(SERVICE *service, char **options)
 
     inst->service = service;
     spinlock_init(&inst->lock);
-
-    /*
-     * We need an array of the backend servers in the instance structure so
-     * that we can maintain a count of the number of connections to each
-     * backend server.
-     */
-    for (sref = service->dbref, n = 0; sref; sref = sref->next)
-    {
-        n++;
-    }
-
-    inst->servers = (BACKEND **) MXS_CALLOC(n + 1, sizeof(BACKEND *));
-    if (!inst->servers)
-    {
-        free_readconn_instance(inst);
-        return NULL;
-    }
-
-    for (sref = service->dbref, n = 0; sref; sref = sref->next)
-    {
-        if ((inst->servers[n] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
-        {
-            free_readconn_instance(inst);
-            return NULL;
-        }
-        inst->servers[n]->server = sref->server;
-        inst->servers[n]->current_connection_count = 0;
-        inst->servers[n]->weight = 1000;
-        n++;
-    }
-    inst->servers[n] = NULL;
-
-    if ((weightby = serviceGetWeightingParameter(service)) != NULL)
-    {
-        int total = 0;
-
-        for (int n = 0; inst->servers[n]; n++)
-        {
-            BACKEND *backend = inst->servers[n];
-            char *param = serverGetParameter(backend->server, weightby);
-            if (param)
-            {
-                total += atoi(param);
-            }
-        }
-        if (total == 0)
-        {
-            MXS_WARNING("Weighting Parameter for service '%s' "
-                        "will be ignored as no servers have values "
-                        "for the parameter '%s'.",
-                        service->name, weightby);
-        }
-        else if (total < 0)
-        {
-            MXS_ERROR("Sum of weighting parameter '%s' for service '%s' exceeds "
-                      "maximum value of %d. Weighting will be ignored.",
-                      weightby, service->name, INT_MAX);
-        }
-        else
-        {
-            for (int n = 0; inst->servers[n]; n++)
-            {
-                BACKEND *backend = inst->servers[n];
-                char *param = serverGetParameter(backend->server, weightby);
-                if (param)
-                {
-                    int wght = atoi(param);
-                    int perc = (wght * 1000) / total;
-
-                    if (perc == 0)
-                    {
-                        perc = 1;
-                        MXS_ERROR("Weighting parameter '%s' with a value of %d for"
-                                  " server '%s' rounds down to zero with total weight"
-                                  " of %d for service '%s'. No queries will be "
-                                  "routed to this server.", weightby, wght,
-                                  backend->server->unique_name, total,
-                                  service->name);
-                    }
-                    else if (perc < 0)
-                    {
-                        MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
-                                  "maximum value is %d. No weighting will be used for this server.",
-                                  weightby, backend->server->unique_name, INT_MAX / 1000);
-                        perc = 1000;
-                    }
-                    backend->weight = perc;
-                }
-                else
-                {
-                    MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
-                                " for service '%s'.", backend->server->unique_name,
-                                weightby, service->name);
-                }
-            }
-        }
-    }
 
     /*
      * Process the options
@@ -400,16 +291,15 @@ newSession(ROUTER *instance, SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
-    BACKEND *candidate = NULL;
+    SERVER_REF *candidate = NULL;
     int i;
-    BACKEND *master_host = NULL;
+    SERVER_REF *master_host = NULL;
 
     MXS_DEBUG("%lu [newSession] new router session with session "
               "%p, and inst %p.",
               pthread_self(),
               session,
               inst);
-
 
     client_rses = (ROUTER_CLIENT_SES *) MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
@@ -427,7 +317,7 @@ newSession(ROUTER *instance, SESSION *session)
     /**
      * Find the Master host from available servers
      */
-    master_host = get_root_master(inst->servers);
+    master_host = get_root_master(inst->service->dbref);
 
     /**
      * Find a backend server to connect to. This is the extent of the
@@ -447,52 +337,43 @@ newSession(ROUTER *instance, SESSION *session)
      * become the new candidate. This has the effect of spreading the
      * connections over different servers during periods of very low load.
      */
-    for (i = 0; inst->servers[i]; i++)
+    for (SERVER_REF *ref = inst->service->dbref; ref; ref = ref->next)
     {
-        if (inst->servers[i])
+        if (!SERVER_REF_IS_ACTIVE(ref) || SERVER_IN_MAINT(ref->server) || ref->weight == 0)
+        {
+            continue;
+        }
+        else
         {
             MXS_DEBUG("%lu [newSession] Examine server in port %d with "
                       "%d connections. Status is %s, "
                       "inst->bitvalue is %d",
                       pthread_self(),
-                      inst->servers[i]->server->port,
-                      inst->servers[i]->current_connection_count,
-                      STRSRVSTATUS(inst->servers[i]->server),
+                      ref->server->port,
+                      ref->connections,
+                      STRSRVSTATUS(ref->server),
                       inst->bitmask);
         }
 
-        if (SERVER_IN_MAINT(inst->servers[i]->server))
-        {
-            continue;
-        }
-
-        if (inst->servers[i]->weight == 0)
-        {
-            continue;
-        }
-
         /* Check server status bits against bitvalue from router_options */
-        if (inst->servers[i] &&
-            SERVER_IS_RUNNING(inst->servers[i]->server) &&
-            (inst->servers[i]->server->status & inst->bitmask & inst->bitvalue))
+        if (ref && SERVER_IS_RUNNING(ref->server) &&
+            (ref->server->status & inst->bitmask & inst->bitvalue))
         {
             if (master_host)
             {
-                if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_SLAVE))
+                if (ref == master_host && (inst->bitvalue & SERVER_SLAVE))
                 {
-                    /* skip root Master here, as it could also be slave of an external server
-                     * that is not in the configuration.
-                     * Intermediate masters (Relay Servers) are also slave and will be selected
-                     * as Slave(s)
+                    /* Skip root master here, as it could also be slave of an external server that
+                     * is not in the configuration.  Intermediate masters (Relay Servers) are also
+                     * slave and will be selected as Slave(s)
                      */
 
                     continue;
                 }
-                if (inst->servers[i] == master_host && (inst->bitvalue & SERVER_MASTER))
+                if (ref == master_host && (inst->bitvalue & SERVER_MASTER))
                 {
-                    /* If option is "master" return only the root Master as there
-                     * could be intermediate masters (Relay Servers)
-                     * and they must not be selected.
+                    /* If option is "master" return only the root Master as there could be
+                     * intermediate masters (Relay Servers) and they must not be selected.
                      */
 
                     candidate = master_host;
@@ -501,8 +382,7 @@ newSession(ROUTER *instance, SESSION *session)
             }
             else
             {
-                /* master_host is NULL, no master server.
-                 * If requested router_option is 'master'
+                /* Master_host is NULL, no master server.  If requested router_option is 'master'
                  * candidate wll be NULL.
                  */
                 if (inst->bitvalue & SERVER_MASTER)
@@ -512,40 +392,31 @@ newSession(ROUTER *instance, SESSION *session)
                 }
             }
 
-            /* If no candidate set, set first running server as
-            our initial candidate server */
+            /* If no candidate set, set first running server as our initial candidate server */
             if (candidate == NULL)
             {
-                candidate = inst->servers[i];
+                candidate = ref;
             }
-            else if (((inst->servers[i]->current_connection_count + 1)
-                      * 1000) / inst->servers[i]->weight <
-                     ((candidate->current_connection_count + 1) *
-                      1000) / candidate->weight)
+            else if (((ref->connections + 1) * 1000) / ref->weight <
+                     ((candidate->connections + 1) * 1000) / candidate->weight)
             {
-                /* This running server has fewer
-                connections, set it as a new candidate */
-                candidate = inst->servers[i];
+                /* This running server has fewer connections, set it as a new candidate */
+                candidate = ref;
             }
-            else if (((inst->servers[i]->current_connection_count + 1)
-                      * 1000) / inst->servers[i]->weight ==
-                     ((candidate->current_connection_count + 1) *
-                      1000) / candidate->weight &&
-                     inst->servers[i]->server->stats.n_connections <
-                     candidate->server->stats.n_connections)
+            else if (((ref->connections + 1) * 1000) / ref->weight ==
+                     ((candidate->connections + 1) * 1000) / candidate->weight &&
+                     ref->server->stats.n_connections < candidate->server->stats.n_connections)
             {
-                /* This running server has the same number
-                of connections currently as the candidate
-                but has had fewer connections over time
-                than candidate, set this server to candidate*/
-                candidate = inst->servers[i];
+                /* This running server has the same number of connections currently as the candidate
+                but has had fewer connections over time than candidate, set this server to
+                candidate*/
+                candidate = ref;
             }
         }
     }
 
-    /* There is no candidate server here!
-     * With router_option=slave a master_host could be set, so route traffic there.
-     * Otherwise, just clean up and return NULL
+    /* If we haven't found a proper candidate yet but a master server is available, we'll pick that
+     * with the assumption that it is "better" than a slave.
      */
     if (!candidate)
     {
@@ -555,62 +426,43 @@ newSession(ROUTER *instance, SESSION *session)
         }
         else
         {
-            MXS_ERROR("Failed to create new routing session. "
-                      "Couldn't find eligible candidate server. Freeing "
-                      "allocated resources.");
+            MXS_ERROR("Failed to create new routing session. Couldn't find eligible"
+                      " candidate server. Freeing allocated resources.");
             MXS_FREE(client_rses);
             return NULL;
         }
     }
 
-    client_rses->rses_capabilities = RCAP_TYPE_PACKET_INPUT;
-
     /*
      * We now have the server with the least connections.
      * Bump the connection count for this server
      */
-    atomic_add(&candidate->current_connection_count, 1);
     client_rses->backend = candidate;
-    MXS_DEBUG("%lu [newSession] Selected server in port %d. "
-              "Connections : %d\n",
-              pthread_self(),
-              candidate->server->port,
-              candidate->current_connection_count);
 
-    /*
-     * Open a backend connection, putting the DCB for this
-     * connection in the client_rses->backend_dcb
-     */
-    client_rses->backend_dcb = dcb_connect(candidate->server,
-                                           session,
+    /** Open the backend connection */
+    client_rses->backend_dcb = dcb_connect(candidate->server, session,
                                            candidate->server->protocol);
+
     if (client_rses->backend_dcb == NULL)
     {
-        atomic_add(&candidate->current_connection_count, -1);
+        /** The failure is reported in dcb_connect() */
         MXS_FREE(client_rses);
         return NULL;
     }
-    dcb_add_callback(
-                     client_rses->backend_dcb,
+
+    atomic_add(&candidate->connections, 1);
+
+    // TODO: Remove this as it is never called
+    dcb_add_callback(client_rses->backend_dcb,
                      DCB_REASON_NOT_RESPONDING,
                      &handle_state_switch,
                      client_rses);
     inst->stats.n_sessions++;
 
-    /**
-     * Add this session to the list of active sessions.
-     */
-    spinlock_acquire(&inst->lock);
-    client_rses->next = inst->connections;
-    inst->connections = client_rses;
-    spinlock_release(&inst->lock);
-
     CHK_CLIENT_RSES(client_rses);
 
-    MXS_INFO("Readconnroute: New session for server %s. "
-             "Connections : %d",
-             candidate->server->unique_name,
-             candidate->current_connection_count);
+    MXS_INFO("Readconnroute: New session for server %s. Connections : %d",
+             candidate->server->unique_name, candidate->connections);
 
     return(void *) client_rses;
 }
@@ -635,42 +487,10 @@ newSession(ROUTER *instance, SESSION *session)
 static void freeSession(ROUTER* router_instance, void* router_client_ses)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
-    ROUTER_CLIENT_SES* router_cli_ses =
-        (ROUTER_CLIENT_SES *) router_client_ses;
-    int prev_val;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
 
-    prev_val = atomic_add(&router_cli_ses->backend->current_connection_count, -1);
+    ss_debug(int prev_val = ) atomic_add(&router_cli_ses->backend->connections, -1);
     ss_dassert(prev_val > 0);
-
-    spinlock_acquire(&router->lock);
-
-    if (router->connections == router_cli_ses)
-    {
-        router->connections = router_cli_ses->next;
-    }
-    else
-    {
-        ROUTER_CLIENT_SES *ptr = router->connections;
-
-        while (ptr != NULL && ptr->next != router_cli_ses)
-        {
-            ptr = ptr->next;
-        }
-
-        if (ptr != NULL)
-        {
-            ptr->next = router_cli_ses->next;
-        }
-    }
-    spinlock_release(&router->lock);
-
-    MXS_DEBUG("%lu [freeSession] Unlinked router_client_session %p from "
-              "router %p and from server on port %d. Connections : %d. ",
-              pthread_self(),
-              router_cli_ses,
-              router,
-              router_cli_ses->backend->server->port,
-              prev_val - 1);
 
     MXS_FREE(router_cli_ses);
 }
@@ -713,6 +533,29 @@ closeSession(ROUTER *instance, void *router_session)
     }
 }
 
+/** Log routing failure due to closed session */
+static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
+                               SERVER_REF *ref)
+{
+    char msg[MAX_SERVER_NAME_LEN + 200] = ""; // Extra space for message
+
+    if (is_closed)
+    {
+        sprintf(msg, "Session is closed.");
+    }
+    else if (SERVER_IS_DOWN(ref->server))
+    {
+        sprintf(msg, "Server '%s' is down.", ref->server->unique_name);
+    }
+    else if (!SERVER_REF_IS_ACTIVE(ref))
+    {
+        sprintf(msg, "Server '%s' was removed from the service.", ref->server->unique_name);
+    }
+
+    MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
+              mysql_command, msg);
+}
+
 /**
  * We have data from the client, we must route it to the backend.
  * This is simply a case of sending it to the connection that was
@@ -728,7 +571,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
-    int rc;
+    int rc = 0;
     DCB* backend_dcb;
     MySQLProtocol *proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
     mysql_server_cmd_t mysql_command = proto->current_command;
@@ -757,16 +600,11 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
     }
 
     if (rses_is_closed || backend_dcb == NULL ||
+        !SERVER_REF_IS_ACTIVE(router_cli_ses->backend) ||
         SERVER_IS_DOWN(router_cli_ses->backend->server))
     {
-        MXS_ERROR("Failed to route MySQL command %d to backend "
-                  "server.%s",
-                  mysql_command, rses_is_closed ? " Session is closed." : "");
-        rc = 0;
-        while ((queue = GWBUF_CONSUME_ALL(queue)) != NULL)
-        {
-            ;
-        }
+        log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend);
+        gwbuf_free(queue);
         goto return_rc;
 
     }
@@ -811,23 +649,12 @@ static void
 diagnostics(ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
-    ROUTER_CLIENT_SES *session;
-    int i = 0;
-    BACKEND *backend;
     char *weightby;
-
-    spinlock_acquire(&router_inst->lock);
-    session = router_inst->connections;
-    while (session)
-    {
-        i++;
-        session = session->next;
-    }
-    spinlock_release(&router_inst->lock);
 
     dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
                router_inst->stats.n_sessions);
-    dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n", i);
+    dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n",
+               router_inst->service->stats.n_current);
     dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
                router_inst->stats.n_queries);
     if ((weightby = serviceGetWeightingParameter(router_inst->service))
@@ -838,15 +665,13 @@ diagnostics(ROUTER *router, DCB *dcb)
                    weightby);
         dcb_printf(dcb,
                    "\t\tServer               Target %% Connections\n");
-        for (i = 0; router_inst->servers[i]; i++)
+        for (SERVER_REF *ref = router_inst->service->dbref; ref; ref = ref->next)
         {
-            backend = router_inst->servers[i];
             dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
-                       backend->server->unique_name,
-                       (float) backend->weight / 10,
-                       backend->current_connection_count);
+                       ref->server->unique_name,
+                       (float) ref->weight / 10,
+                       ref->connections);
         }
-
     }
 }
 
@@ -989,9 +814,9 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
     spinlock_release(&rses->rses_lock);
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_PACKET_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /********************************
@@ -1007,28 +832,28 @@ static int getCapabilities()
  *
  */
 
-static BACKEND *get_root_master(BACKEND **servers)
+static SERVER_REF *get_root_master(SERVER_REF *servers)
 {
     int i = 0;
-    BACKEND *master_host = NULL;
+    SERVER_REF *master_host = NULL;
 
-    for (i = 0; servers[i]; i++)
+    for (SERVER_REF *ref = servers; ref; ref = ref->next)
     {
-        if (servers[i] && (servers[i]->server->status & (SERVER_MASTER | SERVER_MAINT)) == SERVER_MASTER)
+        if (ref->active && SERVER_IS_MASTER(ref->server))
         {
             if (master_host == NULL)
             {
-                master_host = servers[i];
+                master_host = ref;
             }
-            else if (servers[i]->server->depth < master_host->server->depth ||
-                    (servers[i]->server->depth == master_host->server->depth &&
-                     servers[i]->weight > master_host->weight))
+            else if (ref->server->depth < master_host->server->depth ||
+                    (ref->server->depth == master_host->server->depth &&
+                     ref->weight > master_host->weight))
             {
                 /**
                  * This master has a lower depth than the candidate master or
                  * the depths are equal but this master has a higher weight
                  */
-                master_host = servers[i];
+                master_host = ref;
             }
         }
     }

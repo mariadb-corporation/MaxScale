@@ -31,10 +31,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <listmanager.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <log_manager.h>
+#include <maxscale/listmanager.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 
 /**

@@ -33,8 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <spinlock.h>
-#include <thread.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
 
 
 /**

@@ -29,26 +29,24 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <ini.h>
 #include <sys/stat.h>
 
-#include <avrorouter.h>
-#include <random_jkiss.h>
+#include "avrorouter.h"
+#include <maxscale/random_jkiss.h>
 #include <binlog_common.h>
 #include <avro/errors.h>
 #include <maxscale/alloc.h>
@@ -81,7 +79,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void errorReply(ROUTER *instance, void *router_session, GWBUF *message,
                        DCB *backend_dcb, error_action_t action, bool *succp);
-static int getCapabilities();
+static uint64_t getCapabilities(void);
 extern int MaxScaleUptime();
 extern void avro_get_used_tables(AVRO_INSTANCE *router, DCB *dcb);
 void converter_func(void* data);
@@ -107,7 +105,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     errorReply,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static SPINLOCK instlock;
@@ -225,14 +224,22 @@ bool create_tables(sqlite3* handle)
     return true;
 }
 
-static void add_conversion_task(AVRO_INSTANCE *inst)
+static bool add_conversion_task(AVRO_INSTANCE *inst)
 {
     char tasknm[strlen(avro_task_name) + strlen(inst->service->name) + 2];
     snprintf(tasknm, sizeof(tasknm), "%s-%s", inst->service->name, avro_task_name);
+    if (inst->service->svc_do_shutdown)
+    {
+        MXS_INFO("AVRO converter task is not added due to MaxScale shutdown");
+        return false;
+    }
+    MXS_INFO("Setting task for converter_func");
     if (hktask_oneshot(tasknm, converter_func, inst, inst->task_delay) == 0)
     {
         MXS_ERROR("Failed to add binlog to Avro conversion task to housekeeper.");
+        return false;
     }
+    return true;
 }
 
 /**
@@ -412,7 +419,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "start_index") == 0)
                 {
-                    first_file = MAX(1, atoi(value));
+                    first_file = MXS_MAX(1, atoi(value));
                 }
                 else
                 {
@@ -957,7 +964,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
     ss_dassert(false);
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_NO_RSESSION;
 }
@@ -1008,7 +1015,8 @@ void converter_func(void* data)
     AVRO_INSTANCE* router = (AVRO_INSTANCE*) data;
     bool ok = true;
     avro_binlog_end_t binlog_end = AVRO_OK;
-    while (ok && binlog_end == AVRO_OK)
+
+    while (!router->service->svc_do_shutdown && ok && binlog_end == AVRO_OK)
     {
         uint64_t start_pos = router->current_pos;
         if (avro_open_binlog(router->binlogdir, router->binlog_name, &router->binlog_fd))
@@ -1038,11 +1046,13 @@ void converter_func(void* data)
 
     if (binlog_end == AVRO_LAST_FILE)
     {
-        router->task_delay = MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
-        add_conversion_task(router);
-        MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
-                 " more data is written before continuing. Next check in %d seconds.",
-                 router->binlog_name, router->current_pos, router->task_delay);
+        router->task_delay = MXS_MIN(router->task_delay + 1, AVRO_TASK_DELAY_MAX);
+        if (add_conversion_task(router))
+        {
+            MXS_INFO("Stopped processing file %s at position %lu. Waiting until"
+                     " more data is written before continuing. Next check in %d seconds.",
+                     router->binlog_name, router->current_pos, router->task_delay);
+        }
     }
 }
 
@@ -1061,7 +1071,7 @@ static bool ensure_dir_ok(const char* path, int mode)
 
     if (path)
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         char resolved[PATH_MAX + 1];
         const char *rp = realpath(path, resolved);
 

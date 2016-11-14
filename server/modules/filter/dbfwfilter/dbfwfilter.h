@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _DBFWFILTER_H
 #define _DBFWFILTER_H
 /*
@@ -20,7 +21,10 @@
  * the generater parser which is created from the ruleparser.y and token.l files.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
+
+MXS_BEGIN_DECLS
 
 /** Matching type */
 enum match_type
@@ -48,5 +52,7 @@ bool add_active_user(void* scanner, const char* name);
 bool add_active_rule(void* scanner, const char* name);
 void set_matching_mode(void* scanner, enum match_type mode);
 bool create_user_templates(void* scanner);
+
+MXS_END_DECLS
 
 #endif

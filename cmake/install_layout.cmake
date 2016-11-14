@@ -20,6 +20,7 @@ set(DEFAULT_CACHE_SUBPATH "cache/maxscale" CACHE PATH "Default cache subpath")
 set(DEFAULT_LANG_SUBPATH "lib/maxscale" CACHE PATH "Default language file subpath")
 set(DEFAULT_EXEC_SUBPATH "${MAXSCALE_BINDIR}" CACHE PATH "Default executable subpath")
 set(DEFAULT_CONFIG_SUBPATH "etc" CACHE PATH "Default configuration subpath")
+set(DEFAULT_CONFIG_PERSIST_SUBPATH "maxscale.cnf.d" CACHE PATH "Default persisted configuration subpath")
 
 set(DEFAULT_PIDDIR ${MAXSCALE_VARDIR}/${DEFAULT_PID_SUBPATH} CACHE PATH "Default PID file directory")
 set(DEFAULT_LOGDIR ${MAXSCALE_VARDIR}/${DEFAULT_LOG_SUBPATH} CACHE PATH "Default log directory")
@@ -29,6 +30,7 @@ set(DEFAULT_CACHEDIR ${MAXSCALE_VARDIR}/${DEFAULT_CACHE_SUBPATH} CACHE PATH "Def
 set(DEFAULT_LANGDIR ${MAXSCALE_VARDIR}/${DEFAULT_LANG_SUBPATH} CACHE PATH "Default language file directory")
 set(DEFAULT_EXECDIR ${CMAKE_INSTALL_PREFIX}/${DEFAULT_EXEC_SUBPATH} CACHE PATH "Default executable directory")
 set(DEFAULT_CONFIGDIR /${DEFAULT_CONFIG_SUBPATH} CACHE PATH "Default configuration directory")
+set(DEFAULT_CONFIG_PERSISTDIR ${DEFAULT_DATADIR}/${DEFAULT_CONFIG_PERSIST_SUBPATH} CACHE PATH "Default persisted configuration directory")
 
 # Massage TARGET_COMPONENT into a list
 if (TARGET_COMPONENT)

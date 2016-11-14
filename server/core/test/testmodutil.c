@@ -34,8 +34,8 @@
 #include <string.h>
 
 #include <maxscale/alloc.h>
-#include <modutil.h>
-#include <buffer.h>
+#include <maxscale/modutil.h>
+#include <maxscale/buffer.h>
 
 /**
  * test1    Allocate a service and do lots of other things

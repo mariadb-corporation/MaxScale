@@ -25,12 +25,13 @@
  * @endverbatim
  */
 
-#include <gw_authenticator.h>
-#include <cdc.h>
-#include <modutil.h>
-#include <users.h>
+#include <maxscale/gw_authenticator.h>
 #include <sys/stat.h>
+#include <cdc.h>
 #include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/modutil.h>
+#include <maxscale/users.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30
@@ -67,12 +68,14 @@ extern char *decryptPassword(char *crypt);
  */
 static GWAUTHENTICATOR MyObject =
 {
-    cdc_auth_set_protocol_data,           /* Extract data into structure   */
-    cdc_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
-    cdc_auth_authenticate,                /* Authenticate user credentials */
-    cdc_auth_free_client_data,            /* Free the client data held in DCB */
-    cdc_replace_users,
-    NULL
+    NULL,                           /* No initialize entry point */
+    NULL,                           /* No create entry point */
+    cdc_auth_set_protocol_data,     /* Extract data into structure   */
+    cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+    cdc_auth_authenticate,          /* Authenticate user credentials */
+    cdc_auth_free_client_data,      /* Free the client data held in DCB */
+    NULL,                           /* No destroy entry point */
+    cdc_replace_users               /* Load CDC users */
 };
 
 static int cdc_auth_check(
@@ -136,7 +139,7 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint
 {
     if (dcb->listener->users)
     {
-        char *user_password = users_fetch(dcb->listener->users, username);
+        const char *user_password = users_fetch(dcb->listener->users, username);
 
         if (user_password)
         {

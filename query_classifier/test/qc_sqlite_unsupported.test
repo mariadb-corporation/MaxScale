@@ -20,3 +20,8 @@ SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));
 # REMOVE: expr(A) ::= LP(B) expr(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
 # REMOVE: expr(A) ::= LP expr(X) COMMA(OP) expr(Y) RP. {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
 # ADD   : expr(A) ::= LP exprlist RP. { ... }
+
+insert into t1 values (2, 2) on duplicate key update data= data + 10;
+# Problem: warning: [qc_sqlite] Statement was only partially parsed (Sqlite3 error: SQL logic error
+#          or missing database, near "on": syntax error): "insert into t1 values (2, 2) on duplicate 
+#          key update data= data + 10;"

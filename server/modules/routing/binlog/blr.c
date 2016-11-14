@@ -51,6 +51,8 @@
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
  * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA new state
+ * 16/09/2016   Massimiliano Pinto  Addition of Start Encription Event description
+ * 08/11/2016   Massimiliano Pinto  Added destroyInstance()
  *
  * @endverbatim
  */
@@ -59,29 +61,26 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <utils.h>
-#include <secrets.h>
-#include <spinlock.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/utils.h>
+#include <maxscale/secrets.h>
+#include <maxscale/spinlock.h>
+#include "blr.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <time.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <ini.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
 
 static char *version_str = "V2.1.0";
 
@@ -104,15 +103,15 @@ static  void    errorReply(ROUTER  *instance,
                            error_action_t     action,
                            bool    *succp);
 
-static  int getCapabilities();
+static uint64_t getCapabilities(void);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
-static int blr_set_service_mysql_user(SERVICE *service);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
+static void destroyInstance(ROUTER *instance);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -125,7 +124,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     errorReply,
-    getCapabilities
+    getCapabilities,
+    destroyInstance
 };
 
 static void stats_func(void *);
@@ -570,7 +570,7 @@ createInstance(SERVICE *service, char **options)
         mkdir_rval = mkdir(inst->binlogdir, 0700);
         if (mkdir_rval == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Service %s, Failed to create binlog directory '%s': [%d] %s",
                       service->name,
                       inst->binlogdir,
@@ -582,24 +582,13 @@ createInstance(SERVICE *service, char **options)
         }
     }
 
-    /* Allocate dbusers for this router here instead of serviceStartPort() */
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        if ((port->users = mysql_users_alloc()) == NULL)
-        {
-            MXS_ERROR("%s: Error allocating dbusers in createInstance",
-                      inst->service->name);
-            free_instance(inst);
-            return NULL;
-        }
-    }
-
     /* Dynamically allocate master_host server struct, not written in any cnf file */
     if (service->dbref == NULL)
     {
         SERVER *server;
         SSL_LISTENER *ssl_cfg;
-        server = server_alloc("_none_", "MySQLBackend", (int)3306);
+        server = server_alloc("binlog_router_master_host", "_none_", 3306,
+                              "MySQLBackend", "MySQLBackendAuth", NULL);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
@@ -631,7 +620,6 @@ createInstance(SERVICE *service, char **options)
         server->server_ssl = ssl_cfg;
 
         /* Set server unique name */
-        server_set_unique_name(server, "binlog_router_master_host");
         /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
     }
@@ -678,19 +666,10 @@ createInstance(SERVICE *service, char **options)
                       inst->service->name, inst->binlogdir);
         }
 
-        /* Set service user or load db users */
-        blr_set_service_mysql_user(inst->service);
-
     }
     else
     {
         inst->master_state = BLRM_UNCONNECTED;
-
-        /* Try loading dbusers */
-        if (inst->service->ports)
-        {
-            blr_load_dbusers(inst);
-        }
     }
 
     /**
@@ -940,9 +919,8 @@ static void freeSession(ROUTER* router_instance,
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
-    int prev_val;
 
-    prev_val = atomic_add(&router->stats.n_slaves, -1);
+    ss_debug(int prev_val = ) atomic_add(&router->stats.n_slaves, -1);
     ss_dassert(prev_val > 0);
 
     /*
@@ -1117,7 +1095,8 @@ static char *event_names_mariadb10[] =
     /* New MariaDB 10.x event numbers */
     "Binlog Checkpoint Event",
     "GTID Event",
-    "GTID List Event"
+    "GTID List Event",
+    "Start Encryption Event"
 };
 
 /**
@@ -1628,7 +1607,7 @@ errorReply(ROUTER *instance,
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int error;
     socklen_t len;
-    char msg[STRERROR_BUFLEN + 1 + 5] = "";
+    char msg[MXS_STRERROR_BUFLEN + 1 + 5] = "";
     char *errmsg;
     unsigned long mysql_errno;
 
@@ -1688,7 +1667,7 @@ errorReply(ROUTER *instance,
         getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 &&
         error != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
     }
     else
@@ -1790,9 +1769,9 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 }
 
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
-    return (int)(RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_USERS_INIT);
+    return RCAP_TYPE_NO_RSESSION;
 }
 
 /**
@@ -2137,140 +2116,6 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
 }
 
 /**
- * Add the service user to mysql dbusers (service->users)
- * via mysql_users_alloc and add_mysql_users_with_host_ipv4
- * User is added for '%' and 'localhost' hosts
- *
- * @param service   The current service
- * @return      0 on success, 1 on failure
- */
-static int
-blr_set_service_mysql_user(SERVICE *service)
-{
-    char *dpwd = NULL;
-    char *newpasswd = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        MXS_ERROR("failed to get service user details for service %s",
-                  service->name);
-
-        return 1;
-    }
-
-    dpwd = decryptPassword(service->credentials.authdata);
-
-    if (!dpwd)
-    {
-        MXS_ERROR("decrypt password failed for service user %s, service %s",
-                  service_user,
-                  service->name);
-
-        return 1;
-    }
-
-    newpasswd = create_hex_sha1_sha1_passwd(dpwd);
-
-    if (!newpasswd)
-    {
-        MXS_ERROR("create hex_sha1_sha1_password failed for service user %s",
-                  service_user);
-
-        MXS_FREE(dpwd);
-        return 1;
-    }
-
-    /** Add the service user for % and localhost to all listeners so that
-     * it can always be used. */
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                       "%", newpasswd, "Y", "");
-        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                       "localhost", newpasswd, "Y", "");
-    }
-
-    MXS_FREE(newpasswd);
-    MXS_FREE(dpwd);
-
-    return 0;
-}
-
-/**
- * Load mysql dbusers into (service->users)
- *
- * @param router    The router instance
- * @return              -1 on failure, 0 for no users found, > 0 for found users
- */
-static int
-blr_load_dbusers(const ROUTER_INSTANCE *router)
-{
-    int loaded_total = 0;
-    SERVICE *service;
-    char path[PATH_MAX];
-    service = router->service;
-
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
-    {
-        sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
-
-        if (mxs_mkdir_all(path, 0775))
-        {
-            strcat(path, BLR_DBUSERS_FILE);
-        }
-
-        /* Try loading dbusers from configured backends */
-        int loaded = load_mysql_users(port);
-
-        if (loaded < 0)
-        {
-            MXS_ERROR("Unable to load users for service %s", service->name);
-
-            /* Try loading authentication data from file cache */
-            loaded = dbusers_load(port->users, path);
-
-            if (loaded != -1)
-            {
-                MXS_ERROR("Service %s, Listener %s, Using cached credential information file %s.",
-                          service->name, port->name, path);
-            }
-            else
-            {
-                MXS_ERROR("Service %s, Listener %s, Unable to read cache credential"
-                          " information from %s. No database user added to service users table.",
-                          service->name, port->name, path);
-            }
-        }
-        else
-        {
-            /* don't update cache if no user was loaded */
-            if (loaded == 0)
-            {
-                MXS_ERROR("Service %s, Listener %s: failed to load any user information."
-                          " Authentication will probably fail as a result.",
-                          service->name, port->name);
-            }
-            else
-            {
-                /* update cached data */
-                dbusers_save(port->users, path);
-            }
-        }
-        loaded_total += loaded;
-    }
-
-    /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
-     * This way MaxScale could try reloading users' just after startup
-     */
-    service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-    service->rate_limit.nloads = 1;
-
-    return loaded_total;
-}
-
-/**
  * Extract a numeric field from a packet of the specified number of bits
  *
  * @param src   The raw packet source
@@ -2449,4 +2294,66 @@ blr_free_ssl_data(ROUTER_INSTANCE *inst)
         MXS_FREE(inst->service->dbref->server->server_ssl);
         inst->service->dbref->server->server_ssl = NULL;
     }
+}
+
+/**
+ * destroy binlog server instance
+ *
+ * @param service   The service this router instance belongs to
+ */
+static void
+destroyInstance(ROUTER *instance)
+{
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
+
+    MXS_DEBUG("Destroying instance of router %s for service %s",
+              inst->service->routerModule, inst->service->name);
+
+    /* Check whether master connection is active */
+    if (inst->master)
+    {
+        if (inst->master->fd != -1 && inst->master->state == DCB_STATE_POLLING)
+        {
+            blr_master_close(inst);
+        }
+    }
+
+    spinlock_acquire(&inst->lock);
+
+    if (inst->master_state != BLRM_UNCONFIGURED)
+    {
+        inst->master_state = BLRM_SLAVE_STOPPED;
+    }
+
+    if (inst->client)
+    {
+        if (inst->client->state == DCB_STATE_POLLING)
+        {
+            dcb_close(inst->client);
+            inst->client = NULL;
+        }
+    }
+
+    /* Discard the queued residual data */
+    while (inst->residual)
+    {
+        inst->residual = gwbuf_consume(inst->residual, GWBUF_LENGTH(inst->residual));
+    }
+    inst->residual = NULL;
+
+    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
+               "read up to log %s, pos %lu, transaction safe pos %lu",
+               inst->service->name,
+               inst->service->dbref->server->name,
+               inst->service->dbref->server->port,
+               inst->binlog_name, inst->current_pos, inst->binlog_position);
+
+    if (inst->trx_safe && inst->pending_transaction)
+    {
+        MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
+                    "pos %lu, incomplete transaction starts at pos %lu",
+                    inst->service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
+    }
+
+    spinlock_release(&inst->lock);
 }

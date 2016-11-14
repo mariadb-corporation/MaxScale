@@ -24,12 +24,12 @@
  *
  * @endverbatim
  */
-#include <buffer.h>
+#include <maxscale/buffer.h>
 #include <string.h>
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <modutil.h>
+#include <maxscale/modutil.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
@@ -1059,7 +1059,7 @@ void prepare_pcre2_patterns()
     {
         int err;
         size_t erroff;
-        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
 
         if ((re_percent = pcre2_compile(pattern_percent, PCRE2_ZERO_TERMINATED,
                                         0, &err, &erroff, NULL)) &&
@@ -1099,7 +1099,7 @@ void prepare_pcre2_patterns()
  * @param string String to match
  * @return MXS_PCRE2_MATCH if the pattern matches, MXS_PCRE2_NOMATCH if it does
  * not match and MXS_PCRE2_ERROR if an error occurred
- * @see maxscale_pcre2.h
+ * @see maxscale/pcre2.h
  */
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string)
 {
@@ -1137,7 +1137,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
                 {
                     if (errcode != 0)
                     {
-                        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+                        PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
                         pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
                         MXS_ERROR("Failed to match pattern: %s", errbuf);
                     }

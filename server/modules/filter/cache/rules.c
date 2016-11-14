@@ -16,10 +16,10 @@
 #include <errno.h>
 #include <stdio.h>
 #include <maxscale/alloc.h>
-#include <modutil.h>
-#include <mysql_client_server_protocol.h>
-#include <query_classifier.h>
-#include <session.h>
+#include <maxscale/modutil.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/session.h>
 #include "cache.h"
 
 static const char KEY_ATTRIBUTE[] = "attribute";
@@ -246,7 +246,7 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
 
         MXS_ERROR("Could not open rules file %s for reading: %s",
                   path, strerror_r(errno, errbuf, sizeof(errbuf)));
@@ -782,9 +782,119 @@ static bool cache_rule_compare_n(CACHE_RULE *self, const char *value, size_t len
 static bool cache_rule_matches_column(CACHE_RULE *self, const char *default_db, const GWBUF *query)
 {
     ss_dassert(self->attribute == CACHE_ATTRIBUTE_COLUMN);
-    ss_info_dassert(!true, "Column matching not implemented yet.");
 
-    return false;
+    // TODO: Do this "parsing" when the rule item is created.
+    char buffer[strlen(self->value) + 1];
+    strcpy(buffer, self->value);
+
+    const char* rule_column = NULL;
+    const char* rule_table = NULL;
+    const char* rule_database = NULL;
+    char* dot1 = strchr(buffer, '.');
+    char* dot2 = dot1 ? strchr(buffer, '.') : NULL;
+
+    if (dot1 && dot2)
+    {
+        rule_database = buffer;
+        *dot1 = 0;
+        rule_table = dot1 + 1;
+        *dot2 = 0;
+        rule_column = dot2 + 1;
+    }
+    else if (dot1)
+    {
+        rule_table = buffer;
+        *dot1 = 0;
+        rule_column = dot1 + 1;
+    }
+    else
+    {
+        rule_column = buffer;
+    }
+
+    const QC_FIELD_INFO *infos;
+    size_t n_infos;
+
+    int n_tables;
+    char** tables = qc_get_table_names((GWBUF*)query, &n_tables, false);
+
+    const char* default_table = NULL;
+
+    if (n_tables == 1)
+    {
+        // Only if we have exactly one table can we assume anything
+        // about a table that has not been mentioned explicitly.
+        default_table = tables[0];
+    }
+
+    qc_get_field_info((GWBUF*)query, &infos, &n_infos);
+
+    bool matches = false;
+
+    size_t i = 0;
+    while (!matches && (i < n_infos))
+    {
+        const QC_FIELD_INFO *info = (infos + i);
+
+        if ((strcmp(info->column, rule_column) == 0) || (strcmp(info->column, "*") == 0))
+        {
+            if (rule_table)
+            {
+                const char* check_table = info->table ? info->table : default_table;
+
+                if (check_table && (strcmp(check_table, rule_table) == 0))
+                {
+                    if (rule_database)
+                    {
+                        const char *check_database = info->database ? info->database : default_db;
+
+                        if (check_database && (strcmp(check_database, rule_database) == 0))
+                        {
+                            matches = true;
+                        }
+                        else
+                        {
+                            // If the rules specifies a database and either the database
+                            // does not match or we do not know the database, the rule
+                            // does *not* match.
+                            matches = false;
+                        }
+                    }
+                    else
+                    {
+                        // If the rule specifies no table, then if the table and column matches,
+                        // the rule matches.
+                        matches = true;
+                    }
+                }
+                else
+                {
+                    // The rules specifies a table and either the table does not match
+                    // or we do not know the table, the rule does *not* match.
+                    matches = false;
+                }
+            }
+            else
+            {
+                // If the rule specifies no table, then if the column matches, the
+                // rule matches.
+                matches = true;
+            }
+        }
+
+        ++i;
+    }
+
+    if (tables)
+    {
+        for (i = 0; i < (size_t)n_tables; ++i)
+        {
+            MXS_FREE(tables[i]);
+        }
+        MXS_FREE(tables);
+    }
+
+    return matches;
 }
 
 /**

@@ -21,20 +21,18 @@
 #include <errno.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include <dcb.h>
-#include <atomic.h>
-#include <gwbitmask.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gw.h>
-#include <maxconfig.h>
-#include <housekeeper.h>
-#include <maxconfig.h>
+#include <maxscale/dcb.h>
+#include <maxscale/atomic.h>
+#include <maxscale/gwbitmask.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/config.h>
 #include <mysql.h>
-#include <resultset.h>
-#include <session.h>
-#include <statistics.h>
-#include <query_classifier.h>
+#include <maxscale/resultset.h>
+#include <maxscale/session.h>
+#include <maxscale/statistics.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/utils.h>
 
 #define         PROFILE_POLL    0
 
@@ -216,7 +214,7 @@ poll_init()
     }
     if ((epoll_fd = epoll_create(MAX_EVENTS)) == -1)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("FATAL: Could not create epoll instance: %s", strerror_r(errno, errbuf, sizeof(errbuf)));
         exit(-1);
     }
@@ -897,18 +895,6 @@ process_pollq(int thread_id)
         thread_data[thread_id].event = ev;
     }
 
-#if defined(FAKE_CODE)
-    if (dcb_fake_write_ev[dcb->fd] != 0)
-    {
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "Added fake events %d to ev %d.",
-                  pthread_self(),
-                  dcb_fake_write_ev[dcb->fd],
-                  ev);
-        ev |= dcb_fake_write_ev[dcb->fd];
-        dcb_fake_write_ev[dcb->fd] = 0;
-    }
-#endif /* FAKE_CODE */
     ss_debug(spinlock_acquire(&dcb->dcb_initlock));
     ss_dassert(dcb->state != DCB_STATE_ALLOC);
     /* It isn't obvious that this is impossible */
@@ -946,7 +932,7 @@ process_pollq(int thread_id)
         }
         else
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLOUT due %d, %s. "
                       "dcb %p, fd %i",
@@ -1009,23 +995,9 @@ process_pollq(int thread_id)
     if (ev & EPOLLERR)
     {
         int eno = gw_getsockerrno(dcb->fd);
-#if defined(FAKE_CODE)
-        if (eno == 0)
-        {
-            eno = dcb_fake_write_errno[dcb->fd];
-            char errbuf[STRERROR_BUFLEN];
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "Added fake errno %d. "
-                      "%s",
-                      pthread_self(),
-                      eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
-        }
-        dcb_fake_write_errno[dcb->fd] = 0;
-#endif /* FAKE_CODE */
         if (eno != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLERR due %d, %s.",
                       pthread_self(),
@@ -1046,9 +1018,8 @@ process_pollq(int thread_id)
 
     if (ev & EPOLLHUP)
     {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
-        char errbuf[STRERROR_BUFLEN];
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -1082,9 +1053,8 @@ process_pollq(int thread_id)
 #ifdef EPOLLRDHUP
     if (ev & EPOLLRDHUP)
     {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
-        char errbuf[STRERROR_BUFLEN];
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",

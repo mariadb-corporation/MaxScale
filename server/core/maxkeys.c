@@ -24,10 +24,9 @@
  */
 #include <getopt.h>
 #include <stdio.h>
-#include <secrets.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <gwdirs.h>
+#include <maxscale/secrets.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/gwdirs.h>
 
 struct option options[] =
 {
