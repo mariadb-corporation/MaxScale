@@ -3036,6 +3036,73 @@ void log_server_connections(select_criteria_t select_criteria,
 }
 
 /**
+ * @brief Check whether it's possible to connect to this server
+ *
+ * @param bref Backend reference
+ * @return True if a connection to this server can be attempted
+ */
+static bool bref_valid_for_connect(const backend_ref_t *bref)
+{
+    return !BREF_HAS_FAILED(bref) &&
+        SERVER_IS_RUNNING(bref->bref_backend->backend_server);
+}
+
+/**
+ * Check whether it's possible to use this server as a slave
+ *
+ * @param bref Backend reference
+ * @param master_host The master server
+ * @return True if this server is a valid slave candidate
+ */
+static bool bref_valid_for_slave(const backend_ref_t *bref, const SERVER *master_host)
+{
+    SERVER *server = bref->bref_backend->backend_server;
+
+    return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
+        (master_host == NULL || (server != master_host));
+}
+
+/**
+ * @brief Find the best slave candidate
+ *
+ * This function iterates through @c bref and tries to find the best backend
+ * reference that is not in use. @c cmpfun will be called to compare the backends.
+ *
+ * @param bref Backend reference
+ * @param n Size of @c bref
+ * @param master The master server
+ * @param cmpfun qsort() compatible comparison function
+ * @return The best slave backend reference or NULL if no candidates could be found
+ */
+backend_ref_t* get_slave_candidate(backend_ref_t *bref, int n, const SERVER *master,
+                                   int (*cmpfun)(const void *, const void *))
+{
+    backend_ref_t *candidate = NULL;
+
+    for (int i = 0; i < n; i++)
+    {
+        if (!BREF_IS_IN_USE(&bref[i]) &&
+            bref_valid_for_connect(&bref[i]) &&
+            bref_valid_for_slave(&bref[i], master))
+        {
+            if (candidate)
+            {
+                if (cmpfun(candidate, &bref[i]) > 0)
+                {
+                    candidate = &bref[i];
+                }
+            }
+            else
+            {
+                candidate = &bref[i];
+            }
+        }
+    }
+
+    return candidate;
+}
+
+/**
  * @brief Search suitable backend servers from those of router instance
  *
  * It is assumed that there is only one master among servers of a router instance.
@@ -3071,10 +3138,11 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     }
 
     /* get the root Master */
-    BACKEND *master_host = get_root_master(backend_ref, router_nservers);
+    BACKEND *master_backend = get_root_master(backend_ref, router_nservers);
+    SERVER  *master_host = master_backend ? master_backend->backend_server : NULL;
 
     if (router->rwsplit_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
-        (master_host == NULL || SERVER_IS_DOWN(master_host->backend_server)))
+        (master_host == NULL || SERVER_IS_DOWN(master_host)))
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
         return false;
@@ -3098,24 +3166,6 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 
     SERVER *old_master = *p_master_ref ? (*p_master_ref)->bref_backend->backend_server : NULL;
 
-    /** Sort the pointer list to servers according to slave selection criteria.
-     * The servers that match the criteria the best are at the beginning of
-     * the list. */
-    qsort(backend_ref, (size_t) router_nservers, sizeof(backend_ref_t), p);
-
-    if (master_connected && old_master)
-    {
-        /** We sorted the array so the pointer to the old master was changed and
-         * we need to find the old master again. */
-        for (int i = 0; i < router_nservers; i++)
-        {
-            if (backend_ref[i].bref_backend->backend_server == old_master)
-            {
-                *p_master_ref = &backend_ref[i];
-            }
-        }
-    }
-
     if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
     {
         log_server_connections(select_criteria, backend_ref, router_nservers);
@@ -3126,44 +3176,59 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     const int min_nslaves = 0; /*< not configurable at the time */
     bool succp = false;
 
-    /**
-     * Choose at least 1+min_nslaves (master and slave) and at most 1+max_nslaves
-     * servers from the sorted list. First master found is selected.
-     */
-    for (int i = 0; i < router_nservers &&
-         (slaves_connected < max_nslaves || !master_connected); i++)
+    if (!master_connected)
     {
-        SERVER *serv = backend_ref[i].bref_backend->backend_server;
-
-        if (!BREF_HAS_FAILED(&backend_ref[i]) && SERVER_IS_RUNNING(serv))
+        /** Find a master server */
+        for (int i = 0; i < router_nservers; i++)
         {
-            /* check also for relay servers and don't take the master_host */
-            if (slaves_found < max_nslaves &&
-                (max_slave_rlag == MAX_RLAG_UNDEFINED ||
-                 (serv->rlag != MAX_RLAG_NOT_AVAILABLE &&
-                  serv->rlag <= max_slave_rlag)) &&
-                (SERVER_IS_SLAVE(serv) || SERVER_IS_RELAY_SERVER(serv)) &&
-                (master_host == NULL || (serv != master_host->backend_server)))
-            {
-                slaves_found += 1;
+            SERVER *serv = backend_ref[i].bref_backend->backend_server;
 
-                if (BREF_IS_IN_USE((&backend_ref[i])) ||
-                    connect_server(&backend_ref[i], session, true))
-                {
-                    slaves_connected += 1;
-                }
-            }
-                /* take the master_host for master */
-            else if (!master_connected && master_host && serv == master_host->backend_server)
+            if (bref_valid_for_connect(&backend_ref[i]) &&
+                master_host && serv == master_host)
             {
                 if (connect_server(&backend_ref[i], session, false))
                 {
                     *p_master_ref = &backend_ref[i];
-                    master_connected = true;
+                    break;
                 }
             }
         }
-    } /*< for */
+    }
+
+    /** Calculate how many connections we already have */
+    for (int i = 0; i < router_nservers; i++)
+    {
+        if (bref_valid_for_connect(&backend_ref[i]) &&
+            bref_valid_for_slave(&backend_ref[i], master_host))
+        {
+            slaves_found += 1;
+
+            if (BREF_IS_IN_USE(&backend_ref[i]))
+            {
+                slaves_connected += 1;
+            }
+        }
+    }
+
+    ss_dassert(slaves_connected < max_nslaves);
+
+    backend_ref_t *bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
+
+    /** Connect to all possible slaves */
+    while (bref && slaves_connected < max_nslaves)
+    {
+        if (connect_server(bref, session, true))
+        {
+            slaves_connected += 1;
+        }
+        else
+        {
+            /** Failed to connect, mark server as failed */
+            bref_set_state(bref, BREF_FATAL_FAILURE);
+        }
+
+        bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
+    }
 
     /**
      * Successful cases
