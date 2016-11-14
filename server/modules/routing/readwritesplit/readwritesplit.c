@@ -1041,6 +1041,40 @@ static void freeSession(ROUTER *router_instance, void *router_client_session)
 }
 
 /**
+ * @brief Mark a backend reference as failed
+ *
+ * @param bref Backend reference to close
+ * @param fatal Whether the failure was fatal
+ */
+static void close_failed_bref(backend_ref_t *bref, bool fatal)
+{
+    if (BREF_IS_WAITING_RESULT(bref))
+    {
+        bref_clear_state(bref, BREF_WAITING_RESULT);
+    }
+
+    bref_clear_state(bref, BREF_QUERY_ACTIVE);
+    bref_clear_state(bref, BREF_IN_USE);
+    bref_set_state(bref, BREF_CLOSED);
+
+    if (fatal)
+    {
+        bref_set_state(bref, BREF_FATAL_FAILURE);
+    }
+
+    if (sescmd_cursor_is_active(&bref->bref_sescmd_cur))
+    {
+        sescmd_cursor_set_active(&bref->bref_sescmd_cur, false);
+    }
+
+    if (bref->bref_pending_cmd)
+    {
+        gwbuf_free(bref->bref_pending_cmd);
+        bref->bref_pending_cmd = NULL;
+    }
+}
+
+/**
  * Provide the router with a pointer to a suitable backend dcb.
  *
  * Detect failures in server statuses and reselect backends if necessary.
@@ -3272,13 +3306,8 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             {
                 ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
 
-                /** disconnect opened connections */
-                if (BREF_IS_WAITING_RESULT(&backend_ref[i]))
-                {
-                    bref_clear_state(&backend_ref[i], BREF_WAITING_RESULT);
-                }
-                bref_clear_state(&backend_ref[i], BREF_IN_USE);
-                bref_set_state(&backend_ref[i], BREF_CLOSED);
+                close_failed_bref(&backend_ref[i], true);
+
                 /** Decrease backend's connection counter. */
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
                 dcb_close(backend_ref[i].bref_dcb);
@@ -3513,16 +3542,14 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
             /** Set response status received */
             bref_clear_state(bref, BREF_WAITING_RESULT);
 
-            if (bref->reply_cmd != scmd->reply_cmd)
+            if (bref->reply_cmd != scmd->reply_cmd && BREF_IS_IN_USE(bref))
             {
                 MXS_ERROR("Slave server '%s': response differs from master's response. "
                           "Closing connection due to inconsistent session state.",
                           bref->bref_backend->backend_server->unique_name);
-                sescmd_cursor_set_active(scur, false);
-                bref_clear_state(bref, BREF_QUERY_ACTIVE);
-                bref_clear_state(bref, BREF_IN_USE);
-                bref_set_state(bref, BREF_CLOSED);
-                bref_set_state(bref, BREF_FATAL_FAILURE);
+
+                close_failed_bref(bref, true);
+
                 if (bref->bref_dcb)
                 {
                     dcb_close(bref->bref_dcb);
@@ -3560,10 +3587,9 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                         !BREF_IS_CLOSED(&ses->rses_backend_ref[i]) &&
                         BREF_IS_IN_USE(&ses->rses_backend_ref[i]))
                     {
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_QUERY_ACTIVE);
-                        bref_clear_state(&ses->rses_backend_ref[i], BREF_IN_USE);
-                        bref_set_state(&ses->rses_backend_ref[i], BREF_CLOSED);
-                        bref_set_state(bref, BREF_FATAL_FAILURE);
+
+                        close_failed_bref(&ses->rses_backend_ref[i], true);
+
                         if (ses->rses_backend_ref[i].bref_dcb)
                         {
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
@@ -4457,13 +4483,6 @@ static void handleError(ROUTER *instance, void *router_session,
                          * case the safest thing to do is to close the client
                          * connection. */
                         can_continue = true;
-
-                        if (bref)
-                        {
-                            /** Mark the master as failed so that it won't be
-                             * taken into use if it comes back up. */
-                            bref_set_state(bref, BREF_FATAL_FAILURE);
-                        }
                     }
                     else if (!srv->master_err_is_logged)
                     {
@@ -4478,13 +4497,7 @@ static void handleError(ROUTER *instance, void *router_session,
                     if (bref != NULL)
                     {
                         CHK_BACKEND_REF(bref);
-                        bref_clear_state(bref, BREF_IN_USE);
-                        bref_set_state(bref, BREF_CLOSED);
-
-                        if (BREF_IS_WAITING_RESULT(bref))
-                        {
-                            bref_clear_state(bref, BREF_WAITING_RESULT);
-                        }
+                        close_failed_bref(bref, true);
                     }
                     else
                     {
@@ -4551,13 +4564,7 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
 
             if (BREF_IS_IN_USE(bref))
             {
-                bref_clear_state(bref, BREF_IN_USE);
-                bref_set_state(bref, BREF_CLOSED);
-                if (BREF_IS_WAITING_RESULT(bref))
-                {
-                    bref_clear_state(bref, BREF_WAITING_RESULT);
-                }
-
+                close_failed_bref(bref, false);
                 dcb_close(backend_dcb);
             }
         }
@@ -4632,13 +4639,11 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (BREF_IS_WAITING_RESULT(bref))
     {
-        DCB *client_dcb;
-        client_dcb = ses->client_dcb;
+        DCB *client_dcb = ses->client_dcb;
         client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
-        bref_clear_state(bref, BREF_WAITING_RESULT);
     }
-    bref_clear_state(bref, BREF_IN_USE);
-    bref_set_state(bref, BREF_CLOSED);
+
+    close_failed_bref(bref, false);
 
     /**
      * Error handler is already called for this DCB because
