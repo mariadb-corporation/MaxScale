@@ -69,6 +69,8 @@ MODULE_INFO info =
  * @endverbatim
  */
 
+#define RW_CHK_DCB(bref, dcb) do{if(dcb->state == DCB_STATE_DISCONNECTED){MXS_NOTICE("DCB was closed on line %d.", (bref) ? (bref)->closed_at : -1);}}while(false)
+
 static char *version_str = "V1.1.0";
 
 static ROUTER *createInstance(SERVICE *service, char **options);
@@ -952,7 +954,9 @@ static void closeSession(ROUTER *instance, void *router_session)
                 /**
                  * closes protocol and dcb
                  */
+                RW_CHK_DCB(bref, dcb);
                 dcb_close(dcb);
+                bref->closed_at = __LINE__;
                 /** decrease server current connection counters */
                 atomic_add(&bref->bref_backend->backend_conn_count, -1);
             }
@@ -2976,6 +2980,7 @@ bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
     if (bref->bref_dcb != NULL)
     {
         bref_clear_state(bref, BREF_CLOSED);
+        bref->closed_at = 0;
 
         if (!execute_history || execute_sescmd_history(bref))
         {
@@ -2994,7 +2999,9 @@ bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
                       bref->bref_backend->backend_server->unique_name,
                       bref->bref_backend->backend_server->name,
                       bref->bref_backend->backend_server->port);
+            RW_CHK_DCB(bref, bref->bref_dcb);
             dcb_close(bref->bref_dcb);
+            bref->closed_at = __LINE__;
             bref->bref_dcb = NULL;
         }
     }
@@ -3303,7 +3310,9 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 
                 /** Decrease backend's connection counter. */
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
+                RW_CHK_DCB(&backend_ref[i], backend_ref[i].bref_dcb);
                 dcb_close(backend_ref[i].bref_dcb);
+                backend_ref[i].closed_at = __LINE__;
             }
         }
     }
@@ -3545,7 +3554,9 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
 
                 if (bref->bref_dcb)
                 {
+                    RW_CHK_DCB(bref, bref->bref_dcb);
                     dcb_close(bref->bref_dcb);
+                    bref->closed_at = __LINE__;
                 }
                 *reconnect = true;
                 gwbuf_free(replybuf);
@@ -3585,7 +3596,9 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
 
                         if (ses->rses_backend_ref[i].bref_dcb)
                         {
+                            RW_CHK_DCB(&ses->rses_backend_ref[i], ses->rses_backend_ref[i].bref_dcb);
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
+                            ses->rses_backend_ref[i].closed_at = __LINE__;
                         }
                         *reconnect = true;
                         MXS_WARNING("Disabling slave %s:%d, result differs from "
@@ -4451,6 +4464,8 @@ static void handleError(ROUTER *instance, void *router_session,
                     break;
                 }
 
+                backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
+
                 /**
                  * If master has lost its Master status error can't be
                  * handled so that session could continue.
@@ -4458,7 +4473,6 @@ static void handleError(ROUTER *instance, void *router_session,
                 if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb)
                 {
                     SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
-                    backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
                     bool can_continue = false;
 
                     if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
@@ -4505,7 +4519,12 @@ static void handleError(ROUTER *instance, void *router_session,
                     *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
 
+                RW_CHK_DCB(bref, problem_dcb);
                 dcb_close(problem_dcb);
+                if (bref)
+                {
+                    bref->closed_at = __LINE__;
+                }
                 close_dcb = false;
                 rses_end_locked_router_action(rses);
                 break;
@@ -4528,7 +4547,13 @@ static void handleError(ROUTER *instance, void *router_session,
 
     if (close_dcb)
     {
+        backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
+        RW_CHK_DCB(bref, problem_dcb);
         dcb_close(problem_dcb);
+        if (bref)
+        {
+            bref->closed_at = __LINE__;
+        }
     }
 }
 
@@ -4556,7 +4581,9 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
             if (BREF_IS_IN_USE(bref))
             {
                 close_failed_bref(bref, false);
+                RW_CHK_DCB(bref, backend_dcb);
                 dcb_close(backend_dcb);
+                bref->closed_at = __LINE__;
             }
         }
         else

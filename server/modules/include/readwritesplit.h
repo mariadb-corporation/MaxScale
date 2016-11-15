@@ -237,6 +237,7 @@ typedef struct backend_ref_st
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_tail;
 #endif
+    int closed_at; /** DEBUG: Line number where this backend reference was closed */
 } backend_ref_t;
 
 /**
