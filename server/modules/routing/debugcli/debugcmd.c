@@ -734,37 +734,42 @@ struct subcommand disableoptions[] =
 
 static void telnetdAddUser(DCB *, char *user, char *password);
 
-static void cmd_AddServer(DCB *dcb, void *a, void *b)
+static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
+                          char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                          char *v10, char *v11)
 {
-    SERVER *server = (SERVER*)a;
-    char *name = (char*)b;
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
 
-    SERVICE *service = service_find(name);
-    MONITOR *monitor = monitor_find(name);
-
-    if (service || monitor)
+    for (int i = 0; i < items && values[i]; i++)
     {
-        ss_dassert(service == NULL || monitor == NULL);
+        SERVICE *service = service_find(values[i]);
+        MONITOR *monitor = monitor_find(values[i]);
 
-        if (service)
+        if (service || monitor)
         {
-            serviceAddBackend(service, server);
-            service_serialize_servers(service);
+            ss_dassert(service == NULL || monitor == NULL);
+
+            if (service)
+            {
+                serviceAddBackend(service, server);
+                service_serialize_servers(service);
+            }
+            else if (monitor)
+            {
+                monitorAddServer(monitor, server);
+                monitor_serialize_servers(monitor);
+            }
+
+            const char *target = service ? "service" : "monitor";
+
+            MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Added server '%s' to %s '%s'\n", server->unique_name, target, values[i]);
         }
-        else if (monitor)
+        else
         {
-            monitorAddServer(monitor, server);
-            monitor_serialize_servers(monitor);
+            dcb_printf(dcb, "No service or monitor with the name '%s'\n", values[i]);
         }
-
-        const char *target = service ? "service" : "monitor";
-
-        MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, target, name);
-        dcb_printf(dcb, "Added server '%s' to %s '%s'\n", server->unique_name, target, name);
-    }
-    else
-    {
-        dcb_printf(dcb, "No service or monitor with the name '%s'\n", name);
     }
 }
 
@@ -781,11 +786,15 @@ struct subcommand addoptions[] =
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
-        "server", 2, 2, cmd_AddServer,
+        "server", 2, 12, cmd_AddServer,
         "Add a new server to a service",
-        "Usage: add server SERVER TARGET\n"
-        "The TARGET must be either a service or a monitor",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING, 0}
+        "Usage: add server SERVER TARGET...\n"
+        "The TARGET must be a list of service and monitor names\n"
+        "e.g. add server my-db my-service 'Cluster Monitor'\n"
+        "A server can be assigned to a maximum of 11 objects in one command",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     { EMPTY_OPTION}
 };
