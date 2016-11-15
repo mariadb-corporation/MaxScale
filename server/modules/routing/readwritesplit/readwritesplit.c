@@ -4462,12 +4462,10 @@ static void handleError(ROUTER *instance, void *router_session,
                  * If master has lost its Master status error can't be
                  * handled so that session could continue.
                  */
-                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb &&
-                    !SERVER_IS_MASTER(rses->rses_master_ref->bref_backend->backend_server))
+                if (rses->rses_master_ref && rses->rses_master_ref->bref_dcb == problem_dcb)
                 {
                     SERVER *srv = rses->rses_master_ref->bref_backend->backend_server;
-                    backend_ref_t *bref;
-                    bref = get_bref_from_dcb(rses, problem_dcb);
+                    backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
                     bool can_continue = false;
 
                     if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
@@ -4484,7 +4482,7 @@ static void handleError(ROUTER *instance, void *router_session,
                          * connection. */
                         can_continue = true;
                     }
-                    else if (!srv->master_err_is_logged)
+                    else if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
                     {
                         MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
                                   "service can't locate the master. Client sessions "
