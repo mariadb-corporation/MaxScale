@@ -63,7 +63,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
-#include <secrets.h>
+#include <maxscale/secrets.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
