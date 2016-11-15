@@ -802,35 +802,41 @@ struct subcommand addoptions[] =
 
 static void telnetdRemoveUser(DCB *, char *user, char *password);
 
-static void cmd_RemoveServer(DCB *dcb, void *a, void *b)
+static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
+                             char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                             char *v10, char *v11)
 {
-    SERVER *server = (SERVER*)a;
-    char *name = (char*)b;
-    SERVICE *service = service_find(name);
-    MONITOR *monitor = monitor_find(name);
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
 
-    if (service || monitor)
+    for (int i = 0; i < items && values[i]; i++)
     {
-        ss_dassert(service == NULL || monitor == NULL);
+        SERVICE *service = service_find(values[i]);
+        MONITOR *monitor = monitor_find(values[i]);
 
-        if (service)
+        if (service || monitor)
         {
-            serviceRemoveBackend(service, server);
-            service_serialize_servers(service);
-        }
-        else if (monitor)
-        {
-            monitorRemoveServer(monitor, server);
-            monitor_serialize_servers(monitor);
-        }
+            ss_dassert(service == NULL || monitor == NULL);
 
-        const char *target = service ? "service" : "monitor";
-        MXS_NOTICE("Removed server '%s' from %s '%s'", server->unique_name, target, name);
-        dcb_printf(dcb, "Removed server '%s' from %s '%s'\n", server->unique_name, target, name);
-    }
-    else
-    {
-        dcb_printf(dcb, "No service or monitor with the name '%s'\n", name);
+            if (service)
+            {
+                serviceRemoveBackend(service, server);
+                service_serialize_servers(service);
+            }
+            else if (monitor)
+            {
+                monitorRemoveServer(monitor, server);
+                monitor_serialize_servers(monitor);
+            }
+
+            const char *target = service ? "service" : "monitor";
+            MXS_NOTICE("Removed server '%s' from %s '%s'", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Removed server '%s' from %s '%s'\n", server->unique_name, target, values[i]);
+        }
+        else
+        {
+            dcb_printf(dcb, "No service or monitor with the name '%s'\n", values[i]);
+        }
     }
 }
 
@@ -849,11 +855,15 @@ struct subcommand removeoptions[] =
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
-        "server", 2, 2, cmd_RemoveServer,
+        "server", 2, 12, cmd_RemoveServer,
         "Remove a server from a service or a monitor",
-        "Usage: remove server SERVER TARGET\n"
-        "The TARGET must be either a service or a monitor",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING}
+        "Usage: remove server SERVER TARGET...\n"
+        "The TARGET must be a list of service and monitor names\n"
+        "e.g. remove server my-db my-service 'Cluster Monitor'\n"
+        "A server can be removed from a maximum of 11 objects in one command",
+        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION
@@ -1125,40 +1135,37 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT *obj = NULL;
 
-    for (int i = 0; i < items; i++)
+    for (int i = 0; i < items && values[i]; i++)
     {
-        if (values[i])
+        char *key = values[i];
+        char *value = strchr(key, '=');
+
+        if (value)
         {
-            char *key = values[i];
-            char *value = strchr(key, '=');
+            *value++ = '\0';
 
-            if (value)
+            if (config_is_ssl_parameter(key))
             {
-                *value++ = '\0';
-
-                if (config_is_ssl_parameter(key))
+                /**
+                 * All the required SSL parameters must be defined at once to
+                 * enable SSL for created servers. This removes the problem
+                 * of partial configuration and allows a somewhat atomic
+                 * operation.
+                 */
+                if ((obj == NULL && (obj = config_context_create(server->unique_name)) == NULL) ||
+                    (!config_add_param(obj, key, value)))
                 {
-                    /**
-                     * All the required SSL parameters must be defined at once to
-                     * enable SSL for created servers. This removes the problem
-                     * of partial configuration and allows a somewhat atomic
-                     * operation.
-                     */
-                    if ((obj == NULL && (obj = config_context_create(server->unique_name)) == NULL) ||
-                        (!config_add_param(obj, key, value)))
-                    {
-                        dcb_printf(dcb, "Internal error, see log for more details\n");
-                    }
-                }
-                else if (!handle_alter_server(server, key, value))
-                {
-                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+                    dcb_printf(dcb, "Internal error, see log for more details\n");
                 }
             }
-            else
+            else if (!handle_alter_server(server, key, value))
             {
-                dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+                dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
         }
     }
 
@@ -1252,26 +1259,23 @@ static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
 
-    for (int i = 0; i < items; i++)
+    for (int i = 0; i < items && values[i]; i++)
     {
-        if (values[i])
+        char *key = values[i];
+        char *value = strchr(key, '=');
+
+        if (value)
         {
-            char *key = values[i];
-            char *value = strchr(key, '=');
+            *value++ = '\0';
 
-            if (value)
+            if (!handle_alter_monitor(monitor, key, value))
             {
-                *value++ = '\0';
-
-                if (!handle_alter_monitor(monitor, key, value))
-                {
-                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
-                }
+                dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
-            else
-            {
-                dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
-            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
         }
     }
 
