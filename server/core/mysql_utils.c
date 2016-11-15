@@ -20,13 +20,13 @@
  * row based replication.
  */
 
-#include <mysql_utils.h>
+#include <maxscale/mysql_utils.h>
 #include <string.h>
 #include <stdbool.h>
 #include <maxscale/alloc.h>
-#include <log_manager.h>
-#include <skygw_debug.h>
-#include <maxconfig.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/debug.h>
+#include <maxscale/config.h>
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes

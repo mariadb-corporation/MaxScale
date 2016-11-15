@@ -11,9 +11,9 @@
  * Public License.
  */
 
-#include <gwdirs.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
+#include <maxscale/utils.h>
 
 /**
  * Set the configuration file directory
@@ -24,6 +24,17 @@ void set_configdir(char* str)
     MXS_FREE(configdir);
     clean_up_pathname(str);
     configdir = str;
+}
+
+/**
+ * Set the configuration parts file directory
+ * @param str Path to directory
+ */
+void set_config_persistdir(char* str)
+{
+    MXS_FREE(config_persistdir);
+    clean_up_pathname(str);
+    config_persistdir = str;
 }
 
 /**
@@ -158,6 +169,15 @@ char* get_process_datadir()
 char* get_configdir()
 {
     return configdir ? configdir : (char*) default_configdir;
+}
+
+/**
+ * Get the configuration file directory
+ * @return The path to the configuration file directory
+ */
+char* get_config_persistdir()
+{
+    return config_persistdir ? config_persistdir : (char*) default_config_persistdir;
 }
 
 /**

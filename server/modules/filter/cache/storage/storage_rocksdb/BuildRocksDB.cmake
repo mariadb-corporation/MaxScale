@@ -1,7 +1,7 @@
 # Build RocksDB
 
-if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)))
-  message(STATUS "GCC >= 4.7, RocksDB is built.")
+if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)))
+  message(STATUS "GCC >= 4.8, RocksDB is built.")
 
   set(ROCKSDB_REPO "https://github.com/facebook/rocksdb.git"
     CACHE STRING "RocksDB Git repository")

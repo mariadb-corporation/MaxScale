@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _BLR_DEFINES_H
 #define _BLR_DEFINES_H
 /*
@@ -13,16 +14,19 @@
  * Public License.
  */
 
-/*
+/**
+ * @file blr_defines.h - Various definitions for binlogrouter
+
  * @verbatim
  * Revision History
  *
  * 26/04/16 Massimiliano Pinto Added MariaDB 10.0 and 10.1 GTID event flags detection
+ * @endverbatim
  */
 
-/**
- * @file blr_defines.h - Various definitions for binlogrouter
- */
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 #define BINLOG_FNAMELEN   255
 #define BLR_PROTOCOL      "MySQLBackend"
@@ -200,5 +204,7 @@
 #define EXTRACT24(x) extract_field((x), 24)
 #define EXTRACT32(x) extract_field((x), 32)
 #endif
+
+MXS_END_DECLS
 
 #endif

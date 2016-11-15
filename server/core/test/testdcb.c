@@ -32,8 +32,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <listener.h>
-#include <dcb.h>
+#include <maxscale/listener.h>
+#include <maxscale/dcb.h>
 
 /**
  * test1    Allocate a dcb and do lots of other things

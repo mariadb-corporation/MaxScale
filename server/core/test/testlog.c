@@ -11,12 +11,16 @@
  * Public License.
  */
 
+#ifndef SS_DEBUG
+#define SS_DEBUG
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include "../maxscale/skygw_utils.h"
+#include <maxscale/log_manager.h>
 
 static void skygw_log_enable(int priority)
 {

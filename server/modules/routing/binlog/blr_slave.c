@@ -72,24 +72,21 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <maxscale.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
+#include <maxscale/maxscale.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include "blr.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
 #include <sys/stat.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
 #include <zlib.h>
 #include <maxscale/alloc.h>
-#include <gw.h>
 
 extern int load_mysql_users(SERV_LISTENER *listener);
 extern void blr_master_close(ROUTER_INSTANCE* router);
@@ -270,7 +267,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     case COM_QUIT:
         MXS_DEBUG("COM_QUIT received from slave with server_id %d",
                   slave->serverid);
-        break;
+        return 1;
     default:
         blr_send_custom_error(slave->dcb, 1, 0,
                               "You have an error in your SQL syntax; Check the "
@@ -442,7 +439,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         else if (strcasecmp(word, "USER()") == 0)
         {
             /* Return user@host */
-            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN + 1] = "";
+            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOST_MAXLEN + 1] = "";
 
             MXS_FREE(query_text);
             snprintf(user_host, sizeof(user_host),
@@ -882,7 +879,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 if (removed_cfg == -1)
                 {
-                    char err_msg[STRERROR_BUFLEN];
+                    char err_msg[MXS_STRERROR_BUFLEN];
                     snprintf(error_string, BINLOG_ERROR_MSG_LEN,
                              "Error removing %s, %s, errno %u", path,
                              strerror_r(errno, err_msg, sizeof(err_msg)), errno);
@@ -2370,25 +2367,25 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                  MXS_INFO("Start Encryption event found while reading. Binlog %s is encrypted. First event at %lu",
                           slave->binlogfile,
                           (unsigned long) hdr.next_pos);
-            }
-            else
-            {
-                MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
-                         blr_get_event_description(router, hdr.event_type), 
-                         (unsigned long)hdr.event_size,
-                         slave->binlogfile,
-                         (unsigned long) slave->binlog_pos);
-            }
+             }
+             else
+             {
+                 MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
+                          blr_get_event_description(router, hdr.event_type), 
+                          (unsigned long)hdr.event_size,
+                          slave->binlogfile,
+                          (unsigned long) slave->binlog_pos);
+             }
 
-            /* set next pos */
-            slave->binlog_pos = hdr.next_pos;
+             /* set next pos */
+             slave->binlog_pos = hdr.next_pos;
 
-            spinlock_release(&slave->catch_lock);
+             spinlock_release(&slave->catch_lock);
 
-            gwbuf_free(record);
-            record = NULL;
+             gwbuf_free(record);
+             record = NULL;
 
-            break;
+             break;
         }
 
         if (hdr.event_type == ROTATE_EVENT)
@@ -3475,8 +3472,6 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-    int loaded;
-
     /* if unconfigured return an error */
     if (router->master_state == BLRM_UNCONFIGURED)
     {
@@ -3606,28 +3601,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->current_pos, router->binlog_position);
 
     /* Try reloading new users and update cached credentials */
-    loaded = service_refresh_users(router->service);
-
-    if (loaded == 0)
-    {
-        for (SERV_LISTENER *port = router->service->ports; port; port = port->next)
-        {
-            char path[PATH_MAX];
-            sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
-
-            if (mxs_mkdir_all(path, 0775))
-            {
-                strcat(path, BLR_DBUSERS_FILE);
-                dbusers_save(port->users, path);
-            }
-        }
-    }
-    else
-    {
-        MXS_NOTICE("Service %s: user credentials could not be refreshed. "
-                   "Will use existing cached credentials (%s/%s) if possible.",
-                   router->service->name, router->binlogdir, BLR_DBUSERS_DIR);
-    }
+    service_refresh_users(router->service);
 
     return blr_slave_send_ok(router, slave);
 }

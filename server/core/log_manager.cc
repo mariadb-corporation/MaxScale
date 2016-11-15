@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -23,15 +23,14 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include <atomic.h>
+#include <maxscale/atomic.h>
 
-#include <hashtable.h>
-#include <mlist.h>
-#include <spinlock.h>
-#include <skygw_debug.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/debug.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
+#include "maxscale/mlist.h"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
@@ -1643,7 +1642,7 @@ static bool logfile_write_header(skygw_file_t* file)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing header failed due to %d, %s\n",
                   errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         written = false;
@@ -1820,13 +1819,13 @@ static bool check_file_and_path(const char* filename, bool* writable)
             {
                 if (file_is_symlink(filename))
                 {
-                    char errbuf[STRERROR_BUFLEN];
+                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access file pointed to by %s due to %d, %s.\n",
                               filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
                 else
                 {
-                    char errbuf[STRERROR_BUFLEN];
+                    char errbuf[MXS_STRERROR_BUFLEN];
                     LOG_ERROR("MaxScale Log: Error, Can't access %s due to %d, %s.\n",
                               filename, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
@@ -1925,7 +1924,7 @@ static bool logfile_init(logfile_t*    logfile,
 
         if (mkdir(dir, S_IRWXU | S_IRWXG) != 0 && (errno != EEXIST))
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             LOG_ERROR("MaxScale Log: Error, creating directory %s failed due to %d, %s.\n",
                       dir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 
@@ -2110,7 +2109,7 @@ static bool logfile_write_footer(skygw_file_t* file, const char* suffix)
 
     if ((header_items != 1) || (line_items != 1))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         LOG_ERROR("MaxScale Log: Writing footer failed due to %d, %s\n",
                   errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         written = false;
@@ -2238,7 +2237,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             if (err)
             {
                 // TODO: Log this to syslog.
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 LOG_ERROR("MaxScale Log: Error, writing to the log-file %s failed due to %d, %s. "
                           "Disabling writing to the log.\n",
                           lf->lf_full_file_name, err, strerror_r(err, errbuf, sizeof(errbuf)));
@@ -2914,131 +2913,128 @@ int mxs_log_message(int priority,
 
     if ((priority & ~LOG_PRIMASK) == 0) // Check that the priority is ok,
     {
-        if (MXS_LOG_PRIORITY_IS_ENABLED(priority))
-        {
-            message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
+        message_suppression_t status = MESSAGE_NOT_SUPPRESSED;
 
-            // We only throttle errors and warnings. Info and debug messages
-            // are never on during normal operation, so if they are enabled,
-            // we are presumably debugging something. Notice messages are
-            // assumed to be logged for a reason and always in a context where
-            // flooding cannot be caused.
-            if ((priority == LOG_ERR) || (priority == LOG_WARNING))
+        // We only throttle errors and warnings. Info and debug messages
+        // are never on during normal operation, so if they are enabled,
+        // we are presumably debugging something. Notice messages are
+        // assumed to be logged for a reason and always in a context where
+        // flooding cannot be caused.
+        if ((priority == LOG_ERR) || (priority == LOG_WARNING))
+        {
+            status = message_status(file, line);
+        }
+
+        if (status != MESSAGE_STILL_SUPPRESSED)
+        {
+            va_list valist;
+
+            int modname_len = modname ? strlen(modname) + 3 : 0; // +3 due to "[...] "
+
+            static const char SUPPRESSION[] =
+                " (subsequent similar messages suppressed for %lu milliseconds)";
+            int suppression_len = 0;
+            size_t suppress_ms = log_config.throttling.suppress_ms;
+
+            if (status == MESSAGE_SUPPRESSED)
             {
-                status = message_status(file, line);
+                suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
+                suppression_len -= 3; // Remove the %lu
+                suppression_len += UINTLEN(suppress_ms);
             }
 
-            if (status != MESSAGE_STILL_SUPPRESSED)
+            /**
+             * Find out the length of log string (to be formatted str).
+             */
+            va_start(valist, format);
+            int message_len = vsnprintf(NULL, 0, format, valist);
+            va_end(valist);
+
+            if (message_len >= 0)
             {
-                va_list valist;
+                log_prefix_t prefix = priority_to_prefix(priority);
 
-                int modname_len = modname ? strlen(modname) + 3 : 0; // +3 due to "[...] "
+                static const char FORMAT_FUNCTION[] = "(%s): ";
 
-                static const char SUPPRESSION[] =
-                    " (subsequent similar messages suppressed for %lu milliseconds)";
-                int suppression_len = 0;
-                size_t suppress_ms = log_config.throttling.suppress_ms;
+                // Other thread might change log_config.augmentation.
+                int augmentation = log_config.augmentation;
+                int augmentation_len = 0;
 
-                if (status == MESSAGE_SUPPRESSED)
+                switch (augmentation)
                 {
-                    suppression_len += sizeof(SUPPRESSION) - 1; // Remove trailing NULL
-                    suppression_len += 3; // Remove the %lu
-                    suppression_len += UINTLEN(suppress_ms);
+                case MXS_LOG_AUGMENT_WITH_FUNCTION:
+                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+                    augmentation_len -= 2; // Remove the %s
+                    augmentation_len += strlen(function);
+                    break;
+
+                default:
+                    break;
                 }
 
-                /**
-                 * Find out the length of log string (to be formatted str).
-                 */
-                va_start(valist, format);
-                int message_len = vsnprintf(NULL, 0, format, valist);
-                va_end(valist);
+                int buffer_len = 0;
+                buffer_len += prefix.len;
+                buffer_len += modname_len;
+                buffer_len += augmentation_len;
+                buffer_len += message_len;
+                buffer_len += suppression_len;
+                buffer_len += 1; // Trailing NULL
 
-                if (message_len >= 0)
+                if (buffer_len > MAX_LOGSTRLEN)
                 {
-                    log_prefix_t prefix = priority_to_prefix(priority);
+                    message_len -= (buffer_len - MAX_LOGSTRLEN);
+                    buffer_len = MAX_LOGSTRLEN;
 
-                    static const char FORMAT_FUNCTION[] = "(%s): ";
+                    ss_dassert(prefix.len + modname_len +
+                               augmentation_len + message_len + suppression_len + 1 == buffer_len);
+                }
 
-                    // Other thread might change log_config.augmentation.
-                    int augmentation = log_config.augmentation;
-                    int augmentation_len = 0;
+                char buffer[buffer_len];
+
+                char *prefix_text = buffer;
+                char *modname_text = prefix_text + prefix.len;
+                char *augmentation_text = modname_text + modname_len;
+                char *message_text = augmentation_text + augmentation_len;
+                char *suppression_text = message_text + message_len;
+
+                strcpy(prefix_text, prefix.text);
+
+                if (modname_len)
+                {
+                    strcpy(modname_text, "[");
+                    strcat(modname_text, modname);
+                    strcat(modname_text, "] ");
+                }
+
+                if (augmentation_len)
+                {
+                    int len = 0;
 
                     switch (augmentation)
                     {
                     case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                        augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                        augmentation_len -= 2; // Remove the %s
-                        augmentation_len += strlen(function);
+                        len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
                         break;
 
                     default:
-                        break;
+                        assert(!true);
                     }
 
-                    int buffer_len = 0;
-                    buffer_len += prefix.len;
-                    buffer_len += modname_len;
-                    buffer_len += augmentation_len;
-                    buffer_len += message_len;
-                    buffer_len += suppression_len;
-                    buffer_len += 1; // Trailing NULL
-
-                    if (buffer_len > MAX_LOGSTRLEN)
-                    {
-                        message_len -= (buffer_len - MAX_LOGSTRLEN);
-                        buffer_len = MAX_LOGSTRLEN;
-
-                        ss_dassert(prefix.len + modname_len +
-                                   augmentation_len + message_len + suppression_len + 1 == buffer_len);
-                    }
-
-                    char buffer[buffer_len];
-
-                    char *prefix_text = buffer;
-                    char *modname_text = prefix_text + prefix.len;
-                    char *augmentation_text = modname_text + modname_len;
-                    char *message_text = augmentation_text + augmentation_len;
-                    char *suppression_text = message_text + message_len;
-
-                    strcpy(prefix_text, prefix.text);
-
-                    if (modname_len)
-                    {
-                        strcpy(modname_text, "[");
-                        strcat(modname_text, modname);
-                        strcat(modname_text, "] ");
-                    }
-
-                    if (augmentation_len)
-                    {
-                        int len = 0;
-
-                        switch (augmentation)
-                        {
-                        case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                            len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
-                            break;
-
-                        default:
-                            assert(!true);
-                        }
-
-                        assert(len == augmentation_len);
-                    }
-
-                    va_start(valist, format);
-                    vsnprintf(message_text, message_len + 1, format, valist);
-                    va_end(valist);
-
-                    if (suppression_len)
-                    {
-                        sprintf(suppression_text, SUPPRESSION, suppress_ms);
-                    }
-
-                    enum log_flush flush = priority_to_flush(priority);
-
-                    err = log_write(priority, file, line, function, prefix.len, buffer_len, buffer, flush);
+                    assert(len == augmentation_len);
                 }
+
+                va_start(valist, format);
+                vsnprintf(message_text, message_len + 1, format, valist);
+                va_end(valist);
+
+                if (suppression_len)
+                {
+                    sprintf(suppression_text, SUPPRESSION, suppress_ms);
+                }
+
+                enum log_flush flush = priority_to_flush(priority);
+
+                err = log_write(priority, file, line, function, prefix.len, buffer_len, buffer, flush);
             }
         }
     }

@@ -33,16 +33,15 @@
 #include <string.h>
 #include <errno.h>
 #include <maxscale/alloc.h>
-#include <session.h>
-#include <listmanager.h>
-#include <service.h>
-#include <router.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <atomic.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <housekeeper.h>
+#include <maxscale/session.h>
+#include <maxscale/listmanager.h>
+#include <maxscale/service.h>
+#include <maxscale/router.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/atomic.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/housekeeper.h>
 
 /* This list of all sessions */
 LIST_CONFIG SESSIONlist =
@@ -125,6 +124,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         MXS_OOM();
         return NULL;
     }
+    /** Assign a session id and increase */
+    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
     session->service = service;
     session->client_dcb = client_dcb;
@@ -143,6 +144,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
      */
     session->state = SESSION_STATE_READY;
 
+    session->trx_state = SESSION_TRX_INACTIVE;
+    session->autocommit = true;
     /*
      * Only create a router session if we are not the listening
      * DCB or an internal DCB. Creating a router session may create a connection to a
@@ -220,8 +223,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                  session->client_dcb->user,
                  session->client_dcb->remote);
     }
-    /** Assign a session id and increase, insert session into list */
-    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
     CHK_SESSION(session);
@@ -1062,3 +1063,34 @@ sessionGetList(SESSIONLISTFILTER filter)
 }
 /*lint +e429 */
 
+session_trx_state_t session_get_trx_state(const SESSION* ses)
+{
+    return ses->trx_state;
+}
+
+session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state)
+{
+    session_trx_state_t prev_state = ses->trx_state;
+
+    ses->trx_state = new_state;
+
+    return prev_state;
+}
+
+const char* session_trx_state_to_string(session_trx_state_t state)
+{
+    switch (state)
+    {
+    case SESSION_TRX_INACTIVE:
+        return "SESSION_TRX_INACTIVE";
+    case SESSION_TRX_ACTIVE:
+        return "SESSION_TRX_ACTIVE";
+    case SESSION_TRX_READ_ONLY:
+        return "SESSION_TRX_READ_ONLY";
+    case SESSION_TRX_READ_WRITE:
+        return "SESSION_TRX_READ_WRITE";
+    }
+
+    MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);
+    return "UNKNOWN";
+}

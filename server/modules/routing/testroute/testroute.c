@@ -12,8 +12,8 @@
  */
 #include <stdio.h>
 #include <maxscale/alloc.h>
-#include <router.h>
-#include <modinfo.h>
+#include <maxscale/router.h>
+#include <maxscale/modinfo.h>
 
 static char *version_str = "V1.0.0";
 
@@ -32,7 +32,7 @@ static  void   freeSession(ROUTER *instance, void *session);
 static  int    routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static  void   clientReply(ROUTER *instance, void *session, GWBUF *queue, DCB*);
 static  void   diagnostic(ROUTER *instance, DCB *dcb);
-static  int    getCapabilities ();
+static  uint64_t getCapabilities ();
 static void    handleError(ROUTER           *instance,
                            void             *router_session,
                            GWBUF            *errbuf,
@@ -50,7 +50,8 @@ static ROUTER_OBJECT MyObject =
     diagnostic,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 typedef struct
@@ -164,7 +165,7 @@ diagnostic(ROUTER *instance, DCB *dcb)
 {
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return 0;
 }

@@ -69,37 +69,29 @@
 #include <string.h>
 #include <time.h>
 #include <signal.h>
-#include <dcb.h>
-#include <listmanager.h>
-#include <spinlock.h>
-#include <server.h>
-#include <session.h>
-#include <service.h>
-#include <modules.h>
-#include <router.h>
+#include <maxscale/dcb.h>
+#include <maxscale/listmanager.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/server.h>
+#include <maxscale/session.h>
+#include <maxscale/service.h>
+#include <maxscale/modules.h>
+#include <maxscale/router.h>
 #include <errno.h>
-#include <gw.h>
 #include <maxscale/poll.h>
-#include <atomic.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <hashtable.h>
-#include <listener.h>
-#include <hk_heartbeat.h>
+#include <maxscale/atomic.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/listener.h>
+#include <maxscale/hk_heartbeat.h>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <maxscale/alloc.h>
-
-#if defined(FAKE_CODE)
-unsigned char dcb_fake_write_errno[10240];
-__int32_t     dcb_fake_write_ev[10240];
-bool          fail_next_backend_fd;
-bool          fail_next_client_fd;
-int           fail_next_accept;
-int           fail_accept_errno;
-#endif /* FAKE_CODE */
+#include <maxscale/utils.h>
 
 /* The list of all DCBs */
 static LIST_CONFIG DCBlist =
@@ -129,9 +121,6 @@ static int dcb_create_SSL(DCB* dcb, SSL_LISTENER *ssl);
 static int dcb_read_SSL(DCB *dcb, GWBUF **head);
 static GWBUF *dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *nsingleread);
 static GWBUF *dcb_basic_read_SSL(DCB *dcb, int *nsingleread);
-#if defined(FAKE_CODE)
-static inline void dcb_write_fake_code(DCB *dcb);
-#endif
 static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
 static int gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing);
@@ -396,6 +385,11 @@ dcb_free_all_memory(DCB *dcb)
     {
         dcb->authfunc.free(dcb);
         dcb->data = NULL;
+    }
+    if (dcb->authfunc.destroy)
+    {
+        dcb->authfunc.destroy(dcb->authenticator_data);
+        dcb->authenticator_data = NULL;
     }
     if (dcb->protoname)
     {
@@ -667,7 +661,7 @@ dcb_process_victim_queue(DCB *listofdcb)
             {
                 int eno = errno;
                 errno = 0;
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("%lu [dcb_process_victim_queue] Error : Failed to close "
                           "socket %d on dcb %p due error %d, %s.",
                           pthread_self(),
@@ -678,9 +672,6 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
             else
             {
-#if defined(FAKE_CODE)
-                conn_open[dcb->fd] = false;
-#endif /* FAKE_CODE */
                 dcb->fd = DCBFD_CLOSED;
 
                 MXS_DEBUG("%lu [dcb_process_victim_queue] Closed socket "
@@ -766,6 +757,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
             MXS_DEBUG("%lu [dcb_connect] Reusing a persistent connection, dcb %p\n",
                       pthread_self(), dcb);
             dcb->persistentstart = 0;
+            dcb->was_persistent = true;
             return dcb;
         }
         else
@@ -792,6 +784,22 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     }
     memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
     dcb->protoname = MXS_STRDUP_A(protocol);
+
+    const char *authenticator = server->authenticator ?
+        server->authenticator : dcb->func.auth_default ?
+        dcb->func.auth_default() : "NullAuthDeny";
+
+    GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR*)load_module(authenticator,
+                                                               MODULE_AUTHENTICATOR);
+    if (authfuncs == NULL)
+    {
+
+        MXS_ERROR("Failed to load authenticator module '%s'.", authenticator);
+        dcb_close(dcb);
+        return NULL;
+    }
+
+    memcpy(&dcb->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
 
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
@@ -845,12 +853,24 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     dcb->dcb_server_status = server->status;
     dcb->dcb_port = server->port;
 
+    dcb->was_persistent = false;
+
     /**
      * backend_dcb is connected to backend server, and once backend_dcb
      * is added to poll set, authentication takes place as part of
      * EPOLLOUT event that will be received once the connection
      * is established.
      */
+
+    /** Allocate DCB specific authentication data */
+    if (dcb->authfunc.create &&
+        (dcb->authenticator_data = dcb->authfunc.create(dcb->server->auth_instance)) == NULL)
+    {
+        MXS_ERROR("Failed to create authenticator for backend DCB.");
+        dcb->state = DCB_STATE_DISCONNECTED;
+        dcb_final_free(dcb);
+        return NULL;
+    }
 
     /**
      * Add the dcb in the poll set
@@ -972,7 +992,7 @@ dcb_bytes_readable(DCB *dcb)
 
     if (-1 == ioctl(dcb->fd, FIONREAD, &bytesavailable))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
         MXS_ERROR("%lu [dcb_read] Error : ioctl FIONREAD for dcb %p in "
                   "state %s fd %d failed due error %d, %s.",
@@ -1038,10 +1058,10 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
 {
     GWBUF *buffer;
 
-    int bufsize = MIN(bytesavailable, MAX_BUFFER_SIZE);
+    int bufsize = MXS_MIN(bytesavailable, MXS_MAX_NW_READ_BUFFER_SIZE);
     if (maxbytes)
     {
-        bufsize = MIN(bufsize, maxbytes - nreadtotal);
+        bufsize = MXS_MIN(bufsize, maxbytes - nreadtotal);
     }
 
     if ((buffer = gwbuf_alloc(bufsize)) == NULL)
@@ -1050,7 +1070,7 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
          * This is a fatal error which should cause shutdown.
          * Todo shutdown if memory allocation fails.
          */
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
         MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
                   "for dcb %p fd %d, due %d, %s.",
@@ -1071,7 +1091,7 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
         {
             if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                char errbuf[STRERROR_BUFLEN];
+                char errbuf[MXS_STRERROR_BUFLEN];
                 /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
                 MXS_ERROR("%lu [dcb_read] Error : Read failed, dcb %p in state "
                           "%s fd %d, due %d, %s.",
@@ -1156,10 +1176,10 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 static GWBUF *
 dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
 {
-    unsigned char temp_buffer[MAX_BUFFER_SIZE];
+    unsigned char temp_buffer[MXS_MAX_NW_READ_BUFFER_SIZE];
     GWBUF *buffer = NULL;
 
-    *nsingleread = SSL_read(dcb->ssl, (void *)temp_buffer, MAX_BUFFER_SIZE);
+    *nsingleread = SSL_read(dcb->ssl, (void *)temp_buffer, MXS_MAX_NW_READ_BUFFER_SIZE);
     dcb->stats.n_reads++;
 
     switch (SSL_get_error(dcb->ssl, *nsingleread))
@@ -1180,7 +1200,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
              * This is a fatal error which should cause shutdown.
              * Todo shutdown if memory allocation fails.
              */
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
             MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
                       "for dcb %p fd %d, due %d, %s.",
@@ -1266,7 +1286,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
 static int
 dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret)
 {
-    char errbuf[STRERROR_BUFLEN];
+    char errbuf[MXS_STRERROR_BUFLEN];
     unsigned long ssl_errno;
 
     ssl_errno = ERR_get_error();
@@ -1296,7 +1316,7 @@ dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret)
     {
         while (ssl_errno != 0)
         {
-            ERR_error_string_n(ssl_errno, errbuf, STRERROR_BUFLEN);
+            ERR_error_string_n(ssl_errno, errbuf, MXS_STRERROR_BUFLEN);
             MXS_ERROR("%s", errbuf);
             ssl_errno = ERR_get_error();
         }
@@ -1351,34 +1371,6 @@ dcb_write(DCB *dcb, GWBUF *queue)
 
     return 1;
 }
-
-#if defined(FAKE_CODE)
-/**
- * Fake code for dcb_write
- * (Should have fuller description)
- *
- * @param dcb   The DCB of the client
- */
-static inline void
-dcb_write_fake_code(DCB *dcb)
-{
-    if (dcb->session != NULL)
-    {
-        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER && fail_next_client_fd)
-        {
-            dcb_fake_write_errno[dcb->fd] = 32;
-            dcb_fake_write_ev[dcb->fd] = 29;
-            fail_next_client_fd = false;
-        }
-        else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && fail_next_backend_fd)
-        {
-            dcb_fake_write_errno[dcb->fd] = 32;
-            dcb_fake_write_ev[dcb->fd] = 29;
-            fail_next_backend_fd = false;
-        }
-    }
-}
-#endif /* FAKE_CODE */
 
 /**
  * Check the parameters for dcb_write
@@ -1444,7 +1436,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
     {
         if (eno == EPIPE)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [dcb_write] Write to dcb "
                       "%p in state %s fd %d failed "
                       "due errno %d, %s",
@@ -1463,7 +1455,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
             eno != EAGAIN &&
             eno != EWOULDBLOCK)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Write to dcb %p in "
                       "state %s fd %d failed due "
                       "errno %d, %s",
@@ -1497,7 +1489,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
         }
         if (dolog)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [dcb_write] Writing to %s socket failed due %d, %s.",
                       pthread_self(),
                       DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ? "client" : "backend server",
@@ -1792,6 +1784,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
                   pthread_self(),
                   dcb->user);
+        dcb->was_persistent = false;
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
         if (dcb->session)
@@ -2389,78 +2382,11 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
 
     errno = 0;
 
-#if defined(FAKE_CODE)
-    if (fd > 0 && dcb_fake_write_errno[fd] != 0)
-    {
-        ss_dassert(dcb_fake_write_ev[fd] != 0);
-        written = write(fd, buf, nbytes / 2); /*< leave peer to read missing bytes */
-
-        if (written > 0)
-        {
-            written = -1;
-            errno = dcb_fake_write_errno[fd];
-        }
-    }
-    else if (fd > 0)
-    {
-        written = write(fd, buf, nbytes);
-    }
-#else
     if (fd > 0)
     {
         written = write(fd, buf, nbytes);
     }
-#endif /* FAKE_CODE */
 
-#if defined(SS_DEBUG_MYSQL)
-    {
-        size_t   len;
-        uint8_t* packet = (uint8_t *)buf;
-        char*    str;
-
-        /** Print only MySQL packets */
-        if (written > 5)
-        {
-            str = (char *)&packet[5];
-            len      = packet[0];
-            len     += 256 * packet[1];
-            len     += 256 * 256 * packet[2];
-
-            if (strncmp(str, "insert", 6) == 0 ||
-                strncmp(str, "create", 6) == 0 ||
-                strncmp(str, "drop", 4) == 0)
-            {
-                ss_dassert((dcb->dcb_server_status & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE)) ==
-                           (SERVER_RUNNING | SERVER_MASTER));
-            }
-
-            if (strncmp(str, "set autocommit", 14) == 0 && nbytes > 17)
-            {
-                char* s = (char *)MXS_CALLOC(1, nbytes + 1);
-                MXS_ABORT_IF_NULL(s);
-
-                if (nbytes - 5 > len)
-                {
-                    size_t len2 = packet[4 + len];
-                    len2 += 256 * packet[4 + len + 1];
-                    len2 += 256 * 256 * packet[4 + len + 2];
-
-                    char* str2 = (char *)&packet[4 + len + 5];
-                    snprintf(s, 5 + len + len2, "long %s %s", (char *)str, (char *)str2);
-                }
-                else
-                {
-                    snprintf(s, len, "%s", (char *)str);
-                }
-                MXS_INFO("%lu [gw_write] Wrote %d bytes : %s ",
-                         pthread_self(),
-                         w,
-                         s);
-                MXS_FREE(s);
-            }
-        }
-    }
-#endif
     saved_errno = errno;
     errno = 0;
 
@@ -2476,14 +2402,14 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
             saved_errno != EPIPE)
 #endif
         {
-            char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Write to dcb %p "
-                      "in state %s fd %d failed due errno %d, %s",
-                      dcb,
-                      STRDCBSTATE(dcb->state),
-                      dcb->fd,
-                      saved_errno,
-                      strerror_r(saved_errno, errbuf, sizeof(errbuf)));
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Write to %s %s in state %s failed due errno %d, %s",
+                      DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
+                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)));
+            MXS_DEBUG("Write to %s %s in state %s failed due errno %d, %s (at %p, fd %d)",
+                      DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
+                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)),
+                      dcb, dcb->fd);
         }
     }
     else
@@ -2820,7 +2746,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             }
             persistentdcb = nextdcb;
         }
-        server->persistmax = MAX(server->persistmax, count);
+        server->persistmax = MXS_MAX(server->persistmax, count);
         spinlock_release(&server->persistlock);
         /** Call possible callback for this DCB in case of close */
         while (disposals)
@@ -2936,20 +2862,16 @@ dcb_create_SSL(DCB* dcb, SSL_LISTENER *ssl)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int ssl_rval;
-    char *remote;
-    char *user;
-
     if ((NULL == dcb->listener || NULL == dcb->listener->ssl) ||
         (NULL == dcb->ssl && dcb_create_SSL(dcb, dcb->listener->ssl) != 0))
     {
         return -1;
     }
 
-    remote = dcb->remote ? dcb->remote : "";
-    user = dcb->user ? dcb->user : "";
+    ss_debug(char *remote = dcb->remote ? dcb->remote : "");
+    ss_debug(char *user = dcb->user ? dcb->user : "");
 
-    ssl_rval = SSL_accept(dcb->ssl);
+    int ssl_rval = SSL_accept(dcb->ssl);
 
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {
@@ -3105,21 +3027,16 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
     int sendbuf;
     struct sockaddr_storage client_conn;
     socklen_t optlen = sizeof(sendbuf);
-    char errbuf[STRERROR_BUFLEN];
+    char errbuf[MXS_STRERROR_BUFLEN];
 
     if ((c_sock = dcb_accept_one_connection(listener, (struct sockaddr *)&client_conn)) >= 0)
     {
         listener->stats.n_accepts++;
-#if defined(SS_DEBUG)
         MXS_DEBUG("%lu [gw_MySQLAccept] Accepted fd %d.",
                   pthread_self(),
                   c_sock);
-#endif /* SS_DEBUG */
-#if defined(FAKE_CODE)
-        conn_open[c_sock] = true;
-#endif /* FAKE_CODE */
         /* set nonblocking  */
-        sendbuf = GW_CLIENT_SO_SNDBUF;
+        sendbuf = MXS_CLIENT_SO_SNDBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen) != 0)
         {
@@ -3127,7 +3044,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
                       errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         }
 
-        sendbuf = GW_CLIENT_SO_RCVBUF;
+        sendbuf = MXS_CLIENT_SO_RCVBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen) != 0)
         {
@@ -3145,7 +3062,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
         }
         else
         {
-            const char *authenticator_name = "NullAuth";
+            const char *authenticator_name = "NullAuthDeny";
             GWAUTHENTICATOR *authfuncs;
 
             client_dcb->service = listener->session->service;
@@ -3189,7 +3106,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
             if ((authfuncs = (GWAUTHENTICATOR *)load_module(authenticator_name,
                                                             MODULE_AUTHENTICATOR)) == NULL)
             {
-                if ((authfuncs = (GWAUTHENTICATOR *)load_module("NullAuth",
+                if ((authfuncs = (GWAUTHENTICATOR *)load_module("NullAuthDeny",
                                                                 MODULE_AUTHENTICATOR)) == NULL)
                 {
                     MXS_ERROR("Failed to load authenticator module for %s, free dcb %p\n",
@@ -3200,6 +3117,17 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
                 }
             }
             memcpy(&(client_dcb->authfunc), authfuncs, sizeof(GWAUTHENTICATOR));
+
+            /** Allocate DCB specific authentication data */
+            if (client_dcb->authfunc.create &&
+                (client_dcb->authenticator_data = client_dcb->authfunc.create(
+                 client_dcb->listener->auth_instance)) == NULL)
+            {
+                MXS_ERROR("Failed to create authenticator for client DCB.");
+                dcb_close(client_dcb);
+                return NULL;
+            }
+
             if (client_dcb->service->max_connections &&
                 client_dcb->service->client_count >= client_dcb->service->max_connections)
             {
@@ -3239,31 +3167,16 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
         socklen_t client_len = sizeof(struct sockaddr_storage);
         int eno = 0;
 
-#if defined(FAKE_CODE)
-        if (fail_next_accept > 0)
-        {
-            c_sock = -1;
-            eno = fail_accept_errno;
-            fail_next_accept -= 1;
-        }
-        else
-        {
-            fail_accept_errno = 0;
-#endif /* FAKE_CODE */
-
-            /* new connection from client */
-            c_sock = accept(listener->fd,
-                            client_conn,
-                            &client_len);
-            eno = errno;
-            errno = 0;
-#if defined(FAKE_CODE)
-        }
-#endif /* FAKE_CODE */
+        /* new connection from client */
+        c_sock = accept(listener->fd,
+                        client_conn,
+                        &client_len);
+        eno = errno;
+        errno = 0;
 
         if (c_sock == -1)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             /* Did not get a file descriptor */
             if (eno == EAGAIN || eno == EWOULDBLOCK)
             {
@@ -3355,7 +3268,7 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 
     if (listen(listener_socket, 10 * SOMAXCONN) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to start listening on '%s' with protocol '%s': %d, %s",
                   config,
                   protocol_name,
@@ -3377,9 +3290,6 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
                   "attempting to register on an epoll instance.");
         return -1;
     }
-#if defined(FAKE_CODE)
-    conn_open[listener_socket] = true;
-#endif /* FAKE_CODE */
     return 0;
 }
 
@@ -3409,7 +3319,7 @@ dcb_listen_create_socket_inet(const char *config_bind)
     /** Create the TCP socket */
     if ((listener_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't create socket: %i, %s",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
@@ -3433,7 +3343,7 @@ dcb_listen_create_socket_inet(const char *config_bind)
 
     if (bind(listener_socket, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to bind on '%s': %i, %s",
                   config_bind,
                   errno,
@@ -3476,7 +3386,7 @@ dcb_listen_create_socket_unix(const char *config_bind)
     // UNIX socket create
     if ((listener_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't create UNIX socket: %i, %s",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
@@ -3503,7 +3413,7 @@ dcb_listen_create_socket_unix(const char *config_bind)
 
     if ((-1 == unlink(config_bind)) && (errno != ENOENT))
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to unlink Unix Socket %s: %d %s",
                   config_bind, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
     }
@@ -3511,7 +3421,7 @@ dcb_listen_create_socket_unix(const char *config_bind)
     /* Bind the socket to the Unix domain socket */
     if (bind(listener_socket, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %i, %s",
                   config_bind,
                   errno,
@@ -3523,7 +3433,7 @@ dcb_listen_create_socket_unix(const char *config_bind)
     /* set permission for all users */
     if (chmod(config_bind, 0777) < 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %i, %s",
                   config_bind,
                   errno,
@@ -3550,7 +3460,7 @@ dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_
 {
     if (setsockopt(sockfd, level, optname, optval, optlen) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to set socket options. Error %d: %s",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));

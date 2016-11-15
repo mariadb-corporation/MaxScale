@@ -27,19 +27,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <service.h>
-#include <session.h>
-#include <router.h>
-#include <modules.h>
-#include <modinfo.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/router.h>
+#include <maxscale/modules.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <debugcli.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
 
 MODULE_INFO     info =
@@ -59,7 +58,7 @@ static  void   closeSession(ROUTER *instance, void *router_session);
 static  void   freeSession(ROUTER *instance, void *router_session);
 static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static  void   diagnostics(ROUTER *instance, DCB *dcb);
-static  int    getCapabilities();
+static  uint64_t getCapabilities(void);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -72,7 +71,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     NULL,
     NULL,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 extern int execute_cmd(CLI_SESSION *cli);
@@ -272,7 +272,7 @@ execute(ROUTER *instance, void *router_session, GWBUF *queue)
     {
         const char* data = GWBUF_DATA(queue);
         int len = GWBUF_LENGTH(queue);
-        int n = MIN(len, CMDBUFLEN - cmdlen - 1);
+        int n = MXS_MIN(len, CMDBUFLEN - cmdlen - 1);
 
         if (n != len)
         {
@@ -303,7 +303,7 @@ diagnostics(ROUTER *instance, DCB *dcb)
     return; /* Nothing to do currently */
 }
 
-static int getCapabilities()
+static uint64_t getCapabilities(void)
 {
     return 0;
 }

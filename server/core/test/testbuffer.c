@@ -34,8 +34,8 @@
 #include <string.h>
 
 #include <maxscale/alloc.h>
-#include <buffer.h>
-#include <hint.h>
+#include <maxscale/buffer.h>
+#include <maxscale/hint.h>
 
 /**
  * Generate predefined test data

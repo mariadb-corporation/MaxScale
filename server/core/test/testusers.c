@@ -33,9 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <users.h>
+#include <maxscale/users.h>
 
-#include "log_manager.h"
+#include <maxscale/log_manager.h>
 
 /**
  * test1    Allocate table of users and mess around with it
@@ -45,9 +45,9 @@
 static int
 test1()
 {
-    USERS   *users;
-    char    *authdata;
-    int     result, count;
+    USERS      *users;
+    const char *authdata;
+    int        result, count;
 
     /* Poll tests */
     ss_dfprintf(stderr,

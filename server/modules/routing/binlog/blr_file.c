@@ -37,8 +37,8 @@
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 16/09/2016   Massimiliano Pinto  Addition of IGNORABLE_EVENT in case of a missing event
  *                                  detected from master binlog stream
- * 19/09/2016   Massimiliano Pinto  Addition of START_ENCRYPTION_EVENT: new event is written
- *                                  when encrypt_binlog=1 in Binlog Server option.
+ * 19/09/2016   Massimiliano Pinto  START_ENCRYPTION_EVENT is detected by maxbinlocheck.
+ * 21/09/2016   Massimiliano Pinto  Addition of START_ENCRYPTION_EVENT: new event is written
  *
  * @endverbatim
  */
@@ -51,18 +51,16 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <gwdirs.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include "blr.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <inttypes.h>
 #include <secrets.h>
@@ -128,6 +126,44 @@ typedef struct start_encryption_event
     uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
                                        * These bytes + the binlog event current pos
                                        * form the encrryption IV for the event */
+} START_ENCRYPTION_EVENT;
+
+static uint8_t *blr_create_ignorable_event(uint32_t event_size,
+                                           REP_HEADER *hdr,
+                                           uint32_t event_pos,
+                                           bool do_checksum);
+static int blr_write_special_event(ROUTER_INSTANCE *router,
+                                   uint32_t file_offset,
+                                   uint32_t hole_size,
+                                   REP_HEADER *hdr,
+                                   int type);
+
+/** MaxScale generated events */
+typedef enum
+{
+    BLRM_IGNORABLE, /*< Ignorable event */
+    BLRM_START_ENCRYPTION /*< Start Encryption event */
+} generated_event_t;
+
+/**
+ * MariaDB 10.1.7 Start Encryption event content
+ *
+ * Event header:    19 bytes
+ * Content size:    17 bytes
+ *     crypto scheme 1 byte
+ *     key_version   4 bytes
+ *     nonce random 12 bytes
+ *
+ * Event size is 19 + 17 = 36 bytes
+ */
+typedef struct start_encryption_event
+{
+    uint8_t header[BINLOG_EVENT_HDR_LEN]; /**< Replication event header */
+    uint8_t binlog_crypto_scheme;         /**< Encryption scheme */
+    uint32_t binlog_key_version;          /**< Encryption key version */
+    uint8_t nonce[BLRM_NONCE_LENGTH];     /**< nonce (random bytes) of current binlog.
+                                           * These bytes + the binlog event current pos
+                                           * form the encrryption IV for the event */
 } START_ENCRYPTION_EVENT;
 
 /**
@@ -293,7 +329,7 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
     }
 
     int created = 0;
-    char err_msg[STRERROR_BUFLEN];
+    char err_msg[MXS_STRERROR_BUFLEN];
 
     char path[PATH_MAX + 1] = "";
 
@@ -482,11 +518,11 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         memcpy(buf + BINLOG_EVENT_LEN_OFFSET, &event_size, 4);
     }
  
-    /* Write current received event from master */
+    /* Write current received event form master */
     if ((n = pwrite(router->binlog_fd, buf, size,
                     router->last_written)) != size)
     {
-        char err_msg[STRERROR_BUFLEN];
+        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->last_written,
@@ -503,7 +539,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         return 0;
     }
 
-    // Increment offsets
+    /* Increment offsets */
     spinlock_acquire(&router->binlog_lock);
     router->current_pos = hdr->next_pos;
     router->last_written += size;
@@ -735,7 +771,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
             break;
         case -1:
             {
-                char err_msg[STRERROR_BUFLEN];
+                char err_msg[MXS_STRERROR_BUFLEN];
                 snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
                          file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
@@ -847,7 +883,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
                 break;
             case -1:
                 {
-                    char err_msg[STRERROR_BUFLEN];
+                    char err_msg[MXS_STRERROR_BUFLEN];
                     snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                              "Failed to reread header in binlog file '%s'; (%s), event at %lu",
                              file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
@@ -907,7 +943,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     {
         if (n == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                      "Error reading the binlog event at %lu in binlog file '%s';"
                      "(%s), expected %d bytes.",
@@ -2192,7 +2228,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     char filename[len + sizeof('/') + sizeof(MASTER_INI)]; // sizeof includes NULL
     char tmp_file[len + sizeof('/') + sizeof(MASTER_INI) + sizeof('.') + sizeof(TMP)];
-    char err_msg[STRERROR_BUFLEN];
+    char err_msg[MXS_STRERROR_BUFLEN];
     char *ssl_ca;
     char *ssl_cert;
     char *ssl_key;
@@ -2410,7 +2446,7 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
                      (unsigned long)event_size,
                      (unsigned long)file_offset);
 
-            /* Create the new Ignorable event */
+            /* Create the Ignorable event */
             if ((new_event = blr_create_ignorable_event(event_size,
                                                          hdr,
                                                          file_offset,
@@ -2445,7 +2481,6 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
                        (unsigned long)event_size,
                        router->binlog_name,
                        router->current_pos);
-            new_event_desc = "UNKNOWN";
             return 0;
             break;
     }
@@ -2453,7 +2488,7 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
     // Write the event
     if ((n = pwrite(router->binlog_fd, new_event, event_size, file_offset)) != event_size)
     {
-       char err_msg[STRERROR_BUFLEN];
+       char err_msg[MXS_STRERROR_BUFLEN];
        MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                  "Truncating to previous record.",
                  router->service->name, new_event_desc, (unsigned long)file_offset,

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale.h>
+#include <maxscale/maxscale.h>
 #include <time.h>
 
 static time_t started;

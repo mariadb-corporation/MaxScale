@@ -37,19 +37,18 @@
  *
  * @endverbatim
  */
-#include <buffer.h>
+#include <maxscale/buffer.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <maxscale/alloc.h>
-#include <atomic.h>
-#include <skygw_debug.h>
-#include <skygw_utils.h>
-#include <spinlock.h>
-#include <hint.h>
-#include <log_manager.h>
+#include <maxscale/atomic.h>
+#include <maxscale/debug.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/hint.h>
+#include <maxscale/log_manager.h>
 
 #if defined(BUFFER_TRACE)
-#include <hashtable.h>
+#include <maxscale/hashtable.h>
 #include <execinfo.h>
 
 static HASHTABLE *buffer_hashtable = NULL;
@@ -121,7 +120,7 @@ gwbuf_alloc(unsigned int size)
 retblock:
     if (rval == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Memory allocation failed due to %s.",
                   strerror_r(errno, errbuf, sizeof(errbuf)));
     }
@@ -964,7 +963,7 @@ size_t gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest
 
                 if (buffer)
                 {
-                    bytes_left = MIN(GWBUF_LENGTH(buffer), bytes);
+                    bytes_left = MXS_MIN(GWBUF_LENGTH(buffer), bytes);
                     ptr = (uint8_t*) GWBUF_DATA(buffer);
                 }
             }

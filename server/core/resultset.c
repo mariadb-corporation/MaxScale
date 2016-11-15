@@ -26,9 +26,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <maxscale/alloc.h>
-#include <resultset.h>
-#include <buffer.h>
-#include <dcb.h>
+#include <maxscale/resultset.h>
+#include <maxscale/buffer.h>
+#include <maxscale/dcb.h>
 
 
 static int mysql_send_fieldcount(DCB *, int);

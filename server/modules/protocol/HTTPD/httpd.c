@@ -32,13 +32,13 @@
  * @endverbatim
  */
 
-#include <httpd.h>
+#include "httpd.h"
+#include <ctype.h>
 #include <maxscale/alloc.h>
-#include <gw_protocol.h>
-#include <gw.h>
-#include <modinfo.h>
-#include <log_manager.h>
-#include <resultset.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/resultset.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
   * lint directives.
@@ -215,9 +215,10 @@ static int httpd_read_event(DCB* dcb)
         }
     }
 
-    /** If listener->authenticator is NULL, it means we're using the default
-     * authenticator and we don't need to check the user credentials. */
-    bool auth_ok = dcb->listener->authenticator == 0;
+    /** If listener->authenticator is the default authenticator, it means that
+     * we don't need to check the user credentials. All other authenticators
+     * cause a 401 Unauthorized to be returned on the first try. */
+    bool auth_ok = strcmp(httpd_default_auth(), dcb->listener->authenticator) == 0;
 
     /**
      * Get the request headers
@@ -254,7 +255,7 @@ static int httpd_read_event(DCB* dcb)
                     /** The freeing entry point is called automatically when
                      * the client DCB is closed */
                     dcb->authfunc.extract(dcb, auth_data);
-                    auth_ok = dcb->authfunc.authenticate(dcb) == 0;
+                    auth_ok = dcb->authfunc.authenticate(dcb) == MXS_AUTH_SUCCEEDED;
                     gwbuf_free(auth_data);
                 }
             }

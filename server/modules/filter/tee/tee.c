@@ -43,23 +43,22 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/log_manager.h>
 #include <sys/time.h>
 #include <regex.h>
 #include <string.h>
-#include <service.h>
-#include <router.h>
-#include <dcb.h>
+#include <maxscale/service.h>
+#include <maxscale/router.h>
+#include <maxscale/dcb.h>
 #include <sys/time.h>
 #include <maxscale/poll.h>
-#include <mysql_client_server_protocol.h>
-#include <housekeeper.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
-#include <listmanager.h>
+#include <maxscale/listmanager.h>
 
 #define MYSQL_COM_QUIT                  0x01
 #define MYSQL_COM_INITDB                0x02
@@ -117,6 +116,7 @@ static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
 
 static FILTER_OBJECT MyObject =
 {
@@ -129,6 +129,8 @@ static FILTER_OBJECT MyObject =
     routeQuery,
     clientReply,
     diagnostic,
+    getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**
@@ -1123,6 +1125,16 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tNo. of statements rejected:	%d.\n",
                    my_session->n_rejected);
     }
+}
+
+/**
+ * Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
 /**

@@ -32,6 +32,14 @@ Issues [MXS-710](https://jira.mariadb.org/browse/MXS-710) and
 
 Compression is not included in MySQL server handshake
 
+# Authenticator limitations
+
+## Limitations in the GSSAPI authentication
+
+Currently MaxScale only supports GSSAPI authentication when the backend
+connections use GSSAPI authentication. Client side GSSAPI authentication with a
+different backend authentication module is not supported.
+
 # Monitor limitations
 
 A server can only be monitored by one monitor. If multiple monitors monitor the

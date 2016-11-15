@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <memlog.h>
+#include <maxscale/memlog.h>
 
 /**
  * Count the number of lines in a file

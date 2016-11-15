@@ -24,7 +24,7 @@
  * @endverbatim
  */
 
-#include <maxscale_pcre2.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
 
 /**

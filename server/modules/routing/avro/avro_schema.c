@@ -18,17 +18,16 @@
 #define _GNU_SOURCE
 #endif
 
-#include <avrorouter.h>
-#include <mysql_utils.h>
+#include "avrorouter.h"
+#include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <stdio.h>
 #include <limits.h>
 #include <unistd.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <skygw_utils.h>
-#include <skygw_debug.h>
+#include <maxscale/debug.h>
 #include <string.h>
 #include <strings.h>
 #include <maxscale/alloc.h>

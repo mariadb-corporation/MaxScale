@@ -34,6 +34,7 @@
  * 03/03/15     Massimiliano Pinto      Added config_enable_feedback_task() call in serviceStartAll
  * 19/06/15     Martin Brampton         More meaningful names for temp variables
  * 31/05/16     Martin Brampton         Implement connection throttling
+ * 08/11/16     Massimiliano Pinto      Added: service_shutdown() calls destroyInstance() hoosk for routers
  *
  * @endverbatim
  */
@@ -42,31 +43,33 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <session.h>
-#include <service.h>
-#include <gw_protocol.h>
-#include <listener.h>
-#include <server.h>
-#include <router.h>
-#include <spinlock.h>
-#include <modules.h>
-#include <dcb.h>
-#include <users.h>
-#include <filter.h>
-#include <dbusers.h>
-#include <maxscale/poll.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <housekeeper.h>
-#include <resultset.h>
-#include <gw.h>
-#include <gwdirs.h>
 #include <math.h>
-#include <version.h>
-#include <queuemanager.h>
+#include <fcntl.h>
+#include <maxscale/session.h>
+#include <maxscale/service.h>
+#include <maxscale/gw_protocol.h>
+#include <maxscale/listener.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/modules.h>
+#include <maxscale/dcb.h>
+#include <maxscale/users.h>
+#include <maxscale/filter.h>
+#include <maxscale/poll.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/resultset.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/version.h>
+#include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
+
+/** Base value for server weights */
+#define SERVICE_BASE_SERVER_WEIGHT 1000
 
 /** To be used with configuration type checks */
 typedef struct typelib_st
@@ -78,13 +81,13 @@ typedef struct typelib_st
 
 /** Set of subsequent false,true pairs */
 static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
-typelib_t bool_type  = {array_nelems(bool_strings) - 1, "bool_type", bool_strings};
+typelib_t bool_type  = {MXS_ARRAY_NELEMS(bool_strings) - 1, "bool_type", bool_strings};
 
 /** List of valid values */
 static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
 typelib_t sqlvar_target_type =
 {
-    array_nelems(sqlvar_target_strings) - 1,
+    MXS_ARRAY_NELEMS(sqlvar_target_strings) - 1,
     "sqlvar_target_type",
     sqlvar_target_strings
 };
@@ -98,6 +101,7 @@ static void service_add_qualified_param(SERVICE*          svc,
                                         CONFIG_PARAMETER* param);
 static void service_internal_restart(void *data);
 static void service_queue_check(void *data);
+static void service_calculate_weights(SERVICE *service);
 
 /**
  * Allocate a new service for the gateway to support
@@ -145,7 +149,9 @@ service_alloc(const char *servname, const char *router)
         return NULL;
     }
 
+    service->capabilities = service->router->getCapabilities();
     service->client_count = 0;
+    service->n_dbref = 0;
     service->name = (char*)servname;
     service->routerModule = (char*)router;
     service->users_from_all = false;
@@ -211,6 +217,16 @@ service_isvalid(SERVICE *service)
     return rval;
 }
 
+static inline void close_port(SERV_LISTENER *port)
+{
+    port->service->state = SERVICE_STATE_FAILED;
+    if (port->listener)
+    {
+        dcb_close(port->listener);
+        port->listener = NULL;
+    }
+}
+
 /**
  * Start an individual port/protocol pair
  *
@@ -233,7 +249,9 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     {
         /* Should never happen, this guarantees it can't */
         MXS_ERROR("Attempt to start port with null or incomplete service");
-        goto retblock;
+        close_port(port);
+        ss_dassert(false);
+        return 0;
     }
 
     port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, port);
@@ -241,7 +259,8 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     if (port->listener == NULL)
     {
         MXS_ERROR("Failed to create listener for service %s.", service->name);
-        goto retblock;
+        close_port(port);
+        return 0;
     }
 
     port->listener->service = service;
@@ -253,18 +272,15 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
-        dcb_close(port->listener);
-        port->listener = NULL;
-        MXS_ERROR("Unable to load protocol module %s. Listener "
-                  "for service %s not started.",
-                  port->protocol,
-                  service->name);
-        goto retblock;
+        MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
+                  port->protocol, service->name);
+        close_port(port);
+        return 0;
     }
 
     memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
 
-    const char *authenticator_name = "NullAuth";
+    const char *authenticator_name = "NullAuthDeny";
 
     if (port->authenticator)
     {
@@ -281,12 +297,16 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     {
         MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'",
                   authenticator_name, port->name);
-        dcb_close(port->listener);
-        port->listener = NULL;
+        close_port(port);
         return 0;
     }
 
     memcpy(&port->listener->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
+
+    /**
+     * Normally, we'd allocate the DCB specific authentication data. As the
+     * listeners aren't normal DCBs, we can skip that.
+     */
 
     if (port->address)
     {
@@ -298,12 +318,24 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     }
 
     /** Load the authentication users before before starting the listener */
-    if (port->listener->authfunc.loadusers &&
-        (service->router->getCapabilities() & RCAP_TYPE_NO_USERS_INIT) == 0 &&
-        port->listener->authfunc.loadusers(port) != MXS_AUTH_LOADUSERS_OK)
+    if (port->listener->authfunc.loadusers)
     {
-        MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",
-                  service->name, port->name);
+        switch (port->listener->authfunc.loadusers(port))
+        {
+            case MXS_AUTH_LOADUSERS_FATAL:
+                MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
+                          "service is not started.", service->name, port->name);
+                close_port(port);
+                return 0;
+
+            case MXS_AUTH_LOADUSERS_ERROR:
+                MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                            " might not work.", service->name, port->name);
+                break;
+
+            default:
+                break;
+        }
     }
 
     /**
@@ -324,24 +356,16 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         }
         else
         {
-            MXS_ERROR("Failed to create session to service %s.",
-                      service->name);
-            dcb_close(port->listener);
-            port->listener = NULL;
-            goto retblock;
+            MXS_ERROR("[%s] Failed to create listener session.", service->name);
+            close_port(port);
         }
     }
     else
     {
-        MXS_ERROR("Unable to start to listen port %d for %s %s.",
-                  port->port,
-                  port->protocol,
-                  service->name);
-        dcb_close(port->listener);
-        port->listener = NULL;
+        MXS_ERROR("[%s] Failed to listen on %s", service->name, config_bind);
+        close_port(port);
     }
 
-retblock:
     return listeners;
 }
 
@@ -366,7 +390,11 @@ int serviceStartAllPorts(SERVICE* service)
             port = port->next;
         }
 
-        if (listeners)
+        if (service->state == SERVICE_STATE_FAILED)
+        {
+            listeners = 0;
+        }
+        else if (listeners)
         {
             service->state = SERVICE_STATE_STARTED;
             service->stats.started = time(0);
@@ -377,7 +405,7 @@ int serviceStartAllPorts(SERVICE* service)
             service->stats.n_failed_starts++;
             char taskname[strlen(service->name) + strlen("_start_retry_") +
                           (int) ceil(log10(INT_MAX)) + 1];
-            int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
+            int retry_after = MXS_MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
             snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
                      service->name, service->stats.n_failed_starts);
             hktask_oneshot(taskname, service_internal_restart,
@@ -453,30 +481,24 @@ static void free_string_array(char** array)
 int
 serviceStart(SERVICE *service)
 {
-    int listeners = 0;
+    /** Calculate the server weights */
+    service_calculate_weights(service);
 
-    if (check_service_permissions(service))
+    int listeners = 0;
+    char **router_options = copy_string_array(service->routerOptions);
+
+    if ((service->router_instance = service->router->createInstance(service, router_options)))
     {
-        char **router_options = copy_string_array(service->routerOptions);
-        if ((service->router_instance = service->router->createInstance(
-                                            service, router_options)))
-        {
-            listeners += serviceStartAllPorts(service);
-        }
-        else
-        {
-            MXS_ERROR("%s: Failed to create router instance for service. Service not started.",
-                      service->name);
-            service->state = SERVICE_STATE_FAILED;
-        }
-        free_string_array(router_options);
+        listeners = serviceStartAllPorts(service);
     }
     else
     {
-        MXS_ERROR("%s: Inadequate user permissions for service. Service not started.",
-                  service->name);
+        MXS_ERROR("%s: Failed to create router instance. Service not started.", service->name);
         service->state = SERVICE_STATE_FAILED;
     }
+
+    free_string_array(router_options);
+
     return listeners;
 }
 
@@ -667,11 +689,12 @@ service_free(SERVICE *service)
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address, unsigned short port, char *authenticator,
+serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
+                   unsigned short port, char *authenticator, char *options,
                    SSL_LISTENER *ssl)
 {
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
-                                          port, authenticator, ssl);
+                                          port, authenticator, options, ssl);
 
     if (proto)
     {
@@ -717,6 +740,28 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 }
 
 /**
+ * Allocate a new server reference
+ *
+ * @param server Server to refer to
+ * @return Server reference or NULL on error
+ */
+static SERVER_REF* server_ref_create(SERVER *server)
+{
+    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
+
+    if (sref)
+    {
+        sref->next = NULL;
+        sref->server = server;
+        sref->weight = SERVICE_BASE_SERVER_WEIGHT;
+        sref->connections = 0;
+        sref->active = true;
+    }
+
+    return sref;
+}
+
+/**
  * Add a backend database server to a service
  *
  * @param service       The service to add the server to
@@ -725,31 +770,74 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
-
-    if (sref)
+    if (!serviceHasBackend(service, server))
     {
-        sref->next = NULL;
-        sref->server = server;
+        SERVER_REF *new_ref = server_ref_create(server);
 
-        spinlock_acquire(&service->spin);
-        if (service->dbref)
+        if (new_ref)
         {
-            SERVER_REF *ref = service->dbref;
-            while (ref->next)
+            spinlock_acquire(&service->spin);
+
+            service->n_dbref++;
+
+            if (service->dbref)
             {
-                ref = ref->next;
+                SERVER_REF *ref = service->dbref;
+                SERVER_REF *prev = ref;
+
+                while (ref)
+                {
+                    if (ref->server == server)
+                    {
+                        ref->active = true;
+                        break;
+                    }
+                    prev = ref;
+                    ref = ref->next;
+                }
+
+                if (ref == NULL)
+                {
+                    /** A new server that hasn't been used by this service */
+                    atomic_synchronize();
+                    prev->next = new_ref;
+                }
             }
-            ref->next = sref;
+            else
+            {
+                atomic_synchronize();
+                service->dbref = new_ref;
+            }
+            spinlock_release(&service->spin);
         }
-        else
-        {
-            service->dbref = sref;
-        }
-        spinlock_release(&service->spin);
     }
 }
 
+/**
+ * @brief Remove a server from a service
+ *
+ * This function sets the server reference into an inactive state. This does not
+ * remove the server from the list or free any of the memory.
+ *
+ * @param service Service to modify
+ * @param server  Server to remove
+ */
+void serviceRemoveBackend(SERVICE *service, const SERVER *server)
+{
+    spinlock_acquire(&service->spin);
+
+    for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+    {
+        if (ref->server == server)
+        {
+            ref->active = false;
+            service->n_dbref--;
+            break;
+        }
+    }
+
+    spinlock_release(&service->spin);
+}
 /**
  * Test if a server is part of a service
  *
@@ -757,7 +845,7 @@ serviceAddBackend(SERVICE *service, SERVER *server)
  * @param server        The server to add
  * @return              Non-zero if the server is already part of the service
  */
-int
+bool
 serviceHasBackend(SERVICE *service, SERVER *server)
 {
     SERVER_REF *ptr;
@@ -1054,6 +1142,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     char *ptr, *brkt;
     int n = 0;
     bool rval = true;
+    uint64_t capabilities = 0;
 
     if ((flist = (FILTER_DEF **) MXS_MALLOC(sizeof(FILTER_DEF *))) == NULL)
     {
@@ -1076,7 +1165,11 @@ serviceSetFilters(SERVICE *service, char *filters)
 
         if ((flist[n - 1] = filter_find(filter_name)))
         {
-            if (!filter_load(flist[n - 1]))
+            if (filter_load(flist[n - 1]))
+            {
+                capabilities |= flist[n - 1]->obj->getCapabilities();
+            }
+            else
             {
                 MXS_ERROR("Failed to load filter '%s' for service '%s'.",
                           filter_name, service->name);
@@ -1100,6 +1193,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     {
         service->filters = flist;
         service->n_filters = n;
+        service->capabilities |= capabilities;
     }
     else
     {
@@ -1275,8 +1369,11 @@ void dprintService(DCB *dcb, SERVICE *service)
     dcb_printf(dcb, "\tBackend databases:\n");
     while (server)
     {
-        dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
-                   server->server->protocol);
+        if (SERVER_REF_IS_ACTIVE(server))
+        {
+            dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name,
+                       server->server->port, server->server->protocol);
+        }
         server = server->next;
     }
     if (service->weightby)
@@ -1457,11 +1554,26 @@ int service_refresh_users(SERVICE *service)
 
             for (SERV_LISTENER *port = service->ports; port; port = port->next)
             {
-                if (port->listener->authfunc.loadusers(port) != MXS_AUTH_LOADUSERS_OK)
+                /** Load the authentication users before before starting the listener */
+                if (port->listener->authfunc.loadusers)
                 {
-                    MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",
-                              service->name, port->name);
-                    ret = 1;
+                    switch (port->listener->authfunc.loadusers(port))
+                    {
+                        case MXS_AUTH_LOADUSERS_FATAL:
+                            MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
+                                      " authentication will not work.", service->name, port->name);
+                            ret = 1;
+                            break;
+
+                        case MXS_AUTH_LOADUSERS_ERROR:
+                            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                                        " might not work.", service->name, port->name);
+                            ret = 1;
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -1768,6 +1880,23 @@ void service_shutdown()
     while (svc != NULL)
     {
         svc->svc_do_shutdown = true;
+        /* Call destroyInstance hook for routers */
+        if (svc->router->destroyInstance)
+        {
+           svc->router->destroyInstance(svc->router_instance);
+        }
+        if (svc->n_filters)
+        {
+            FILTER_DEF **filters = svc->filters;
+            for (int i=0; i < svc->n_filters; i++)
+            {
+                if (filters[i]->obj->destroyInstance)
+                {
+                    /* Call destroyInstance hook for filters */
+                    filters[i]->obj->destroyInstance(filters[i]->filter);
+                }
+            }
+        }
         svc = svc->next;
     }
     spinlock_release(&service_spin);
@@ -1991,5 +2120,186 @@ bool service_all_services_have_listeners()
     }
 
     spinlock_release(&service_spin);
+    return rval;
+}
+
+static void service_calculate_weights(SERVICE *service)
+{
+    char *weightby = serviceGetWeightingParameter(service);
+    if (weightby && service->dbref)
+    {
+        /** Service has a weighting parameter and at least one server */
+        int total = 0;
+
+        /** Calculate total weight */
+        for (SERVER_REF *server = service->dbref; server; server = server->next)
+        {
+            server->weight = SERVICE_BASE_SERVER_WEIGHT;
+            char *param = serverGetParameter(server->server, weightby);
+            if (param)
+            {
+                total += atoi(param);
+            }
+        }
+
+        if (total == 0)
+        {
+            MXS_WARNING("Weighting Parameter for service '%s' will be ignored as "
+                        "no servers have values for the parameter '%s'.",
+                        service->name, weightby);
+        }
+        else if (total < 0)
+        {
+            MXS_ERROR("Sum of weighting parameter '%s' for service '%s' exceeds "
+                      "maximum value of %d. Weighting will be ignored.",
+                      weightby, service->name, INT_MAX);
+        }
+        else
+        {
+            /** Calculate the relative weight of the servers */
+            for (SERVER_REF *server = service->dbref; server; server = server->next)
+            {
+                char *param = serverGetParameter(server->server, weightby);
+                if (param)
+                {
+                    int wght = atoi(param);
+                    int perc = (wght * SERVICE_BASE_SERVER_WEIGHT) / total;
+
+                    if (perc == 0)
+                    {
+                        MXS_ERROR("Weighting parameter '%s' with a value of %d for"
+                                  " server '%s' rounds down to zero with total weight"
+                                  " of %d for service '%s'. No queries will be "
+                                  "routed to this server as long as a server with"
+                                  " positive weight is available.",
+                                  weightby, wght, server->server->unique_name,
+                                  total, service->name);
+                    }
+                    else if (perc < 0)
+                    {
+                        MXS_ERROR("Weighting parameter '%s' for server '%s' is too large, "
+                                  "maximum value is %d. No weighting will be used for this "
+                                  "server.", weightby, server->server->unique_name,
+                                  INT_MAX / SERVICE_BASE_SERVER_WEIGHT);
+                        perc = SERVICE_BASE_SERVER_WEIGHT;
+                    }
+                    server->weight = perc;
+                }
+                else
+                {
+                    MXS_WARNING("Server '%s' has no parameter '%s' used for weighting"
+                                " for service '%s'.", server->server->unique_name,
+                                weightby, service->name);
+                }
+            }
+        }
+    }
+}
+
+bool service_server_in_use(const SERVER *server)
+{
+    bool rval = false;
+
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (SERVER_REF *ref = service->dbref; ref && !rval; ref = ref->next)
+        {
+            if (ref->active && ref->server == server)
+            {
+                rval = true;
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}
+
+/**
+ * Creates a service configuration at the location pointed by @c filename
+ *
+ * @param service Service to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_service_config(const SERVICE *service, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
+                  filename, service->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    /**
+     * Only additional parameters are added to the configuration. This prevents
+     * duplication or addition of parameters that don't support it.
+     *
+     * TODO: Check for return values on all of the dprintf calls
+     */
+    dprintf(file, "[%s]\n", service->name);
+    if (service->dbref)
+    {
+        dprintf(file, "servers=");
+        for (SERVER_REF *db = service->dbref; db; db = db->next)
+        {
+            if (db != service->dbref)
+            {
+                dprintf(file, ",");
+            }
+            dprintf(file, "%s", db->server->unique_name);
+        }
+        dprintf(file, "\n");
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool service_serialize_servers(const SERVICE *service)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             service->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_service_config(service, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
     return rval;
 }

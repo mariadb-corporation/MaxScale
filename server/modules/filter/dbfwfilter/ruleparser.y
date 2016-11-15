@@ -19,8 +19,8 @@
 
 %{
 #include <lex.yy.h>
-#include <dbfwfilter.h>
-#include <log_manager.h>
+#include "dbfwfilter.h"
+#include <maxscale/log_manager.h>
 %}
 
 /** We need a reentrant scanner so no global variables are used */

@@ -31,8 +31,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <spinlock.h>
-#include <random_jkiss.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/random_jkiss.h>
 
 /* Public domain code for JKISS RNG - Comment header added */
 

@@ -14,8 +14,8 @@
 #include "maxavro.h"
 #include <jansson.h>
 #include <string.h>
-#include <skygw_debug.h>
-#include <log_manager.h>
+#include <maxscale/debug.h>
+#include <maxscale/log_manager.h>
 
 static const MAXAVRO_SCHEMA_FIELD types[MAXAVRO_TYPE_MAX] =
 {

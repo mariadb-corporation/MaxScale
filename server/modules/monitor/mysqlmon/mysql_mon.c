@@ -46,9 +46,10 @@
  */
 
 #include "../mysqlmon.h"
-#include <dcb.h>
-#include <modutil.h>
+#include <maxscale/dcb.h>
+#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/debug.h>
 
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_BINLOG_POS 5
@@ -214,7 +215,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
     while (database)
     {
         /** Delete any existing structures and replace them with empty ones */
-        hashtable_delete(handle->server_info, database->server);
+        hashtable_delete(handle->server_info, database->server->unique_name);
 
         if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
         {
@@ -269,7 +270,6 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->replicationHeartbeat = 0;
         handle->detectStaleMaster = true;
         handle->detectStaleSlave = true;
-        handle->master = NULL;
         handle->script = NULL;
         handle->multimaster = false;
         handle->mysql51_replication = false;
@@ -279,6 +279,9 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
+
+    /** This should always be reset to NULL */
+    handle->master = NULL;
 
     while (params)
     {
@@ -687,19 +690,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_MONITOR* handle = mon->handle;
     MYSQL_ROW row;
     MYSQL_RES *result;
-    char *uname = mon->user;
     unsigned long int server_version = 0;
     char *server_string;
-
-    if (database->server->monuser != NULL)
-    {
-        uname = database->server->monuser;
-    }
-
-    if (uname == NULL)
-    {
-        return;
-    }
 
     /* Don't probe servers in maintenance mode */
     if (SERVER_IN_MAINT(database->server))
@@ -1032,8 +1024,17 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nse
              * slave in this case can be either a normal slave or another
              * master.
              */
-            monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
-            monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+            if (graph[i].info->read_only)
+            {
+                /** The master is in read-only mode, set it into Slave state */
+                monitor_set_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_clear_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
+            }
+            else
+            {
+                monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
+                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+            }
         }
     }
 }
@@ -1315,10 +1316,11 @@ monitorMain(void *arg)
         ptr = mon->databases;
         while (ptr)
         {
-            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
-            ss_dassert(serv_info);
             if (!SERVER_IN_MAINT(ptr->server))
             {
+                MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
+                ss_dassert(serv_info);
+
                 /** If "detect_stale_master" option is On, let's use the previous master.
                  *
                  * Multi-master mode detects the stale masters in find_graph_cycles().
@@ -1327,7 +1329,8 @@ monitorMain(void *arg)
                     (strcmp(ptr->server->name, root_master->server->name) == 0 &&
                      ptr->server->port == root_master->server->port) &&
                     (ptr->server->status & SERVER_MASTER) &&
-                    !(ptr->pending_status & SERVER_MASTER))
+                    !(ptr->pending_status & SERVER_MASTER) &&
+                    !serv_info->read_only)
                 {
                     /**
                      * In this case server->status will not be updated from pending_status
@@ -1877,7 +1880,13 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
                         monitor_clear_pending_status(handle->master, SERVER_MASTER);
                     }
 
-                    monitor_set_pending_status(master, SERVER_MASTER);
+                    MYSQL_SERVER_INFO* info = hashtable_fetch(handle->server_info,
+                                                              master->server->unique_name);
+                    ss_dassert(info);
+
+                    /** Only set the Master status if read_only is disabled */
+                    monitor_set_pending_status(master, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
+
                     handle->master = master;
                 }
                 else

@@ -30,28 +30,26 @@
 #include <string.h>
 #include <time.h>
 #include <maxscale/alloc.h>
-#include <service.h>
-#include <session.h>
-#include <server.h>
-#include <router.h>
-#include <modules.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <monitor.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <maxscale.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/modules.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/monitor.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/maxscale.h>
 #include <maxscale/poll.h>
-#include <maxinfo.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <resultset.h>
-#include <version.h>
-#include <resultset.h>
-#include <secrets.h>
-#include <users.h>
-#include <dbusers.h>
+#include "maxinfo.h"
+#include <maxscale/log_manager.h>
+#include <maxscale/resultset.h>
+#include <maxscale/version.h>
+#include <maxscale/resultset.h>
+#include <maxscale/secrets.h>
+#include <maxscale/users.h>
 
 
 MODULE_INFO info =
@@ -70,7 +68,6 @@ static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
 static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWBUF *queue);
-static int maxinfo_add_mysql_user(SERVICE *service);
 
 
 /* The router entry points */
@@ -80,7 +77,7 @@ static  void    closeSession(ROUTER *instance, void *router_session);
 static  void    freeSession(ROUTER *instance, void *router_session);
 static  int     execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static  void    diagnostics(ROUTER *instance, DCB *dcb);
-static  int     getCapabilities();
+static  uint64_t getCapabilities(void);
 static  void    handleError(ROUTER         *instance,
                             void           *router_session,
                             GWBUF          *errbuf,
@@ -99,7 +96,8 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     NULL,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static SPINLOCK     instlock;
@@ -182,13 +180,6 @@ createInstance(SERVICE *service, char **options)
     inst->next = instances;
     instances = inst;
     spinlock_release(&instlock);
-
-    /*
-     * The following add the service user to service->users via mysql_users_alloc()
-     * password to be used.
-     */
-
-    maxinfo_add_mysql_user(service);
 
     return (ROUTER *)inst;
 }
@@ -410,8 +401,8 @@ diagnostics(ROUTER *instance, DCB *dcb)
  *
  * Not used for the maxinfo router
  */
-static int
-getCapabilities()
+static uint64_t
+getCapabilities(void)
 {
     return 0;
 }
@@ -736,75 +727,4 @@ handle_url(INFO_INSTANCE *instance, INFO_SESSION *session, GWBUF *queue)
     }
     gwbuf_free(queue);
     return 1;
-}
-
-/**
- * Add the service user to the service->users
- * via mysql_users_alloc and add_mysql_users_with_host_ipv4
- * User is added for '%' and 'localhost' hosts
- *
- * @param service The service for this router
- * @return  0 on success, 1 on failure
- */
-static int
-maxinfo_add_mysql_user(SERVICE *service)
-{
-    int rval = 1;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        MXS_ERROR("maxinfo: failed to get service user details");
-        return 1;
-    }
-
-    char *dpwd = decryptPassword(service->credentials.authdata);
-
-    if (!dpwd)
-    {
-        MXS_ERROR("maxinfo: decrypt password failed for service user %s", service_user);
-        return 1;
-    }
-
-    SERV_LISTENER *port = service->ports;
-
-    while (port)
-    {
-        while (port && strcmp(port->protocol, "MySQLClient"))
-        {
-            port = port->next;
-        }
-
-        if (port)
-        {
-            port->users = (void *)mysql_users_alloc();
-
-            char *newpasswd = create_hex_sha1_sha1_passwd(dpwd);
-
-            if (!newpasswd)
-            {
-                MXS_ERROR("maxinfo: create hex_sha1_sha1_password failed for "
-                          "service user %s", service_user);
-                users_free(port->users);
-                break;
-            }
-
-            /* add service user for % and localhost */
-            add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                           "%", newpasswd, "Y", "");
-            add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
-                                           "localhost", newpasswd, "Y", "");
-            rval = 0;
-            MXS_FREE(newpasswd);
-
-            /** Continue processing listeners in case there are multiple
-             * MySQLClient listeners*/
-            port = port->next;
-        }
-    }
-
-    MXS_FREE(dpwd);
-
-    return rval;
 }

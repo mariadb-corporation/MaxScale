@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _DEBUGCLI_H
 #define _DEBUGCLI_H
 /*
@@ -13,9 +14,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#include <service.h>
-#include <session.h>
-#include <spinlock.h>
 
 /**
  * @file debugcli.h The debug interface to the gateway
@@ -28,6 +26,14 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+#include <maxscale/service.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+
+MXS_BEGIN_DECLS
+
 struct cli_session;
 
 /**
@@ -49,7 +55,7 @@ typedef struct cli_instance
  * The CLI_SESSION structure. As CLI_SESSION is created for each user that logs into
  * the DEBUG CLI.
  */
-enum { CMDBUFLEN = 80 };
+#define CMDBUFLEN  2048
 
 typedef struct cli_session
 {
@@ -63,4 +69,7 @@ typedef struct cli_session
 /* Command line interface modes */
 #define CLIM_USER       1
 #define CLIM_DEVELOPER      2
+
+MXS_END_DECLS
+
 #endif

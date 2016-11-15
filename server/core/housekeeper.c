@@ -10,13 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <maxscale/housekeeper.h>
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/alloc.h>
-#include <housekeeper.h>
-#include <thread.h>
-#include <spinlock.h>
-#include <log_manager.h>
+#include <maxscale/atomic.h>
+#include <maxscale/semaphore.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/thread.h>
 
 /**
  * @file housekeeper.c  Provide a mechanism to run periodic tasks
@@ -49,22 +50,28 @@ static HKTASK *tasks = NULL;
  */
 static SPINLOCK tasklock = SPINLOCK_INIT;
 
-static int do_shutdown = 0;
+static bool do_shutdown = 0;
+
 long hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
 static THREAD hk_thr_handle;
 
 static void hkthread(void *);
 
-/**
- * Initialise the housekeeper thread
- */
-void
+bool
 hkinit()
 {
-    if (thread_start(&hk_thr_handle, hkthread, NULL) == NULL)
+    bool inited = false;
+
+    if (thread_start(&hk_thr_handle, hkthread, NULL) != NULL)
     {
-        MXS_ERROR("Failed to start housekeeper thread.");
+        inited = true;
     }
+    else
+    {
+        MXS_ALERT("Failed to start housekeeper thread.");
+    }
+
+    return inited;
 }
 
 /**
@@ -255,21 +262,17 @@ hkthread(void *data)
     void *taskdata;
     int i;
 
-    for (;;)
+    while (!do_shutdown)
     {
         for (i = 0; i < 10; i++)
         {
-            if (do_shutdown)
-            {
-                return;
-            }
             thread_millisleep(100);
             hkheartbeat++;
         }
         now = time(0);
         spinlock_acquire(&tasklock);
         ptr = tasks;
-        while (ptr)
+        while (!do_shutdown && ptr)
         {
             if (ptr->nextdue <= now)
             {
@@ -297,16 +300,25 @@ hkthread(void *data)
         }
         spinlock_release(&tasklock);
     }
+
+    MXS_NOTICE("Housekeeper shutting down.");
 }
 
-/**
- * Called to shutdown the housekeeper
- *
- */
 void
 hkshutdown()
 {
-    do_shutdown = 1;
+    do_shutdown = true;
+    atomic_synchronize();
+}
+
+void hkfinish()
+{
+    ss_dassert(do_shutdown);
+
+    MXS_NOTICE("Waiting for housekeeper to shut down.");
+    thread_wait(hk_thr_handle);
+    do_shutdown = false;
+    MXS_NOTICE("Housekeeper has shut down.");
 }
 
 /**

@@ -11,11 +11,12 @@
  * Public License.
  */
 
-#include <query_classifier.h>
-#include <log_manager.h>
-#include <modules.h>
-#include <modutil.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -25,6 +26,12 @@
 #else
 #define QC_TRACE()
 #endif
+
+struct type_name_info
+{
+    const char* name;
+    size_t name_len;
+};
 
 static const char default_qc_name[] = "qc_sqlite";
 
@@ -100,20 +107,6 @@ void qc_thread_end(void)
     return classifier->qc_thread_end();
 }
 
-/**
- * Parses the query in the provided buffer and returns a value specifying
- * to what extent the query could be parsed.
- *
- * There is no need to call this function explicitly before calling any of
- * the other functions; e.g. qc_get_type. When some particular property of
- * a query is asked for, the query will be parsed if it has not been parsed
- * yet. Also, if the query in the provided buffer has been parsed already
- * then this function will only return the result of that parsing; the query
- * will not be parsed again.
- *
- * @param query A GWBUF containing an SQL statement.
- * @result To what extent the query could be parsed.
- */
 qc_parse_result_t qc_parse(GWBUF* query)
 {
     QC_TRACE();
@@ -122,15 +115,6 @@ qc_parse_result_t qc_parse(GWBUF* query)
     return classifier->qc_parse(query);
 }
 
-/**
- * Returns a bitmask specifying the type(s) of the query.
- * The result should be tested against specific qc_query_type_t values
- * using the bitwise & operator, never using the == operator.
- *
- * @param query A buffer containing a query.
- *
- * @return A bitmask of type bits.
- */
 uint32_t qc_get_type(GWBUF* query)
 {
     QC_TRACE();
@@ -211,62 +195,12 @@ bool qc_query_has_clause(GWBUF* query)
     return classifier->qc_query_has_clause(query);
 }
 
-/**
- * Generate a string of query type value.
- * Caller must free the memory of the resulting string.
- *
- * @param   qtype   Query type value, combination of values listed in
- *                  query_classifier.h
- *
- * @return  string representing the query type value
- */
-char* qc_get_qtype_str(qc_query_type_t qtype)
-{
-    QC_TRACE();
-    int t1 = (int) qtype;
-    int t2 = 1;
-    qc_query_type_t t = QUERY_TYPE_UNKNOWN;
-    char* qtype_str = NULL;
-
-    /**
-     * Test values (bits) and clear matching bits from t1 one by one until
-     * t1 is completely cleared.
-     */
-    while (t1 != 0)
-    {
-        if (t1 & t2)
-        {
-            t = (qc_query_type_t) t2;
-
-            if (qtype_str == NULL)
-            {
-                qtype_str = MXS_STRDUP_A(STRQTYPE(t));
-            }
-            else
-            {
-                size_t len = strlen(STRQTYPE(t));
-                /** reallocate space for delimiter, new string and termination */
-                qtype_str = (char *) MXS_REALLOC(qtype_str, strlen(qtype_str) + 1 + len + 1);
-                MXS_ABORT_IF_NULL(qtype_str);
-                snprintf(qtype_str + strlen(qtype_str), 1 + len + 1, "|%s", STRQTYPE(t));
-            }
-
-            /** Remove found value from t1 */
-            t1 &= ~t2;
-        }
-
-        t2 <<= 1;
-    }
-
-    return qtype_str;
-}
-
-char* qc_get_affected_fields(GWBUF* query)
+void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_affected_fields(query);
+    classifier->qc_get_field_info(query, infos, n_infos);
 }
 
 char** qc_get_database_names(GWBUF* query, int* sizep)
@@ -277,14 +211,149 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
     return classifier->qc_get_database_names(query, sizep);
 }
 
-/**
- * Returns the string representation of a query operation.
- *
- * @param op An operation.
- * @return The corresponding string.
- *         NOTE: The returned string is statically allocated
- *               and must *not* be freed.
- */
+char* qc_get_prepare_name(GWBUF* query)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    return classifier->qc_get_prepare_name(query);
+}
+
+struct type_name_info field_usage_to_type_name_info(qc_field_usage_t usage)
+{
+    struct type_name_info info;
+
+    switch (usage)
+    {
+    case QC_USED_IN_SELECT:
+        {
+            static const char name[] = "QC_USED_IN_SELECT";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_SUBSELECT:
+        {
+            static const char name[] = "QC_USED_IN_SUBSELECT";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_WHERE:
+        {
+            static const char name[] = "QC_USED_IN_WHERE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_SET:
+        {
+            static const char name[] = "QC_USED_IN_SET";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    case QC_USED_IN_GROUP_BY:
+        {
+            static const char name[] = "QC_USED_IN_GROUP_BY";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+
+    default:
+        {
+            static const char name[] = "UNKNOWN_FIELD_USAGE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+	}
+	break;
+    }
+
+    return info;
+}
+
+
+
+const char* qc_field_usage_to_string(qc_field_usage_t usage)
+{
+    return field_usage_to_type_name_info(usage).name;
+}
+
+static const qc_field_usage_t FIELD_USAGE_VALUES[] =
+{
+    QC_USED_IN_SELECT,
+    QC_USED_IN_SUBSELECT,
+    QC_USED_IN_WHERE,
+    QC_USED_IN_SET,
+    QC_USED_IN_GROUP_BY,
+};
+
+static const int N_FIELD_USAGE_VALUES =
+    sizeof(FIELD_USAGE_VALUES) / sizeof(FIELD_USAGE_VALUES[0]);
+static const int FIELD_USAGE_MAX_LEN = 20; // strlen("QC_USED_IN_SUBSELECT");
+
+char* qc_field_usage_mask_to_string(uint32_t mask)
+{
+    size_t len = 0;
+
+    // First calculate how much space will be needed.
+    for (int i = 0; i < N_FIELD_USAGE_VALUES; ++i)
+    {
+        if (mask & FIELD_USAGE_VALUES[i])
+        {
+            if (len != 0)
+            {
+                ++len; // strlen("|");
+            }
+
+            len += FIELD_USAGE_MAX_LEN;
+        }
+    }
+
+    ++len;
+
+    // Then make one allocation and build the string.
+    char* s = (char*) MXS_MALLOC(len);
+
+    if (s)
+    {
+        if (len > 1)
+        {
+            char* p = s;
+
+            for (int i = 0; i < N_FIELD_USAGE_VALUES; ++i)
+            {
+                qc_field_usage_t value = FIELD_USAGE_VALUES[i];
+
+                if (mask & value)
+                {
+                    if (p != s)
+                    {
+                        strcpy(p, "|");
+                        ++p;
+                    }
+
+                    struct type_name_info info = field_usage_to_type_name_info(value);
+
+                    strcpy(p, info.name);
+                    p += info.name_len;
+                }
+            }
+        }
+        else
+        {
+            *s = 0;
+        }
+    }
+
+    return s;
+}
+
 const char* qc_op_to_string(qc_query_op_t op)
 {
     switch (op)
@@ -332,12 +401,6 @@ const char* qc_op_to_string(qc_query_op_t op)
         return "UNKNOWN_QUERY_OP";
     }
 }
-
-struct type_name_info
-{
-    const char* name;
-    size_t name_len;
-};
 
 struct type_name_info type_to_type_name_info(qc_query_type_t type)
 {
@@ -538,15 +601,6 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 }
 
 
-
-/**
- * Returns the string representation of a query type.
- *
- * @param type A specific type (not a bitmask of several).
- * @return The corresponding string.
- *         NOTE: The returned string is statically allocated
- *               and must *not* be freed.
- */
 const char* qc_type_to_string(qc_query_type_t type)
 {
     return type_to_type_name_info(type).name;
@@ -586,15 +640,7 @@ static const qc_query_type_t QUERY_TYPES[] =
 static const int N_QUERY_TYPES = sizeof(QUERY_TYPES) / sizeof(QUERY_TYPES[0]);
 static const int QUERY_TYPE_MAX_LEN = 29; // strlen("QUERY_TYPE_PREPARE_NAMED_STMT");
 
-/**
- * Returns the string representation of a bitmask of query types.
- *
- * @param type Bitmask of several qc_query_type_t values.
- * @return The corresponding string.
- *         NOTE: The returned string is dynamically allocated
- *               and *must* be freed by the caller.
- */
-char* qc_types_to_string(uint32_t types)
+char* qc_typemask_to_string(uint32_t types)
 {
     int len = 0;
 

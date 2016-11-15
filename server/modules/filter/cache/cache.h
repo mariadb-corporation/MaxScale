@@ -1,5 +1,6 @@
-#ifndef CACHE_H
-#define CACHE_H
+#pragma once
+#ifndef _MAXSCALE_FILTER_CACHE_CACHE_H
+#define _MAXSCALE_FILTER_CACHE_CACHE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,11 +16,14 @@
 
 #include <limits.h>
 
-#define CACHE_DEBUG_NONE         0
-#define CACHE_DEBUG_MATCHING     1
-#define CACHE_DEBUG_NON_MATCHING 2
-#define CACHE_DEBUG_USE          4
-#define CACHE_DEBUG_NON_USE      8
+MXS_BEGIN_DECLS
+
+#define CACHE_DEBUG_NONE          0  /* 0b00000 */
+#define CACHE_DEBUG_MATCHING      1  /* 0b00001 */
+#define CACHE_DEBUG_NON_MATCHING  2  /* 0b00010 */
+#define CACHE_DEBUG_USE           4  /* 0b00100 */
+#define CACHE_DEBUG_NON_USE       8  /* 0b01000 */
+#define CACHE_DEBUG_DECISIONS    16  /* 0b10000 */
 
 #define CACHE_DEBUG_RULES        (CACHE_DEBUG_MATCHING | CACHE_DEBUG_NON_MATCHING)
 #define CACHE_DEBUG_USAGE        (CACHE_DEBUG_USE | CACHE_DEBUG_NON_USE)
@@ -34,5 +38,7 @@
 #define CACHE_DEFAULT_TTL                10
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
+
+MXS_END_DECLS
 
 #endif

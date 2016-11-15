@@ -12,13 +12,13 @@
  */
 
 #include <stdio.h>
-#include <filter.h>
-#include <modinfo.h>
-#include <modutil.h>
-#include <atomic.h>
-#include <query_classifier.h>
-#include <hashtable.h>
-#include <gwdirs.h>
+#include <maxscale/filter.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/atomic.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/hashtable.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
 #define GK_DEFAULT_HASHTABLE_SIZE 1000
@@ -89,6 +89,8 @@ static void freeSession(FILTER *instance, void *session);
 static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static uint64_t getCapabilities(void);
+
 static bool read_stored_data(GK_INSTANCE *inst);
 static bool write_stored_data(GK_INSTANCE *inst);
 
@@ -101,8 +103,10 @@ static FILTER_OBJECT MyObject =
     setDownstream,
     NULL, // No upstream requirement
     routeQuery,
-    NULL,
+    NULL, // No clientReply
     diagnostic,
+    getCapabilities,
+    NULL, // No destroyInstance
 };
 
 /**
@@ -183,7 +187,7 @@ static FILTER* createInstance(const char *name, char **options, FILTER_PARAMETER
                 }
                 else
                 {
-                    char err[STRERROR_BUFLEN];
+                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR(MODNAME"File is not accessible: %d, %s", errno,
                               strerror_r(errno, err, sizeof(err)));
                     ok = false;
@@ -423,6 +427,16 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 }
 
 /**
+ * @brief Capability routine.
+ *
+ * @return The capabilities of the filter.
+ */
+static uint64_t getCapabilities(void)
+{
+    return RCAP_TYPE_STMT_INPUT;
+}
+
+/**
  * @brief Write query patterns from memory to disk
  *
  * The data is stored as length-encoded strings. A length-encoded string contains
@@ -453,7 +467,7 @@ static bool write_stored_data(GK_INSTANCE *inst)
             if (write(fd, &len, sizeof(len)) != sizeof(len) ||
                 write(fd, key, len) != len)
             {
-                char err[STRERROR_BUFLEN];
+                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR(MODNAME"Failed to write key '%s' to disk (%d, %s). The datafile at '%s' was "
                           "not updated but it will be updated when the next session closes. ",
                           key, errno, strerror_r(errno, err, sizeof(err)), inst->datadir);
@@ -471,7 +485,7 @@ static bool write_stored_data(GK_INSTANCE *inst)
 
             if (!rval)
             {
-                char err[STRERROR_BUFLEN];
+                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR(MODNAME"Failed to rename file '%s' to '%s' when writing data: %d, %s",
                           filepath, newfilepath, errno, strerror_r(errno, err, sizeof(err)));
             }
@@ -479,7 +493,7 @@ static bool write_stored_data(GK_INSTANCE *inst)
     }
     else if (fd == -1)
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR(MODNAME"Failed to open file '%s' when writing data: %d, %s",
                   filepath, errno, strerror_r(errno, err, sizeof(err)));
     }
@@ -497,7 +511,7 @@ static void report_failed_read(FILE *file, int nexpected, int nread)
 {
     if (ferror(file))
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR(MODNAME"Failed to read %d bytes, only %d bytes read: %d, %s",
                   nexpected, nread, errno, strerror_r(errno, err, sizeof(err)));
     }
@@ -579,7 +593,7 @@ static bool read_stored_data(GK_INSTANCE *inst)
     }
     else
     {
-        char err[STRERROR_BUFLEN];
+        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR(MODNAME"Failed to open file '%s' when reading stored data: %d, %s",
                   filepath, errno, strerror_r(errno, err, sizeof(err)));
     }

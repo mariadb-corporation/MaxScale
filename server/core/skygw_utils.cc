@@ -15,6 +15,8 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
+#include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -23,13 +25,20 @@
 #include <time.h>
 #include <stddef.h>
 #include <regex.h>
-#include "skygw_debug.h"
-#include <skygw_types.h>
+#include <maxscale/debug.h>
 #include <sys/time.h>
-#include "skygw_utils.h"
-#include <atomic.h>
-#include <random_jkiss.h>
+#include "maxscale/skygw_utils.h"
+#include <maxscale/atomic.h>
+#include <maxscale/random_jkiss.h>
 #include <pcre2.h>
+
+#if !defined(PATH_MAX)
+# if defined(__USE_POSIX)
+#   define PATH_MAX _POSIX_PATH_MAX
+# else
+#   define PATH_MAX 256
+# endif
+#endif
 
 static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void thread_free_memory(skygw_thread_t* th, char* name);
@@ -47,7 +56,7 @@ int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock)
     else
     {
         rwlock->srw_rwlock_thr = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr,
                     "* pthread_rwlock_rdlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
@@ -66,7 +75,7 @@ int skygw_rwlock_wrlock(skygw_rwlock_t* rwlock)
     else
     {
         rwlock->srw_rwlock_thr = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr,
                     "* pthread_rwlock_wrlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
@@ -84,7 +93,7 @@ int skygw_rwlock_unlock(skygw_rwlock_t* rwlock)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "* pthread_rwlock_unlock : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
     }
@@ -97,7 +106,7 @@ int skygw_rwlock_destroy(skygw_rwlock_t* rwlock)
     /** Lock */
     if ((err = pthread_rwlock_wrlock(rwlock->srw_rwlock)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Error : pthread_rwlock_wrlock failed due to %d, %s.\n",
                 err, strerror_r(err, errbuf, sizeof (errbuf)));
         goto retblock;
@@ -109,7 +118,7 @@ int skygw_rwlock_destroy(skygw_rwlock_t* rwlock)
     /** Destroy */
     if ((err = pthread_rwlock_destroy(rwlock->srw_rwlock)) != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Error : pthread_rwlock_destroy failed due to %d,%s\n",
                 err, strerror_r(err, errbuf, sizeof (errbuf)));
     }
@@ -141,7 +150,7 @@ int skygw_rwlock_init(skygw_rwlock_t** rwlock)
     if (err != 0)
     {
         free(rwl);
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         ss_dfprintf(stderr, "* Creating pthread_rwlock failed : %s\n",
                     strerror_r(err, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -193,7 +202,7 @@ size_t snprint_timestamp(char* p_ts, size_t tslen)
 
     t = time(NULL);
     localtime_r(&t, &tm);
-    snprintf(p_ts, MIN(tslen, timestamp_len), timestamp_formatstr,
+    snprintf(p_ts, MXS_MIN(tslen, timestamp_len), timestamp_formatstr,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
              tm.tm_min, tm.tm_sec);
     rval = strlen(p_ts) * sizeof (char);
@@ -234,7 +243,7 @@ size_t snprint_timestamp_hp(char* p_ts, size_t tslen)
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, &tm);
     usec = tv.tv_usec / 1000;
-    snprintf(p_ts, MIN(tslen, timestamp_len_hp), timestamp_formatstr_hp,
+    snprintf(p_ts, MXS_MIN(tslen, timestamp_len_hp), timestamp_formatstr_hp,
              tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
              tm.tm_hour, tm.tm_min, tm.tm_sec, usec);
     rval = strlen(p_ts) * sizeof (char);
@@ -339,7 +348,7 @@ int skygw_thread_start(skygw_thread_t* thr)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Starting file writer thread failed due error, %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -515,7 +524,7 @@ simple_mutex_t* simple_mutex_init(simple_mutex_t* mutexptr, const char* name)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing simple mutex %s failed due error %d, %s\n",
                 name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -555,7 +564,7 @@ int simple_mutex_done(simple_mutex_t* sm)
     if (err != 0)
     {
         perror("simple_mutex : ");
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying simple mutex %s failed due %d, %s\n",
                 sm->sm_name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_err;
@@ -602,7 +611,7 @@ int simple_mutex_lock(simple_mutex_t* sm, bool block)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking simple mutex %s failed due error, %d, %s\n",
                 sm->sm_name, err,  strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -631,7 +640,7 @@ int simple_mutex_unlock(simple_mutex_t* sm)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking simple mutex %s failed due error %d, %s\n",
                 sm->sm_name, err, strerror_r(errno, errbuf, sizeof (errbuf)));
         perror("simple_mutex : ");
@@ -665,7 +674,7 @@ skygw_message_t* skygw_message_init(void)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing pthread mutex failed due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         free(mes);
@@ -676,7 +685,7 @@ skygw_message_t* skygw_message_init(void)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Initializing pthread cond var failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         pthread_mutex_destroy(&mes->mes_mutex);
@@ -705,7 +714,7 @@ void skygw_message_done(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying cond var failed due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -714,7 +723,7 @@ void skygw_message_done(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Destroying pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -732,7 +741,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -746,7 +755,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
     }
     else
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Signaling pthread cond var failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -754,7 +763,7 @@ skygw_mes_rc_t skygw_message_send(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due to error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -772,7 +781,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -784,7 +793,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
         if (err != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "* Locking pthread cond wait failed, due error %d, %s\n",
                     err, strerror_r(errno, errbuf, sizeof (errbuf)));
         }
@@ -794,7 +803,7 @@ void skygw_message_wait(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
     }
@@ -810,7 +819,7 @@ void skygw_message_reset(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Locking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -821,7 +830,7 @@ void skygw_message_reset(skygw_message_t* mes)
 
     if (err != 0)
     {
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Unlocking pthread mutex failed, due error %d, %s\n",
                 err, strerror_r(errno, errbuf, sizeof (errbuf)));
         goto return_mes_rc;
@@ -923,7 +932,7 @@ skygw_file_t* skygw_file_init(const char* fname,
     {
         int eno = errno;
         errno = 0;
-        char errbuf[STRERROR_BUFLEN];
+        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "* Opening file %s failed due %d, %s.\n",
                 file->sf_fname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
         free(file);
@@ -947,7 +956,7 @@ skygw_file_t* skygw_file_init(const char* fname,
         {
             int eno = errno;
             errno = 0;
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "failed to create symlink %s -> %s due %d, %s. Exiting.",
                     fname, symlinkname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
             free(file);
@@ -983,7 +992,7 @@ void skygw_file_close(skygw_file_t* file)
 
         if ((err = fclose(file->sf_file)) != 0)
         {
-            char errbuf[STRERROR_BUFLEN];
+            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "* Closing file %s failed due to %d, %s.\n",
                     file->sf_fname, errno, strerror_r(errno, errbuf, sizeof (errbuf)));
         }
@@ -993,298 +1002,6 @@ void skygw_file_close(skygw_file_t* file)
             skygw_file_free(file);
         }
     }
-}
-
-#define BUFFER_GROWTH_RATE 1.2
-static pcre2_code* remove_comments_re = NULL;
-static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-    "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
-
-/**
- * Remove SQL comments from the end of a string
- *
- * The inline executable comments are not removed due to the fact that they can
- * alter the behavior of the query.
- * @param src Pointer to the string to modify.
- * @param srcsize Pointer to a size_t variable which holds the length of the string to
- * be modified.
- * @param dest The address of the pointer where the result will be stored. If the
- * value pointed by this parameter is NULL, new memory will be allocated as needed.
- * @param Pointer to a size_t variable where the size of the result string is stored.
- * @return Pointer to new modified string or NULL if memory allocation failed.
- * If NULL is returned and the value pointed by @c dest was not NULL, no new
- * memory will be allocated, the memory pointed by @dest will be freed and the
- * contents of @c dest and @c destsize will be invalid.
- */
-char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
-{
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "";
-    pcre2_match_data* mdata;
-    char* output = *dest;
-    size_t orig_len = *srcsize;
-    size_t len = output ? *destsize : orig_len;
-
-    if (orig_len > 0)
-    {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
-        {
-            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
-            {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
-                if (tmp == NULL)
-                {
-                    free(output);
-                    output = NULL;
-                    break;
-                }
-                output = tmp;
-            }
-            pcre2_match_data_free(mdata);
-        }
-        else
-        {
-            free(output);
-            output = NULL;
-        }
-    }
-    else if (output == NULL)
-    {
-        output = strdup(*src);
-    }
-
-    if (output)
-    {
-        *destsize = strlen(output);
-        *dest = output;
-    }
-
-    return output;
-}
-
-static pcre2_code* replace_values_re = NULL;
-static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-    "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
-
-/**
- * Replace literal numbers and user variables with a question mark.
- * @param src Pointer to the string to modify.
- * @param srcsize Pointer to a size_t variable which holds the length of the string to
- * be modified.
- * @param dest The address of the pointer where the result will be stored. If the
- * value pointed by this parameter is NULL, new memory will be allocated as needed.
- * @param Pointer to a size_t variable where the size of the result string is stored.
- * @return Pointer to new modified string or NULL if memory allocation failed.
- * If NULL is returned and the value pointed by @c dest was not NULL, no new
- * memory will be allocated, the memory pointed by @dest will be freed and the
- * contents of @c dest and @c destsize will be invalid.
- */
-char* replace_values(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
-{
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
-    pcre2_match_data* mdata;
-    char* output = *dest;
-    size_t orig_len = *srcsize;
-    size_t len = output ? *destsize : orig_len;
-
-    if (orig_len > 0)
-    {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
-        {
-            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
-            {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
-                if (tmp == NULL)
-                {
-                    free(output);
-                    output = NULL;
-                    break;
-                }
-                output = tmp;
-            }
-            pcre2_match_data_free(mdata);
-        }
-        else
-        {
-            free(output);
-            output = NULL;
-        }
-    }
-    else if (output == NULL)
-    {
-        output = strdup(*src);
-    }
-
-    if (output)
-    {
-        *destsize = strlen(output);
-        *dest = output;
-    }
-
-    return output;
-}
-
-/**
- * Find the given needle - user-provided literal -  and replace it with
- * replacement string. Separate user-provided literals from matching table names
- * etc. by searching only substrings preceded by non-letter and non-number.
- *
- * @param haystack      Plain text query string, not to be freed
- * @param needle        Substring to be searched, not to be freed
- * @param replacement   Replacement text, not to be freed
- *
- * @return newly allocated string where needle is replaced
- */
-char* replace_literal(char* haystack, const char* needle, const char* replacement)
-{
-    const char* prefix = "[ ='\",\\(]"; /*< ' ','=','(',''',''"',',' are allowed before needle */
-    const char* suffix = "([^[:alnum:]]|$)"; /*< alpha-num chars aren't allowed after the needle */
-    char* search_re;
-    char* newstr;
-    regex_t re;
-    regmatch_t match;
-    int rc;
-    size_t rlen = strlen(replacement);
-    size_t nlen = strlen(needle);
-    size_t hlen = strlen(haystack);
-
-    search_re = (char *) malloc(strlen(prefix) + nlen + strlen(suffix) + 1);
-
-    if (search_re == NULL)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr, "Regex memory allocation failed : %s\n",
-                strerror_r(errno, errbuf, sizeof (errbuf)));
-        newstr = haystack;
-        goto retblock;
-    }
-
-    sprintf(search_re, "%s%s%s", prefix, needle, suffix);
-    /** Allocate memory for new string +1 for terminating byte */
-    newstr = (char *) malloc(hlen - nlen + rlen + 1);
-
-    if (newstr == NULL)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr, "Regex memory allocation failed : %s\n",
-                strerror_r(errno, errbuf, sizeof (errbuf)));
-        free(search_re);
-        free(newstr);
-        newstr = haystack;
-        goto retblock;
-    }
-
-    rc = regcomp(&re, search_re, REG_EXTENDED | REG_ICASE);
-    ss_info_dassert(rc == 0, "Regex check");
-
-    if (rc != 0)
-    {
-        char error_message[MAX_ERROR_MSG];
-        regerror(rc, &re, error_message, MAX_ERROR_MSG);
-        fprintf(stderr, "Regex error compiling '%s': %s\n",
-                search_re, error_message);
-        free(search_re);
-        free(newstr);
-        newstr = haystack;
-        goto retblock;
-    }
-    rc = regexec(&re, haystack, 1, &match, 0);
-
-    if (rc != 0)
-    {
-        free(search_re);
-        free(newstr);
-        regfree(&re);
-        newstr = haystack;
-        goto retblock;
-    }
-    memcpy(newstr, haystack, match.rm_so + 1);
-    memcpy(newstr + match.rm_so + 1, replacement, rlen);
-    /** +1 is terminating byte */
-    memcpy(newstr + match.rm_so + 1 + rlen, haystack + match.rm_so + 1 + nlen, hlen - (match.rm_so + 1) - nlen + 1);
-
-    regfree(&re);
-    free(haystack);
-    free(search_re);
-retblock:
-    return newstr;
-}
-
-static pcre2_code* replace_quoted_re = NULL;
-static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
-
-/**
- * Replace contents of single or double quoted strings with question marks.
- * @param src Pointer to the string to modify.
- * @param srcsize Pointer to a size_t variable which holds the length of the string to
- * be modified.
- * @param dest The address of the pointer where the result will be stored. If the
- * value pointed by this parameter is NULL, new memory will be allocated as needed.
- * @param Pointer to a size_t variable where the size of the result string is stored.
- * @return Pointer to new modified string or NULL if memory allocation failed.
- * If NULL is returned and the value pointed by @c dest was not NULL, no new
- * memory will be allocated, the memory pointed by @dest will be freed and the
- * contents of @c dest and @c destsize will be invalid.
- */
-char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
-{
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "?$1";
-    pcre2_match_data* mdata;
-    char* output = *dest;
-    size_t orig_len = *srcsize;
-    size_t len = output ? *destsize : orig_len;
-
-    if (orig_len > 0)
-    {
-        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
-            (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
-        {
-            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) * src, orig_len, 0,
-                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                    replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
-            {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
-                if (tmp == NULL)
-                {
-                    free(output);
-                    output = NULL;
-                    break;
-                }
-                output = tmp;
-            }
-            pcre2_match_data_free(mdata);
-        }
-        else
-        {
-            free(output);
-            output = NULL;
-        }
-    }
-    else if (output == NULL)
-    {
-        output = strdup(*src);
-    }
-
-    if (output)
-    {
-        *destsize = strlen(output);
-        *dest = output;
-    }
-    else
-    {
-        *dest = NULL;
-    }
-
-    return output;
 }
 
 /**
@@ -1300,193 +1017,4 @@ size_t get_decimal_len(
     size_t value)
 {
     return value > 0 ? (size_t) log10((double) value) + 1 : 1;
-}
-
-/**
- * Check if the provided pathname is POSIX-compliant. The valid characters
- * are [a-z A-Z 0-9._-].
- * @param path A null-terminated string
- * @return true if it is a POSIX-compliant pathname, otherwise false
- */
-bool is_valid_posix_path(char* path)
-{
-    char* ptr = path;
-    while (*ptr != '\0')
-    {
-        if (isalnum(*ptr) || *ptr == '/' || *ptr == '.' || *ptr == '-' || *ptr == '_')
-        {
-            ptr++;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
- * Strip escape characters from a character string.
- * @param String to parse.
- * @return True if parsing was successful, false on errors.
- */
-bool
-strip_escape_chars(char* val)
-{
-    int cur, end;
-
-    if (val == NULL)
-    {
-        return false;
-    }
-
-    end = strlen(val) + 1;
-    cur = 0;
-
-    while (cur < end)
-    {
-        if (val[cur] == '\\')
-        {
-            memmove(val + cur, val + cur + 1, end - cur - 1);
-            end--;
-        }
-        cur++;
-    }
-    return true;
-}
-
-/**
- * Trim leading and trailing whitespace from a string
- *
- * @param str String to trim
- * @return    Trimmed string
- */
-char* trim(char *str)
-{
-    char* ptr = strchr(str, '\0') - 1;
-
-    while (ptr > str && isspace(*ptr))
-    {
-        ptr--;
-    }
-
-    if (isspace(*(ptr + 1)))
-    {
-        *(ptr + 1) = '\0';
-    }
-
-    ptr = str;
-
-    while (isspace(*ptr))
-    {
-        ptr++;
-    }
-
-    if (ptr != str)
-    {
-        memmove(str, ptr, strlen(ptr) + 1);
-    }
-
-    return str;
-}
-
-/**
- * Replace all whitespace with spaces and squeeze repeating whitespace characters
- *
- * @param str String to squeeze
- * @return Squeezed string
- */
-char* squeeze_whitespace(char* str)
-{
-    char* store = str;
-    char* ptr = str;
-
-    /** Remove leading whitespace */
-    while (isspace(*ptr) && *ptr != '\0')
-    {
-        ptr++;
-    }
-
-    /** Squeeze all repeating whitespace */
-    while (*ptr != '\0')
-    {
-        while (isspace(*ptr) && isspace(*(ptr + 1)))
-        {
-            ptr++;
-        }
-
-        if (isspace(*ptr))
-        {
-            *store++ = ' ';
-            ptr++;
-        }
-        else
-        {
-            *store++ = *ptr++;
-        }
-    }
-
-    *store = '\0';
-
-    /** Remove trailing whitespace */
-    while (store > str && isspace(*(store - 1)))
-    {
-        store--;
-        *store = '\0';
-    }
-
-    return str;
-}
-
-/**
- * Initialize the utils library
- *
- * This function initializes structures used in various functions.
- * @return true on success, false on error
- */
-bool utils_init()
-{
-    bool rval = true;
-
-    PCRE2_SIZE erroffset;
-    int errcode;
-
-    ss_info_dassert(remove_comments_re == NULL, "utils_init called multiple times");
-    remove_comments_re = pcre2_compile(remove_comments_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                       &erroffset, NULL);
-    if (remove_comments_re == NULL)
-    {
-        rval = false;
-    }
-
-    ss_info_dassert(replace_quoted_re == NULL, "utils_init called multiple times");
-    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                      &erroffset, NULL);
-    if (replace_quoted_re == NULL)
-    {
-        rval = false;
-    }
-
-    ss_info_dassert(replace_values_re == NULL, "utils_init called multiple times");
-    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
-                                      &erroffset, NULL);
-    if (replace_values_re == NULL)
-    {
-        rval = false;
-    }
-
-    return rval;
-}
-
-/**
- * Close the utils library. This should be the last call to this library.
- */
-void utils_end()
-{
-    pcre2_code_free(remove_comments_re);
-    remove_comments_re = NULL;
-    pcre2_code_free(replace_quoted_re);
-    replace_quoted_re = NULL;
-    pcre2_code_free(replace_values_re);
-    replace_values_re = NULL;
 }

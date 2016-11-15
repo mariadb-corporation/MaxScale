@@ -44,8 +44,8 @@
 #include <sys/stat.h>
 
 #include <maxscale/alloc.h>
-#include <log_manager.h>
-#include <blr.h>
+#include <maxscale/log_manager.h>
+#include "blr.h"
 
 
 static void printVersion(const char *progname);

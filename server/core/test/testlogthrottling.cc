@@ -19,7 +19,7 @@
 #include <iostream>
 #include <pthread.h>
 #include <semaphore.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
 using std::cerr;
 using std::cout;

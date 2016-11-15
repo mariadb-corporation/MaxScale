@@ -32,8 +32,8 @@
  * @endverbatim
  */
 
-#include <avrorouter.h>
-#include <skygw_debug.h>
+#include "avrorouter.h"
+#include <maxscale/debug.h>
 #include <glob.h>
 
 void* safe_key_free(void *data);

@@ -23,11 +23,12 @@
  * @endverbatim
  */
 
-#include <statistics.h>
-#include <maxscale/alloc.h>
-#include <maxconfig.h>
+#include <maxscale/statistics.h>
 #include <string.h>
-#include <platform.h>
+#include <maxscale/alloc.h>
+#include <maxscale/config.h>
+#include <maxscale/debug.h>
+#include <maxscale/platform.h>
 
 static int thread_count = 0;
 static bool stats_initialized = false;

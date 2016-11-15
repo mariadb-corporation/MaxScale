@@ -18,8 +18,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <maxscale/alloc.h>
-#include <atomic.h>
-#include <hashtable.h>
+#include <maxscale/atomic.h>
+#include <maxscale/hashtable.h>
 
 /**
  * @file hashtable.c General purpose hashtable routines

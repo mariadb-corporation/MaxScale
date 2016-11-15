@@ -56,29 +56,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <session.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
-#include <buffer.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/session.h>
+#include "blr.h"
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/buffer.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
+#include <maxscale/log_manager.h>
 
-#include <rdtsc.h>
-#include <thread.h>
+#include <maxscale/rdtsc.h>
+#include <maxscale/thread.h>
 
 /* Temporary requirement for auth data */
-#include <mysql_client_server_protocol.h>
+#include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 
 
@@ -1292,7 +1290,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                     if (router->master_chksum)
                     {
-                        uint32_t size = MIN(len - extra_bytes - semisync_bytes,
+                        uint32_t size = MXS_MIN(len - extra_bytes - semisync_bytes,
                                             router->checksum_size);
 
                         router->stored_checksum = crc32(router->stored_checksum,
@@ -1343,7 +1341,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     size = len - (check_packet_len + MYSQL_CHECKSUM_LEN);
                 }
 
-                size = MIN(size, router->checksum_size);
+                size = MXS_MIN(size, router->checksum_size);
 
                 if (router->checksum_size > 0)
                 {
@@ -2093,7 +2091,7 @@ GWBUF
             break;
         case -1:
             {
-                char err_msg[STRERROR_BUFLEN];
+                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Reading saved events: failed to read binlog "
                           "file %s at position %llu"
                           " (%s).", router->binlog_name,
@@ -2153,7 +2151,7 @@ GWBUF
     {
         if (n == -1)
         {
-            char err_msg[STRERROR_BUFLEN];
+            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Reading saved events: the event at %llu in %s. "
                       "%s, expected %d bytes.",
                       pos, router->binlog_name,
@@ -2412,7 +2410,7 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
     if ((n = pwrite(router->binlog_fd, buf, data_len,
                     router->last_written)) != data_len)
     {
-        char err_msg[STRERROR_BUFLEN];
+        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->last_written,
@@ -2540,7 +2538,7 @@ bool blr_send_event(blr_thread_role_t role,
         while (rval && len > 0)
         {
             uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1 :
-                                   MIN(MYSQL_PACKET_LENGTH_MAX, len);
+                                   MXS_MIN(MYSQL_PACKET_LENGTH_MAX, len);
 
             if (blr_send_packet(slave, buf, payload_len, first))
             {

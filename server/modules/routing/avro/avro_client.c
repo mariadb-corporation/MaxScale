@@ -28,21 +28,18 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <version.h>
-#include <avrorouter.h>
+#include <maxscale/service.h>
+#include <maxscale/server.h>
+#include <maxscale/router.h>
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/dcb.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/version.h>
+#include "avrorouter.h"
 #include <maxavro.h>
 #include <maxscale/alloc.h>
-#include <dbusers.h>
 
 extern char *blr_extract_column(GWBUF *buf, int col);
 extern uint32_t extract_field(uint8_t *src, int bits);
@@ -858,7 +855,7 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         }
         else
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open file '%s': %d, %s", buffer, errno,
                       strerror_r(errno, err, sizeof(err)));
         }
