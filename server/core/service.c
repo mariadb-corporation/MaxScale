@@ -802,6 +802,10 @@ serviceAddBackend(SERVICE *service, SERVER *server)
                     atomic_synchronize();
                     prev->next = new_ref;
                 }
+                else
+                {
+                    MXS_FREE(new_ref);
+                }
             }
             else
             {
