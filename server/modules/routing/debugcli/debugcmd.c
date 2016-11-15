@@ -749,10 +749,12 @@ static void cmd_AddServer(DCB *dcb, void *a, void *b)
         if (service)
         {
             serviceAddBackend(service, server);
+            service_serialize_servers(service);
         }
         else if (monitor)
         {
             monitorAddServer(monitor, server);
+            monitor_serialize_servers(monitor);
         }
 
         const char *target = service ? "service" : "monitor";
@@ -805,10 +807,12 @@ static void cmd_RemoveServer(DCB *dcb, void *a, void *b)
         if (service)
         {
             serviceRemoveBackend(service, server);
+            service_serialize_servers(service);
         }
         else if (monitor)
         {
             monitorRemoveServer(monitor, server);
+            monitor_serialize_servers(monitor);
         }
 
         const char *target = service ? "service" : "monitor";
@@ -980,9 +984,9 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 struct subcommand createoptions[] =
 {
     {
-        "server", 3, 6, createServer,
+        "server", 2, 6, createServer,
         "Create a new server",
-        "Usage: create server NAME HOST PORT [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "Create a new server from the following parameters.\n"
         "NAME          Server name\n"
         "HOST          Server host address\n"
@@ -1032,9 +1036,9 @@ struct subcommand destroyoptions[] =
     }
 };
 
-static void alterServer(DCB *dcb, SERVER *server, char *key, char *value)
+static bool handle_alter_server(SERVER *server, char *key, char *value)
 {
-    bool unknown = false;
+    bool valid = true;
 
     if (strcmp(key, "address") == 0)
     {
@@ -1052,18 +1056,108 @@ static void alterServer(DCB *dcb, SERVER *server, char *key, char *value)
     {
         server_update_credentials(server, server->monuser, value);
     }
-    else if (server_is_ssl_parameter(key))
+    else
     {
-        server_update_ssl(server, key, value);
+        valid = false;
+    }
+
+    return valid;
+}
+
+void handle_server_ssl(DCB *dcb, SERVER *server, CONFIG_CONTEXT *obj)
+{
+    if (config_have_required_ssl_params(obj))
+    {
+        int err = 0;
+        SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
+
+        if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
+        {
+            /** Sync to prevent reads on partially initialized server_ssl */
+            atomic_synchronize();
+
+            server->server_ssl = ssl;
+            if (server_serialize(server))
+            {
+                dcb_printf(dcb, "SSL enabled for server '%s'\n", server->unique_name);
+            }
+            else
+            {
+                dcb_printf(dcb, "SSL enabled for server '%s' but persisting "
+                           "it to disk failed, see log for more details.\n",
+                           server->unique_name);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
+                       "for more details.\n", server->unique_name);
+        }
     }
     else
     {
-        unknown = true;
+        dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
+                   "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
+    }
+}
+
+/**
+ * @brief Process multiple alter operations at once
+ *
+ * This is a somewhat ugly way to handle multiple key-value changes in one operation
+ * with one function. This could be handled with a variadic function but the
+ * required complexity would probably negate any benefits.
+ */
+static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
+                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                        char *v10, char *v11)
+{
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
+    CONFIG_CONTEXT *obj = NULL;
+
+    for (int i = 0; i < items; i++)
+    {
+        if (values[i])
+        {
+            char *key = values[i];
+            char *value = strchr(key, '=');
+
+            if (value)
+            {
+                *value++ = '\0';
+
+                if (config_is_ssl_parameter(key))
+                {
+                    /**
+                     * All the required SSL parameters must be defined at once to
+                     * enable SSL for created servers. This removes the problem
+                     * of partial configuration and allows a somewhat atomic
+                     * operation.
+                     */
+                    if ((obj == NULL && (obj = config_context_create(server->unique_name)) == NULL) ||
+                        (!config_add_param(obj, key, value)))
+                    {
+                        dcb_printf(dcb, "Internal error, see log for more details\n");
+                    }
+                }
+                else if (!handle_alter_server(server, key, value))
+                {
+                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+                }
+            }
+            else
+            {
+                dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+            }
+        }
     }
 
-    if (unknown)
+    if (obj)
     {
-        dcb_printf(dcb, "Unknown parameter '%s'", key);
+        /** We have SSL parameters, try to process them */
+        handle_server_ssl(dcb, server, obj);
+        config_context_free(obj);
     }
 }
 
@@ -1072,11 +1166,10 @@ static void alterServer(DCB *dcb, SERVER *server, char *key, char *value)
  *
  * If the value is not a positive integer, an error is printed to @c dcb.
  *
- * @param dcb Client DCB
  * @param value String value
  * @return 0 on error, otherwise a positive integer
  */
-static long get_positive_int(DCB *dcb, const char *value)
+static long get_positive_int(const char *value)
 {
     char *endptr;
     long ival = strtol(value, &endptr, 10);
@@ -1086,82 +1179,119 @@ static long get_positive_int(DCB *dcb, const char *value)
         return ival;
     }
 
-    dcb_printf(dcb, "Invalid value: %s", value);
     return 0;
 }
 
-static void alterMonitor(DCB *dcb, MONITOR *monitor, char *key, char *value)
+static bool handle_alter_monitor(MONITOR *monitor, char *key, char *value)
 {
-    bool unknown = false;
+    bool valid = false;
+
     if (strcmp(key, "user") == 0)
     {
+        valid = true;
         monitorAddUser(monitor, value, monitor->password);
     }
     else if (strcmp(key, "password") == 0)
     {
+        valid = true;
         monitorAddUser(monitor, monitor->user, value);
     }
     else if (strcmp(key, "monitor_interval") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
+            valid = true;
             monitorSetInterval(monitor, ival);
         }
     }
     else if (strcmp(key, "backend_connect_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
+            valid = true;
             monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
         }
     }
     else if (strcmp(key, "backend_write_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
+            valid = true;
+            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
         }
     }
     else if (strcmp(key, "backend_read_timeout") == 0)
     {
-        long ival = get_positive_int(dcb, value);
+        long ival = get_positive_int(value);
         if (ival)
         {
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
+            valid = true;
+            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
-    else
+
+    return valid;
+}
+
+static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
+                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                        char *v10, char *v11)
+{
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 0; i < items; i++)
     {
-        unknown = true;
+        if (values[i])
+        {
+            char *key = values[i];
+            char *value = strchr(key, '=');
+
+            if (value)
+            {
+                *value++ = '\0';
+
+                if (!handle_alter_monitor(monitor, key, value))
+                {
+                    dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+                }
+            }
+            else
+            {
+                dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+            }
+        }
     }
 
-    if (unknown)
-    {
-        dcb_printf(dcb, "Unknown parameter '%s'", key);
-    }
 }
 
 struct subcommand alteroptions[] =
 {
     {
-        "server", 3, 3, alterServer,
+        "server", 2, 12, alterServer,
         "Alter server parameters",
-        "Usage: alter server NAME KEY VALUE\n"
+        "Usage: alter server NAME KEY=VALUE ...\n"
         "This will alter an existing parameter of a server. The accepted values\n"
-        "for KEY are: 'address', 'port', 'monuser', 'monpw'",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING}
+        "for KEY are: 'address', 'port', 'monuser', 'monpw'\n"
+        "A maximum of 11 parameters can be changed at one time",
+        { ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
-        "monitor", 3, 3, alterMonitor,
+        "monitor", 2, 12, alterMonitor,
         "Alter monitor parameters",
-        "Usage: alter monitor NAME KEY VALUE\n"
+        "Usage: alter monitor NAME KEY=VALUE ...\n"
         "This will alter an existing parameter of a monitor. The accepted values\n"
         "for KEY are: 'user', 'password', 'monitor_interval',\n"
-        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'",
-        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING}
+        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'\n"
+        "A maximum of 11 parameters can be changed at one time",
+        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION
@@ -1456,11 +1586,28 @@ execute_cmd(CLI_SESSION *cli)
                     if (strcasecmp(args[1], cmds[i].options[j].arg1) == 0)
                     {
                         found = 1; /**< command and sub-command match */
-                        if (argc < cmds[i].options[j].argc_min)
+
+                        if (cmds[i].options[j].argc_min == cmds[i].options[j].argc_max &&
+                            argc != cmds[i].options[j].argc_min)
                         {
+                            /** Wrong number of arguments */
+                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects %d arguments\n",
+                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                                       cmds[i].options[j].argc_min);
+                        }
+                        else if (argc < cmds[i].options[j].argc_min)
+                        {
+                            /** Not enough arguments */
                             dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at least %d arguments\n",
                                        cmds[i].cmd, cmds[i].options[j].arg1,
                                        cmds[i].options[j].argc_min);
+                        }
+                        else if (argc > cmds[i].options[j].argc_max)
+                        {
+                            /** Too many arguments */
+                            dcb_printf(dcb, "Incorrect number of arguments: %s %s expects at most %d arguments\n",
+                                       cmds[i].cmd, cmds[i].options[j].arg1,
+                                       cmds[i].options[j].argc_max);
                         }
                         else
                         {

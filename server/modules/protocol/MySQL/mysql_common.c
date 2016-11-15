@@ -1339,7 +1339,7 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
         (dcb->session->state != SESSION_STATE_READY &&
          dcb->session->state != SESSION_STATE_ROUTER_READY) ||
         (dcb->server->server_ssl &&
-         dcb->ssl_state != SSL_HANDSHAKE_FAILED))
+         dcb->ssl_state == SSL_HANDSHAKE_FAILED))
     {
         return MXS_AUTH_STATE_FAILED;
     }

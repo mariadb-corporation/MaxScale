@@ -200,7 +200,7 @@ extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);
 extern void serviceRemoveBackend(SERVICE *, const SERVER *);
-extern int serviceHasBackend(SERVICE *, SERVER *);
+extern bool serviceHasBackend(SERVICE *, SERVER *);
 extern void serviceAddRouterOption(SERVICE *, char *);
 extern void serviceClearRouterOptions(SERVICE *);
 extern int serviceStart(SERVICE *);
@@ -263,5 +263,21 @@ static inline uint64_t service_get_capabilities(const SERVICE *service)
  * @return True if server is used by at least one service
  */
 bool service_server_in_use(const SERVER *server);
+
+/**
+ * @brief Serialize a service to a file
+ *
+ * This partially converts @c service into an INI format file. Only the servers
+ * of the service are serialized. This allows the service to keep using the servers
+ * added at runtime even after a restart.
+ *
+ * NOTE: This does not persist the complete service configuration and requires
+ * that an existing service configuration is in the main configuration file.
+ * Changes to service parameters are not persisted.
+ *
+ * @param service Service to serialize
+ * @return False if the serialization of the service fails, true if it was successful
+ */
+bool service_serialize_servers(const SERVICE *service);
 
 MXS_END_DECLS

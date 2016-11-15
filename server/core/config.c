@@ -80,7 +80,6 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT *);
 static bool process_config_update(CONFIG_CONTEXT *);
-static void free_config_context(CONFIG_CONTEXT      *);
 static char *config_get_value(CONFIG_PARAMETER *, const char *);
 static char *config_get_password(CONFIG_PARAMETER *);
 static const char *config_get_value_string(CONFIG_PARAMETER *, const char *);
@@ -90,13 +89,11 @@ static void global_defaults();
 static void feedback_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
-static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
 
 int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
-void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* context);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
@@ -326,6 +323,20 @@ char* config_clean_string_list(const char* str)
     return dest;
 }
 
+CONFIG_CONTEXT* config_context_create(const char *section)
+{
+    CONFIG_CONTEXT* ctx = (CONFIG_CONTEXT *)MXS_MALLOC(sizeof(CONFIG_CONTEXT));
+    if (ctx)
+    {
+        ctx->object = MXS_STRDUP_A(section);
+        ctx->parameters = NULL;
+        ctx->next = NULL;
+        ctx->element = NULL;
+    }
+
+    return ctx;
+}
+
 /**
  * Config item handler for the ini file reader
  *
@@ -340,7 +351,6 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
 {
     CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT   *ptr = cntxt;
-    CONFIG_PARAMETER *param, *p1;
 
     if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
     {
@@ -368,54 +378,26 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
 
     if (!ptr)
     {
-        if ((ptr = (CONFIG_CONTEXT *)MXS_MALLOC(sizeof(CONFIG_CONTEXT))) == NULL)
+        if ((ptr = config_context_create(section)) == NULL)
         {
             return 0;
         }
 
-        ptr->object = MXS_STRDUP_A(section);
-        ptr->parameters = NULL;
         ptr->next = cntxt->next;
-        ptr->element = NULL;
         cntxt->next = ptr;
     }
-    /* Check to see if the parameter already exists for the section */
-    p1 = ptr->parameters;
-    while (p1)
+
+    if (config_get_param(ptr->parameters, name))
     {
-        if (!strcmp(p1->name, name))
+        if (!config_append_param(ptr, name, value))
         {
-            char *tmp;
-            int paramlen = strlen(p1->value) + strlen(value) + 2;
-
-            if ((tmp = MXS_REALLOC(p1->value, sizeof(char) * (paramlen))) == NULL)
-            {
-                return 0;
-            }
-            strcat(tmp, ",");
-            strcat(tmp, value);
-            if ((p1->value = config_clean_string_list(tmp)) == NULL)
-            {
-                p1->value = tmp;
-                MXS_ERROR("[%s] Cleaning configuration parameter failed.", __FUNCTION__);
-                return 0;
-            }
-            MXS_FREE(tmp);
-            return 1;
+            return 0;
         }
-        p1 = p1->next;
     }
-
-    if ((param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(CONFIG_PARAMETER))) == NULL)
+    else if (!config_add_param(ptr, name, value))
     {
         return 0;
     }
-
-    param->name = MXS_STRDUP_A(name);
-    param->value = MXS_STRDUP_A(value);
-    param->next = ptr->parameters;
-    param->qfd_param_type = UNDEFINED_TYPE;
-    ptr->parameters = param;
 
     return 1;
 }
@@ -582,6 +564,47 @@ static bool is_directory(const char *dir)
 }
 
 /**
+ * @brief Check if a directory contains .cnf files
+ *
+ * @param path Path to a directory
+ * @return True if the directory contained one or more .cnf files
+ */
+static bool contains_cnf_files(const char *path)
+{
+    bool rval = false;
+    glob_t matches;
+    const char suffix[] = "/*.cnf";
+    char pattern[strlen(path) + sizeof(suffix)];
+
+    strcpy(pattern, path);
+    strcat(pattern, suffix);
+    int rc = glob(pattern, GLOB_NOSORT, NULL, &matches);
+
+    switch (rc)
+    {
+        case 0:
+            rval = true;
+            break;
+
+        case GLOB_NOSPACE:
+            MXS_OOM();
+            break;
+
+        case GLOB_ABORTED:
+            MXS_ERROR("Failed to read directory '%s'", path);
+            break;
+
+        default:
+            ss_dassert(rc == GLOB_NOMATCH);
+            break;
+    }
+
+    globfree(&matches);
+
+    return rval;
+}
+
+/**
  * @brief Load the specified configuration file for MaxScale
  *
  * This function will parse the configuration file, check for duplicate sections,
@@ -625,7 +648,23 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             if (is_directory(persist_cnf))
             {
-                rval = config_load_dir(persist_cnf, &dcontext, &ccontext);
+                DUPLICATE_CONTEXT p_dcontext;
+                /**
+                 * We need to initialize a second duplicate context for the
+                 * generated configuration files as the monitors and services will
+                 * have duplicate sections. The duplicate sections are used to
+                 * store changes to the list of servers the services and monitors
+                 * use, and thus should not be treated as errors.
+                 */
+                if (duplicate_context_init(&p_dcontext))
+                {
+                    rval = config_load_dir(persist_cnf, &p_dcontext, &ccontext);
+                    duplicate_context_finish(&p_dcontext);
+                }
+                else
+                {
+                    rval = false;
+                }
             }
 
             if (rval)
@@ -633,11 +672,18 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
                 if (!check_config_objects(ccontext.next) || !process_config(ccontext.next))
                 {
                     rval = false;
+                    if (contains_cnf_files(persist_cnf))
+                    {
+                        MXS_WARNING("One or more generated configurations were found at '%s'. "
+                                    "If the error relates to any of the files located there, "
+                                    "remove the offending configurations from this directory.",
+                                    persist_cnf);
+                    }
                 }
             }
         }
 
-        free_config_context(ccontext.next);
+        config_context_free(ccontext.next);
 
         duplicate_context_finish(&dcontext);
     }
@@ -876,10 +922,7 @@ config_get_value_string(CONFIG_PARAMETER *params, const char *name)
     return "";
 }
 
-
-CONFIG_PARAMETER* config_get_param(
-    CONFIG_PARAMETER* params,
-    const char*       name)
+CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name)
 {
     while (params)
     {
@@ -1042,22 +1085,15 @@ void free_config_parameter(CONFIG_PARAMETER* p1)
     }
 }
 
-/**
- * Free a config tree
- *
- * @param context       The configuration data
- */
-static  void
-free_config_context(CONFIG_CONTEXT *context)
+void config_context_free(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT   *obj;
-    CONFIG_PARAMETER *p1, *p2;
 
     while (context)
     {
-        MXS_FREE(context->object);
-        free_config_parameter(context->parameters);
         obj = context->next;
+        free_config_parameter(context->parameters);
+        MXS_FREE(context->object);
         MXS_FREE(context);
         context = obj;
     }
@@ -1362,8 +1398,7 @@ free_ssl_structure(SSL_LISTENER *ssl)
  * @param *error_count  An error count which may be incremented
  * @return SSL_LISTENER structure or NULL
  */
-static SSL_LISTENER *
-make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
+SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
 {
     char *ssl, *ssl_version, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_cert_verify_depth;
     int local_errors = 0;
@@ -2288,26 +2323,57 @@ unsigned long config_get_gateway_id()
     return gateway.id;
 }
 
-void config_add_param(CONFIG_CONTEXT* obj, char* key, char* value)
+bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    key = MXS_STRDUP(key);
-    value = MXS_STRDUP(value);
+    ss_dassert(config_get_param(obj->parameters, key) == NULL);
+    bool rval = false;
+    char *my_key = MXS_STRDUP(key);
+    char *my_value = MXS_STRDUP(value);
+    CONFIG_PARAMETER* param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
 
-    CONFIG_PARAMETER* param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(CONFIG_PARAMETER));
-
-    if (!key || !value || !param)
+    if (my_key && my_value && param)
     {
-        MXS_FREE(key);
-        MXS_FREE(value);
+        param->name = my_key;
+        param->value = my_value;
+        param->qfd_param_type = UNDEFINED_TYPE;
+        param->next = obj->parameters;
+        obj->parameters = param;
+        rval = true;
+    }
+    else
+    {
+        MXS_FREE(my_key);
+        MXS_FREE(my_value);
         MXS_FREE(param);
-        return;
     }
 
-    param->name = key;
-    param->value = value;
-    param->next = obj->parameters;
-    obj->parameters = param;
+    return rval;
 }
+
+bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    ss_dassert(param);
+    int paramlen = strlen(param->value) + strlen(value) + 2;
+    char tmp[paramlen];
+    bool rval = false;
+
+    strcpy(tmp, param->value);
+    strcat(tmp, ",");
+    strcat(tmp, value);
+
+    char *new_value = config_clean_string_list(tmp);
+
+    if (new_value)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+        rval = true;
+    }
+
+    return rval;
+}
+
 /**
  * Return the pointer to the global options for MaxScale.
  * @return Pointer to the GATEWAY_CONF structure. This is a static structure and
@@ -3157,4 +3223,39 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     }
 
     return error_count;
+}
+
+bool config_have_required_ssl_params(CONFIG_CONTEXT *obj)
+{
+    CONFIG_PARAMETER *param = obj->parameters;
+
+    return config_get_param(param, "ssl") &&
+        config_get_param(param, "ssl_key") &&
+        config_get_param(param, "ssl_cert") &&
+        config_get_param(param, "ssl_ca_cert") &&
+        strcmp(config_get_value_string(param, "ssl"), "required") == 0;
+}
+
+bool config_is_ssl_parameter(const char *key)
+{
+    const char *ssl_params[] =
+    {
+        "ssl_cert",
+        "ssl_ca_cert",
+        "ssl",
+        "ssl_key",
+        "ssl_version",
+        "ssl_cert_verify_depth",
+        NULL
+    };
+
+    for (int i = 0; ssl_params[i]; i++)
+    {
+        if (strcmp(key, ssl_params[i]) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }

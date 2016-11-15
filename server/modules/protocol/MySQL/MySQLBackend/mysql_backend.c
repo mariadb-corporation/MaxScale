@@ -617,6 +617,11 @@ gw_read_backend_event(DCB *dcb)
                 gw_reply_on_error(dcb, proto->protocol_auth_state);
             }
         }
+        else if (proto->protocol_auth_state == MXS_AUTH_STATE_CONNECTED &&
+                 dcb->ssl_state == SSL_ESTABLISHED)
+        {
+            proto->protocol_auth_state = gw_send_backend_auth(dcb);
+        }
     }
 
     return rc;

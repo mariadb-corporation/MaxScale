@@ -987,6 +987,8 @@ server_update_address(SERVER *server, char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
+        MXS_NOTICE("Updated the address of server '%s' from '%s' to '%s'.",
+                   server->unique_name, server->name, address);
         strcpy(server->name, address);
     }
     spinlock_release(&server_spin);
@@ -1005,6 +1007,8 @@ server_update_port(SERVER *server, unsigned short port)
     spinlock_acquire(&server_spin);
     if (server && port > 0)
     {
+        MXS_NOTICE("Updated the port of server '%s' from %d to %d.",
+                   server->unique_name, server->port, port);
         server->port = port;
     }
     spinlock_release(&server_spin);
@@ -1082,7 +1086,7 @@ bool server_set_version_string(SERVER* server, const char* string)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_server_config(SERVER *server, const char *filename)
+static bool create_server_config(const SERVER *server, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1182,17 +1186,7 @@ static bool create_server_config(SERVER *server, const char *filename)
     return true;
 }
 
-/**
- * @brief Serialize a server to a file
- *
- * This converts @c server into an INI format file. This allows created servers
- * to be persisted to disk. This will replace any existing files with the same
- * name.
- *
- * @param server Server to serialize
- * @return False if the serialization of the server fails, true if it was successful
- */
-static bool server_serialize(SERVER *server)
+bool server_serialize(const SERVER *server)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1293,15 +1287,19 @@ bool server_create(const char *name, const char *address, const char *port,
             server->is_active = true;
             rval = true;
         }
-        else if ((server = server_alloc(name, address, atoi(port), protocol, authenticator,
-                                        authenticator_options)))
+        else
         {
-            if (server_serialize(server))
-            {
-                /** server_alloc will add the server to the global list of
-                 * servers so we don't need to manually add it. */
-                rval = true;
-            }
+            /**
+             * server_alloc will add the server to the global list of
+             * servers so we don't need to manually add it.
+             */
+            server = server_alloc(name, address, atoi(port), protocol,
+                                  authenticator, authenticator_options);
+        }
+
+        if (server && server_serialize(server))
+        {
+            rval = true;
         }
     }
 
@@ -1353,15 +1351,4 @@ bool server_destroy(SERVER *server)
     }
 
     return rval;
-}
-
-bool server_is_ssl_parameter(const char *key)
-{
-    // TODO: Implement this
-    return false;
-}
-
-void server_update_ssl(SERVER *server, const char *key, const char *value)
-{
-    // TODO: Implement this
 }

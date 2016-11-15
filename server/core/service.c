@@ -43,6 +43,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <math.h>
+#include <fcntl.h>
 #include <maxscale/session.h>
 #include <maxscale/service.h>
 #include <maxscale/gw_protocol.h>
@@ -56,12 +60,9 @@
 #include <maxscale/filter.h>
 #include <maxscale/poll.h>
 #include <maxscale/log_manager.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/resultset.h>
 #include <maxscale/gwdirs.h>
-#include <math.h>
 #include <maxscale/version.h>
 #include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
@@ -769,43 +770,46 @@ static SERVER_REF* server_ref_create(SERVER *server)
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    SERVER_REF *new_ref = server_ref_create(server);
-
-    if (new_ref)
+    if (!serviceHasBackend(service, server))
     {
-        spinlock_acquire(&service->spin);
+        SERVER_REF *new_ref = server_ref_create(server);
 
-        service->n_dbref++;
-
-        if (service->dbref)
+        if (new_ref)
         {
-            SERVER_REF *ref = service->dbref;
-            SERVER_REF *prev = ref;
+            spinlock_acquire(&service->spin);
 
-            while (ref)
+            service->n_dbref++;
+
+            if (service->dbref)
             {
-                if (ref->server == server)
+                SERVER_REF *ref = service->dbref;
+                SERVER_REF *prev = ref;
+
+                while (ref)
                 {
-                    ref->active = true;
-                    break;
+                    if (ref->server == server)
+                    {
+                        ref->active = true;
+                        break;
+                    }
+                    prev = ref;
+                    ref = ref->next;
                 }
-                prev = ref;
-                ref = ref->next;
-            }
 
-            if (ref == NULL)
-            {
-                /** A new server that hasn't been used by this service */
-                atomic_synchronize();
-                prev->next = new_ref;
+                if (ref == NULL)
+                {
+                    /** A new server that hasn't been used by this service */
+                    atomic_synchronize();
+                    prev->next = new_ref;
+                }
             }
+            else
+            {
+                atomic_synchronize();
+                service->dbref = new_ref;
+            }
+            spinlock_release(&service->spin);
         }
-        else
-        {
-            atomic_synchronize();
-            service->dbref = new_ref;
-        }
-        spinlock_release(&service->spin);
     }
 }
 
@@ -841,7 +845,7 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server)
  * @param server        The server to add
  * @return              Non-zero if the server is already part of the service
  */
-int
+bool
 serviceHasBackend(SERVICE *service, SERVER *server)
 {
     SERVER_REF *ptr;
@@ -2214,6 +2218,88 @@ bool service_server_in_use(const SERVER *server)
     }
 
     spinlock_release(&service_spin);
+
+    return rval;
+}
+
+/**
+ * Creates a service configuration at the location pointed by @c filename
+ *
+ * @param service Service to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_service_config(const SERVICE *service, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
+                  filename, service->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    /**
+     * Only additional parameters are added to the configuration. This prevents
+     * duplication or addition of parameters that don't support it.
+     *
+     * TODO: Check for return values on all of the dprintf calls
+     */
+    dprintf(file, "[%s]\n", service->name);
+    if (service->dbref)
+    {
+        dprintf(file, "servers=");
+        for (SERVER_REF *db = service->dbref; db; db = db->next)
+        {
+            if (db != service->dbref)
+            {
+                dprintf(file, ",");
+            }
+            dprintf(file, "%s", db->server->unique_name);
+        }
+        dprintf(file, "\n");
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool service_serialize_servers(const SERVICE *service)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             service->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_service_config(service, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
 
     return rval;
 }

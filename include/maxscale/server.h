@@ -246,6 +246,18 @@ extern bool server_create(const char *name, const char *address, const char *por
                           const char *options);
 
 /**
+ * @brief Serialize a server to a file
+ *
+ * This converts @c server into an INI format file. This allows created servers
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
+ *
+ * @param server Server to serialize
+ * @return False if the serialization of the server fails, true if it was successful
+ */
+bool server_serialize(const SERVER *server);
+
+/**
  * @brief Destroy a server
  *
  * This removes any created server configuration files and marks the server removed
@@ -280,7 +292,5 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
-extern bool server_is_ssl_parameter(const char *key);
-extern void server_update_ssl(SERVER *server, const char *key, const char *value);
 
 MXS_END_DECLS

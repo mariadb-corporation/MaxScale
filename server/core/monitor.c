@@ -40,6 +40,7 @@
 #include <mysqld_error.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 
 /*
  *  Create declarations of the enum for monitor events and also the array of
@@ -244,46 +245,62 @@ monitorStopAll()
 void
 monitorAddServer(MONITOR *mon, SERVER *server)
 {
-    MONITOR_SERVERS *db = (MONITOR_SERVERS *)MXS_MALLOC(sizeof(MONITOR_SERVERS));
-    MXS_ABORT_IF_NULL(db);
-
-    db->server = server;
-    db->con = NULL;
-    db->next = NULL;
-    db->mon_err_count = 0;
-    db->log_version_err = true;
-    /** Server status is uninitialized */
-    db->mon_prev_status = -1;
-    /* pending status is updated by get_replication_tree */
-    db->pending_status = 0;
-
-    monitor_state_t old_state = mon->state;
-
-    if (old_state == MONITOR_STATE_RUNNING)
-    {
-        monitorStop(mon);
-    }
-
+    bool new_server = true;
     spinlock_acquire(&mon->lock);
 
-    if (mon->databases == NULL)
+    for (MONITOR_SERVERS *db = mon->databases; db; db = db->next)
     {
-        mon->databases = db;
-    }
-    else
-    {
-        MONITOR_SERVERS *ptr = mon->databases;
-        while (ptr->next != NULL)
+        if (db->server == server)
         {
-            ptr = ptr->next;
+            new_server = false;
         }
-        ptr->next = db;
     }
+
     spinlock_release(&mon->lock);
 
-    if (old_state == MONITOR_STATE_RUNNING)
+    if (new_server)
     {
-        monitorStart(mon, mon->parameters);
+        MONITOR_SERVERS *db = (MONITOR_SERVERS *)MXS_MALLOC(sizeof(MONITOR_SERVERS));
+        MXS_ABORT_IF_NULL(db);
+
+        db->server = server;
+        db->con = NULL;
+        db->next = NULL;
+        db->mon_err_count = 0;
+        db->log_version_err = true;
+        /** Server status is uninitialized */
+        db->mon_prev_status = -1;
+        /* pending status is updated by get_replication_tree */
+        db->pending_status = 0;
+
+        monitor_state_t old_state = mon->state;
+
+        if (old_state == MONITOR_STATE_RUNNING)
+        {
+            monitorStop(mon);
+        }
+
+        spinlock_acquire(&mon->lock);
+
+        if (mon->databases == NULL)
+        {
+            mon->databases = db;
+        }
+        else
+        {
+            MONITOR_SERVERS *ptr = mon->databases;
+            while (ptr->next != NULL)
+            {
+                ptr = ptr->next;
+            }
+            ptr->next = db;
+        }
+        spinlock_release(&mon->lock);
+
+        if (old_state == MONITOR_STATE_RUNNING)
+        {
+            monitorStart(mon, mon->parameters);
+        }
     }
 }
 
@@ -1149,6 +1166,89 @@ bool monitor_server_in_use(const SERVER *server)
     }
 
     spinlock_release(&monLock);
+
+    return rval;
+}
+
+/**
+ * Creates a monitor configuration at the location pointed by @c filename
+ *
+ * @param monitor Monitor to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_monitor_config(const MONITOR *monitor, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
+                  filename, monitor->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    /**
+     * Only additional parameters are added to the configuration. This prevents
+     * duplication or addition of parameters that don't support it.
+     *
+     * TODO: Check for return values on all of the dprintf calls
+     */
+    dprintf(file, "[%s]\n", monitor->name);
+
+    if (monitor->databases)
+    {
+        dprintf(file, "servers=");
+        for (MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        {
+            if (db != monitor->databases)
+            {
+                dprintf(file, ",");
+            }
+            dprintf(file, "%s", db->server->unique_name);
+        }
+        dprintf(file, "\n");
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool monitor_serialize_servers(const MONITOR *monitor)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             monitor->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_monitor_config(monitor, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
 
     return rval;
 }
