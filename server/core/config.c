@@ -387,10 +387,12 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
         cntxt->next = ptr;
     }
 
-    if (config_get_param(ptr->parameters, name) &&
-        !config_append_param(ptr, name, value))
+    if (config_get_param(ptr->parameters, name))
     {
-        return 0;
+        if (!config_append_param(ptr, name, value))
+        {
+            return 0;
+        }
     }
     else if (!config_add_param(ptr, name, value))
     {
