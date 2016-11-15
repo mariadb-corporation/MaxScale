@@ -120,50 +120,12 @@ typedef enum
  */
 typedef struct start_encryption_event
 {
-    uint8_t header[BINLOG_EVENT_HDR_LEN];
+    uint8_t header[BINLOG_EVENT_HDR_LEN]; /**< Replication event header */
     uint8_t binlog_crypto_scheme; /**< Encryption scheme */
     uint32_t binlog_key_version;  /**< Encryption key version */
     uint8_t nonce[BLRM_NONCE_LENGTH]; /**< nonce (random bytes) of current binlog.
                                        * These bytes + the binlog event current pos
                                        * form the encrryption IV for the event */
-} START_ENCRYPTION_EVENT;
-
-static uint8_t *blr_create_ignorable_event(uint32_t event_size,
-                                           REP_HEADER *hdr,
-                                           uint32_t event_pos,
-                                           bool do_checksum);
-static int blr_write_special_event(ROUTER_INSTANCE *router,
-                                   uint32_t file_offset,
-                                   uint32_t hole_size,
-                                   REP_HEADER *hdr,
-                                   int type);
-
-/** MaxScale generated events */
-typedef enum
-{
-    BLRM_IGNORABLE, /*< Ignorable event */
-    BLRM_START_ENCRYPTION /*< Start Encryption event */
-} generated_event_t;
-
-/**
- * MariaDB 10.1.7 Start Encryption event content
- *
- * Event header:    19 bytes
- * Content size:    17 bytes
- *     crypto scheme 1 byte
- *     key_version   4 bytes
- *     nonce random 12 bytes
- *
- * Event size is 19 + 17 = 36 bytes
- */
-typedef struct start_encryption_event
-{
-    uint8_t header[BINLOG_EVENT_HDR_LEN]; /**< Replication event header */
-    uint8_t binlog_crypto_scheme;         /**< Encryption scheme */
-    uint32_t binlog_key_version;          /**< Encryption key version */
-    uint8_t nonce[BLRM_NONCE_LENGTH];     /**< nonce (random bytes) of current binlog.
-                                           * These bytes + the binlog event current pos
-                                           * form the encrryption IV for the event */
 } START_ENCRYPTION_EVENT;
 
 /**
