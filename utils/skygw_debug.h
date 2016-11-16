@@ -146,6 +146,7 @@ typedef enum skygw_chk_t
                         ((t) == QUERY_TYPE_UNKNOWN ? "QUERY_TYPE_UNKNOWN" : 		\
                         ((t) == QUERY_TYPE_LOCAL_READ ? "QUERY_TYPE_LOCAL_READ" :	\
                         ((t) == QUERY_TYPE_MASTER_READ ? "QUERY_TYPE_MASTER_READ" :	\
+                        ((t) == QUERY_TYPE_USERVAR_WRITE ? "QUERY_TYPE_USERVAR_WRITE" :	\
                         ((t) == QUERY_TYPE_USERVAR_READ ? "QUERY_TYPE_USERVAR_READ" :	\
                         ((t) == QUERY_TYPE_SYSVAR_READ ? "QUERY_TYPE_SYSVAR_READ" :	\
                         ((t) == QUERY_TYPE_GSYSVAR_READ ? "QUERY_TYPE_GSYSVAR_READ" :	\
@@ -162,7 +163,7 @@ typedef enum skygw_chk_t
                         ((t) == QUERY_TYPE_READ_TMP_TABLE ? "QUERY_TYPE_READ_TMP_TABLE" :		\
                         ((t) == QUERY_TYPE_SHOW_DATABASES ? "QUERY_TYPE_SHOW_DATABASES" :		\
                         ((t) == QUERY_TYPE_SHOW_TABLES ? "QUERY_TYPE_SHOW_TABLES" :	\
-                        "Unknown query type"))))))))))))))))))))))
+                         "Unknown query type")))))))))))))))))))))))
 
 #define STRLOGPRIORITYNAME(n)\
     ((n) == LOG_EMERG ? "LOG_EMERG" :                            \

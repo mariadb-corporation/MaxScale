@@ -746,8 +746,7 @@ static void update_affected_fields(QC_SQLITE_INFO* info,
                 {
                     if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
                     {
-                        // Yes, QUERY_TYPE_USERVAR_WRITE is currently not available.
-                        info->types |= QUERY_TYPE_GSYSVAR_WRITE;
+                        info->types |= QUERY_TYPE_USERVAR_WRITE;
                     }
                     else
                     {
@@ -2036,6 +2035,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
+    info->types = 0; // Reset what was set in maxscaleKeyword
 
     switch (kind)
     {
@@ -2053,10 +2053,6 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 
     case MXS_SET_VARIABLES:
         {
-            // TODO: qc_mysqlembedded sets this bit on, without checking what
-            // TODO: kind of variable it is.
-            info->types = QUERY_TYPE_GSYSVAR_WRITE;
-
             for (int i = 0; i < pList->nExpr; ++i)
             {
                 const struct ExprList_item* pItem = &pList->a[i];
@@ -2065,19 +2061,48 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
                 {
                 case TK_CHARACTER:
                 case TK_NAMES:
+                    info->types |= QUERY_TYPE_GSYSVAR_WRITE;
                     break;
 
                 case TK_EQ:
                     {
                         const Expr* pEq = pItem->pExpr;
-                        const Expr* pVariable = pEq->pLeft;
+                        const Expr* pVariable;
                         const Expr* pValue = pEq->pRight;
 
-                        // pVariable is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
-                        // then pVariable->pLeft is either TK_VARIABLE or TK_ID and pVariable->pRight
+                        // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
+                        // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
                         // is either TK_DOT, TK_VARIABLE or TK_ID.
 
+                        // Find the left-most part.
+                        pVariable = pEq->pLeft;
+                        while (pVariable->op == TK_DOT)
+                        {
+                            pVariable = pVariable->pLeft;
+                            ss_dassert(pVariable);
+                        }
+
+                        // Check what kind of variable it is.
+                        size_t n_at = 0;
+                        const char* zName = pVariable->u.zToken;
+
+                        while (*zName == '@')
+                        {
+                            ++n_at;
+                            ++zName;
+                        }
+
+                        if (n_at == 1)
+                        {
+                            info->types |= QUERY_TYPE_USERVAR_WRITE;
+                        }
+                        else
+                        {
+                            info->types |= QUERY_TYPE_GSYSVAR_WRITE;
+                        }
+
                         // Set pVariable to point to the rightmost part of the name.
+                        pVariable = pEq->pLeft;
                         while (pVariable->op == TK_DOT)
                         {
                             pVariable = pVariable->pRight;
@@ -2085,54 +2110,59 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 
                         ss_dassert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
 
-                        const char* zName = pVariable->u.zToken;
-
-                        while (*zName == '@')
+                        if (n_at != 1)
                         {
-                            ++zName;
-                        }
+                            // If it's not a user-variable we need to check whether it might
+                            // be 'autocommit'.
+                            const char* zName = pVariable->u.zToken;
 
-                        // As pVariable points to the rightmost part, we'll catch both
-                        // "autocommit" and "@@global.autocommit".
-                        if (strcasecmp(zName, "autocommit") == 0)
-                        {
-                            int enable = -1;
-
-                            switch (pValue->op)
+                            while (*zName == '@')
                             {
-                            case TK_INTEGER:
-                                if (pValue->u.iValue == 1)
-                                {
-                                    enable = 1;
-                                }
-                                else if (pValue->u.iValue == 0)
-                                {
-                                    enable = 0;
-                                }
-                                break;
-
-                            case TK_ID:
-                                enable = string_to_truth(pValue->u.zToken);
-                                break;
-
-                            default:
-                                break;
+                                ++zName;
                             }
 
-                            switch (enable)
+                            // As pVariable points to the rightmost part, we'll catch both
+                            // "autocommit" and "@@global.autocommit".
+                            if (strcasecmp(zName, "autocommit") == 0)
                             {
-                            case 0:
-                                info->types |= QUERY_TYPE_BEGIN_TRX;
-                                info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
-                                break;
+                                int enable = -1;
 
-                            case 1:
-                                info->types |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-                                info->types |= QUERY_TYPE_COMMIT;
-                                break;
+                                switch (pValue->op)
+                                {
+                                case TK_INTEGER:
+                                    if (pValue->u.iValue == 1)
+                                    {
+                                        enable = 1;
+                                    }
+                                    else if (pValue->u.iValue == 0)
+                                    {
+                                        enable = 0;
+                                    }
+                                    break;
 
-                            default:
-                                break;
+                                case TK_ID:
+                                    enable = string_to_truth(pValue->u.zToken);
+                                    break;
+
+                                default:
+                                    break;
+                                }
+
+                                switch (enable)
+                                {
+                                case 0:
+                                    info->types |= QUERY_TYPE_BEGIN_TRX;
+                                    info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                                    break;
+
+                                case 1:
+                                    info->types |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                                    info->types |= QUERY_TYPE_COMMIT;
+                                    break;
+
+                                default:
+                                    break;
+                                }
                             }
                         }
 

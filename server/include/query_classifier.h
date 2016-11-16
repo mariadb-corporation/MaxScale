@@ -26,8 +26,7 @@ typedef enum
     QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
     QUERY_TYPE_MASTER_READ        = 0x000008, /*< Read from the master:master */
     QUERY_TYPE_SESSION_WRITE      = 0x000010, /*< Session data will be modified:master or all */
-    /** Not implemented yet */
-    //QUERY_TYPE_USERVAR_WRITE      = 0x000020, /*< Write a user variable:master or all */
+    QUERY_TYPE_USERVAR_WRITE      = 0x000020, /*< Write a user variable:master or all */
     QUERY_TYPE_USERVAR_READ       = 0x000040, /*< Read a user variable:master or any */
     QUERY_TYPE_SYSVAR_READ        = 0x000080, /*< Read a system variable:master or any */
     /** Not implemented yet */

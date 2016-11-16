@@ -381,8 +381,14 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
 	}
 	break;
 
-        /** Not implemented yet */
-        //case QUERY_TYPE_USERVAR_WRITE:
+    case QUERY_TYPE_USERVAR_WRITE:
+        {
+            static const char name[] = "QUERY_TYPE_USERVAR_WRITE";
+            info.name = name;
+            info.name_len = sizeof(name) - 1;
+        }
+        break;
+
     case QUERY_TYPE_USERVAR_READ:
         {
             static const char name[] = "QUERY_TYPE_USERVAR_READ";
@@ -549,8 +555,7 @@ static const qc_query_type_t QUERY_TYPES[] =
     QUERY_TYPE_WRITE,
     QUERY_TYPE_MASTER_READ,
     QUERY_TYPE_SESSION_WRITE,
-    /** Not implemented yet */
-    //QUERY_TYPE_USERVAR_WRITE,
+    QUERY_TYPE_USERVAR_WRITE,
     QUERY_TYPE_USERVAR_READ,
     QUERY_TYPE_SYSVAR_READ,
     /** Not implemented yet */

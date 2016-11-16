@@ -87,7 +87,7 @@ typedef struct parsing_info_st
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
 static bool create_parse_tree(THD* thd);
-static uint32_t resolve_query_type(THD* thd);
+static uint32_t resolve_query_type(parsing_info_t*, THD* thd);
 static bool skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
 static int is_autocommit_stmt(LEX* lex);
@@ -167,7 +167,7 @@ uint32_t qc_get_type(GWBUF* querybuf)
             /** Find out the query type */
             if (mysql != NULL)
             {
-                qtype = resolve_query_type((THD *) mysql->thd);
+                qtype = resolve_query_type(pi, (THD *) mysql->thd);
             }
         }
     }
@@ -436,8 +436,101 @@ return_here:
 }
 
 /**
+ * Sniff whether the statement is
+ *
+ *    SET ROLE ...
+ *    SET NAMES ...
+ *    SET PASSWORD ...
+ *    SET CHARACTER ...
+ *
+ * Depending on what kind of SET statement it is, the parser of the embedded
+ * library creates instances of set_var_user, set_var, set_var_password,
+ * set_var_role, etc. that all are derived from set_var_base. However, there
+ * is no type-information available in set_var_base, which is the type of the
+ * instances when accessed from the lexer. Consequently, we cannot know what
+ * kind of statment it is based on that, only whether it is a system variable
+ * or not.
+ *
+ * Consequently, we just look at the string and deduce whether it is a
+ * set [ROLE|NAMES|PASSWORD|CHARACTER] statement.
+ */
+bool is_set_specific(const char* s)
+{
+    bool rv = false;
+
+    // Remove space from the beginning.
+    while (isspace(*s))
+    {
+        ++s;
+    }
+
+    const char* token = s;
+
+    // Find next non-space character.
+    while (!isspace(*s) && (*s != 0))
+    {
+        ++s;
+    }
+
+    if (s - token == 3) // Might be "set"
+    {
+        if (strncasecmp(token, "set", 3) == 0)
+        {
+            // YES it was!
+            while (isspace(*s))
+            {
+                ++s;
+            }
+
+            token = s;
+
+            while (!isspace(*s) && (*s != 0) && (*s != '='))
+            {
+                ++s;
+            }
+
+            if (s - token == 4) // Might be "role"
+            {
+                if (strncasecmp(token, "role", 4) == 0)
+                {
+                    // YES it was!
+                    rv = true;
+                }
+            }
+            else if (s - token == 5) // Might be "names"
+            {
+                if (strncasecmp(token, "names", 5) == 0)
+                {
+                    // YES it was!
+                    rv = true;
+                }
+            }
+            else if (s - token == 8) // Might be "password
+            {
+                if (strncasecmp(token, "password", 8) == 0)
+                {
+                    // YES it was!
+                    rv = true;
+                }
+            }
+            else if (s - token == 9) // Might be "character"
+            {
+                if (strncasecmp(token, "character", 9) == 0)
+                {
+                    // YES it was!
+                    rv = true;
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
+/**
  * Detect query type by examining parsed representation of it.
  *
+ * @param pi    The parsing info.
  * @param thd   MariaDB thread context.
  *
  * @return Copy of query type value.
@@ -449,7 +542,7 @@ return_here:
  * the resulting type may be different.
  *
  */
-static uint32_t resolve_query_type(THD* thd)
+static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
 {
     qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     uint32_t type = QUERY_TYPE_UNKNOWN;
@@ -565,7 +658,33 @@ static uint32_t resolve_query_type(THD* thd)
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
             /** Either user- or system variable write */
-            type |= QUERY_TYPE_GSYSVAR_WRITE;
+            if (is_set_specific(pi->pi_query_plain_str))
+            {
+                type |= QUERY_TYPE_GSYSVAR_WRITE;
+            }
+            else
+            {
+                List_iterator<set_var_base> ilist(lex->var_list);
+                size_t n = 0;
+
+                while (set_var_base *var = ilist++)
+                {
+                    if (var->is_system())
+                    {
+                        type |= QUERY_TYPE_GSYSVAR_WRITE;
+                    }
+                    else
+                    {
+                        type |= QUERY_TYPE_USERVAR_WRITE;
+                    }
+                    ++n;
+                }
+
+                if (n == 0)
+                {
+                    type |= QUERY_TYPE_GSYSVAR_WRITE;
+                }
+            }
         }
 
         goto return_qtype;
@@ -812,12 +931,7 @@ static uint32_t resolve_query_type(THD* thd)
 
                         /** User-defined variable modification */
                     case Item_func::SUSERVAR_FUNC:
-                        /**
-                         * Really it is user variable but we
-                         * don't separate sql variables atm.
-                         * 15.9.14
-                         */
-                        func_qtype |= QUERY_TYPE_GSYSVAR_WRITE;
+                        func_qtype |= QUERY_TYPE_USERVAR_WRITE;
                         MXS_DEBUG("%lu [resolve_query_type] "
                                   "functype SUSERVAR_FUNC, user "
                                   "variable write.",
