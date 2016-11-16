@@ -3497,7 +3497,14 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
         return -1;
     }
 
-    if (listen(listener_socket, 10 * SOMAXCONN) != 0)
+    /**
+     * The use of INT_MAX for backlog length in listen() allows the end-user to
+     * control the backlog length with the net.ipv4.tcp_max_syn_backlog kernel
+     * option since the parameter is silently truncated to the configured value.
+     *
+     * @see man 2 listen
+     */
+    if (listen(listener_socket, INT_MAX) != 0)
     {
         char errbuf[STRERROR_BUFLEN];
         MXS_ERROR("Failed to start listening on '%s' with protocol '%s': %d, %s",

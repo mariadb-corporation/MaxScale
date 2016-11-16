@@ -723,6 +723,14 @@ This example configuration requires all connections to this server to be encrypt
 
 The listener defines a port and protocol pair that is used to listen for connections to a service. A service may have multiple listeners associated with it, either to support multiple protocols or multiple ports. As with other elements of the configuration the section name is the listener name and it can be selected freely. A type parameter is used to identify the section as a listener definition. Address is optional and it allows the user to limit connections to certain interface only. Socket is also optional and used for Unix socket connections.
 
+The network socket where the listener listens will have a backlog of
+connections. The size of this backlog is controlled by the
+net.ipv4.tcp_max_syn_backlog and net.core.somaxconn kernel parameters.
+
+Increasing the size of the backlog by modifying the kernel parameters
+helps with sudden connection spikes and rejected connections. For more
+information see [listen(2)](http://man7.org/linux/man-pages/man2/listen.2.html).
+
 ```
 [<Listener name>]
 type=listener
