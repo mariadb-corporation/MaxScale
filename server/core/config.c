@@ -1731,7 +1731,7 @@ process_config_update(CONFIG_CONTEXT *context)
 
                         if (connection_timeout)
                         {
-                            serviceSetTimeout(service, config_truth_value(connection_timeout));
+                            serviceSetTimeout(service, atoi(connection_timeout));
                         }
 
                         if (strlen(max_connections))

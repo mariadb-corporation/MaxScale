@@ -444,6 +444,8 @@ monitorMain(void *arg)
             }
             ptr = ptr->next;
         }
+
+        mon_hangup_failed_servers(mon);
     }
 }
 

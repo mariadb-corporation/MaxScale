@@ -191,6 +191,11 @@ int MySQLSendHandshake(DCB* dcb)
     int len_version_string = 0;
     int id_num;
 
+    if (dcb->service->dbref)
+    {
+        mysql_server_language = dcb->service->dbref->server->charset;
+    }
+
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF *buf;
 
