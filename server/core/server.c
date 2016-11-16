@@ -990,6 +990,7 @@ static struct
     { "ndb",         SERVER_NDB },
     { "maintenance", SERVER_MAINT },
     { "maint",       SERVER_MAINT },
+    { "stale",       SERVER_STALE_STATUS },
     { NULL,          0 }
 };
 
