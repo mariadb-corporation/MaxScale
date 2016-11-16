@@ -349,7 +349,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     MONITOR_SERVERS *ptr = mon->databases;
 
-    if (ptr->server == server)
+    if (ptr && ptr->server == server)
     {
         mon->databases = mon->databases->next;
     }
