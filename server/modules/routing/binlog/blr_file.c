@@ -412,8 +412,8 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
      * Fill the gap with a self generated ignorable event
      * Binlog file position is incremented by blr_write_special_event()
      */
-
-    if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
+    if (router->master_event_state == BLR_EVENT_DONE &&
+        hdr->next_pos && (hdr->next_pos > (file_offset + size)))
     {
         uint64_t hole_size = hdr->next_pos - file_offset - size;
         if (!blr_write_special_event(router, file_offset, hole_size, hdr, BLRM_IGNORABLE))
