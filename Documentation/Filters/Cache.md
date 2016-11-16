@@ -173,8 +173,11 @@ where,
    * the _op_ can be `=`, `!=`, `like` or `unlike`, and
    * the _value_ a string.
 
-If _op_ is `=` or `!=` then _value_ is used verbatim; if it is `like`
+If _op_ is `=` or `!=` then _value_ is used as a string; if it is `like`
 or `unlike`, then _value_ is interpreted as a _pcre2_ regular expression.
+Note though that if _attribute_ is `database`, `table` or `column`, then
+the string is interpreted as a name, where a dot `.` denotes qualification
+or scoping.
 
 The objects in the `store` array are processed in order. If the result
 of a comparison is _true_, no further processing will be made and the
@@ -205,6 +208,39 @@ select * from tbl where b = 3 and a = 2;
 ```
 as well. Although they conceptually are identical, there will be two
 cache entries.
+
+### Qualified Names
+
+When using `=` or `!=` in the rule object in conjunction with `database`,
+`table` and `column`, the provided string is interpreted as a name, that is,
+dot (`.`) denotes qualification or scope.
+
+In practice that means that if _attribute_ is `database` then _value_ may
+not contain a dot, if _attribute_ is `table` then _value_ may contain one
+dot, used for separating the database and table names respectively, and
+if _attribute_ is `column` then _value_ may contain one or two dots, used
+for separating table and column names, or database, table and column names.
+
+Note that if a qualified name is used as a _value_, then all parts of the
+name must be available for a match. Currently Maria DB MaxScale may not
+always be capable of deducing in what table a particular column is. If
+that is the case, then a value like `tbl.field` may not necessarily
+be a match even if the field is `field` and the table actually is `tbl`.
+
+### Implication of the _default_ database.
+
+If the rules concerns the `database`, then only if the statement refers
+to *no* specific database, will the default database be considered.
+
+### Regexp Matching
+
+The string used for matching the regular expression contains as much
+information as there is available. For instance, in a situation like
+```
+use somedb;
+select fld from tbl;
+```
+the string matched against the regular expression will be `somedb.tbl.fld`.
 
 ### Examples
 

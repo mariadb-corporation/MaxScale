@@ -2417,7 +2417,7 @@ extern void maxscaleShow(Parse* pParse, MxsShow* pShow)
     case MXS_SHOW_COLUMNS:
         {
             info->types = QUERY_TYPE_READ;
-            update_names(info, "information_schema", "COLUMNS");
+            update_names(info, zDatabase, zName);
             if (pShow->data == MXS_SHOW_COLUMNS_FULL)
             {
                 update_field_info(info, "information_schema", "COLUMNS", "COLLATION_NAME", u, NULL);
