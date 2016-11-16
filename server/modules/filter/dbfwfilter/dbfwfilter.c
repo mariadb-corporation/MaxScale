@@ -253,16 +253,15 @@ typedef struct user_t
     RULE_BOOK*  rules_and;      /*< All of these rules must match for the action to trigger */
     RULE_BOOK*  rules_strict_and; /*< rules that skip the rest of the rules if one of them
                                    * fails. This is only for rules paired with 'match strict_all'. */
-} USER;
+} DBFW_USER;
 
 /**
  * The Firewall filter instance.
  */
 typedef struct
 {
-    HASHTABLE*      htable;     /*< User hashtable */
+    HASHTABLE*      users;     /*< User hashtable */
     RULE*           rules;      /*< List of all the rules */
-    STRLINK*        userstrings; /*< Temporary list of raw strings of users */
     enum fw_actions action;     /*< Default operation mode, defaults to deny */
     int             log_match;  /*< Log matching and/or non-matching queries */
     SPINLOCK        lock;       /*< Instance spinlock */
@@ -367,7 +366,7 @@ static STRLINK* strlink_reverse_clone(STRLINK* head)
  * Add a rule to a rulebook
  * @param head
  * @param rule
- * @return 
+ * @return
  */
 static RULE_BOOK* rulebook_push(RULE_BOOK *head, RULE *rule)
 {
@@ -385,7 +384,7 @@ static void* rulebook_clone(void* fval)
 {
 
     RULE_BOOK *rule = NULL,
-              *ptr = (RULE_BOOK*) fval;
+               *ptr = (RULE_BOOK*) fval;
 
 
     while (ptr)
@@ -415,7 +414,7 @@ static void* rulebook_free(void* fval)
 
 static void dbfw_user_free(void* fval)
 {
-    USER* value = (USER*) fval;
+    DBFW_USER* value = (DBFW_USER*) fval;
 
     rulebook_free(value->rules_and);
     rulebook_free(value->rules_or);
@@ -698,17 +697,6 @@ FILTER_OBJECT * GetModuleObject()
 }
 
 /**
- * Adds the given rule string to the list of strings to be parsed for users.
- * @param rule The rule string, assumed to be null-terminated
- * @param instance The FW_FILTER instance
- */
-void add_users(char* rule, FW_INSTANCE* instance)
-{
-    assert(rule != NULL && instance != NULL);
-    instance->userstrings = strlink_push(instance->userstrings, rule);
-}
-
-/**
  * Apply a rule set to a user
  *
  * @param instance Filter instance
@@ -721,12 +709,12 @@ void add_users(char* rule, FW_INSTANCE* instance)
 static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
                                RULE_BOOK *rulebook, enum match_type type)
 {
-    USER* user;
+    DBFW_USER* user;
     ss_dassert(type == FWTOK_MATCH_ANY || type == FWTOK_MATCH_STRICT_ALL || type == FWTOK_MATCH_ALL);
-    if ((user = (USER*) hashtable_fetch(instance->htable, username)) == NULL)
+    if ((user = (DBFW_USER*) hashtable_fetch(instance->users, username)) == NULL)
     {
         /**New user*/
-        if ((user = (USER*) MXS_CALLOC(1, sizeof(USER))) == NULL)
+        if ((user = (DBFW_USER*) MXS_CALLOC(1, sizeof(DBFW_USER))) == NULL)
         {
             return false;
         }
@@ -758,7 +746,7 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
             user->rules_and = tl;
             break;
     }
-    hashtable_add(instance->htable, (void *) username, (void *) user);
+    hashtable_add(instance->users, (void *) username, (void *) user);
     return true;
 }
 
@@ -766,7 +754,7 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
  * Free a TIMERANGE struct
  * @param tr pointer to a TIMERANGE struct
  */
-void tr_free(TIMERANGE* tr)
+void timerange_free(TIMERANGE* tr)
 {
     TIMERANGE *node, *tmp;
 
@@ -902,16 +890,14 @@ bool create_rule(void* scanner, const char* name)
  * Free a list of rules
  * @param rule Rules to free
  */
-static void free_rules(RULE* rule)
+static void rule_free_all(RULE* rule)
 {
     while (rule)
     {
         RULE *tmp = rule->next;
-        while (rule->active)
+        if (rule->active)
         {
-            TIMERANGE *tr = rule->active;
-            rule->active = rule->active->next;
-            MXS_FREE(tr);
+            timerange_free(rule->active);
         }
 
         switch (rule->type)
@@ -933,6 +919,7 @@ static void free_rules(RULE* rule)
         }
 
         MXS_FREE(rule->name);
+        MXS_FREE(rule);
         rule = tmp;
     }
 }
@@ -1230,17 +1217,17 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
 
     while (templates)
     {
-        USER *user = hashtable_fetch(instance->htable, templates->name);
+        DBFW_USER *user = hashtable_fetch(instance->users, templates->name);
 
         if (user == NULL)
         {
-            if ((user = MXS_MALLOC(sizeof(USER))) && (user->name = MXS_STRDUP(templates->name)))
+            if ((user = MXS_MALLOC(sizeof(DBFW_USER))) && (user->name = MXS_STRDUP(templates->name)))
             {
                 user->rules_and = NULL;
                 user->rules_or = NULL;
                 user->rules_strict_and = NULL;
                 spinlock_init(&user->lock);
-                hashtable_add(instance->htable, user->name, user);
+                hashtable_add(instance->users, user->name, user);
             }
             else
             {
@@ -1339,7 +1326,7 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
         else
         {
             rc = 1;
-            free_rules(pstack.rule);
+            rule_free_all(pstack.rule);
             MXS_ERROR("Failed to process rule file '%s'.", filename);
         }
 
@@ -1358,6 +1345,18 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
     return rc == 0;
 }
 
+HASHTABLE *create_dbfw_users()
+{
+    HASHTABLE *ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
+
+    if (ht)
+    {
+        hashtable_memory_fns(ht, hashtable_item_strdup, NULL, hashtable_item_free, dbfw_user_free);
+    }
+
+    return ht;
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -1373,7 +1372,6 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     FW_INSTANCE *my_instance;
     int i;
-    HASHTABLE* ht;
     char *filename = NULL;
     bool err = false;
 
@@ -1385,19 +1383,15 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 
     spinlock_init(&my_instance->lock);
 
-    if ((ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
+    if ((my_instance->users = create_dbfw_user()) == NULL)
     {
         MXS_ERROR("Unable to allocate hashtable.");
         MXS_FREE(my_instance);
         return NULL;
     }
 
-    hashtable_memory_fns(ht, hashtable_item_strdup, NULL, hashtable_item_free, dbfw_user_free);
-
-    my_instance->htable = ht;
     my_instance->action = FW_ACTION_BLOCK;
     my_instance->log_match = FW_LOG_NONE;
-    my_instance->userstrings = NULL;
 
     for (i = 0; params[i]; i++)
     {
@@ -1452,7 +1446,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 
     if (err || !process_rule_file(filename, my_instance))
     {
-        hashtable_free(my_instance->htable);
+        hashtable_free(my_instance->users);
         MXS_FREE(my_instance);
         my_instance = NULL;
     }
@@ -1701,7 +1695,7 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
 bool rule_matches(FW_INSTANCE* my_instance,
                   FW_SESSION* my_session,
                   GWBUF *queue,
-                  USER* user,
+                  DBFW_USER* user,
                   RULE_BOOK *rulebook,
                   char* query)
 {
@@ -1744,17 +1738,17 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 {
                     switch (optype)
                     {
-                    case QUERY_OP_SELECT:
-                    case QUERY_OP_UPDATE:
-                    case QUERY_OP_INSERT:
-                    case QUERY_OP_DELETE:
-                        // In these cases, we have to be able to trust what qc_get_field_info
-                        // returns. Unless the query was parsed completely, we cannot do that.
-                        msg = create_parse_error(my_instance, "parsed completely", query, &matches);
-                        goto queryresolved;
+                        case QUERY_OP_SELECT:
+                        case QUERY_OP_UPDATE:
+                        case QUERY_OP_INSERT:
+                        case QUERY_OP_DELETE:
+                            // In these cases, we have to be able to trust what qc_get_field_info
+                            // returns. Unless the query was parsed completely, we cannot do that.
+                            msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+                            goto queryresolved;
 
-                    default:
-                        break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -1807,15 +1801,15 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_PERMISSION:
-                {
-                    matches = true;
-                    msg = MXS_STRDUP_A("Permission denied at this time.");
-                    char buffer[32]; // asctime documentation requires 26
-                    asctime_r(&tm_now, buffer);
-                    MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulebook->rule->name, buffer);
-                    goto queryresolved;
-                }
-                break;
+            {
+                matches = true;
+                msg = MXS_STRDUP_A("Permission denied at this time.");
+                char buffer[32]; // asctime documentation requires 26
+                asctime_r(&tm_now, buffer);
+                MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulebook->rule->name, buffer);
+                goto queryresolved;
+            }
+            break;
 
             case RT_COLUMN:
                 if (is_sql && is_real)
@@ -2003,7 +1997,7 @@ queryresolved:
  * @return True if the query matches at least one of the rules otherwise false
  */
 bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
-                     GWBUF *queue, USER* user, char** rulename)
+                     GWBUF *queue, DBFW_USER* user, char** rulename)
 {
     RULE_BOOK* rulebook;
     bool rval = false;
@@ -2078,7 +2072,7 @@ void append_string(char** dest, size_t* size, const char* src)
  * @return True if the query matches all of the rules otherwise false
  */
 bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
-                     GWBUF *queue, USER* user, bool strict_all, char** rulename)
+                     GWBUF *queue, DBFW_USER* user, bool strict_all, char** rulename)
 {
     bool rval = false;
     bool have_active_rule = false;
@@ -2138,17 +2132,17 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
  * @param remote Remove network address
  * @return The user data or NULL if it was not found
  */
-USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
+DBFW_USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
 {
     char nameaddr[strlen(name) + strlen(remote) + 2];
     snprintf(nameaddr, sizeof(nameaddr), "%s@%s", name, remote);
-    USER* user = (USER*) hashtable_fetch(hash, nameaddr);
+    DBFW_USER* user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
     if (user == NULL)
     {
         char *ip_start = strchr(nameaddr, '@') + 1;
         while (user == NULL && next_ip_class(ip_start))
         {
-            user = (USER*) hashtable_fetch(hash, nameaddr);
+            user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
         }
 
         if (user == NULL)
@@ -2157,7 +2151,7 @@ USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
             ip_start = strchr(nameaddr, '@') + 1;
             while (user == NULL && next_ip_class(ip_start))
             {
-                user = (USER*) hashtable_fetch(hash, nameaddr);
+                user = (DBFW_USER*) hashtable_fetch(hash, nameaddr);
             }
         }
     }
@@ -2194,7 +2188,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     }
     else
     {
-        USER *user = find_user_data(my_instance->htable, dcb->user, dcb->remote);
+        DBFW_USER *user = find_user_data(my_instance->users, dcb->user, dcb->remote);
         bool query_ok = false;
 
         if (user)
