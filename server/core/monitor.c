@@ -424,9 +424,46 @@ monitorShowAll(DCB *dcb)
 void
 monitorShow(DCB *dcb, MONITOR *monitor)
 {
+    const char *state;
 
-    dcb_printf(dcb, "Monitor: %p\n", monitor);
-    dcb_printf(dcb, "\tName:                   %s\n", monitor->name);
+    switch (monitor->state)
+    {
+        case MONITOR_STATE_RUNNING:
+            state = "Running";
+            break;
+        case MONITOR_STATE_STOPPING:
+            state = "Stopping";
+            break;
+        case MONITOR_STATE_STOPPED:
+            state = "Stopped";
+            break;
+        case MONITOR_STATE_ALLOC:
+            state = "Allocated";
+            break;
+        default:
+            state = "Unknown";
+            break;
+    }
+
+    dcb_printf(dcb, "Monitor:           %p\n", monitor);
+    dcb_printf(dcb, "Name:              %s\n", monitor->name);
+    dcb_printf(dcb, "State:             %s\n", state);
+    dcb_printf(dcb, "Sampling interval: %lu milliseconds\n", monitor->interval);
+    dcb_printf(dcb, "Connect Timeout:   %i seconds\n", monitor->connect_timeout);
+    dcb_printf(dcb, "Read Timeout:      %i seconds\n", monitor->read_timeout);
+    dcb_printf(dcb, "Write Timeout:     %i seconds\n", monitor->write_timeout);
+    dcb_printf(dcb, "Monitored servers: ");
+
+    const char *sep = "";
+
+    for (MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+    {
+        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
+        sep = ", ";
+    }
+
+    dcb_printf(dcb, "\n");
+
     if (monitor->handle)
     {
         if (monitor->module->diagnostics)
@@ -442,6 +479,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
     {
         dcb_printf(dcb, "\tMonitor failed\n");
     }
+    dcb_printf(dcb, "\n");
 }
 
 /**
