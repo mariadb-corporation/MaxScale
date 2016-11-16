@@ -527,8 +527,6 @@ exec_clear(DCB *dcb, MAXINFO_TREE *tree)
     MXS_ERROR("%s", errmsg);
 }
 
-extern void shutdown_server();
-
 /**
  * MaxScale shutdown
  * @param dcb Client DCB
@@ -536,7 +534,7 @@ extern void shutdown_server();
  */
 void exec_shutdown_maxscale(DCB *dcb, MAXINFO_TREE *tree)
 {
-    shutdown_server();
+    maxscale_shutdown();
     maxinfo_send_ok(dcb);
 }
 
