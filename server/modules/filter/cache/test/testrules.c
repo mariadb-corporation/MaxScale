@@ -132,8 +132,46 @@ struct store_test_case
 //   false: The query should NOT match the rule.
 const struct store_test_case store_test_cases[] =
 {
-    STORE_TEST_CASE("column", "=", "a", true,  NULL, "SELECT a FROM tbl"),
-    STORE_TEST_CASE("column", "=", "b", false, NULL, "SELECT a FROM tbl")
+    STORE_TEST_CASE("column", "=",  "a",     true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column", "!=", "a",     false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column", "=",  "b",     false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column", "!=", "b",     true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column", "=",  "tbl.a", true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("column", "=",  "tbl.a", true,  NULL, "SELECT tbl.a FROM tbl"),
+
+    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT a from tbl"),
+    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column", "like", ".*a",  true,  NULL, "SELECT db.tbl.a from tbl"),
+    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT a from tbl"),
+    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column", "like", ".*aa", false, NULL, "SELECT db.tbl.a from tbl"),
+    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT a from tbl"),
+    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT tbl.a from tbl"),
+    STORE_TEST_CASE("column", "unlike", ".*aa", true, NULL, "SELECT db.tbl.a from tbl"),
+
+    STORE_TEST_CASE("table", "=",   "tbl",    true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table", "!=",  "tbl",    false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table", "=",   "tbl2",   false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table", "!=",  "tbl2",   true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("table", "=",   "db.tbl", true,  NULL, "SELECT a from db.tbl"),
+    STORE_TEST_CASE("table", "=",   "db.tbl", true,  "db", "SELECT a from tbl"),
+    STORE_TEST_CASE("table", "!=",  "db.tbl", false, NULL, "SELECT a from db.tbl"),
+    STORE_TEST_CASE("table", "!=",  "db.tbl", false, "db", "SELECT a from tbl"),
+
+    STORE_TEST_CASE("database", "=",  "db",    false, NULL,  "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database", "!=", "db",    true,  NULL,  "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database", "=",  "db1",   true,  NULL,  "SELECT a FROM db1.tbl"),
+    STORE_TEST_CASE("database", "!=", "db1",   false, NULL,  "SELECT a FROM db1.tbl"),
+    STORE_TEST_CASE("database", "=",  "db1",   true,  "db1", "SELECT a FROM tbl"),
+    STORE_TEST_CASE("database", "!=", "db1",   false, "db1", "SELECT a FROM tbl"),
+
+    STORE_TEST_CASE("query", "=",  "SELECT a FROM tbl", true,  NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query", "!=", "SELECT a FROM tbl", false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query", "=",  "SELECT b FROM tbl", false, NULL, "SELECT a FROM tbl"),
+    STORE_TEST_CASE("query", "!=", "SELECT b FROM tbl", true,  NULL, "SELECT a FROM tbl"),
+
+    STORE_TEST_CASE("column", "=", "a", false, NULL, "SELECT b FROM tbl WHERE a = 5"),
+    STORE_TEST_CASE("column", "=", "a", true,  NULL, "SELECT a, b FROM tbl WHERE a = 5"),
 };
 
 const size_t n_store_test_cases = sizeof(store_test_cases) / sizeof(store_test_cases[0]);
@@ -144,6 +182,7 @@ int test_store()
 
     for (int i = 0; i < n_store_test_cases; ++i)
     {
+        printf("TC      : %d\n", i + 1);
         const struct store_test_case *test_case = &store_test_cases[i];
 
         CACHE_RULES *rules = cache_rules_parse(test_case->rule, 0);
@@ -160,10 +199,12 @@ int test_store()
         {
             printf("Query   : %s\n"
                    "Rule    : %s\n"
+                   "Def-db  : %s\n"
                    "Expected: %s\n"
                    "Result  : %s\n\n",
                    test_case->query,
                    test_case->rule,
+                   test_case->default_db,
                    test_case->matches ? "A match" : "Not a match",
                    matches ? "A match" : "Not a match");
         }

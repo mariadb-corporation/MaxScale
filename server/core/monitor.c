@@ -349,7 +349,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     MONITOR_SERVERS *ptr = mon->databases;
 
-    if (ptr->server == server)
+    if (ptr && ptr->server == server)
     {
         mon->databases = mon->databases->next;
     }
@@ -800,8 +800,14 @@ mon_get_event_type(MONITOR_SERVERS* node)
         }
         else
         {
+            /** These are used to detect whether we actually lost something or
+             * just transitioned from one state to another */
+            unsigned int prev_bits = prev & (SERVER_MASTER | SERVER_SLAVE);
+            unsigned int present_bits = present & (SERVER_MASTER | SERVER_SLAVE);
+
             /* Was running and still is */
-            if (prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
+            if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
+                     prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -1251,4 +1257,17 @@ bool monitor_serialize_servers(const MONITOR *monitor)
     }
 
     return rval;
+}
+
+void mon_hangup_failed_servers(MONITOR *monitor)
+{
+    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr) &&
+            (!(SERVER_IS_RUNNING(ptr->server)) ||
+             !(SERVER_IS_IN_CLUSTER(ptr->server))))
+        {
+            dcb_hangup_foreach(ptr->server);
+        }
+    }
 }

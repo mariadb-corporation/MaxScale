@@ -163,8 +163,6 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
 
     if (listener)
     {
-        GATEWAY_CONF* config = config_get_global_options();
-        // mysql_ssl_set always returns true.
         mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
     }
 

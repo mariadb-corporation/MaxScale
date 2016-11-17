@@ -535,16 +535,9 @@ monitorMain(void *arg)
                           STRSRVSTATUS(ptr->server));
             }
 
-            if (!(SERVER_IS_RUNNING(ptr->server)) ||
-                !(SERVER_IS_IN_CLUSTER(ptr->server)))
-            {
-                dcb_hangup_foreach(ptr->server);
-            }
-
             if (SERVER_IS_DOWN(ptr->server))
             {
                 /** Increase this server'e error count */
-                dcb_hangup_foreach(ptr->server);
                 ptr->mon_err_count += 1;
 
             }
@@ -650,6 +643,8 @@ monitorMain(void *arg)
             }
             ptr = ptr->next;
         }
+
+        mon_hangup_failed_servers(mon);
     }
 }
 

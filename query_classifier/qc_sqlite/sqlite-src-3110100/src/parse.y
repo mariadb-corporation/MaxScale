@@ -3022,12 +3022,16 @@ like_or_where_opt ::= WHERE expr.
 
 %type show {MxsShow}
 
-show(A) ::= SHOW full_opt(X) COLUMNS from_or_in nm(Y) dbnm(Z) from_or_in_db_opt like_or_where_opt . {
+show(A) ::= SHOW full_opt(X) COLUMNS from_or_in nm(Y) dbnm(Z) from_or_in_db_opt(W) like_or_where_opt . {
   A.what = MXS_SHOW_COLUMNS;
   A.data = X;
   if (Z.z) {
       A.pName = &Z;
       A.pDatabase = &Y;
+  }
+  else if (W.z) {
+      A.pName = &Y;
+      A.pDatabase = &W;
   }
   else {
       A.pName = &Y;

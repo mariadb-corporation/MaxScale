@@ -109,9 +109,9 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
+bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                                          GWBUF *querybuf,
-                                         qc_query_type_t type)
+                                         qc_query_type_t qtype)
 {
 
     bool target_tmp_table = false;
@@ -120,20 +120,20 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     char *dbname;
     char hkey[MYSQL_DATABASE_MAXLEN + MYSQL_TABLE_MAXLEN + 2];
     MYSQL_session *data;
-    qc_query_type_t qtype = type;
+    bool rval = false;
     rses_property_t *rses_prop_tmp;
 
     if (router_cli_ses == NULL || querybuf == NULL)
     {
         MXS_ERROR("[%s] Error: NULL parameters passed: %p %p", __FUNCTION__,
                   router_cli_ses, querybuf);
-        return type;
+        return false;
     }
 
     if (router_cli_ses->client_dcb == NULL)
     {
         MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
-        return type;
+        return false;
     }
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
@@ -142,7 +142,7 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     if (data == NULL)
     {
         MXS_ERROR("[%s] Error: User data in client DBC is NULL.", __FUNCTION__);
-        return qtype;
+        return false;
     }
 
     dbname = (char *)data->db;
@@ -166,7 +166,7 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
                     if (hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey))
                     {
                         /**Query target is a temporary table*/
-                        qtype = QUERY_TYPE_READ_TMP_TABLE;
+                        rval = true;
                         MXS_INFO("Query targets a temporary table: %s", hkey);
                         break;
                     }
@@ -184,7 +184,7 @@ qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
         MXS_FREE(tbl);
     }
 
-    return qtype;
+    return rval;
 }
 
 /**

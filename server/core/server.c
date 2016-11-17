@@ -51,6 +51,9 @@
 #include <maxscale/modules.h>
 #include <maxscale/gwdirs.h>
 
+/** The latin1 charset */
+#define SERVER_DEFAULT_CHARSET 0x08
+
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
 
@@ -129,6 +132,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->monuser[0] = '\0';
     server->monpw[0] = '\0';
     server->is_active = true;
+    server->charset = SERVER_DEFAULT_CHARSET;
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);

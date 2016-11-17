@@ -48,8 +48,14 @@ typedef struct cache_rule
     char                  *value;     // The value from the rule file.
     struct
     {
-        pcre2_code* code;
-        pcre2_match_data* data;
+        char *database;
+        char *table;
+        char *column;
+    } simple;                         // Details, only for CACHE_OP_[EQ|NEQ]
+    struct
+    {
+        pcre2_code       *code;
+        pcre2_match_data *data;
     } regexp;                         // Regexp data, only for CACHE_OP_[LIKE|UNLIKE].
     uint32_t               debug;     // The debug level.
     struct cache_rule     *next;

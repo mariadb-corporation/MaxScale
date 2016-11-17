@@ -596,15 +596,6 @@ monitorMain(void *arg)
             /* monitor current node */
             monitorDatabase(mon, ptr);
 
-            if (mon_status_changed(ptr))
-            {
-                if (!(SERVER_IS_RUNNING(ptr->server)) ||
-                    !(SERVER_IS_IN_CLUSTER(ptr->server)))
-                {
-                    dcb_hangup_foreach(ptr->server);
-                }
-            }
-
             if (mon_status_changed(ptr) ||
                 mon_print_fail_status(ptr))
             {
@@ -676,6 +667,8 @@ monitorMain(void *arg)
             }
             ptr = ptr->next;
         }
+
+        mon_hangup_failed_servers(mon);
     }
 }
 
