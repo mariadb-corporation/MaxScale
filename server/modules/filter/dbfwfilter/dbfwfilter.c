@@ -424,6 +424,18 @@ static void dbfw_user_free(void* fval)
     MXS_FREE(value);
 }
 
+HASHTABLE *dbfw_userlist_create()
+{
+    HASHTABLE *ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
+
+    if (ht)
+    {
+        hashtable_memory_fns(ht, hashtable_item_strdup, NULL, hashtable_item_free, dbfw_user_free);
+    }
+
+    return ht;
+}
+
 /**
  * Parses a string that contains an IP address and converts the last octet to '%'.
  * This modifies the string passed as the parameter.
@@ -1204,7 +1216,7 @@ static RULE* find_rule_by_name(RULE* rules, const char* name)
  * @param rules List of all rules
  * @return True on success, false on error.
  */
-static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templates,
+static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
                                    RULE* rules)
 {
     bool rval = true;
@@ -1217,7 +1229,7 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
 
     while (templates)
     {
-        DBFW_USER *user = hashtable_fetch(instance->users, templates->name);
+        DBFW_USER *user = hashtable_fetch(users, templates->name);
 
         if (user == NULL)
         {
@@ -1227,7 +1239,7 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
                 user->rules_or = NULL;
                 user->rules_strict_and = NULL;
                 spinlock_init(&user->lock);
-                hashtable_add(instance->users, user->name, user);
+                hashtable_add(users, user->name, user);
             }
             else
             {
@@ -1292,7 +1304,7 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
  * @param instance Filter instance
  * @return True on success, false on error.
  */
-static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
+static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **users)
 {
     int rc = 1;
     FILE *file = fopen(filename, "r");
@@ -1318,15 +1330,18 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
         dbfw_yy_delete_buffer(buf, scanner);
         dbfw_yylex_destroy(scanner);
         fclose(file);
+        HASHTABLE *new_users = dbfw_userlist_create();
 
-        if (rc == 0 && process_user_templates(instance, pstack.templates, pstack.rule))
+        if (rc == 0 && new_users && process_user_templates(new_users, pstack.templates, pstack.rule))
         {
-            instance->rules = pstack.rule;
+            *rules = pstack.rule;
+            *users = new_users;
         }
         else
         {
             rc = 1;
             rule_free_all(pstack.rule);
+            hashtable_free(new_users);
             MXS_ERROR("Failed to process rule file '%s'.", filename);
         }
 
@@ -1345,16 +1360,39 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
     return rc == 0;
 }
 
-HASHTABLE *create_dbfw_users()
-{
-    HASHTABLE *ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
 
-    if (ht)
+/**
+ * @brief Replace the rule file used by this filter instance
+ *
+ * This function does no locking. An external lock needs to protect this function
+ * call to prevent any connections from using the data when it is being replaced.
+ *
+ * @param filename File where the rules are located
+ * @param instance Filter instance
+ * @return True on success, false on error. If the return value is false, the
+ * old rules remain active.
+ */
+bool replace_rule_file(const char* filename, FW_INSTANCE* instance)
+{
+    bool rval = false;
+    RULE *rules;
+    HASHTABLE *users;
+
+    if (process_rule_file(filename, &rules, &users))
     {
-        hashtable_memory_fns(ht, hashtable_item_strdup, NULL, hashtable_item_free, dbfw_user_free);
+        /** Rules processed successfully, free the old ones */
+        rule_free_all(instance->rules);
+        hashtable_free(instance->users);
+        instance->rules = rules;
+        instance->users = users;
+        rval = true;
+    }
+    else
+    {
+        MXS_ERROR("Failed to process rule file at '%s', old rules are still active.", filename);
     }
 
-    return ht;
+    return rval;
 }
 
 /**
@@ -1382,14 +1420,6 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
     }
 
     spinlock_init(&my_instance->lock);
-
-    if ((my_instance->users = create_dbfw_user()) == NULL)
-    {
-        MXS_ERROR("Unable to allocate hashtable.");
-        MXS_FREE(my_instance);
-        return NULL;
-    }
-
     my_instance->action = FW_ACTION_BLOCK;
     my_instance->log_match = FW_LOG_NONE;
 
@@ -1444,9 +1474,8 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         err = true;
     }
 
-    if (err || !process_rule_file(filename, my_instance))
+    if (err || !process_rule_file(filename, &my_instance->rules, &my_instance->users))
     {
-        hashtable_free(my_instance->users);
         MXS_FREE(my_instance);
         my_instance = NULL;
     }
@@ -2332,86 +2361,3 @@ static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_STMT_INPUT;
 }
-
-#ifdef BUILD_RULE_PARSER
-// TODO: Not ok to include file from other component's test directory.
-#include "../../../core/test/test_utils.h"
-
-int main(int argc, char** argv)
-{
-    char ch;
-    bool have_icase = false;
-    char *home;
-    char cwd[PATH_MAX];
-    char* opts[2] = {NULL, NULL};
-    FILTER_PARAMETER ruleparam;
-    FILTER_PARAMETER * paramlist[2];
-
-    opterr = 0;
-    while ((ch = getopt(argc, argv, "h?")) != -1)
-    {
-        switch (ch)
-        {
-            case '?':
-            case 'h':
-                printf("Usage: %s [OPTION]... RULEFILE\n"
-                       "Options:\n"
-                       "\t-?\tPrint this information\n",
-                       argv[0]);
-                return 0;
-            default:
-                printf("Unknown option '%c'.\n", ch);
-                return 1;
-        }
-    }
-
-    if (argc < 2)
-    {
-        printf("Usage: %s [OPTION]... RULEFILE\n"
-               "-?\tPrint this information\n",
-               argv[0]);
-        return 1;
-    }
-
-    home = MXS_MALLOC(sizeof(char) * (PATH_MAX + 1));
-    MXS_ABORT_IF_NULL(home);
-    if (getcwd(home, PATH_MAX) == NULL)
-    {
-        MXS_FREE(home);
-        home = NULL;
-    }
-
-    printf("Log files written to: %s\n", home ? home : "/tpm");
-
-    int argc_ = 2;
-    char* argv_[] =
-    {
-        "log_manager",
-        "-o",
-        NULL
-    };
-
-    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
-
-
-    init_test_env(home);
-    ruleparam.name = MXS_STRDUP_A("rules");
-    ruleparam.value = MXS_STRDUP_A(argv[1]);
-    paramlist[0] = &ruleparam;
-    paramlist[1] = NULL;
-
-    if (createInstance(opts, paramlist))
-    {
-        printf("Rule parsing was successful.\n");
-    }
-    else
-    {
-        printf("Failed to parse rule. Read the error log for the reason of the failure.\n");
-    }
-
-    mxs_log_flush_sync();
-
-    return 0;
-}
-
-#endif
