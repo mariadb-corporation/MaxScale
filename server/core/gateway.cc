@@ -159,7 +159,7 @@ static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool file_is_readable(const char* absolute_pathname);
 static bool file_is_writable(const char* absolute_pathname);
-bool handle_path_arg(char** dest, const char* path, char* arg, bool rd, bool wr);
+bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr);
 static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
@@ -218,7 +218,8 @@ struct CRYPTO_dynlock_value
  */
 static struct CRYPTO_dynlock_value *ssl_create_dynlock(const char* file, int line)
 {
-    struct CRYPTO_dynlock_value* lock = MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
+    struct CRYPTO_dynlock_value* lock =
+        (struct CRYPTO_dynlock_value*) MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         spinlock_init(&lock->lock);
@@ -1298,6 +1299,8 @@ int main(int argc, char **argv)
     bool config_check = false;
     bool to_stdout = false;
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
+    GATEWAY_CONF* cnf = NULL;
+    int numlocks = 0;
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1321,7 +1324,7 @@ int main(int argc, char **argv)
 
         if (l != 0)
         {
-            char* fprerr = "Failed to register exit functions for MaxScale";
+            const char* fprerr = "Failed to register exit functions for MaxScale";
             print_log_n_stderr(false, true, NULL, fprerr, 0);
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
@@ -1351,11 +1354,12 @@ int main(int argc, char **argv)
                 }
                 if (cnf_file_arg == NULL)
                 {
-                    char* logerr = "Configuration file argument "
-                                   "identifier \'-f\' was specified but "
-                                   "the argument didn't specify\n  a valid "
-                                   "configuration file or the argument "
-                                   "was missing.";
+                    const char* logerr =
+                        "Configuration file argument "
+                        "identifier \'-f\' was specified but "
+                        "the argument didn't specify\n  a valid "
+                        "configuration file or the argument "
+                        "was missing.";
                     print_log_n_stderr(true, true, logerr, logerr, 0);
                     usage();
                     succp = false;
@@ -1391,11 +1395,12 @@ int main(int argc, char **argv)
                 }
                 else
                 {
-                    char* logerr = "Configuration file argument "
-                                   "identifier \'-l\' was specified but "
-                                   "the argument didn't specify\n  a valid "
-                                   "configuration file or the argument "
-                                   "was missing.";
+                    const char* logerr =
+                        "Configuration file argument "
+                        "identifier \'-l\' was specified but "
+                        "the argument didn't specify\n  a valid "
+                        "configuration file or the argument "
+                        "was missing.";
                     print_log_n_stderr(true, true, logerr, logerr, 0);
                     usage();
                     succp = false;
@@ -1618,14 +1623,14 @@ int main(int argc, char **argv)
 
             if (nread == -1)
             {
-                char* logerr = "Failed to read data from child process pipe.";
+                const char* logerr = "Failed to read data from child process pipe.";
                 print_log_n_stderr(true, true, logerr, logerr, errno);
                 exit(MAXSCALE_INTERNALERROR);
             }
             else if (nread == 0)
             {
                 /** Child process has exited or closed write pipe */
-                char* logerr = "No data read from child process pipe.";
+                const char* logerr = "No data read from child process pipe.";
                 print_log_n_stderr(true, true, logerr, logerr, 0);
                 exit(MAXSCALE_INTERNALERROR);
             }
@@ -1652,8 +1657,7 @@ int main(int argc, char **argv)
 
     if (eno != 0)
     {
-        char* logerr = "Failed to initialise signal mask for MaxScale. "
-                       "Exiting.";
+        const char* logerr = "Failed to initialise signal mask for MaxScale. Exiting.";
         print_log_n_stderr(true, true, logerr, logerr, eno);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1661,7 +1665,7 @@ int main(int argc, char **argv)
 
     if (!utils_init())
     {
-        char* logerr = "Failed to initialise utility library.";
+        const char* logerr = "Failed to initialise utility library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1670,7 +1674,7 @@ int main(int argc, char **argv)
     /** OpenSSL initialization */
     if (!HAVE_OPENSSL_THREADS)
     {
-        char* logerr = "OpenSSL library does not support multi-threading";
+        const char* logerr = "OpenSSL library does not support multi-threading";
         print_log_n_stderr(true, true, logerr, logerr, eno);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1679,8 +1683,8 @@ int main(int argc, char **argv)
     SSL_load_error_strings();
     OPENSSL_add_all_algorithms_noconf();
 
-    int numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = MXS_MALLOC(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
+    numlocks = CRYPTO_num_locks();
+    if ((ssl_locks = (SPINLOCK*)MXS_MALLOC(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
     {
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1705,10 +1709,12 @@ int main(int argc, char **argv)
 
     if (l != 0)
     {
-        char* fprerr = "Failed to register exit function for\n* "
-                       "embedded MySQL library.\n* Exiting.";
-        char* logerr = "Failed to register exit function libmysql_done "
-                       "for MaxScale. Exiting.";
+        const char* fprerr =
+            "Failed to register exit function for\n* "
+            "embedded MySQL library.\n* Exiting.";
+        const char* logerr =
+            "Failed to register exit function libmysql_done "
+            "for MaxScale. Exiting.";
         print_log_n_stderr(true, true, logerr, fprerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1837,7 +1843,7 @@ int main(int argc, char **argv)
 
     if (!config_load(cnf_file_path))
     {
-        char* fprerr =
+        const char* fprerr =
             "Failed to open, read or process the MaxScale configuration "
             "file. Exiting. See the error log for details.";
         print_log_n_stderr(false, true, fprerr, fprerr, 0);
@@ -1848,12 +1854,12 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    GATEWAY_CONF* cnf = config_get_global_options();
+    cnf = config_get_global_options();
     ss_dassert(cnf);
 
     if (!qc_init(cnf->qc_name, cnf->qc_args))
     {
-        char* logerr = "Failed to initialise query classifier library.";
+        const char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1870,8 +1876,7 @@ int main(int argc, char **argv)
     {
         if (!daemon_mode)
         {
-            char* fprerr = "Failed to initialise the MySQL library. "
-                           "Exiting.";
+            const char* fprerr = "Failed to initialise the MySQL library. Exiting.";
             print_log_n_stderr(false, true, fprerr, fprerr, 0);
 
             if (mysql_errno(NULL) == 2000)
@@ -1950,7 +1955,7 @@ int main(int argc, char **argv)
 
     if (n_services == 0)
     {
-        char* logerr = "Failed to start all MaxScale services. Exiting.";
+        const char* logerr = "Failed to start all MaxScale services. Exiting.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_NOSERVICES;
         goto return_main;
@@ -1962,7 +1967,7 @@ int main(int argc, char **argv)
 
     if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms) == NULL)
     {
-        char* logerr = "Failed to start log flushing thread.";
+        const char* logerr = "Failed to start log flushing thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1973,7 +1978,7 @@ int main(int argc, char **argv)
      */
     if (!hkinit())
     {
-        char* logerr = "Failed to start housekeeper thread.";
+        const char* logerr = "Failed to start housekeeper thread.";
         print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
@@ -1993,7 +1998,7 @@ int main(int argc, char **argv)
         if (thread_start(&threads[thread_id], worker_thread_main,
                          (void *)(thread_id + 1)) == NULL)
         {
-            char* logerr = "Failed to start worker thread.";
+            const char* logerr = "Failed to start worker thread.";
             print_log_n_stderr(true, true, logerr, logerr, 0);
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
@@ -2133,7 +2138,7 @@ static void unlock_pidfile()
         if (flock(pidfd, LOCK_UN | LOCK_NB) != 0)
         {
             char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
-            char* logerr = "Failed to unlock PID file '%s'.";
+            const char* logerr = "Failed to unlock PID file '%s'.";
             snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
         }
@@ -2189,7 +2194,7 @@ bool pid_file_exists()
 
         if ((fd = open(pathbuf, O_RDWR)) == -1)
         {
-            char* logerr = "Failed to open PID file '%s'.";
+            const char* logerr = "Failed to open PID file '%s'.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             return true;
@@ -2198,7 +2203,7 @@ bool pid_file_exists()
         {
             if (errno != EWOULDBLOCK)
             {
-                char* logerr = "Failed to lock PID file '%s'.";
+                const char* logerr = "Failed to lock PID file '%s'.";
                 snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
                 print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 close(fd);
@@ -2212,7 +2217,7 @@ bool pid_file_exists()
 
         if (b == -1)
         {
-            char* logerr = "Failed to read from PID file '%s'.";
+            const char* logerr = "Failed to read from PID file '%s'.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2221,24 +2226,26 @@ bool pid_file_exists()
         else if (b == 0)
         {
             /** Empty file */
-            char* logerr = "PID file read from '%s'. File was empty.\n"
-                           "If the file is the correct PID file and no other MaxScale processes "
-                           "are running, please remove it manually and start MaxScale again.";
+            const char* logerr =
+                "PID file read from '%s'. File was empty.\n"
+                "If the file is the correct PID file and no other MaxScale processes "
+                "are running, please remove it manually and start MaxScale again.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
             return true;
         }
 
-        pidbuf[b < sizeof(pidbuf) ? b : sizeof(pidbuf) - 1] = '\0';
+        pidbuf[(size_t)b < sizeof(pidbuf) ? (size_t)b : sizeof(pidbuf) - 1] = '\0';
         pid = strtol(pidbuf, NULL, 0);
 
         if (pid < 1)
         {
             /** Bad PID */
-            char* logerr = "PID file read from '%s'. File contents not valid.\n"
-                           "If the file is the correct PID file and no other MaxScale processes "
-                           "are running, please remove it manually and start MaxScale again.";
+            const char* logerr =
+                "PID file read from '%s'. File contents not valid.\n"
+                "If the file is the correct PID file and no other MaxScale processes "
+                "are running, please remove it manually and start MaxScale again.";
             snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2252,7 +2259,7 @@ bool pid_file_exists()
                 /** no such process, old PID file */
                 if (lock_failed)
                 {
-                    char* logerr =
+                    const char* logerr =
                         "Locking the PID file '%s' failed. "
                         "Read PID from file and no process found with PID %d. "
                         "Confirm that no other process holds the lock on the PID file.";
@@ -2264,7 +2271,7 @@ bool pid_file_exists()
             }
             else
             {
-                char* logerr = "Failed to check the existence of process %d read from file '%s'";
+                const char* logerr = "Failed to check the existence of process %d read from file '%s'";
                 snprintf(logbuf, sizeof(logbuf), logerr, pid, pathbuf);
                 print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 unlock_pidfile();
@@ -2272,7 +2279,7 @@ bool pid_file_exists()
         }
         else
         {
-            char* logerr =
+            const char* logerr =
                 "MaxScale is already running. Process id: %d. "
                 "Use another location for the PID file to run multiple "
                 "instances of MaxScale on the same machine.";
@@ -2283,8 +2290,9 @@ bool pid_file_exists()
     }
     else
     {
-        char* logerr = "Cannot open PID file '%s', no read permissions. "
-                       "Please confirm that the user running MaxScale has read permissions on the file.";
+        const char* logerr =
+            "Cannot open PID file '%s', no read permissions. "
+            "Please confirm that the user running MaxScale has read permissions on the file.";
         snprintf(logbuf, sizeof(logbuf), logerr, pathbuf);
         print_log_n_stderr(true, true, logbuf, logbuf, errno);
     }
@@ -2313,7 +2321,7 @@ static int write_pid_file()
         fd = open(pidfile, O_WRONLY | O_CREAT, 0777);
         if (fd == -1)
         {
-            char* logerr = "Failed to open PID file '%s'.";
+            const char* logerr = "Failed to open PID file '%s'.";
             snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
             return -1;
@@ -2342,7 +2350,7 @@ static int write_pid_file()
     /* truncate pidfile content */
     if (ftruncate(pidfd, 0))
     {
-        char* logerr = "MaxScale failed to truncate PID file '%s'.";
+        const char* logerr = "MaxScale failed to truncate PID file '%s'.";
         snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
         print_log_n_stderr(true, true, logbuf, logbuf, errno);
         unlock_pidfile();
@@ -2353,7 +2361,7 @@ static int write_pid_file()
 
     if (pwrite(pidfd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr))
     {
-        char* logerr = "MaxScale failed to write into PID file '%s'.";
+        const char* logerr = "MaxScale failed to write into PID file '%s'.";
         snprintf(logbuf, sizeof(logbuf), logerr, pidfile);
         print_log_n_stderr(true, true, logbuf, logbuf, errno);
         unlock_pidfile();
@@ -2364,7 +2372,7 @@ static int write_pid_file()
     return 0;
 }
 
-bool handle_path_arg(char** dest, const char* path, char* arg, bool rd, bool wr)
+bool handle_path_arg(char** dest, const char* path, const char* arg, bool rd, bool wr)
 {
     char pathbuffer[PATH_MAX + 2];
     char* errstr;

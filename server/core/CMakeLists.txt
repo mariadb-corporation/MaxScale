@@ -12,7 +12,7 @@ add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 
-add_executable(maxscale gateway.c)
+add_executable(maxscale gateway.cc)
 add_dependencies(maxscale pcre2)
 
 if(WITH_JEMALLOC)
