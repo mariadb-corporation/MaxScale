@@ -825,7 +825,6 @@ typedef struct
     int index;
     char    *like;
 } VARCONTEXT;
-
 /**
  * Callback function to populate rows of the show variable
  * command
@@ -836,9 +835,9 @@ typedef struct
 static RESULT_ROW *
 variable_row(RESULTSET *result, void *data)
 {
-    VARCONTEXT  *context = (VARCONTEXT *)data;
-    RESULT_ROW  *row;
-    char        buf[80];
+    VARCONTEXT *context = (VARCONTEXT *) data;
+    RESULT_ROW *row;
+    char buf[80];
 
     if (variables[context->index].name)
     {
@@ -862,10 +861,14 @@ variable_row(RESULTSET *result, void *data)
                          (long)(*variables[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
+            default:
+                ss_dassert(!true);
         }
         context->index++;
         return row;
     }
+    // We only get to this point once all variables have been printed
+    free(data);
     return NULL;
 }
 
@@ -910,14 +913,18 @@ exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
 RESULTSET *
 maxinfo_variables()
 {
-    RESULTSET   *result;
-    static VARCONTEXT   context;
-
-    context.like = NULL;
-    context.index = 0;
-
-    if ((result = resultset_create(variable_row, &context)) == NULL)
+    RESULTSET *result;
+    VARCONTEXT *context;
+    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
     {
+        return NULL;
+    }
+    context->like = NULL;
+    context->index = 0;
+
+    if ((result = resultset_create(variable_row, context)) == NULL)
+    {
+        free(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1140,10 +1147,14 @@ status_row(RESULTSET *result, void *data)
                          (long)(*status[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
+            default:
+                ss_dassert(!true);
         }
         context->index++;
         return row;
     }
+    // We only get to this point once all status elements have been printed
+    free(data);
     return NULL;
 }
 
@@ -1189,13 +1200,17 @@ RESULTSET *
 maxinfo_status()
 {
     RESULTSET   *result;
-    static VARCONTEXT   context;
-
-    context.like = NULL;
-    context.index = 0;
-
-    if ((result = resultset_create(status_row, &context)) == NULL)
+    VARCONTEXT   *context;
+    if ((context = malloc(sizeof(VARCONTEXT))) == NULL)
     {
+        return NULL;
+    }
+    context->like = NULL;
+    context->index = 0;
+
+    if ((result = resultset_create(status_row, context)) == NULL)
+    {
+        free(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
