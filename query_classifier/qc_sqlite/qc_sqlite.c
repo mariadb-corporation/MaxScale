@@ -77,6 +77,7 @@ typedef struct qc_sqlite_info
     size_t database_names_capacity;  // The capacity of database_names.
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
+    bool initializing;               // Whether we are initializing sqlite3.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -188,7 +189,6 @@ static QC_SQLITE_INFO* info_alloc(void);
 static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info);
-static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse);
 static void log_invalid_data(GWBUF* query, const char* message);
 static bool parse_query(GWBUF* query);
 static void parse_query_string(const char* query, size_t len);
@@ -381,6 +381,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->database_names_capacity = 0;
     info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
     info->keyword_2 = 0; // that we have not seen a keyword.
+    info->initializing = false;
 
     return info;
 }
@@ -526,76 +527,6 @@ static bool parse_query(GWBUF* query)
 static bool query_is_parsed(GWBUF* query)
 {
     return query && GWBUF_IS_PARSED(query);
-}
-
-/*
- * Check that the statement being reported about is the one that initially was
- * submitted to parse_query_string(...). When sqlite3 is parsing other statements
- * it may (right after it's used for the first time) parse selects of its own.
- * We need to detect that, so that the internal stuff is not allowed to interfere
- * with the parsing of the provided statement.
- *
- * @param info    The thread specific info structure.
- * @param pParse  Sqlite3's parse context.
- *
- * @return True, if the current callback relates to the provided query,
- *         false otherwise.
- */
-static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse)
-{
-    bool rv = false;
-
-    if (*pParse->zTail == 0)
-    {
-        // Everything has been consumed => the callback relates to the statement
-        // that was provided to parse_query_string(...).
-        rv = true;
-    }
-    else if (pParse->sLastToken.z && (*pParse->sLastToken.z == ';'))
-    {
-        // A ';' has been reached, i.e. everything has been consumed => the callback
-        // relates to the statement that was provided to parse_query_string(...).
-        rv = true;
-    }
-    else
-    {
-        // If info->query contains a trailing ';', pParse->zTail may or may not contain
-        // one also. We need to cater for the situation that the former has one and the
-        // latter does not.
-        const char* i = info->query;
-        const char* end = i + info->query_len;
-        const char* j = pParse->zTail;
-
-        // Walk forward as long as neither has reached the end,
-        // and the characters are the same.
-        while ((i < end) && (*j != 0) && (*i == *j))
-        {
-            ++i;
-            ++j;
-        }
-
-        if (i == end)
-        {
-            // If i has reached the end, then if j also has reached the end,
-            // both are the same. In this case both either have or have not
-            // a trailing ';'.
-            rv = (*j == 0);
-        }
-        else if (*j == 0)
-        {
-            // Else if j has reached the end, then if i points to ';', both
-            // are the same. In this case info->query contains a trailing ';'
-            // while pParse->zTail does not.
-            rv = (*i == ';');
-        }
-        else
-        {
-            // Otherwise they are not the same.
-            rv = false;
-        }
-    }
-
-    return rv;
 }
 
 /**
@@ -1271,7 +1202,7 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         if (pSelect)
         {
@@ -1359,10 +1290,7 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    // Check whether the statement being parsed is the one that was passed
-    // to sqlite3_prepare in parse_query_string(). During inserts, sqlite may
-    // parse selects of its own.
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         info->status = QC_QUERY_PARSED;
         info->operation = QUERY_OP_SELECT;
@@ -1391,7 +1319,7 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         info->status = QC_QUERY_PARSED;
         info->operation = QUERY_OP_CREATE;
@@ -2479,14 +2407,13 @@ static bool qc_sqlite_init(const char* args)
 
     if (sqlite3_initialize() == 0)
     {
+        init_builtin_functions();
+
         this_unit.initialized = true;
+        this_unit.log_level = log_level;
 
         if (qc_sqlite_thread_init())
         {
-            init_builtin_functions();
-
-            this_unit.log_level = log_level;
-
             if (log_level != QC_LOG_NOTHING)
             {
                 const char* message;
@@ -2550,10 +2477,38 @@ static bool qc_sqlite_thread_init(void)
     int rc = sqlite3_open(":memory:", &this_thread.db);
     if (rc == SQLITE_OK)
     {
-        this_thread.initialized = true;
-
         MXS_INFO("qc_sqlite: In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
+
+        QC_SQLITE_INFO* info = info_alloc();
+
+        if (info)
+        {
+            this_thread.info = info;
+
+            // With this statement we cause sqlite3 to initialize itself, so that it
+            // is not done as part of the actual classification of data.
+            const char* s = "CREATE TABLE __maxscale__internal__ (int field UNIQUE)";
+            size_t len = strlen(s);
+
+            this_thread.info->query = s;
+            this_thread.info->query_len = len;
+            this_thread.info->initializing = true;
+            parse_query_string(s, len);
+            this_thread.info->initializing = false;
+            this_thread.info->query = NULL;
+            this_thread.info->query_len = 0;
+
+            info_free(this_thread.info);
+            this_thread.info = NULL;
+
+            this_thread.initialized = true;
+        }
+        else
+        {
+            sqlite3_close(this_thread.db);
+            this_thread.db = NULL;
+        }
     }
     else
     {
