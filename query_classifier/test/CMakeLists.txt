@@ -17,9 +17,16 @@ if (BUILD_QC_MYSQLEMBEDDED)
   endif()
 
   add_executable(classify classify.c)
-  add_executable(compare compare.cc)
   target_link_libraries(classify maxscale-common)
+
+  add_executable(compare compare.cc)
   target_link_libraries(compare maxscale-common)
+
+  add_executable(crash_qc_sqlite crash_qc_sqlite.c)
+  target_link_libraries(crash_qc_sqlite maxscale-common)
+
+  add_test(TestQC_Crash_qcsqlite crash_qc_sqlite)
+
   add_test(TestQC_MySQLEmbedded classify qc_mysqlembedded ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
   add_test(TestQC_SqLite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 
