@@ -173,7 +173,7 @@ bool modulecmd_call_command(const MODULECMD *cmd, const MODULECMD_ARG *args);
  * @brief Set the current error message
  *
  * Modules that register commands should use this function to report errors.
- * This will overwrite the existing error message.
+ * This will overwrite any existing error message.
  *
  * @param format Format string
  * @param ... Format string arguments
@@ -186,5 +186,32 @@ void modulecmd_set_error(const char *format, ...);
  * @return Human-readable error message
  */
 const char* modulecmd_get_error();
+
+
+/**
+ * @brief Call a function for each command
+ *
+ * Calls a function for each matching command in the matched domains. The filters
+ * for the domain and identifier are PCRE2 expressions that are matched against
+ * the domain and identifier. These are optional and both @c domain and @c ident
+ * can be NULL.
+ *
+ * @param domain_re Command domain filter, NULL for all domains
+ *
+ * @param ident_re Command identifier filter, NULL for all commands
+ *
+ * @param fn Function that is called for every command. The first parameter is
+ *           the current command. The second parameter is the value of @c data.
+ *           The function should return true to continue iteration or false to
+ *           stop iteration early. The function must not call any of the functions
+ *           declared in modulecmd.h.
+ *
+ * @param data User defined data passed as the second parameter to @c fn
+ *
+ * @return True on success, false on PCRE2 error. Use modulecmd_get_error()
+ * to retrieve the error.
+ */
+bool modulecmd_foreach(const char *domain_re, const char *ident_re,
+                       bool(*fn)(const MODULECMD *cmd, void *data), void *data);
 
 MXS_END_DECLS

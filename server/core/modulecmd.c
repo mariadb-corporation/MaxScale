@@ -14,6 +14,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
 
@@ -507,4 +508,59 @@ const char* modulecmd_get_error()
 {
     prepare_error();
     return errbuf;
+}
+
+bool modulecmd_foreach(const char *domain_re, const char *ident_re,
+                   bool(*fn)(const MODULECMD *cmd, void *data), void *data)
+{
+    bool rval = true;
+    bool stop = false;
+    spinlock_acquire(&modulecmd_lock);
+
+    for (MODULECMD_DOMAIN *domain = modulecmd_domains; domain && rval && !stop; domain = domain->next)
+    {
+        int err;
+        mxs_pcre2_result_t d_res = domain_re ?
+            mxs_pcre2_simple_match(domain_re, domain->domain, 0, &err) :
+            MXS_PCRE2_MATCH;
+
+        if (d_res == MXS_PCRE2_MATCH)
+        {
+            for (MODULECMD *cmd = domain->commands; cmd && rval; cmd = cmd->next)
+            {
+                mxs_pcre2_result_t i_res = ident_re ?
+                    mxs_pcre2_simple_match(ident_re, cmd->identifier, 0, &err) :
+                    MXS_PCRE2_MATCH;
+
+                if (i_res == MXS_PCRE2_MATCH)
+                {
+                    if (!fn(cmd, data))
+                    {
+                        stop = true;
+                        break;
+                    }
+                }
+                else if (i_res == MXS_PCRE2_ERROR)
+                {
+                    PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
+                    pcre2_get_error_message(err, errbuf, sizeof(errbuf));
+                    MXS_ERROR("Failed to match command identifier with '%s': %s", ident_re, errbuf);
+                    modulecmd_set_error("Failed to match command identifier with '%s': %s", ident_re, errbuf);
+                    rval = false;
+                }
+
+            }
+        }
+        else if (d_res == MXS_PCRE2_ERROR)
+        {
+            PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
+            pcre2_get_error_message(err, errbuf, sizeof(errbuf));
+            MXS_ERROR("Failed to match command domain with '%s': %s", domain_re, errbuf);
+            modulecmd_set_error("Failed to match command domain with '%s': %s", domain_re, errbuf);
+            rval = false;
+        }
+    }
+
+    spinlock_release(&modulecmd_lock);
+    return rval;
 }

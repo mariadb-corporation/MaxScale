@@ -236,6 +236,68 @@ int test_module_errors()
     return 0;
 }
 
+bool test_fn_map(const MODULECMD_ARG *args)
+{
+    return true;
+}
+
+const char *map_dom = "test_map";
+
+bool mapfn(const MODULECMD *cmd, void *data)
+{
+    int *i = (int*)data;
+    (*i)++;
+    return true;
+}
+
+int test_map()
+{
+    for (int i = 0; i < 10; i++)
+    {
+        char id[200];
+        sprintf(id, "test_map%d", i + 1);
+        TEST(modulecmd_register_command(map_dom, id, test_fn_map, 0, NULL),
+             "Registering a command should succeed");
+    }
+
+    int n = 0;
+    TEST(modulecmd_foreach(NULL, NULL, mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 10, "Every registered command should be called");
+
+    n = 0;
+    TEST(modulecmd_foreach("test_map", NULL, mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 10, "Every registered command should be called");
+
+    n = 0;
+    TEST(modulecmd_foreach(NULL, "test_map", mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 10, "Every registered command should be called");
+
+    n = 0;
+    TEST(modulecmd_foreach("test_map", "test_map", mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 10, "Every registered command should be called");
+
+    n = 0;
+    TEST(modulecmd_foreach("wrong domain", "test_map", mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 0, "No registered command should be called");
+
+    n = 0;
+    TEST(modulecmd_foreach("test_map", "test_map[2-4]", mapfn, &n), "Mapping function should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(n == 3, "Three registered commands should be called");
+
+    n = 0;
+    TEST(!modulecmd_foreach("(", NULL, mapfn, &n), "Mapping function should fail");
+    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(n == 0, "No registered command should be called");
+
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int rc = 0;
@@ -243,6 +305,7 @@ int main(int argc, char **argv)
     rc += test_arguments();
     rc += test_optional_arguments();
     rc += test_module_errors();
+    rc += test_map();
 
     return rc;
 }
