@@ -385,6 +385,8 @@ poll_add_dcb(DCB *dcb)
     dcb->owner = owner;
     spinlock_release(&dcb->dcb_initlock);
 
+    dcb_add_to_list(dcb);
+
     rc = epoll_ctl(epoll_fd[owner], EPOLL_CTL_ADD, dcb->fd, &ev);
     if (rc)
     {
@@ -719,13 +721,7 @@ poll_waitevents(void *arg)
              */
         }
 
-        /*
-         * Process of the queue of waiting requests
-         * This is done without checking the evq_pending count as a
-         * precautionary measure to avoid issues if the house keeping
-         * of the count goes wrong.
-         */
-
+        /* Process of the queue of waiting requests */
         for (int i = 0; i < nfds; i++)
         {
             process_pollq(thread_id, &events[i]);
@@ -744,7 +740,6 @@ poll_waitevents(void *arg)
             spinlock_release(&fake_event_lock[thread_id]);
         }
 
-        /** Process fake events */
         while (event)
         {
             struct epoll_event ev;
@@ -752,7 +747,9 @@ poll_waitevents(void *arg)
             ev.data.ptr = event->dcb;
             ev.events = event->event;
             process_pollq(thread_id, &ev);
+            fake_event_t *tmp = event;
             event = event->next;
+            MXS_FREE(tmp);
         }
 
         if (check_timeouts && hkheartbeat >= next_timeout_check)
@@ -764,7 +761,10 @@ poll_waitevents(void *arg)
         {
             thread_data[thread_id].state = THREAD_ZPROCESSING;
         }
+
+        /** Process closed DCBs */
         dcb_process_zombies(thread_id);
+
         if (thread_data)
         {
             thread_data[thread_id].state = THREAD_IDLE;
@@ -1195,10 +1195,6 @@ dprintPollStats(DCB *dcb)
     dcb_printf(dcb, "\t>= %d\t\t\t%" PRId32 "\n", MAXNFDS,
                pollStats.n_fds[MAXNFDS - 1]);
 
-#if SPINLOCK_PROFILE
-    dcb_printf(dcb, "Event queue lock statistics:\n");
-    spinlock_stats(&pollqlock, spin_reporter, dcb);
-#endif
 }
 
 /**
@@ -1541,33 +1537,6 @@ poll_fake_hangup_event(DCB *dcb)
 void
 dShowEventQ(DCB *pdcb)
 {
-    DCB *dcb;
-    char *tmp1, *tmp2;
-
-    spinlock_acquire(&pollqlock);
-    if (eventq == NULL)
-    {
-        /* Nothing to process */
-        spinlock_release(&pollqlock);
-        return;
-    }
-    dcb = eventq;
-    dcb_printf(pdcb, "\nEvent Queue.\n");
-    dcb_printf(pdcb, "%-16s | %-10s | %-18s | %s\n", "DCB", "Status", "Processing Events",
-               "Pending Events");
-    dcb_printf(pdcb, "-----------------+------------+--------------------+-------------------\n");
-    do
-    {
-        dcb_printf(pdcb, "%-16p | %-10s | %-18s | %-18s\n", dcb,
-                   dcb->evq.processing ? "Processing" : "Pending",
-                   (tmp1 = event_to_string(dcb->evq.processing_events)),
-                   (tmp2 = event_to_string(dcb->evq.pending_events)));
-        MXS_FREE(tmp1);
-        MXS_FREE(tmp2);
-        dcb = dcb->evq.next;
-    }
-    while (dcb != eventq);
-    spinlock_release(&pollqlock);
 }
 
 

@@ -278,6 +278,8 @@ typedef struct dcb
     bool            ssl_write_want_write;    /*< Flag */
     int             dcb_port;       /**< port of target server */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
+    struct dcb      *thr_next; /**< Next DCB in owning thread's list */
+    struct dcb      *thr_tail; /**< Last DCB in owning thread's list */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 
@@ -288,7 +290,7 @@ typedef struct dcb
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
-    .authenticator_data = NULL}
+    .authenticator_data = NULL, .thr_next = NULL, .thr_tail = NULL}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason
@@ -343,6 +345,13 @@ void dcb_close(DCB *);
  * @param threadid Thread ID of the poll thread
  */
 void dcb_process_zombies(int threadid);
+
+/**
+ * Add a DCB to the owner's list
+ *
+ * @param dcb DCB to add
+ */
+void dcb_add_to_list(DCB *dcb);
 
 void printAllDCBs();                         /* Debug to print all DCB in the system */
 void printDCB(DCB *);                        /* Debug print routine */

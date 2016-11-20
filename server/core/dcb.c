@@ -100,6 +100,8 @@ static LIST_CONFIG DCBlist =
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized = DCB_INIT;
 
+static  DCB           **all_dcbs;
+static  SPINLOCK       *all_dcbs_lock;
 static  DCB           **zombies;
 static  int            *nzombies;
 static  int             maxzombies = 0;
@@ -110,10 +112,17 @@ void dcb_global_init()
     int nthreads = config_threadcount();
 
     if ((zombies = MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
+        (all_dcbs = MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
+        (all_dcbs_lock = MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
         (nzombies = MXS_CALLOC(nthreads, sizeof(int))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);
+    }
+
+    for (int i = 0; i < nthreads; i++)
+    {
+        spinlock_init(&all_dcbs_lock[i]);
     }
 }
 
@@ -145,6 +154,7 @@ static int dcb_set_socket_option(int sockfd, int level, int optname, void *optva
 static void dcb_add_to_all_list(DCB *dcb);
 static DCB *dcb_find_free();
 static GWBUF *dcb_grab_writeq(DCB *dcb, bool first_time);
+static void dcb_remove_from_list(DCB *dcb);
 
 size_t dcb_get_session_id(
     DCB *dcb)
@@ -597,6 +607,7 @@ dcb_process_victim_queue(int threadid)
          * Whether it is actually freed depends on the type of the DCB and how
          * many DCBs are linked to it via the SESSION object. */
         dcb->state = DCB_STATE_DISCONNECTED;
+        dcb_remove_from_list(dcb);
         dcb_final_free(dcb);
     }
     /** Reset threads session data */
@@ -1940,7 +1951,6 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
 void
 dprintDCBList(DCB *pdcb)
 {
-    dprintListStats(pdcb, &DCBlist, "All DCBs");
 }
 
 /**
@@ -1951,19 +1961,19 @@ dprintDCBList(DCB *pdcb)
 void
 dprintAllDCBs(DCB *pdcb)
 {
-    list_entry_t *current;
 
-    current = list_start_iteration(&DCBlist);
-#if SPINLOCK_PROFILE
-    dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
-    spinlock_stats(&DCBlist->list_lock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
-    spinlock_stats(&zombiespin, spin_reporter, pdcb);
-#endif
-    while (current)
+    int nthr = config_threadcount();
+
+    for (int i = 0; i < nthr; i++)
     {
-        dprintOneDCB(pdcb, (DCB *)current);
-        current = list_iterate(&DCBlist, current);
+        spinlock_acquire(&all_dcbs_lock[i]);
+
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        {
+            dprintOneDCB(pdcb, dcb);
+        }
+
+        spinlock_release(&all_dcbs_lock[i]);
     }
 }
 
@@ -1975,24 +1985,28 @@ dprintAllDCBs(DCB *pdcb)
 void
 dListDCBs(DCB *pdcb)
 {
-    DCB *dcb;
-    list_entry_t *current;
-
-    current = list_start_iteration(&DCBlist);
     dcb_printf(pdcb, "Descriptor Control Blocks\n");
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
     dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n",
                "DCB", "State", "Service", "Remote");
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
-    while (current)
+
+    int nthr = config_threadcount();
+
+    for (int i = 0; i < nthr; i++)
     {
-        dcb = (DCB *)current;
-        dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
-            dcb, gw_dcb_state2string(dcb->state),
-            ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
-            (dcb->remote ? dcb->remote : ""));
-        current = list_iterate(&DCBlist, current);
+        spinlock_acquire(&all_dcbs_lock[i]);
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        {
+            dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
+                       dcb, gw_dcb_state2string(dcb->state),
+                       ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
+                       (dcb->remote ? dcb->remote : ""));
+        }
+
+        spinlock_release(&all_dcbs_lock[i]);
     }
+
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
 }
 
@@ -2004,32 +2018,34 @@ dListDCBs(DCB *pdcb)
 void
 dListClients(DCB *pdcb)
 {
-    DCB *dcb;
-    list_entry_t *current;
-
-    current = list_start_iteration(&DCBlist);
-
     dcb_printf(pdcb, "Client Connections\n");
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
     dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n",
                "Client", "DCB", "Service", "Session");
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
-    while (current)
+
+    int nthr = config_threadcount();
+
+    for (int i = 0; i < nthr; i++)
     {
-        dcb = (DCB *)current;
-        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+        spinlock_acquire(&all_dcbs_lock[i]);
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
         {
-            dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
-                       (dcb->remote ? dcb->remote : ""),
-                       dcb, (dcb->session->service ?
-                             dcb->session->service->name : ""),
-                       dcb->session);
+            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+            {
+                dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
+                           (dcb->remote ? dcb->remote : ""),
+                           dcb, (dcb->session->service ?
+                                 dcb->session->service->name : ""),
+                           dcb->session);
+            }
         }
-        current = list_iterate(&DCBlist, current);
+
+        spinlock_release(&all_dcbs_lock[i]);
     }
+
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
 }
-
 
 /**
  * Diagnostic to print a DCB to another DCB
@@ -2502,7 +2518,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 int
 dcb_isvalid(DCB *dcb)
 {
-    return (int)list_is_entry_in_use(&DCBlist, (list_entry_t *)dcb);
+    return !dcb->dcb_is_zombie;
 }
 
 /**
@@ -2513,25 +2529,27 @@ dcb_isvalid(DCB *dcb)
 void
 dcb_hangup_foreach(struct server* server)
 {
-    DCB *dcb;
-    list_entry_t *current;
+    int nthr = config_threadcount();
 
-    current = list_start_iteration(&DCBlist);
 
-    while (current)
+    for (int i = 0; i < nthr; i++)
     {
-        dcb = (DCB *)current;
-        spinlock_acquire(&dcb->dcb_initlock);
-        if (dcb->state == DCB_STATE_POLLING && dcb->server &&
-            dcb->server == server)
+        spinlock_acquire(&all_dcbs_lock[i]);
+
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
         {
-            poll_fake_hangup_event(dcb);
+            spinlock_acquire(&dcb->dcb_initlock);
+            if (dcb->state == DCB_STATE_POLLING && dcb->server &&
+                dcb->server == server)
+            {
+                poll_fake_hangup_event(dcb);
+            }
+            spinlock_release(&dcb->dcb_initlock);
         }
-        spinlock_release(&dcb->dcb_initlock);
-        current = list_iterate(&DCBlist, current);
+
+        spinlock_release(&all_dcbs_lock[i]);
     }
 }
-
 
 /**
  * Null protocol write routine used for cloned dcb's. It merely consumes
@@ -3403,4 +3421,61 @@ dcb_role_name(DCB *dcb)
 void dcb_append_readqueue(DCB *dcb, GWBUF *buffer)
 {
     dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buffer);
+}
+
+void dcb_add_to_list(DCB *dcb)
+{
+    spinlock_acquire(&all_dcbs_lock[dcb->owner]);
+
+    if (all_dcbs[dcb->owner] == NULL)
+    {
+        all_dcbs[dcb->owner] = dcb;
+        all_dcbs[dcb->owner]->thr_tail = dcb;
+    }
+    else
+    {
+        all_dcbs[dcb->owner]->thr_tail->thr_next = dcb;
+        all_dcbs[dcb->owner]->thr_tail = dcb;
+    }
+
+    spinlock_release(&all_dcbs_lock[dcb->owner]);
+}
+
+/**
+ * Remove a DCB from the owner's list
+ *
+ * @param dcb DCB to remove
+ */
+static void dcb_remove_from_list(DCB *dcb)
+{
+    spinlock_acquire(&all_dcbs_lock[dcb->owner]);
+
+    if (dcb == all_dcbs[dcb->owner])
+    {
+        DCB *tail = all_dcbs[dcb->owner]->thr_tail;
+        all_dcbs[dcb->owner] = all_dcbs[dcb->owner]->thr_next;
+        all_dcbs[dcb->owner]->thr_tail = tail;
+    }
+    else
+    {
+        DCB *current = all_dcbs[dcb->owner]->thr_next;
+        DCB *prev = all_dcbs[dcb->owner];
+
+        while (current)
+        {
+            if (current == dcb)
+            {
+                if (current == all_dcbs[dcb->owner]->thr_tail)
+                {
+                    all_dcbs[dcb->owner]->thr_tail = prev;
+                }
+                prev->thr_next = current->thr_next;
+                break;
+            }
+            prev = current;
+            current = current->thr_next;
+        }
+    }
+
+    spinlock_release(&all_dcbs_lock[dcb->owner]);
 }
