@@ -752,10 +752,7 @@ poll_waitevents(void *arg)
             MXS_FREE(tmp);
         }
 
-        if (check_timeouts && hkheartbeat >= next_timeout_check)
-        {
-            process_idle_sessions();
-        }
+        dcb_process_idle_sessions(thread_id);
 
         if (thread_data)
         {

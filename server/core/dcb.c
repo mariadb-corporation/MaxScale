@@ -92,6 +92,7 @@
 #include <sys/un.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+#include <maxscale/platform.h>
 
 /* The list of all DCBs */
 static LIST_CONFIG DCBlist =
@@ -106,6 +107,10 @@ static  DCB           **zombies;
 static  int            *nzombies;
 static  int             maxzombies = 0;
 static  SPINLOCK        zombiespin = SPINLOCK_INIT;
+
+/** Variables for session timeout checks */
+bool check_timeouts = false;
+thread_local long next_timeout_check = 0;
 
 void dcb_global_init()
 {
@@ -3478,4 +3483,42 @@ static void dcb_remove_from_list(DCB *dcb)
     }
 
     spinlock_release(&all_dcbs_lock[dcb->owner]);
+}
+
+/**
+ * Enable the timing out of idle connections.
+ */
+void dcb_enable_session_timeouts()
+{
+    check_timeouts = true;
+}
+
+/**
+ * Close sessions that have been idle for too long.
+ *
+ * If the time since a session last sent data is greater than the set value in the
+ * service, it is disconnected. The connection timeout is disabled by default.
+ */
+void dcb_process_idle_sessions(int thr)
+{
+    if (check_timeouts && hkheartbeat >= next_timeout_check)
+    {
+        /** Because the resolution of the timeout is one second, we only need to
+         * check for it once per second. One heartbeat is 100 milliseconds. */
+        next_timeout_check = hkheartbeat + 10;
+
+        for (DCB *dcb = all_dcbs[thr]; dcb; dcb = dcb->memdata.next)
+        {
+            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+            {
+                SESSION *session = dcb->session;
+
+                if (session->service && session->client_dcb && session->client_dcb->state == DCB_STATE_POLLING &&
+                    hkheartbeat - session->client_dcb->last_read > session->service->conn_idle_timeout * 10)
+                {
+                    poll_fake_hangup_event(dcb);
+                }
+            }
+        }
+    }
 }

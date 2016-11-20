@@ -185,13 +185,6 @@ typedef struct session
     .stats = SESSION_STATS_INIT, .head = DOWNSTREAM_INIT, .tail = UPSTREAM_INIT, \
     .state = SESSION_STATE_ALLOC, .ses_chk_tail = CHK_NUM_SESSION}
 
-/** Whether to do session timeout checks */
-extern bool check_timeouts;
-
-/** When the next timeout check is done. This is compared to hkheartbeat in
- * hk_heartbeat.h */
-extern long next_timeout_check;
-
 #define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client_dcb, type)
 
 /**
@@ -231,8 +224,6 @@ SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log_priority(SESSION* ses, int priority);
 void session_disable_log_priority(SESSION* ses, int priority);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
-void process_idle_sessions();
-void enable_session_timeouts();
 
 /**
  * Get the transaction state of the session.

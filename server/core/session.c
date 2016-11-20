@@ -56,14 +56,6 @@ static int session_id;
 
 static struct session session_dummy_struct;
 
-/**
- * These two are declared in session.h
- */
-bool check_timeouts = false;
-long next_timeout_check = 0;
-
-static SPINLOCK timeout_lock = SPINLOCK_INIT;
-
 static void session_initialize(void *session);
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
@@ -892,50 +884,6 @@ char *
 session_getUser(SESSION *session)
 {
     return (session && session->client_dcb) ? session->client_dcb->user : NULL;
-}
-
-/**
- * Enable the timing out of idle connections.
- *
- * This will prevent unnecessary acquisitions of the session spinlock if no
- * service is configured with a session idle timeout.
- */
-void enable_session_timeouts()
-{
-    check_timeouts = true;
-}
-
-/**
- * Close sessions that have been idle for too long.
- *
- * If the time since a session last sent data is greater than the set value in the
- * service, it is disconnected. The connection timeout is disabled by default.
- */
-void process_idle_sessions()
-{
-    if (spinlock_acquire_nowait(&timeout_lock))
-    {
-        if (hkheartbeat >= next_timeout_check)
-        {
-            list_entry_t *current = list_start_iteration(&SESSIONlist);
-            /** Because the resolution of the timeout is one second, we only need to
-             * check for it once per second. One heartbeat is 100 milliseconds. */
-            next_timeout_check = hkheartbeat + 10;
-            while (current)
-            {
-                SESSION *all_session = (SESSION *)current;
-
-                if (all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
-                    hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
-                {
-                    poll_fake_hangup_event(all_session->client_dcb);
-                }
-
-                current = list_iterate(&SESSIONlist, current);
-            }
-        }
-        spinlock_release(&timeout_lock);
-    }
 }
 
 /**

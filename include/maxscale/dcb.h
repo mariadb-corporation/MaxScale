@@ -377,6 +377,8 @@ int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
 int dcb_listen(DCB *listener, const char *config, const char *protocol_name);
 void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
+void dcb_enable_session_timeouts();
+void dcb_process_idle_sessions(int thr);
 
 /**
  * DCB flags values
