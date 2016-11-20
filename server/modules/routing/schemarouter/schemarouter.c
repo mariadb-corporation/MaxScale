@@ -608,41 +608,6 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
 }
 
 /**
- * A fake DCB read function used to forward queued queries.
- * @param dcb Internal DCB used by the router session
- * @return Always 1
- */
-int internalRoute(DCB* dcb)
-{
-    if (dcb->dcb_readqueue && dcb->session)
-    {
-        GWBUF* tmp = dcb->dcb_readqueue;
-        void* rinst = dcb->session->service->router_instance;
-        void *rses = dcb->session->router_session;
-
-        dcb->dcb_readqueue = NULL;
-        return dcb->session->service->router->routeQuery(rinst, rses, tmp);
-    }
-    return 1;
-}
-
-/**
- * A fake DCB read function used to forward replies to the client.
- * @param dcb Internal DCB used by the router session
- * @return Always 1
- */
-int internalReply(DCB* dcb)
-{
-    if (dcb->dcb_readqueue && dcb->session)
-    {
-        GWBUF* tmp = dcb->dcb_readqueue;
-        dcb->dcb_readqueue = NULL;
-        return SESSION_ROUTE_REPLY(dcb->session, tmp);
-    }
-    return 1;
-}
-
-/**
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
@@ -955,16 +920,8 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     }
 
     client_rses->shardmap = map;
-    client_rses->dcb_reply = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
-    client_rses->dcb_reply->func.read = internalReply;
-    client_rses->dcb_reply->state = DCB_STATE_POLLING;
-    client_rses->dcb_reply->session = session;
     memcpy(&client_rses->rses_config, &router->schemarouter_config, sizeof(schemarouter_config_t));
     client_rses->n_sescmd = 0;
-    client_rses->dcb_route = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
-    client_rses->dcb_route->func.read = internalRoute;
-    client_rses->dcb_route->state = DCB_STATE_POLLING;
-    client_rses->dcb_route->session = session;
     client_rses->rses_config.last_refresh = time(NULL);
 
     if (using_db)
@@ -1147,18 +1104,7 @@ static void closeSession(ROUTER* instance, void* router_session)
             }
         }
 
-        /* Close internal DCBs */
-        router_cli_ses->dcb_reply->session = NULL;
-        router_cli_ses->dcb_route->session = NULL;
-        dcb_close(router_cli_ses->dcb_reply);
-        dcb_close(router_cli_ses->dcb_route);
-
-        while (router_cli_ses->queue &&
-               (router_cli_ses->queue = gwbuf_consume(
-                                            router_cli_ses->queue, gwbuf_length(router_cli_ses->queue))))
-        {
-            ;
-        }
+        gwbuf_free(router_cli_ses->queue);
 
         /** Unlock */
         rses_end_locked_router_action(router_cli_ses);
@@ -4153,7 +4099,7 @@ void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
               querystr);
     MXS_FREE(querystr);
 #endif
-    poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route, tmp);
+    poll_add_epollin_event_to_dcb(router_cli_ses->rses_client_dcb, tmp);
 }
 
 /**

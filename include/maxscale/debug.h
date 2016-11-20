@@ -243,7 +243,8 @@ typedef enum skygw_chk_t
 #define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
                        ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER" : \
                         ((r) == DCB_ROLE_BACKEND_HANDLER ? "DCB_ROLE_BACKEND_HANDLER" : \
-                         "UNKNOWN DCB ROLE")))
+                         ((r) == DCB_ROLE_INTERNAL ? "DCB_ROLE_INTERNAL" : \
+                          "UNKNOWN DCB ROLE"))))
 
 #define STRBETYPE(t) ((t) == BE_MASTER ? "BE_MASTER" : \
                         ((t) == BE_SLAVE ? "BE_SLAVE" : \
