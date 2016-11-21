@@ -14,6 +14,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <limits.h>
 
 MXS_BEGIN_DECLS

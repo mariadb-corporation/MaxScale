@@ -381,4 +381,26 @@ regardless of what host the `admin` user comes from.
 
 # Storage
 
-## Storage RocksDB
+## `storage_rocksdb`
+
+This storage module uses RocksDB database for storing the cached data. The
+directory where the RocksDB database will be created is by default created
+into the _MaxScale cache_ directory, which usually is not on a RAM disk. For
+maximum performance, you may want to explicitly place the RocksDB database
+on a RAM disk.
+
+### Parameters
+
+#### `cache_directory`
+
+Specifies the directory under which the filter instance specific RocksDB
+databases will be placed. Note that at startup, each RocksDB database will
+be deleted and recreated. That is, cache content will not be retained across
+MaxScale restarts.
+
+```
+storage_options=cache_directory=/mnt/maxscale-cache
+```
+
+With the above setting a directory `/mnt/macscale-cache/storage_rocksdb` will
+created, under which the actual instance specific cache directories are created.
