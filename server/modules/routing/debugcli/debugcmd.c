@@ -51,11 +51,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <maxscale/alloc.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/router.h>
 #include <maxscale/filter.h>
 #include <maxscale/modules.h>
+#include <maxscale/modulecmd.h>
 #include <maxscale/atomic.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -285,6 +287,59 @@ struct subcommand showoptions[] =
     { EMPTY_OPTION}
 };
 
+bool listfuncs_cb(const MODULECMD *cmd, void *data)
+{
+    DCB *dcb = (DCB*)data;
+
+    dcb_printf(dcb, "%s::%s(", cmd->domain, cmd->identifier);
+
+
+    for (int i = 0; i < cmd->arg_count_max; i++)
+    {
+        modulecmd_arg_type_t *type = &cmd->arg_types[i];
+
+        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
+        {
+            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
+
+            if (t)
+            {
+                dcb_printf(dcb, "%s%s", t, i < cmd->arg_count_max - 1 ? " " : "");
+                MXS_FREE(t);
+            }
+        }
+    }
+
+    dcb_printf(dcb, ")\n");
+
+
+    for (int i = 0; i < cmd->arg_count_max; i++)
+    {
+        modulecmd_arg_type_t *type = &cmd->arg_types[i];
+
+        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
+        {
+
+            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
+
+            if (t)
+            {
+                dcb_printf(dcb, "    %s - %s\n", t, cmd->arg_types[i].description);
+                MXS_FREE(t);
+            }
+        }
+    }
+
+    dcb_printf(dcb, "\n");
+
+    return true;
+}
+
+void dListFunctions(DCB *dcb)
+{
+    modulecmd_foreach(NULL, NULL, listfuncs_cb, dcb);
+}
+
 /**
  * The subcommands of the list command
  */
@@ -349,6 +404,12 @@ struct subcommand listoptions[] =
         "List polling threads",
         "List the status of the polling threads in MaxScale",
         {0, 0, 0}
+    },
+    {
+        "functions", 0, 0, dListFunctions,
+        "List registered functions",
+        "List all registered functions",
+        {0}
     },
     { EMPTY_OPTION}
 };
@@ -1311,6 +1372,78 @@ struct subcommand alteroptions[] =
     }
 };
 
+static inline bool requires_output_dcb(const MODULECMD *cmd)
+{
+    modulecmd_arg_type_t *type = &cmd->arg_types[0];
+    return cmd->arg_count_max > 0 && MODULECMD_GET_TYPE(type) == MODULECMD_ARG_OUTPUT;
+}
+
+static void callFunction(DCB *dcb, char *domain, char *id, char *v3,
+                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                         char *v10, char *v11, char *v12)
+{
+    const void *values[11] = {v3, v4, v5, v6, v7, v8, v9, v10, v11, v12};
+    const int valuelen = sizeof(values) / sizeof(values[0]);
+    int numargs = 0;
+
+    while (numargs < valuelen && values[numargs])
+    {
+        numargs++;
+    }
+
+    const MODULECMD *cmd = modulecmd_find_command(domain, id);
+
+    if (cmd)
+    {
+        if (requires_output_dcb(cmd))
+        {
+            /** The function requires a DCB for output, add the client DCB
+             * as the first argument */
+            for (int i = valuelen - 1; i > 0; i--)
+            {
+                values[i] = values[i - 1];
+            }
+            values[0] = dcb;
+            numargs += numargs + 1 < valuelen - 1 ? 1 : 0;
+        }
+
+        MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, numargs, values);
+
+        if (arg)
+        {
+            if (!modulecmd_call_command(cmd, arg))
+            {
+                dcb_printf(dcb, "Failed to call function: %s\n", modulecmd_get_error());
+            }
+            modulecmd_arg_free(arg);
+        }
+        else
+        {
+            dcb_printf(dcb, "Failed to parse arguments: %s\n", modulecmd_get_error());
+        }
+    }
+    else
+    {
+        dcb_printf(dcb, "Function not found: %s\n", modulecmd_get_error());
+    }
+}
+
+struct subcommand calloptions[] =
+{
+    {
+        "function", 2, 12, callFunction,
+        "Call module function",
+        "Usage: call function NAMESPACE FUNCTION ARGS...\n"
+        "To list all registered functions, run 'list functions'.\n",
+        { ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+    },
+    {
+        EMPTY_OPTION
+    }
+};
+
 /**
  * The debug command table
  */
@@ -1335,7 +1468,8 @@ static struct
     { "restart",    restartoptions },
     { "shutdown",   shutdownoptions },
     { "show",       showoptions },
-    { "sync",   syncoptions },
+    { "sync",       syncoptions },
+    { "call",       calloptions },
     { NULL,         NULL    }
 };
 
