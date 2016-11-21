@@ -15,7 +15,9 @@
  * Test modulecmd.h functionality
  */
 
+#include <maxscale/dcb.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/session.h>
 
 #define TEST(a, b) do{if (!(a)){printf("%s:%d "b"\n", __FILE__, __LINE__);return 1;}}while(false)
 
@@ -32,16 +34,16 @@ bool test_fn(const MODULECMD_ARG *arg)
 
 int test_arguments()
 {
-    const char *params1[] = {"Hello", "true"};
-    const char *params2[] = {"Hello", "1"};
+    const void *params1[] = {"Hello", "true"};
+    const void *params2[] = {"Hello", "1"};
 
-    const char *wrong_params1[] = {"Hi", "true"};
-    const char *wrong_params2[] = {"Hello", "false"};
+    const void *wrong_params1[] = {"Hi", "true"};
+    const void *wrong_params2[] = {"Hello", "false"};
 
-    const char *bad_params1[] = {"Hello", "World!"};
-    const char *bad_params2[] = {"Hello", NULL};
-    const char *bad_params3[] = {NULL, NULL};
-    const char *bad_params4[] = {NULL, "World!"};
+    const void *bad_params1[] = {"Hello", "World!"};
+    const void *bad_params2[] = {"Hello", NULL};
+    const void *bad_params3[] = {NULL, NULL};
+    const void *bad_params4[] = {NULL, "World!"};
 
     const char *ns = "test_arguments";
     const char *id = "test_arguments";
@@ -139,13 +141,13 @@ bool test_fn2(const MODULECMD_ARG *arg)
 
 int test_optional_arguments()
 {
-    const char *params1[] = {"Hello", "true"};
-    const char *params2[] = {NULL, "true"};
-    const char *params3[] = {"Hello", NULL};
-    const char *params4[] = {NULL, NULL};
+    const void *params1[] = {"Hello", "true"};
+    const void *params2[] = {NULL, "true"};
+    const void *params3[] = {"Hello", NULL};
+    const void *params4[] = {NULL, NULL};
 
-    const char *ns = "test_optional_arguments";
-    const char *id = "test_optional_arguments";
+    const void *ns = "test_optional_arguments";
+    const void *id = "test_optional_arguments";
     modulecmd_arg_type_t args1[] =
     {
         MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
@@ -263,7 +265,7 @@ int test_map()
     int n = 0;
     TEST(modulecmd_foreach(NULL, NULL, mapfn, &n), "Mapping function should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
-    TEST(n == 10, "Every registered command should be called");
+    TEST(n >= 10, "Every registered command should be called");
 
     n = 0;
     TEST(modulecmd_foreach("test_map", NULL, mapfn, &n), "Mapping function should succeed");
@@ -298,6 +300,57 @@ int test_map()
     return 0;
 }
 
+static DCB my_dcb;
+static SESSION my_session;
+
+bool ptrfn(const MODULECMD_ARG *argv)
+{
+    bool rval = false;
+
+    if (argv->argc == 4 && argv->argv[0].value.dcb == &my_dcb &&
+        argv->argv[1].value.dcb == &my_dcb &&
+        argv->argv[2].value.session == &my_session &&
+        argv->argv[3].value.session == &my_session)
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
+int test_pointers()
+{
+    const char *ns = "test_pointers";
+    const char *id = "test_pointers";
+
+    modulecmd_arg_type_t args[] = {MODULECMD_ARG_DCB, MODULECMD_ARG_DCB_PTR,
+                                   MODULECMD_ARG_SESSION, MODULECMD_ARG_SESSION_PTR
+                                  };
+
+    TEST(modulecmd_register_command(ns, id, ptrfn, 4, args), "Registering a command should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    TEST(cmd, "The registered command should be found");
+    char dcb_str[200];
+    char session_str[200];
+
+    sprintf(dcb_str, "%p", &my_dcb);
+    sprintf(session_str, "%p", &my_session);
+
+    const void* params[] = {dcb_str, &my_dcb, session_str, &my_session};
+
+    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 4, params);
+    TEST(arg, "Parsing arguments should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    TEST(modulecmd_call_command(cmd, arg), "Module call should be successful");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    modulecmd_arg_free(arg);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int rc = 0;
@@ -306,6 +359,7 @@ int main(int argc, char **argv)
     rc += test_optional_arguments();
     rc += test_module_errors();
     rc += test_map();
+    rc += test_pointers();
 
     return rc;
 }

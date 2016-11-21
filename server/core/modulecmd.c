@@ -197,7 +197,7 @@ static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
     return false;
 }
 
-static bool process_argument(modulecmd_arg_type_t type, const char* value,
+static bool process_argument(modulecmd_arg_type_t type, const void* value,
                              struct arg_node *arg, const char **err)
 {
     bool rval = false;
@@ -217,7 +217,7 @@ static bool process_argument(modulecmd_arg_type_t type, const char* value,
                 break;
 
             case MODULECMD_ARG_STRING:
-                if ((arg->value.string = MXS_STRDUP(value)))
+                if ((arg->value.string = MXS_STRDUP((char*)value)))
                 {
                     arg->type = MODULECMD_ARG_STRING;
                     rval = true;
@@ -257,7 +257,7 @@ static bool process_argument(modulecmd_arg_type_t type, const char* value,
                 break;
 
             case MODULECMD_ARG_SERVER:
-                if ((arg->value.server = server_find_by_unique_name(value)))
+                if ((arg->value.server = server_find_by_unique_name((char*)value)))
                 {
                     arg->type = MODULECMD_ARG_SERVER;
                     rval = true;
@@ -269,11 +269,27 @@ static bool process_argument(modulecmd_arg_type_t type, const char* value,
                 break;
 
             case MODULECMD_ARG_SESSION:
-                // TODO: Implement this
+                arg->type = MODULECMD_ARG_SESSION;
+                arg->value.session = (SESSION*)strtol((char*)value, NULL, 0);
+                rval = true;
+                break;
+
+            case MODULECMD_ARG_SESSION_PTR:
+                arg->type = MODULECMD_ARG_SESSION_PTR;
+                arg->value.session = (SESSION*)value;
+                rval = true;
                 break;
 
             case MODULECMD_ARG_DCB:
-                // TODO: Implement this
+                arg->type = MODULECMD_ARG_DCB;
+                arg->value.dcb = (DCB*)strtol((char*)value, NULL, 0);
+                rval = true;
+                break;
+
+            case MODULECMD_ARG_DCB_PTR:
+                arg->type = MODULECMD_ARG_DCB_PTR;
+                arg->value.dcb = (DCB*)value;
+                rval = true;
                 break;
 
             case MODULECMD_ARG_MONITOR:
@@ -418,7 +434,7 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
     return rval;
 }
 
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const char **argv)
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **argv)
 {
     reset_error();
 

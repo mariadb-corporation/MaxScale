@@ -44,15 +44,17 @@ typedef uint64_t modulecmd_arg_type_t;
  * Argument types for the registered functions, the first 8 bits of
  * the modulecmd_arg_type_t type. An argument can be of only one type.
  */
-#define MODULECMD_ARG_NONE    0
-#define MODULECMD_ARG_STRING  1
-#define MODULECMD_ARG_BOOLEAN 2
-#define MODULECMD_ARG_SERVICE 3
-#define MODULECMD_ARG_SERVER  4
-#define MODULECMD_ARG_SESSION 5
-#define MODULECMD_ARG_DCB     6
-#define MODULECMD_ARG_MONITOR 7
-#define MODULECMD_ARG_FILTER  8
+#define MODULECMD_ARG_NONE        0
+#define MODULECMD_ARG_STRING      1
+#define MODULECMD_ARG_BOOLEAN     2
+#define MODULECMD_ARG_SERVICE     3
+#define MODULECMD_ARG_SERVER      4
+#define MODULECMD_ARG_SESSION     5
+#define MODULECMD_ARG_SESSION_PTR 6
+#define MODULECMD_ARG_DCB         7
+#define MODULECMD_ARG_DCB_PTR     8
+#define MODULECMD_ARG_MONITOR     9
+#define MODULECMD_ARG_FILTER      10
 
 /**
  * Options for arguments, bits 9 through 32
@@ -148,7 +150,7 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
  * @param argv Argument list in string format of size @c argc
  * @return Parsed arguments or NULL on error
  */
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const char **argv);
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **argv);
 
 /**
  * @brief Free parsed arguments returned by modulecmd_arg_parse
