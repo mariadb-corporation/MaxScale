@@ -35,26 +35,37 @@ MXS_BEGIN_DECLS
 /**
  * The argument type
  *
- * First 8 bits are reserved for argument type, bits 9 through 32 are reserved
- * for argument options and bits 33 through 64 are reserved for future use.
+ * First 8 bits of @c value are reserved for argument type, bits 9 through
+ * 32 are reserved for argument options and bits 33 through 64 are reserved
+ * for future use.
+ *
+ * @c description should be a human-readable description of the argument.
  */
-typedef uint64_t modulecmd_arg_type_t;
+typedef struct
+{
+    uint64_t    type;  /**< The argument type */
+    const char *description; /**< The argument description */
+} modulecmd_arg_type_t;
 
 /**
  * Argument types for the registered functions, the first 8 bits of
- * the modulecmd_arg_type_t type. An argument can be of only one type.
+ * the modulecmd_arg_type_t type's @c value member. An argument can be of
+ * only one type.
  */
-#define MODULECMD_ARG_NONE        0
-#define MODULECMD_ARG_STRING      1
-#define MODULECMD_ARG_BOOLEAN     2
-#define MODULECMD_ARG_SERVICE     3
-#define MODULECMD_ARG_SERVER      4
-#define MODULECMD_ARG_SESSION     5
-#define MODULECMD_ARG_SESSION_PTR 6
-#define MODULECMD_ARG_DCB         7
-#define MODULECMD_ARG_DCB_PTR     8
-#define MODULECMD_ARG_MONITOR     9
-#define MODULECMD_ARG_FILTER      10
+#define MODULECMD_ARG_NONE        0 /**< Empty argument */
+#define MODULECMD_ARG_STRING      1 /**< String */
+#define MODULECMD_ARG_BOOLEAN     2 /**< Boolean value */
+#define MODULECMD_ARG_SERVICE     3 /**< Service name */
+#define MODULECMD_ARG_SERVER      4 /**< Server name */
+#define MODULECMD_ARG_SESSION     5 /**< SESSION pointer in string format */
+#define MODULECMD_ARG_SESSION_PTR 6 /**< Raw SESSION pointer */
+#define MODULECMD_ARG_DCB         7 /**< DCB pointer in string format*/
+#define MODULECMD_ARG_DCB_PTR     8 /**< Raw DCB pointer*/
+#define MODULECMD_ARG_MONITOR     9 /**< Monitor name */
+#define MODULECMD_ARG_FILTER      10 /**< Filter name */
+#define MODULECMD_ARG_OUTPUT      11 /**< DCB suitable for writing results to.
+                                          This should always be the first argument
+                                          if the function requires an output DCB. */
 
 /**
  * Options for arguments, bits 9 through 32
@@ -64,8 +75,9 @@ typedef uint64_t modulecmd_arg_type_t;
 /**
  * Helper macros
  */
-#define MODULECMD_GET_TYPE(type) ((type & 0xff))
-#define MODULECMD_ARG_IS_REQUIRED(type) ((type & MODULECMD_ARG_OPTIONAL) == 0)
+#define MODULECMD_GET_TYPE(t) ((t)->type & 0xff)
+#define MODULECMD_ARG_IS_REQUIRED(t) (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
+#define MODULECMD_ARG_PRESENT(t) (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
 
 /** Argument list node */
 struct arg_node
@@ -159,6 +171,18 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
 void modulecmd_arg_free(MODULECMD_ARG *arg);
 
 /**
+ * @brief Check if an optional argument was defined
+ *
+ * This function looks the argument list @c arg at an offset of @c idx and
+ * checks if the argument list contains a value for an optional argument.
+ *
+ * @param arg Argument list
+ * @param idx Index of the argument, starts at 0
+ * @return True if the optional argument is present
+ */
+bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx);
+
+/**
  * @brief Call a registered command
  *
  * This calls a registered command in a specific domain. There are no guarantees
@@ -215,5 +239,16 @@ const char* modulecmd_get_error();
  */
 bool modulecmd_foreach(const char *domain_re, const char *ident_re,
                        bool(*fn)(const MODULECMD *cmd, void *data), void *data);
+
+/**
+ * @brief Return argument type as string
+ *
+ * This returns the string type of @c type. The returned string must be freed
+ * by the called.
+ *
+ * @param type Type to convert
+ * @return New string or NULL on memory allocation error
+ */
+char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type);
 
 MXS_END_DECLS

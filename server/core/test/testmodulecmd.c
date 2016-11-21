@@ -47,7 +47,11 @@ int test_arguments()
 
     const char *ns = "test_arguments";
     const char *id = "test_arguments";
-    modulecmd_arg_type_t args1[] = {MODULECMD_ARG_STRING, MODULECMD_ARG_BOOLEAN};
+    modulecmd_arg_type_t args1[] =
+    {
+        {MODULECMD_ARG_STRING, ""},
+        {MODULECMD_ARG_BOOLEAN, ""}
+    };
 
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
@@ -150,8 +154,8 @@ int test_optional_arguments()
     const void *id = "test_optional_arguments";
     modulecmd_arg_type_t args1[] =
     {
-        MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
-        MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL
+        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, ""},
+        {MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL, ""}
     };
 
     TEST(modulecmd_register_command(ns, id, test_fn2, 2, args1),
@@ -323,9 +327,13 @@ int test_pointers()
     const char *ns = "test_pointers";
     const char *id = "test_pointers";
 
-    modulecmd_arg_type_t args[] = {MODULECMD_ARG_DCB, MODULECMD_ARG_DCB_PTR,
-                                   MODULECMD_ARG_SESSION, MODULECMD_ARG_SESSION_PTR
-                                  };
+    modulecmd_arg_type_t args[] =
+    {
+        {MODULECMD_ARG_DCB, ""},
+        {MODULECMD_ARG_DCB_PTR, ""},
+        {MODULECMD_ARG_SESSION, ""},
+        {MODULECMD_ARG_SESSION_PTR, ""}
+    };
 
     TEST(modulecmd_register_command(ns, id, ptrfn, 4, args), "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");

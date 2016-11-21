@@ -147,7 +147,7 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
 
         for (int i = 0; i < argc; i++)
         {
-            if (MODULECMD_ARG_IS_REQUIRED(argv[i]))
+            if (MODULECMD_ARG_IS_REQUIRED(&argv[i]))
             {
                 argc_min++;
             }
@@ -197,14 +197,14 @@ static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
     return false;
 }
 
-static bool process_argument(modulecmd_arg_type_t type, const void* value,
+static bool process_argument(modulecmd_arg_type_t *type, const void* value,
                              struct arg_node *arg, const char **err)
 {
     bool rval = false;
 
     if (!MODULECMD_ARG_IS_REQUIRED(type) && value == NULL)
     {
-        arg->type = MODULECMD_ARG_NONE;
+        arg->type.type = MODULECMD_ARG_NONE;
         rval = true;
     }
     else if (value)
@@ -212,14 +212,14 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
         switch (MODULECMD_GET_TYPE(type))
         {
             case MODULECMD_ARG_NONE:
-                arg->type = MODULECMD_ARG_NONE;
+                arg->type.type = MODULECMD_ARG_NONE;
                 rval = true;
                 break;
 
             case MODULECMD_ARG_STRING:
                 if ((arg->value.string = MXS_STRDUP((char*)value)))
                 {
-                    arg->type = MODULECMD_ARG_STRING;
+                    arg->type.type = MODULECMD_ARG_STRING;
                     rval = true;
                 }
                 else
@@ -234,7 +234,7 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
                     if (truthval != -1)
                     {
                         arg->value.boolean = truthval;
-                        arg->type = MODULECMD_ARG_BOOLEAN;
+                        arg->type.type = MODULECMD_ARG_BOOLEAN;
                         rval = true;
                     }
                     else
@@ -247,7 +247,7 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
             case MODULECMD_ARG_SERVICE:
                 if ((arg->value.service = service_find((char*)value)))
                 {
-                    arg->type = MODULECMD_ARG_SERVICE;
+                    arg->type.type = MODULECMD_ARG_SERVICE;
                     rval = true;
                 }
                 else
@@ -259,7 +259,7 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
             case MODULECMD_ARG_SERVER:
                 if ((arg->value.server = server_find_by_unique_name((char*)value)))
                 {
-                    arg->type = MODULECMD_ARG_SERVER;
+                    arg->type.type = MODULECMD_ARG_SERVER;
                     rval = true;
                 }
                 else
@@ -269,25 +269,25 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
                 break;
 
             case MODULECMD_ARG_SESSION:
-                arg->type = MODULECMD_ARG_SESSION;
+                arg->type.type = MODULECMD_ARG_SESSION;
                 arg->value.session = (SESSION*)strtol((char*)value, NULL, 0);
                 rval = true;
                 break;
 
             case MODULECMD_ARG_SESSION_PTR:
-                arg->type = MODULECMD_ARG_SESSION_PTR;
+                arg->type.type = MODULECMD_ARG_SESSION_PTR;
                 arg->value.session = (SESSION*)value;
                 rval = true;
                 break;
 
             case MODULECMD_ARG_DCB:
-                arg->type = MODULECMD_ARG_DCB;
+                arg->type.type = MODULECMD_ARG_DCB;
                 arg->value.dcb = (DCB*)strtol((char*)value, NULL, 0);
                 rval = true;
                 break;
 
             case MODULECMD_ARG_DCB_PTR:
-                arg->type = MODULECMD_ARG_DCB_PTR;
+                arg->type.type = MODULECMD_ARG_DCB_PTR;
                 arg->value.dcb = (DCB*)value;
                 rval = true;
                 break;
@@ -295,7 +295,7 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
             case MODULECMD_ARG_MONITOR:
                 if ((arg->value.monitor = monitor_find((char*)value)))
                 {
-                    arg->type = MODULECMD_ARG_MONITOR;
+                    arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
                 }
                 else
@@ -307,7 +307,7 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
             case MODULECMD_ARG_FILTER:
                 if ((arg->value.filter = filter_find((char*)value)))
                 {
-                    arg->type = MODULECMD_ARG_FILTER;
+                    arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
                 }
                 else
@@ -316,9 +316,15 @@ static bool process_argument(modulecmd_arg_type_t type, const void* value,
                 }
                 break;
 
+            case MODULECMD_ARG_OUTPUT:
+                arg->type.type = MODULECMD_ARG_OUTPUT;
+                arg->value.dcb = (DCB*)value;
+                rval = true;
+                break;
+
             default:
                 ss_dassert(false);
-                MXS_ERROR("Undefined argument type: %0lx", type);
+                MXS_ERROR("Undefined argument type: %0lx", type->type);
                 *err = "internal error";
                 break;
         }
@@ -353,7 +359,7 @@ static MODULECMD_ARG* modulecmd_arg_create(int argc)
 
 static void free_argument(struct arg_node *arg)
 {
-    switch (arg->type)
+    switch (arg->type.type)
     {
         case MODULECMD_ARG_STRING:
             MXS_FREE(arg->value.string);
@@ -451,7 +457,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
             {
                 const char *err = "";
 
-                if (!process_argument(cmd->arg_types[i], argv[i], &arg->argv[i], &err))
+                if (!process_argument(&cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
                     modulecmd_set_error("Argument %d, %s: %s", i + 1, err, argv[i] ? argv[i] : "No argument given");
@@ -579,4 +585,83 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
 
     spinlock_release(&modulecmd_lock);
     return rval;
+}
+
+char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
+{
+    const char *strtype = "UNKNOWN";
+
+    switch (MODULECMD_GET_TYPE(type))
+    {
+        case MODULECMD_ARG_NONE:
+            strtype = "NONE";
+            break;
+
+        case MODULECMD_ARG_STRING:
+            strtype = "STRING";
+            break;
+
+        case MODULECMD_ARG_BOOLEAN:
+            strtype = "BOOLEAN";
+            break;
+
+        case MODULECMD_ARG_SERVICE:
+            strtype = "SERVICE";
+            break;
+
+        case MODULECMD_ARG_SERVER:
+            strtype = "SERVER";
+            break;
+
+        case MODULECMD_ARG_SESSION:
+            strtype = "SESSION";
+            break;
+
+        case MODULECMD_ARG_SESSION_PTR:
+            strtype = "SESSION_PTR";
+            break;
+
+        case MODULECMD_ARG_DCB:
+            strtype = "DCB";
+            break;
+
+        case MODULECMD_ARG_DCB_PTR:
+            strtype = "DCB_PTR";
+            break;
+
+        case MODULECMD_ARG_MONITOR:
+            strtype = "MONITOR";
+            break;
+
+        case MODULECMD_ARG_FILTER:
+            strtype = "FILTER";
+            break;
+
+        case MODULECMD_ARG_OUTPUT:
+            strtype = "OUTPUT";
+            break;
+
+        default:
+            ss_dassert(false);
+            MXS_ERROR("Unknown type");
+            break;
+    }
+
+    size_t slen = strlen(strtype);
+    size_t extra = MODULECMD_ARG_IS_REQUIRED(type) ? 0 : 2;
+    char *rval = MXS_MALLOC(slen + extra + 1);
+
+    if (rval)
+    {
+        const char *fmtstr = extra ? "[%s]" : "%s";
+        sprintf(rval, fmtstr, strtype);
+    }
+
+    return rval;
+}
+
+bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx)
+{
+    return arg->argc > idx &&
+        MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
 }
