@@ -60,25 +60,31 @@
  *@endcode
  */
 
-#include <my_config.h>
+#include <maxscale/cdefs.h>
+
 #include <stdio.h>
-#include <maxscale/filter.h>
 #include <string.h>
+#include <time.h>
+#include <assert.h>
+#include <regex.h>
+#include <stdlib.h>
+
+#include <maxscale/filter.h>
 #include <maxscale/atomic.h>
+#include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
+#include <maxscale/platform.h>
 #include <maxscale/spinlock.h>
-#include <time.h>
-#include <assert.h>
-#include <regex.h>
+#include <maxscale/thread.h>
 #include <maxscale/pcre2.h>
-#include "dbfwfilter.h"
-#include <ruleparser.yy.h>
-#include <lex.yy.h>
-#include <stdlib.h>
 #include <maxscale/alloc.h>
+
+#include "dbfwfilter.h"
+#include "ruleparser.yy.h"
+#include "lex.yy.h"
 
 /** Older versions of Bison don't include the parsing function in the header */
 #ifndef dbfw_yyparse
@@ -167,6 +173,8 @@ const char* rule_names[] =
     "CLAUSE"
 };
 
+const int rule_names_len = sizeof(rule_names) / sizeof(char**);
+
 /**
  * Linked list of strings.
  */
@@ -228,6 +236,10 @@ typedef struct rulebook_t
     struct rulebook_t* next;    /*< The next rule in the book */
 } RULE_BOOK;
 
+thread_local int        thr_rule_version = 0;
+thread_local RULE      *thr_rules = NULL;
+thread_local HASHTABLE *thr_users = NULL;
+
 /**
  * A temporary template structure used in the creation of actual users.
  * This is also used to link the user definitions with the rules.
@@ -260,12 +272,12 @@ typedef struct user_t
  */
 typedef struct
 {
-    HASHTABLE*      users;     /*< User hashtable */
-    RULE*           rules;      /*< List of all the rules */
     enum fw_actions action;     /*< Default operation mode, defaults to deny */
     int             log_match;  /*< Log matching and/or non-matching queries */
     SPINLOCK        lock;       /*< Instance spinlock */
     int             idgen;      /*< UID generator */
+    char           *rulefile;   /*< Path to the rule file */
+    int             rule_version; /*< Latest rule file version, incremented on reload */
 } FW_INSTANCE;
 
 /**
@@ -281,6 +293,24 @@ typedef struct
 
 bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef);
 bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr);
+static void rule_free_all(RULE* rule);
+static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **users);
+bool replace_rules(FW_INSTANCE* instance);
+
+static void print_rule(RULE *rules, char *dest)
+{
+    int type = 0;
+
+    if ((int)rules->type > 0 && (int)rules->type < rule_names_len)
+    {
+        type = (int)rules->type;
+    }
+
+    sprintf(dest, "%s, %s, %d",
+            rules->name,
+            rule_names[type],
+            rules->times_matched);
+}
 
 /**
  * Push a string onto a string stack
@@ -674,6 +704,95 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
     return tmp;
 }
 
+bool dbfw_reload_rules(const MODULECMD_ARG *argv)
+{
+    bool rval = true;
+    FILTER_DEF *filter = argv->argv[0].value.filter;
+    FW_INSTANCE *inst = (FW_INSTANCE*)filter->filter;
+
+    if (modulecmd_arg_is_present(argv, 1))
+    {
+        /** We need to change the rule file */
+        char *newname = MXS_STRDUP(argv->argv[1].value.string);
+
+        if (newname)
+        {
+            spinlock_acquire(&inst->lock);
+
+            char *oldname = inst->rulefile;
+            inst->rulefile = newname;
+
+            spinlock_release(&inst->lock);
+
+            MXS_FREE(oldname);
+        }
+        else
+        {
+            modulecmd_set_error("Memory allocation failed");
+            rval = false;
+        }
+    }
+
+    spinlock_acquire(&inst->lock);
+    char filename[strlen(inst->rulefile) + 1];
+    strcpy(filename, inst->rulefile);
+    spinlock_release(&inst->lock);
+
+    RULE *rules = NULL;
+    HASHTABLE *users = NULL;
+
+    if (rval && access(filename, R_OK) == 0)
+    {
+        if (process_rule_file(filename, &rules, &users))
+        {
+            atomic_add(&inst->rule_version, 1);
+        }
+        else
+        {
+            modulecmd_set_error("Failed to process rule file '%s'. See log "
+                                "file for more details.", filename);
+            rval = false;
+        }
+    }
+    else
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        modulecmd_set_error("Failed to read rules at '%s': %d, %s", filename,
+                            errno, strerror_r(errno, err, sizeof(err)));
+        rval = false;
+    }
+
+    rule_free_all(rules);
+    hashtable_free(users);
+
+    return rval;
+}
+
+bool dbfw_show_rules(const MODULECMD_ARG *argv)
+{
+    DCB *dcb = argv->argv[0].value.dcb;
+    FILTER_DEF *filter = argv->argv[1].value.filter;
+    FW_INSTANCE *inst = (FW_INSTANCE*)filter->filter;
+
+    dcb_printf(dcb, "Rule, Type, Times Matched\n");
+
+    if (!thr_rules || !thr_users)
+    {
+        if (!replace_rules(inst))
+        {
+            return 0;
+        }
+    }
+
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
+    {
+        char buf[strlen(rule->name) + 200]; // Some extra space
+        print_rule(rule, buf);
+        dcb_printf(dcb, "%s\n", buf);
+    }
+
+    return true;
+}
 /**
  * Implementation of the mandatory version entry point
  *
@@ -692,7 +811,23 @@ char * version()
 /*lint -e14 */
 void ModuleInit()
 {
+    modulecmd_arg_type_t args_rules_reload[] =
+    {
+        {MODULECMD_ARG_FILTER, "Filter to reload"},
+        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Path to rule file"}
+    };
+
+    modulecmd_register_command("dbfwfilter", "rules/reload", dbfw_reload_rules, 2, args_rules_reload);
+
+    modulecmd_arg_type_t args_rules_show[] =
+    {
+        {MODULECMD_ARG_OUTPUT, "DCB where result is written"},
+        {MODULECMD_ARG_FILTER, "Filter to inspect"}
+    };
+
+    modulecmd_register_command("dbfwfilter", "rules", dbfw_show_rules, 2, args_rules_show);
 }
+
 /*lint +e14 */
 
 /**
@@ -706,60 +841,6 @@ void ModuleInit()
 FILTER_OBJECT * GetModuleObject()
 {
     return &MyObject;
-}
-
-/**
- * Apply a rule set to a user
- *
- * @param instance Filter instance
- * @param user User name
- * @param rulebook List of rules to apply
- * @param type Matching type, one of FWTOK_MATCH_ANY, FWTOK_MATCH_ALL or FWTOK_MATCH_STRICT_ALL
- * @return True of the rules were successfully applied. False if memory allocation
- * fails
- */
-static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
-                               RULE_BOOK *rulebook, enum match_type type)
-{
-    DBFW_USER* user;
-    ss_dassert(type == FWTOK_MATCH_ANY || type == FWTOK_MATCH_STRICT_ALL || type == FWTOK_MATCH_ALL);
-    if ((user = (DBFW_USER*) hashtable_fetch(instance->users, username)) == NULL)
-    {
-        /**New user*/
-        if ((user = (DBFW_USER*) MXS_CALLOC(1, sizeof(DBFW_USER))) == NULL)
-        {
-            return false;
-        }
-        spinlock_init(&user->lock);
-    }
-
-    user->name = (char*) MXS_STRDUP_A(username);
-    user->qs_limit = NULL;
-    RULE_BOOK *tl = (RULE_BOOK*) rulebook_clone(rulebook);
-    RULE_BOOK *tail = tl;
-
-    while (tail && tail->next)
-    {
-        tail = tail->next;
-    }
-
-    switch (type)
-    {
-        case FWTOK_MATCH_ANY:
-            tail->next = user->rules_or;
-            user->rules_or = tl;
-            break;
-        case FWTOK_MATCH_STRICT_ALL:
-            tail->next = user->rules_and;
-            user->rules_strict_and = tl;
-            break;
-        case FWTOK_MATCH_ALL:
-            tail->next = user->rules_and;
-            user->rules_and = tl;
-            break;
-    }
-    hashtable_add(instance->users, (void *) username, (void *) user);
-    return true;
 }
 
 /**
@@ -1238,6 +1319,7 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
                 user->rules_and = NULL;
                 user->rules_or = NULL;
                 user->rules_strict_and = NULL;
+                user->qs_limit = NULL;
                 spinlock_init(&user->lock);
                 hashtable_add(users, user->name, user);
             }
@@ -1360,36 +1442,45 @@ static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **us
     return rc == 0;
 }
 
-
 /**
- * @brief Replace the rule file used by this filter instance
+ * @brief Replace the rule file used by this thread
  *
- * This function does no locking. An external lock needs to protect this function
- * call to prevent any connections from using the data when it is being replaced.
+ * This function replaces or initializes the thread local list of rules and users.
  *
- * @param filename File where the rules are located
  * @param instance Filter instance
- * @return True on success, false on error. If the return value is false, the
- * old rules remain active.
+ * @return True if the session can continue, false on fatal error.
  */
-bool replace_rule_file(const char* filename, FW_INSTANCE* instance)
+bool replace_rules(FW_INSTANCE* instance)
 {
-    bool rval = false;
+    bool rval = true;
+    spinlock_acquire(&instance->lock);
+
+    size_t len = strlen(instance->rulefile);
+    char filename[len + 1];
+    strcpy(filename, instance->rulefile);
+
+    spinlock_release(&instance->lock);
+
     RULE *rules;
     HASHTABLE *users;
 
     if (process_rule_file(filename, &rules, &users))
     {
-        /** Rules processed successfully, free the old ones */
-        rule_free_all(instance->rules);
-        hashtable_free(instance->users);
-        instance->rules = rules;
-        instance->users = users;
+        rule_free_all(thr_rules);
+        hashtable_free(thr_users);
+        thr_rules = rules;
+        thr_users = users;
         rval = true;
+    }
+    else if (thr_rules && thr_users)
+    {
+        MXS_ERROR("Failed to parse rules at '%s'. Old rules are still used.", filename);
     }
     else
     {
-        MXS_ERROR("Failed to process rule file at '%s', old rules are still active.", filename);
+        MXS_ERROR("Failed to parse rules at '%s'. No previous rules available, "
+                  "closing session.", filename);
+        rval = false;
     }
 
     return rval;
@@ -1474,11 +1565,22 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         err = true;
     }
 
-    if (err || !process_rule_file(filename, &my_instance->rules, &my_instance->users))
+    RULE *rules = NULL;
+    HASHTABLE *users = NULL;
+    my_instance->rulefile = MXS_STRDUP(filename);
+
+    if (err || !my_instance->rulefile || !process_rule_file(filename, &rules, &users))
     {
         MXS_FREE(my_instance);
         my_instance = NULL;
     }
+    else
+    {
+        atomic_add(&my_instance->rule_version, 1);
+    }
+
+    rule_free_all(rules);
+    hashtable_free(users);
 
     return (FILTER *) my_instance;
 }
@@ -1830,15 +1932,15 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_PERMISSION:
-            {
-                matches = true;
-                msg = MXS_STRDUP_A("Permission denied at this time.");
-                char buffer[32]; // asctime documentation requires 26
-                asctime_r(&tm_now, buffer);
-                MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulebook->rule->name, buffer);
-                goto queryresolved;
-            }
-            break;
+                {
+                    matches = true;
+                    msg = MXS_STRDUP_A("Permission denied at this time.");
+                    char buffer[32]; // asctime documentation requires 26
+                    asctime_r(&tm_now, buffer);
+                    MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulebook->rule->name, buffer);
+                    goto queryresolved;
+                }
+                break;
 
             case RT_COLUMN:
                 if (is_sql && is_real)
@@ -2205,6 +2307,16 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     DCB *dcb = my_session->session->client_dcb;
     int rval = 0;
     ss_dassert(dcb && dcb->session);
+    int rule_version = my_instance->rule_version;
+
+    if (thr_rule_version < rule_version)
+    {
+        if (!replace_rules(my_instance))
+        {
+            return 0;
+        }
+        thr_rule_version = rule_version;
+    }
 
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
@@ -2217,7 +2329,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     }
     else
     {
-        DBFW_USER *user = find_user_data(my_instance->users, dcb->user, dcb->remote);
+        DBFW_USER *user = find_user_data(thr_users, dcb->user, dcb->remote);
         bool query_ok = false;
 
         if (user)
@@ -2304,6 +2416,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             rval = dcb->func.write(dcb, forward);
         }
     }
+
     return rval;
 }
 
@@ -2321,34 +2434,15 @@ static void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
     FW_INSTANCE *my_instance = (FW_INSTANCE *) instance;
-    RULE* rules;
-    int type;
 
-    if (my_instance)
+    dcb_printf(dcb, "Firewall Filter\n");
+    dcb_printf(dcb, "Rule, Type, Times Matched\n");
+
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
     {
-        spinlock_acquire(&my_instance->lock);
-        rules = my_instance->rules;
-
-        dcb_printf(dcb, "Firewall Filter\n");
-        dcb_printf(dcb, "%-24s%-24s%-24s\n", "Rule", "Type", "Times Matched");
-        while (rules)
-        {
-            if ((int) rules->type > 0 &&
-                (int) rules->type < sizeof(rule_names) / sizeof(char**))
-            {
-                type = (int) rules->type;
-            }
-            else
-            {
-                type = 0;
-            }
-            dcb_printf(dcb, "%-24s%-24s%-24d\n",
-                       rules->name,
-                       rule_names[type],
-                       rules->times_matched);
-            rules = rules->next;
-        }
-        spinlock_release(&my_instance->lock);
+        char buf[strlen(rule->name) + 200];
+        print_rule(rule, buf);
+        dcb_printf(dcb, "%s\n", buf);
     }
 }
 
