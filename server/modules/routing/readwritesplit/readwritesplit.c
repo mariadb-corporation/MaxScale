@@ -1391,6 +1391,8 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     else if (!trx_active && !load_active &&
              !QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) &&
              !QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) &&
+             !QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) &&
+             !QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) &&
              (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
               QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) ||
               QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
