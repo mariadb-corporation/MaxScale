@@ -23,5 +23,14 @@ SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));
 
 insert into t1 values (2, 2) on duplicate key update data= data + 10;
 # Problem: warning: [qc_sqlite] Statement was only partially parsed (Sqlite3 error: SQL logic error
-#          or missing database, near "on": syntax error): "insert into t1 values (2, 2) on duplicate 
+#          or missing database, near "on": syntax error): "insert into t1 values (2, 2) on duplicate
 #          key update data= data + 10;"
+
+SET @`a b`='hello';
+set @`test`=1;
+set @"tEST"=3;
+set @`TeST`=4;
+# warning: qc_sqlite: Statement was classified only based on keywords
+# (Sqlite3 error: SQL logic error or missing database, unrecognized token: "@"): "set @=4"
+#
+# sqlite3GetToken needs to be modified to accept a quoted variable name.

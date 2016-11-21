@@ -520,6 +520,10 @@ The status bit that can be controlled are
     <td>maintenance</td>
     <td>The server is in maintenance mode. In this mode no new connections will be established to the server. The monitors will also not monitor servers that are in maintenance mode.</td>
   </tr>
+  <tr>
+    <td>stale</td>
+    <td>The server is a stale master server. Read [MySQL Monitor](../Monitors/MySQL-Monitor.md) documentation for more details.</td>
+  </tr>
 </table>
 
 
