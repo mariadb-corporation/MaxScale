@@ -1256,7 +1256,14 @@ static void store_result(CACHE_SESSION_DATA *csdata)
 
         if (result != CACHE_RESULT_OK)
         {
-            MXS_ERROR("Could not store cache item.");
+            MXS_ERROR("Could not store cache item, deleting it.");
+
+            result = csdata->api->delValue(csdata->storage, csdata->key);
+
+            if ((result != CACHE_RESULT_OK) || (result != CACHE_RESULT_NOT_FOUND))
+            {
+                MXS_ERROR("Could not delete cache item.");
+            }
         }
     }
 
