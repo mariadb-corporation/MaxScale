@@ -381,6 +381,17 @@ void dcb_enable_session_timeouts();
 void dcb_process_idle_sessions(int thr);
 
 /**
+ * @brief Call a function for each connected DCB
+ *
+ * @param func Function to call. The function should return @c true to continue iteration
+ * and @c false to stop iteration earlier. The first parameter is a DCB and the second
+ * is the value of @c data that the user provided.
+ * @param data User provided data passed as the second parameter to @c func
+ * @return True if all DCBs were iterated, false if the callback returned false
+ */
+bool dcb_foreach(bool (*func)(DCB *, void *), void *data);
+
+/**
  * DCB flags values
  */
 #define DCBF_CLONE              0x0001  /*< DCB is a clone */

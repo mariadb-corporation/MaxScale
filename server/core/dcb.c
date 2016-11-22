@@ -3522,3 +3522,27 @@ void dcb_process_idle_sessions(int thr)
         }
     }
 }
+
+bool dcb_foreach(bool(*func)(DCB *, void *), void *data)
+{
+
+    int nthr = config_threadcount();
+    bool more = true;
+
+    for (int i = 0; i < nthr && more; i++)
+    {
+        spinlock_acquire(&all_dcbs_lock[i]);
+
+        for (DCB *dcb = all_dcbs[i]; dcb && more; dcb = dcb->memdata.next)
+        {
+            if (!func(dcb, data))
+            {
+                more = false;
+            }
+        }
+
+        spinlock_release(&all_dcbs_lock[i]);
+    }
+
+    return more;
+}
