@@ -106,3 +106,13 @@ bool runtime_alter_server(SERVER *server, char *key, char *value);
  */
 bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
                                const char *ca, const char *version, const char *depth);
+
+/**
+ * @brief Alter monitor parameters
+ *
+ * @param monitor Monitor to aler
+ * @param key Key to modify
+ * @param value New value
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value);

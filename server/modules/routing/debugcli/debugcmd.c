@@ -1169,81 +1169,6 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     }
 }
 
-/**
- * @brief Convert a string value to a positive integer
- *
- * If the value is not a positive integer, an error is printed to @c dcb.
- *
- * @param value String value
- * @return 0 on error, otherwise a positive integer
- */
-static long get_positive_int(const char *value)
-{
-    char *endptr;
-    long ival = strtol(value, &endptr, 10);
-
-    if (*endptr == '\0' && ival > 0)
-    {
-        return ival;
-    }
-
-    return 0;
-}
-
-static bool handle_alter_monitor(MONITOR *monitor, char *key, char *value)
-{
-    bool valid = false;
-
-    if (strcmp(key, "user") == 0)
-    {
-        valid = true;
-        monitorAddUser(monitor, value, monitor->password);
-    }
-    else if (strcmp(key, "password") == 0)
-    {
-        valid = true;
-        monitorAddUser(monitor, monitor->user, value);
-    }
-    else if (strcmp(key, "monitor_interval") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetInterval(monitor, ival);
-        }
-    }
-    else if (strcmp(key, "backend_connect_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
-        }
-    }
-    else if (strcmp(key, "backend_write_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
-        }
-    }
-    else if (strcmp(key, "backend_read_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
-        }
-    }
-
-    return valid;
-}
-
 static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
                         char *v10, char *v11)
@@ -1260,7 +1185,7 @@ static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v
         {
             *value++ = '\0';
 
-            if (!handle_alter_monitor(monitor, key, value))
+            if (!runtime_alter_monitor(monitor, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
