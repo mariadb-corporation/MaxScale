@@ -73,6 +73,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/config_runtime.h>
 
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
@@ -804,28 +805,9 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        SERVICE *service = service_find(values[i]);
-        MONITOR *monitor = monitor_find(values[i]);
-
-        if (service || monitor)
+        if (runtime_link_server(server, values[i]))
         {
-            ss_dassert(service == NULL || monitor == NULL);
-
-            if (service)
-            {
-                serviceAddBackend(service, server);
-                service_serialize_servers(service);
-            }
-            else if (monitor)
-            {
-                monitorAddServer(monitor, server);
-                monitor_serialize_servers(monitor);
-            }
-
-            const char *target = service ? "service" : "monitor";
-
-            MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, target, values[i]);
-            dcb_printf(dcb, "Added server '%s' to %s '%s'\n", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->unique_name, values[i]);
         }
         else
         {
@@ -872,27 +854,9 @@ static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char 
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        SERVICE *service = service_find(values[i]);
-        MONITOR *monitor = monitor_find(values[i]);
-
-        if (service || monitor)
+        if (runtime_unlink_server(server, values[i]))
         {
-            ss_dassert(service == NULL || monitor == NULL);
-
-            if (service)
-            {
-                serviceRemoveBackend(service, server);
-                service_serialize_servers(service);
-            }
-            else if (monitor)
-            {
-                monitorRemoveServer(monitor, server);
-                monitor_serialize_servers(monitor);
-            }
-
-            const char *target = service ? "service" : "monitor";
-            MXS_NOTICE("Removed server '%s' from %s '%s'", server->unique_name, target, values[i]);
-            dcb_printf(dcb, "Removed server '%s' from %s '%s'\n", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->unique_name, values[i]);
         }
         else
         {
@@ -1044,7 +1008,7 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 
     if (server_find_by_unique_name(name) == NULL)
     {
-        if (server_create(name, address, port, protocol, authenticator, authenticator_options))
+        if (runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
         {
             dcb_printf(dcb, "Created server '%s'\n", name);
         }
@@ -1093,7 +1057,7 @@ static void destroyServer(DCB *dcb, SERVER *server)
     char name[strlen(server->unique_name) + 1];
     strcpy(name, server->unique_name);
 
-    if (server_destroy(server))
+    if (runtime_destroy_server(server))
     {
         dcb_printf(dcb, "Destroyed server '%s'\n", name);
     }

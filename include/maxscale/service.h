@@ -190,7 +190,7 @@ typedef enum count_spec_t
 
 extern SERVICE *service_alloc(const char *, const char *);
 extern int service_free(SERVICE *);
-extern SERVICE *service_find(char *);
+extern SERVICE *service_find(const char *);
 extern int service_isvalid(SERVICE *);
 extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
                               char *address, unsigned short port,

@@ -515,7 +515,7 @@ monitorList(DCB *dcb)
  * @return      Pointer to the monitor or NULL
  */
 MONITOR *
-monitor_find(char *name)
+monitor_find(const char *name)
 {
     MONITOR *ptr;
 

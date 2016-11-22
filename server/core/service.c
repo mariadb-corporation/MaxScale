@@ -1218,7 +1218,7 @@ serviceSetFilters(SERVICE *service, char *filters)
  * @return The service or NULL if not found
  */
 SERVICE *
-service_find(char *servname)
+service_find(const char *servname)
 {
     SERVICE *service;
 
