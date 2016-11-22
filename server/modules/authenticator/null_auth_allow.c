@@ -156,4 +156,8 @@ null_auth_is_client_ssl_capable(DCB *dcb)
  * @param dcb Request handler DCB connected to the client
  */
 static void
-null_auth_free_client_data(DCB *dcb) {}
+null_auth_free_client_data(DCB *dcb)
+{
+    free(dcb->data);
+    dcb->data = NULL;
+}

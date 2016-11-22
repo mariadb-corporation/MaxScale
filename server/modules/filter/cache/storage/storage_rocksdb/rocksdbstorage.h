@@ -42,11 +42,22 @@ private:
     RocksDBStorage(const RocksDBStorage&) = delete;
     RocksDBStorage& operator = (const RocksDBStorage&) = delete;
 
+    static RocksDBStorage* Create(const std::string& storageDirectory,
+                                  const char* zName,
+                                  uint32_t ttl);
+
+    static const rocksdb::WriteOptions& writeOptions()
+    {
+        return s_writeOptions;
+    }
+
 private:
     std::unique_ptr<rocksdb::DBWithTTL> m_sDb;
     std::string                         m_name;
     std::string                         m_path;
     uint32_t                            m_ttl;
+
+    static rocksdb::WriteOptions        s_writeOptions;
 };
 
 #endif

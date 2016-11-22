@@ -12,6 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
+#include "cache.h"
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
@@ -20,7 +21,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/query_classifier.h>
-#include "cache.h"
 #include "rules.h"
 #include "storage.h"
 
@@ -95,9 +95,11 @@ typedef struct cache_config
 {
     uint32_t    max_resultset_rows;
     uint32_t    max_resultset_size;
-    const char* rules;
+    const char *rules;
     const char *storage;
-    const char *storage_options;
+    char       *storage_options;
+    char      **storage_argv;
+    int         storage_argc;
     uint32_t    ttl;
     uint32_t    debug;
 } CACHE_CONFIG;
@@ -109,6 +111,8 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     NULL,
     NULL,
     NULL,
+    NULL,
+    0,
     CACHE_DEFAULT_TTL,
     CACHE_DEFAULT_DEBUG
 };
@@ -214,7 +218,11 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
 
                 if (module)
                 {
-                    CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
+                    uint32_t ttl = config.ttl;
+                    int argc = config.storage_argc;
+                    char** argv = config.storage_argv;
+
+                    CACHE_STORAGE *storage = module->api->createInstance(name, ttl, argc, argv);
 
                     if (storage)
                     {
@@ -976,7 +984,47 @@ static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONF
         }
         else if (strcmp(param->name, "storage_options") == 0)
         {
-            config->storage_options = param->value;
+            config->storage_options = MXS_STRDUP(param->value);
+
+            if (config->storage_options)
+            {
+                int argc = 1;
+                char *arg = config->storage_options;
+
+                while ((arg = strchr(config->storage_options, ',')))
+                {
+                    ++argc;
+                }
+
+                config->storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
+
+                if (config->storage_argv)
+                {
+                    config->storage_argc = argc;
+
+                    int i = 0;
+                    arg = config->storage_options;
+                    config->storage_argv[i++] = arg;
+
+                    while ((arg = strchr(config->storage_options, ',')))
+                    {
+                        *arg = 0;
+                        ++arg;
+                        config->storage_argv[i++] = arg;
+                    }
+
+                    config->storage_argv[i] = NULL;
+                }
+                else
+                {
+                    MXS_FREE(config->storage_options);
+                    config->storage_options = NULL;
+                }
+            }
+            else
+            {
+                error = true;
+            }
         }
         else if (strcmp(param->name, "storage") == 0)
         {

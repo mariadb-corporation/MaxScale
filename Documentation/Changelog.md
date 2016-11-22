@@ -11,7 +11,9 @@
   as JSON objects (beta level functionality).
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.0.2 Release Notes](Release-Notes/MaxScale-2.0.2-Release-Notes.md)
 * [MariaDB MaxScale 2.0.1 Release Notes](Release-Notes/MaxScale-2.0.1-Release-Notes.md)
+* [MariaDB MaxScale 2.0.0 Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
 
 ## MariaDB MaxScale 1.4
 * Authentication now allows table level resolution of grants. MaxScale service

@@ -801,8 +801,8 @@ typedef void *(*STATSFUNC)();
  */
 static struct
 {
-    char        *name;
-    int     type;
+    char *name;
+    int  type;
     STATSFUNC   func;
 } variables[] =
 {
@@ -820,10 +820,9 @@ static struct
 
 typedef struct
 {
-    int index;
+    int  index;
     char *like;
 } VARCONTEXT;
-
 /**
  * Callback function to populate rows of the show variable
  * command
@@ -860,10 +859,14 @@ variable_row(RESULTSET *result, void *data)
                          (long)(*variables[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
+            default:
+                ss_dassert(!true);
         }
         context->index++;
         return row;
     }
+    // We only get to this point once all variables have been printed
+    MXS_FREE(data);
     return NULL;
 }
 
@@ -909,13 +912,17 @@ RESULTSET *
 maxinfo_variables()
 {
     RESULTSET *result;
-    static VARCONTEXT context;
-
-    context.like = NULL;
-    context.index = 0;
-
-    if ((result = resultset_create(variable_row, &context)) == NULL)
+    VARCONTEXT *context;
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
+        return NULL;
+    }
+    context->like = NULL;
+    context->index = 0;
+
+    if ((result = resultset_create(variable_row, context)) == NULL)
+    {
+        MXS_FREE(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1138,10 +1145,14 @@ status_row(RESULTSET *result, void *data)
                          (long)(*status[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
+            default:
+                ss_dassert(!true);
         }
         context->index++;
         return row;
     }
+    // We only get to this point once all status elements have been printed
+    MXS_FREE(data);
     return NULL;
 }
 
@@ -1186,14 +1197,18 @@ exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
 RESULTSET *
 maxinfo_status()
 {
-    RESULTSET *result;
-    static VARCONTEXT context;
-
-    context.like = NULL;
-    context.index = 0;
-
-    if ((result = resultset_create(status_row, &context)) == NULL)
+    RESULTSET   *result;
+    VARCONTEXT   *context;
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
     {
+        return NULL;
+    }
+    context->like = NULL;
+    context->index = 0;
+
+    if ((result = resultset_create(status_row, context)) == NULL)
+    {
+        MXS_FREE(context);
         return NULL;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1220,14 +1235,13 @@ exec_select(DCB *dcb, MAXINFO_TREE *tree)
  *
  * @param pattern   Pattern to match
  * @param str       String to match against pattern
- * @return Zero on match
+ * @return      Zero on match
  */
 static int
 maxinfo_pattern_match(char *pattern, char *str)
 {
     int anchor = 0, len, trailing;
     char *fixed;
-    extern char *strcasestr();
 
     if (*pattern != '%')
     {

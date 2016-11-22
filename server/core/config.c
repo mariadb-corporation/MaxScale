@@ -2010,7 +2010,7 @@ config_truth_value(char *str)
     {
         return 0;
     }
-    MXS_ERROR("Not a boolean value: %s", str);
+
     return -1;
 }
 

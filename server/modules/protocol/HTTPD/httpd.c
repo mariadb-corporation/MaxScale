@@ -40,9 +40,9 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
 
- /* @see function load_module in load_utils.c for explanation of the following
-  * lint directives.
- */
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+*/
 /*lint -e14 */
 MODULE_INFO info =
 {
@@ -148,9 +148,9 @@ static int httpd_read_event(DCB* dcb)
     SESSION *session = dcb->session;
 
     int numchars = 1;
-    char buf[HTTPD_REQUESTLINE_MAXLEN-1] = "";
+    char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
     char *query_string = NULL;
-    char method[HTTPD_METHOD_MAXLEN-1] = "";
+    char method[HTTPD_METHOD_MAXLEN - 1] = "";
     char url[HTTPD_SMALL_BUFFER] = "";
     size_t i, j;
     int headers_read = 0;
@@ -166,11 +166,13 @@ static int httpd_read_event(DCB* dcb)
 
     numchars = httpd_get_line(dcb->fd, buf, sizeof(buf));
 
-    i = 0; j = 0;
+    i = 0;
+    j = 0;
     while (!ISspace(buf[j]) && (i < sizeof(method) - 1))
     {
         method[i] = buf[j];
-        i++; j++;
+        i++;
+        j++;
     }
     method[i] = '\0';
 
@@ -193,7 +195,8 @@ static int httpd_read_event(DCB* dcb)
     while ((j < sizeof(buf) - 1) && !ISspace(buf[j]) && (i < sizeof(url) - 1))
     {
         url[i] = buf[j];
-        i++; j++;
+        i++;
+        j++;
     }
 
     url[i] = '\0';
@@ -233,7 +236,7 @@ static int httpd_read_event(DCB* dcb)
         {
             *value = '\0';
             value++;
-            end = &value[strlen(value) -1];
+            end = &value[strlen(value) - 1];
             *end = '\0';
 
             if (strncasecmp(buf, "Hostname", 6) == 0)

@@ -403,35 +403,14 @@ stopMonitor(MONITOR *mon)
  */
 static void diagnostics(DCB *dcb, const MONITOR *mon)
 {
-    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *) mon->handle;
-    MONITOR_SERVERS *db;
-    char *sep;
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
-    switch (handle->status)
-    {
-        case MONITOR_RUNNING:
-            dcb_printf(dcb, "\tMonitor running\n");
-            break;
-        case MONITOR_STOPPING:
-            dcb_printf(dcb, "\tMonitor stopping\n");
-            break;
-        case MONITOR_STOPPED:
-            dcb_printf(dcb, "\tMonitor stopped\n");
-            break;
-    }
+    dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
+    dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb, "Server information\n\n");
 
-    dcb_printf(dcb, "\tSampling interval:\t%lu milliseconds\n", mon->interval);
-    dcb_printf(dcb, "\tMaxScale MonitorId:\t%lu\n", handle->id);
-    dcb_printf(dcb, "\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
-    dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
-    dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
-    dcb_printf(dcb, "\nMonitored servers\n\n");
-
-    db = mon->databases;
-
-    while (db)
+    for (MONITOR_SERVERS *db = mon->databases; db; db = db->next)
     {
         MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
         dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
@@ -450,7 +429,6 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
         }
 
         dcb_printf(dcb, "\n");
-        db = db->next;
     }
 }
 

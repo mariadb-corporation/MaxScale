@@ -1,5 +1,7 @@
 # MaxScale by MariaDB Corporation
 
+[![Build Status](https://travis-ci.org/mariadb-corporation/MaxScale.svg?branch=develop)](https://travis-ci.org/mariadb-corporation/MaxScale)
+
 The MariaDB Corporation MaxScale is an intelligent proxy that allows
 forwarding of database statements to one or more database servers using
 complex rules, a semantic understanding of the database statements and the
@@ -26,23 +28,25 @@ as external shared objects and are referred to as routing modules.
 An Google Group exists for MaxScale that can be used to discuss ideas,
 issues and communicate with the MaxScale community.
 
-  Email: maxscale@googlegroups.com
-  Forum: http://groups.google.com/forum/#!forum/maxscale
+- Email: maxscale@googlegroups.com
+- Forum: http://groups.google.com/forum/#!forum/maxscale
 
-Bugs can be reported in the MariaDB Corporation bugs database:
-https://jira.mariadb.org/projects/MXS/issues
+Please report all feature requests, improvements and bugs in the [MariaDB Jira](https://jira.mariadb.org/projects/MXS/issues).
 
 # Documentation
 
 For information about installing and using MaxScale, please refer to the
-documentation. It is in Markdown format.
+documentation. The official documentation can be found on the
+[MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb-enterprise/maxscale/).
 
-You can point your browser to the MaxScale project at GitHub.  Look
-inside the "Documentation" directory, where you will find a file named
-Documentation-Contents.md. Click on that, and GitHub will show the
-documentation in its intended display format. The contents page lists
-the available documents and has links to them.
+- [MariaDB MaxScale 2.0 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-20-contents/)
+- [MariaDB MaxScale 1.4 Documentation](https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale-14/maxscale-maxscale-contents/)
 
-If you do not want to rely on the internet, then clone the project
-from GitHub and point your browser to the Documentation-Contents.md
-file in your local file system and proceed as above.
+The module and configuration documentation can be found in the _Documentation_
+directory of the source tree.
+
+# Contributing Code
+
+Read the [Contributing](https://github.com/mariadb-corporation/MaxScale/wiki/Contributing)
+page on the wiki for more information on how to do pull request and where to do
+them.

@@ -82,6 +82,7 @@ typedef struct qc_sqlite_info
     QC_FIELD_INFO *field_infos;      // Pointer to array of QC_FIELD_INFOs.
     size_t field_infos_len;          // The used entries in field_infos.
     size_t field_infos_capacity;     // The capacity of the field_infos array.
+    bool initializing;               // Whether we are initializing sqlite3.
 } QC_SQLITE_INFO;
 
 typedef enum qc_log_level
@@ -134,7 +135,6 @@ static QC_SQLITE_INFO* info_alloc(void);
 static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info);
-static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse);
 static void log_invalid_data(GWBUF* query, const char* message);
 static bool parse_query(GWBUF* query);
 static void parse_query_string(const char* query, size_t len);
@@ -369,6 +369,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->field_infos = NULL;
     info->field_infos_len = 0;
     info->field_infos_capacity = 0;
+    info->initializing = false;
 
     return info;
 }
@@ -561,76 +562,6 @@ static bool parse_query(GWBUF* query)
 static bool query_is_parsed(GWBUF* query)
 {
     return query && GWBUF_IS_PARSED(query);
-}
-
-/*
- * Check that the statement being reported about is the one that initially was
- * submitted to parse_query_string(...). When sqlite3 is parsing other statements
- * it may (right after it's used for the first time) parse selects of its own.
- * We need to detect that, so that the internal stuff is not allowed to interfere
- * with the parsing of the provided statement.
- *
- * @param info    The thread specific info structure.
- * @param pParse  Sqlite3's parse context.
- *
- * @return True, if the current callback relates to the provided query,
- *         false otherwise.
- */
-static bool is_submitted_query(const QC_SQLITE_INFO* info, const Parse* pParse)
-{
-    bool rv = false;
-
-    if (*pParse->zTail == 0)
-    {
-        // Everything has been consumed => the callback relates to the statement
-        // that was provided to parse_query_string(...).
-        rv = true;
-    }
-    else if (pParse->sLastToken.z && (*pParse->sLastToken.z == ';'))
-    {
-        // A ';' has been reached, i.e. everything has been consumed => the callback
-        // relates to the statement that was provided to parse_query_string(...).
-        rv = true;
-    }
-    else
-    {
-        // If info->query contains a trailing ';', pParse->zTail may or may not contain
-        // one also. We need to cater for the situation that the former has one and the
-        // latter does not.
-        const char* i = info->query;
-        const char* end = i + info->query_len;
-        const char* j = pParse->zTail;
-
-        // Walk forward as long as neither has reached the end,
-        // and the characters are the same.
-        while ((i < end) && (*j != 0) && (*i == *j))
-        {
-            ++i;
-            ++j;
-        }
-
-        if (i == end)
-        {
-            // If i has reached the end, then if j also has reached the end,
-            // both are the same. In this case both either have or have not
-            // a trailing ';'.
-            rv = (*j == 0);
-        }
-        else if (*j == 0)
-        {
-            // Else if j has reached the end, then if i points to ';', both
-            // are the same. In this case info->query contains a trailing ';'
-            // while pParse->zTail does not.
-            rv = (*i == ';');
-        }
-        else
-        {
-            // Otherwise they are not the same.
-            rv = false;
-        }
-    }
-
-    return rv;
 }
 
 /**
@@ -906,8 +837,7 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                 {
                     if ((prev_token == TK_EQ) && (pos == QC_TOKEN_LEFT))
                     {
-                        // Yes, QUERY_TYPE_USERVAR_WRITE is currently not available.
-                        info->types |= QUERY_TYPE_GSYSVAR_WRITE;
+                        info->types |= QUERY_TYPE_USERVAR_WRITE;
                     }
                     else
                     {
@@ -1454,7 +1384,7 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         if (pSelect)
         {
@@ -1553,10 +1483,7 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    // Check whether the statement being parsed is the one that was passed
-    // to sqlite3_prepare in parse_query_string(). During inserts, sqlite may
-    // parse selects of its own.
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         info->status = QC_QUERY_PARSED;
         info->operation = QUERY_OP_SELECT;
@@ -1585,7 +1512,7 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    if (is_submitted_query(info, pParse))
+    if (!info->initializing)
     {
         info->status = QC_QUERY_PARSED;
         info->operation = QUERY_OP_CREATE;
@@ -1834,7 +1761,7 @@ void maxscaleExplain(Parse* pParse, SrcList* pName)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_READ;
-    update_names(info, "information_schema", "COLUMNS");
+    update_names(info, pName->a[0].zDatabase, pName->a[0].zName);
     uint32_t u = QC_USED_IN_SELECT;
     update_field_info(info, "information_schema", "COLUMNS", "COLUMN_DEFAULT", u, NULL);
     update_field_info(info, "information_schema", "COLUMNS", "COLUMN_KEY", u, NULL);
@@ -2259,6 +2186,7 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
+    info->types = 0; // Reset what was set in maxscaleKeyword
 
     switch (kind)
     {
@@ -2276,10 +2204,6 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 
     case MXS_SET_VARIABLES:
         {
-            // TODO: qc_mysqlembedded sets this bit on, without checking what
-            // TODO: kind of variable it is.
-            info->types = QUERY_TYPE_GSYSVAR_WRITE;
-
             for (int i = 0; i < pList->nExpr; ++i)
             {
                 const struct ExprList_item* pItem = &pList->a[i];
@@ -2288,19 +2212,48 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
                 {
                 case TK_CHARACTER:
                 case TK_NAMES:
+                    info->types |= QUERY_TYPE_GSYSVAR_WRITE;
                     break;
 
                 case TK_EQ:
                     {
                         const Expr* pEq = pItem->pExpr;
-                        const Expr* pVariable = pEq->pLeft;
+                        const Expr* pVariable;
                         const Expr* pValue = pEq->pRight;
 
-                        // pVariable is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
-                        // then pVariable->pLeft is either TK_VARIABLE or TK_ID and pVariable->pRight
+                        // pEq->pLeft is either TK_DOT, TK_VARIABLE or TK_ID. If it's TK_DOT,
+                        // then pEq->pLeft->pLeft is either TK_VARIABLE or TK_ID and pEq->pLeft->pRight
                         // is either TK_DOT, TK_VARIABLE or TK_ID.
 
+                        // Find the left-most part.
+                        pVariable = pEq->pLeft;
+                        while (pVariable->op == TK_DOT)
+                        {
+                            pVariable = pVariable->pLeft;
+                            ss_dassert(pVariable);
+                        }
+
+                        // Check what kind of variable it is.
+                        size_t n_at = 0;
+                        const char* zName = pVariable->u.zToken;
+
+                        while (*zName == '@')
+                        {
+                            ++n_at;
+                            ++zName;
+                        }
+
+                        if (n_at == 1)
+                        {
+                            info->types |= QUERY_TYPE_USERVAR_WRITE;
+                        }
+                        else
+                        {
+                            info->types |= QUERY_TYPE_GSYSVAR_WRITE;
+                        }
+
                         // Set pVariable to point to the rightmost part of the name.
+                        pVariable = pEq->pLeft;
                         while (pVariable->op == TK_DOT)
                         {
                             pVariable = pVariable->pRight;
@@ -2308,54 +2261,59 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
 
                         ss_dassert((pVariable->op == TK_VARIABLE) || (pVariable->op == TK_ID));
 
-                        const char* zName = pVariable->u.zToken;
-
-                        while (*zName == '@')
+                        if (n_at != 1)
                         {
-                            ++zName;
-                        }
+                            // If it's not a user-variable we need to check whether it might
+                            // be 'autocommit'.
+                            const char* zName = pVariable->u.zToken;
 
-                        // As pVariable points to the rightmost part, we'll catch both
-                        // "autocommit" and "@@global.autocommit".
-                        if (strcasecmp(zName, "autocommit") == 0)
-                        {
-                            int enable = -1;
-
-                            switch (pValue->op)
+                            while (*zName == '@')
                             {
-                            case TK_INTEGER:
-                                if (pValue->u.iValue == 1)
-                                {
-                                    enable = 1;
-                                }
-                                else if (pValue->u.iValue == 0)
-                                {
-                                    enable = 0;
-                                }
-                                break;
-
-                            case TK_ID:
-                                enable = string_to_truth(pValue->u.zToken);
-                                break;
-
-                            default:
-                                break;
+                                ++zName;
                             }
 
-                            switch (enable)
+                            // As pVariable points to the rightmost part, we'll catch both
+                            // "autocommit" and "@@global.autocommit".
+                            if (strcasecmp(zName, "autocommit") == 0)
                             {
-                            case 0:
-                                info->types |= QUERY_TYPE_BEGIN_TRX;
-                                info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
-                                break;
+                                int enable = -1;
 
-                            case 1:
-                                info->types |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
-                                info->types |= QUERY_TYPE_COMMIT;
-                                break;
+                                switch (pValue->op)
+                                {
+                                case TK_INTEGER:
+                                    if (pValue->u.iValue == 1)
+                                    {
+                                        enable = 1;
+                                    }
+                                    else if (pValue->u.iValue == 0)
+                                    {
+                                        enable = 0;
+                                    }
+                                    break;
 
-                            default:
-                                break;
+                                case TK_ID:
+                                    enable = string_to_truth(pValue->u.zToken);
+                                    break;
+
+                                default:
+                                    break;
+                                }
+
+                                switch (enable)
+                                {
+                                case 0:
+                                    info->types |= QUERY_TYPE_BEGIN_TRX;
+                                    info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                                    break;
+
+                                case 1:
+                                    info->types |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
+                                    info->types |= QUERY_TYPE_COMMIT;
+                                    break;
+
+                                default:
+                                    break;
+                                }
                             }
                         }
 
@@ -2705,14 +2663,13 @@ static bool qc_sqlite_init(const char* args)
 
     if (sqlite3_initialize() == 0)
     {
+        init_builtin_functions();
+
         this_unit.initialized = true;
+        this_unit.log_level = log_level;
 
         if (qc_sqlite_thread_init())
         {
-            init_builtin_functions();
-
-            this_unit.log_level = log_level;
-
             if (log_level != QC_LOG_NOTHING)
             {
                 const char* message;
@@ -2780,6 +2737,36 @@ static bool qc_sqlite_thread_init(void)
 
         MXS_INFO("In-memory sqlite database successfully opened for thread %lu.",
                  (unsigned long) pthread_self());
+
+        QC_SQLITE_INFO* info = info_alloc();
+
+        if (info)
+        {
+            this_thread.info = info;
+
+            // With this statement we cause sqlite3 to initialize itself, so that it
+            // is not done as part of the actual classification of data.
+            const char* s = "CREATE TABLE __maxscale__internal__ (int field UNIQUE)";
+            size_t len = strlen(s);
+
+            this_thread.info->query = s;
+            this_thread.info->query_len = len;
+            this_thread.info->initializing = true;
+            parse_query_string(s, len);
+            this_thread.info->initializing = false;
+            this_thread.info->query = NULL;
+            this_thread.info->query_len = 0;
+
+            info_free(this_thread.info);
+            this_thread.info = NULL;
+
+            this_thread.initialized = true;
+        }
+        else
+        {
+            sqlite3_close(this_thread.db);
+            this_thread.db = NULL;
+        }
     }
     else
     {

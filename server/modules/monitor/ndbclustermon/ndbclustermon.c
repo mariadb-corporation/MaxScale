@@ -210,38 +210,6 @@ stopMonitor(MONITOR *mon)
 static void
 diagnostics(DCB *dcb, const MONITOR *mon)
 {
-    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *) mon->handle;
-    MONITOR_SERVERS *db;
-    char *sep;
-
-    switch (handle->status)
-    {
-        case MONITOR_RUNNING:
-            dcb_printf(dcb, "\tMonitor running\n");
-            break;
-        case MONITOR_STOPPING:
-            dcb_printf(dcb, "\tMonitor stopping\n");
-            break;
-        case MONITOR_STOPPED:
-            dcb_printf(dcb, "\tMonitor stopped\n");
-            break;
-    }
-
-    dcb_printf(dcb, "\tSampling interval:\t%lu milliseconds\n", mon->interval);
-    dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
-    dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
-    dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
-    dcb_printf(dcb, "\tMonitored servers:	");
-
-    db = mon->databases;
-    sep = "";
-    while (db)
-    {
-        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
-        sep = ", ";
-        db = db->next;
-    }
-    dcb_printf(dcb, "\n");
 }
 
 /**

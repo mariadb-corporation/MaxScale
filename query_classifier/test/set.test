@@ -271,7 +271,8 @@ SET timestamp=UNIX_TIMESTAMP('2014-09-30 08:00:00');
 SET ROLE role_1;
 SET ROLE NONE;
 SET @sum=0;
-SET @old_debug= @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @old_debug= @@session.debug;
 set debug_dbug='+d,send_kill_after_delete';
 set debug_dbug=@old_debug;
 set local sql_mode="";
@@ -398,7 +399,8 @@ SET collation_connection=gb2312_chinese_ci;
 set names gb2312;
 set collation_connection=gb2312_bin;
 SET NAMES gbk;
-SET @`tcontent`:=_binary 0x50434B000900000000000000E9000000 COLLATE `binary`/*!*/;
+# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO SET @`tcontent`:=_binary 0x50434B000900000000000000E9000000 COLLATE `binary`/*!*/;
 SET @test_character_set= 'gbk';
 SET @test_collation= 'gbk_chinese_ci';
 SET NAMES gbk;
@@ -1487,7 +1489,8 @@ set global event_scheduler=on;
 set global event_scheduler=off;
 set global event_scheduler=original;
 set global event_scheduler=on;
-SET @event_scheduler=@@global.event_scheduler;
+# MXS Embedded parser is not aware of the 'global.event_scheduler' variable.
+# MXS SET @event_scheduler=@@global.event_scheduler;
 SET GLOBAL event_scheduler=OFF;
 SET GLOBAL event_scheduler=OFF;
 SET GLOBAL event_scheduler=1;
@@ -1500,7 +1503,8 @@ SET GLOBAL event_scheduler=2;
 SET GLOBAL event_scheduler=5;
 SET GLOBAL event_scheduler=ON;
 SET GLOBAL event_scheduler=@event_scheduler;
-SET @old_event_scheduler=@@event_scheduler;
+# MXS Embedded parser is not aware of the 'global.event_scheduler' variable.
+# MXS SET @old_event_scheduler=@@event_scheduler;
 SET GLOBAL event_scheduler=on;
 SET GLOBAL event_scheduler=off;
 SET GLOBAL event_scheduler=on;
@@ -1574,7 +1578,8 @@ set time_zone= @@global.time_zone;
 set @a:=0;
 SET @xml='<a aa1="aa1" aa2="aa2">a1<b ba1="ba1">b1<c>c1</c>b2</b>a2</a>';
 SET sql_mode=STRICT_TRANS_TABLES;
-SET @old_debug= @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @old_debug= @@session.debug;
 SET session debug_dbug= '+d,alloc_sort_buffer_fail';
 SET session debug_dbug= @old_debug;
 SET DEBUG_SYNC='filesort_start SIGNAL filesort_started WAIT_FOR filesort_killed';
@@ -1587,7 +1592,8 @@ set global expire_logs_days = 0;
 SET AUTOCOMMIT=0;
 SET AUTOCOMMIT=1;
 set sql_mode="";
-SET @old_innodb_file_per_table= @@GLOBAL.innodb_file_per_table;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET @old_innodb_file_per_table= @@GLOBAL.innodb_file_per_table;
 SET GLOBAL innodb_file_per_table= 1;
 SET @export = 10;
 SET GLOBAL innodb_file_per_table= @old_innodb_file_per_table;
@@ -2267,7 +2273,8 @@ set join_cache_level= @tmp_mdev5037;
 set @@join_cache_level= @save_join_cache_level;
 set storage_engine=@save_storage_engine;
 set optimizer_switch=@innodb_mrr_cpk_tmp;
-set @old_innodb_lock_wait_timeout=@@global.innodb_lock_wait_timeout;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET set @old_innodb_lock_wait_timeout=@@global.innodb_lock_wait_timeout;
 set global innodb_lock_wait_timeout=300;
 set session innodb_lock_wait_timeout=300;
 set @@autocommit=0;
@@ -2414,8 +2421,10 @@ set @value= "1aa";
 set @value= "aa1";
 set @value= "1e+1111111111a";
 set @value= "-1e+1111111111a";
-set @value= 1e+1111111111;
-set @value= -1e+1111111111;
+# MXS ERROR 1367 (22007): Illegal double '1e+1111111111' value found during parsing
+# MXS set @value= 1e+1111111111;
+# MXS ERROR 1367 (22007): Illegal double '1e+1111111111' value found during parsing
+# MXS set @value= -1e+1111111111;
 set @value= 1e+111;
 set @value= -1e+111;
 set @value= 1;
@@ -3389,7 +3398,8 @@ SET DEBUG_SYNC= 'RESET';
 set @default_storage_engine= @@global.storage_engine;
 set global storage_engine=myisam;
 set session storage_engine=myisam;
-SET @orig_debug=@@debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @orig_debug=@@debug;
 SET GLOBAL debug_dbug="+d,myisam_pretend_crashed_table_on_open";
 SET GLOBAL debug_dbug=@orig_debug;
 set global storage_engine=@default_storage_engine;
@@ -3416,7 +3426,8 @@ SET NAMES latin1;
 set autocommit=0;
 set autocommit=1;
 set @mrr_icp_extra_tmp=@@optimizer_switch;
-SET @aux = @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @aux = @@session.debug;
 set @d=4;
 set sql_safe_updates=1;
 set sql_safe_updates=0;
@@ -3774,15 +3785,19 @@ SET GLOBAL general_log = 0;
 SET @@global.general_log = @old_general_log_state;
 SET @old_default_storage_engine = @@default_storage_engine;
 SET @@default_storage_engine = 'InnoDB';
-SET @save_innodb_stats_on_metadata=@@global.innodb_stats_on_metadata;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @save_innodb_stats_on_metadata=@@global.innodb_stats_on_metadata;
 SET @@global.innodb_stats_on_metadata=ON;
 SET @@global.innodb_stats_on_metadata=@save_innodb_stats_on_metadata;
 SET @@default_storage_engine = @old_default_storage_engine;
 set sql_mode="";
 set sql_mode=default;
-SET @old_innodb_file_format = @@global.innodb_file_format;
-SET @old_innodb_file_per_table = @@global.innodb_file_per_table;
-SET @old_innodb_strict_mode = @@global.innodb_strict_mode;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @old_innodb_file_format = @@global.innodb_file_format;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @old_innodb_file_per_table = @@global.innodb_file_per_table;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @old_innodb_strict_mode = @@global.innodb_strict_mode;
 SET @@global.innodb_file_format = Barracuda,
 @@global.innodb_file_per_table = ON,
 @@global.innodb_strict_mode = ON;
@@ -3817,8 +3832,10 @@ SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 set global default_storage_engine='innodb';
 set session default_storage_engine='innodb';
-SET @old_innodb_thread_concurrency := @@innodb_thread_concurrency;
-SET @old_innodb_thread_sleep_delay := @@innodb_thread_sleep_delay;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @old_innodb_thread_concurrency := @@innodb_thread_concurrency;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @old_innodb_thread_sleep_delay := @@innodb_thread_sleep_delay;
 SET GLOBAL innodb_thread_concurrency = 1;
 SET GLOBAL innodb_thread_concurrency = @old_innodb_thread_concurrency;
 SET GLOBAL innodb_thread_sleep_delay = @old_innodb_thread_sleep_delay;
@@ -4825,7 +4842,8 @@ SET optimizer_switch=@save_optimizer_switch;
 SET @pass='my_pw';
 SET @wrong='incorrect';
 set sql_mode="";
-set @save_debug_dbug= @@debug_dbug;
+# MXS ERROR 1193 (HY000): Unknown system variable 'debug_dbug'
+# MXS set @save_debug_dbug= @@debug_dbug;
 set @@debug_dbug= @save_debug_dbug;
 set @@debug_dbug= @save_debug_dbug;
 set gtid_domain_id = 10;
@@ -4943,7 +4961,8 @@ SET NAMES latin1;
 SET NAMES latin1;
 SET NAMES utf8;
 SET NAMES latin1;
-SET @old_debug= @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @old_debug= @@session.debug;
 set debug_sync='RESET';
 set debug_dbug='+d,show_explain_probe_delete_exec_start';
 set @show_explain_probe_select_id=1;
@@ -4954,9 +4973,11 @@ set debug_sync='RESET';
 set @show_explain_probe_select_id=1;
 set debug_dbug='d,show_explain_probe_join_exec_start';
 set debug_dbug='';
-SET @old_debug= @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @old_debug= @@session.debug;
 set debug_sync='RESET';
-SET @old_debug= @@session.debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @old_debug= @@session.debug;
 set @show_explain_probe_select_id=1;
 set debug_dbug='+d,show_explain_probe_join_exec_start';
 set @show_expl_tmp= @@optimizer_switch;
@@ -5169,7 +5190,8 @@ set @@max_sp_recursion_depth= 20;
 set @@max_sp_recursion_depth= 0;
 SET sql_mode=ONLY_FULL_GROUP_BY;
 SET @lock_wait_timeout_saved= @@lock_wait_timeout;
-SET @innodb_lock_wait_timeout_saved= @@innodb_lock_wait_timeout;
+# MXS Embedded parser is not aware of innodb.
+# MXS SET SET @innodb_lock_wait_timeout_saved= @@innodb_lock_wait_timeout;
 SET @@lock_wait_timeout= 1;
 SET @@innodb_lock_wait_timeout= 1;
 SET AUTOCOMMIT= 0;
@@ -5815,7 +5837,8 @@ set @@optimizer_switch= default;
 set optimizer_switch='subquery_cache=on';
 SET optimizer_switch=@save_optimizer_switch;
 set @@optimizer_switch= default;
-SET @orig_debug=@@debug;
+# MXS Embedded parser is not aware of the 'debug' variable.
+# MXS SET @orig_debug=@@debug;
 SET GLOBAL debug_dbug="d,subselect_exec_fail";
 SET GLOBAL debug_dbug=@orig_debug;
 set @subselect_mat_cost=@@optimizer_switch;
@@ -6886,7 +6909,8 @@ set @@autocommit=0;
 set @@autocommit=1;
 set @@global.general_log=@save_general_log;
 SET TIMESTAMP=10000;
-SET @`a b`='hello';
+# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO SET @`a b`='hello';
 set @var1= "';aaa";
 SET @var2=char(ascii('a'));
 set @a := foo;
@@ -6899,7 +6923,8 @@ set @a=_latin2'test';
 set @a=_latin2'test' collate latin2_general_ci;
 set @var= NULL ;
 set @v1=null, @v2=1, @v3=1.1, @v4=now();
-set session @honk=99;
+# 'set session @honk = 99' is not legal.
+# MXS set session @honk=99;
 set @first_var= NULL;
 set @first_var= cast(NULL as signed integer);
 set @first_var= NULL;
@@ -6928,7 +6953,8 @@ SET @aux = NULL;
 SET @bug12408412=1;
 SET @var=NULL;
 set @var= repeat('a',20000);
-set @my_slave_net_timeout         =@@global.slave_net_timeout;
+# MXS Embedded parser is not aware of the 'global.slave_net_timeout' variable.
+# MXS SET set @my_slave_net_timeout         =@@global.slave_net_timeout;
 set global slave_net_timeout=100;
 set global sql_slave_skip_counter=100;
 set global slave_net_timeout=default;
@@ -6987,10 +7013,13 @@ set @my_max_allowed_packet        =@@global.max_allowed_packet;
 set @my_delay_key_write           =@@global.delay_key_write;
 set @my_join_buffer_size          =@@global.join_buffer_size;
 set @my_log_warnings               =@@global.log_warnings;
-set @`test`=1;
+# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO set @`test`=1;
 set @TEST=2;
-set @"tEST"=3;
-set @`TeST`=4;
+# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO set @"tEST"=3;
+# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO set @`TeST`=4;
 set @select=2,@t5=1.23456;
 set @test_int=10,@test_double=1e-10,@test_string="abcdeghi",@test_string2="abcdefghij",@select=NULL;
 set @test_int="hello",@test_double="hello",@test_string="hello",@test_string2="hello";

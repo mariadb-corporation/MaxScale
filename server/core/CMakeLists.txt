@@ -1,4 +1,4 @@
-add_library(maxscale-common SHARED adminusers.c alloc.c authenticator.c atomic.c buffer.c config.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c hashtable.c hint.c housekeeper.c listmanager.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c gw_ssl.c mysql_utils.c mysql_binlog.c)
+add_library(maxscale-common SHARED adminusers.c alloc.c authenticator.c atomic.c buffer.c config.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c hashtable.c hint.c housekeeper.c listmanager.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c gw_ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
 
 target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl pthread crypt dl crypto inih z rt m stdc++)
 
@@ -12,7 +12,7 @@ add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 
-add_executable(maxscale gateway.c)
+add_executable(maxscale gateway.cc)
 add_dependencies(maxscale pcre2)
 
 if(WITH_JEMALLOC)

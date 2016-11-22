@@ -802,6 +802,10 @@ serviceAddBackend(SERVICE *service, SERVER *server)
                     atomic_synchronize();
                     prev->next = new_ref;
                 }
+                else
+                {
+                    MXS_FREE(new_ref);
+                }
             }
             else
             {
@@ -828,7 +832,7 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server)
 
     for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
     {
-        if (ref->server == server)
+        if (ref->server == server && ref->active)
         {
             ref->active = false;
             service->n_dbref--;
@@ -852,8 +856,12 @@ serviceHasBackend(SERVICE *service, SERVER *server)
 
     spinlock_acquire(&service->spin);
     ptr = service->dbref;
-    while (ptr && ptr->server != server)
+    while (ptr)
     {
+        if (ptr->server == server && ptr->active)
+        {
+            break;
+        }
         ptr = ptr->next;
     }
     spinlock_release(&service->spin);
