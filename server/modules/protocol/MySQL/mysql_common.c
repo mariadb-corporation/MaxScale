@@ -1086,11 +1086,11 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
  * @param dcb DCB where packet is written
  * @param sequence Packet sequence number
  * @param affected_rows Number of affected rows
- *  * @param message SQL message
+ * @param message SQL message
  * @return 1 on success, 0 on error
  *
  */
-int mxs_mysql_send_ok(DCB *dcb, int sequence, int affected_rows, const char* message)
+int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char* message)
 {
     uint8_t *outbuf = NULL;
     uint32_t mysql_payload_size = 0;
