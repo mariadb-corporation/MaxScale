@@ -476,3 +476,14 @@ cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
+
+cache_result_t RocksDBStorage::delValue(const char* pKey)
+{
+    ss_dassert(pKey);
+
+    rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
+
+    rocksdb::Status status = m_sDb->Delete(writeOptions(), key);
+
+    return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
+}

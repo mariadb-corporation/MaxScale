@@ -32,6 +32,7 @@ public:
     cache_result_t getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey);
     cache_result_t getValue(const char* pKey, uint32_t flags, GWBUF** ppResult);
     cache_result_t putValue(const char* pKey, const GWBUF* pValue);
+    cache_result_t delValue(const char* pKey);
 
 private:
     RocksDBStorage(std::unique_ptr<rocksdb::DBWithTTL>& sDb,

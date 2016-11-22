@@ -123,6 +123,17 @@ typedef struct cache_storage_api
     cache_result_t (*putValue)(CACHE_STORAGE* storage,
                                const char* key,
                                const GWBUF* value);
+
+    /**
+     * Delete a value from the cache.
+     *
+     * @param storage    Pointer to a CACHE_STORAGE.
+     * @param key        A key generated with getKey.
+     * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
+     *         CACHE_RESULT_OK may be returned also if the entry was not present.
+     */
+    cache_result_t (*delValue)(CACHE_STORAGE* storage,
+                               const char* key);
 } CACHE_STORAGE_API;
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"
