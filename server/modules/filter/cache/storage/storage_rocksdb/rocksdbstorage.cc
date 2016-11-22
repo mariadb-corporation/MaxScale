@@ -403,7 +403,7 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
     return CACHE_RESULT_OK;
 }
 
-cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
+cache_result_t RocksDBStorage::getValue(const char* pKey, uint32_t flags, GWBUF** ppResult)
 {
     // Use the root DB so that we get the value *with* the timestamp at the end.
     rocksdb::DB* pDb = m_sDb->GetRootDB();
@@ -419,7 +419,9 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
     case rocksdb::Status::kOk:
         if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            if (!RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default()))
+            bool isStale = RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default());
+
+            if (!isStale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
             {
                 size_t length = value.length() - RocksDBInternals::TS_LENGTH;
 
@@ -429,7 +431,14 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
                 {
                     memcpy(GWBUF_DATA(*ppResult), value.data(), length);
 
-                    result = CACHE_RESULT_OK;
+                    if (isStale)
+                    {
+                        result = CACHE_RESULT_STALE;
+                    }
+                    else
+                    {
+                        result = CACHE_RESULT_OK;
+                    }
                 }
             }
             else

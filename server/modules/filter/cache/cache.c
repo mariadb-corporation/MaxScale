@@ -1087,7 +1087,7 @@ static bool route_using_cache(CACHE_SESSION_DATA *csdata,
 
     if (result == CACHE_RESULT_OK)
     {
-        result = csdata->api->getValue(csdata->storage, csdata->key, value);
+        result = csdata->api->getValue(csdata->storage, csdata->key, CACHE_FLAGS_NONE, value);
     }
     else
     {

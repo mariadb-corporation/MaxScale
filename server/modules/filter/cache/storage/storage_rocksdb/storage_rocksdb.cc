@@ -86,7 +86,10 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t getValue(CACHE_STORAGE* pStorage, const char* pKey, GWBUF** ppResult)
+cache_result_t getValue(CACHE_STORAGE* pStorage,
+                        const char* pKey,
+                        uint32_t flags,
+                        GWBUF** ppResult)
 {
     ss_dassert(pStorage);
     ss_dassert(pKey);
@@ -96,7 +99,7 @@ cache_result_t getValue(CACHE_STORAGE* pStorage, const char* pKey, GWBUF** ppRes
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, ppResult);
+        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, flags, ppResult);
     }
     catch (const std::bad_alloc&)
     {
