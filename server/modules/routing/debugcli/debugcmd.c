@@ -1080,71 +1080,6 @@ struct subcommand destroyoptions[] =
     }
 };
 
-static bool handle_alter_server(SERVER *server, char *key, char *value)
-{
-    bool valid = true;
-
-    if (strcmp(key, "address") == 0)
-    {
-        server_update_address(server, value);
-    }
-    else if (strcmp(key, "port") == 0)
-    {
-        server_update_port(server, atoi(value));
-    }
-    else if (strcmp(key, "monuser") == 0)
-    {
-        server_update_credentials(server, value, server->monpw);
-    }
-    else if (strcmp(key, "monpw") == 0)
-    {
-        server_update_credentials(server, server->monuser, value);
-    }
-    else
-    {
-        valid = false;
-    }
-
-    return valid;
-}
-
-void handle_server_ssl(DCB *dcb, SERVER *server, CONFIG_CONTEXT *obj)
-{
-    if (config_have_required_ssl_params(obj))
-    {
-        int err = 0;
-        SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
-
-        if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
-        {
-            /** Sync to prevent reads on partially initialized server_ssl */
-            atomic_synchronize();
-
-            server->server_ssl = ssl;
-            if (server_serialize(server))
-            {
-                dcb_printf(dcb, "SSL enabled for server '%s'\n", server->unique_name);
-            }
-            else
-            {
-                dcb_printf(dcb, "SSL enabled for server '%s' but persisting "
-                           "it to disk failed, see log for more details.\n",
-                           server->unique_name);
-            }
-        }
-        else
-        {
-            dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
-                       "for more details.\n", server->unique_name);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
-                   "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
-    }
-}
-
 /**
  * @brief Process multiple alter operations at once
  *
@@ -1159,6 +1094,12 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT *obj = NULL;
+    char *ssl_key = NULL;
+    char *ssl_cert = NULL;
+    char *ssl_ca = NULL;
+    char *ssl_version = NULL;
+    char *ssl_depth = NULL;
+    bool enable = false;
 
     for (int i = 0; i < items && values[i]; i++)
     {
@@ -1171,19 +1112,33 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
 
             if (config_is_ssl_parameter(key))
             {
-                /**
-                 * All the required SSL parameters must be defined at once to
-                 * enable SSL for created servers. This removes the problem
-                 * of partial configuration and allows a somewhat atomic
-                 * operation.
-                 */
-                if ((obj == NULL && (obj = config_context_create(server->unique_name)) == NULL) ||
-                    (!config_add_param(obj, key, value)))
+                if (strcmp("ssl_cert", key) == 0)
                 {
-                    dcb_printf(dcb, "Internal error, see log for more details\n");
+                    ssl_cert = value;
+                }
+                else if (strcmp("ssl_ca_cert", key) == 0)
+                {
+                    ssl_ca = value;
+                }
+                else if (strcmp("ssl_key", key) == 0)
+                {
+                    ssl_key = value;
+                }
+                else if (strcmp("ssl_version", key) == 0)
+                {
+                    ssl_version = value;
+                }
+                else if (strcmp("ssl_cert_verify_depth", key) == 0)
+                {
+                    ssl_depth = value;
+                }
+                else
+                {
+                    enable = strcmp("ssl", key) == 0 && strcmp(value, "required") == 0;
+                    /** Must be 'ssl' */
                 }
             }
-            else if (!handle_alter_server(server, key, value))
+            else if (!runtime_alter_server(server, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
@@ -1194,11 +1149,23 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         }
     }
 
-    if (obj)
+    if (enable || ssl_key || ssl_cert || ssl_ca)
     {
-        /** We have SSL parameters, try to process them */
-        handle_server_ssl(dcb, server, obj);
-        config_context_free(obj);
+        if (enable && ssl_key && ssl_cert && ssl_ca)
+        {
+            /** We have SSL parameters, try to process them */
+            if (!runtime_enable_server_ssl(server, ssl_key, ssl_cert, ssl_ca,
+                                           ssl_version, ssl_depth))
+            {
+                dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
+                           "for more details.\n", server->unique_name);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
+                       "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
+        }
     }
 }
 

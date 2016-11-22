@@ -79,3 +79,30 @@ bool runtime_link_server(SERVER *server, const char *target);
  * if no object matching @c target was found
  */
 bool runtime_unlink_server(SERVER *server, const char *target);
+
+/**
+ * @brief Alter server parameters
+ *
+ * @param server Server to alter
+ * @param key Key to modify
+ * @param value New value
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_server(SERVER *server, char *key, char *value);
+
+/**
+ * @brief Enable SSL for a server
+ *
+ * The @c key , @c cert and @c ca parameters are required. @c version and @c depth
+ * are optional.
+ *
+ * @param server Server to configure
+ * @param key Path to SSL private key
+ * @param cert Path to SSL public certificate
+ * @param ca Path to certificate authority
+ * @param version Required SSL Version
+ * @param depth Certificate verification depth
+ * @return True if SSL was successfully enabled
+ */
+bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
+                               const char *ca, const char *version, const char *depth);

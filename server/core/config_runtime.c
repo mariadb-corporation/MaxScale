@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#include <maxscale/atomic.h>
 #include <maxscale/config_runtime.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/spinlock.h>
@@ -187,4 +188,73 @@ bool runtime_destroy_server(SERVER *server)
 
     spinlock_release(&crt_lock);
     return rval;
+}
+
+bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
+                               const char *ca, const char *version, const char *depth)
+{
+    spinlock_acquire(&crt_lock);
+    bool rval = false;
+
+    if (key && cert && ca)
+    {
+        CONFIG_CONTEXT *obj = config_context_create(server->unique_name);
+
+        if (obj && config_add_param(obj, "ssl_key", key) &&
+            config_add_param(obj, "ssl_cert", cert) &&
+            config_add_param(obj, "ssl_ca_cert", ca) &&
+            (!version || config_add_param(obj, "ssl_version", version)) &&
+            (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)))
+        {
+            int err = 0;
+            SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
+
+            if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
+            {
+                /** Sync to prevent reads on partially initialized server_ssl */
+                atomic_synchronize();
+
+                server->server_ssl = ssl;
+                if (server_serialize(server))
+                {
+                    rval = true;
+                }
+            }
+        }
+
+        config_context_free(obj);
+    }
+
+    spinlock_release(&crt_lock);
+    return rval;
+}
+
+bool runtime_alter_server(SERVER *server, char *key, char *value)
+{
+    spinlock_acquire(&crt_lock);
+    bool valid = true;
+
+    if (strcmp(key, "address") == 0)
+    {
+        server_update_address(server, value);
+    }
+    else if (strcmp(key, "port") == 0)
+    {
+        server_update_port(server, atoi(value));
+    }
+    else if (strcmp(key, "monuser") == 0)
+    {
+        server_update_credentials(server, value, server->monpw);
+    }
+    else if (strcmp(key, "monpw") == 0)
+    {
+        server_update_credentials(server, server->monuser, value);
+    }
+    else
+    {
+        valid = false;
+    }
+
+    spinlock_release(&crt_lock);
+    return valid;
 }
