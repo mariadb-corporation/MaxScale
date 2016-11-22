@@ -70,7 +70,6 @@
 #include <time.h>
 #include <signal.h>
 #include <maxscale/dcb.h>
-#include <maxscale/listmanager.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
@@ -93,10 +92,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 #include <maxscale/platform.h>
-
-/* The list of all DCBs */
-static LIST_CONFIG DCBlist =
-{LIST_TYPE_RECYCLABLE, sizeof(DCB), SPINLOCK_INIT};
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized = DCB_INIT;
@@ -193,17 +188,6 @@ bool dcb_get_ses_log_info(
     return false;
 }
 
-/*
- * @brief Pre-allocate memory for a number of DCBs
- *
- * @param   The number of DCBs to be pre-allocated
- */
-bool
-dcb_pre_alloc(int number)
-{
-    return list_pre_alloc(&DCBlist, number, dcb_initialize);
-}
-
 /**
  * @brief Initialize a DCB
  *
@@ -252,7 +236,6 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
     dcb_initialize(newdcb);
     newdcb->dcb_role = role;
     newdcb->listener = listener;
-    newdcb->entry_is_ready = true;
 
     return newdcb;
 }
@@ -1832,6 +1815,11 @@ spin_reporter(void *dcb, char *desc, int value)
     dcb_printf((DCB *)dcb, "\t\t%-40s  %d\n", desc, value);
 }
 
+bool printAllDCBs_cb(DCB *dcb, void *data)
+{
+    printDCB(dcb);
+    return true;
+}
 
 /**
  * Diagnostic to print all DCB allocated in the system
@@ -1839,15 +1827,7 @@ spin_reporter(void *dcb, char *desc, int value)
  */
 void printAllDCBs()
 {
-    list_entry_t *current;
-
-    current = list_start_iteration(&DCBlist);
-
-    while (current)
-    {
-        printDCB((DCB *)current);
-        current = list_iterate(&DCBlist, current);
-    }
+    dcb_foreach(printAllDCBs_cb, NULL);
 }
 
 /**
@@ -2663,6 +2643,57 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
     return count;
 }
 
+struct dcb_usage_count
+{
+    int count;
+    DCB_USAGE type;
+};
+
+bool count_by_usage_cb(DCB *dcb, void *data)
+{
+    struct dcb_usage_count *d = (struct dcb_usage_count*)data;
+
+    switch (d->type)
+    {
+        case DCB_USAGE_CLIENT:
+            if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+            {
+                d->count++;
+            }
+            break;
+        case DCB_USAGE_LISTENER:
+            if (dcb->state == DCB_STATE_LISTENING)
+            {
+                d->count++;
+            }
+            break;
+        case DCB_USAGE_BACKEND:
+            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+            {
+                d->count++;
+            }
+            break;
+        case DCB_USAGE_INTERNAL:
+            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
+                dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+            {
+                d->count++;
+            }
+            break;
+        case DCB_USAGE_ZOMBIE:
+            if (DCB_ISZOMBIE(dcb))
+            {
+                d->count++;
+            }
+            break;
+        case DCB_USAGE_ALL:
+            d->count++;
+            break;
+    }
+
+    return true;
+}
+
 /**
  * Return DCB counts optionally filtered by usage
  *
@@ -2672,55 +2703,11 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
 int
 dcb_count_by_usage(DCB_USAGE usage)
 {
-    int rval = 0;
-    DCB *dcb;
-    list_entry_t *current;
+    struct dcb_usage_count val = {.count = 0, .type = usage};
 
-    current = list_start_iteration(&DCBlist);
+    dcb_foreach(count_by_usage_cb, &val);
 
-    while (current)
-    {
-        dcb = (DCB *)current;
-        switch (usage)
-        {
-        case DCB_USAGE_CLIENT:
-            if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_LISTENER:
-            if (dcb->state == DCB_STATE_LISTENING)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_BACKEND:
-            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_INTERNAL:
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
-                dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_ZOMBIE:
-            if (DCB_ISZOMBIE(dcb))
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_ALL:
-            rval++;
-            break;
-        }
-        current = list_iterate(&DCBlist, current);
-    }
-    return rval;
+    return val.count;
 }
 
 /**

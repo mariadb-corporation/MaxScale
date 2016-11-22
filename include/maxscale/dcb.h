@@ -48,7 +48,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
-#include <maxscale/listmanager.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/gw_ssl.h>
@@ -216,7 +215,6 @@ typedef enum
  */
 typedef struct dcb
 {
-    LIST_ENTRY_FIELDS
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
@@ -326,7 +324,6 @@ void dcb_global_init();
 
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs);
-bool dcb_pre_alloc(int number);
 DCB *dcb_alloc(dcb_role_t, struct servlistener *);
 void dcb_free(DCB *);
 void dcb_free_all_memory(DCB *dcb);

@@ -92,8 +92,6 @@
 #define ARG_TYPE_FILTER         9
 #define ARG_TYPE_NUMERIC        10
 
-extern LIST_CONFIG SESSIONlist;
-
 /**
  * The subcommand structure
  *
@@ -2115,6 +2113,31 @@ static bool get_log_action(const char* name, struct log_action_entry* entryp)
     return found;
 }
 
+
+bool seslog_cb(DCB *dcb, void *data)
+{
+    bool rval = true;
+    struct log_action_entry *entry = ((void**)data)[0];
+    size_t *id = ((void**)data)[1];
+    bool enable = (bool)((void**)data)[2];
+    SESSION *session = dcb->session;
+
+    if (session->ses_id == *id)
+    {
+        if (enable)
+        {
+            session_enable_log_priority(session, entry->priority);
+        }
+        else
+        {
+            session_disable_log_priority(session, entry->priority);
+        }
+        rval = false;
+    }
+
+    return rval;
+}
+
 /**
  * Enables a log for a single session
  * @param session The session in question
@@ -2127,21 +2150,10 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
     if (get_log_action(arg1, &entry))
     {
-        size_t id = (size_t) strtol(arg2, 0, 0);
-        list_entry_t *current = list_start_iteration(&SESSIONlist);
-        while (current)
-        {
-            SESSION *session = (SESSION *)current;
-            if (session->ses_id == id)
-            {
-                session_enable_log_priority(session, entry.priority);
-                list_terminate_iteration_early(&SESSIONlist, current);
-                break;
-            }
-            current = list_iterate(&SESSIONlist, current);
-        }
+        size_t id = (size_t)strtol(arg2, NULL, 10);
+        void *data[] = {&entry, &id, (void*)true};
 
-        if (!current)
+        if (dcb_foreach(seslog_cb, data))
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -2164,28 +2176,17 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
     if (get_log_action(arg1, &entry))
     {
-        size_t id = (size_t) strtol(arg2, 0, 0);
-        list_entry_t *current = list_start_iteration(&SESSIONlist);
-        while (current)
-        {
-            SESSION *session = (SESSION *)current;
-            if (session->ses_id == id)
-            {
-                session_disable_log_priority(session, entry.priority);
-                list_terminate_iteration_early(&SESSIONlist, current);
-                break;
-            }
-            current = list_iterate(&SESSIONlist, current);
-        }
+        size_t id = (size_t)strtol(arg2, NULL, 10);
+        void *data[] = {&entry, &id, (void*)false};
 
-        if (!current)
+        if (dcb_foreach(seslog_cb, data))
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
     }
     else
     {
-        dcb_printf(dcb, "%s is not supported for disable log.\n", arg1);
+        dcb_printf(dcb, "%s is not supported for enable log.\n", arg1);
     }
 }
 
@@ -2226,6 +2227,30 @@ static int string_to_priority(const char* name)
     return result ? result->priority : -1;
 }
 
+bool sesprio_cb(DCB *dcb, void *data)
+{
+    bool rval = true;
+    int *priority = ((void**)data)[0];
+    size_t *id = ((void**)data)[1];
+    bool enable = (bool)((void**)data)[2];
+    SESSION *session = dcb->session;
+
+    if (session->ses_id == *id)
+    {
+        if (enable)
+        {
+            session_enable_log_priority(session, *priority);
+        }
+        else
+        {
+            session_disable_log_priority(session, *priority);
+        }
+        rval = false;
+    }
+
+    return rval;
+}
+
 /**
  * Enables a log priority for a single session
  * @param session The session in question
@@ -2238,21 +2263,10 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
     if (priority != -1)
     {
-        size_t id = (size_t) strtol(arg2, 0, 0);
-        list_entry_t *current = list_start_iteration(&SESSIONlist);
-        while (current)
-        {
-            SESSION *session = (SESSION *)current;
-            if (session->ses_id == id)
-            {
-                session_enable_log_priority(session, priority);
-                list_terminate_iteration_early(&SESSIONlist, current);
-                break;
-            }
-            current = list_iterate(&SESSIONlist, current);
-        }
+        size_t id = (size_t) strtol(arg2, NULL, 10);
+        void *data[] = {&priority, &id, (void*)true};
 
-        if (!current)
+        if (dcb_foreach(sesprio_cb, data))
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -2275,21 +2289,10 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
     if (priority != -1)
     {
-        size_t id = (size_t) strtol(arg2, 0, 0);
-        list_entry_t *current = list_start_iteration(&SESSIONlist);
-        while (current)
-        {
-            SESSION *session = (SESSION *)current;
-            if (session->ses_id == id)
-            {
-                session_disable_log_priority(session, priority);
-                list_terminate_iteration_early(&SESSIONlist, current);
-                break;
-            }
-            current = list_iterate(&SESSIONlist, current);
-        }
+        size_t id = (size_t) strtol(arg2, NULL, 10);
+        void *data[] = {&priority, &id, (void*)false};
 
-        if (!current)
+        if (dcb_foreach(seslog_cb, data))
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }

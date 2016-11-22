@@ -213,8 +213,6 @@ int route_single_query(TEE_INSTANCE* my_instance,
 int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer);
 void create_orphan(SESSION* ses);
 
-extern LIST_CONFIG SESSIONlist;
-
 static void
 orphan_free(void* data)
 {
@@ -299,7 +297,7 @@ orphan_free(void* data)
             tmp->session->router_session);
 
         tmp->session->state = SESSION_STATE_FREE;
-        list_free_entry(&SESSIONlist, (list_entry_t*)tmp->session);
+        MXS_FREE(tmp->session);
         MXS_FREE(tmp);
     }
 
