@@ -96,6 +96,8 @@ bool runtime_alter_server(SERVER *server, char *key, char *value);
  * The @c key , @c cert and @c ca parameters are required. @c version and @c depth
  * are optional.
  *
+ * @note SSL cannot be disabled at runtime.
+ *
  * @param server Server to configure
  * @param key Path to SSL private key
  * @param cert Path to SSL public certificate
@@ -110,7 +112,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 /**
  * @brief Alter monitor parameters
  *
- * @param monitor Monitor to aler
+ * @param monitor Monitor to alter
  * @param key Key to modify
  * @param value New value
  * @return True if @c key was one of the supported parameters

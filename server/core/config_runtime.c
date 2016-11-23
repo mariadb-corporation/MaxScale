@@ -211,6 +211,12 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 
             if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
             {
+                /** TODO: Properly discard old SSL configurations
+                 *
+                 * This could cause the loss of a pointer if two update
+                 * operations are done at the same time.*/
+                ssl->next = server->server_ssl;
+
                 /** Sync to prevent reads on partially initialized server_ssl */
                 atomic_synchronize();
 
