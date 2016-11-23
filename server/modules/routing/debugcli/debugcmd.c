@@ -1447,7 +1447,7 @@ execute_cmd(CLI_SESSION *cli)
     args[0] = cli->cmdbuf;
     ptr = args[0];
     lptr = ptr;
-    i = 0;
+    i = 1;
     /*
      * Break the command line into a number of words. Whitespace is used
      * to delimit words and may be escaped by use of the \ character or
@@ -1455,7 +1455,7 @@ execute_cmd(CLI_SESSION *cli)
      * The array args contains the broken down words, one per index.
      */
 
-    while (*ptr)
+    while (*ptr && i <= MAXARGS + 2)
     {
         if (escape_next)
         {
@@ -1479,19 +1479,7 @@ execute_cmd(CLI_SESSION *cli)
                 break;
             }
 
-            if (args[i] == ptr)
-            {
-                args[i] = ptr + 1;
-            }
-            else
-            {
-                i++;
-                if (i >= MAXARGS - 1)
-                {
-                    break;
-                }
-                args[i] = ptr + 1;
-            }
+            args[i++] = ptr + 1;
             ptr++;
             lptr++;
         }
@@ -1513,14 +1501,13 @@ execute_cmd(CLI_SESSION *cli)
         }
     }
     *lptr = 0;
-    args[MXS_MIN(MAXARGS - 1, i + 1)] = NULL;
+    args[i] = NULL;
 
     if (args[0] == NULL || *args[0] == 0)
     {
         return 1;
     }
-    for (i = 0; args[i] && *args[i]; i++)
-        ;
+
     argc = i - 2;   /* The number of extra arguments to commands */
 
     if (!strcasecmp(args[0], "help"))
@@ -1561,7 +1548,7 @@ execute_cmd(CLI_SESSION *cli)
                     dcb_printf(dcb, "Available options to the %s command:\n", args[1]);
                     for (j = 0; cmds[i].options[j].arg1; j++)
                     {
-                        dcb_printf(dcb, "'%s' - %s\n\n\t%s\n\n", cmds[i].options[j].arg1,
+                        dcb_printf(dcb, "'%s' - %s\n\n%s\n\n", cmds[i].options[j].arg1,
                                    cmds[i].options[j].help, cmds[i].options[j].devhelp);
 
                     }
