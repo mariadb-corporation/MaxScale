@@ -299,7 +299,7 @@ static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
     return header[3];
 }
 
-static inline uint8_t MYSQL_GET_PACKET_LEN(const uint8_t* header)
+static inline uint32_t MYSQL_GET_PACKET_LEN(const uint8_t* header)
 {
     return gw_mysql_get_byte3(header);
 }
