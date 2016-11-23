@@ -769,10 +769,10 @@ gw_read_and_write(DCB *dcb)
         ss_dassert(read_buffer != NULL);
     }
 
-    /** Ask what type of input the router/filter chain expects */
+    /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
+    if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
     {
         GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
         /* Put any residue into the read queue */
@@ -787,7 +787,7 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
+        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
