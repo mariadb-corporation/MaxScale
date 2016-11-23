@@ -104,6 +104,22 @@ following new commands were added to maxadmin, see output of `maxadmin help
 With these new features, you can start MaxScale without the servers and define
 them later.
 
+# Module commands
+
+## Module commands
+
+Introduced in MaxScale 2.1, the module commands are special, module-specific
+commands. They allow the modules to expand beyound the capabilities of the
+module API. Currently, only MaxAdmin implements an interface to the module
+commands.
+
+All registered module commands can be shown with `maxadmin list functions` and
+they can be executed with `maxadmin call function <domain> <name> ARGS...` where
+_<domain>_ is the domain where the module registered the function and _<name>_
+is the name of the function. _ARGS_ is a function specific list of arguments.
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for more details.
+
 ### Amazon RDS Aurora monitor
 
 The new [Aurora Monitor](../Monitors/Aurora-Monitor.md) module allows monitoring

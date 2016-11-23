@@ -161,11 +161,28 @@ The `users` directive defines the users to which the rule should be applied.
 
 The first keyword is `users`, which identifies this line as a user definition line.
 
-The second component is a list of user names and network addresses in the format *`user`*`@`*`0.0.0.0`*. The first part is the user name and the second part is the network address. You can use the `%` character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected. 
+The second component is a list of user names and network addresses in the format *`user`*`@`*`0.0.0.0`*. The first part is the user name and the second part is the network address. You can use the `%` character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected.
 
 After this either the keyword `any` `all` or `strict_all` is expected. This defined how the rules are matched. If `any` is used when the first rule is matched the query is considered blocked and the rest of the rules are skipped. If instead the `all` keyword is used all rules must match for the query to be blocked. The `strict_all` is the same as `all` but it checks the rules from left to right in the order they were listed. If one of these does not match, the rest of the rules are not checked. This could be useful in situations where you would for example combine `limit_queries` and `regex` rules. By using `strict_all` you can have the `regex` rule first and the `limit_queries` rule second. This way the rule only matches if the `regex` rule matches enough times for the `limit_queries` rule to match.
 
 After the matching part comes the rules keyword after which a list of rule names is expected. This allows reusing of the rules and enables varying levels of query restriction.
+
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
+
+The dbfwfilter supports the following module commands.
+
+### `dbfwfilter::rules/reload [FILE]`
+
+Load a new rule file or reload the current rules. New rules are only taken into
+use if they are successfully loaded and in cases where loading of the rules
+fail, the old rules remain in use. The _FILE_ argument is an optional path to a
+rule file and if it is not defined, the current rule file is used.
+
+### `dbfwfilter::rules`
+
+Shows the current statistics of the rules.
 
 ## Use Cases
 
