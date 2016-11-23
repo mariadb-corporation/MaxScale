@@ -20,6 +20,9 @@
 #include <set>
 #include <string>
 #include <sstream>
+#define MYSQL_COM_QUIT        COM_QUIT
+#define MYSQL_COM_INIT_DB     COM_INIT_DB
+#define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
