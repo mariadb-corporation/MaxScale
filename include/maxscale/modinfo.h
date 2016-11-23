@@ -81,10 +81,10 @@ typedef struct
  */
 typedef struct
 {
-    MODULE_API  modapi;
+    MODULE_API      modapi;
     MODULE_STATUS   status;
     MODULE_VERSION  api_version;
-    char        *description;
+    const char     *description;
 } MODULE_INFO;
 
 MXS_END_DECLS
