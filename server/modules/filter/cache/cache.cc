@@ -51,7 +51,7 @@ MODULE_INFO info =
     "A caching filter that is capable of caching and returning cached data."
 };
 
-char *version()
+extern "C" char *version()
 {
     return VERSION_STRING;
 }
@@ -60,7 +60,7 @@ char *version()
  * The module initialization functions, called when the module has
  * been loaded.
  */
-void ModuleInit()
+extern "C" void ModuleInit()
 {
 }
 
@@ -69,7 +69,7 @@ void ModuleInit()
  *
  * @return The module object.
  */
-FILTER_OBJECT *GetModuleObject()
+extern "C" FILTER_OBJECT *GetModuleObject()
 {
     static FILTER_OBJECT object =
         {
@@ -263,7 +263,7 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
 
         if (rules)
         {
-            cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE));
+            cinstance = (CACHE_INSTANCE*)MXS_CALLOC(1, sizeof(CACHE_INSTANCE));
             HASHTABLE* pending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
 
             if (cinstance && pending)
@@ -405,7 +405,7 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
     CACHE_INSTANCE *cinstance = (CACHE_INSTANCE*)instance;
     CACHE_SESSION_DATA *csdata = (CACHE_SESSION_DATA*)sdata;
 
-    uint8_t *data = GWBUF_DATA(packet);
+    uint8_t *data = (uint8_t*)GWBUF_DATA(packet);
 
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     ss_dassert(GWBUF_IS_CONTIGUOUS(packet));
@@ -425,7 +425,7 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
         {
             ss_dassert(!csdata->use_db);
             size_t len = MYSQL_GET_PACKET_LEN(data) - 1; // Remove the command byte.
-            csdata->use_db = MXS_MALLOC(len + 1);
+            csdata->use_db = (char*)MXS_MALLOC(len + 1);
 
             if (csdata->use_db)
             {
@@ -1087,7 +1087,7 @@ static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONF
                 const char *datadir = get_datadir();
                 size_t len = strlen(datadir) + 1 + strlen(param->value) + 1;
 
-                char *rules = MXS_MALLOC(len);
+                char *rules = (char*)MXS_MALLOC(len);
 
                 if (rules)
                 {
