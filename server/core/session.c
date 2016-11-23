@@ -290,7 +290,7 @@ session_link_dcb(SESSION *session, DCB *dcb)
     atomic_add(&session->refcount, 1);
     dcb->session = session;
     /** Move this DCB under the same thread */
-    dcb->owner = session->client_dcb->owner;
+    dcb->thread.id = session->client_dcb->thread.id;
     spinlock_release(&session->ses_lock);
     return true;
 }

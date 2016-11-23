@@ -225,7 +225,6 @@ typedef struct dcb
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
-    int             owner;          /**< Owning thread */
     SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
@@ -276,8 +275,12 @@ typedef struct dcb
     bool            ssl_write_want_write;    /*< Flag */
     int             dcb_port;       /**< port of target server */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
-    struct dcb      *thr_next; /**< Next DCB in owning thread's list */
-    struct dcb      *thr_tail; /**< Last DCB in owning thread's list */
+    struct
+    {
+        int id; /**< The owning thread's ID */
+        struct dcb *next; /**< Next DCB in owning thread's list */
+        struct dcb *tail; /**< Last DCB in owning thread's list */
+    } thread;
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 
@@ -288,7 +291,7 @@ typedef struct dcb
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
-    .authenticator_data = NULL, .thr_next = NULL, .thr_tail = NULL}
+    .authenticator_data = NULL, .thread = {0}}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason

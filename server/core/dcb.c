@@ -1660,7 +1660,7 @@ dcb_close(DCB *dcb)
         /*<
          * Add closing dcb to the top of the list, setting zombie marker
          */
-        int owner = dcb->owner;
+        int owner = dcb->thread.id;
         dcb->dcb_is_zombie = true;
         dcb->memdata.next = zombies[owner];
         zombies[owner] = dcb;
@@ -3417,20 +3417,20 @@ void dcb_append_readqueue(DCB *dcb, GWBUF *buffer)
 
 void dcb_add_to_list(DCB *dcb)
 {
-    spinlock_acquire(&all_dcbs_lock[dcb->owner]);
+    spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
 
-    if (all_dcbs[dcb->owner] == NULL)
+    if (all_dcbs[dcb->thread.id] == NULL)
     {
-        all_dcbs[dcb->owner] = dcb;
-        all_dcbs[dcb->owner]->thr_tail = dcb;
+        all_dcbs[dcb->thread.id] = dcb;
+        all_dcbs[dcb->thread.id]->thread.tail = dcb;
     }
     else
     {
-        all_dcbs[dcb->owner]->thr_tail->thr_next = dcb;
-        all_dcbs[dcb->owner]->thr_tail = dcb;
+        all_dcbs[dcb->thread.id]->thread.tail->thread.next = dcb;
+        all_dcbs[dcb->thread.id]->thread.tail = dcb;
     }
 
-    spinlock_release(&all_dcbs_lock[dcb->owner]);
+    spinlock_release(&all_dcbs_lock[dcb->thread.id]);
 }
 
 /**
@@ -3440,36 +3440,36 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    spinlock_acquire(&all_dcbs_lock[dcb->owner]);
+    spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
 
-    if (dcb == all_dcbs[dcb->owner])
+    if (dcb == all_dcbs[dcb->thread.id])
     {
-        DCB *tail = all_dcbs[dcb->owner]->thr_tail;
-        all_dcbs[dcb->owner] = all_dcbs[dcb->owner]->thr_next;
-        all_dcbs[dcb->owner]->thr_tail = tail;
+        DCB *tail = all_dcbs[dcb->thread.id]->thread.tail;
+        all_dcbs[dcb->thread.id] = all_dcbs[dcb->thread.id]->thread.next;
+        all_dcbs[dcb->thread.id]->thread.tail = tail;
     }
     else
     {
-        DCB *current = all_dcbs[dcb->owner]->thr_next;
-        DCB *prev = all_dcbs[dcb->owner];
+        DCB *current = all_dcbs[dcb->thread.id]->thread.next;
+        DCB *prev = all_dcbs[dcb->thread.id];
 
         while (current)
         {
             if (current == dcb)
             {
-                if (current == all_dcbs[dcb->owner]->thr_tail)
+                if (current == all_dcbs[dcb->thread.id]->thread.tail)
                 {
-                    all_dcbs[dcb->owner]->thr_tail = prev;
+                    all_dcbs[dcb->thread.id]->thread.tail = prev;
                 }
-                prev->thr_next = current->thr_next;
+                prev->thread.next = current->thread.next;
                 break;
             }
             prev = current;
-            current = current->thr_next;
+            current = current->thread.next;
         }
     }
 
-    spinlock_release(&all_dcbs_lock[dcb->owner]);
+    spinlock_release(&all_dcbs_lock[dcb->thread.id]);
 }
 
 /**

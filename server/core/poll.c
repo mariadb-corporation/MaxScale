@@ -375,14 +375,14 @@ poll_add_dcb(DCB *dcb)
 
     if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
-        owner = dcb->session->client_dcb->owner;
+        owner = dcb->session->client_dcb->thread.id;
     }
     else
     {
         owner = (unsigned int)atomic_add(&next_epoll_fd, 1) % n_threads;
     }
 
-    dcb->owner = owner;
+    dcb->thread.id = owner;
     spinlock_release(&dcb->dcb_initlock);
 
     dcb_add_to_list(dcb);
@@ -495,7 +495,7 @@ poll_remove_dcb(DCB *dcb)
         }
         else
         {
-            rc = epoll_ctl(epoll_fd[dcb->owner], EPOLL_CTL_DEL, dcbfd, &ev);
+            rc = epoll_ctl(epoll_fd[dcb->thread.id], EPOLL_CTL_DEL, dcbfd, &ev);
         }
         /**
          * The poll_resolve_error function will always
@@ -885,7 +885,7 @@ process_pollq(int thread_id, struct epoll_event *event)
     unsigned long qtime;
 
     DCB *dcb = event->data.ptr;
-    ss_dassert(dcb->owner == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+    ss_dassert(dcb->thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 #if PROFILE_POLL
     memlog_log(plog, hkheartbeat - dcb->evq.inserted);
 #endif
@@ -1490,7 +1490,7 @@ static void poll_add_event_to_dcb(DCB*       dcb,
         event->next = NULL;
         event->tail = event;
 
-        int thr = dcb->owner;
+        int thr = dcb->thread.id;
 
         /** It is possible that a housekeeper or a monitor thread inserts a fake
          * event into the thread's event queue which is why the operation needs
