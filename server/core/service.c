@@ -688,11 +688,11 @@ service_free(SERVICE *service)
  * @param ssl           SSL configuration
  * @return      TRUE if the protocol/port could be added
  */
-int
-serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
-                   unsigned short port, char *authenticator, char *options,
-                   SSL_LISTENER *ssl)
+bool serviceAddProtocol(SERVICE *service, const char *name, const char *protocol,
+                   const char *address, unsigned short port, const char *authenticator,
+                   const char *options, SSL_LISTENER *ssl)
 {
+    bool rval = false;
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
                                           port, authenticator, options, ssl);
 
@@ -702,10 +702,10 @@ serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
         proto->next = service->ports;
         service->ports = proto;
         spinlock_release(&service->spin);
-        return 1;
+        rval = true;
     }
 
-    return 0;
+    return rval;
 }
 
 /**

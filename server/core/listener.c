@@ -55,61 +55,67 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
  * @return      New listener object or NULL if unable to allocate
  */
 SERV_LISTENER *
-listener_alloc(struct service* service, char* name, char *protocol, char *address,
-               unsigned short port, char *authenticator, char* auth_options, SSL_LISTENER *ssl)
+listener_alloc(struct service* service, const char* name, const char *protocol,
+               const char *address, unsigned short port, const char *authenticator,
+               const char* auth_options, SSL_LISTENER *ssl)
 {
+    char *my_address = NULL;
     if (address)
     {
-        address = MXS_STRDUP(address);
-        if (!address)
+        my_address = MXS_STRDUP(address);
+        if (!my_address)
         {
             return NULL;
         }
     }
 
+    char *my_authenticator = NULL;
+
     if (authenticator)
     {
-        authenticator = MXS_STRDUP(authenticator);
+        my_authenticator = MXS_STRDUP(authenticator);
     }
-    else if ((authenticator = (char*)get_default_authenticator(protocol)) == NULL ||
-             (authenticator = MXS_STRDUP(authenticator)) == NULL)
+    else if ((authenticator = get_default_authenticator(protocol)) == NULL ||
+             (my_authenticator = MXS_STRDUP(authenticator)) == NULL)
     {
         MXS_ERROR("No authenticator defined for listener '%s' and could not get "
                   "default authenticator for protocol '%s'.", name, protocol);
+        MXS_FREE(my_address);
+        return NULL;
     }
 
     void *auth_instance = NULL;
 
-    if (!authenticator_init(&auth_instance, authenticator, auth_options))
+    if (!authenticator_init(&auth_instance, my_authenticator, auth_options))
     {
         MXS_ERROR("Failed to initialize authenticator module '%s' for "
-                  "listener '%s'.", authenticator, name);
-        MXS_FREE(address);
-        MXS_FREE(authenticator);
+                  "listener '%s'.", my_authenticator, name);
+        MXS_FREE(my_address);
+        MXS_FREE(my_authenticator);
         return NULL;
     }
 
-    protocol = MXS_STRDUP(protocol);
-    name = MXS_STRDUP(name);
+    char *my_protocol = MXS_STRDUP(protocol);
+    char *my_name = MXS_STRDUP(name);
     SERV_LISTENER *proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
 
-    if (!protocol || !proto || !name || !authenticator)
+    if (!my_protocol || !proto || !my_name || !my_authenticator)
     {
-        MXS_FREE(authenticator);
-        MXS_FREE(protocol);
-        MXS_FREE(address);
+        MXS_FREE(my_authenticator);
+        MXS_FREE(my_protocol);
+        MXS_FREE(my_address);
+        MXS_FREE(my_name);
         MXS_FREE(proto);
-        MXS_FREE(name);
         return NULL;
     }
 
-    proto->name = name;
+    proto->name = my_name;
     proto->listener = NULL;
     proto->service = service;
-    proto->protocol = protocol;
-    proto->address = address;
+    proto->protocol = my_protocol;
+    proto->address = my_address;
     proto->port = port;
-    proto->authenticator = authenticator;
+    proto->authenticator = my_authenticator;
     proto->ssl = ssl;
     proto->users = NULL;
     proto->resources = NULL;

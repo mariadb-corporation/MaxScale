@@ -192,10 +192,9 @@ extern SERVICE *service_alloc(const char *, const char *);
 extern int service_free(SERVICE *);
 extern SERVICE *service_find(const char *);
 extern int service_isvalid(SERVICE *);
-extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
-                              char *address, unsigned short port,
-                              char *authenticator, char *options,
-                              SSL_LISTENER *ssl);
+extern bool serviceAddProtocol(SERVICE *service, const char *name, const char *protocol,
+                               const char *address, unsigned short port, const char *authenticator,
+                               const char *options, SSL_LISTENER *ssl);
 extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);
