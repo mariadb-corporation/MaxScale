@@ -506,25 +506,25 @@ serviceStart(SERVICE *service)
  * Start an individual listener
  *
  * @param service       The service to start the listener for
- * @param protocol      The name of the protocol
  * @param port          The port number
  */
-void
-serviceStartProtocol(SERVICE *service, char *protocol, int port)
+bool serviceListen(SERVICE *service, unsigned short port)
 {
-    SERV_LISTENER *ptr;
-
-    ptr = service->ports;
-    while (ptr)
+    bool rval = false;
+    for (SERV_LISTENER *ptr = service->ports; ptr; ptr = ptr->next)
     {
-        if (strcmp(ptr->protocol, protocol) == 0 && ptr->port == port)
+        if (ptr->port == port)
         {
-            serviceStartPort(service, ptr);
+            if (serviceStartPort(service, ptr))
+            {
+                rval = true;
+            }
+            break;
         }
-        ptr = ptr->next;
     }
-}
 
+    return rval;
+}
 
 /**
  * Start all the services

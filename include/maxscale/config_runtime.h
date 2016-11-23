@@ -118,3 +118,29 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
  * @return True if @c key was one of the supported parameters
  */
 bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value);
+
+/**
+ * @brief Create a new listener for a service
+ *
+ * This function adds a new listener to a service and starts it.
+ *
+ * @param service     Service where the listener is added
+ * @param name        Name of the listener
+ * @param addr        Listening address, NULL for default of 0.0.0.0
+ * @param port        Listening port, NULL for default of 3306
+ * @param proto       Listener protocol, NULL for default of "MySQLClient"
+ * @param auth        Listener authenticator, NULL for protocol default authenticator
+ * @param auth_opt    Options for the authenticator, NULL for no options
+ * @param ssl_key     SSL key, NULL for no key
+ * @param ssl_cert    SSL cert, NULL for no cert
+ * @param ssl_ca      SSL CA cert, NULL for no CA cert
+ * @param ssl_version SSL version, NULL for default of "MAX"
+ * @param ssl_depth   SSL cert verification depth, NULL for default
+ *
+ * @return True if the listener was successfully created and started
+ */
+bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
+                             const char *port, const char *proto, const char *auth,
+                             const char *auth_opt, const char *ssl_key,
+                             const char *ssl_cert, const char *ssl_ca,
+                             const char *ssl_version, const char *ssl_depth);

@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#include <strings.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config_runtime.h>
 #include <maxscale/gwdirs.h>
@@ -190,17 +191,16 @@ bool runtime_destroy_server(SERVER *server)
     return rval;
 }
 
-bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
-                               const char *ca, const char *version, const char *depth)
+static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *cert,
+                                const char *ca, const char *version, const char *depth)
 {
-    spinlock_acquire(&crt_lock);
-    bool rval = false;
+    SSL_LISTENER *rval = NULL;
+    CONFIG_CONTEXT *obj = config_context_create(name);
 
-    if (key && cert && ca)
+    if (obj)
     {
-        CONFIG_CONTEXT *obj = config_context_create(server->unique_name);
-
-        if (obj && config_add_param(obj, "ssl_key", key) &&
+        if (config_add_param(obj, "ssl", "required") &&
+            config_add_param(obj, "ssl_key", key) &&
             config_add_param(obj, "ssl_cert", cert) &&
             config_add_param(obj, "ssl_ca_cert", ca) &&
             (!version || config_add_param(obj, "ssl_version", version)) &&
@@ -211,27 +211,44 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 
             if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
             {
-                /** TODO: Properly discard old SSL configurations
-                 *
-                 * This could cause the loss of a pointer if two update
-                 * operations are done at the same time.*/
-                ssl->next = server->server_ssl;
-
-                /** Sync to prevent reads on partially initialized server_ssl */
-                atomic_synchronize();
-
-                server->server_ssl = ssl;
-                if (server_serialize(server))
-                {
-                    rval = true;
-                }
+                rval = ssl;
             }
         }
 
         config_context_free(obj);
     }
 
-    spinlock_release(&crt_lock);
+    return rval;
+}
+
+bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert,
+                               const char *ca, const char *version, const char *depth)
+{
+    bool rval = false;
+
+    if (key && cert && ca)
+    {
+        spinlock_acquire(&crt_lock);
+        SSL_LISTENER *ssl = create_ssl(server->unique_name, key, cert, ca, version, depth);
+
+        if (ssl)
+        {
+            /** TODO: Properly discard old SSL configurations.This could cause the
+             * loss of a pointer if two update operations are done at the same time.*/
+            ssl->next = server->server_ssl;
+
+            /** Sync to prevent reads on partially initialized server_ssl */
+            atomic_synchronize();
+            server->server_ssl = ssl;
+
+            if (server_serialize(server))
+            {
+                rval = true;
+            }
+        }
+        spinlock_release(&crt_lock);
+    }
+
     return rval;
 }
 
@@ -340,4 +357,74 @@ bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
 
     spinlock_release(&crt_lock);
     return valid;
+}
+
+bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
+                             const char *port, const char *proto, const char *auth,
+                             const char *auth_opt, const char *ssl_key,
+                             const char *ssl_cert, const char *ssl_ca,
+                             const char *ssl_version, const char *ssl_depth)
+{
+    SSL_LISTENER *ssl = NULL;
+    bool rval = true;
+
+    if (addr == NULL || strcasecmp(addr, "default") == 0)
+    {
+        addr = "0.0.0.0";
+    }
+    if (port == NULL || strcasecmp(port, "default") == 0)
+    {
+        port = "3306";
+    }
+    if (proto == NULL || strcasecmp(proto, "default") == 0)
+    {
+        proto = "MySQLClient";
+    }
+
+    if (auth && strcasecmp(auth, "default") == 0)
+    {
+        /** Set auth to NULL so the protocol default authenticator is used */
+        auth = NULL;
+    }
+
+    if (auth_opt && strcasecmp(auth_opt, "default") == 0)
+    {
+        /** Don't pass options to the authenticator */
+        auth_opt = NULL;
+    }
+
+    unsigned short u_port = atoi(port);
+
+    if (ssl_key && ssl_cert && ssl_ca)
+    {
+        ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth);
+
+        if (ssl == NULL)
+        {
+            MXS_ERROR("SSL initialization for listener '%s' failed.", name);
+            rval = false;
+        }
+    }
+
+    spinlock_acquire(&crt_lock);
+
+    if (rval)
+    {
+        const char *print_addr = addr ? addr : "0.0.0.0";
+
+        if (serviceAddProtocol(service, name, proto, addr, u_port, auth, auth_opt, ssl) &&
+            serviceListen(service, u_port))
+        {
+            MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
+                       name, print_addr, port, service->name);
+        }
+        else
+        {
+            MXS_ERROR("Failed to start listener '%s' at %s:%s.", name, print_addr, port);
+            rval = false;
+        }
+    }
+
+    spinlock_release(&crt_lock);
+    return rval;
 }

@@ -204,7 +204,7 @@ extern void serviceAddRouterOption(SERVICE *, char *);
 extern void serviceClearRouterOptions(SERVICE *);
 extern int serviceStart(SERVICE *);
 extern int serviceStartAll();
-extern void serviceStartProtocol(SERVICE *, char *, int);
+extern bool serviceListen(SERVICE *service, unsigned short port);
 extern int serviceStop(SERVICE *);
 extern int serviceRestart(SERVICE *);
 extern int serviceSetUser(SERVICE *, char *, char *);
