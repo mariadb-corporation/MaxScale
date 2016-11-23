@@ -289,29 +289,45 @@ typedef struct
 #define MYSQL_REPLY_OK                0x00
 #define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe
 
-/*
- * Let's try this with proper enums instead of numbers
-#define MYSQL_GET_COMMAND(payload)              (payload[4])
-#define MYSQL_GET_PACKET_NO(payload)            (payload[3])
-#define MYSQL_GET_PACKET_LEN(payload)           (gw_mysql_get_byte3(payload))
-#define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
-#define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
-#define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
-#define MYSQL_IS_COM_INIT_DB(payload)              (MYSQL_GET_COMMAND(payload)==0x02)
-#define MYSQL_IS_CHANGE_USER(payload)       (MYSQL_GET_COMMAND(payload)==0x11)
-#define MYSQL_GET_NATTR(payload)                ((int)payload[4])
-*/
-#define MYSQL_GET_COMMAND(payload)              ((mysql_server_cmd_t)((payload)[4]))
-#define MYSQL_GET_PACKET_NO(payload)            (payload[3])
-#define MYSQL_GET_PACKET_LEN(payload)           (gw_mysql_get_byte3(payload))
+static inline mysql_server_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
+{
+    return (mysql_server_cmd_t)header[4];
+}
+
+static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
+{
+    return header[3];
+}
+
+static inline uint8_t MYSQL_GET_PACKET_LEN(const uint8_t* header)
+{
+    return gw_mysql_get_byte3(header);
+}
+
 #define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
 #define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
-#define MYSQL_IS_ERROR_PACKET(payload)          ((int)MYSQL_GET_COMMAND(payload)==MYSQL_REPLY_ERR)
-#define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==MYSQL_COM_QUIT)
-#define MYSQL_IS_COM_INIT_DB(payload)           (MYSQL_GET_COMMAND(payload)==MYSQL_COM_INIT_DB)
-#define MYSQL_IS_CHANGE_USER(payload)       (MYSQL_GET_COMMAND(payload)==MYSQL_COM_CHANGE_USER)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
+
+static inline bool MYSQL_IS_ERROR_PACKET(const uint8_t* header)
+{
+    return MYSQL_GET_COMMAND(header) == MYSQL_REPLY_ERR;
+}
+
+static inline bool MYSQL_IS_COM_QUIT(const uint8_t* header)
+{
+    return MYSQL_GET_COMMAND(header) == MYSQL_COM_QUIT;
+}
+
+static inline bool MYSQL_IS_COM_INIT_DB(const uint8_t* header)
+{
+    return MYSQL_GET_COMMAND(header) == MYSQL_COM_INIT_DB;
+}
+
+static inline bool MYSQL_IS_CHANGE_USER(const uint8_t* header)
+{
+    return MYSQL_GET_COMMAND(header) == MYSQL_COM_CHANGE_USER;
+}
 
 /* The following can be compared using memcmp to detect a null password */
 extern uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN];
