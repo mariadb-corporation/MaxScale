@@ -1025,6 +1025,23 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
     spinlock_release(&server_mod_lock);
 }
 
+static void createListener(DCB *dcb, SERVICE *service, char *name, char *address,
+                           char *port, char *protocol, char *authenticator,
+                           char *authenticator_options, char *key, char *cert,
+                           char *ca, char *version, char *depth)
+{
+    if (runtime_create_listener(service, name, address, port, protocol,
+                                authenticator, authenticator_options,
+                                key, cert, ca, version, depth))
+    {
+        dcb_printf(dcb, "Listener '%s' created\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to create listener '%s', see log for more details\n", name);
+    }
+}
+
 struct subcommand createoptions[] =
 {
     {
@@ -1042,6 +1059,33 @@ struct subcommand createoptions[] =
         {
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
+    },
+    {
+        "listener", 2, 12, createListener,
+        "Create a new listener for a service",
+        "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n\n"
+        "Create a new server from the following parameters.\n"
+        "SERVICE       Service where this listener is added\n"
+        "NAME          Listener name\n"
+        "HOST          Listener host address (default 0.0.0.0)\n"
+        "PORT          Listener port (default 3306)\n"
+        "PROTOCOL      Listener protocol (default MySQLClient)\n"
+        "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"
+        "OPTIONS       Options for the authenticator module\n"
+        "SSL_KEY       Path to SSL private key\n"
+        "SSL_CERT      Path to SSL certificate\n"
+        "SSL_CA        Path to CA certificate\n"
+        "SSL_VERSION   SSL version (default MAX)\n"
+        "SSL_VERIFY_DEPTH Certificate verification depth\n\n"
+        "The first two parameters are required, the others are optional.\n"
+        "Any of the optional parameters can also have the value 'default'\n"
+        "which will be replaced with the default value.\n",
+        {
+            ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
         }
     },
     {
