@@ -34,3 +34,11 @@ set @`TeST`=4;
 # (Sqlite3 error: SQL logic error or missing database, unrecognized token: "@"): "set @=4"
 #
 # sqlite3GetToken needs to be modified to accept a quoted variable name.
+
+SAVEPOINT sa_savepoint_1
+#warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
+# (Sqlite3 error: SQL logic error or missing database, near "SNAPSHOT": syntax error): "SNAPSHOT s"
+
+RELEASE SAVEPOINT sa_savepoint_1
+# warning: [qc_sqlite] Statement was neither parsed nor recognized from keywords
+# (Sqlite3 error: SQL logic error or missing database, near "RELEASE": syntax error): "RELEASE SNAPSHOT s"

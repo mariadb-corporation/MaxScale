@@ -444,25 +444,28 @@ static void parse_query_string(const char* query, size_t len)
             }
         }
     }
-    else
+    else if (!this_thread.info->initializing) // If we are initializing, the query will not be classified.
     {
-        if (qc_info_was_tokenized(this_thread.info->status))
+        if (this_unit.log_level > QC_LOG_NOTHING)
         {
-            // This suggests a callback from the parser into this module is not made.
-            format =
-                "Statement was classified only based on keywords, "
-                "even though the statement was parsed: \"%.*s%s\"";
+            if (qc_info_was_tokenized(this_thread.info->status))
+            {
+                // This suggests a callback from the parser into this module is not made.
+                format =
+                    "Statement was classified only based on keywords, "
+                    "even though the statement was parsed: \"%.*s%s\"";
 
-            MXS_WARNING(format, l, query, suffix);
-        }
-        else if (!qc_info_was_parsed(this_thread.info->status))
-        {
-            // This suggests there are keywords that should be recognized but are not,
-            // a tentative classification cannot be (or is not) made using the keywords
-            // seen and/or a callback from the parser into this module is not made.
-            format = "Statement was parsed, but not classified: \"%.*s%s\"";
+                MXS_WARNING(format, l, query, suffix);
+            }
+            else if (!qc_info_was_parsed(this_thread.info->status))
+            {
+                // This suggests there are keywords that should be recognized but are not,
+                // a tentative classification cannot be (or is not) made using the keywords
+                // seen and/or a callback from the parser into this module is not made.
+                format = "Statement was parsed, but not classified: \"%.*s%s\"";
 
-            MXS_ERROR(format, l, query, suffix);
+                MXS_WARNING(format, l, query, suffix);
+            }
         }
     }
 
