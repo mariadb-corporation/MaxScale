@@ -780,6 +780,8 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     else if (!trx_active && !load_active &&
              !qc_query_is_type(qtype, QUERY_TYPE_MASTER_READ) &&
              !qc_query_is_type(qtype, QUERY_TYPE_WRITE) &&
+             !qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) &&
+             !qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) &&
              (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
               qc_query_is_type(qtype, QUERY_TYPE_SHOW_TABLES) ||
               qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
