@@ -427,7 +427,7 @@ session_final_free(SESSION *session)
 int
 session_isvalid(SESSION *session)
 {
-    return true;
+    return session != NULL;
 }
 
 /**

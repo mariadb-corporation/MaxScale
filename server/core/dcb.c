@@ -2503,7 +2503,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 int
 dcb_isvalid(DCB *dcb)
 {
-    return !dcb->dcb_is_zombie;
+    return dcb && !dcb->dcb_is_zombie;
 }
 
 /**
