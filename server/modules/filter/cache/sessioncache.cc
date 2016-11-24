@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "sessioncache.h"
 #include <new>
 #include <maxscale/alloc.h>
@@ -18,13 +19,10 @@
 #include <maxscale/mysql_utils.h>
 #include "storage.h"
 
-#define DUMMY_VALUE (void*)0xdeadbeef
-
-SessionCache::SessionCache(CACHE_INSTANCE* pInstance, SESSION* pSession, char* zDefaultDb)
+SessionCache::SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb)
     : m_state(CACHE_EXPECTING_NOTHING)
-    , m_pInstance(pInstance)
+    , m_pCache(pCache)
     , m_pSession(pSession)
-    , m_pStorage(pInstance->storage)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
@@ -43,7 +41,7 @@ SessionCache::~SessionCache()
 }
 
 //static
-SessionCache* SessionCache::Create(CACHE_INSTANCE* pInstance, SESSION* pSession)
+SessionCache* SessionCache::Create(Cache* pCache, SESSION* pSession)
 {
     SessionCache* pSessionCache = NULL;
 
@@ -60,7 +58,7 @@ SessionCache* SessionCache::Create(CACHE_INSTANCE* pInstance, SESSION* pSession)
 
     if ((pMysqlSession->db[0] == 0) || zDefaultDb)
     {
-        pSessionCache = new (std::nothrow) SessionCache(pInstance, pSession, zDefaultDb);
+        pSessionCache = new (std::nothrow) SessionCache(pCache, pSession, zDefaultDb);
 
         if (!pSessionCache)
         {
@@ -140,9 +138,9 @@ int SessionCache::routeQuery(GWBUF* pPacket)
                 if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
                     session_trx_is_read_only(session))
                 {
-                    if (cache_rules_should_store(m_pInstance->rules, m_zDefaultDb, pPacket))
+                    if (m_pCache->shouldStore(m_zDefaultDb, pPacket))
                     {
-                        if (cache_rules_should_use(m_pInstance->rules, m_pSession))
+                        if (m_pCache->shouldUse(m_pSession))
                         {
                             GWBUF* pResponse;
                             cache_result_t result = get_cached_response(pPacket, &pResponse);
@@ -154,21 +152,7 @@ int SessionCache::routeQuery(GWBUF* pPacket)
                                     // The value was found, but it was stale. Now we need to
                                     // figure out whether somebody else is already fetching it.
 
-                                    long key = hash_of_key(m_key);
-
-                                    spinlock_acquire(&m_pInstance->pending_lock);
-                                    // TODO: Remove the internal locking of hashtable. The internal
-                                    // TODO: locking is no good if you need transactional behaviour.
-                                    // TODO: Now we lock twice.
-                                    void *value = hashtable_fetch(m_pInstance->pending, (void*)key);
-                                    if (!value)
-                                    {
-                                        // It's not being fetched, so we make a note that we are.
-                                        hashtable_add(m_pInstance->pending, (void*)key, DUMMY_VALUE);
-                                    }
-                                    spinlock_release(&m_pInstance->pending_lock);
-
-                                    if (!value)
+                                    if (m_pCache->mustRefresh(m_key, this))
                                     {
                                         // We were the first ones who hit the stale item. It's
                                         // our responsibility now to fetch it.
@@ -229,7 +213,7 @@ int SessionCache::routeQuery(GWBUF* pPacket)
                 }
                 else
                 {
-                    if (m_pInstance->config.debug & CACHE_DEBUG_DECISIONS)
+                    if (log_decisions())
                     {
                         MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
                                    "storing to cache.",
@@ -268,14 +252,14 @@ int SessionCache::clientReply(GWBUF* pData)
 
     if (m_state != CACHE_IGNORING_RESPONSE)
     {
-        if (gwbuf_length(m_res.pData) > m_pInstance->config.max_resultset_size)
+        if (gwbuf_length(m_res.pData) > m_pCache->config().max_resultset_size)
         {
-            if (m_pInstance->config.debug & CACHE_DEBUG_DECISIONS)
+            if (log_decisions())
             {
                 MXS_NOTICE("Current size %uB of resultset, at least as much "
                            "as maximum allowed size %uKiB. Not caching.",
                            gwbuf_length(m_res.pData),
-                           m_pInstance->config.max_resultset_size / 1024);
+                           m_pCache->config().max_resultset_size / 1024);
             }
 
             m_state = CACHE_IGNORING_RESPONSE;
@@ -503,9 +487,9 @@ int SessionCache::handle_expecting_rows()
                 m_res.offset += packetlen;
                 ++m_res.nRows;
 
-                if (m_res.nRows > m_pInstance->config.max_resultset_rows)
+                if (m_res.nRows > m_pCache->config().max_resultset_rows)
                 {
-                    if (m_pInstance->config.debug & CACHE_DEBUG_DECISIONS)
+                    if (log_decisions())
                     {
                         MXS_NOTICE("Max rows %lu reached, not caching result.", m_res.nRows);
                     }
@@ -623,13 +607,13 @@ void SessionCache::reset_response_state()
  */
 cache_result_t SessionCache::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
 {
-    cache_result_t result = m_pStorage->getKey(m_zDefaultDb, pQuery, m_key);
+    cache_result_t result = m_pCache->getKey(m_zDefaultDb, pQuery, m_key);
 
     if (result == CACHE_RESULT_OK)
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
 
-        result = m_pStorage->getValue(m_key, flags, ppResponse);
+        result = m_pCache->getValue(m_key, flags, ppResponse);
     }
     else
     {
@@ -654,13 +638,13 @@ void SessionCache::store_result()
     {
         m_res.pData = pData;
 
-        cache_result_t result = m_pStorage->putValue(m_key, m_res.pData);
+        cache_result_t result = m_pCache->putValue(m_key, m_res.pData);
 
         if (result != CACHE_RESULT_OK)
         {
             MXS_ERROR("Could not store cache item, deleting it.");
 
-            result = m_pStorage->delValue(m_key);
+            result = m_pCache->delValue(m_key);
 
             if ((result != CACHE_RESULT_OK) || (result != CACHE_RESULT_NOT_FOUND))
             {
@@ -671,14 +655,7 @@ void SessionCache::store_result()
 
     if (m_refreshing)
     {
-        long key = hash_of_key(m_key);
-
-        spinlock_acquire(&m_pInstance->pending_lock);
-        ss_dassert(hashtable_fetch(m_pInstance->pending, (void*)key) == DUMMY_VALUE);
-        ss_debug(int n =) hashtable_delete(m_pInstance->pending, (void*)key);
-        ss_dassert(n == 1);
-        spinlock_release(&m_pInstance->pending_lock);
-
+        m_pCache->refreshed(m_key, this);
         m_refreshing = false;
     }
 }

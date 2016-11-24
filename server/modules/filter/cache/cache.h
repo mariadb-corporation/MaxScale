@@ -65,6 +65,8 @@ public:
      */
     void refreshed(const char* pKey,  const SessionCache* pSessionCache);
 
+    const CACHE_CONFIG& config() const { return m_config; }
+
     cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, char* pKey);
 
     cache_result_t getValue(const char* pKey, uint32_t flags, GWBUF** ppValue);

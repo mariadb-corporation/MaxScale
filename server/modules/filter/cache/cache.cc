@@ -23,6 +23,42 @@
 // are being fetches.
 #define CACHE_PENDING_ITEMS 50
 
+static const CACHE_CONFIG DEFAULT_CONFIG =
+{
+    CACHE_DEFAULT_MAX_RESULTSET_ROWS,
+    CACHE_DEFAULT_MAX_RESULTSET_SIZE,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CACHE_DEFAULT_TTL,
+    CACHE_DEFAULT_DEBUG
+};
+
+/**
+ * Hashes a cache key to an integer.
+ *
+ * @param key Pointer to cache key.
+ *
+ * @returns Corresponding integer hash.
+ */
+static int hash_of_key(const void* key)
+{
+    int hash = 0;
+
+    const char* i   = (const char*)key;
+    const char* end = i + CACHE_KEY_MAXLEN;
+
+    while (i < end)
+    {
+        int c = *i;
+        hash = c + (hash << 6) + (hash << 16) - hash;
+        ++i;
+    }
+
+    return hash;
+}
 
 static int hashfn(const void* address)
 {
@@ -62,8 +98,7 @@ Cache* Cache::Create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppP
 {
     Cache* pCache = NULL;
 
-    CACHE_CONFIG config;
-    memset(&config, 0, sizeof(config));
+    CACHE_CONFIG config = DEFAULT_CONFIG;
 
     if (process_params(pzOptions, ppParams, &config))
     {

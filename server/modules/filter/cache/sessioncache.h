@@ -15,8 +15,11 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
 #include <maxscale/filter.h>
+#include "cache.h"
 #include "cachefilter.h"
 #include "cache_storage_api.h"
+
+class Cache;
 
 class SessionCache
 {
@@ -48,7 +51,7 @@ public:
     /**
      * Creates a SessionCache instance.
      *
-     * @param pInstance  Pointer to the cache instance to which this session cache
+     * @param pCache     Pointer to the cache instance to which this session cache
      *                   belongs. Must remain valid for the lifetime of the SessionCache
      *                   instance being created.
      * @param pSession   Pointer to the session this session cache instance is
@@ -57,7 +60,7 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static SessionCache* Create(CACHE_INSTANCE* pInstance, SESSION* pSession);
+    static SessionCache* Create(Cache* pCache, SESSION* pSession);
 
     /**
      * The session has been closed.
@@ -113,22 +116,21 @@ private:
 
     bool log_decisions() const
     {
-        return m_pInstance->config.debug & CACHE_DEBUG_DECISIONS ? true : false;
+        return m_pCache->config().debug & CACHE_DEBUG_DECISIONS ? true : false;
     }
 
     void store_result();
 
 private:
-    SessionCache(CACHE_INSTANCE* pInstance, SESSION* pSession, char* zDefaultDb);
+    SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb);
 
     SessionCache(const SessionCache&);
     SessionCache& operator = (const SessionCache&);
 
 private:
     cache_session_state_t m_state;                 /**< What state is the session in, what data is expected. */
-    CACHE_INSTANCE*       m_pInstance;             /**< The cache instance the session is associated with. */
+    Cache*                m_pCache;                /**< The cache instance the session is associated with. */
     SESSION*              m_pSession;              /**< The session this data is associated with. */
-    Storage*              m_pStorage;              /**< The storage to be used with this session data. */
     DOWNSTREAM            m_down;                  /**< The previous filter or equivalent. */
     UPSTREAM              m_up;                    /**< The next filter or equivalent. */
     CACHE_RESPONSE_STATE  m_res;                   /**< The response state. */
