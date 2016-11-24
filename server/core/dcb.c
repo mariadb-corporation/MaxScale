@@ -3446,7 +3446,11 @@ static void dcb_remove_from_list(DCB *dcb)
     {
         DCB *tail = all_dcbs[dcb->thread.id]->thread.tail;
         all_dcbs[dcb->thread.id] = all_dcbs[dcb->thread.id]->thread.next;
-        all_dcbs[dcb->thread.id]->thread.tail = tail;
+
+        if (all_dcbs[dcb->thread.id])
+        {
+            all_dcbs[dcb->thread.id]->thread.tail = tail;
+        }
     }
     else
     {
