@@ -411,9 +411,10 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     if (rval)
     {
         const char *print_addr = addr ? addr : "0.0.0.0";
+        SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
+                                                     u_port, auth, auth_opt, ssl);
 
-        if (serviceAddProtocol(service, name, proto, addr, u_port, auth, auth_opt, ssl) &&
-            serviceListen(service, u_port))
+        if (listener && listener_serialize(listener) && serviceListen(service, listener))
         {
             MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
                        name, print_addr, port, service->name);

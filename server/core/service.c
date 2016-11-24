@@ -508,22 +508,9 @@ serviceStart(SERVICE *service)
  * @param service       The service to start the listener for
  * @param port          The port number
  */
-bool serviceListen(SERVICE *service, unsigned short port)
+bool serviceListen(SERVICE *service, SERV_LISTENER *port)
 {
-    bool rval = false;
-    for (SERV_LISTENER *ptr = service->ports; ptr; ptr = ptr->next)
-    {
-        if (ptr->port == port)
-        {
-            if (serviceStartPort(service, ptr))
-            {
-                rval = true;
-            }
-            break;
-        }
-    }
-
-    return rval;
+    return serviceStartPort(service, port);
 }
 
 /**
@@ -678,7 +665,7 @@ service_free(SERVICE *service)
 }
 
 /**
- * Add a protocol/port pair to the service
+ * Create a listener for the service
  *
  * @param service       The service
  * @param protocol      The name of the protocol module
@@ -686,13 +673,13 @@ service_free(SERVICE *service)
  * @param port          The port to listen on
  * @param authenticator Name of the authenticator to be used
  * @param ssl           SSL configuration
- * @return      TRUE if the protocol/port could be added
+ *
+ * @return Created listener or NULL on error
  */
-bool serviceAddProtocol(SERVICE *service, const char *name, const char *protocol,
+SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
                    const char *address, unsigned short port, const char *authenticator,
                    const char *options, SSL_LISTENER *ssl)
 {
-    bool rval = false;
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
                                           port, authenticator, options, ssl);
 
@@ -702,10 +689,9 @@ bool serviceAddProtocol(SERVICE *service, const char *name, const char *protocol
         proto->next = service->ports;
         service->ports = proto;
         spinlock_release(&service->spin);
-        rval = true;
     }
 
-    return rval;
+    return proto;
 }
 
 /**

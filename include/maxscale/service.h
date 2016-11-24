@@ -192,9 +192,9 @@ extern SERVICE *service_alloc(const char *, const char *);
 extern int service_free(SERVICE *);
 extern SERVICE *service_find(const char *);
 extern int service_isvalid(SERVICE *);
-extern bool serviceAddProtocol(SERVICE *service, const char *name, const char *protocol,
-                               const char *address, unsigned short port, const char *authenticator,
-                               const char *options, SSL_LISTENER *ssl);
+extern SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
+                                            const char *address, unsigned short port, const char *authenticator,
+                                            const char *options, SSL_LISTENER *ssl);
 extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);
@@ -204,7 +204,7 @@ extern void serviceAddRouterOption(SERVICE *, char *);
 extern void serviceClearRouterOptions(SERVICE *);
 extern int serviceStart(SERVICE *);
 extern int serviceStartAll();
-extern bool serviceListen(SERVICE *service, unsigned short port);
+extern bool serviceListen(SERVICE *service, SERV_LISTENER *port);
 extern int serviceStop(SERVICE *);
 extern int serviceRestart(SERVICE *);
 extern int serviceSetUser(SERVICE *, char *, char *);

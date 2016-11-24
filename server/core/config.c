@@ -3121,8 +3121,8 @@ int create_new_listener(CONFIG_CONTEXT *obj)
                 }
                 else
                 {
-                    serviceAddProtocol(service, obj->object, protocol, socket, 0,
-                                       authenticator, authenticator_options, ssl_info);
+                    serviceCreateListener(service, obj->object, protocol, socket, 0,
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
@@ -3138,8 +3138,8 @@ int create_new_listener(CONFIG_CONTEXT *obj)
                 }
                 else
                 {
-                    serviceAddProtocol(service, obj->object, protocol, address, atoi(port),
-                                       authenticator, authenticator_options, ssl_info);
+                    serviceCreateListener(service, obj->object, protocol, address, atoi(port),
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 

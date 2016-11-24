@@ -30,13 +30,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <maxscale/listener.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
 #include <maxscale/modules.h>
+#include <maxscale/service.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;
@@ -67,6 +70,14 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
         {
             return NULL;
         }
+    }
+
+    char *my_auth_options = NULL;
+
+    if (auth_options && (my_auth_options = MXS_STRDUP(auth_options)) == NULL)
+    {
+        MXS_FREE(my_address);
+        return NULL;
     }
 
     char *my_authenticator = NULL;
@@ -116,6 +127,7 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
     proto->address = my_address;
     proto->port = port;
     proto->authenticator = my_authenticator;
+    proto->auth_options = my_auth_options;
     proto->ssl = ssl;
     proto->users = NULL;
     proto->resources = NULL;
@@ -146,6 +158,8 @@ void listener_free(SERV_LISTENER* listener)
 
         MXS_FREE(listener->address);
         MXS_FREE(listener->authenticator);
+        MXS_FREE(listener->auth_options);
+        MXS_FREE(listener->name);
         MXS_FREE(listener->protocol);
         MXS_FREE(listener);
     }
@@ -375,4 +389,133 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         }
     }
     return(rsa_tmp);
+}
+
+/**
+ * Creates a listener configuration at the location pointed by @c filename
+ *
+ * @param listener Listener to serialize into a configuration
+ * @param filename Filename where configuration is written
+ * @return True on success, false on error
+ */
+static bool create_listener_config(const SERV_LISTENER *listener, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
+                  filename, listener->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    // TODO: Check for return values on all of the dprintf calls
+    dprintf(file, "[%s]\n", listener->name);
+    dprintf(file, "type=listener\n");
+    dprintf(file, "protocol=%s\n", listener->protocol);
+    dprintf(file, "service=%s\n", listener->service->name);
+    dprintf(file, "address=%s\n", listener->address);
+    dprintf(file, "port=%u\n", listener->port);
+    dprintf(file, "authenticator=%s\n", listener->authenticator);
+
+    if (listener->auth_options)
+    {
+        dprintf(file, "authenticator_options=%s\n", listener->auth_options);
+    }
+
+    if (listener->ssl)
+    {
+        dprintf(file, "ssl=required\n");
+
+        if (listener->ssl->ssl_cert)
+        {
+            dprintf(file, "ssl_cert=%s\n", listener->ssl->ssl_cert);
+        }
+
+        if (listener->ssl->ssl_key)
+        {
+            dprintf(file, "ssl_key=%s\n", listener->ssl->ssl_key);
+        }
+
+        if (listener->ssl->ssl_ca_cert)
+        {
+            dprintf(file, "ssl_ca_cert=%s\n", listener->ssl->ssl_ca_cert);
+        }
+        if (listener->ssl->ssl_cert_verify_depth)
+        {
+            dprintf(file, "ssl_cert_verify_depth=%d\n", listener->ssl->ssl_cert_verify_depth);
+        }
+
+        const char *version = NULL;
+
+        switch (listener->ssl->ssl_method_type)
+        {
+            case SERVICE_TLS10:
+                version = "TLSV10";
+                break;
+
+#ifdef OPENSSL_1_0
+            case SERVICE_TLS11:
+                version = "TLSV11";
+                break;
+
+            case SERVICE_TLS12:
+                version = "TLSV12";
+                break;
+#endif
+            case SERVICE_SSL_TLS_MAX:
+                version = "MAX";
+                break;
+
+            default:
+                break;
+        }
+
+        if (version)
+        {
+            dprintf(file, "ssl_version=%s\n", version);
+        }
+    }
+
+    close(file);
+
+    return true;
+}
+
+bool listener_serialize(const SERV_LISTENER *listener)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             listener->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary listener configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_listener_config(listener, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary listener configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
 }
