@@ -17,6 +17,7 @@
 #include <maxscale/cdefs.h>
 #include <limits.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/spinlock.h>
 #include "rules.h"
 
 class Storage;
