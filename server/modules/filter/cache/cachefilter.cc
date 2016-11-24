@@ -25,6 +25,7 @@
 #include <maxscale/spinlock.h>
 #include "rules.h"
 #include "storage.h"
+#include "storagefactory.h"
 
 static char VERSION_STRING[] = "V1.0.0";
 
@@ -124,8 +125,8 @@ typedef struct cache_instance
     const char            *name;         // The name of the instance; the section name in the config.
     CACHE_CONFIG           config;       // The configuration of the cache instance.
     CACHE_RULES           *rules;        // The rules of the cache instance.
-    CACHE_STORAGE_MODULE  *module;       // The storage module.
-    CACHE_STORAGE         *storage;      // The storage API.
+    StorageFactory        *factory;      // The storage factory.
+    Storage               *storage;      // The storage instance to use.
     HASHTABLE             *pending;      // Pending items; being fetched from the backend.
     SPINLOCK               pending_lock; // Lock used for protecting 'pending'.
 } CACHE_INSTANCE;
@@ -154,8 +155,7 @@ static void cache_response_state_reset(CACHE_RESPONSE_STATE *state);
 typedef struct cache_session_data
 {
     CACHE_INSTANCE       *instance;   /**< The cache instance the session is associated with. */
-    CACHE_STORAGE_API    *api;        /**< The storage API to be used. */
-    CACHE_STORAGE        *storage;    /**< The storage to be used with this session data. */
+    Storage              *storage;    /**< The storage to be used with this session data. */
     DOWNSTREAM            down;       /**< The previous filter or equivalent. */
     UPSTREAM              up;         /**< The next filter or equivalent. */
     CACHE_RESPONSE_STATE  res;        /**< The response state. */
@@ -268,22 +268,22 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
 
             if (cinstance && pending)
             {
-                CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
+                StorageFactory *factory = StorageFactory::Open(config.storage);
 
-                if (module)
+                if (factory)
                 {
                     uint32_t ttl = config.ttl;
                     int argc = config.storage_argc;
                     char** argv = config.storage_argv;
 
-                    CACHE_STORAGE *storage = module->api->createInstance(name, ttl, argc, argv);
+                    Storage *storage = factory->createStorage(name, ttl, argc, argv);
 
                     if (storage)
                     {
                         cinstance->name = name;
                         cinstance->config = config;
                         cinstance->rules = rules;
-                        cinstance->module = module;
+                        cinstance->factory = factory;
                         cinstance->storage = storage;
                         cinstance->pending = pending;
 
@@ -293,7 +293,7 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
                     {
                         MXS_ERROR("Could not create storage instance for '%s'.", name);
                         cache_rules_free(rules);
-                        cache_storage_close(module);
+                        delete factory;
                         MXS_FREE(cinstance);
                         hashtable_free(pending);
                         cinstance = NULL;
@@ -722,7 +722,6 @@ static CACHE_SESSION_DATA *cache_session_data_create(CACHE_INSTANCE *instance,
         if ((mysql_session->db[0] == 0) || default_db)
         {
             data->instance = instance;
-            data->api = instance->module->api;
             data->storage = instance->storage;
             data->session = session;
             data->state = CACHE_EXPECTING_NOTHING;
@@ -1202,13 +1201,13 @@ static cache_result_t get_cached_response(CACHE_SESSION_DATA *csdata,
                                           const GWBUF *query,
                                           GWBUF **value)
 {
-    cache_result_t result = csdata->api->getKey(csdata->storage, csdata->default_db, query, csdata->key);
+    cache_result_t result = csdata->storage->getKey(csdata->default_db, query, csdata->key);
 
     if (result == CACHE_RESULT_OK)
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
 
-        result = csdata->api->getValue(csdata->storage, csdata->key, flags, value);
+        result = csdata->storage->getValue(csdata->key, flags, value);
     }
     else
     {
@@ -1250,15 +1249,13 @@ static void store_result(CACHE_SESSION_DATA *csdata)
     {
         csdata->res.data = data;
 
-        cache_result_t result = csdata->api->putValue(csdata->storage,
-                                                      csdata->key,
-                                                      csdata->res.data);
+        cache_result_t result = csdata->storage->putValue(csdata->key, csdata->res.data);
 
         if (result != CACHE_RESULT_OK)
         {
             MXS_ERROR("Could not store cache item, deleting it.");
 
-            result = csdata->api->delValue(csdata->storage, csdata->key);
+            result = csdata->storage->delValue(csdata->key);
 
             if ((result != CACHE_RESULT_OK) || (result != CACHE_RESULT_NOT_FOUND))
             {

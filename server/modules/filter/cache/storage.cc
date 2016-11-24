@@ -12,85 +12,37 @@
  */
 
 #include "storage.h"
-#include <dlfcn.h>
-#include <sys/param.h>
-#include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
-#include <maxscale/log_manager.h>
 
-CACHE_STORAGE_MODULE* cache_storage_open(const char *name)
+
+Storage::Storage(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
+    : m_pApi(pApi)
+    , m_pStorage(pStorage)
 {
-    CACHE_STORAGE_MODULE* module = (CACHE_STORAGE_MODULE*)MXS_CALLOC(1, sizeof(CACHE_STORAGE_MODULE));
-
-    if (module)
-    {
-        char path[MAXPATHLEN + 1];
-        sprintf(path, "%s/lib%s.so", get_libdir(), name);
-
-        void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
-
-        if (handle)
-        {
-            module->handle = handle;
-
-            void *f = dlsym(module->handle, CACHE_STORAGE_ENTRY_POINT);
-
-            if (f)
-            {
-                module->api = ((CacheGetStorageAPIFN)f)();
-
-                if (module->api)
-                {
-                    if (!(module->api->initialize)())
-                    {
-                        MXS_ERROR("Initialization of %s failed.", path);
-
-                        (void)dlclose(module->handle);
-                        MXS_FREE(module);
-                        module = NULL;
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Could not obtain API object from %s.", name);
-
-                    (void)dlclose(module->handle);
-                    MXS_FREE(module);
-                    module = NULL;
-                }
-            }
-            else
-            {
-                const char* s = dlerror();
-                MXS_ERROR("Could not look up symbol %s from %s: %s",
-                          name, CACHE_STORAGE_ENTRY_POINT, s ? s : "");
-                MXS_FREE(module);
-                module = NULL;
-            }
-        }
-        else
-        {
-            const char* s = dlerror();
-            MXS_ERROR("Could not load %s: %s", name, s ? s : "");
-            MXS_FREE(module);
-            module = NULL;
-        }
-    }
-
-    return module;
+    ss_dassert(m_pApi);
+    ss_dassert(m_pStorage);
 }
 
-
-void cache_storage_close(CACHE_STORAGE_MODULE *module)
+cache_result_t Storage::getKey(const char* zDefaultDb,
+                               const GWBUF* pQuery,
+                               char* pKey)
 {
-    if (module)
-    {
-        if (dlclose(module->handle) != 0)
-        {
-            const char *s = dlerror();
-            MXS_ERROR("Could not close module %s: ", s ? s : "");
-        }
+    return m_pApi->getKey(m_pStorage, zDefaultDb, pQuery, pKey);
+}
 
-        MXS_FREE(module);
-    }
+cache_result_t Storage::getValue(const char* pKey,
+                                 uint32_t flags,
+                                 GWBUF** ppValue)
+{
+    return m_pApi->getValue(m_pStorage, pKey, flags, ppValue);
+}
+
+cache_result_t Storage::putValue(const char* pKey,
+                                 const GWBUF* pValue)
+{
+    return m_pApi->putValue(m_pStorage, pKey, pValue);
+}
+
+cache_result_t Storage::delValue(const char* pKey)
+{
+    return m_pApi->delValue(m_pStorage, pKey);
 }
