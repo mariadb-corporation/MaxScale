@@ -20,7 +20,7 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
-#include "cache.h"
+#include "cachefilter.h"
 
 static const char KEY_ATTRIBUTE[] = "attribute";
 static const char KEY_OP[]        = "op";
@@ -41,8 +41,8 @@ static const char VALUE_OP_UNLIKE[] = "unlike";
 
 struct cache_attribute_mapping
 {
-    const char* name;
-    int         value;
+    const char*            name;
+    cache_rule_attribute_t value;
 };
 
 static struct cache_attribute_mapping cache_store_attributes[] =
@@ -51,13 +51,13 @@ static struct cache_attribute_mapping cache_store_attributes[] =
     { VALUE_ATTRIBUTE_DATABASE, CACHE_ATTRIBUTE_DATABASE },
     { VALUE_ATTRIBUTE_QUERY,    CACHE_ATTRIBUTE_QUERY },
     { VALUE_ATTRIBUTE_TABLE,    CACHE_ATTRIBUTE_TABLE },
-    { NULL,                     0 }
+    { NULL,                     static_cast<cache_rule_attribute_t>(0) }
 };
 
 static struct cache_attribute_mapping cache_use_attributes[] =
 {
     { VALUE_ATTRIBUTE_USER, CACHE_ATTRIBUTE_USER },
-    { NULL,                 0 }
+    { NULL,                 static_cast<cache_rule_attribute_t>(0) }
 };
 
 static bool cache_rule_attribute_get(struct cache_attribute_mapping *mapping,
@@ -567,6 +567,7 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
     char *at = strchr(value, '@');
     char *user = value;
     char *host;
+    char any[2]; // sizeof("%")
 
     if (at)
     {
@@ -575,7 +576,8 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
     }
     else
     {
-        host = "%";
+        strcpy(any, "%");
+        host = any;
     }
 
     if (dequote_mysql(user))
@@ -610,7 +612,7 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
                 // No wildcard, no need to use regexp.
 
                 rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
-                char *value = MXS_MALLOC(strlen(user) + 1 + strlen(host) + 1);
+                char *value = (char*)MXS_MALLOC(strlen(user) + 1 + strlen(host) + 1);
 
                 if (rule && value)
                 {
@@ -827,7 +829,7 @@ static CACHE_RULE *cache_rule_create_simple_query(cache_rule_attribute_t attribu
     ss_dassert(attribute == CACHE_ATTRIBUTE_QUERY);
     ss_dassert((op == CACHE_OP_EQ) || (op == CACHE_OP_NEQ));
 
-    CACHE_RULE *rule = MXS_CALLOC(1, sizeof(CACHE_RULE));
+    CACHE_RULE *rule = (CACHE_RULE*)MXS_CALLOC(1, sizeof(CACHE_RULE));
     char *value = MXS_STRDUP(cvalue);
 
     if (rule && value)

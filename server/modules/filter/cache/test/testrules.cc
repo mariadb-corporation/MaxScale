@@ -80,7 +80,7 @@ int test_user()
 {
     int errors = 0;
 
-    for (int i = 0; i < n_user_test_cases; ++i)
+    for (size_t i = 0; i < n_user_test_cases; ++i)
     {
         const struct user_test_case *test_case = &user_test_cases[i];
 
@@ -182,9 +182,9 @@ int test_store()
 {
     int errors = 0;
 
-    for (int i = 0; i < n_store_test_cases; ++i)
+    for (size_t i = 0; i < n_store_test_cases; ++i)
     {
-        printf("TC      : %d\n", i + 1);
+        printf("TC      : %d\n", (int)(i + 1));
         const struct store_test_case *test_case = &store_test_cases[i];
 
         CACHE_RULES *rules = cache_rules_parse(test_case->rule, 0);
