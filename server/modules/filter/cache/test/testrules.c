@@ -13,6 +13,8 @@
 
 #include <stdlib.h>
 #include "rules.h"
+#include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
@@ -234,8 +236,10 @@ int main()
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
+        set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
         if (qc_init("qc_sqlite", ""))
         {
+            set_libdir(MXS_STRDUP_A("../"));
             rc = test();
         }
         else

@@ -4585,35 +4585,28 @@ blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *
 static char *
 blr_get_parsed_command_value(char *input)
 {
-    /* space+TAB+= */
-    char *sep = " \t=";
     char *ret = NULL;
-    char *word;
-    char *value = NULL;
 
-    if (strlen(input))
+    if (input && *input)
     {
-        value = MXS_STRDUP_A(input);
-    }
-    else
-    {
-        return ret;
-    }
+        char value[strlen(input) + 1];
+        strcpy(value, input);
 
-    if ((word = get_next_token(NULL, sep, &input)) != NULL)
-    {
-        char *ptr;
+        /* space+TAB+= */
+        char *sep = " \t=";
+        char *word;
 
-        /* remove trailing spaces */
-        ptr = value + strlen(value) - 1;
-        while (ptr > value && isspace(*ptr))
+        if ((word = get_next_token(NULL, sep, &input)) != NULL)
         {
-            *ptr-- = 0;
+            /* remove trailing spaces */
+            char *ptr = value + strlen(value) - 1;
+            while (ptr > value && isspace(*ptr))
+            {
+                *ptr-- = 0;
+            }
+
+            ret = MXS_STRDUP_A(strstr(value, word));
         }
-
-        ret = MXS_STRDUP_A(strstr(value, word));
-
-        MXS_FREE(value);
     }
 
     return ret;
