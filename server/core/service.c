@@ -1889,7 +1889,7 @@ void service_shutdown()
     {
         svc->svc_do_shutdown = true;
         /* Call destroyInstance hook for routers */
-        if (svc->router->destroyInstance)
+        if (svc->router->destroyInstance && svc->router_instance)
         {
            svc->router->destroyInstance(svc->router_instance);
         }
@@ -1898,7 +1898,7 @@ void service_shutdown()
             FILTER_DEF **filters = svc->filters;
             for (int i=0; i < svc->n_filters; i++)
             {
-                if (filters[i]->obj->destroyInstance)
+                if (filters[i]->obj->destroyInstance && filters[i]->filter)
                 {
                     /* Call destroyInstance hook for filters */
                     filters[i]->obj->destroyInstance(filters[i]->filter);
