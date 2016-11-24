@@ -12,6 +12,8 @@
  */
 
 #define MXS_MODULE_NAME "cache"
+#include "cachefilter.h"
+#include <exception>
 #include <maxscale/filter.h>
 #include "cache.h"
 #include "sessioncache.h"
@@ -28,6 +30,11 @@ static int      routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket
 static int      clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket);
 static void     diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb);
 static uint64_t getCapabilities(void);
+
+#define CPP_GUARD(statement)\
+    do { try { statement; }                                              \
+    catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\
+    catch (...) { MXS_ERROR("Caught unknown exception."); } } while (false)
 
 //
 // Global symbols of the Module
@@ -95,7 +102,8 @@ extern "C" FILTER_OBJECT *GetModuleObject()
  */
 static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
 {
-    Cache* pCache = Cache::Create(zName, pzOptions, ppParams);
+    Cache* pCache = NULL;
+    CPP_GUARD(pCache = Cache::Create(zName, pzOptions, ppParams));
 
     return reinterpret_cast<FILTER*>(pCache);
 }
@@ -111,7 +119,9 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
 static void *newSession(FILTER* pInstance, SESSION* pSession)
 {
     Cache* pCache = reinterpret_cast<Cache*>(pInstance);
-    SessionCache* pSessionCache = SessionCache::Create(pCache, pSession);
+
+    SessionCache* pSessionCache = NULL;
+    CPP_GUARD(pSessionCache = SessionCache::Create(pCache, pSession));
 
     return pSessionCache;
 }
@@ -126,7 +136,7 @@ static void closeSession(FILTER* pInstance, void* pSessionData)
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    pSessionCache->close();
+    CPP_GUARD(pSessionCache->close());
 }
 
 /**
@@ -153,7 +163,7 @@ static void setDownstream(FILTER* pInstance, void* pSessionData, DOWNSTREAM* pDo
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    pSessionCache->setDownstream(pDownstream);
+    CPP_GUARD(pSessionCache->setDownstream(pDownstream));
 }
 
 /**
@@ -167,7 +177,7 @@ static void setUpstream(FILTER* pInstance, void* pSessionData, UPSTREAM* pUpstre
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    pSessionCache->setUpstream(pUpstream);
+    CPP_GUARD(pSessionCache->setUpstream(pUpstream));
 }
 
 /**
@@ -181,7 +191,10 @@ static int routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    return pSessionCache->routeQuery(pPacket);
+    int rv = 0;
+    CPP_GUARD(rv = pSessionCache->routeQuery(pPacket));
+
+    return rv;
 }
 
 /**
@@ -195,7 +208,10 @@ static int clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    return pSessionCache->clientReply(pPacket);
+    int rv = 0;
+    CPP_GUARD(rv = pSessionCache->clientReply(pPacket));
+
+    return rv;
 }
 
 /**
@@ -212,7 +228,7 @@ static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
 {
     SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
 
-    pSessionCache->diagnostics(pDcb);
+    CPP_GUARD(pSessionCache->diagnostics(pDcb));
 }
 
 
