@@ -345,7 +345,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     char *ptr;
     extern char *strcasestr();
 
-    qtext = GWBUF_DATA(queue);
+    qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
     qtext += 5;     // Skip header and first byte of the payload
     query_text = strndup(qtext, query_len);

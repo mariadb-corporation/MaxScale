@@ -191,7 +191,7 @@ cdc_read_event(DCB* dcb)
 
             case CDC_STATE_HANDLE_REQUEST:
                 // handle CLOSE command, it shoudl be routed as well and client connection closed after last transmission
-                if (strncmp(GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
+                if (strncmp((char*)GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
                 {
                     MXS_INFO("%s: Client [%s] has requested CLOSE action",
                              dcb->service->name, dcb->remote != NULL ? dcb->remote : "");

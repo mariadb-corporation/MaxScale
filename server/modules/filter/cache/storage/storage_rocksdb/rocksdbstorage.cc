@@ -470,7 +470,7 @@ cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
     ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
     rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
-    rocksdb::Slice value(static_cast<const char*>(GWBUF_DATA(pValue)), GWBUF_LENGTH(pValue));
+    rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
 
     rocksdb::Status status = m_sDb->Put(writeOptions(), key, value);
 

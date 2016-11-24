@@ -422,7 +422,8 @@ getCapabilities(void)
 static int
 maxinfo_statistics(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
 {
-    char result[1000], *ptr;
+    char result[1000];
+    uint8_t *ptr;
     GWBUF *ret;
     int len;
 
@@ -456,7 +457,7 @@ maxinfo_statistics(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
 static int
 maxinfo_ping(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
 {
-    char *ptr;
+    uint8_t *ptr;
     GWBUF *ret;
     int len;
 

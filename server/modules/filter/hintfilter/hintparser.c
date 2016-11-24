@@ -220,7 +220,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
         if (buf)
         {
             len = GWBUF_LENGTH(buf);
-            ptr = GWBUF_DATA(buf);
+            ptr = (char*)GWBUF_DATA(buf);
         }
     }
     while (buf);
@@ -243,7 +243,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
         buf = buf->next;
         if (buf)
         {
-            ptr = GWBUF_DATA(buf);
+            ptr = (char*)GWBUF_DATA(buf);
         }
         else
         {

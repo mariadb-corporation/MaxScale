@@ -1822,7 +1822,7 @@ int
 blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
     char result[BLRM_COM_STATISTICS_SIZE + 1] = "";
-    char *ptr;
+    uint8_t *ptr;
     GWBUF *ret;
     unsigned long len;
 
@@ -1858,7 +1858,7 @@ blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 int
 blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
-    char *ptr;
+    uint8_t *ptr;
     GWBUF *ret;
 
     if ((ret = gwbuf_alloc(5)) == NULL)

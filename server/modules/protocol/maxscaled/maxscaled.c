@@ -102,7 +102,7 @@ static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
 
             username = gwbuf_alloc(strlen(protocol->username) + 1);
 
-            strcpy(GWBUF_DATA(username), protocol->username);
+            strcpy((char*)GWBUF_DATA(username), protocol->username);
 
             /* Authenticate the user */
             if (dcb->authfunc.extract(dcb, username) == 0 &&
@@ -261,7 +261,7 @@ static int maxscaled_read_event(DCB* dcb)
                 {
                 case MAXSCALED_STATE_LOGIN:
                     {
-                        maxscaled->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        maxscaled->username = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                         maxscaled->state = MAXSCALED_STATE_PASSWD;
                         dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
                         gwbuf_free(head);
@@ -270,7 +270,7 @@ static int maxscaled_read_event(DCB* dcb)
 
                 case MAXSCALED_STATE_PASSWD:
                     {
-                        char *password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        char *password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                         if (admin_verify_inet_user(maxscaled->username, password))
                         {
                             dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);

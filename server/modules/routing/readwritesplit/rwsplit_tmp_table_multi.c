@@ -327,7 +327,7 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_
     if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
         packet_type == MYSQL_COM_QUERY)
     {
-        char *ptr, *data = GWBUF_DATA(buf) + 5;
+        char *ptr, *data = (char*)GWBUF_DATA(buf) + 5;
         /** Payload size without command byte */
         int buflen = gw_mysql_get_byte3((uint8_t *)GWBUF_DATA(buf)) - 1;
 
