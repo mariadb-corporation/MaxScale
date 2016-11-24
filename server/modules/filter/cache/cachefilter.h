@@ -16,8 +16,11 @@
 
 #include <maxscale/cdefs.h>
 #include <limits.h>
+#include <maxscale/hashtable.h>
+#include "rules.h"
 
-MXS_BEGIN_DECLS
+class Storage;
+class StorageFactory;
 
 #define CACHE_DEBUG_NONE          0  /* 0b00000 */
 #define CACHE_DEBUG_MATCHING      1  /* 0b00001 */
@@ -40,6 +43,30 @@ MXS_BEGIN_DECLS
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
 
-MXS_END_DECLS
+typedef struct cache_config
+{
+    uint32_t    max_resultset_rows;
+    uint32_t    max_resultset_size;
+    const char *rules;
+    const char *storage;
+    char       *storage_options;
+    char      **storage_argv;
+    int         storage_argc;
+    uint32_t    ttl;
+    uint32_t    debug;
+} CACHE_CONFIG;
+
+typedef struct cache_instance
+{
+    const char            *name;         // The name of the instance; the section name in the config.
+    CACHE_CONFIG           config;       // The configuration of the cache instance.
+    CACHE_RULES           *rules;        // The rules of the cache instance.
+    StorageFactory        *factory;      // The storage factory.
+    Storage               *storage;      // The storage instance to use.
+    HASHTABLE             *pending;      // Pending items; being fetched from the backend.
+    SPINLOCK               pending_lock; // Lock used for protecting 'pending'.
+} CACHE_INSTANCE;
+
+int hash_of_key(const void* key);
 
 #endif

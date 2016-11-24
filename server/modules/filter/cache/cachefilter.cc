@@ -94,19 +94,6 @@ extern "C" FILTER_OBJECT *GetModuleObject()
 // Implementation
 //
 
-typedef struct cache_config
-{
-    uint32_t    max_resultset_rows;
-    uint32_t    max_resultset_size;
-    const char *rules;
-    const char *storage;
-    char       *storage_options;
-    char      **storage_argv;
-    int         storage_argc;
-    uint32_t    ttl;
-    uint32_t    debug;
-} CACHE_CONFIG;
-
 static const CACHE_CONFIG DEFAULT_CONFIG =
 {
     CACHE_DEFAULT_MAX_RESULTSET_ROWS,
@@ -119,17 +106,6 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     CACHE_DEFAULT_TTL,
     CACHE_DEFAULT_DEBUG
 };
-
-typedef struct cache_instance
-{
-    const char            *name;         // The name of the instance; the section name in the config.
-    CACHE_CONFIG           config;       // The configuration of the cache instance.
-    CACHE_RULES           *rules;        // The rules of the cache instance.
-    StorageFactory        *factory;      // The storage factory.
-    Storage               *storage;      // The storage instance to use.
-    HASHTABLE             *pending;      // Pending items; being fetched from the backend.
-    SPINLOCK               pending_lock; // Lock used for protecting 'pending'.
-} CACHE_INSTANCE;
 
 typedef enum cache_session_state
 {
@@ -190,7 +166,7 @@ static void store_result(CACHE_SESSION_DATA *csdata);
  *
  * @returns Corresponding integer hash.
  */
-static int hash_of_key(const void* key)
+int hash_of_key(const void* key)
 {
     int hash = 0;
 
