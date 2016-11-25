@@ -21,7 +21,7 @@ CacheMT::CacheMT(const char* zName,
                  StorageFactory* pFactory,
                  Storage* pStorage,
                  HASHTABLE* pPending)
-    : Cache(zName, config, pRules, pFactory, pStorage, pPending)
+    : CacheSimple(zName, config, pRules, pFactory, pStorage, pPending)
 {
     spinlock_init(&m_lockPending);
 }
@@ -38,7 +38,7 @@ CacheMT* CacheMT::Create(const char* zName, CACHE_CONFIG& config)
     HASHTABLE* pPending = NULL;
     StorageFactory* pFactory = NULL;
 
-    if (Cache::Create(config, &pRules, &pFactory, &pPending))
+    if (CacheSimple::Create(config, &pRules, &pFactory, &pPending))
     {
         uint32_t ttl = config.ttl;
         int argc = config.storage_argc;
@@ -73,7 +73,7 @@ bool CacheMT::mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCach
     long k = hashOfKey(key);
 
     spinlock_acquire(&m_lockPending);
-    bool rv = Cache::mustRefresh(k, pSessionCache);
+    bool rv = CacheSimple::mustRefresh(k, pSessionCache);
     spinlock_release(&m_lockPending);
 
     return rv;
@@ -84,6 +84,6 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
     long k = hashOfKey(key);
 
     spinlock_acquire(&m_lockPending);
-    Cache::refreshed(k, pSessionCache);
+    CacheSimple::refreshed(k, pSessionCache);
     spinlock_release(&m_lockPending);
 }

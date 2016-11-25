@@ -14,9 +14,9 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
-#include "cache.h"
+#include "cachesimple.h"
 
-class CacheMT : public Cache
+class CacheMT : public CacheSimple
 {
 public:
     ~CacheMT();

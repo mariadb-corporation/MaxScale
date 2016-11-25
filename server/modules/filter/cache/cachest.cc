@@ -21,7 +21,7 @@ CacheST::CacheST(const char* zName,
                  StorageFactory* pFactory,
                  Storage* pStorage,
                  HASHTABLE* pPending)
-    : Cache(zName, config, pRules, pFactory, pStorage, pPending)
+    : CacheSimple(zName, config, pRules, pFactory, pStorage, pPending)
 {
 }
 
@@ -37,7 +37,7 @@ CacheST* CacheST::Create(const char* zName, CACHE_CONFIG& config)
     HASHTABLE* pPending = NULL;
     StorageFactory* pFactory = NULL;
 
-    if (Cache::Create(config, &pRules, &pFactory, &pPending))
+    if (CacheSimple::Create(config, &pRules, &pFactory, &pPending))
     {
         uint32_t ttl = config.ttl;
         int argc = config.storage_argc;
@@ -71,12 +71,12 @@ bool CacheST::mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCach
 {
     long k = hashOfKey(key);
 
-    return Cache::mustRefresh(k, pSessionCache);
+    return CacheSimple::mustRefresh(k, pSessionCache);
 }
 
 void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
     long k = hashOfKey(key);
 
-    Cache::refreshed(k, pSessionCache);
+    CacheSimple::refreshed(k, pSessionCache);
 }

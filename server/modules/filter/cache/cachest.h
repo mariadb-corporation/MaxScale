@@ -13,9 +13,9 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "cache.h"
+#include "cachesimple.h"
 
-class CacheST : public Cache
+class CacheST : public CacheSimple
 {
 public:
     ~CacheST();

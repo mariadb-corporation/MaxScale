@@ -14,7 +14,6 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
-#include <maxscale/filter.h>
 #include <maxscale/session.h>
 #include "cachefilter.h"
 #include "cache_storage_api.h"
@@ -24,7 +23,9 @@ class SessionCache;
 class Cache
 {
 public:
-    ~Cache();
+    virtual ~Cache();
+
+    const CACHE_CONFIG& config() const { return m_config; }
 
     /**
      * Returns whether the results of a particular query should be stored.
@@ -63,44 +64,31 @@ public:
      */
     virtual void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache) = 0;
 
-    const CACHE_CONFIG& config() const { return m_config; }
+    virtual cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
 
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
+    virtual cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) = 0;
 
-    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
+    virtual cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue) = 0;
 
-    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
-
-    cache_result_t delValue(const CACHE_KEY& key);
+    virtual cache_result_t delValue(const CACHE_KEY& key) = 0;
 
 protected:
     Cache(const char* zName,
           CACHE_CONFIG& config,
           CACHE_RULES* pRules,
-          StorageFactory* pFactory,
-          Storage* pStorage,
-          HASHTABLE* pPending);
+          StorageFactory* pFactory);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules,
-                       StorageFactory**    ppFactory,
-                       HASHTABLE**         ppPending);
-
-    long hashOfKey(const CACHE_KEY& key);
-
-    bool mustRefresh(long key, const SessionCache* pSessionCache);
-
-    void refreshed(long key, const SessionCache* pSessionCache);
+                       StorageFactory**    ppFactory);
 
 private:
     Cache(const Cache&);
     Cache& operator = (const Cache&);
 
 protected:
-    const char*     m_zName;       // The name of the instance; the section name in the config.
-    CACHE_CONFIG    m_config;      // The configuration of the cache instance.
-    CACHE_RULES*    m_pRules;      // The rules of the cache instance.
-    StorageFactory* m_pFactory;    // The storage factory.
-    Storage*        m_pStorage;    // The storage instance to use.
-    HASHTABLE*      m_pPending;    // Pending items; being fetched from the backend.
+    const char*     m_zName;    // The name of the instance; the section name in the config.
+    CACHE_CONFIG    m_config;   // The configuration of the cache instance.
+    CACHE_RULES*    m_pRules;   // The rules of the cache instance.
+    StorageFactory* m_pFactory; // The storage factory.
 };
