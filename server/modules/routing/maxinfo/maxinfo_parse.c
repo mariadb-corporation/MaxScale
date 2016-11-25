@@ -41,7 +41,7 @@
 #include <log_manager.h>
 
 static MAXINFO_TREE *make_tree_node(MAXINFO_OPERATOR, char *, MAXINFO_TREE *, MAXINFO_TREE *);
-static void free_tree(MAXINFO_TREE *);
+void maxinfo_free_tree(MAXINFO_TREE *); // This function is needed by maxinfo.c
 static char *fetch_token(char *, int *, char **);
 static MAXINFO_TREE *parse_column_list(char **sql);
 static MAXINFO_TREE *parse_table_name(char **sql);
@@ -62,44 +62,46 @@ char		*ptr, *text;
 MAXINFO_TREE	*tree = NULL;
 MAXINFO_TREE	*col, *table;
 
-	*parse_error = PARSE_NOERROR;
-	while ((ptr  = fetch_token(sql, &token, &text)) != NULL)
-	{
-		switch (token)
-		{
-		case	LT_SHOW:
-			free(text);	// not needed
-			ptr = fetch_token(ptr, &token, &text);
-			if (ptr == NULL || token != LT_STRING)
-			{
-				// Expected show "name"
-				*parse_error = PARSE_MALFORMED_SHOW;
-				return NULL;
-			}
-			tree = make_tree_node(MAXOP_SHOW, text, NULL, NULL);
-			if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
-				return tree;
-			else if (token == LT_LIKE)
-			{
-				if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
-				{
-					tree->right = make_tree_node(MAXOP_LIKE,
-							text, NULL, NULL);
-					return tree;
-				}
-				else
-				{
-					// Expected expression
-					*parse_error = PARSE_EXPECTED_LIKE;
-					free_tree(tree);
-					return NULL;
-				}
-			}
-			// Malformed show
-			free(text);
-			free_tree(tree);
-			*parse_error = PARSE_MALFORMED_SHOW;
-			return NULL;
+    *parse_error = PARSE_NOERROR;
+    while ((ptr = fetch_token(sql, &token, &text)) != NULL)
+    {
+        switch (token)
+        {
+            case LT_SHOW:
+                free(text); // not needed
+                ptr = fetch_token(ptr, &token, &text);
+                if (ptr == NULL || token != LT_STRING)
+                {
+                    // Expected show "name"
+                    *parse_error = PARSE_MALFORMED_SHOW;
+                    return NULL;
+                }
+                tree = make_tree_node(MAXOP_SHOW, text, NULL, NULL);
+                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+                {
+                    return tree;
+                }
+                else if (token == LT_LIKE)
+                {
+                    if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+                    {
+                        tree->right = make_tree_node(MAXOP_LIKE,
+                                                     text, NULL, NULL);
+                        return tree;
+                    }
+                    else
+                    {
+                        // Expected expression
+                        *parse_error = PARSE_EXPECTED_LIKE;
+                        maxinfo_free_tree(tree);
+                        return NULL;
+                    }
+                }
+                // Malformed show
+                free(text);
+                maxinfo_free_tree(tree);
+                *parse_error = PARSE_MALFORMED_SHOW;
+                return NULL;
 #if 0
 		case	LT_SELECT:
 			free(text);	// not needed
@@ -128,7 +130,7 @@ MAXINFO_TREE	*col, *table;
                 {
                     /** Unknown token after SHUTDOWN MONITOR|SERVICE */
                     *parse_error = PARSE_SYNTAX_ERROR;
-                    free_tree(tree);
+                    maxinfo_free_tree(tree);
                     return NULL;
                 }
                 return tree;
@@ -142,7 +144,7 @@ MAXINFO_TREE	*col, *table;
                 {
                     /** Missing token for RESTART MONITOR|SERVICE */
                     *parse_error = PARSE_SYNTAX_ERROR;
-                    free_tree(tree);
+                    maxinfo_free_tree(tree);
                     return NULL;
                 }
                 tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
@@ -152,7 +154,7 @@ MAXINFO_TREE	*col, *table;
                     /** Unknown token after RESTART MONITOR|SERVICE */
                     *parse_error = PARSE_SYNTAX_ERROR;
                     free(text);
-                    free_tree(tree);
+                    maxinfo_free_tree(tree);
                     return NULL;
                 }
                 return tree;
@@ -270,20 +272,26 @@ MAXINFO_TREE	*node;
 }
 
 /**
- * Recusrsively free the storage associated with a parse tree
+ * Recursively free the storage associated with a parse tree
  *
  * @param tree	The parse tree to free
  */
-static void
-free_tree(MAXINFO_TREE *tree)
+void
+maxinfo_free_tree(MAXINFO_TREE *tree)
 {
-	if (tree->left)
-		free_tree(tree->left);
-	if (tree->right)
-		free_tree(tree->right);
-	if (tree->value)
-		free(tree->value);
-	free(tree);
+    if (tree->left)
+    {
+        maxinfo_free_tree(tree->left);
+    }
+    if (tree->right)
+    {
+        maxinfo_free_tree(tree->right);
+    }
+    if (tree->value)
+    {
+        free(tree->value);
+    }
+    free(tree);
 }
 
 /**
@@ -410,8 +418,8 @@ MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr
            (node->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL)) == NULL)
         {
             *parse_error = PARSE_SYNTAX_ERROR;
-            free_tree(tree);
-            if(ptr)
+            maxinfo_free_tree(tree);
+            if (ptr)
             {
                 free(text);
             }

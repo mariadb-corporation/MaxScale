@@ -335,54 +335,60 @@ static void handleError(
 static	int
 execute(ROUTER *rinstance, void *router_session, GWBUF *queue)
 {
-INFO_INSTANCE	*instance = (INFO_INSTANCE *)rinstance;
-INFO_SESSION	*session = (INFO_SESSION *)router_session;
-uint8_t		*data;
-int		length, len, residual;
-char		*sql;
+    INFO_INSTANCE *instance = (INFO_INSTANCE *)rinstance;
+    INFO_SESSION *session = (INFO_SESSION *)router_session;
+    uint8_t *data;
+    int length, len, residual;
+    char *sql;
 
-	if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
-	{
-		return handle_url(instance, session, queue);
-	}
-	if (session->queue)
-	{
-		queue = gwbuf_append(session->queue, queue);
-		session->queue = NULL;
-		queue = gwbuf_make_contiguous(queue);
-	}
-	data = (uint8_t *)GWBUF_DATA(queue);
-	length = data[0] + (data[1] << 8) + (data[2] << 16);
-	if (length + 4 > GWBUF_LENGTH(queue))
-	{
-		// Incomplete packet, must be buffered
-		session->queue = queue;
-		return 1;
-	}
+    if (GWBUF_TYPE(queue) == GWBUF_TYPE_HTTP)
+    {
+        return handle_url(instance, session, queue);
+    }
+    if (session->queue)
+    {
+        queue = gwbuf_append(session->queue, queue);
+        session->queue = NULL;
+        queue = gwbuf_make_contiguous(queue);
+    }
+    data = (uint8_t *)GWBUF_DATA(queue);
+    length = data[0] + (data[1] << 8) + (data[2] << 16);
+    if (length + 4 > GWBUF_LENGTH(queue))
+    {
+        // Incomplete packet, must be buffered
+        session->queue = queue;
+        return 1;
+    }
 
-	// We have a complete request in a signle buffer
-	if (modutil_MySQL_Query(queue, &sql, &len, &residual))
-	{
-		sql = strndup(sql, len);
-		int rc = maxinfo_execute_query(instance, session, sql);
-		free(sql);
-		return rc;
-	}
-	else
-	{
-		switch (MYSQL_COMMAND(queue))
-		{
-		case COM_PING:
-			return maxinfo_ping(instance, session, queue);
-		case COM_STATISTICS:
-			return maxinfo_statistics(instance, session, queue);
-		default:
-                    MXS_ERROR("maxinfo: Unexpected MySQL command 0x%x",
-                              MYSQL_COMMAND(queue));
-		}
-	}
-
-	return 1;
+    int rc = 1;
+    // We have a complete request in a single buffer
+    if (modutil_MySQL_Query(queue, &sql, &len, &residual))
+    {
+        sql = strndup(sql, len);
+        rc = maxinfo_execute_query(instance, session, sql);
+        free(sql);
+    }
+    else
+    {
+        switch (MYSQL_COMMAND(queue))
+        {
+            case COM_PING:
+                rc = maxinfo_ping(instance, session, queue);
+                break;
+            case COM_STATISTICS:
+                rc = maxinfo_statistics(instance, session, queue);
+                break;
+            case COM_QUIT:
+                break;
+            default:
+                MXS_ERROR("maxinfo: Unexpected MySQL command 0x%x",
+                          MYSQL_COMMAND(queue));
+                break;
+        }
+    }
+    // MaxInfo doesn't route the data forward so it should be freed.
+    gwbuf_free(queue);
+    return rc;
 }
 
 /**
@@ -601,51 +607,54 @@ uint8_t *ptr;
 static int
 maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
 {
-MAXINFO_TREE	*tree;
-PARSE_ERROR	err;
+    MAXINFO_TREE    *tree;
+    PARSE_ERROR err;
 
-        MXS_INFO("maxinfo: SQL statement: '%s' for 0x%p.",
-                 sql, session->dcb);
-	if (strcmp(sql, "select @@version_comment limit 1") == 0)
-	{
-		respond_vercom(session->dcb);
-		return 1;
-	}
-	/* Below is a kludge for MonYog, if we see
-	 * 	select unix_timestamp... as starttime
-	 * just return the starttime of MaxScale
-	 */
-	if (strncasecmp(sql, "select UNIX_TIMESTAMP",
-			strlen("select UNIX_TIMESTAMP")) == 0
-				&& (strstr(sql, "as starttime") != NULL || strstr(sql, "AS starttime") != NULL))
-	{
-		respond_starttime(session->dcb);
-		return 1;
-	}
-	if (strcasecmp(sql, "set names 'utf8'") == 0)
-	{
-		return maxinfo_send_ok(session->dcb);
-	}
-	if (strncasecmp(sql, "set session", 11) == 0)
-	{
-		return maxinfo_send_ok(session->dcb);
-	}
-	if (strncasecmp(sql, "set autocommit", 14) == 0)
-	{
-		return maxinfo_send_ok(session->dcb);
-	}
-	if (strncasecmp(sql, "SELECT `ENGINES`.`SUPPORT`", 26) == 0)
-	{
-		return maxinfo_send_ok(session->dcb);
-	}
-	if ((tree = maxinfo_parse(sql, &err)) == NULL)
-	{
-		maxinfo_send_parse_error(session->dcb, sql, err);
-		MXS_NOTICE("Failed to parse SQL statement: '%s'.", sql);
-	}
-	else
-		maxinfo_execute(session->dcb, tree);
-	return 1;
+    MXS_INFO("maxinfo: SQL statement: '%s' for 0x%p.",
+             sql, session->dcb);
+    if (strcmp(sql, "select @@version_comment limit 1") == 0)
+    {
+        respond_vercom(session->dcb);
+        return 1;
+    }
+    /* Below is a kludge for MonYog, if we see
+     *  select unix_timestamp... as starttime
+     * just return the starttime of MaxScale
+     */
+    if (strncasecmp(sql, "select UNIX_TIMESTAMP",
+                    strlen("select UNIX_TIMESTAMP")) == 0
+        && (strstr(sql, "as starttime") != NULL || strstr(sql, "AS starttime") != NULL))
+    {
+        respond_starttime(session->dcb);
+        return 1;
+    }
+    if (strcasecmp(sql, "set names 'utf8'") == 0)
+    {
+        return maxinfo_send_ok(session->dcb);
+    }
+    if (strncasecmp(sql, "set session", 11) == 0)
+    {
+        return maxinfo_send_ok(session->dcb);
+    }
+    if (strncasecmp(sql, "set autocommit", 14) == 0)
+    {
+        return maxinfo_send_ok(session->dcb);
+    }
+    if (strncasecmp(sql, "SELECT `ENGINES`.`SUPPORT`", 26) == 0)
+    {
+        return maxinfo_send_ok(session->dcb);
+    }
+    if ((tree = maxinfo_parse(sql, &err)) == NULL)
+    {
+        maxinfo_send_parse_error(session->dcb, sql, err);
+        MXS_NOTICE("Failed to parse SQL statement: '%s'.", sql);
+    }
+    else
+    {
+        maxinfo_execute(session->dcb, tree);
+        maxinfo_free_tree(tree);
+    }
+    return 1;
 }
 
 /**
