@@ -62,10 +62,11 @@
 #include <maxscale/monitor.h>
 #include <maxscale/notification.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/gwdirs.h>
+
+#include "maxscale/service.h"
 
 typedef struct duplicate_context
 {

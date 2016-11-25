@@ -48,7 +48,6 @@
 #include <math.h>
 #include <fcntl.h>
 #include <maxscale/session.h>
-#include <maxscale/service.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/listener.h>
 #include <maxscale/server.h>
@@ -67,6 +66,8 @@
 #include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+
+#include "maxscale/service.h"
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000

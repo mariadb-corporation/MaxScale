@@ -17,6 +17,8 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/spinlock.h>
 
+#include "maxscale/service.h"
+
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
 bool runtime_link_server(SERVER *server, const char *target)
