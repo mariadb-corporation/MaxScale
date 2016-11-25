@@ -60,7 +60,7 @@ void freeInstance(CACHE_STORAGE* pInstance)
 cache_result_t getKey(CACHE_STORAGE* pStorage,
                       const char* zDefaultDB,
                       const GWBUF* pQuery,
-                      char* pKey)
+                      CACHE_KEY* pKey)
 {
     ss_dassert(pStorage);
     // zDefaultDB may be NULL.
@@ -90,7 +90,7 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
 }
 
 cache_result_t getValue(CACHE_STORAGE* pStorage,
-                        const char* pKey,
+                        const CACHE_KEY* pKey,
                         uint32_t flags,
                         GWBUF** ppResult)
 {
@@ -121,7 +121,7 @@ cache_result_t getValue(CACHE_STORAGE* pStorage,
 }
 
 cache_result_t putValue(CACHE_STORAGE* pStorage,
-                        const char* pKey,
+                        const CACHE_KEY* pKey,
                         const GWBUF* pValue)
 {
     ss_dassert(pStorage);
@@ -151,7 +151,7 @@ cache_result_t putValue(CACHE_STORAGE* pStorage,
 }
 
 cache_result_t delValue(CACHE_STORAGE* pStorage,
-                        const char* pKey)
+                        const CACHE_KEY* pKey)
 {
     ss_dassert(pStorage);
     ss_dassert(pKey);

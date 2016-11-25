@@ -23,9 +23,9 @@ public:
 
     static CacheMT* Create(const char* zName, CACHE_CONFIG& config);
 
-    bool mustRefresh(const char* pKey, const SessionCache* pSessionCache);
+    bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
-    void refreshed(const char* pKey,  const SessionCache* pSessionCache);
+    void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
 
 private:
     CacheMT(const char* zName,

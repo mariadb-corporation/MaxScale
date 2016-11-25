@@ -29,10 +29,10 @@ public:
     static RocksDBStorage* Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
     ~RocksDBStorage();
 
-    cache_result_t getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey);
-    cache_result_t getValue(const char* pKey, uint32_t flags, GWBUF** ppResult);
-    cache_result_t putValue(const char* pKey, const GWBUF* pValue);
-    cache_result_t delValue(const char* pKey);
+    cache_result_t getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey);
+    cache_result_t getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult);
+    cache_result_t putValue(const CACHE_KEY* pKey, const GWBUF* pValue);
+    cache_result_t delValue(const CACHE_KEY* pKey);
 
 private:
     RocksDBStorage(std::unique_ptr<rocksdb::DBWithTTL>& sDb,

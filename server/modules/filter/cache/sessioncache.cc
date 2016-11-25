@@ -29,7 +29,7 @@ SessionCache::SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb)
 {
     memset(&m_down, 0, sizeof(m_down));
     memset(&m_up, 0, sizeof(m_up));
-    memset(m_key, 0, CACHE_KEY_MAXLEN);
+    memset(m_key.data, 0, CACHE_KEY_MAXLEN);
 
     reset_response_state();
 }
@@ -607,7 +607,7 @@ void SessionCache::reset_response_state()
  */
 cache_result_t SessionCache::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
 {
-    cache_result_t result = m_pCache->getKey(m_zDefaultDb, pQuery, m_key);
+    cache_result_t result = m_pCache->getKey(m_zDefaultDb, pQuery, &m_key);
 
     if (result == CACHE_RESULT_OK)
     {

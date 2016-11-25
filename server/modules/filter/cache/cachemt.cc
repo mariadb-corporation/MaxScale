@@ -68,22 +68,22 @@ CacheMT* CacheMT::Create(const char* zName, CACHE_CONFIG& config)
     return pCache;
 }
 
-bool CacheMT::mustRefresh(const char* pKey, const SessionCache* pSessionCache)
+bool CacheMT::mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    long key = hashOfKey(pKey);
+    long k = hashOfKey(key);
 
     spinlock_acquire(&m_lockPending);
-    bool rv = Cache::mustRefresh(key, pSessionCache);
+    bool rv = Cache::mustRefresh(k, pSessionCache);
     spinlock_release(&m_lockPending);
 
     return rv;
 }
 
-void CacheMT::refreshed(const char* pKey,  const SessionCache* pSessionCache)
+void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    long key = hashOfKey(pKey);
+    long k = hashOfKey(key);
 
     spinlock_acquire(&m_lockPending);
-    Cache::refreshed(key, pSessionCache);
+    Cache::refreshed(k, pSessionCache);
     spinlock_release(&m_lockPending);
 }

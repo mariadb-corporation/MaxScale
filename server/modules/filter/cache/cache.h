@@ -48,30 +48,30 @@ public:
     /**
      * Specifies whether a particular SessioCache should refresh the data.
      *
-     * @param pKey           The hashed key for a query.
+     * @param key            The hashed key for a query.
      * @param pSessionCache  The session cache asking.
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool mustRefresh(const char* pKey, const SessionCache* pSessionCache) = 0;
+    virtual bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
      *
-     * @param pKey           The hashed key for a query.
+     * @param key            The hashed key for a query.
      * @param pSessionCache  The session cache informing.
      */
-    virtual void refreshed(const char* pKey,  const SessionCache* pSessionCache) = 0;
+    virtual void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache) = 0;
 
     const CACHE_CONFIG& config() const { return m_config; }
 
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, char* pKey);
+    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
 
-    cache_result_t getValue(const char* pKey, uint32_t flags, GWBUF** ppValue);
+    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
 
-    cache_result_t putValue(const char* pKey, const GWBUF* pValue);
+    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
 
-    cache_result_t delValue(const char* pKey);
+    cache_result_t delValue(const CACHE_KEY& key);
 
 protected:
     Cache(const char* zName,
@@ -86,7 +86,7 @@ protected:
                        StorageFactory**    ppFactory,
                        HASHTABLE**         ppPending);
 
-    long hashOfKey(const char* pKey);
+    long hashOfKey(const CACHE_KEY& key);
 
     bool mustRefresh(long key, const SessionCache* pSessionCache);
 

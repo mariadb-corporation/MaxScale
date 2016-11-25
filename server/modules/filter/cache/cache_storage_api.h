@@ -39,8 +39,8 @@ typedef enum cache_flags
 
 typedef enum cache_thread_model
 {
-    CACHE_THREAD_MODEL_ST  = 0x1,
-    CACHE_THREAD_MODEL_MT  = 0x2,
+    CACHE_THREAD_MODEL_ST,
+    CACHE_THREAD_MODEL_MT
 } cache_thread_model_t;
 
 typedef void* CACHE_STORAGE;
@@ -49,6 +49,11 @@ enum
 {
     CACHE_KEY_MAXLEN = 128
 };
+
+typedef struct cache_key
+{
+    char data[CACHE_KEY_MAXLEN];
+} CACHE_KEY;
 
 typedef struct cache_storage_api
 {
@@ -93,14 +98,14 @@ typedef struct cache_storage_api
      *
      * @param storage    Pointer to a CACHE_STORAGE.
      * @param query      An SQL query. Must be one contiguous buffer.
-     * @param key        Pointer to array of CACHE_KEY_MAXLEN size where
-     *                   the key will be written.
+     * @param key        Pointer to key.
+     *
      * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
      */
     cache_result_t (*getKey)(CACHE_STORAGE* storage,
                              const char* default_db,
                              const GWBUF* query,
-                             char* key);
+                             CACHE_KEY* key);
     /**
      * Get a value from the cache.
      *
@@ -116,7 +121,7 @@ typedef struct cache_storage_api
      *         the ttl was reached), or some other error code.
      */
     cache_result_t (*getValue)(CACHE_STORAGE* storage,
-                               const char* key,
+                               const CACHE_KEY* key,
                                uint32_t flags,
                                GWBUF** result);
 
@@ -132,7 +137,7 @@ typedef struct cache_storage_api
      *         some resource having become exhausted, or some other error code.
      */
     cache_result_t (*putValue)(CACHE_STORAGE* storage,
-                               const char* key,
+                               const CACHE_KEY* key,
                                const GWBUF* value);
 
     /**
@@ -144,7 +149,7 @@ typedef struct cache_storage_api
      *         CACHE_RESULT_OK may be returned also if the entry was not present.
      */
     cache_result_t (*delValue)(CACHE_STORAGE* storage,
-                               const char* key);
+                               const CACHE_KEY* key);
 } CACHE_STORAGE_API;
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"

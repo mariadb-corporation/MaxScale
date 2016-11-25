@@ -24,16 +24,16 @@ public:
 
     cache_result_t getKey(const char* zDefaultDb,
                           const GWBUF* pQuery,
-                          char* pKey);
+                          CACHE_KEY* pKey);
 
-    cache_result_t getValue(const char* pKey,
+    cache_result_t getValue(const CACHE_KEY& key,
                             uint32_t flags,
                             GWBUF** ppValue);
 
-    cache_result_t putValue(const char* pKey,
+    cache_result_t putValue(const CACHE_KEY& key,
                             const GWBUF* pValue);
 
-    cache_result_t delValue(const char* pKey);
+    cache_result_t delValue(const CACHE_KEY& key);
 
 private:
     friend class StorageFactory;

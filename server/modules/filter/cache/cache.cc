@@ -145,33 +145,33 @@ bool Cache::shouldUse(const SESSION* pSession)
 
 cache_result_t Cache::getKey(const char* zDefaultDb,
                              const GWBUF* pQuery,
-                             char* pKey)
+                             CACHE_KEY* pKey)
 {
     return m_pStorage->getKey(zDefaultDb, pQuery, pKey);
 }
 
-cache_result_t Cache::getValue(const char* pKey,
+cache_result_t Cache::getValue(const CACHE_KEY& key,
                                uint32_t flags,
                                GWBUF** ppValue)
 {
-    return m_pStorage->getValue(pKey, flags, ppValue);
+    return m_pStorage->getValue(key, flags, ppValue);
 }
 
-cache_result_t Cache::putValue(const char* pKey,
+cache_result_t Cache::putValue(const CACHE_KEY& key,
                                const GWBUF* pValue)
 {
-    return m_pStorage->putValue(pKey, pValue);
+    return m_pStorage->putValue(key, pValue);
 }
 
-cache_result_t Cache::delValue(const char* pKey)
+cache_result_t Cache::delValue(const CACHE_KEY& key)
 {
-    return m_pStorage->delValue(pKey);
+    return m_pStorage->delValue(key);
 }
 
 // protected
-long Cache::hashOfKey(const char* pKey)
+long Cache::hashOfKey(const CACHE_KEY& key)
 {
-    return hash_of_key(pKey);
+    return hash_of_key(key.data);
 }
 
 // protected
