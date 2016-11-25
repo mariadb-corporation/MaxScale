@@ -359,29 +359,35 @@ execute(ROUTER *rinstance, void *router_session, GWBUF *queue)
         return 1;
     }
 
-    // We have a complete request in a signle buffer
+    int rc = 1;
+    // We have a complete request in a single buffer
     if (modutil_MySQL_Query(queue, &sql, &len, &residual))
     {
         sql = strndup(sql, len);
-        int rc = maxinfo_execute_query(instance, session, sql);
+        rc = maxinfo_execute_query(instance, session, sql);
         MXS_FREE(sql);
-        return rc;
     }
     else
     {
         switch (MYSQL_COMMAND(queue))
         {
             case COM_PING:
-                return maxinfo_ping(instance, session, queue);
+                rc = maxinfo_ping(instance, session, queue);
+                break;
             case COM_STATISTICS:
-                return maxinfo_statistics(instance, session, queue);
+                rc = maxinfo_statistics(instance, session, queue);
+                break;
+            case COM_QUIT:
+                break;
             default:
                 MXS_ERROR("maxinfo: Unexpected MySQL command 0x%x",
                           MYSQL_COMMAND(queue));
+                break;
         }
     }
-
-    return 1;
+    // MaxInfo doesn't route the data forward so it should be freed.
+    gwbuf_free(queue);
+    return rc;
 }
 
 /**
@@ -652,6 +658,7 @@ maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
     else
     {
         maxinfo_execute(session->dcb, tree);
+        maxinfo_free_tree(tree);
     }
     return 1;
 }
