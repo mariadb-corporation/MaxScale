@@ -23,7 +23,10 @@ bool initialize()
     return RocksDBStorage::Initialize();
 }
 
-CACHE_STORAGE* createInstance(const char* zName, uint32_t ttl, int argc, char* argv[])
+CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always MT safe.
+                              const char* zName,
+                              uint32_t ttl,
+                              int argc, char* argv[])
 {
     ss_dassert(zName);
 

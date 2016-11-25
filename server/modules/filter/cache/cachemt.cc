@@ -12,8 +12,6 @@
  */
 
 #include "cachemt.h"
-#include <new>
-#include <maxscale/spinlock.h>
 #include "storage.h"
 #include "storagefactory.h"
 
@@ -46,7 +44,7 @@ CacheMT* CacheMT::Create(const char* zName, CACHE_CONFIG& config)
         int argc = config.storage_argc;
         char** argv = config.storage_argv;
 
-        Storage* pStorage = pFactory->createStorage(zName, ttl, argc, argv);
+        Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, zName, ttl, argc, argv);
 
         if (pStorage)
         {

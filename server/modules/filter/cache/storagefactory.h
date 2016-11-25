@@ -26,7 +26,8 @@ public:
 
     static StorageFactory* Open(const char* zName);
 
-    Storage* createStorage(const char* zName,
+    Storage* createStorage(cache_thread_model_t model,
+                           const char* zName,
                            uint32_t ttl,
                            int argc, char* argv[]);
 

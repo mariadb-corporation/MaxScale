@@ -37,6 +37,12 @@ typedef enum cache_flags
     CACHE_FLAGS_INCLUDE_STALE = 0x01,
 } cache_flags_t;
 
+typedef enum cache_thread_model
+{
+    CACHE_THREAD_MODEL_ST  = 0x1,
+    CACHE_THREAD_MODEL_MT  = 0x2,
+} cache_thread_model_t;
+
 typedef void* CACHE_STORAGE;
 
 enum
@@ -58,6 +64,10 @@ typedef struct cache_storage_api
      * create the actual storage, initialize it and prepare to put and get
      * cache items.
      *
+     * @param model Whether the storage will be used in a single thread or
+     *              multi thread context. In the latter case the storage must
+     *              perform thread synchronization as appropriate, in the former
+     *              case it need not.
      * @param name  The name of the cache instance.
      * @param ttl   Time to live; number of seconds the value is valid.
      * @param argc  The number of elements in the argv array.
@@ -66,7 +76,8 @@ typedef struct cache_storage_api
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    CACHE_STORAGE* (*createInstance)(const char *name,
+    CACHE_STORAGE* (*createInstance)(cache_thread_model_t model,
+                                     const char *name,
                                      uint32_t ttl,
                                      int argc, char* argv[]);
 

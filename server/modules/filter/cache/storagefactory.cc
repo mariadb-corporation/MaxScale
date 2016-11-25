@@ -131,7 +131,8 @@ StorageFactory* StorageFactory::Open(const char* zName)
     return pFactory;
 }
 
-Storage* StorageFactory::createStorage(const char* zName,
+Storage* StorageFactory::createStorage(cache_thread_model_t model,
+                                       const char* zName,
                                        uint32_t ttl,
                                        int argc, char* argv[])
 {
@@ -139,7 +140,7 @@ Storage* StorageFactory::createStorage(const char* zName,
     ss_dassert(m_pApi);
 
     Storage* pStorage = 0;
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(zName, ttl, argc, argv);
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, argc, argv);
 
     if (pRawStorage)
     {
