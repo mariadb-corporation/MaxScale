@@ -23,6 +23,14 @@ class CacheSimple : public Cache
 public:
     ~CacheSimple();
 
+    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
+
+    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
+
+    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
+
+    cache_result_t delValue(const CACHE_KEY& key);
+
 protected:
     CacheSimple(const char* zName,
                 CACHE_CONFIG& config,
@@ -35,14 +43,6 @@ protected:
                        CACHE_RULES**       ppRules,
                        StorageFactory**    ppFactory,
                        HASHTABLE**         ppPending);
-
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
-
-    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
-
-    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
-
-    cache_result_t delValue(const CACHE_KEY& key);
 
     long hashOfKey(const CACHE_KEY& key);
 
