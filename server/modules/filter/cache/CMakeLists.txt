@@ -1,5 +1,5 @@
 if (JANSSON_FOUND)
-  add_library(cache SHARED cache.cc cachefilter.cc cachemt.cc rules.cc sessioncache.cc storage.cc storagefactory.cc)
+  add_library(cache SHARED cache.cc cachefilter.cc cachemt.cc cachest.cc rules.cc sessioncache.cc storage.cc storagefactory.cc)
   target_link_libraries(cache maxscale-common jansson)
   set_target_properties(cache PROPERTIES VERSION "1.0.0")
   set_target_properties(cache PROPERTIES LINK_FLAGS -Wl,-z,defs)
