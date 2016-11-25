@@ -61,4 +61,9 @@ void cache_config_finish(CACHE_CONFIG& config);
 void cache_config_free(CACHE_CONFIG* pConfig);
 void cache_config_reset(CACHE_CONFIG& config);
 
+#define CPP_GUARD(statement)\
+    do { try { statement; }                                              \
+    catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\
+    catch (...) { MXS_ERROR("Caught unknown exception."); } } while (false)
+
 #endif

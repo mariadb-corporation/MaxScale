@@ -17,7 +17,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
-#include "cache.h"
+#include "cachemt.h"
 #include "sessioncache.h"
 
 static char VERSION_STRING[] = "V1.0.0";
@@ -47,11 +47,6 @@ static void     diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb);
 static uint64_t getCapabilities(void);
 
 static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config);
-
-#define CPP_GUARD(statement)\
-    do { try { statement; }                                              \
-    catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\
-    catch (...) { MXS_ERROR("Caught unknown exception."); } } while (false)
 
 //
 // Global symbols of the Module
@@ -124,7 +119,7 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
 
     if (process_params(pzOptions, ppParams, config))
     {
-        CPP_GUARD(pCache = Cache::Create(zName, config));
+        CPP_GUARD(pCache = CacheMT::Create(zName, config));
 
         if (!pCache)
         {

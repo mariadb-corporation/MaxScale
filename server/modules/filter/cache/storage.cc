@@ -23,6 +23,10 @@ Storage::Storage(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
     ss_dassert(m_pStorage);
 }
 
+Storage::~Storage()
+{
+}
+
 cache_result_t Storage::getKey(const char* zDefaultDb,
                                const GWBUF* pQuery,
                                char* pKey)

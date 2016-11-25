@@ -55,7 +55,7 @@ public:
      *
      * @return True, if the session cache should refresh the data.
      */
-    bool mustRefresh(const char* pKey, const SessionCache* pSessionCache);
+    virtual bool mustRefresh(const char* pKey, const SessionCache* pSessionCache);
 
     /**
      * To inform the cache that a particular item has been updated upon request.
@@ -63,7 +63,7 @@ public:
      * @param pKey           The hashed key for a query.
      * @param pSessionCache  The session cache informing.
      */
-    void refreshed(const char* pKey,  const SessionCache* pSessionCache);
+    virtual void refreshed(const char* pKey,  const SessionCache* pSessionCache);
 
     const CACHE_CONFIG& config() const { return m_config; }
 
@@ -75,7 +75,7 @@ public:
 
     cache_result_t delValue(const char* pKey);
 
-private:
+protected:
     Cache(const char* zName,
           CACHE_CONFIG& config,
           CACHE_RULES* pRules,
@@ -83,11 +83,22 @@ private:
           Storage* pStorage,
           HASHTABLE* pPending);
 
+    static bool Create(const CACHE_CONFIG& config,
+                       CACHE_RULES**       ppRules,
+                       StorageFactory**    ppFactory,
+                       HASHTABLE**         ppPending);
+
+    long hashOfKey(const char* pKey);
+
+    bool mustRefresh(long key, const SessionCache* pSessionCache);
+
+    void refreshed(long key, const SessionCache* pSessionCache);
+
 private:
     Cache(const Cache&);
     Cache& operator = (const Cache&);
 
-private:
+protected:
     const char*     m_zName;       // The name of the instance; the section name in the config.
     CACHE_CONFIG    m_config;      // The configuration of the cache instance.
     CACHE_RULES*    m_pRules;      // The rules of the cache instance.

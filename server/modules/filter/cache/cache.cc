@@ -152,6 +152,58 @@ Cache* Cache::Create(const char* zName, CACHE_CONFIG& config)
     return pCache;
 }
 
+//static
+bool Cache::Create(const CACHE_CONFIG& config,
+                   CACHE_RULES**       ppRules,
+                   StorageFactory**    ppFactory,
+                   HASHTABLE**         ppPending)
+{
+    CACHE_RULES* pRules = NULL;
+    HASHTABLE* pPending = NULL;
+    StorageFactory* pFactory = NULL;
+
+    if (config.rules)
+    {
+        pRules = cache_rules_load(config.rules, config.debug);
+    }
+    else
+    {
+        pRules = cache_rules_create(config.debug);
+    }
+
+    if (pRules)
+    {
+        pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
+
+        if (pPending)
+        {
+            pFactory = StorageFactory::Open(config.storage);
+
+            if (!pFactory)
+            {
+                MXS_ERROR("Could not open storage factory '%s'.", config.storage);
+            }
+        }
+    }
+
+    bool rv = (pRules && pPending && pFactory);
+
+    if (rv)
+    {
+        *ppRules = pRules;
+        *ppPending = pPending;
+        *ppFactory = pFactory;
+    }
+    else
+    {
+        cache_rules_free(pRules);
+        hashtable_free(pPending);
+        delete pFactory;
+    }
+
+    return rv;
+}
+
 bool Cache::shouldStore(const char* zDefaultDb, const GWBUF* pQuery)
 {
     return cache_rules_should_store(m_pRules, zDefaultDb, pQuery);
@@ -216,3 +268,32 @@ cache_result_t Cache::delValue(const char* pKey)
 {
     return m_pStorage->delValue(pKey);
 }
+
+// protected
+long Cache::hashOfKey(const char* pKey)
+{
+    return hash_of_key(pKey);
+}
+
+// protected
+bool Cache::mustRefresh(long key, const SessionCache* pSessionCache)
+{
+    void *pValue = hashtable_fetch(m_pPending, (void*)key);
+    if (!pValue)
+    {
+        // It's not being fetched, so we make a note that we are.
+        hashtable_add(m_pPending, (void*)key, (void*)pSessionCache);
+    }
+
+    return !pValue;
+}
+
+// protected
+void Cache::refreshed(long key, const SessionCache* pSessionCache)
+{
+    ss_dassert(hashtable_fetch(m_pPending, (void*)key) == pSessionCache);
+    ss_debug(int n =) hashtable_delete(m_pPending, (void*)key);
+    ss_dassert(n == 1);
+}
+
+
