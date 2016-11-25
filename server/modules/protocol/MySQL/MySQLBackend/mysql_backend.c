@@ -838,7 +838,6 @@ gw_read_and_write(DCB *dcb)
      */
     if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != MYSQL_COM_UNDEFINED)
     {
-        ss_dassert(rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT));
         read_buffer = process_response_data(dcb, read_buffer, gwbuf_length(read_buffer));
         /**
          * Received incomplete response to session command.
