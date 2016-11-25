@@ -387,6 +387,8 @@ poll_add_dcb(DCB *dcb)
 
     dcb_add_to_list(dcb);
 
+    int error_num = 0;
+
     if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
     {
         /** Listeners are added to all epoll instances */
@@ -396,6 +398,7 @@ poll_add_dcb(DCB *dcb)
         {
             if ((rc = epoll_ctl(epoll_fd[i], EPOLL_CTL_ADD, dcb->fd, &ev)))
             {
+                error_num = errno;
                 /** Remove the listener from the previous epoll instances */
                 for (int j = 0; j < i; j++)
                 {
@@ -407,13 +410,16 @@ poll_add_dcb(DCB *dcb)
     }
     else
     {
-        rc = epoll_ctl(epoll_fd[owner], EPOLL_CTL_ADD, dcb->fd, &ev);
+        if ((rc = epoll_ctl(epoll_fd[owner], EPOLL_CTL_ADD, dcb->fd, &ev)))
+        {
+            error_num = errno;
+        }
     }
 
     if (rc)
     {
         /* Some errors are actually considered acceptable */
-        rc = poll_resolve_error(dcb, errno, true);
+        rc = poll_resolve_error(dcb, error_num, true);
     }
     if (0 == rc)
     {
@@ -477,6 +483,8 @@ poll_remove_dcb(DCB *dcb)
 
     if (dcbfd > 0)
     {
+        int error_num = 0;
+
         if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
         {
             /** Listeners are added to all epoll instances */
@@ -490,12 +498,16 @@ poll_remove_dcb(DCB *dcb)
                     /** Even if one of the instances failed to remove it, try
                      * to remove it from all the others */
                     rc = tmp_rc;
+                    error_num = errno;
                 }
             }
         }
         else
         {
-            rc = epoll_ctl(epoll_fd[dcb->thread.id], EPOLL_CTL_DEL, dcbfd, &ev);
+            if ((rc = epoll_ctl(epoll_fd[dcb->thread.id], EPOLL_CTL_DEL, dcbfd, &ev)))
+            {
+                error_num = errno;
+            }
         }
         /**
          * The poll_resolve_error function will always
@@ -504,7 +516,7 @@ poll_remove_dcb(DCB *dcb)
          */
         if (rc)
         {
-            rc = poll_resolve_error(dcb, errno, false);
+            rc = poll_resolve_error(dcb, error_num, false);
         }
         if (rc)
         {
