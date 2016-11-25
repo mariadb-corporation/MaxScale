@@ -505,7 +505,7 @@ avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *q
     {
         GWBUF *reply = gwbuf_alloc(5);
         memcpy(GWBUF_DATA(reply), "ECHO:", 5);
-        reply = gwbuf_append(reply, queue);
+        reply = gwbuf_append(reply, gwbuf_clone(queue));
         client->dcb->func.write(client->dcb, reply);
     }
 }
