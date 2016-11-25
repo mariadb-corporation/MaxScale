@@ -343,7 +343,7 @@ static int httpd_accept(DCB *dcb)
     {
         int so = -1;
         struct sockaddr_in addr;
-        socklen_t addrlen;
+        socklen_t addrlen = sizeof(struct sockaddr_in);
         DCB *client = NULL;
         HTTPD_session *client_data = NULL;
 

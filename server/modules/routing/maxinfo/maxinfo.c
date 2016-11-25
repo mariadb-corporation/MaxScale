@@ -365,12 +365,14 @@ char		*sql;
 		return 1;
 	}
 
-	// We have a complete request in a signle buffer
+        // We have a complete request in a single buffer
 	if (modutil_MySQL_Query(queue, &sql, &len, &residual))
 	{
 		sql = strndup(sql, len);
 		int rc = maxinfo_execute_query(instance, session, sql);
 		free(sql);
+                // The original buffer is no longer needed.
+                gwbuf_free(queue);
 		return rc;
 	}
 	else
@@ -649,7 +651,10 @@ PARSE_ERROR	err;
 		MXS_NOTICE("Failed to parse SQL statement: '%s'.", sql);
 	}
 	else
-		maxinfo_execute(session->dcb, tree);
+        {
+            maxinfo_execute(session->dcb, tree);
+            maxinfo_free_tree(tree);
+        }
 	return 1;
 }
 
