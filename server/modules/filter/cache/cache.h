@@ -26,8 +26,6 @@ class Cache
 public:
     ~Cache();
 
-    static Cache* Create(const char* zName, CACHE_CONFIG& config);
-
     /**
      * Returns whether the results of a particular query should be stored.
      *
