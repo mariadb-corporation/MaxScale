@@ -1776,7 +1776,7 @@ shutdown_service(DCB *dcb, SERVICE *service)
 static void
 restart_service(DCB *dcb, SERVICE *service)
 {
-    serviceRestart(service);
+    serviceStart(service);
 }
 
 /**

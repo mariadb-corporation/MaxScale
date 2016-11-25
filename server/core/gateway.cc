@@ -1951,7 +1951,7 @@ int main(int argc, char **argv)
     monitorStartAll();
 
     /** Start the services that were created above */
-    n_services = serviceStartAll();
+    n_services = service_launch_all();
 
     if (n_services == 0)
     {

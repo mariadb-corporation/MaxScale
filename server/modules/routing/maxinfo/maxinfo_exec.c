@@ -694,7 +694,7 @@ void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
         SERVICE* service = service_find(tree->value);
         if (service)
         {
-            serviceRestart(service);
+            serviceStart(service);
             maxinfo_send_ok(dcb);
         }
         else
