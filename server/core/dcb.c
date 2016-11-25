@@ -1953,7 +1953,7 @@ dprintAllDCBs(DCB *pdcb)
     {
         spinlock_acquire(&all_dcbs_lock[i]);
 
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
         {
             dprintOneDCB(pdcb, dcb);
         }
@@ -1981,7 +1981,7 @@ dListDCBs(DCB *pdcb)
     for (int i = 0; i < nthr; i++)
     {
         spinlock_acquire(&all_dcbs_lock[i]);
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
         {
             dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
                        dcb, gw_dcb_state2string(dcb->state),
@@ -2014,7 +2014,7 @@ dListClients(DCB *pdcb)
     for (int i = 0; i < nthr; i++)
     {
         spinlock_acquire(&all_dcbs_lock[i]);
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
@@ -2521,7 +2521,7 @@ dcb_hangup_foreach(struct server* server)
     {
         spinlock_acquire(&all_dcbs_lock[i]);
 
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
         {
             spinlock_acquire(&dcb->dcb_initlock);
             if (dcb->state == DCB_STATE_POLLING && dcb->server &&
@@ -3498,7 +3498,7 @@ void dcb_process_idle_sessions(int thr)
          * check for it once per second. One heartbeat is 100 milliseconds. */
         next_timeout_check = hkheartbeat + 10;
 
-        for (DCB *dcb = all_dcbs[thr]; dcb; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[thr]; dcb; dcb = dcb->thread.next)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
@@ -3524,7 +3524,7 @@ bool dcb_foreach(bool(*func)(DCB *, void *), void *data)
     {
         spinlock_acquire(&all_dcbs_lock[i]);
 
-        for (DCB *dcb = all_dcbs[i]; dcb && more; dcb = dcb->memdata.next)
+        for (DCB *dcb = all_dcbs[i]; dcb && more; dcb = dcb->thread.next)
         {
             if (!func(dcb, data))
             {
