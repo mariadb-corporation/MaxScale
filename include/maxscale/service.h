@@ -262,13 +262,13 @@ bool serviceStop(SERVICE *service);
 bool serviceStart(SERVICE *service);
 
 /**
- * @brief Start a listener for a service
+ * @brief Start new a listener for a service
  *
  * @param service Service where the listener is linked
  * @param port Listener to start
  * @return True if listener was started
  */
-bool serviceStartListener(SERVICE *service, SERV_LISTENER *port);
+bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port);
 
 /**
  * @brief Stop a listener for a service

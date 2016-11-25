@@ -1111,6 +1111,18 @@ static void destroyServer(DCB *dcb, SERVER *server)
     }
 }
 
+static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
+{
+    if (runtime_destroy_listener(service, name))
+    {
+        dcb_printf(dcb, "Destroyed listener '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to destroy listener '%s', see log file for more details\n", name);
+    }
+}
+
 struct subcommand destroyoptions[] =
 {
     {
@@ -1118,6 +1130,12 @@ struct subcommand destroyoptions[] =
         "Destroy a server",
         "Usage: destroy server NAME",
         {ARG_TYPE_SERVER}
+    },
+    {
+        "listener", 2, 2, destroyListener,
+        "Destroy a listener",
+        "Usage: destroy listener SERVICE NAME",
+        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION

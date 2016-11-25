@@ -412,9 +412,9 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
     {
         const char *print_addr = addr ? addr : "0.0.0.0";
         SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
-                                                     u_port, auth, auth_opt, ssl);
+                                                        u_port, auth, auth_opt, ssl);
 
-        if (listener && listener_serialize(listener) && serviceStartListener(service, listener))
+        if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
         {
             MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
                        name, print_addr, port, service->name);
@@ -423,6 +423,55 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
         {
             MXS_ERROR("Failed to start listener '%s' at %s:%s.", name, print_addr, port);
             rval = false;
+        }
+    }
+
+    spinlock_release(&crt_lock);
+    return rval;
+}
+
+bool runtime_destroy_listener(SERVICE *service, const char *name)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), name);
+
+    spinlock_acquire(&crt_lock);
+
+    if (unlink(filename) == -1)
+    {
+        if (errno != ENOENT)
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to remove persisted listener configuration '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+        else
+        {
+            rval = false;
+            MXS_WARNING("Listener '%s' was not created at runtime. Remove the "
+                        "listener manually from the correct configuration file.",
+                        name);
+        }
+    }
+    else
+    {
+        rval = true;
+    }
+
+    if (rval)
+    {
+        rval = serviceStopListener(service, name);
+
+        if (rval)
+        {
+            MXS_NOTICE("Destroyed listener '%s' for service '%s'. The listener "
+                       "will be removed after the next restart of MaxScale.",
+                       name, service->name);
+        }
+        else
+        {
+            MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
         }
     }
 

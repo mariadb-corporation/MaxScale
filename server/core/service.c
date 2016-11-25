@@ -490,7 +490,7 @@ int serviceInitialize(SERVICE *service)
     return listeners;
 }
 
-bool serviceStartListener(SERVICE *service, SERV_LISTENER *port)
+bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
 {
     return serviceStartPort(service, port);
 }

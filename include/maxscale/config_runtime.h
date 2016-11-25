@@ -144,3 +144,16 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *auth_opt, const char *ssl_key,
                              const char *ssl_cert, const char *ssl_ca,
                              const char *ssl_version, const char *ssl_depth);
+
+/**
+ * @brief Destroy a listener
+ *
+ * This disables the listener by removing it from the polling system. It also
+ * removes any generated configurations for this listener.
+ *
+ * @param service Service where the listener exists
+ * @param name Name of the listener
+ *
+ * @return True if the listener was successfully destroyed
+ */
+bool runtime_destroy_listener(SERVICE *service, const char *name);
