@@ -48,13 +48,17 @@ typedef struct cache_config
 {
     uint32_t    max_resultset_rows;
     uint32_t    max_resultset_size;
-    const char *rules;
-    const char *storage;
-    char       *storage_options;
-    char      **storage_argv;
+    char*       rules;
+    char*       storage;
+    char*       storage_options;
+    char**      storage_argv;
     int         storage_argc;
     uint32_t    ttl;
     uint32_t    debug;
 } CACHE_CONFIG;
+
+void cache_config_finish(CACHE_CONFIG& config);
+void cache_config_free(CACHE_CONFIG* pConfig);
+void cache_config_reset(CACHE_CONFIG& config);
 
 #endif

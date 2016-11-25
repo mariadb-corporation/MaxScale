@@ -23,19 +23,6 @@
 // are being fetches.
 #define CACHE_PENDING_ITEMS 50
 
-static const CACHE_CONFIG DEFAULT_CONFIG =
-{
-    CACHE_DEFAULT_MAX_RESULTSET_ROWS,
-    CACHE_DEFAULT_MAX_RESULTSET_SIZE,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    0,
-    CACHE_DEFAULT_TTL,
-    CACHE_DEFAULT_DEBUG
-};
-
 /**
  * Hashes a cache key to an integer.
  *
@@ -73,7 +60,7 @@ static int hashcmp(const void* address1, const void* address2)
 
 
 Cache::Cache(const char* zName,
-             const CACHE_CONFIG& config,
+             CACHE_CONFIG& config,
              CACHE_RULES* pRules,
              StorageFactory* pFactory,
              Storage* pStorage,
@@ -85,6 +72,7 @@ Cache::Cache(const char* zName,
     , m_pStorage(pStorage)
     , m_pPending(pPending)
 {
+    cache_config_reset(config);
 }
 
 Cache::~Cache()
@@ -94,76 +82,71 @@ Cache::~Cache()
 }
 
 //static
-Cache* Cache::Create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
+Cache* Cache::Create(const char* zName, CACHE_CONFIG& config)
 {
     Cache* pCache = NULL;
 
-    CACHE_CONFIG config = DEFAULT_CONFIG;
+    CACHE_RULES* pRules = NULL;
 
-    if (process_params(pzOptions, ppParams, &config))
+    if (config.rules)
     {
-        CACHE_RULES* pRules = NULL;
+        pRules = cache_rules_load(config.rules, config.debug);
+    }
+    else
+    {
+        pRules = cache_rules_create(config.debug);
+    }
 
-        if (config.rules)
-        {
-            pRules = cache_rules_load(config.rules, config.debug);
-        }
-        else
-        {
-            pRules = cache_rules_create(config.debug);
-        }
+    if (pRules)
+    {
+        HASHTABLE* pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
 
-        if (pRules)
+        if (pPending)
         {
-            HASHTABLE* pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
+            StorageFactory *pFactory = StorageFactory::Open(config.storage);
 
-            if (pPending)
+            if (pFactory)
             {
-                StorageFactory *pFactory = StorageFactory::Open(config.storage);
+                uint32_t ttl = config.ttl;
+                int argc = config.storage_argc;
+                char** argv = config.storage_argv;
 
-                if (pFactory)
+                Storage* pStorage = pFactory->createStorage(zName, ttl, argc, argv);
+
+                if (pStorage)
                 {
-                    uint32_t ttl = config.ttl;
-                    int argc = config.storage_argc;
-                    char** argv = config.storage_argv;
-
-                    Storage* pStorage = pFactory->createStorage(zName, ttl, argc, argv);
-
-                    if (pStorage)
-                    {
-                        pCache = new (std::nothrow) Cache(zName,
-                                                          config,
-                                                          pRules,
-                                                          pFactory,
-                                                          pStorage,
-                                                          pPending);
-                    }
-                    else
-                    {
-                        MXS_ERROR("Could not create storage instance for '%s'.", zName);
-                    }
+                    pCache = new (std::nothrow) Cache(zName,
+                                                      config,
+                                                      pRules,
+                                                      pFactory,
+                                                      pStorage,
+                                                      pPending);
                 }
                 else
                 {
-                    MXS_ERROR("Could not open storage factory '%s'.", config.storage);
+                    MXS_ERROR("Could not create storage instance for '%s'.", zName);
                 }
-
-                if (!pCache)
-                {
-                    delete pFactory;
-                }
+            }
+            else
+            {
+                MXS_ERROR("Could not open storage factory '%s'.", config.storage);
             }
 
             if (!pCache)
             {
-                hashtable_free(pPending);
+                delete pFactory;
             }
         }
 
         if (!pCache)
         {
-            cache_rules_free(pRules);
+            hashtable_free(pPending);
         }
+    }
+
+    if (!pCache)
+    {
+        cache_rules_free(pRules);
     }
 
     return pCache;
@@ -232,163 +215,4 @@ cache_result_t Cache::putValue(const char* pKey,
 cache_result_t Cache::delValue(const char* pKey)
 {
     return m_pStorage->delValue(pKey);
-}
-
-/**
- * Processes the cache params
- *
- * @param options Options as passed to the filter.
- * @param params  Parameters as passed to the filter.
- * @param config  Pointer to config instance where params will be stored.
- *
- * @return True if all parameters could be processed, false otherwise.
- */
-bool Cache::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG* pConfig)
-{
-    bool error = false;
-
-    for (int i = 0; ppParams[i]; ++i)
-    {
-        const FILTER_PARAMETER *pParam = ppParams[i];
-
-        if (strcmp(pParam->name, "max_resultset_rows") == 0)
-        {
-            int v = atoi(pParam->value);
-
-            if (v > 0)
-            {
-                pConfig->max_resultset_rows = v;
-            }
-            else
-            {
-                pConfig->max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
-            }
-        }
-        else if (strcmp(pParam->name, "max_resultset_size") == 0)
-        {
-            int v = atoi(pParam->value);
-
-            if (v > 0)
-            {
-                pConfig->max_resultset_size = v * 1024;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", pParam->name);
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "rules") == 0)
-        {
-            if (*pParam->value == '/')
-            {
-                pConfig->rules = MXS_STRDUP(pParam->value);
-            }
-            else
-            {
-                const char *datadir = get_datadir();
-                size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
-
-                char *rules = (char*)MXS_MALLOC(len);
-
-                if (rules)
-                {
-                    sprintf(rules, "%s/%s", datadir, pParam->value);
-                    pConfig->rules = rules;
-                }
-            }
-
-            if (!pConfig->rules)
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "storage_options") == 0)
-        {
-            pConfig->storage_options = MXS_STRDUP(pParam->value);
-
-            if (pConfig->storage_options)
-            {
-                int argc = 1;
-                char *arg = pConfig->storage_options;
-
-                while ((arg = strchr(pConfig->storage_options, ',')))
-                {
-                    ++argc;
-                }
-
-                pConfig->storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
-
-                if (pConfig->storage_argv)
-                {
-                    pConfig->storage_argc = argc;
-
-                    int i = 0;
-                    arg = pConfig->storage_options;
-                    pConfig->storage_argv[i++] = arg;
-
-                    while ((arg = strchr(pConfig->storage_options, ',')))
-                    {
-                        *arg = 0;
-                        ++arg;
-                        pConfig->storage_argv[i++] = arg;
-                    }
-
-                    pConfig->storage_argv[i] = NULL;
-                }
-                else
-                {
-                    MXS_FREE(pConfig->storage_options);
-                    pConfig->storage_options = NULL;
-                }
-            }
-            else
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "storage") == 0)
-        {
-            pConfig->storage = pParam->value;
-        }
-        else if (strcmp(pParam->name, "ttl") == 0)
-        {
-            int v = atoi(pParam->value);
-
-            if (v > 0)
-            {
-                pConfig->ttl = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", pParam->name);
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "debug") == 0)
-        {
-            int v = atoi(pParam->value);
-
-            if ((v >= CACHE_DEBUG_MIN) && (v <= CACHE_DEBUG_MAX))
-            {
-                pConfig->debug = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be between %d and %d, inclusive.",
-                          pParam->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
-                error = true;
-            }
-        }
-        else if (!filter_standard_parameter(pParam->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
-            error = true;
-        }
-    }
-
-    return !error;
 }

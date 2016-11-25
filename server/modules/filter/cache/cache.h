@@ -26,7 +26,7 @@ class Cache
 public:
     ~Cache();
 
-    static Cache* Create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
+    static Cache* Create(const char* zName, CACHE_CONFIG& config);
 
     /**
      * Returns whether the results of a particular query should be stored.
@@ -77,13 +77,11 @@ public:
 
 private:
     Cache(const char* zName,
-          const CACHE_CONFIG& config,
+          CACHE_CONFIG& config,
           CACHE_RULES* pRules,
           StorageFactory* pFactory,
           Storage* pStorage,
           HASHTABLE* pPending);
-
-    static bool process_params(char **options, FILTER_PARAMETER **params, CACHE_CONFIG* config);
 
 private:
     Cache(const Cache&);

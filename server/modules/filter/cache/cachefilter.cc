@@ -14,11 +14,26 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.h"
 #include <exception>
+#include <maxscale/alloc.h>
 #include <maxscale/filter.h>
+#include <maxscale/gwdirs.h>
 #include "cache.h"
 #include "sessioncache.h"
 
 static char VERSION_STRING[] = "V1.0.0";
+
+static const CACHE_CONFIG DEFAULT_CONFIG =
+{
+    CACHE_DEFAULT_MAX_RESULTSET_ROWS,
+    CACHE_DEFAULT_MAX_RESULTSET_SIZE,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    CACHE_DEFAULT_TTL,
+    CACHE_DEFAULT_DEBUG
+};
 
 static FILTER*  createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
 static void*    newSession(FILTER* pInstance, SESSION* pSession);
@@ -30,6 +45,8 @@ static int      routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket
 static int      clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket);
 static void     diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb);
 static uint64_t getCapabilities(void);
+
+static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config);
 
 #define CPP_GUARD(statement)\
     do { try { statement; }                                              \
@@ -87,7 +104,7 @@ extern "C" FILTER_OBJECT *GetModuleObject()
 };
 
 //
-// API Implementation
+// API Implementation BEGIN
 //
 
 /**
@@ -103,7 +120,17 @@ extern "C" FILTER_OBJECT *GetModuleObject()
 static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
 {
     Cache* pCache = NULL;
-    CPP_GUARD(pCache = Cache::Create(zName, pzOptions, ppParams));
+    CACHE_CONFIG config = DEFAULT_CONFIG;
+
+    if (process_params(pzOptions, ppParams, config))
+    {
+        CPP_GUARD(pCache = Cache::Create(zName, config));
+
+        if (!pCache)
+        {
+            cache_config_finish(config);
+        }
+    }
 
     return reinterpret_cast<FILTER*>(pCache);
 }
@@ -240,4 +267,228 @@ static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
 static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_TRANSACTION_TRACKING;
+}
+
+//
+// API Implementation END
+//
+
+/**
+ * Processes the cache params
+ *
+ * @param options Options as passed to the filter.
+ * @param params  Parameters as passed to the filter.
+ * @param config  Reference to config instance where params will be stored.
+ *
+ * @return True if all parameters could be processed, false otherwise.
+ */
+static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config)
+{
+    bool error = false;
+
+    for (int i = 0; ppParams[i]; ++i)
+    {
+        const FILTER_PARAMETER *pParam = ppParams[i];
+
+        if (strcmp(pParam->name, "max_resultset_rows") == 0)
+        {
+            int v = atoi(pParam->value);
+
+            if (v > 0)
+            {
+                config.max_resultset_rows = v;
+            }
+            else
+            {
+                config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
+            }
+        }
+        else if (strcmp(pParam->name, "max_resultset_size") == 0)
+        {
+            int v = atoi(pParam->value);
+
+            if (v > 0)
+            {
+                config.max_resultset_size = v * 1024;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", pParam->name);
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "rules") == 0)
+        {
+            if (*pParam->value == '/')
+            {
+                config.rules = MXS_STRDUP(pParam->value);
+            }
+            else
+            {
+                const char* datadir = get_datadir();
+                size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
+
+                char *rules = (char*)MXS_MALLOC(len);
+
+                if (rules)
+                {
+                    sprintf(rules, "%s/%s", datadir, pParam->value);
+                    config.rules = rules;
+                }
+            }
+
+            if (!config.rules)
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "storage_options") == 0)
+        {
+            config.storage_options = MXS_STRDUP(pParam->value);
+
+            if (config.storage_options)
+            {
+                int argc = 1;
+                char *arg = config.storage_options;
+
+                while ((arg = strchr(config.storage_options, ',')))
+                {
+                    ++argc;
+                }
+
+                config.storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
+
+                if (config.storage_argv)
+                {
+                    config.storage_argc = argc;
+
+                    int i = 0;
+                    arg = config.storage_options;
+                    config.storage_argv[i++] = arg;
+
+                    while ((arg = strchr(config.storage_options, ',')))
+                    {
+                        *arg = 0;
+                        ++arg;
+                        config.storage_argv[i++] = arg;
+                    }
+
+                    config.storage_argv[i] = NULL;
+                }
+                else
+                {
+                    MXS_FREE(config.storage_options);
+                    config.storage_options = NULL;
+                }
+            }
+            else
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "storage") == 0)
+        {
+            config.storage = MXS_STRDUP(pParam->value);
+
+            if (!config.storage)
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "ttl") == 0)
+        {
+            int v = atoi(pParam->value);
+
+            if (v > 0)
+            {
+                config.ttl = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", pParam->name);
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "debug") == 0)
+        {
+            int v = atoi(pParam->value);
+
+            if ((v >= CACHE_DEBUG_MIN) && (v <= CACHE_DEBUG_MAX))
+            {
+                config.debug = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be between %d and %d, inclusive.",
+                          pParam->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+                error = true;
+            }
+        }
+        else if (!filter_standard_parameter(pParam->name))
+        {
+            MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
+            error = true;
+        }
+    }
+
+    if (error)
+    {
+        cache_config_finish(config);
+    }
+
+    return !error;
+}
+
+/**
+ * Frees all data of a config object, but not the object itself
+ *
+ * @param pConfig  Pointer to a config object.
+ */
+void cache_config_finish(CACHE_CONFIG& config)
+{
+    MXS_FREE(config.rules);
+    MXS_FREE(config.storage);
+    MXS_FREE(config.storage_options);
+
+    for (int i = 0; i < config.storage_argc; ++i)
+    {
+        MXS_FREE(config.storage_argv[i]);
+    }
+
+    config.max_resultset_rows = 0;
+    config.max_resultset_size = 0;
+    config.rules = NULL;
+    config.storage = NULL;
+    config.storage_options = NULL;
+    config.storage_argc = 0;
+    config.storage_argv = NULL;
+    config.ttl = 0;
+    config.debug = 0;
+}
+
+/**
+ * Frees all data of a config object, and the object itself
+ *
+ * @param pConfig  Pointer to a config object.
+ */
+void cache_config_free(CACHE_CONFIG* pConfig)
+{
+    if (pConfig)
+    {
+        cache_config_finish(*pConfig);
+        MXS_FREE(pConfig);
+    }
+}
+
+/**
+ * Resets the data without freeing anything.
+ *
+ * @param config  Reference to a config object.
+ */
+void cache_config_reset(CACHE_CONFIG& config)
+{
+    memset(&config, 0, sizeof(config));
 }
