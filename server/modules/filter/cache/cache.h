@@ -53,7 +53,7 @@ public:
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool mustRefresh(const char* pKey, const SessionCache* pSessionCache);
+    virtual bool mustRefresh(const char* pKey, const SessionCache* pSessionCache) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
@@ -61,7 +61,7 @@ public:
      * @param pKey           The hashed key for a query.
      * @param pSessionCache  The session cache informing.
      */
-    virtual void refreshed(const char* pKey,  const SessionCache* pSessionCache);
+    virtual void refreshed(const char* pKey,  const SessionCache* pSessionCache) = 0;
 
     const CACHE_CONFIG& config() const { return m_config; }
 
@@ -103,5 +103,4 @@ protected:
     StorageFactory* m_pFactory;    // The storage factory.
     Storage*        m_pStorage;    // The storage instance to use.
     HASHTABLE*      m_pPending;    // Pending items; being fetched from the backend.
-    SPINLOCK        m_lockPending; // Lock used for protecting 'pending'.
 };

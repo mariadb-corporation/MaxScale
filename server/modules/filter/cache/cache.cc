@@ -143,36 +143,6 @@ bool Cache::shouldUse(const SESSION* pSession)
     return cache_rules_should_use(m_pRules, pSession);
 }
 
-bool Cache::mustRefresh(const char* pKey, const SessionCache* pSessionCache)
-{
-    long key = hash_of_key(pKey);
-
-    spinlock_acquire(&m_lockPending);
-    // TODO: Remove the internal locking of hashtable. The internal
-    // TODO: locking is no good if you need transactional behaviour.
-    // TODO: Now we lock twice.
-    void *pValue = hashtable_fetch(m_pPending, (void*)pKey);
-    if (!pValue)
-    {
-        // It's not being fetched, so we make a note that we are.
-        hashtable_add(m_pPending, (void*)pKey, (void*)pSessionCache);
-    }
-    spinlock_release(&m_lockPending);
-
-    return pValue == NULL;
-}
-
-void Cache::refreshed(const char* pKey,  const SessionCache* pSessionCache)
-{
-    long key = hash_of_key(pKey);
-
-    spinlock_acquire(&m_lockPending);
-    ss_dassert(hashtable_fetch(m_pPending, (void*)pKey) == pSessionCache);
-    ss_debug(int n =) hashtable_delete(m_pPending, (void*)pKey);
-    ss_dassert(n == 1);
-    spinlock_release(&m_lockPending);
-}
-
 cache_result_t Cache::getKey(const char* zDefaultDb,
                              const GWBUF* pQuery,
                              char* pKey)

@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/spinlock.h>
 #include "cache.h"
 
 class CacheMT : public Cache
