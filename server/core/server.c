@@ -553,6 +553,7 @@ dprintServer(DCB *dcb, SERVER *server)
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
+        poll_send_message(POLL_MSG_CLEAN_PERSISTENT, server);
         dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);

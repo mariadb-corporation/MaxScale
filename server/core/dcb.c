@@ -1687,7 +1687,6 @@ dcb_close(DCB *dcb)
 static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
-    int  poolcount = -1;
     if (dcb->user != NULL
         && strlen(dcb->user)
         && dcb->server
@@ -1695,7 +1694,8 @@ dcb_maybe_add_persistent(DCB *dcb)
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
-        && (poolcount = dcb_persistent_clean_count(dcb, dcb->thread.id, false)) < dcb->server->persistpoolmax)
+        && dcb_persistent_clean_count(dcb, dcb->thread.id, false) < dcb->server->persistpoolmax
+        && dcb->server->stats.n_persistent < dcb->server->persistpoolmax)
     {
         DCB_CALLBACK *loopcallback;
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
@@ -1742,7 +1742,7 @@ dcb_maybe_add_persistent(DCB *dcb)
                   dcb->dcb_errhandle_called ? "true" : "false",
                   (dcb->flags & DCBF_HUNG) ? "true" : "false",
                   dcb->server ? dcb->server->status : 0,
-                  poolcount);
+                  dcb->server->stats.n_persistent);
     }
     return false;
 }
@@ -2573,6 +2573,7 @@ dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
  * Check persistent pool for expiry or excess size and count
  *
  * @param dcb           The DCB being closed.
+ * @param id            Thread ID
  * @param cleanall      Boolean, if true the whole pool is cleared for the
  *                      server related to the given DCB
  * @return              A count of the DCBs remaining in the pool

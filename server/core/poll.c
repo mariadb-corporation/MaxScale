@@ -33,6 +33,9 @@
 #include <maxscale/statistics.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/utils.h>
+#include <maxscale/server.h>
+#include <maxscale/thread.h>
+#include <maxscale/platform.h>
 
 #define         PROFILE_POLL    0
 
@@ -91,12 +94,19 @@ typedef struct fake_event
     struct fake_event *next;  /*< The next event */
 } fake_event_t;
 
+thread_local int thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
 static fake_event_t **fake_events; /*< Thread-specific fake event queue */
 static SPINLOCK      *fake_event_lock;
 static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 static GWBITMASK poll_mask;
+
+/** Poll cross-thread messaging variables */
+static int     *poll_msg;
+static void    *poll_msg_data = NULL;
+static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
+
 #if MUTEX_EPOLL
 static simple_mutex_t epoll_wait_mutex; /*< serializes calls to epoll_wait */
 #endif
@@ -105,6 +115,7 @@ static int n_waiting = 0;    /*< No. of threads in epoll_wait */
 static int process_pollq(int thread_id, struct epoll_event *event);
 static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev);
 static bool poll_dcb_session_check(DCB *dcb, const char *);
+static void poll_check_message(void);
 
 DCB *eventq = NULL;
 SPINLOCK pollqlock = SPINLOCK_INIT;
@@ -242,6 +253,11 @@ poll_init()
     }
 
     if ((fake_event_lock = MXS_CALLOC(n_threads, sizeof(SPINLOCK))) == NULL)
+    {
+        exit(-1);
+    }
+
+    if ((poll_msg = MXS_CALLOC(n_threads, sizeof(int))) == NULL)
     {
         exit(-1);
     }
@@ -661,7 +677,7 @@ poll_waitevents(void *arg)
 {
     struct epoll_event events[MAX_EVENTS];
     int i, nfds, timeout_bias = 1;
-    intptr_t thread_id = (intptr_t)arg;
+    thread_id = (intptr_t)arg;
     int poll_spins = 0;
 
     /** Add this thread to the bitmask of running polling threads */
@@ -815,6 +831,8 @@ poll_waitevents(void *arg)
 
         /** Process closed DCBs */
         dcb_process_zombies(thread_id);
+
+        poll_check_message();
 
         if (thread_data)
         {
@@ -1728,4 +1746,49 @@ eventTimesGetList()
     resultset_add_column(set, "No. Events Executed", 12, COL_TYPE_VARCHAR);
 
     return set;
+}
+
+void poll_send_message(enum poll_message msg, void *data)
+{
+    spinlock_acquire(&poll_msg_lock);
+    int nthr = config_threadcount();
+    poll_msg_data = data;
+
+    for (int i = 0; i < nthr; i++)
+    {
+        if (i != thread_id)
+        {
+            /** Synchronize writes to poll_msg */
+            atomic_synchronize();
+        }
+        poll_msg[i] |= msg;
+    }
+
+    /** Handle this thread's message */
+    poll_check_message();
+
+    for (int i = 0; i < nthr; i++)
+    {
+        if (i != thread_id)
+        {
+            while (poll_msg[i] & msg)
+            {
+                thread_millisleep(1);
+            }
+        }
+    }
+
+    poll_msg_data = NULL;
+    spinlock_release(&poll_msg_lock);
+}
+
+static void poll_check_message()
+{
+    if (poll_msg[thread_id] & POLL_MSG_CLEAN_PERSISTENT)
+    {
+        SERVER *server = (SERVER*)poll_msg_data;
+        dcb_persistent_clean_count(server->persistent[thread_id], thread_id, false);
+        atomic_synchronize();
+        poll_msg[thread_id] &= ~POLL_MSG_CLEAN_PERSISTENT;
+    }
 }
