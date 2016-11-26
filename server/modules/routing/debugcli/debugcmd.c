@@ -1520,6 +1520,8 @@ convert_arg(int mode, char *arg, int arg_type)
     return 0;
 }
 
+static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
+
 /**
  * We have a complete line from the user, lookup the commands and execute them
  *
@@ -1611,6 +1613,8 @@ execute_cmd(CLI_SESSION *cli)
 
     argc = i - 2;   /* The number of extra arguments to commands */
 
+    spinlock_acquire(&debugcmd_lock);
+
     if (!strcasecmp(args[0], "help"))
     {
         if (args[1] == NULL || *args[1] == 0)
@@ -1662,11 +1666,7 @@ execute_cmd(CLI_SESSION *cli)
         }
         found = 1;
     }
-    else if (!strcasecmp(args[0], "quit"))
-    {
-        return 0;
-    }
-    else if (argc >= 0)
+    else if (strcasecmp(args[0], "quit") && argc >= 0)
     {
         for (i = 0; cmds[i].cmd; i++)
         {
@@ -1710,7 +1710,7 @@ execute_cmd(CLI_SESSION *cli)
                                 if (arg_list[k] == 0)
                                 {
                                     dcb_printf(dcb, "Invalid argument: %s\n", args[k + 2]);
-                                    return 0;
+                                    break;
                                 }
                             }
 
@@ -1806,6 +1806,8 @@ execute_cmd(CLI_SESSION *cli)
         dcb_printf(dcb,
                    "Command '%s' not known, type help for a list of available commands\n", args[0]);
     }
+
+    spinlock_release(&debugcmd_lock);
 
     memset(cli->cmdbuf, 0, CMDBUFLEN);
 
