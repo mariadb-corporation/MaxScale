@@ -445,7 +445,7 @@ poll_add_dcb(DCB *dcb)
 int
 poll_remove_dcb(DCB *dcb)
 {
-    int dcbfd, rc = -1;
+    int dcbfd, rc = 0;
     struct  epoll_event ev;
     CHK_DCB(dcb);
 
@@ -493,12 +493,13 @@ poll_remove_dcb(DCB *dcb)
             for (int i = 0; i < nthr; i++)
             {
                 int tmp_rc = epoll_ctl(epoll_fd[i], EPOLL_CTL_DEL, dcb->fd, &ev);
-                if (tmp_rc)
+                if (tmp_rc && rc == 0)
                 {
                     /** Even if one of the instances failed to remove it, try
                      * to remove it from all the others */
                     rc = tmp_rc;
                     error_num = errno;
+                    ss_dassert(error_num);
                 }
             }
         }

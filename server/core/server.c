@@ -87,15 +87,18 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         return NULL;
     }
 
+    int nthr = config_threadcount();
     SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
     char *my_name = MXS_STRDUP(name);
     char *my_protocol = MXS_STRDUP(protocol);
     char *my_authenticator = MXS_STRDUP(authenticator);
+    DCB **persistent = MXS_CALLOC(nthr, sizeof(*persistent));
 
-    if (!server || !my_name || !my_protocol || !my_authenticator)
+    if (!server || !my_name || !my_protocol || !my_authenticator || !persistent)
     {
         MXS_FREE(server);
         MXS_FREE(my_name);
+        MXS_FREE(persistent);
         MXS_FREE(my_protocol);
         MXS_FREE(my_authenticator);
         return NULL;
@@ -125,7 +128,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->parameters = NULL;
     server->server_string = NULL;
     spinlock_init(&server->lock);
-    server->persistent = NULL;
+    server->persistent = persistent;
     server->persistmax = 0;
     server->persistmaxtime = 0;
     server->persistpoolmax = 0;
@@ -133,7 +136,6 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->monpw[0] = '\0';
     server->is_active = true;
     server->charset = SERVER_DEFAULT_CHARSET;
-    spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);
     server->next = allServers;
@@ -183,7 +185,12 @@ server_free(SERVER *tofreeserver)
 
     if (tofreeserver->persistent)
     {
-        dcb_persistent_clean_count(tofreeserver->persistent, true);
+        int nthr = config_threadcount();
+
+        for (int i = 0; i < nthr; i++)
+        {
+            dcb_persistent_clean_count(tofreeserver->persistent[i], i, true);
+        }
     }
     MXS_FREE(tofreeserver);
     return 1;
@@ -197,17 +204,16 @@ server_free(SERVER *tofreeserver)
  * @param       protocol    The name of the protocol needed for the connection
  */
 DCB *
-server_get_persistent(SERVER *server, char *user, const char *protocol)
+server_get_persistent(SERVER *server, char *user, const char *protocol, int id)
 {
     DCB *dcb, *previous = NULL;
 
-    if (server->persistent
-        && dcb_persistent_clean_count(server->persistent, false)
-        && server->persistent
+    if (server->persistent[id]
+        && dcb_persistent_clean_count(server->persistent[id], id, false)
+        && server->persistent[id] // Check after cleaning
         && (server->status & SERVER_RUNNING))
     {
-        spinlock_acquire(&server->persistlock);
-        dcb = server->persistent;
+        dcb = server->persistent[id];
         while (dcb)
         {
             if (dcb->user
@@ -219,7 +225,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             {
                 if (NULL == previous)
                 {
-                    server->persistent = dcb->nextpersistent;
+                    server->persistent[id] = dcb->nextpersistent;
                 }
                 else
                 {
@@ -227,7 +233,6 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
                 }
                 MXS_FREE(dcb->user);
                 dcb->user = NULL;
-                spinlock_release(&server->persistlock);
                 atomic_add(&server->stats.n_persistent, -1);
                 atomic_add(&server->stats.n_current, 1);
                 return dcb;
@@ -249,7 +254,6 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             previous = dcb;
             dcb = dcb->nextpersistent;
         }
-        spinlock_release(&server->persistlock);
     }
     return NULL;
 }
@@ -549,8 +553,7 @@ dprintServer(DCB *dcb, SERVER *server)
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
-        dcb_printf(dcb, "\tPersistent measured pool size:       %d\n",
-                   dcb_persistent_clean_count(server->persistent, false));
+        dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
         dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->persistmaxtime);
@@ -595,19 +598,21 @@ void
 dprintPersistentDCBs(DCB *pdcb, SERVER *server)
 {
     DCB *dcb;
+    int nthr = config_threadcount();
 
-    spinlock_acquire(&server->persistlock);
-#if SPINLOCK_PROFILE
-    dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
-    spinlock_stats(&server->persistlock, spin_reporter, pdcb);
-#endif
-    dcb = server->persistent;
-    while (dcb)
+    for (int i = 0; i < nthr; i++)
     {
-        dprintOneDCB(pdcb, dcb);
-        dcb = dcb->nextpersistent;
+#if SPINLOCK_PROFILE
+        dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+        spinlock_stats(&server->persistlock, spin_reporter, pdcb);
+#endif
+        dcb = server->persistent[i];
+        while (dcb)
+        {
+            dprintOneDCB(pdcb, dcb);
+            dcb = dcb->nextpersistent;
+        }
     }
-    spinlock_release(&server->persistlock);
 }
 
 /**

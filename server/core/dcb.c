@@ -646,7 +646,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     {
         MXS_DEBUG("%lu [dcb_connect] Looking for persistent connection DCB "
                   "user %s protocol %s\n", pthread_self(), user, protocol);
-        dcb = server_get_persistent(server, user, protocol);
+        dcb = server_get_persistent(server, user, protocol, session->client_dcb->thread.id);
         if (dcb)
         {
             /**
@@ -1695,7 +1695,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
-        && (poolcount = dcb_persistent_clean_count(dcb, false)) < dcb->server->persistpoolmax)
+        && (poolcount = dcb_persistent_clean_count(dcb, dcb->thread.id, false)) < dcb->server->persistpoolmax)
     {
         DCB_CALLBACK *loopcallback;
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
@@ -1724,10 +1724,8 @@ dcb_maybe_add_persistent(DCB *dcb)
             MXS_FREE(loopcallback);
         }
         spinlock_release(&dcb->cb_lock);
-        spinlock_acquire(&dcb->server->persistlock);
-        dcb->nextpersistent = dcb->server->persistent;
-        dcb->server->persistent = dcb;
-        spinlock_release(&dcb->server->persistlock);
+        dcb->nextpersistent = dcb->server->persistent[dcb->thread.id];
+        dcb->server->persistent[dcb->thread.id] = dcb;
         atomic_add(&dcb->server->stats.n_persistent, 1);
         atomic_add(&dcb->server->stats.n_current, -1);
         return true;
@@ -2580,7 +2578,7 @@ dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
  * @return              A count of the DCBs remaining in the pool
  */
 int
-dcb_persistent_clean_count(DCB *dcb, bool cleanall)
+dcb_persistent_clean_count(DCB *dcb, int id, bool cleanall)
 {
     int count = 0;
     if (dcb && dcb->server)
@@ -2591,8 +2589,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         DCB *disposals = NULL;
 
         CHK_SERVER(server);
-        spinlock_acquire(&server->persistlock);
-        persistentdcb = server->persistent;
+        persistentdcb = server->persistent[id];
         while (persistentdcb)
         {
             CHK_DCB(persistentdcb);
@@ -2611,7 +2608,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
                 }
                 else
                 {
-                    server->persistent = nextdcb;
+                    server->persistent[id] = nextdcb;
                 }
                 /* Add removed DCBs to disposal list for processing outside spinlock */
                 persistentdcb->nextpersistent = disposals;
@@ -2626,7 +2623,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             persistentdcb = nextdcb;
         }
         server->persistmax = MXS_MAX(server->persistmax, count);
-        spinlock_release(&server->persistlock);
+
         /** Call possible callback for this DCB in case of close */
         while (disposals)
         {

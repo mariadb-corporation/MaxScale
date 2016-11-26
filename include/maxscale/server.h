@@ -110,8 +110,7 @@ typedef struct server
     int            depth;          /**< Replication level in the tree */
     long           slaves[MAX_NUM_SLAVES]; /**< Slaves of this node */
     bool           master_err_is_logged; /*< If node failed, this indicates whether it is logged */
-    DCB            *persistent;    /**< List of unused persistent connections to the server */
-    SPINLOCK       persistlock;    /**< Lock for adjusting the persistent connections list */
+    DCB            **persistent;    /**< List of unused persistent connections to the server */
     long           persistpoolmax; /**< Maximum size of persistent connections pool */
     long           persistmaxtime; /**< Maximum number of seconds connection can live */
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
@@ -272,7 +271,7 @@ extern void serverAddMonUser(SERVER *, char *, char *);
 extern void serverAddParameter(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
 extern void server_update_credentials(SERVER *, char *, char *);
-extern DCB  *server_get_persistent(SERVER *, char *, const char *);
+extern DCB  *server_get_persistent(SERVER *, char *, const char *, int);
 extern void server_update_address(SERVER *, char *);
 extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
