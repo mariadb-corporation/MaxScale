@@ -19,6 +19,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
 #include "cachemt.h"
+#include "cachept.h"
 #include "sessioncache.h"
 
 static char VERSION_STRING[] = "V1.0.0";
@@ -33,7 +34,8 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     NULL,
     0,
     CACHE_DEFAULT_TTL,
-    CACHE_DEFAULT_DEBUG
+    CACHE_DEFAULT_DEBUG,
+    CACHE_DEFAULT_THREAD_MODEL,
 };
 
 typedef struct cache_filter
@@ -143,14 +145,28 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
     {
         if (process_params(pzOptions, ppParams, pFilter->config))
         {
-            CPP_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
-
-            if (!pFilter->pCache)
+            switch (pFilter->config.thread_model)
             {
-                cache_config_finish(pFilter->config);
-                delete pFilter;
-                pFilter = NULL;
+            case CACHE_THREAD_MODEL_MT:
+                MXS_NOTICE("Creating shared cache.");
+                CPP_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
+                break;
+
+            case CACHE_THREAD_MODEL_ST:
+                MXS_NOTICE("Creating thread specific cache.");
+                CPP_GUARD(pFilter->pCache = CachePT::Create(zName, &pFilter->config));
+                break;
+
+            default:
+                ss_dassert(!true);
             }
+        }
+
+        if (!pFilter->pCache)
+        {
+            cache_config_finish(pFilter->config);
+            delete pFilter;
+            pFilter = NULL;
         }
     }
 
@@ -447,6 +463,23 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
                 MXS_ERROR("The value of the configuration entry '%s' must "
                           "be between %d and %d, inclusive.",
                           pParam->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "cached_data") == 0)
+        {
+            if (strcmp(pParam->value, "shared") == 0)
+            {
+                config.thread_model = CACHE_THREAD_MODEL_MT;
+            }
+            else if (strcmp(pParam->value, "thread_specific") == 0)
+            {
+                config.thread_model = CACHE_THREAD_MODEL_ST;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be either 'shared' or 'thread_specific'.", pParam->name);
                 error = true;
             }
         }

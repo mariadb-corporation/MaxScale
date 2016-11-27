@@ -20,6 +20,7 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.h>
 #include "rules.h"
+#include "cache_storage_api.h"
 
 class Storage;
 class StorageFactory;
@@ -44,18 +45,21 @@ class StorageFactory;
 #define CACHE_DEFAULT_TTL                10
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
+// Thread model
+#define CACHE_DEFAULT_THREAD_MODEL       CACHE_THREAD_MODEL_MT
 
 typedef struct cache_config
 {
-    uint32_t    max_resultset_rows;
-    uint32_t    max_resultset_size;
-    char*       rules;
-    char*       storage;
-    char*       storage_options;
-    char**      storage_argv;
-    int         storage_argc;
-    uint32_t    ttl;
-    uint32_t    debug;
+    uint32_t max_resultset_rows;       /**< The maximum number of rows of a resultset for it to be cached. */
+    uint32_t max_resultset_size;       /**< The maximum size of a resultset for it to be cached. */
+    char* rules;                       /**< Name of rules file. */
+    char* storage;                     /**< Name of storage module. */
+    char* storage_options;             /**< Raw options for storage module. */
+    char** storage_argv;               /**< Cooked options for storage module. */
+    int storage_argc;                  /**< Number of cooked options. */
+    uint32_t ttl;                      /**< Time to live. */
+    uint32_t debug;                    /**< Debug settings. */
+    cache_thread_model_t thread_model; /**< Thread model. */
 } CACHE_CONFIG;
 
 void cache_config_finish(CACHE_CONFIG& config);
