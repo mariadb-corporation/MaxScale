@@ -15,13 +15,13 @@
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheST::CacheST(const char* zName,
+CacheST::CacheST(const std::string& name,
                  const CACHE_CONFIG* pConfig,
                  CACHE_RULES* pRules,
                  StorageFactory* pFactory,
                  HASHTABLE* pPending,
                  Storage* pStorage)
-    : CacheSimple(zName, pConfig, pRules, pFactory, pPending, pStorage)
+    : CacheSimple(name, pConfig, pRules, pFactory, pPending, pStorage)
 {
 }
 
@@ -29,7 +29,7 @@ CacheST::~CacheST()
 {
 }
 
-CacheST* CacheST::Create(const char* zName, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
 
@@ -41,14 +41,14 @@ CacheST* CacheST::Create(const char* zName, const CACHE_CONFIG* pConfig)
 
     if (CacheSimple::Create(*pConfig, &pRules, &pPending, &pFactory))
     {
-        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory, pPending);
     }
 
     return pCache;
 }
 
 // static
-CacheST* CacheST::Create(const char* zName, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
     ss_dassert(pFactory);
@@ -60,7 +60,7 @@ CacheST* CacheST::Create(const char* zName, StorageFactory* pFactory, const CACH
 
     if (CacheSimple::Create(*pConfig, &pRules, &pPending))
     {
-        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory, pPending);
     }
 
     return pCache;
@@ -81,7 +81,7 @@ void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 }
 
 // statis
-CacheST* CacheST::Create(const char*         zName,
+CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
                          StorageFactory*     pFactory,
@@ -93,11 +93,11 @@ CacheST* CacheST::Create(const char*         zName,
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_ST, zName, ttl, argc, argv);
+    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_ST, name.c_str(), ttl, argc, argv);
 
     if (pStorage)
     {
-        CPP_GUARD(pCache = new CacheST(zName,
+        CPP_GUARD(pCache = new CacheST(name,
                                        pConfig,
                                        pRules,
                                        pFactory,

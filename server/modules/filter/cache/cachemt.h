@@ -21,22 +21,22 @@ class CacheMT : public CacheSimple
 public:
     ~CacheMT();
 
-    static CacheMT* Create(const char* zName, const CACHE_CONFIG* pConfig);
-    static CacheMT* Create(const char* zName, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
+    static CacheMT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
+    static CacheMT* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
     bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
 
 private:
-    CacheMT(const char*         zName,
+    CacheMT(const std::string&  name,
             const CACHE_CONFIG* pConfig,
             CACHE_RULES*        pRules,
             StorageFactory*     pFactory,
             HASHTABLE*          pPending,
             Storage*            pStorage);
 
-    static CacheMT* Create(const char*         zName,
+    static CacheMT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
                            CACHE_RULES*        pRules,
                            StorageFactory*     pFactory,

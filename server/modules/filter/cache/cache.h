@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
 #include "cachefilter.h"
@@ -73,10 +74,10 @@ public:
     virtual cache_result_t delValue(const CACHE_KEY& key) = 0;
 
 protected:
-    Cache(const char* zName,
+    Cache(const std::string&  name,
           const CACHE_CONFIG* pConfig,
-          CACHE_RULES* pRules,
-          StorageFactory* pFactory);
+          CACHE_RULES*        pRules,
+          StorageFactory*     pFactory);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules);
@@ -90,7 +91,7 @@ private:
     Cache& operator = (const Cache&);
 
 protected:
-    const char*         m_zName;    // The name of the instance; the section name in the config.
+    const std::string   m_name;     // The name of the instance; the section name in the config.
     const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
     CACHE_RULES*        m_pRules;   // The rules of the cache instance.
     StorageFactory*     m_pFactory; // The storage factory.

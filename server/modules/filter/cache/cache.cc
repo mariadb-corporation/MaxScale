@@ -19,11 +19,11 @@
 #include "storagefactory.h"
 #include "storage.h"
 
-Cache::Cache(const char* zName,
+Cache::Cache(const std::string& name,
              const CACHE_CONFIG* pConfig,
              CACHE_RULES* pRules,
              StorageFactory* pFactory)
-    : m_zName(zName)
+    : m_name(name)
     , m_config(*pConfig)
     , m_pRules(pRules)
     , m_pFactory(pFactory)

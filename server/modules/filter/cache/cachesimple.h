@@ -32,7 +32,7 @@ public:
     cache_result_t delValue(const CACHE_KEY& key);
 
 protected:
-    CacheSimple(const char*         zName,
+    CacheSimple(const std::string&  name,
                 const CACHE_CONFIG* pConfig,
                 CACHE_RULES*        pRules,
                 StorageFactory*     pFactory,

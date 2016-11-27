@@ -60,13 +60,13 @@ int hashcmp(const void* address1, const void* address2)
 }
 
 
-CacheSimple::CacheSimple(const char*         zName,
+CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
                          StorageFactory*     pFactory,
                          HASHTABLE*          pPending,
                          Storage*            pStorage)
-    : Cache(zName, pConfig, pRules, pFactory)
+    : Cache(name, pConfig, pRules, pFactory)
     , m_pPending(pPending)
     , m_pStorage(pStorage)
 {

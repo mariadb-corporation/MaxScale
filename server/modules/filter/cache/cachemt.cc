@@ -15,13 +15,13 @@
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheMT::CacheMT(const char* zName,
+CacheMT::CacheMT(const std::string& name,
                  const CACHE_CONFIG* pConfig,
                  CACHE_RULES* pRules,
                  StorageFactory* pFactory,
                  HASHTABLE* pPending,
                  Storage* pStorage)
-    : CacheSimple(zName, pConfig, pRules, pFactory, pPending, pStorage)
+    : CacheSimple(name, pConfig, pRules, pFactory, pPending, pStorage)
 {
     spinlock_init(&m_lockPending);
 }
@@ -30,7 +30,7 @@ CacheMT::~CacheMT()
 {
 }
 
-CacheMT* CacheMT::Create(const char* zName, const CACHE_CONFIG* pConfig)
+CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
 
@@ -42,14 +42,14 @@ CacheMT* CacheMT::Create(const char* zName, const CACHE_CONFIG* pConfig)
 
     if (CacheSimple::Create(*pConfig, &pRules, &pPending, &pFactory))
     {
-        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory, pPending);
     }
 
     return pCache;
 }
 
 // static
-CacheMT* CacheMT::Create(const char* zName, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
+CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
     ss_dassert(pFactory);
@@ -61,7 +61,7 @@ CacheMT* CacheMT::Create(const char* zName, StorageFactory* pFactory, const CACH
 
     if (CacheSimple::Create(*pConfig, &pRules, &pPending))
     {
-        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory, pPending);
     }
 
     return pCache;
@@ -88,7 +88,7 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 }
 
 // static
-CacheMT* CacheMT::Create(const char*         zName,
+CacheMT* CacheMT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
                          StorageFactory*     pFactory,
@@ -100,11 +100,11 @@ CacheMT* CacheMT::Create(const char*         zName,
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, zName, ttl, argc, argv);
+    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(), ttl, argc, argv);
 
     if (pStorage)
     {
-        CPP_GUARD(pCache = new CacheMT(zName,
+        CPP_GUARD(pCache = new CacheMT(name,
                                        pConfig,
                                        pRules,
                                        pFactory,
