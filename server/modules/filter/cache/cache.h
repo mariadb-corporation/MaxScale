@@ -74,9 +74,12 @@ public:
 
 protected:
     Cache(const char* zName,
-          CACHE_CONFIG& config,
+          const CACHE_CONFIG* pConfig,
           CACHE_RULES* pRules,
           StorageFactory* pFactory);
+
+    static bool Create(const CACHE_CONFIG& config,
+                       CACHE_RULES**       ppRules);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules,
@@ -87,8 +90,8 @@ private:
     Cache& operator = (const Cache&);
 
 protected:
-    const char*     m_zName;    // The name of the instance; the section name in the config.
-    CACHE_CONFIG    m_config;   // The configuration of the cache instance.
-    CACHE_RULES*    m_pRules;   // The rules of the cache instance.
-    StorageFactory* m_pFactory; // The storage factory.
+    const char*         m_zName;    // The name of the instance; the section name in the config.
+    const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
+    CACHE_RULES*        m_pRules;   // The rules of the cache instance.
+    StorageFactory*     m_pFactory; // The storage factory.
 };

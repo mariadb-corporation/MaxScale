@@ -20,15 +20,14 @@
 #include "storage.h"
 
 Cache::Cache(const char* zName,
-             CACHE_CONFIG& config,
+             const CACHE_CONFIG* pConfig,
              CACHE_RULES* pRules,
              StorageFactory* pFactory)
     : m_zName(zName)
-    , m_config(config)
+    , m_config(*pConfig)
     , m_pRules(pRules)
     , m_pFactory(pFactory)
 {
-    cache_config_reset(config);
 }
 
 Cache::~Cache()
@@ -39,11 +38,9 @@ Cache::~Cache()
 
 //static
 bool Cache::Create(const CACHE_CONFIG& config,
-                   CACHE_RULES**       ppRules,
-                   StorageFactory**    ppFactory)
+                   CACHE_RULES**       ppRules)
 {
     CACHE_RULES* pRules = NULL;
-    StorageFactory* pFactory = NULL;
 
     if (config.rules)
     {
@@ -56,28 +53,41 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
     if (pRules)
     {
-        pFactory = StorageFactory::Open(config.storage);
-
-        if (!pFactory)
-        {
-            MXS_ERROR("Could not open storage factory '%s'.", config.storage);
-        }
-    }
-
-    bool rv = (pRules && pFactory);
-
-    if (rv)
-    {
         *ppRules = pRules;
-        *ppFactory = pFactory;
     }
     else
     {
-        cache_rules_free(pRules);
-        delete pFactory;
+        MXS_ERROR("Could not create rules.");
     }
 
-    return rv;
+    return pRules != NULL;
+}
+
+//static
+bool Cache::Create(const CACHE_CONFIG& config,
+                   CACHE_RULES**       ppRules,
+                   StorageFactory**    ppFactory)
+{
+    CACHE_RULES* pRules = NULL;
+    StorageFactory* pFactory = NULL;
+
+    if (Create(config, &pRules))
+    {
+        pFactory = StorageFactory::Open(config.storage);
+
+        if (pFactory)
+        {
+            *ppFactory = pFactory;
+            *ppRules = pRules;
+        }
+        else
+        {
+            MXS_ERROR("Could not open storage factory '%s'.", config.storage);
+            cache_rules_free(pRules);
+        }
+    }
+
+    return pFactory != NULL;
 }
 
 bool Cache::shouldStore(const char* zDefaultDb, const GWBUF* pQuery)

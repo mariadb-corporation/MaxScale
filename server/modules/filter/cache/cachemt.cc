@@ -16,12 +16,12 @@
 #include "storagefactory.h"
 
 CacheMT::CacheMT(const char* zName,
-                 CACHE_CONFIG& config,
+                 const CACHE_CONFIG* pConfig,
                  CACHE_RULES* pRules,
                  StorageFactory* pFactory,
-                 Storage* pStorage,
-                 HASHTABLE* pPending)
-    : CacheSimple(zName, config, pRules, pFactory, pStorage, pPending)
+                 HASHTABLE* pPending,
+                 Storage* pStorage)
+    : CacheSimple(zName, pConfig, pRules, pFactory, pPending, pStorage)
 {
     spinlock_init(&m_lockPending);
 }
@@ -30,39 +30,38 @@ CacheMT::~CacheMT()
 {
 }
 
-CacheMT* CacheMT::Create(const char* zName, CACHE_CONFIG& config)
+CacheMT* CacheMT::Create(const char* zName, const CACHE_CONFIG* pConfig)
 {
+    ss_dassert(pConfig);
+
     CacheMT* pCache = NULL;
 
     CACHE_RULES* pRules = NULL;
     HASHTABLE* pPending = NULL;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::Create(config, &pRules, &pFactory, &pPending))
+    if (CacheSimple::Create(*pConfig, &pRules, &pPending, &pFactory))
     {
-        uint32_t ttl = config.ttl;
-        int argc = config.storage_argc;
-        char** argv = config.storage_argv;
+        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
+    }
 
-        Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, zName, ttl, argc, argv);
+    return pCache;
+}
 
-        if (pStorage)
-        {
-            CPP_GUARD(pCache = new CacheMT(zName,
-                                           config,
-                                           pRules,
-                                           pFactory,
-                                           pStorage,
-                                           pPending));
+// static
+CacheMT* CacheMT::Create(const char* zName, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
+{
+    ss_dassert(pConfig);
+    ss_dassert(pFactory);
 
-            if (!pCache)
-            {
-                cache_rules_free(pRules);
-                hashtable_free(pPending);
-                delete pStorage;
-                delete pFactory;
-            }
-        }
+    CacheMT* pCache = NULL;
+
+    CACHE_RULES* pRules = NULL;
+    HASHTABLE* pPending = NULL;
+
+    if (CacheSimple::Create(*pConfig, &pRules, &pPending))
+    {
+        pCache = Create(zName, pConfig, pRules, pFactory, pPending);
     }
 
     return pCache;
@@ -86,4 +85,40 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
     spinlock_acquire(&m_lockPending);
     CacheSimple::refreshed(k, pSessionCache);
     spinlock_release(&m_lockPending);
+}
+
+// static
+CacheMT* CacheMT::Create(const char*         zName,
+                         const CACHE_CONFIG* pConfig,
+                         CACHE_RULES*        pRules,
+                         StorageFactory*     pFactory,
+                         HASHTABLE*          pPending)
+{
+    CacheMT* pCache = NULL;
+
+    uint32_t ttl = pConfig->ttl;
+    int argc = pConfig->storage_argc;
+    char** argv = pConfig->storage_argv;
+
+    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, zName, ttl, argc, argv);
+
+    if (pStorage)
+    {
+        CPP_GUARD(pCache = new CacheMT(zName,
+                                       pConfig,
+                                       pRules,
+                                       pFactory,
+                                       pPending,
+                                       pStorage));
+
+        if (!pCache)
+        {
+            delete pStorage;
+            cache_rules_free(pRules);
+            hashtable_free(pPending);
+            delete pFactory;
+        }
+    }
+
+    return pCache;
 }

@@ -60,15 +60,15 @@ int hashcmp(const void* address1, const void* address2)
 }
 
 
-CacheSimple::CacheSimple(const char* zName,
-                         CACHE_CONFIG& config,
-                         CACHE_RULES* pRules,
-                         StorageFactory* pFactory,
-                         Storage* pStorage,
-                         HASHTABLE* pPending)
-    : Cache(zName, config, pRules, pFactory)
-    , m_pStorage(pStorage)
+CacheSimple::CacheSimple(const char*         zName,
+                         const CACHE_CONFIG* pConfig,
+                         CACHE_RULES*        pRules,
+                         StorageFactory*     pFactory,
+                         HASHTABLE*          pPending,
+                         Storage*            pStorage)
+    : Cache(zName, pConfig, pRules, pFactory)
     , m_pPending(pPending)
+    , m_pStorage(pStorage)
 {
 }
 
@@ -79,11 +79,34 @@ CacheSimple::~CacheSimple()
 }
 
 
-// static protected
+// static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
                          CACHE_RULES**       ppRules,
-                         StorageFactory**    ppFactory,
                          HASHTABLE**         ppPending)
+{
+    int rv = false;
+
+    CACHE_RULES* pRules = NULL;
+    HASHTABLE* pPending = NULL;
+
+    if (Cache::Create(config, &pRules) && Create(&pPending))
+    {
+        *ppRules = pRules;
+        *ppPending = pPending;
+    }
+    else
+    {
+        cache_rules_free(pRules);
+    }
+
+    return pPending != NULL;;
+}
+
+// static
+bool CacheSimple::Create(const CACHE_CONFIG& config,
+                         CACHE_RULES**       ppRules,
+                         HASHTABLE**         ppPending,
+                         StorageFactory**    ppFactory)
 {
     int rv = false;
 
@@ -91,21 +114,16 @@ bool CacheSimple::Create(const CACHE_CONFIG& config,
     StorageFactory* pFactory = NULL;
     HASHTABLE* pPending = NULL;
 
-    if (Cache::Create(config, &pRules, &pFactory))
+    if (Cache::Create(config, &pRules, &pFactory) && Create(&pPending))
     {
-        pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
-
-        if (pPending)
-        {
-            *ppRules = pRules;
-            *ppPending = pPending;
-            *ppFactory = pFactory;
-        }
-        else
-        {
-            cache_rules_free(pRules);
-            delete pFactory;
-        }
+        *ppRules = pRules;
+        *ppPending = pPending;
+        *ppFactory = pFactory;
+    }
+    else
+    {
+        cache_rules_free(pRules);
+        delete pFactory;
     }
 
     return pPending != NULL;
@@ -161,4 +179,17 @@ void CacheSimple::refreshed(long key, const SessionCache* pSessionCache)
     ss_dassert(hashtable_fetch(m_pPending, (void*)key) == pSessionCache);
     ss_debug(int n =) hashtable_delete(m_pPending, (void*)key);
     ss_dassert(n == 1);
+}
+
+// static
+bool CacheSimple::Create(HASHTABLE** ppPending)
+{
+    HASHTABLE* pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
+
+    if (pPending)
+    {
+        *ppPending = pPending;
+    }
+
+    return pPending != NULL;
 }

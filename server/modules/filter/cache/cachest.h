@@ -20,20 +20,26 @@ class CacheST : public CacheSimple
 public:
     ~CacheST();
 
-    static CacheST* Create(const char* zName, CACHE_CONFIG& config);
+    static CacheST* Create(const char* zName, const CACHE_CONFIG* pConfig);
+    static CacheST* Create(const char* zName, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
     bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
 
 private:
-    CacheST(const char* zName,
-            CACHE_CONFIG& config,
-            CACHE_RULES* pRules,
-            StorageFactory* pFactory,
-            Storage* pStorage,
-            HASHTABLE* pPending);
+    CacheST(const char*         zName,
+            const CACHE_CONFIG* pConfig,
+            CACHE_RULES*        pRules,
+            StorageFactory*     pFactory,
+            HASHTABLE*          pPending,
+            Storage*            pStorage);
 
+    static CacheST* Create(const char*         zName,
+                           const CACHE_CONFIG* pConfig,
+                           CACHE_RULES*        pRules,
+                           StorageFactory*     pFactory,
+                           HASHTABLE*          pPending);
 private:
     CacheST(const CacheST&);
     CacheST& operator = (const CacheST&);

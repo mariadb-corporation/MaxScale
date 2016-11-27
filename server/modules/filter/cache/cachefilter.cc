@@ -14,6 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.h"
 #include <exception>
+#include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
@@ -34,6 +35,28 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     CACHE_DEFAULT_TTL,
     CACHE_DEFAULT_DEBUG
 };
+
+typedef struct cache_filter
+{
+    cache_filter()
+        : config(DEFAULT_CONFIG)
+        , pCache(NULL)
+    {
+    }
+
+    ~cache_filter()
+    {
+        delete pCache;
+        cache_config_finish(config);
+    }
+
+    CACHE_CONFIG config;
+    Cache*       pCache;
+
+private:
+    cache_filter(const cache_filter&);
+    cache_filter& operator = (const cache_filter&);
+} CACHE_FILTER;
 
 static FILTER*  createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
 static void*    newSession(FILTER* pInstance, SESSION* pSession);
@@ -114,20 +137,24 @@ extern "C" FILTER_OBJECT *GetModuleObject()
  */
 static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
 {
-    Cache* pCache = NULL;
-    CACHE_CONFIG config = DEFAULT_CONFIG;
+    CACHE_FILTER* pFilter = new (std::nothrow) CACHE_FILTER;
 
-    if (process_params(pzOptions, ppParams, config))
+    if (pFilter)
     {
-        CPP_GUARD(pCache = CacheMT::Create(zName, config));
-
-        if (!pCache)
+        if (process_params(pzOptions, ppParams, pFilter->config))
         {
-            cache_config_finish(config);
+            CPP_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
+
+            if (!pFilter->pCache)
+            {
+                cache_config_finish(pFilter->config);
+                delete pFilter;
+                pFilter = NULL;
+            }
         }
     }
 
-    return reinterpret_cast<FILTER*>(pCache);
+    return reinterpret_cast<FILTER*>(pFilter);
 }
 
 /**
@@ -140,7 +167,8 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
  */
 static void *newSession(FILTER* pInstance, SESSION* pSession)
 {
-    Cache* pCache = reinterpret_cast<Cache*>(pInstance);
+    CACHE_FILTER *pFilter = reinterpret_cast<CACHE_FILTER*>(pInstance);
+    Cache* pCache = pFilter->pCache;
 
     SessionCache* pSessionCache = NULL;
     CPP_GUARD(pSessionCache = SessionCache::Create(pCache, pSession));
@@ -447,11 +475,7 @@ void cache_config_finish(CACHE_CONFIG& config)
     MXS_FREE(config.rules);
     MXS_FREE(config.storage);
     MXS_FREE(config.storage_options);
-
-    for (int i = 0; i < config.storage_argc; ++i)
-    {
-        MXS_FREE(config.storage_argv[i]);
-    }
+    MXS_FREE(config.storage_argv); // The items need not be freed, they point into storage_options.
 
     config.max_resultset_rows = 0;
     config.max_resultset_size = 0;

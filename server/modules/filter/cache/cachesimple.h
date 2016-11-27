@@ -32,17 +32,22 @@ public:
     cache_result_t delValue(const CACHE_KEY& key);
 
 protected:
-    CacheSimple(const char* zName,
-                CACHE_CONFIG& config,
-                CACHE_RULES* pRules,
-                StorageFactory* pFactory,
-                Storage* pStorage,
-                HASHTABLE* pPending);
+    CacheSimple(const char*         zName,
+                const CACHE_CONFIG* pConfig,
+                CACHE_RULES*        pRules,
+                StorageFactory*     pFactory,
+                HASHTABLE*          pPending,
+                Storage*            pStorage);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules,
-                       StorageFactory**    ppFactory,
                        HASHTABLE**         ppPending);
+
+    static bool Create(const CACHE_CONFIG& config,
+                       CACHE_RULES**       ppRules,
+                       HASHTABLE**         ppPending,
+                       StorageFactory**    ppFactory);
+
 
     long hashOfKey(const CACHE_KEY& key);
 
@@ -54,7 +59,9 @@ private:
     CacheSimple(const Cache&);
     CacheSimple& operator = (const CacheSimple&);
 
+    static bool Create(HASHTABLE** ppPending);
+
 protected:
-    Storage*   m_pStorage;  // The storage instance to use.
     HASHTABLE* m_pPending;  // Pending items; being fetched from the backend.
+    Storage*   m_pStorage;  // The storage instance to use.
 };
