@@ -1730,7 +1730,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         atomic_add(&dcb->server->stats.n_current, -1);
         return true;
     }
-    else
+    else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && dcb->server)
     {
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Not adding DCB %p to persistent pool, "
                   "user %s, max for pool %ld, error handle called %s, hung flag %s, "
@@ -1738,10 +1738,10 @@ dcb_maybe_add_persistent(DCB *dcb)
                   pthread_self(),
                   dcb,
                   dcb->user ? dcb->user : "",
-                  (dcb->server && dcb->server->persistpoolmax) ? dcb->server->persistpoolmax : 0,
+                  dcb->server->persistpoolmax,
                   dcb->dcb_errhandle_called ? "true" : "false",
                   (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                  dcb->server ? dcb->server->status : 0,
+                  dcb->server->status,
                   dcb->server->stats.n_persistent);
     }
     return false;
