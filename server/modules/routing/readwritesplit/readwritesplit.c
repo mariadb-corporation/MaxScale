@@ -69,7 +69,15 @@ MODULE_INFO info =
  * @endverbatim
  */
 
-#define RW_CHK_DCB(bref, dcb) do{if(dcb->state == DCB_STATE_DISCONNECTED){MXS_NOTICE("DCB was closed on line %d and another attempt to close it is made on line %d." , (bref) ? (bref)->closed_at : -1, __LINE__);}}while(false)
+#define RW_CHK_DCB(bref, dcb) \
+do{ \
+    if(dcb->state == DCB_STATE_DISCONNECTED){ \
+        MXS_NOTICE("DCB was closed on line %d and another attempt to close it is  made on line %d." , \
+            (bref) ? (bref)->closed_at : -1, __LINE__); \
+        } \
+}while (false)
+
+#define RW_CLOSE_BREF(b) do{ if (bref){ bref->closed_at = __LINE__; } } while (false)
 
 static char *version_str = "V1.1.0";
 
@@ -956,7 +964,7 @@ static void closeSession(ROUTER *instance, void *router_session)
                  */
                 RW_CHK_DCB(bref, dcb);
                 dcb_close(dcb);
-                bref->closed_at = __LINE__;
+                RW_CLOSE_BREF(bref);
                 /** decrease server current connection counters */
                 atomic_add(&bref->bref_backend->backend_conn_count, -1);
             }
@@ -3001,7 +3009,7 @@ bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
                       bref->bref_backend->backend_server->port);
             RW_CHK_DCB(bref, bref->bref_dcb);
             dcb_close(bref->bref_dcb);
-            bref->closed_at = __LINE__;
+            RW_CLOSE_BREF(bref);
             bref->bref_dcb = NULL;
         }
     }
@@ -3318,7 +3326,7 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
                 RW_CHK_DCB(&backend_ref[i], backend_ref[i].bref_dcb);
                 dcb_close(backend_ref[i].bref_dcb);
-                backend_ref[i].closed_at = __LINE__;
+                RW_CLOSE_BREF(&backend_ref[i]);
             }
         }
     }
@@ -3562,7 +3570,7 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                 {
                     RW_CHK_DCB(bref, bref->bref_dcb);
                     dcb_close(bref->bref_dcb);
-                    bref->closed_at = __LINE__;
+                    RW_CLOSE_BREF(bref);
                 }
                 *reconnect = true;
                 gwbuf_free(replybuf);
@@ -3604,7 +3612,7 @@ static GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                         {
                             RW_CHK_DCB(&ses->rses_backend_ref[i], ses->rses_backend_ref[i].bref_dcb);
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
-                            ses->rses_backend_ref[i].closed_at = __LINE__;
+                            RW_CLOSE_BREF(&ses->rses_backend_ref[i]);
                         }
                         *reconnect = true;
                         MXS_WARNING("Disabling slave %s:%d, result differs from "
@@ -4425,6 +4433,13 @@ static void handleError(ROUTER *instance, void *router_session,
 
     CHK_DCB(problem_dcb);
 
+    if (!rses_begin_locked_router_action(rses))
+    {
+        /** Session is already closed */
+        *succp = false;
+        return;
+    }
+
     /** Don't handle same error twice on same DCB */
     if (problem_dcb->dcb_errhandle_called)
     {
@@ -4434,6 +4449,7 @@ static void handleError(ROUTER *instance, void *router_session,
          * be safe with the code as it stands on 9 Sept 2015 - MNB
          */
         *succp = true;
+        rses_end_locked_router_action(rses);
         return;
     }
     else
@@ -4443,6 +4459,7 @@ static void handleError(ROUTER *instance, void *router_session,
     session = problem_dcb->session;
 
     bool close_dcb = true;
+    backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
 
     if (session == NULL || rses == NULL)
     {
@@ -4461,17 +4478,6 @@ static void handleError(ROUTER *instance, void *router_session,
         {
             case ERRACT_NEW_CONNECTION:
             {
-                if (!rses_begin_locked_router_action(rses))
-                {
-                    close_dcb = false; /* With the assumption that if the router session is closed,
-                                        * then so is the dcb.
-                                        */
-                    *succp = false;
-                    break;
-                }
-
-                backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
-
                 /**
                  * If master has lost its Master status error can't be
                  * handled so that session could continue.
@@ -4516,12 +4522,11 @@ static void handleError(ROUTER *instance, void *router_session,
                                   "corresponding backend ref.", srv->name, srv->port);
                     }
                 }
-                else
+                else if (bref)
                 {
-                    /**
-                     * This is called in hope of getting replacement for
-                     * failed slave(s).
-                     */
+                    /** We should reconnect only if we find a backend for this
+                     * DCB. If this DCB is an older DCB that has been closed,
+                     * we can ignore it. */
                     *succp = handle_error_new_connection(inst, &rses, problem_dcb, errmsgbuf);
                 }
 
@@ -4535,7 +4540,7 @@ static void handleError(ROUTER *instance, void *router_session,
 
                     if (bref && bref->bref_dcb == problem_dcb)
                     {
-                        bref->closed_at = __LINE__;
+                        RW_CLOSE_BREF(bref);
                     }
                 }
                 else
@@ -4549,7 +4554,6 @@ static void handleError(ROUTER *instance, void *router_session,
                 }
 
                 close_dcb = false;
-                rses_end_locked_router_action(rses);
                 break;
             }
 
@@ -4570,14 +4574,11 @@ static void handleError(ROUTER *instance, void *router_session,
 
     if (close_dcb)
     {
-        backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
         RW_CHK_DCB(bref, problem_dcb);
         dcb_close(problem_dcb);
-        if (bref)
-        {
-            bref->closed_at = __LINE__;
-        }
+        RW_CLOSE_BREF(bref);
     }
+    rses_end_locked_router_action(rses);
 }
 
 static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
@@ -4592,35 +4593,22 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
     client_dcb = ses->client_dcb;
     spinlock_release(&ses->ses_lock);
 
-    if (rses_begin_locked_router_action(rses))
+    if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
     {
-        /**
-         * If bref exists, mark it closed
-         */
-        if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
-        {
-            CHK_BACKEND_REF(bref);
+        CHK_BACKEND_REF(bref);
 
-            if (BREF_IS_IN_USE(bref))
-            {
-                close_failed_bref(bref, false);
-                RW_CHK_DCB(bref, backend_dcb);
-                dcb_close(backend_dcb);
-                bref->closed_at = __LINE__;
-            }
-        }
-        else
+        if (BREF_IS_IN_USE(bref))
         {
-            // All dcbs should be associated with a backend reference.
-            ss_dassert(!true);
+            close_failed_bref(bref, false);
+            RW_CHK_DCB(bref, backend_dcb);
+            dcb_close(backend_dcb);
+            RW_CLOSE_BREF(bref);
         }
-
-        rses_end_locked_router_action(rses);
     }
     else
     {
-        // The session has already been closed, hence the dcb has been
-        // closed as well.
+        // All dcbs should be associated with a backend reference.
+        ss_dassert(!true);
     }
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
