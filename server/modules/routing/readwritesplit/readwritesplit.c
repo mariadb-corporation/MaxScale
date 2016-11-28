@@ -69,7 +69,7 @@ MODULE_INFO info =
  * @endverbatim
  */
 
-#define RW_CHK_DCB(bref, dcb) do{if(dcb->state == DCB_STATE_DISCONNECTED){MXS_NOTICE("DCB was closed on line %d.", (bref) ? (bref)->closed_at : -1);}}while(false)
+#define RW_CHK_DCB(bref, dcb) do{if(dcb->state == DCB_STATE_DISCONNECTED){MXS_NOTICE("DCB was closed on line %d and another attempt to close it is made on line %d." , (bref) ? (bref)->closed_at : -1, __LINE__);}}while(false)
 
 static char *version_str = "V1.1.0";
 
@@ -3244,7 +3244,13 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
         }
     }
 
-    ss_dassert(slaves_connected < max_nslaves);
+    ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
+
+    if (max_nslaves > 0 && slaves_connected == max_nslaves)
+    {
+        MXS_ERROR("Unexpected reconnection of slave servers. Found %d slaves with "
+                  "a maximum of %d connected slaves.", slaves_found, max_nslaves);
+    }
 
     backend_ref_t *bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
 
@@ -4520,11 +4526,28 @@ static void handleError(ROUTER *instance, void *router_session,
                 }
 
                 RW_CHK_DCB(bref, problem_dcb);
-                dcb_close(problem_dcb);
-                if (bref)
+
+                if (bref == NULL || // No backend found for this DCB
+                    bref->bref_dcb != problem_dcb || // The DCB was replaced
+                    !BREF_IS_IN_USE(bref)) // The backend was closed
                 {
-                    bref->closed_at = __LINE__;
+                    dcb_close(problem_dcb);
+
+                    if (bref && bref->bref_dcb == problem_dcb)
+                    {
+                        bref->closed_at = __LINE__;
+                    }
                 }
+                else
+                {
+                    /** The DCB is not closed. This should not be reached unless
+                     * an attempt to reconnect is make even though all connections
+                     * are already connected. */
+                    const char *remote = problem_dcb->server ?
+                        problem_dcb->server->unique_name : "not a server connection";
+                    MXS_ERROR("DCB at '%s' is still in use, not closing it.", remote);
+                }
+
                 close_dcb = false;
                 rses_end_locked_router_action(rses);
                 break;
