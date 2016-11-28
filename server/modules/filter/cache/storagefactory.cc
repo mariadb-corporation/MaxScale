@@ -19,7 +19,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
-#include "storage.h"
+#include "cachefilter.h"
+#include "storagereal.h"
 
 
 namespace
@@ -120,7 +121,7 @@ StorageFactory* StorageFactory::Open(const char* zName)
 
     if (open_cache_storage(zName, &handle, &pApi))
     {
-        pFactory = new (std::nothrow) StorageFactory(handle, pApi);
+        CPP_GUARD(pFactory = new StorageFactory(handle, pApi));
 
         if (!pFactory)
         {
@@ -144,7 +145,7 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
 
     if (pRawStorage)
     {
-        pStorage = new (std::nothrow) Storage(m_pApi, pRawStorage);
+        CPP_GUARD(pStorage = new StorageReal(m_pApi, pRawStorage));
 
         if (!pStorage)
         {

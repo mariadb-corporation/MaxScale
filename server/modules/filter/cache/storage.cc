@@ -15,39 +15,10 @@
 #include "storage.h"
 
 
-Storage::Storage(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
-    : m_pApi(pApi)
-    , m_pStorage(pStorage)
+Storage::Storage()
 {
-    ss_dassert(m_pApi);
-    ss_dassert(m_pStorage);
 }
 
 Storage::~Storage()
 {
-}
-
-cache_result_t Storage::get_key(const char* zDefaultDb,
-                                const GWBUF* pQuery,
-                                CACHE_KEY* pKey)
-{
-    return m_pApi->getKey(m_pStorage, zDefaultDb, pQuery, pKey);
-}
-
-cache_result_t Storage::get_value(const CACHE_KEY& key,
-                                  uint32_t flags,
-                                  GWBUF** ppValue)
-{
-    return m_pApi->getValue(m_pStorage, &key, flags, ppValue);
-}
-
-cache_result_t Storage::put_value(const CACHE_KEY& key,
-                                  const GWBUF* pValue)
-{
-    return m_pApi->putValue(m_pStorage, &key, pValue);
-}
-
-cache_result_t Storage::del_value(const CACHE_KEY& key)
-{
-    return m_pApi->delValue(m_pStorage, &key);
 }

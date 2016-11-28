@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_CACHE_STORAGE_H
-#define _MAXSCALE_FILTER_CACHE_STORAGE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -20,32 +18,24 @@
 class Storage
 {
 public:
-    ~Storage();
+    virtual ~Storage();
 
-    cache_result_t get_key(const char* zDefaultDb,
-                          const GWBUF* pQuery,
-                          CACHE_KEY* pKey);
+    virtual cache_result_t get_key(const char* zDefaultDb,
+                                   const GWBUF* pQuery,
+                                   CACHE_KEY* pKey) = 0;
 
-    cache_result_t get_value(const CACHE_KEY& key,
-                            uint32_t flags,
-                            GWBUF** ppValue);
+    virtual cache_result_t get_value(const CACHE_KEY& key,
+                                     uint32_t flags,
+                                     GWBUF** ppValue) = 0;
 
-    cache_result_t put_value(const CACHE_KEY& key,
-                            const GWBUF* pValue);
+    virtual cache_result_t put_value(const CACHE_KEY& key,
+                                     const GWBUF* pValue) = 0;
 
-    cache_result_t del_value(const CACHE_KEY& key);
+    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
-private:
-    friend class StorageFactory;
-
-    Storage(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage);
+protected:
+    Storage();
 
     Storage(const Storage&);
     Storage& operator = (const Storage&);
-
-private:
-    CACHE_STORAGE_API* m_pApi;
-    CACHE_STORAGE*     m_pStorage;
 };
-
-#endif
