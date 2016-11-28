@@ -33,14 +33,12 @@ private:
             const CACHE_CONFIG* pConfig,
             CACHE_RULES*        pRules,
             StorageFactory*     pFactory,
-            HASHTABLE*          pPending,
             Storage*            pStorage);
 
     static CacheMT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
                            CACHE_RULES*        pRules,
-                           StorageFactory*     pFactory,
-                           HASHTABLE*          pPending);
+                           StorageFactory*     pFactory);
 
 private:
     CacheMT(const CacheMT&);

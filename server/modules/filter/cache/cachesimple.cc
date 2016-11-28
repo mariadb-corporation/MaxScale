@@ -15,59 +15,12 @@
 #include "storage.h"
 #include "storagefactory.h"
 
-namespace
-{
-
-// Initial size of hashtable used for storing keys of queries that
-// are being fetches.
-const size_t CACHE_PENDING_ITEMS = 50;
-
-/**
- * Hashes a cache key to an integer.
- *
- * @param key Pointer to cache key.
- *
- * @returns Corresponding integer hash.
- */
-int hash_of_key(const CACHE_KEY& key)
-{
-    int hash = 0;
-
-    const char* i   = key.data;
-    const char* end = i + CACHE_KEY_MAXLEN;
-
-    while (i < end)
-    {
-        int c = *i;
-        hash = c + (hash << 6) + (hash << 16) - hash;
-        ++i;
-    }
-
-    return hash;
-}
-
-int hashfn(const void* address)
-{
-    // TODO: Hash the address; pointers are not evenly distributed.
-    return (long)address;
-}
-
-int hashcmp(const void* address1, const void* address2)
-{
-    return (long)address2 - (long)address1;
-}
-
-}
-
-
 CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
                          StorageFactory*     pFactory,
-                         HASHTABLE*          pPending,
                          Storage*            pStorage)
     : Cache(name, pConfig, pRules, pFactory)
-    , m_pPending(pPending)
     , m_pStorage(pStorage)
 {
 }
@@ -75,58 +28,42 @@ CacheSimple::CacheSimple(const std::string&  name,
 CacheSimple::~CacheSimple()
 {
     delete m_pStorage;
-    hashtable_free(m_pPending);
 }
 
 
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CACHE_RULES**       ppRules,
-                         HASHTABLE**         ppPending)
+                         CACHE_RULES**       ppRules)
 {
     int rv = false;
 
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
 
-    if (Cache::Create(config, &pRules) && Create(&pPending))
+    if (Cache::Create(config, &pRules))
     {
         *ppRules = pRules;
-        *ppPending = pPending;
-    }
-    else
-    {
-        cache_rules_free(pRules);
     }
 
-    return pPending != NULL;;
+    return pRules != NULL;;
 }
 
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
                          CACHE_RULES**       ppRules,
-                         HASHTABLE**         ppPending,
                          StorageFactory**    ppFactory)
 {
     int rv = false;
 
     CACHE_RULES* pRules = NULL;
     StorageFactory* pFactory = NULL;
-    HASHTABLE* pPending = NULL;
 
-    if (Cache::Create(config, &pRules, &pFactory) && Create(&pPending))
+    if (Cache::Create(config, &pRules, &pFactory))
     {
         *ppRules = pRules;
-        *ppPending = pPending;
         *ppFactory = pFactory;
     }
-    else
-    {
-        cache_rules_free(pRules);
-        delete pFactory;
-    }
 
-    return pPending != NULL;
+    return pRules != NULL;
 }
 
 cache_result_t CacheSimple::get_key(const char* zDefaultDb,
@@ -155,41 +92,32 @@ cache_result_t CacheSimple::del_value(const CACHE_KEY& key)
 }
 
 // protected
-long CacheSimple::hash_of_key(const CACHE_KEY& key)
+bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    return ::hash_of_key(key);
+    bool rv = false;
+    Pending::iterator i = m_pending.find(key);
+
+    if (i == m_pending.end())
+    {
+        try
+        {
+            m_pending.insert(std::make_pair(key, pSessionCache));
+            rv = true;
+        }
+        catch (const std::exception& x)
+        {
+            rv = false;
+        }
+    }
+
+    return rv;
 }
 
 // protected
-bool CacheSimple::must_refresh(long key, const SessionCache* pSessionCache)
+void CacheSimple::do_refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    void *pValue = hashtable_fetch(m_pPending, (void*)key);
-    if (!pValue)
-    {
-        // It's not being fetched, so we make a note that we are.
-        hashtable_add(m_pPending, (void*)key, (void*)pSessionCache);
-    }
-
-    return !pValue;
-}
-
-// protected
-void CacheSimple::refreshed(long key, const SessionCache* pSessionCache)
-{
-    ss_dassert(hashtable_fetch(m_pPending, (void*)key) == pSessionCache);
-    ss_debug(int n =) hashtable_delete(m_pPending, (void*)key);
-    ss_dassert(n == 1);
-}
-
-// static
-bool CacheSimple::Create(HASHTABLE** ppPending)
-{
-    HASHTABLE* pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
-
-    if (pPending)
-    {
-        *ppPending = pPending;
-    }
-
-    return pPending != NULL;
+    Pending::iterator i = m_pending.find(key);
+    ss_dassert(i != m_pending.end());
+    ss_dassert(i->second == pSessionCache);
+    m_pending.erase(i);
 }

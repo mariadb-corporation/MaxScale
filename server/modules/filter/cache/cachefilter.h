@@ -17,6 +17,7 @@
 #include <maxscale/cdefs.h>
 #include <limits.h>
 #include <exception>
+#include <tr1/functional>
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.h>
 #include "rules.h"
@@ -65,6 +66,39 @@ typedef struct cache_config
 void cache_config_finish(CACHE_CONFIG& config);
 void cache_config_free(CACHE_CONFIG* pConfig);
 void cache_config_reset(CACHE_CONFIG& config);
+
+size_t cache_key_hash(const CACHE_KEY& key);
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs);
+
+std::string cache_key_to_string(const CACHE_KEY& key);
+
+namespace std
+{
+
+template<>
+struct equal_to<CACHE_KEY>
+{
+    bool operator()(const CACHE_KEY& lhs, const CACHE_KEY& rhs) const
+    {
+        return cache_key_equal_to(lhs, rhs);
+    }
+};
+
+namespace tr1
+{
+
+template<>
+struct hash<CACHE_KEY>
+{
+    size_t operator()(const CACHE_KEY& key) const
+    {
+        return cache_key_hash(key);
+    }
+};
+
+}
+
+}
 
 #define CPP_GUARD(statement)\
     do { try { statement; }                                              \

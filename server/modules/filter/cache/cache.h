@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <tr1/functional>
 #include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>

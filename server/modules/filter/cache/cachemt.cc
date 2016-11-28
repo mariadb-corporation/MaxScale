@@ -19,9 +19,8 @@ CacheMT::CacheMT(const std::string& name,
                  const CACHE_CONFIG* pConfig,
                  CACHE_RULES* pRules,
                  StorageFactory* pFactory,
-                 HASHTABLE* pPending,
                  Storage* pStorage)
-    : CacheSimple(name, pConfig, pRules, pFactory, pPending, pStorage)
+    : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
 {
     spinlock_init(&m_lockPending);
 }
@@ -37,12 +36,11 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     CacheMT* pCache = NULL;
 
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::Create(*pConfig, &pRules, &pPending, &pFactory))
+    if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory);
     }
 
     return pCache;
@@ -57,11 +55,10 @@ CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, cons
     CacheMT* pCache = NULL;
 
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
 
-    if (CacheSimple::Create(*pConfig, &pRules, &pPending))
+    if (CacheSimple::Create(*pConfig, &pRules))
     {
-        pCache = Create(name, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory);
     }
 
     return pCache;
@@ -69,10 +66,8 @@ CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, cons
 
 bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    long k = hash_of_key(key);
-
     spinlock_acquire(&m_lockPending);
-    bool rv = CacheSimple::must_refresh(k, pSessionCache);
+    bool rv = CacheSimple::do_must_refresh(key, pSessionCache);
     spinlock_release(&m_lockPending);
 
     return rv;
@@ -80,10 +75,8 @@ bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCac
 
 void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    long k = hash_of_key(key);
-
     spinlock_acquire(&m_lockPending);
-    CacheSimple::refreshed(k, pSessionCache);
+    CacheSimple::do_refreshed(key, pSessionCache);
     spinlock_release(&m_lockPending);
 }
 
@@ -91,8 +84,7 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 CacheMT* CacheMT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
-                         StorageFactory*     pFactory,
-                         HASHTABLE*          pPending)
+                         StorageFactory*     pFactory)
 {
     CacheMT* pCache = NULL;
 
@@ -108,14 +100,12 @@ CacheMT* CacheMT::Create(const std::string&  name,
                                        pConfig,
                                        pRules,
                                        pFactory,
-                                       pPending,
                                        pStorage));
 
         if (!pCache)
         {
             delete pStorage;
             cache_rules_free(pRules);
-            hashtable_free(pPending);
             delete pFactory;
         }
     }

@@ -19,9 +19,8 @@ CacheST::CacheST(const std::string& name,
                  const CACHE_CONFIG* pConfig,
                  CACHE_RULES* pRules,
                  StorageFactory* pFactory,
-                 HASHTABLE* pPending,
                  Storage* pStorage)
-    : CacheSimple(name, pConfig, pRules, pFactory, pPending, pStorage)
+    : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
 {
 }
 
@@ -36,12 +35,11 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     CacheST* pCache = NULL;
 
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
     StorageFactory* pFactory = NULL;
 
-    if (CacheSimple::Create(*pConfig, &pRules, &pPending, &pFactory))
+    if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory);
     }
 
     return pCache;
@@ -56,11 +54,10 @@ CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, cons
     CacheST* pCache = NULL;
 
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
 
-    if (CacheSimple::Create(*pConfig, &pRules, &pPending))
+    if (CacheSimple::Create(*pConfig, &pRules))
     {
-        pCache = Create(name, pConfig, pRules, pFactory, pPending);
+        pCache = Create(name, pConfig, pRules, pFactory);
     }
 
     return pCache;
@@ -68,24 +65,19 @@ CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, cons
 
 bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    long k = hash_of_key(key);
-
-    return CacheSimple::must_refresh(k, pSessionCache);
+    return CacheSimple::do_must_refresh(key, pSessionCache);
 }
 
 void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    long k = hash_of_key(key);
-
-    CacheSimple::refreshed(k, pSessionCache);
+    CacheSimple::do_refreshed(key, pSessionCache);
 }
 
 // static
 CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
-                         StorageFactory*     pFactory,
-                         HASHTABLE*          pPending)
+                         StorageFactory*     pFactory)
 {
     CacheST* pCache = NULL;
 
@@ -101,14 +93,12 @@ CacheST* CacheST::Create(const std::string&  name,
                                        pConfig,
                                        pRules,
                                        pFactory,
-                                       pPending,
                                        pStorage));
 
         if (!pCache)
         {
             delete pStorage;
             cache_rules_free(pRules);
-            hashtable_free(pPending);
             delete pFactory;
         }
     }

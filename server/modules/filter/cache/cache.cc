@@ -99,5 +99,3 @@ bool Cache::should_use(const SESSION* pSession)
 {
     return cache_rules_should_use(m_pRules, pSession);
 }
-
-

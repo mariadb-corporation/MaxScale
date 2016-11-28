@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <tr1/unordered_map>
 #include <maxscale/hashtable.h>
 #include "cache.h"
 
@@ -36,32 +37,27 @@ protected:
                 const CACHE_CONFIG* pConfig,
                 CACHE_RULES*        pRules,
                 StorageFactory*     pFactory,
-                HASHTABLE*          pPending,
                 Storage*            pStorage);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules,
-                       HASHTABLE**         ppPending);
+                       CACHE_RULES**       ppRules);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules,
-                       HASHTABLE**         ppPending,
                        StorageFactory**    ppFactory);
 
 
-    long hash_of_key(const CACHE_KEY& key);
+    bool do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
-    bool must_refresh(long key, const SessionCache* pSessionCache);
-
-    void refreshed(long key, const SessionCache* pSessionCache);
+    void do_refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
 private:
     CacheSimple(const Cache&);
     CacheSimple& operator = (const CacheSimple&);
 
-    static bool Create(HASHTABLE** ppPending);
-
 protected:
-    HASHTABLE* m_pPending;  // Pending items; being fetched from the backend.
-    Storage*   m_pStorage;  // The storage instance to use.
+    typedef std::tr1::unordered_map<CACHE_KEY, const SessionCache*> Pending;
+
+    Pending  m_pending;  // Pending items; being fetched from the backend.
+    Storage* m_pStorage; // The storage instance to use.
 };

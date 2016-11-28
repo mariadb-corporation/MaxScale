@@ -32,14 +32,12 @@ private:
             const CACHE_CONFIG* pConfig,
             CACHE_RULES*        pRules,
             StorageFactory*     pFactory,
-            HASHTABLE*          pPending,
             Storage*            pStorage);
 
     static CacheST* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
                            CACHE_RULES*        pRules,
-                           StorageFactory*     pFactory,
-                           HASHTABLE*          pPending);
+                           StorageFactory*     pFactory);
 private:
     CacheST(const CacheST&);
     CacheST& operator = (const CacheST&);

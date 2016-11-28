@@ -22,6 +22,8 @@
 #include "cachept.h"
 #include "sessioncache.h"
 
+using std::string;
+
 static char VERSION_STRING[] = "V1.0.0";
 
 static const CACHE_CONFIG DEFAULT_CONFIG =
@@ -543,4 +545,60 @@ void cache_config_free(CACHE_CONFIG* pConfig)
 void cache_config_reset(CACHE_CONFIG& config)
 {
     memset(&config, 0, sizeof(config));
+}
+
+/**
+ * Hashes a CACHE_KEY to size_t.
+ *
+ * @param key The key to be hashed.
+ *
+ * @return The corresponding hash.
+ */
+size_t cache_key_hash(const CACHE_KEY& key)
+{
+    size_t hash = 0;
+
+    const char* i   = key.data;
+    const char* end = i + CACHE_KEY_MAXLEN;
+
+    while (i < end)
+    {
+        int c = *i;
+        hash = c + (hash << 6) + (hash << 16) - hash;
+        ++i;
+    }
+
+    return hash;
+}
+
+/**
+ * Are two CACHE_KEYs equal.
+ *
+ * @param lhs One cache key.
+ * @param rhs Another cache key.
+ *
+ * @return True, if the keys are equal.
+ */
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+{
+    return memcmp(lhs.data, rhs.data, CACHE_KEY_MAXLEN) == 0;
+}
+
+std::string cache_key_to_string(const CACHE_KEY& key)
+{
+    string s;
+
+    for (int i = 0; i < CACHE_KEY_MAXLEN; ++i)
+    {
+        char c = key.data[i];
+
+        if (!isprint(c))
+        {
+            c = '.';
+        }
+
+        s += c;
+    }
+
+    return s;
 }
