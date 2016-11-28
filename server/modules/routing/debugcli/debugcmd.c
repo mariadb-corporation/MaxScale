@@ -423,6 +423,19 @@ static void shutdown_server()
 static void shutdown_service(DCB *dcb, SERVICE *service);
 static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
 
+static void
+shutdown_listener(DCB *dcb, SERVICE *service, const char *name)
+{
+    if (serviceStopListener(service, name))
+    {
+        dcb_printf(dcb, "Stopped listener '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to stop listener '%s'\n", name);
+    }
+}
+
 /**
  * The subcommands of the shutdown command
  */
@@ -451,6 +464,14 @@ struct subcommand shutdownoptions[] =
         "Stop a service",
         "E.g. shutdown service \"Sales Database\"",
         {ARG_TYPE_SERVICE, 0, 0}
+    },
+    {
+        "listener",
+        2, 2,
+        shutdown_listener,
+        "Stop a listener",
+        "E.g. shutdown listener \"RW Service\" \"RW Listener\"",
+        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
     },
     {
         EMPTY_OPTION
@@ -487,6 +508,20 @@ struct subcommand syncoptions[] =
 
 static void restart_service(DCB *dcb, SERVICE *service);
 static void restart_monitor(DCB *dcb, MONITOR *monitor);
+
+static void
+restart_listener(DCB *dcb, SERVICE *service, const char *name)
+{
+    if (serviceStartListener(service, name))
+    {
+        dcb_printf(dcb, "Restarted listener '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to restart listener '%s'\n", name);
+    }
+}
+
 /**
  * The subcommands of the restart command
  */
@@ -503,6 +538,12 @@ struct subcommand restartoptions[] =
         "Restart a service",
         "E.g. restart service \"Sales Database\"",
         {ARG_TYPE_SERVICE, 0, 0}
+    },
+    {
+        "listener", 2, 2, restart_listener,
+        "Restart a listener",
+        "E.g. restart listener \"RW Service\" \"RW Listener\"",
+        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
     },
     { EMPTY_OPTION }
 };
