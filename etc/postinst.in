@@ -50,6 +50,11 @@ then
         systemctl daemon-reload
     fi
 else
+    if [ -d "/etc/init/" ]
+    then
+        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf /etc/init/
+    fi
+
     # If systemd is not present, use init.d scripts
     if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
     then
