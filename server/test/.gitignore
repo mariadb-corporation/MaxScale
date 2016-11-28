@@ -1,8 +1,0 @@
-# directories generated/filled by "make testall"
-bin/
-Documentation/
-etc/
-lib/
-log/
-modules/
-mysql/

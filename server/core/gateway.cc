@@ -66,13 +66,13 @@
 #include <maxscale/poll.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
-#include <maxscale/service.h>
-#include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/statistics.h>
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+
+#include "maxscale/service.h"
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -1951,7 +1951,7 @@ int main(int argc, char **argv)
     monitorStartAll();
 
     /** Start the services that were created above */
-    n_services = serviceStartAll();
+    n_services = service_launch_all();
 
     if (n_services == 0)
     {

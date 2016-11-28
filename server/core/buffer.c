@@ -854,9 +854,9 @@ gwbuf_get_property(GWBUF *buf, char *name)
 GWBUF *
 gwbuf_make_contiguous(GWBUF *orig)
 {
-    GWBUF *newbuf;
-    char  *ptr;
-    int   len;
+    GWBUF   *newbuf;
+    uint8_t *ptr;
+    int     len;
 
     if (orig == NULL)
     {

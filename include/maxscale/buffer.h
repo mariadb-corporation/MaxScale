@@ -151,7 +151,7 @@ typedef struct gwbuf
  * Macros to access the data in the buffers
  */
 /*< First valid, unconsumed byte in the buffer */
-#define GWBUF_DATA(b)           ((b)->start)
+#define GWBUF_DATA(b)           ((uint8_t*)(b)->start)
 
 /*< Number of bytes in the individual buffer */
 #define GWBUF_LENGTH(b)         ((char *)(b)->end - (char *)(b)->start)

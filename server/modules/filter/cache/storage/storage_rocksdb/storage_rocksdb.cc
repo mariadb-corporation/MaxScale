@@ -86,7 +86,10 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t getValue(CACHE_STORAGE* pStorage, const char* pKey, GWBUF** ppResult)
+cache_result_t getValue(CACHE_STORAGE* pStorage,
+                        const char* pKey,
+                        uint32_t flags,
+                        GWBUF** ppResult)
 {
     ss_dassert(pStorage);
     ss_dassert(pKey);
@@ -96,7 +99,7 @@ cache_result_t getValue(CACHE_STORAGE* pStorage, const char* pKey, GWBUF** ppRes
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, ppResult);
+        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, flags, ppResult);
     }
     catch (const std::bad_alloc&)
     {
@@ -144,6 +147,34 @@ cache_result_t putValue(CACHE_STORAGE* pStorage,
     return result;
 }
 
+cache_result_t delValue(CACHE_STORAGE* pStorage,
+                        const char* pKey)
+{
+    ss_dassert(pStorage);
+    ss_dassert(pKey);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    try
+    {
+        result = reinterpret_cast<RocksDBStorage*>(pStorage)->delValue(pKey);
+    }
+    catch (const std::bad_alloc&)
+    {
+        MXS_OOM();
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("Standard exception caught: %s", x.what());
+    }
+    catch (...)
+    {
+        MXS_ERROR("Unknown exception caught.");
+    }
+
+    return result;
+}
+
 }
 
 extern "C"
@@ -158,7 +189,8 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
             freeInstance,
             getKey,
             getValue,
-            putValue
+            putValue,
+            delValue,
         };
 
     return &api;

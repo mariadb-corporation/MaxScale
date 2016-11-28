@@ -1440,7 +1440,7 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
 
                 if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
                 {
-                    uint32_t *data = GWBUF_DATA(packetbuf);
+                    uint8_t *data = GWBUF_DATA(packetbuf);
 
                     if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
                     {

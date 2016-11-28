@@ -49,6 +49,7 @@ typedef struct servlistener
     unsigned short port;        /**< Port to listen on */
     char *address;              /**< Address to listen with */
     char *authenticator;        /**< Name of authenticator */
+    char *auth_options;         /**< Authenticator options */
     void *auth_instance;        /**< Authenticator instance created in GWAUTHENTICATOR::initialize() */
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
     struct dcb *listener;       /**< The DCB for the listener */
@@ -59,9 +60,21 @@ typedef struct servlistener
     struct  servlistener *next; /**< Next service protocol */
 } SERV_LISTENER;
 
-SERV_LISTENER *listener_alloc(struct service* service, char *name, char *protocol,
-                              char *address, unsigned short port, char *authenticator,
-                              char* options, SSL_LISTENER *ssl);
+/**
+ * @brief Serialize a listener to a file
+ *
+ * This converts @c listener into an INI format file. This allows created listeners
+ * to be persisted to disk. This will replace any existing files with the same
+ * name.
+ *
+ * @param listener Listener to serialize
+ * @return True if the serialization of the listener was successful, false if it fails
+ */
+bool listener_serialize(const SERV_LISTENER *listener);
+
+SERV_LISTENER* listener_alloc(struct service* service, const char* name, const char *protocol,
+               const char *address, unsigned short port, const char *authenticator,
+               const char* auth_options, SSL_LISTENER *ssl);
 void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);

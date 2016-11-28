@@ -1228,8 +1228,7 @@ bool server_serialize(const SERVER *server)
     return rval;
 }
 
-/** Try to find a server with a matching name that has been destroyed */
-static SERVER* find_destroyed_server(const char *name, const char *protocol,
+SERVER* server_find_destroyed(const char *name, const char *protocol,
                                      const char *authenticator, const char *auth_options)
 {
     spinlock_acquire(&server_spin);
@@ -1253,107 +1252,4 @@ static SERVER* find_destroyed_server(const char *name, const char *protocol,
     spinlock_release(&server_spin);
 
     return server;
-}
-
-bool server_create(const char *name, const char *address, const char *port,
-                   const char *protocol, const char *authenticator,
-                   const char *authenticator_options)
-{
-    bool rval = false;
-
-    if (server_find_by_unique_name(name) == NULL)
-    {
-        // TODO: Get default values from the protocol module
-        if (port == NULL)
-        {
-            port = "3306";
-        }
-        if (protocol == NULL)
-        {
-            protocol = "MySQLBackend";
-        }
-        if (authenticator == NULL && (authenticator = get_default_authenticator(protocol)) == NULL)
-        {
-            MXS_ERROR("No authenticator defined for server '%s' and no default "
-                      "authenticator for protocol '%s'.", name, protocol);
-            return false;
-        }
-
-        /** First check if this service has been created before */
-        SERVER *server = find_destroyed_server(name, protocol, authenticator,
-                                               authenticator_options);
-
-        if (server)
-        {
-            /** Found old server, replace network details with new ones and
-             * reactivate it */
-            snprintf(server->name, sizeof(server->name), "%s", address);
-            server->port = atoi(port);
-            server->is_active = true;
-            rval = true;
-        }
-        else
-        {
-            /**
-             * server_alloc will add the server to the global list of
-             * servers so we don't need to manually add it.
-             */
-            server = server_alloc(name, address, atoi(port), protocol,
-                                  authenticator, authenticator_options);
-        }
-
-        if (server && server_serialize(server))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
-}
-
-bool server_destroy(SERVER *server)
-{
-    bool rval = false;
-
-    if (service_server_in_use(server) || monitor_server_in_use(server))
-    {
-        MXS_ERROR("Cannot destroy server '%s' as it is used by at least one "
-                  "service or monitor", server->unique_name);
-    }
-    else
-    {
-        char filename[PATH_MAX];
-        snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(),
-                 server->unique_name);
-
-        if (unlink(filename) == -1)
-        {
-            if (errno != ENOENT)
-            {
-                char err[MXS_STRERROR_BUFLEN];
-                MXS_ERROR("Failed to remove persisted server configuration '%s': %d, %s",
-                          filename, errno, strerror_r(errno, err, sizeof(err)));
-            }
-            else
-            {
-                rval = true;
-                MXS_WARNING("Server '%s' was not created at runtime. Remove the "
-                            "server manually from the correct configuration file.",
-                            server->unique_name);
-            }
-        }
-        else
-        {
-            rval = true;
-        }
-
-        if (rval)
-        {
-            MXS_NOTICE("Destroyed server '%s' at %s:%u", server->unique_name,
-                       server->name, server->port);
-            server->is_active = false;
-        }
-    }
-
-    return rval;
 }

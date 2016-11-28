@@ -130,7 +130,7 @@ avro_client_do_registration(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *d
     const char reg_uuid[] = "REGISTER UUID=";
     const int reg_uuid_len = strlen(reg_uuid);
     int data_len = GWBUF_LENGTH(data) - reg_uuid_len;
-    char *request = GWBUF_DATA(data);
+    char *request = (char*)GWBUF_DATA(data);
     int ret = 0;
 
     if (strstr(request, reg_uuid) != NULL)

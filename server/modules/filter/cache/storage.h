@@ -17,17 +17,35 @@
 #include <maxscale/cdefs.h>
 #include "cache_storage_api.h"
 
-MXS_BEGIN_DECLS
-
-typedef struct cache_storage_module_t
+class Storage
 {
-    void* handle;
-    CACHE_STORAGE_API* api;
-} CACHE_STORAGE_MODULE;
+public:
+    ~Storage();
 
-CACHE_STORAGE_MODULE* cache_storage_open(const char *name);
-void cache_storage_close(CACHE_STORAGE_MODULE *module);
+    cache_result_t getKey(const char* zDefaultDb,
+                          const GWBUF* pQuery,
+                          char* pKey);
 
-MXS_END_DECLS
+    cache_result_t getValue(const char* pKey,
+                            uint32_t flags,
+                            GWBUF** ppValue);
+
+    cache_result_t putValue(const char* pKey,
+                            const GWBUF* pValue);
+
+    cache_result_t delValue(const char* pKey);
+
+private:
+    friend class StorageFactory;
+
+    Storage(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage);
+
+    Storage(const Storage&);
+    Storage& operator = (const Storage&);
+
+private:
+    CACHE_STORAGE_API* m_pApi;
+    CACHE_STORAGE*     m_pStorage;
+};
 
 #endif

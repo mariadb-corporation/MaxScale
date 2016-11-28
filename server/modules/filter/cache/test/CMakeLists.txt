@@ -1,4 +1,4 @@
-add_executable(testrules testrules.c ../rules.c)
+add_executable(testrules testrules.cc ../rules.cc)
 include_directories(..)
 target_link_libraries(testrules maxscale-common jansson)
 

@@ -48,7 +48,6 @@
 #include <math.h>
 #include <fcntl.h>
 #include <maxscale/session.h>
-#include <maxscale/service.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/listener.h>
 #include <maxscale/server.h>
@@ -67,6 +66,8 @@
 #include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+
+#include "maxscale/service.h"
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
@@ -103,32 +104,21 @@ static void service_internal_restart(void *data);
 static void service_queue_check(void *data);
 static void service_calculate_weights(SERVICE *service);
 
-/**
- * Allocate a new service for the gateway to support
- *
- *
- * @param servname      The service name
- * @param router        Name of the router module this service uses
- *
- * @return              The newly created service or NULL if an error occurred
- */
-SERVICE *
-service_alloc(const char *servname, const char *router)
+SERVICE* service_alloc(const char *name, const char *router)
 {
-    servname = MXS_STRDUP(servname);
-    router = MXS_STRDUP(router);
-
+    char *my_name = MXS_STRDUP(name);
+    char *my_router = MXS_STRDUP(router);
     SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
 
-    if (!servname || !router || !service)
+    if (!my_name || !my_router || !service)
     {
-        MXS_FREE((void*)servname);
-        MXS_FREE((void*)router);
+        MXS_FREE(my_name);
+        MXS_FREE(my_router);
         MXS_FREE(service);
         return NULL;
     }
 
-    if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
+    if ((service->router = load_module(my_router, MODULE_ROUTER)) == NULL)
     {
         char* home = get_libdir();
         char* ldpath = getenv("LD_LIBRARY_PATH");
@@ -138,13 +128,13 @@ service_alloc(const char *servname, const char *router)
                   "following directories :\n\t\t\t      "
                   "- %s\n%s%s",
                   MODULE_ROUTER,
-                  router,
-                  router,
+                  my_router,
+                  my_router,
                   home,
                   ldpath ? "\t\t\t      - " : "",
                   ldpath ? ldpath : "");
-        MXS_FREE((void*)servname);
-        MXS_FREE((void*)router);
+        MXS_FREE(my_name);
+        MXS_FREE(my_router);
         MXS_FREE(service);
         return NULL;
     }
@@ -152,8 +142,8 @@ service_alloc(const char *servname, const char *router)
     service->capabilities = service->router->getCapabilities();
     service->client_count = 0;
     service->n_dbref = 0;
-    service->name = (char*)servname;
-    service->routerModule = (char*)router;
+    service->name = my_name;
+    service->routerModule = my_router;
     service->users_from_all = false;
     service->queued_connections = NULL;
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
@@ -478,8 +468,7 @@ static void free_string_array(char** array)
  * @param service       The Service that should be started
  * @return      Returns the number of listeners created
  */
-int
-serviceStart(SERVICE *service)
+int serviceInitialize(SERVICE *service)
 {
     /** Calculate the server weights */
     service_calculate_weights(service);
@@ -502,37 +491,36 @@ serviceStart(SERVICE *service)
     return listeners;
 }
 
-/**
- * Start an individual listener
- *
- * @param service       The service to start the listener for
- * @param protocol      The name of the protocol
- * @param port          The port number
- */
-void
-serviceStartProtocol(SERVICE *service, char *protocol, int port)
+bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
 {
-    SERV_LISTENER *ptr;
-
-    ptr = service->ports;
-    while (ptr)
-    {
-        if (strcmp(ptr->protocol, protocol) == 0 && ptr->port == port)
-        {
-            serviceStartPort(service, ptr);
-        }
-        ptr = ptr->next;
-    }
+    return serviceStartPort(service, port);
 }
 
+bool serviceStopListener(SERVICE *service, const char *name)
+{
+    bool rval = false;
 
-/**
- * Start all the services
- *
- * @return Return the number of services started
- */
-int
-serviceStartAll()
+    spinlock_acquire(&service->spin);
+
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    {
+        if (strcmp(port->name, name) == 0)
+        {
+            if (poll_remove_dcb(port->listener) == 0)
+            {
+                port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                rval = true;
+            }
+            break;
+        }
+    }
+
+    spinlock_release(&service->spin);
+
+    return rval;
+}
+
+int service_launch_all()
 {
     SERVICE *ptr;
     int n = 0, i;
@@ -543,7 +531,7 @@ serviceStartAll()
     ptr = allServices;
     while (ptr && !ptr->svc_do_shutdown)
     {
-        n += (i = serviceStart(ptr));
+        n += (i = serviceInitialize(ptr));
 
         if (i == 0)
         {
@@ -556,16 +544,7 @@ serviceStartAll()
     return error ? 0 : n;
 }
 
-/**
- * Stop a service
- *
- * This function stops the listener for the service
- *
- * @param service       The Service that should be stopped
- * @return      Returns the number of listeners restarted
- */
-int
-serviceStop(SERVICE *service)
+bool serviceStop(SERVICE *service)
 {
     SERV_LISTENER *port;
     int listeners = 0;
@@ -585,7 +564,7 @@ serviceStop(SERVICE *service)
     }
     service->state = SERVICE_STATE_STOPPED;
 
-    return listeners;
+    return listeners > 0;
 }
 
 /**
@@ -596,8 +575,7 @@ serviceStop(SERVICE *service)
  * @param service       The Service that should be restarted
  * @return      Returns the number of listeners restarted
  */
-int
-serviceRestart(SERVICE *service)
+bool serviceStart(SERVICE *service)
 {
     SERV_LISTENER *port;
     int listeners = 0;
@@ -616,24 +594,16 @@ serviceRestart(SERVICE *service)
         port = port->next;
     }
     service->state = SERVICE_STATE_STARTED;
-    return listeners;
+    return listeners > 0;
 }
 
-
-/**
- * Deallocate the specified service
- *
- * @param service       The service to deallocate
- * @return      Returns true if the service was freed
- */
-int
-service_free(SERVICE *service)
+void service_free(SERVICE *service)
 {
     SERVICE *ptr;
     SERVER_REF *srv;
     if (service->stats.n_current)
     {
-        return 0;
+        return;
     }
     /* First of all remove from the linked list */
     spinlock_acquire(&service_spin);
@@ -674,11 +644,10 @@ service_free(SERVICE *service)
     serviceClearRouterOptions(service);
 
     MXS_FREE(service);
-    return 1;
 }
 
 /**
- * Add a protocol/port pair to the service
+ * Create a listener for the service
  *
  * @param service       The service
  * @param protocol      The name of the protocol module
@@ -686,12 +655,12 @@ service_free(SERVICE *service)
  * @param port          The port to listen on
  * @param authenticator Name of the authenticator to be used
  * @param ssl           SSL configuration
- * @return      TRUE if the protocol/port could be added
+ *
+ * @return Created listener or NULL on error
  */
-int
-serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
-                   unsigned short port, char *authenticator, char *options,
-                   SSL_LISTENER *ssl)
+SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
+                   const char *address, unsigned short port, const char *authenticator,
+                   const char *options, SSL_LISTENER *ssl)
 {
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
                                           port, authenticator, options, ssl);
@@ -702,10 +671,9 @@ serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address,
         proto->next = service->ports;
         service->ports = proto;
         spinlock_release(&service->spin);
-        return 1;
     }
 
-    return 0;
+    return proto;
 }
 
 /**
@@ -1218,7 +1186,7 @@ serviceSetFilters(SERVICE *service, char *filters)
  * @return The service or NULL if not found
  */
 SERVICE *
-service_find(char *servname)
+service_find(const char *servname)
 {
     SERVICE *service;
 
@@ -1889,7 +1857,7 @@ void service_shutdown()
     {
         svc->svc_do_shutdown = true;
         /* Call destroyInstance hook for routers */
-        if (svc->router->destroyInstance)
+        if (svc->router->destroyInstance && svc->router_instance)
         {
            svc->router->destroyInstance(svc->router_instance);
         }
@@ -1898,7 +1866,7 @@ void service_shutdown()
             FILTER_DEF **filters = svc->filters;
             for (int i=0; i < svc->n_filters; i++)
             {
-                if (filters[i]->obj->destroyInstance)
+                if (filters[i]->obj->destroyInstance && filters[i]->filter)
                 {
                     /* Call destroyInstance hook for filters */
                     filters[i]->obj->destroyInstance(filters[i]->filter);

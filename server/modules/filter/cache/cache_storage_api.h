@@ -26,9 +26,16 @@ typedef enum cache_result
 {
     CACHE_RESULT_OK,
     CACHE_RESULT_NOT_FOUND,
+    CACHE_RESULT_STALE,
     CACHE_RESULT_OUT_OF_RESOURCES,
     CACHE_RESULT_ERROR
 } cache_result_t;
+
+typedef enum cache_flags
+{
+    CACHE_FLAGS_NONE          = 0x00,
+    CACHE_FLAGS_INCLUDE_STALE = 0x01,
+} cache_flags_t;
 
 typedef void* CACHE_STORAGE;
 
@@ -88,14 +95,18 @@ typedef struct cache_storage_api
      *
      * @param storage    Pointer to a CACHE_STORAGE.
      * @param key        A key generated with getKey.
+     * @param flags      Mask of cache_flags_t values.
      * @param result     Pointer to variable that after a successful return will
      *                   point to a GWBUF.
      * @return CACHE_RESULT_OK if item was found,
+     *         CACHE_RESULT_STALE if CACHE_FLAGS_INCLUDE_STALE was specified in
+     *         flags and the item was found but stale,
      *         CACHE_RESULT_NOT_FOUND if item was not found (which may be because
      *         the ttl was reached), or some other error code.
      */
     cache_result_t (*getValue)(CACHE_STORAGE* storage,
                                const char* key,
+                               uint32_t flags,
                                GWBUF** result);
 
     /**
@@ -112,6 +123,17 @@ typedef struct cache_storage_api
     cache_result_t (*putValue)(CACHE_STORAGE* storage,
                                const char* key,
                                const GWBUF* value);
+
+    /**
+     * Delete a value from the cache.
+     *
+     * @param storage    Pointer to a CACHE_STORAGE.
+     * @param key        A key generated with getKey.
+     * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
+     *         CACHE_RESULT_OK may be returned also if the entry was not present.
+     */
+    cache_result_t (*delValue)(CACHE_STORAGE* storage,
+                               const char* key);
 } CACHE_STORAGE_API;
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"

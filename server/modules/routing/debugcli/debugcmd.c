@@ -51,11 +51,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <maxscale/alloc.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/router.h>
 #include <maxscale/filter.h>
 #include <maxscale/modules.h>
+#include <maxscale/modulecmd.h>
 #include <maxscale/atomic.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -71,6 +73,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
 #include <maxscale/maxscale.h>
+#include <maxscale/config_runtime.h>
 
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
@@ -285,6 +288,59 @@ struct subcommand showoptions[] =
     { EMPTY_OPTION}
 };
 
+bool listfuncs_cb(const MODULECMD *cmd, void *data)
+{
+    DCB *dcb = (DCB*)data;
+
+    dcb_printf(dcb, "%s::%s(", cmd->domain, cmd->identifier);
+
+
+    for (int i = 0; i < cmd->arg_count_max; i++)
+    {
+        modulecmd_arg_type_t *type = &cmd->arg_types[i];
+
+        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
+        {
+            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
+
+            if (t)
+            {
+                dcb_printf(dcb, "%s%s", t, i < cmd->arg_count_max - 1 ? " " : "");
+                MXS_FREE(t);
+            }
+        }
+    }
+
+    dcb_printf(dcb, ")\n");
+
+
+    for (int i = 0; i < cmd->arg_count_max; i++)
+    {
+        modulecmd_arg_type_t *type = &cmd->arg_types[i];
+
+        if (MODULECMD_GET_TYPE(type) != MODULECMD_ARG_OUTPUT)
+        {
+
+            char *t = modulecmd_argtype_to_str(&cmd->arg_types[i]);
+
+            if (t)
+            {
+                dcb_printf(dcb, "    %s - %s\n", t, cmd->arg_types[i].description);
+                MXS_FREE(t);
+            }
+        }
+    }
+
+    dcb_printf(dcb, "\n");
+
+    return true;
+}
+
+void dListFunctions(DCB *dcb)
+{
+    modulecmd_foreach(NULL, NULL, listfuncs_cb, dcb);
+}
+
 /**
  * The subcommands of the list command
  */
@@ -349,6 +405,12 @@ struct subcommand listoptions[] =
         "List polling threads",
         "List the status of the polling threads in MaxScale",
         {0, 0, 0}
+    },
+    {
+        "functions", 0, 0, dListFunctions,
+        "List registered functions",
+        "List all registered functions",
+        {0}
     },
     { EMPTY_OPTION}
 };
@@ -743,28 +805,9 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        SERVICE *service = service_find(values[i]);
-        MONITOR *monitor = monitor_find(values[i]);
-
-        if (service || monitor)
+        if (runtime_link_server(server, values[i]))
         {
-            ss_dassert(service == NULL || monitor == NULL);
-
-            if (service)
-            {
-                serviceAddBackend(service, server);
-                service_serialize_servers(service);
-            }
-            else if (monitor)
-            {
-                monitorAddServer(monitor, server);
-                monitor_serialize_servers(monitor);
-            }
-
-            const char *target = service ? "service" : "monitor";
-
-            MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, target, values[i]);
-            dcb_printf(dcb, "Added server '%s' to %s '%s'\n", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Added server '%s' to '%s'\n", server->unique_name, values[i]);
         }
         else
         {
@@ -811,27 +854,9 @@ static void cmd_RemoveServer(DCB *dcb, SERVER *server, char *v1, char *v2, char 
 
     for (int i = 0; i < items && values[i]; i++)
     {
-        SERVICE *service = service_find(values[i]);
-        MONITOR *monitor = monitor_find(values[i]);
-
-        if (service || monitor)
+        if (runtime_unlink_server(server, values[i]))
         {
-            ss_dassert(service == NULL || monitor == NULL);
-
-            if (service)
-            {
-                serviceRemoveBackend(service, server);
-                service_serialize_servers(service);
-            }
-            else if (monitor)
-            {
-                monitorRemoveServer(monitor, server);
-                monitor_serialize_servers(monitor);
-            }
-
-            const char *target = service ? "service" : "monitor";
-            MXS_NOTICE("Removed server '%s' from %s '%s'", server->unique_name, target, values[i]);
-            dcb_printf(dcb, "Removed server '%s' from %s '%s'\n", server->unique_name, target, values[i]);
+            dcb_printf(dcb, "Removed server '%s' from '%s'\n", server->unique_name, values[i]);
         }
         else
         {
@@ -983,7 +1008,7 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
 
     if (server_find_by_unique_name(name) == NULL)
     {
-        if (server_create(name, address, port, protocol, authenticator, authenticator_options))
+        if (runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
         {
             dcb_printf(dcb, "Created server '%s'\n", name);
         }
@@ -998,6 +1023,23 @@ static void createServer(DCB *dcb, char *name, char *address, char *port,
     }
 
     spinlock_release(&server_mod_lock);
+}
+
+static void createListener(DCB *dcb, SERVICE *service, char *name, char *address,
+                           char *port, char *protocol, char *authenticator,
+                           char *authenticator_options, char *key, char *cert,
+                           char *ca, char *version, char *depth)
+{
+    if (runtime_create_listener(service, name, address, port, protocol,
+                                authenticator, authenticator_options,
+                                key, cert, ca, version, depth))
+    {
+        dcb_printf(dcb, "Listener '%s' created\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to create listener '%s', see log for more details\n", name);
+    }
 }
 
 struct subcommand createoptions[] =
@@ -1020,6 +1062,33 @@ struct subcommand createoptions[] =
         }
     },
     {
+        "listener", 2, 12, createListener,
+        "Create a new listener for a service",
+        "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
+        "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n\n"
+        "Create a new server from the following parameters.\n"
+        "SERVICE       Service where this listener is added\n"
+        "NAME          Listener name\n"
+        "HOST          Listener host address (default 0.0.0.0)\n"
+        "PORT          Listener port (default 3306)\n"
+        "PROTOCOL      Listener protocol (default MySQLClient)\n"
+        "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"
+        "OPTIONS       Options for the authenticator module\n"
+        "SSL_KEY       Path to SSL private key\n"
+        "SSL_CERT      Path to SSL certificate\n"
+        "SSL_CA        Path to CA certificate\n"
+        "SSL_VERSION   SSL version (default MAX)\n"
+        "SSL_VERIFY_DEPTH Certificate verification depth\n\n"
+        "The first two parameters are required, the others are optional.\n"
+        "Any of the optional parameters can also have the value 'default'\n"
+        "which will be replaced with the default value.\n",
+        {
+            ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        }
+    },
+    {
         EMPTY_OPTION
     }
 };
@@ -1032,13 +1101,25 @@ static void destroyServer(DCB *dcb, SERVER *server)
     char name[strlen(server->unique_name) + 1];
     strcpy(name, server->unique_name);
 
-    if (server_destroy(server))
+    if (runtime_destroy_server(server))
     {
         dcb_printf(dcb, "Destroyed server '%s'\n", name);
     }
     else
     {
         dcb_printf(dcb, "Failed to destroy server '%s', see log file for more details\n", name);
+    }
+}
+
+static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
+{
+    if (runtime_destroy_listener(service, name))
+    {
+        dcb_printf(dcb, "Destroyed listener '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to destroy listener '%s', see log file for more details\n", name);
     }
 }
 
@@ -1051,74 +1132,15 @@ struct subcommand destroyoptions[] =
         {ARG_TYPE_SERVER}
     },
     {
+        "listener", 2, 2, destroyListener,
+        "Destroy a listener",
+        "Usage: destroy listener SERVICE NAME",
+        {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
+    },
+    {
         EMPTY_OPTION
     }
 };
-
-static bool handle_alter_server(SERVER *server, char *key, char *value)
-{
-    bool valid = true;
-
-    if (strcmp(key, "address") == 0)
-    {
-        server_update_address(server, value);
-    }
-    else if (strcmp(key, "port") == 0)
-    {
-        server_update_port(server, atoi(value));
-    }
-    else if (strcmp(key, "monuser") == 0)
-    {
-        server_update_credentials(server, value, server->monpw);
-    }
-    else if (strcmp(key, "monpw") == 0)
-    {
-        server_update_credentials(server, server->monuser, value);
-    }
-    else
-    {
-        valid = false;
-    }
-
-    return valid;
-}
-
-void handle_server_ssl(DCB *dcb, SERVER *server, CONFIG_CONTEXT *obj)
-{
-    if (config_have_required_ssl_params(obj))
-    {
-        int err = 0;
-        SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
-
-        if (err == 0 && ssl && listener_init_SSL(ssl) == 0)
-        {
-            /** Sync to prevent reads on partially initialized server_ssl */
-            atomic_synchronize();
-
-            server->server_ssl = ssl;
-            if (server_serialize(server))
-            {
-                dcb_printf(dcb, "SSL enabled for server '%s'\n", server->unique_name);
-            }
-            else
-            {
-                dcb_printf(dcb, "SSL enabled for server '%s' but persisting "
-                           "it to disk failed, see log for more details.\n",
-                           server->unique_name);
-            }
-        }
-        else
-        {
-            dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
-                       "for more details.\n", server->unique_name);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
-                   "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
-    }
-}
 
 /**
  * @brief Process multiple alter operations at once
@@ -1134,6 +1156,12 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
     CONFIG_CONTEXT *obj = NULL;
+    char *ssl_key = NULL;
+    char *ssl_cert = NULL;
+    char *ssl_ca = NULL;
+    char *ssl_version = NULL;
+    char *ssl_depth = NULL;
+    bool enable = false;
 
     for (int i = 0; i < items && values[i]; i++)
     {
@@ -1146,19 +1174,33 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
 
             if (config_is_ssl_parameter(key))
             {
-                /**
-                 * All the required SSL parameters must be defined at once to
-                 * enable SSL for created servers. This removes the problem
-                 * of partial configuration and allows a somewhat atomic
-                 * operation.
-                 */
-                if ((obj == NULL && (obj = config_context_create(server->unique_name)) == NULL) ||
-                    (!config_add_param(obj, key, value)))
+                if (strcmp("ssl_cert", key) == 0)
                 {
-                    dcb_printf(dcb, "Internal error, see log for more details\n");
+                    ssl_cert = value;
+                }
+                else if (strcmp("ssl_ca_cert", key) == 0)
+                {
+                    ssl_ca = value;
+                }
+                else if (strcmp("ssl_key", key) == 0)
+                {
+                    ssl_key = value;
+                }
+                else if (strcmp("ssl_version", key) == 0)
+                {
+                    ssl_version = value;
+                }
+                else if (strcmp("ssl_cert_verify_depth", key) == 0)
+                {
+                    ssl_depth = value;
+                }
+                else
+                {
+                    enable = strcmp("ssl", key) == 0 && strcmp(value, "required") == 0;
+                    /** Must be 'ssl' */
                 }
             }
-            else if (!handle_alter_server(server, key, value))
+            else if (!runtime_alter_server(server, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
@@ -1169,87 +1211,24 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
         }
     }
 
-    if (obj)
+    if (enable || ssl_key || ssl_cert || ssl_ca)
     {
-        /** We have SSL parameters, try to process them */
-        handle_server_ssl(dcb, server, obj);
-        config_context_free(obj);
-    }
-}
-
-/**
- * @brief Convert a string value to a positive integer
- *
- * If the value is not a positive integer, an error is printed to @c dcb.
- *
- * @param value String value
- * @return 0 on error, otherwise a positive integer
- */
-static long get_positive_int(const char *value)
-{
-    char *endptr;
-    long ival = strtol(value, &endptr, 10);
-
-    if (*endptr == '\0' && ival > 0)
-    {
-        return ival;
-    }
-
-    return 0;
-}
-
-static bool handle_alter_monitor(MONITOR *monitor, char *key, char *value)
-{
-    bool valid = false;
-
-    if (strcmp(key, "user") == 0)
-    {
-        valid = true;
-        monitorAddUser(monitor, value, monitor->password);
-    }
-    else if (strcmp(key, "password") == 0)
-    {
-        valid = true;
-        monitorAddUser(monitor, monitor->user, value);
-    }
-    else if (strcmp(key, "monitor_interval") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
+        if (enable && ssl_key && ssl_cert && ssl_ca)
         {
-            valid = true;
-            monitorSetInterval(monitor, ival);
+            /** We have SSL parameters, try to process them */
+            if (!runtime_enable_server_ssl(server, ssl_key, ssl_cert, ssl_ca,
+                                           ssl_version, ssl_depth))
+            {
+                dcb_printf(dcb, "Enabling SSL for server '%s' failed, see log "
+                           "for more details.\n", server->unique_name);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: SSL configuration requires the following parameters:\n"
+                       "ssl=required ssl_key=PATH ssl_cert=PATH ssl_ca_cert=PATH\n");
         }
     }
-    else if (strcmp(key, "backend_connect_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
-        }
-    }
-    else if (strcmp(key, "backend_write_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
-        }
-    }
-    else if (strcmp(key, "backend_read_timeout") == 0)
-    {
-        long ival = get_positive_int(value);
-        if (ival)
-        {
-            valid = true;
-            monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
-        }
-    }
-
-    return valid;
 }
 
 static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
@@ -1268,7 +1247,7 @@ static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v
         {
             *value++ = '\0';
 
-            if (!handle_alter_monitor(monitor, key, value))
+            if (!runtime_alter_monitor(monitor, key, value))
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
@@ -1311,6 +1290,78 @@ struct subcommand alteroptions[] =
     }
 };
 
+static inline bool requires_output_dcb(const MODULECMD *cmd)
+{
+    modulecmd_arg_type_t *type = &cmd->arg_types[0];
+    return cmd->arg_count_max > 0 && MODULECMD_GET_TYPE(type) == MODULECMD_ARG_OUTPUT;
+}
+
+static void callFunction(DCB *dcb, char *domain, char *id, char *v3,
+                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                         char *v10, char *v11, char *v12)
+{
+    const void *values[11] = {v3, v4, v5, v6, v7, v8, v9, v10, v11, v12};
+    const int valuelen = sizeof(values) / sizeof(values[0]);
+    int numargs = 0;
+
+    while (numargs < valuelen && values[numargs])
+    {
+        numargs++;
+    }
+
+    const MODULECMD *cmd = modulecmd_find_command(domain, id);
+
+    if (cmd)
+    {
+        if (requires_output_dcb(cmd))
+        {
+            /** The function requires a DCB for output, add the client DCB
+             * as the first argument */
+            for (int i = valuelen - 1; i > 0; i--)
+            {
+                values[i] = values[i - 1];
+            }
+            values[0] = dcb;
+            numargs += numargs + 1 < valuelen - 1 ? 1 : 0;
+        }
+
+        MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, numargs, values);
+
+        if (arg)
+        {
+            if (!modulecmd_call_command(cmd, arg))
+            {
+                dcb_printf(dcb, "Failed to call function: %s\n", modulecmd_get_error());
+            }
+            modulecmd_arg_free(arg);
+        }
+        else
+        {
+            dcb_printf(dcb, "Failed to parse arguments: %s\n", modulecmd_get_error());
+        }
+    }
+    else
+    {
+        dcb_printf(dcb, "Function not found: %s\n", modulecmd_get_error());
+    }
+}
+
+struct subcommand calloptions[] =
+{
+    {
+        "function", 2, 12, callFunction,
+        "Call module function",
+        "Usage: call function NAMESPACE FUNCTION ARGS...\n"
+        "To list all registered functions, run 'list functions'.\n",
+        { ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+    },
+    {
+        EMPTY_OPTION
+    }
+};
+
 /**
  * The debug command table
  */
@@ -1335,7 +1386,8 @@ static struct
     { "restart",    restartoptions },
     { "shutdown",   shutdownoptions },
     { "show",       showoptions },
-    { "sync",   syncoptions },
+    { "sync",       syncoptions },
+    { "call",       calloptions },
     { NULL,         NULL    }
 };
 
@@ -1457,7 +1509,7 @@ execute_cmd(CLI_SESSION *cli)
     args[0] = cli->cmdbuf;
     ptr = args[0];
     lptr = ptr;
-    i = 0;
+    i = 1;
     /*
      * Break the command line into a number of words. Whitespace is used
      * to delimit words and may be escaped by use of the \ character or
@@ -1465,7 +1517,7 @@ execute_cmd(CLI_SESSION *cli)
      * The array args contains the broken down words, one per index.
      */
 
-    while (*ptr)
+    while (*ptr && i <= MAXARGS + 2)
     {
         if (escape_next)
         {
@@ -1489,19 +1541,7 @@ execute_cmd(CLI_SESSION *cli)
                 break;
             }
 
-            if (args[i] == ptr)
-            {
-                args[i] = ptr + 1;
-            }
-            else
-            {
-                i++;
-                if (i >= MAXARGS - 1)
-                {
-                    break;
-                }
-                args[i] = ptr + 1;
-            }
+            args[i++] = ptr + 1;
             ptr++;
             lptr++;
         }
@@ -1523,14 +1563,13 @@ execute_cmd(CLI_SESSION *cli)
         }
     }
     *lptr = 0;
-    args[MXS_MIN(MAXARGS - 1, i + 1)] = NULL;
+    args[i] = NULL;
 
     if (args[0] == NULL || *args[0] == 0)
     {
         return 1;
     }
-    for (i = 0; args[i] && *args[i]; i++)
-        ;
+
     argc = i - 2;   /* The number of extra arguments to commands */
 
     if (!strcasecmp(args[0], "help"))
@@ -1571,7 +1610,7 @@ execute_cmd(CLI_SESSION *cli)
                     dcb_printf(dcb, "Available options to the %s command:\n", args[1]);
                     for (j = 0; cmds[i].options[j].arg1; j++)
                     {
-                        dcb_printf(dcb, "'%s' - %s\n\n\t%s\n\n", cmds[i].options[j].arg1,
+                        dcb_printf(dcb, "'%s' - %s\n\n%s\n\n", cmds[i].options[j].arg1,
                                    cmds[i].options[j].help, cmds[i].options[j].devhelp);
 
                     }
@@ -1755,7 +1794,7 @@ shutdown_service(DCB *dcb, SERVICE *service)
 static void
 restart_service(DCB *dcb, SERVICE *service)
 {
-    serviceRestart(service);
+    serviceStart(service);
 }
 
 /**

@@ -4,7 +4,7 @@ if (BUILD_QC_MYSQLEMBEDDED)
   foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
     include_directories(${DIR})
   endforeach()
-  include_directories(${MYSQL_EMMBEDDED_INCLUDE_DIR}/..)
+  include_directories(${MYSQL_EMBEDDED_INCLUDE_DIR}/..)
 
   if(${ERRMSG} MATCHES "ERRMSG-NOTFOUND")
     message(FATAL_ERROR "The errmsg.sys file was not found, please define the path with -DERRMSG=<path>")

@@ -349,12 +349,12 @@ test1()
     ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
     gwbuf_add_property(buffer, "name", "value");
     ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, "name")), "Should now have correct property");
-    strcpy(GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
+    strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     ss_dfprintf(stderr, "\t..done\nLoad some data into the buffer");
     ss_info_dassert('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
     ss_info_dassert(-1 == GWBUF_DATA_CHAR(buffer, 105), "Hundred and fifth character of buffer must return -1");
     ss_info_dassert(0 == GWBUF_IS_SQL(buffer), "Must say buffer is not SQL, as it does not have marker");
-    strcpy(GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
+    strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
     ss_dfprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     ss_info_dassert(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
     transform = gwbuf_clone_transform(buffer, GWBUF_TYPE_PLAINSQL);

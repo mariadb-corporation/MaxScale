@@ -227,9 +227,11 @@ int sqlite3Dequote(char *z){
       // TODO: removed.
       break;
     }else if ( z[i]=='\\' ){
-      z[j++] = '\\';
+      // If we want to dequote properly, a few more characters would have to be
+      // handled explicitly. That would not affect the classification, however,
+      // so we won't do that.
       if ( z[i+1]==quote || z[i+1]=='\\' ){
-        z[j++] = quote;
+        z[j++] = z[i+1];
         i++;
       }
     } else

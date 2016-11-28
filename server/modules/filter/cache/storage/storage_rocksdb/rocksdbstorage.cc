@@ -403,7 +403,7 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
     return CACHE_RESULT_OK;
 }
 
-cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
+cache_result_t RocksDBStorage::getValue(const char* pKey, uint32_t flags, GWBUF** ppResult)
 {
     // Use the root DB so that we get the value *with* the timestamp at the end.
     rocksdb::DB* pDb = m_sDb->GetRootDB();
@@ -419,7 +419,9 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
     case rocksdb::Status::kOk:
         if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            if (!RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default()))
+            bool isStale = RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default());
+
+            if (!isStale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
             {
                 size_t length = value.length() - RocksDBInternals::TS_LENGTH;
 
@@ -429,7 +431,14 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
                 {
                     memcpy(GWBUF_DATA(*ppResult), value.data(), length);
 
-                    result = CACHE_RESULT_OK;
+                    if (isStale)
+                    {
+                        result = CACHE_RESULT_STALE;
+                    }
+                    else
+                    {
+                        result = CACHE_RESULT_OK;
+                    }
                 }
             }
             else
@@ -461,9 +470,20 @@ cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
     ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
     rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
-    rocksdb::Slice value(static_cast<const char*>(GWBUF_DATA(pValue)), GWBUF_LENGTH(pValue));
+    rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
 
     rocksdb::Status status = m_sDb->Put(writeOptions(), key, value);
+
+    return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
+}
+
+cache_result_t RocksDBStorage::delValue(const char* pKey)
+{
+    ss_dassert(pKey);
+
+    rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
+
+    rocksdb::Status status = m_sDb->Delete(writeOptions(), key);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }

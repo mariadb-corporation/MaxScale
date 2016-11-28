@@ -219,7 +219,7 @@ if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMP
 endif()
 
 install_file(${CMAKE_SOURCE_DIR}/COPYRIGHT core)
-install_file(${CMAKE_SOURCE_DIR}/README core)
+install_file(${CMAKE_SOURCE_DIR}/README.md core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
 install_file(etc/lsyncd_example.conf core)

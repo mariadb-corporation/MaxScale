@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale/maxscale_test.h>
-#include <maxscale/service.h>
+#include "../maxscale/service.h"
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 #include "test_utils.h"
@@ -69,8 +69,8 @@ test1()
     ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
     set_libdir(MXS_STRDUP_A("../../modules/authenticator/MySQLAuth/"));
-    ss_info_dassert(0 != serviceAddProtocol(service, "TestProtocol", "testprotocol",
-                                            "localhost", 9876, "MySQLAuth", NULL, NULL),
+    ss_info_dassert(serviceCreateListener(service, "TestProtocol", "testprotocol",
+                                          "localhost", 9876, "MySQLAuth", NULL, NULL),
                     "Add Protocol should succeed");
     ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", "localhost", 9876),
                     "Service should have new protocol as requested");

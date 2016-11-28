@@ -13,6 +13,8 @@
 
 #include <stdlib.h>
 #include "rules.h"
+#include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>
@@ -78,7 +80,7 @@ int test_user()
 {
     int errors = 0;
 
-    for (int i = 0; i < n_user_test_cases; ++i)
+    for (size_t i = 0; i < n_user_test_cases; ++i)
     {
         const struct user_test_case *test_case = &user_test_cases[i];
 
@@ -180,9 +182,9 @@ int test_store()
 {
     int errors = 0;
 
-    for (int i = 0; i < n_store_test_cases; ++i)
+    for (size_t i = 0; i < n_store_test_cases; ++i)
     {
-        printf("TC      : %d\n", i + 1);
+        printf("TC      : %d\n", (int)(i + 1));
         const struct store_test_case *test_case = &store_test_cases[i];
 
         CACHE_RULES *rules = cache_rules_parse(test_case->rule, 0);
@@ -234,8 +236,10 @@ int main()
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
+        set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
         if (qc_init("qc_sqlite", ""))
         {
+            set_libdir(MXS_STRDUP_A("../"));
             rc = test();
         }
         else

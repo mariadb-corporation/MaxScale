@@ -26,7 +26,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
@@ -46,6 +45,9 @@
 #include <getopt.h>
 
 #include <maxscale/version.h>
+
+// This isn't really a clean way of testing
+#include "../../../../core/maxscale/service.h"
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);

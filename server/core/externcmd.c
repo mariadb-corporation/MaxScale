@@ -230,6 +230,7 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
                 }
             }
         }
+        pcre2_code_free(re);
     }
     else
     {

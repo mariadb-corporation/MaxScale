@@ -98,10 +98,10 @@ typedef struct
 typedef struct server_ref_t
 {
     struct server_ref_t *next; /**< Next server reference */
-    SERVER* server; /**< The actual server */
-    int weight; /**< Weight of this server */
-    int connections; /**< Number of connections created through this reference */
-    bool active;     /**< Whether this reference is valid and in use*/
+    SERVER* server;            /**< The actual server */
+    int weight;                /**< Weight of this server */
+    int connections;           /**< Number of connections created through this reference */
+    bool active;               /**< Whether this reference is valid and in use*/
 } SERVER_REF;
 
 /** Macro to check whether a SERVER_REF is active */
@@ -119,8 +119,8 @@ typedef struct server_ref_t
 #define SERVICE_PARAM_UNINIT -1
 
 /* Refresh rate limits for load users from database */
-#define USERS_REFRESH_TIME         30           /* Allowed time interval (in seconds) after last update*/
-#define USERS_REFRESH_MAX_PER_TIME 4    /* Max number of load calls within the time interval */
+#define USERS_REFRESH_TIME         30 /* Allowed time interval (in seconds) after last update*/
+#define USERS_REFRESH_MAX_PER_TIME 4  /* Max number of load calls within the time interval */
 
 /** Default timeout values used by the connections which fetch user authentication data */
 #define DEFAULT_AUTH_CONNECT_TIMEOUT 3
@@ -142,25 +142,24 @@ typedef struct service
     int max_connections;               /**< Maximum client connections */
     QUEUE_CONFIG *queued_connections;  /**< Queued connections, if set */
     SERV_LISTENER *ports;              /**< Linked list of ports and protocols
-                                        * that this service will listen on.
-                                        */
+                                        * that this service will listen on */
     char *routerModule;                /**< Name of router module to use */
     char **routerOptions;              /**< Router specific option strings */
     struct router_object *router;      /**< The router we are using */
     void *router_instance;             /**< The router instance for this service */
-    char *version_string;              /** version string for this service listeners */
-    SERVER_REF *dbref;                 /** server references */
-    int         n_dbref;               /** Number of server references */
+    char *version_string;              /**< version string for this service listeners */
+    SERVER_REF *dbref;                 /**< server references */
+    int         n_dbref;               /**< Number of server references */
     SERVICE_USER credentials;          /**< The cedentials of the service user */
     SPINLOCK spin;                     /**< The service spinlock */
     SERVICE_STATS stats;               /**< The service statistics */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */
-    CONFIG_PARAMETER* svc_config_param;/*<  list of config params and values */
-    int svc_config_version;            /*<  Version number of configuration */
-    bool svc_do_shutdown;              /*< tells the service to exit loops etc. */
-    bool users_from_all;               /*< Load users from one server or all of them */
-    bool strip_db_esc;                 /*< Remove the '\' characters from database names
+    CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
+    int svc_config_version;            /**<  Version number of configuration */
+    bool svc_do_shutdown;              /**< tells the service to exit loops etc. */
+    bool users_from_all;               /**< Load users from one server or all of them */
+    bool strip_db_esc;                 /**< Remove the '\' characters from database names
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
     SPINLOCK users_table_spin;         /**< The spinlock for users data refresh */
@@ -168,11 +167,11 @@ typedef struct service
     FILTER_DEF **filters;              /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
     long conn_idle_timeout;            /**< Session timeout in seconds */
-    char *weightby;
+    char *weightby;                    /**< Service weighting parameter name */
     struct service *next;              /**< The next service in the linked list */
-    bool retry_start;                  /*< If starting of the service should be retried later */
-    bool log_auth_warnings;            /*< Log authentication failures and warnings */
-    uint64_t capabilities;             /*< The capabilities of the service. */
+    bool retry_start;                  /**< If starting of the service should be retried later */
+    bool log_auth_warnings;            /**< Log authentication failures and warnings */
+    uint64_t capabilities;             /**< The capabilities of the service. */
 } SERVICE;
 
 typedef enum count_spec_t
@@ -188,61 +187,76 @@ typedef enum count_spec_t
 #define SERVICE_STATE_FAILED    3       /**< The service failed to start */
 #define SERVICE_STATE_STOPPED   4       /**< The service has been stopped */
 
-extern SERVICE *service_alloc(const char *, const char *);
-extern int service_free(SERVICE *);
-extern SERVICE *service_find(char *);
-extern int service_isvalid(SERVICE *);
-extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
-                              char *address, unsigned short port,
-                              char *authenticator, char *options,
-                              SSL_LISTENER *ssl);
-extern int serviceHasProtocol(SERVICE *service, const char *protocol,
-                              const char* address, unsigned short port);
-extern void serviceAddBackend(SERVICE *, SERVER *);
-extern void serviceRemoveBackend(SERVICE *, const SERVER *);
-extern bool serviceHasBackend(SERVICE *, SERVER *);
-extern void serviceAddRouterOption(SERVICE *, char *);
-extern void serviceClearRouterOptions(SERVICE *);
-extern int serviceStart(SERVICE *);
-extern int serviceStartAll();
-extern void serviceStartProtocol(SERVICE *, char *, int);
-extern int serviceStop(SERVICE *);
-extern int serviceRestart(SERVICE *);
-extern int serviceSetUser(SERVICE *, char *, char *);
-extern int serviceGetUser(SERVICE *, char **, char **);
-extern bool serviceSetFilters(SERVICE *, char *);
-extern int serviceSetSSL(SERVICE *service, char* action);
-extern int serviceSetSSLVersion(SERVICE *service, char* version);
-extern int serviceSetSSLVerifyDepth(SERVICE* service, int depth);
-extern void serviceSetCertificates(SERVICE *service, char* cert, char* key, char* ca_cert);
-extern int serviceEnableRootUser(SERVICE *, int );
-extern int serviceSetTimeout(SERVICE *, int );
-extern int serviceSetConnectionLimits(SERVICE *, int, int, int);
-extern void serviceSetRetryOnFailure(SERVICE *service, char* value);
-extern void serviceWeightBy(SERVICE *, char *);
-extern char *serviceGetWeightingParameter(SERVICE *);
-extern int serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
-extern int serviceStripDbEsc(SERVICE* service, int action);
-extern int serviceAuthAllServers(SERVICE *service, int action);
-extern void service_update(SERVICE *, char *, char *, char *);
-extern int service_refresh_users(SERVICE *);
-extern void printService(SERVICE *);
-extern void printAllServices();
-extern void dprintAllServices(DCB *);
-extern bool service_set_param_value(SERVICE*            service,
-                                    CONFIG_PARAMETER*   param,
-                                    char*               valstr,
-                                    count_spec_t        count_spec,
-                                    config_param_type_t type);
-extern void dprintService(DCB *, SERVICE *);
-extern void dListServices(DCB *);
-extern void dListListeners(DCB *);
-extern char* service_get_name(SERVICE* svc);
-extern void service_shutdown();
-extern int serviceSessionCountAll();
-extern RESULTSET *serviceGetList();
-extern RESULTSET *serviceGetListenerList();
-extern bool service_all_services_have_listeners();
+/**
+ * Starting and stopping services
+ */
+
+/**
+ * @brief Stop a service
+ *
+ * @param service Service to stop
+ * @return True if service was stopped
+ */
+bool serviceStop(SERVICE *service);
+
+/**
+ * @brief Restart a stopped service
+ *
+ * @param service Service to restart
+ * @return True if service was restarted
+ */
+bool serviceStart(SERVICE *service);
+
+/**
+ * @brief Start new a listener for a service
+ *
+ * @param service Service where the listener is linked
+ * @param port Listener to start
+ * @return True if listener was started
+ */
+bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port);
+
+/**
+ * @brief Stop a listener for a service
+ *
+ * @param service Service where the listener is linked
+ * @param name Name of the listener
+ * @return True if listener was stopped
+ */
+bool serviceStopListener(SERVICE *service, const char *name);
+
+/**
+ * Utility functions
+ */
+SERVICE* service_find(const char *name);
+
+// TODO: Change binlogrouter to use the functions in config_runtime.h
+void serviceAddBackend(SERVICE *service, SERVER *server);
+
+int   serviceGetUser(SERVICE *service, char **user, char **auth);
+int   serviceSetUser(SERVICE *service, char *user, char *auth);
+bool  serviceSetFilters(SERVICE *service, char *filters);
+int   serviceEnableRootUser(SERVICE *service, int action);
+int   serviceSetTimeout(SERVICE *service, int val);
+int   serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout);
+void  serviceSetRetryOnFailure(SERVICE *service, char* value);
+void  serviceWeightBy(SERVICE *service, char *weightby);
+char* serviceGetWeightingParameter(SERVICE *service);
+int   serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action);
+int   serviceStripDbEsc(SERVICE* service, int action);
+int   serviceAuthAllServers(SERVICE *service, int action);
+int   service_refresh_users(SERVICE *service);
+
+/**
+ * Diagnostics
+ */
+void       dprintAllServices(DCB *dcb);
+void       dprintService(DCB *dcb, SERVICE *service);
+void       dListServices(DCB *dcb);
+void       dListListeners(DCB *dcb);
+int        serviceSessionCountAll(void);
+RESULTSET* serviceGetList(void);
+RESULTSET* serviceGetListenerList(void);
 
 /**
  * Get the capabilities of the servive.
@@ -256,28 +270,5 @@ static inline uint64_t service_get_capabilities(const SERVICE *service)
 {
     return service->capabilities;
 }
-
-/**
- * Check if a service uses @c servers
- * @param server Server that is queried
- * @return True if server is used by at least one service
- */
-bool service_server_in_use(const SERVER *server);
-
-/**
- * @brief Serialize a service to a file
- *
- * This partially converts @c service into an INI format file. Only the servers
- * of the service are serialized. This allows the service to keep using the servers
- * added at runtime even after a restart.
- *
- * NOTE: This does not persist the complete service configuration and requires
- * that an existing service configuration is in the main configuration file.
- * Changes to service parameters are not persisted.
- *
- * @param service Service to serialize
- * @return False if the serialization of the service fails, true if it was successful
- */
-bool service_serialize_servers(const SERVICE *service);
 
 MXS_END_DECLS

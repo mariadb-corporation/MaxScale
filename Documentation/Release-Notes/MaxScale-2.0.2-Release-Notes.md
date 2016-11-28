@@ -27,6 +27,7 @@ To cater for this situation there is now a `set server <name> stale` command.
 [Here is a list of bugs fixed since the release of MaxScale 2.0.1.](https://jira.mariadb.org/browse/MXS-976?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.0.2)
 
 * [MXS-1018](https://jira.mariadb.org/browse/MXS-1018): Internal connections don't use TLS
+* [MXS-1008](https://jira.mariadb.org/browse/MXS-1008): MySQL Monitor with scripts leaks memory
 * [MXS-976](https://jira.mariadb.org/browse/MXS-976): Crash in libqc_sqlite
 * [MXS-975](https://jira.mariadb.org/browse/MXS-975): TCP backlog is capped at 1280
 * [MXS-970](https://jira.mariadb.org/browse/MXS-970): A fatal problem with maxscale automatically shut down
@@ -35,6 +36,7 @@ To cater for this situation there is now a `set server <name> stale` command.
 * [MXS-965](https://jira.mariadb.org/browse/MXS-965): galeramon erlaubt keine TLS verschlüsselte Verbindung
 * [MXS-960](https://jira.mariadb.org/browse/MXS-960): MaxScale Binlog Server does not allow comma to be in password
 * [MXS-957](https://jira.mariadb.org/browse/MXS-957): Temporary table creation from another temporary table isn't detected
+* [MXS-956](https://jira.mariadb.org/browse/MXS-956): Removing DCB 0x7fbf94016760 but was in state DCB_STATE_DISCONNECTED which is not legal for a call to dcb_close
 * [MXS-955](https://jira.mariadb.org/browse/MXS-955): MaxScale 2.0.1 doesn't recognize user and passwd options in .maxadmin file
 * [MXS-953](https://jira.mariadb.org/browse/MXS-953): Charset error when server configued in utf8mb4
 * [MXS-942](https://jira.mariadb.org/browse/MXS-942): describe table query not routed to shard that contains the schema

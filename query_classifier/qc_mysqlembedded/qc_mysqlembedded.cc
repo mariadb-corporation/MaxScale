@@ -58,6 +58,11 @@
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
+// <maxscale/protocol/mysql.h> assumes it is being compiled agains Connector-C,
+// so we need to make certain Connector-C constants visible.
+#define MYSQL_COM_QUIT        COM_QUIT
+#define MYSQL_COM_INIT_DB     COM_INIT_DB
+#define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/gwdirs.h>
 

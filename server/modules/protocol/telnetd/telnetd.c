@@ -181,7 +181,7 @@ static int telnetd_read_event(DCB* dcb)
                 switch (telnetd->state)
                 {
                 case TELNETD_STATE_LOGIN:
-                    telnetd->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                    telnetd->username = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                     /* Strip the cr/lf from the username */
                     t = strstr(telnetd->username, "\r\n");
                     if (t)
@@ -194,7 +194,7 @@ static int telnetd_read_event(DCB* dcb)
                     gwbuf_consume(head, GWBUF_LENGTH(head));
                     break;
                 case TELNETD_STATE_PASSWD:
-                    password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                    password = strndup((char*)GWBUF_DATA(head), GWBUF_LENGTH(head));
                     /* Strip the cr/lf from the username */
                     t = strstr(password, "\r\n");
                     if (t)

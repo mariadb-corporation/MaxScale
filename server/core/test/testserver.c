@@ -70,7 +70,7 @@ test1()
     ss_info_dassert(0 == strcmp("value", serverGetParameter(server, "name")),
                     "Parameter should be returned correctly");
     ss_dfprintf(stderr, "\t..done\nTesting Unique Name for Server.");
-    ss_info_dassert(NULL == server_find_by_unique_name("uniquename"),
+    ss_info_dassert(NULL == server_find_by_unique_name("non-existent"),
                     "Should not find non-existent unique name.");
     mxs_log_flush_sync();
     ss_info_dassert(server == server_find_by_unique_name("uniquename"), "Should find by unique name.");

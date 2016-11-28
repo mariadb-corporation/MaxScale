@@ -62,10 +62,11 @@
 #include <maxscale/monitor.h>
 #include <maxscale/notification.h>
 #include <maxscale/pcre2.h>
-#include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/gwdirs.h>
+
+#include "maxscale/service.h"
 
 typedef struct duplicate_context
 {
@@ -98,7 +99,7 @@ bool config_has_duplicate_sections(const char* config, DUPLICATE_CONTEXT* contex
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
-int create_new_listener(CONFIG_CONTEXT *obj, bool startnow);
+int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
@@ -815,7 +816,7 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (!strcmp(type, "listener"))
                 {
-                    error_count += create_new_listener(obj, false);
+                    error_count += create_new_listener(obj);
                 }
                 else if (!strcmp(type, "monitor"))
                 {
@@ -3094,7 +3095,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
  * @param startnow If true, start the listener now
  * @return Number of errors
  */
-int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
+int create_new_listener(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
     char *service_name = config_get_value(obj->parameters, "service");
@@ -3121,12 +3122,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, obj->object, protocol, socket, 0,
-                                       authenticator, authenticator_options, ssl_info);
-                    if (startnow)
-                    {
-                        serviceStartProtocol(service, protocol, 0);
-                    }
+                    serviceCreateListener(service, obj->object, protocol, socket, 0,
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 
@@ -3142,12 +3139,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, obj->object, protocol, address, atoi(port),
-                                       authenticator, authenticator_options, ssl_info);
-                    if (startnow)
-                    {
-                        serviceStartProtocol(service, protocol, atoi(port));
-                    }
+                    serviceCreateListener(service, obj->object, protocol, address, atoi(port),
+                                          authenticator, authenticator_options, ssl_info);
                 }
             }
 

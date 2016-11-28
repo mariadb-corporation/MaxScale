@@ -372,7 +372,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     if (ptr)
     {
-      monitor_server_free(ptr);
+        monitor_server_free(ptr);
     }
 
     if (old_state == MONITOR_STATE_RUNNING)
@@ -515,7 +515,7 @@ monitorList(DCB *dcb)
  * @return      Pointer to the monitor or NULL
  */
 MONITOR *
-monitor_find(char *name)
+monitor_find(const char *name)
 {
     MONITOR *ptr;
 
@@ -845,7 +845,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
             /* Was running and still is */
             if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
-                     prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
+                prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -1042,8 +1042,48 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
     }
     else
     {
+        ss_dassert(cmd->argv != NULL && cmd->argv[0] != NULL);
+        // Construct a string with the script + arguments
+        char *scriptStr = NULL;
+        int totalStrLen = 0;
+        bool memError = false;
+        for (int i = 0; cmd->argv[i]; i++)
+        {
+            totalStrLen += strlen(cmd->argv[i]) + 1; // +1 for space and one \0
+        }
+        int spaceRemaining = totalStrLen;
+        if ((scriptStr = MXS_CALLOC(totalStrLen, sizeof(char))) != NULL)
+        {
+            char *currentPos = scriptStr;
+            // The script name should not begin with a space
+            int len = snprintf(currentPos, spaceRemaining, "%s", cmd->argv[0]);
+            currentPos += len;
+            spaceRemaining -= len;
+
+            for (int i = 1; cmd->argv[i]; i++)
+            {
+                if ((cmd->argv[i])[0] == '\0')
+                {
+                    continue; // Empty argument, print nothing
+                }
+                len = snprintf(currentPos, spaceRemaining, " %s", cmd->argv[i]);
+                currentPos += len;
+                spaceRemaining -= len;
+            }
+            ss_dassert(spaceRemaining > 0);
+            *currentPos = '\0';
+        }
+        else
+        {
+            memError = true;
+            scriptStr = cmd->argv[0]; // print at least something
+        }
         MXS_NOTICE("Executed monitor script '%s' on event '%s'.",
-                   script, mon_get_event_name(ptr));
+                   scriptStr, mon_get_event_name(ptr));
+        if (!memError)
+        {
+            MXS_FREE(scriptStr);
+        }
     }
 
     externcmd_free(cmd);

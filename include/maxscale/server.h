@@ -227,25 +227,20 @@ extern SERVER* server_alloc(const char *name, const char *address, unsigned shor
                             const char *auth_options);
 
 /**
- * @brief Create a new server
+ * @brief Find a server that can be reused
  *
- * This function creates a new, persistent server by first allocating a new
- * server and then storing the resulting configuration file on disk. This
- * function should be used only from administrative interface modules and internal
- * modules should use server_alloc() instead.
+ * A server that has been destroyed will not be deleted but only deactivated.
  *
- * @param name          Server name
- * @param address       Network address
- * @param port          Network port
- * @param protocol      Protocol module name
- * @param authenticator Authenticator module name
- * @param options       Options for the authenticator module
- * @return True on success, false if an error occurred
+ * @param name Name of the server
+ * @param protocol Protocol used by the server
+ * @param authenticator The authenticator module of the server
+ * @param auth_options Options for the authenticator
+ * @return Reusable SERVER or NULL if no servers matching the criteria were
+ * found
+ * @see runtime_create_server
  */
-extern bool server_create(const char *name, const char *address, const char *port,
-                          const char *protocol, const char *authenticator,
-                          const char *options);
-
+SERVER* server_find_destroyed(const char *name, const char *protocol,
+                              const char *authenticator, const char *auth_options);
 /**
  * @brief Serialize a server to a file
  *
@@ -257,16 +252,6 @@ extern bool server_create(const char *name, const char *address, const char *por
  * @return False if the serialization of the server fails, true if it was successful
  */
 bool server_serialize(const SERVER *server);
-
-/**
- * @brief Destroy a server
- *
- * This removes any created server configuration files and marks the server removed
- * If the server is not in use.
- * @param server Server to destroy
- * @return True if server was destroyed
- */
-bool server_destroy(SERVER *server);
 
 extern int server_free(SERVER *);
 extern SERVER *server_find_by_unique_name(const char *name);

@@ -32,6 +32,7 @@
  - [Routing Hints](Reference/Hint-Syntax.md)
  - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
  - [MaxScale REST API](REST-API/API.md)
+ - [Module Commands](Reference/Module-Commands.md)
 
 ## Tutorials
 
