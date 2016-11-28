@@ -73,13 +73,15 @@ MONITOR *
 monitor_alloc(char *name, char *module)
 {
     name = MXS_STRDUP(name);
+    char *my_module = MXS_STRDUP(module);
 
     MONITOR *mon = (MONITOR *)MXS_MALLOC(sizeof(MONITOR));
 
-    if (!name || !mon)
+    if (!name || !mon || !my_module)
     {
         MXS_FREE(name);
         MXS_FREE(mon);
+        MXS_FREE(my_module);
         return NULL;
     }
 
@@ -92,6 +94,7 @@ monitor_alloc(char *name, char *module)
     }
     mon->state = MONITOR_STATE_ALLOC;
     mon->name = name;
+    mon->module_name = module;
     mon->handle = NULL;
     mon->databases = NULL;
     *mon->password = '\0';
@@ -144,6 +147,7 @@ monitor_free(MONITOR *mon)
     free_config_parameter(mon->parameters);
     monitor_server_free_all(mon->databases);
     MXS_FREE(mon->name);
+    MXS_FREE(mon->module_name);
     MXS_FREE(mon);
 }
 
@@ -1261,7 +1265,7 @@ bool monitor_server_in_use(const SERVER *server)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_monitor_config(const MONITOR *monitor, const char *filename)
+static bool create_monitor_server_config(const MONITOR *monitor, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1300,7 +1304,75 @@ static bool create_monitor_config(const MONITOR *monitor, const char *filename)
     return true;
 }
 
+static bool create_monitor_config(const MONITOR *monitor, const char *filename)
+{
+    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if (file == -1)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
+                  filename, monitor->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    /**
+     * Only additional parameters are added to the configuration. This prevents
+     * duplication or addition of parameters that don't support it.
+     *
+     * TODO: Check for return values on all of the dprintf calls
+     */
+    dprintf(file, "[%s]\n", monitor->name);
+    dprintf(file, "module=%s\n", monitor->module_name);
+    dprintf(file, "user=%s\n", monitor->user);
+    dprintf(file, "password=%s\n", monitor->password);
+    dprintf(file, "monitor_interval=%lu\n", monitor->interval);
+    dprintf(file, "backend_connect_timeout=%d\n", monitor->connect_timeout);
+    dprintf(file, "backend_write_timeout=%d\n", monitor->write_timeout);
+    dprintf(file, "backend_read_timeout=%d\n", monitor->read_timeout);
+    close(file);
+
+    return true;
+}
+
 bool monitor_serialize_servers(const MONITOR *monitor)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             monitor->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
+                  filename, errno, strerror_r(errno, err, sizeof(err)));
+    }
+    else if (create_monitor_server_config(monitor, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+
+    return rval;
+}
+
+bool monitor_serialize(const MONITOR *monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
