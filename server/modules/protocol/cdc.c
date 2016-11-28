@@ -455,7 +455,7 @@ cdc_protocol_done(DCB* dcb)
 static void
 write_auth_ack(DCB *dcb)
 {
-    dcb_printf(dcb, "OK");
+    dcb_printf(dcb, "OK\n");
 }
 
 /**
@@ -467,6 +467,6 @@ write_auth_ack(DCB *dcb)
 static void
 write_auth_err(DCB *dcb)
 {
-    dcb_printf(dcb, "ERR, code 11, msg: abcd");
+    dcb_printf(dcb, "ERROR: Authentication failed\n");
 }
 
