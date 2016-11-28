@@ -50,6 +50,8 @@
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
  * 24/08/2016   Massimiliano Pinto  Added slave notification and blr_distribute_binlog_record removed
  * 01/09/2016   Massimiliano Pinto  Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
+ * 11/11/2016   Massimiliano Pinto  Encryption context is freed and set to null a new binlog file
+ *                                  is being created due to ROTATE event.
  *
  * @endverbatim
  */
@@ -951,7 +953,7 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
     /* With mariadb10 always ask for annotate rows events */
     if (router->mariadb10_compat)
     {
-        // set flag for annotate rows event
+        /* set flag for annotate rows event request */
         encode_value(&data[9], BLR_REQUEST_ANNOTATE_ROWS_EVENT, 16);
     }
     else
@@ -1256,13 +1258,14 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     spinlock_release(&router->lock);
 #ifdef SHOW_EVENTS
                     printf("blr @ %lu: len %lu, event type 0x%02x, flags 0x%04x, "
-                           "event size %d, event timestamp %lu\n",
+                           "event size %d, event timestamp %lu, next pos %lu\n",
                            router->current_pos,
                            (unsigned long)len - 4,
                            hdr.event_type,
                            hdr.flags,
                            hdr.event_size,
-                           (unsigned long)hdr.timestamp);
+                           (unsigned long)hdr.timestamp,
+                           (unsigned long)hdr.next_pos);
 #endif
                 }
             }
@@ -1861,9 +1864,11 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
     strcpy(router->prevbinlog, router->binlog_name);
 
     int rotated = 1;
+    int remove_encrytion_ctx = 0;
 
     if (strncmp(router->binlog_name, file, slen) != 0)
     {
+        remove_encrytion_ctx = 1;
         router->stats.n_rotates++;
         if (blr_file_rotate(router, file, pos) == 0)
         {
@@ -1872,6 +1877,13 @@ blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
     }
     spinlock_acquire(&router->binlog_lock);
     router->rotating = 0;
+
+    /* remove current binlog encryption context */
+    if (remove_encrytion_ctx == 1)
+    {
+        MXS_FREE(router->encryption_ctx);
+        router->encryption_ctx = NULL;
+    }
     spinlock_release(&router->binlog_lock);
     return rotated;
 }
@@ -2420,12 +2432,12 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
         char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
-                  router->service->name, router->last_written,
+                  router->service->name, router->binlog_position,
                   router->binlog_name,
                   strerror_r(errno, err_msg, sizeof(err_msg)));
 
         /* Remove any partial event that was written */
-        if (ftruncate(router->binlog_fd, router->last_written))
+        if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                       router->service->name, router->last_written,

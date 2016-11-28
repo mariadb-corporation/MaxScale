@@ -68,8 +68,26 @@ MXS_BEGIN_DECLS
 #define BINLOG_EVENT_CRC_SIZE       4
 /* BINLOG_EVENT_LEN_OFFSET points to event_size in event_header */
 #define BINLOG_EVENT_LEN_OFFSET     9
-#define BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN  13
-#define BINLOG_FATAL_ERROR_READING         1236
+#define BINLOG_FATAL_ERROR_READING  1236
+
+/* Binlog Encryption */
+#define BINLOG_ENC_ALGO_NAME_LEN        13
+#define BINLOG_FLAG_ENCRYPT              1
+#define BINLOG_FLAG_DECRYPT              0
+#define BINLOG_AES_MAX_KEY_LEN          32
+#define BINLOG_MAX_CRYPTO_SCHEME         2
+#define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME 1
+#define BINLOG_MAX_KEYFILE_LINE_LEN     130
+
+/* Supported Encryption algorithms */
+enum blr_aes_mode
+{
+    BLR_AES_CBC,
+    BLR_AES_CTR
+};
+
+/* Default encryption alogorithm is AES_CTR */
+#define BINLOG_DEFAULT_ENC_ALGO    BLR_AES_CTR
 
 /**
  * Binlog event types
@@ -474,9 +492,11 @@ typedef struct
 typedef struct binlog_encryption_setup
 {
   bool enabled;
-  char encryption_algorithm[BINLOG_ENCRYPTION_ALGORYTHM_NAME_LEN];
+  int encryption_algorithm;
   char *key_management_filename;
-  uint8_t *keys;
+  uint8_t key_value[BINLOG_AES_MAX_KEY_LEN];
+  unsigned long key_len;
+  uint8_t key_id;
 } BINLOG_ENCRYPTION_SETUP;
 
 /**
@@ -754,6 +774,11 @@ extern bool blr_send_event(blr_thread_role_t role,
                            ROUTER_SLAVE *slave,
                            REP_HEADER *hdr,
                            uint8_t *buf);
+
+extern const char *blr_get_encryption_algorithm(int);
+extern int blr_check_encryption_algorithm(char *);
+extern const char *blr_encryption_algorithm_list(void);
+extern bool blr_get_encryption_key(ROUTER_INSTANCE *);
 
 MXS_END_DECLS
 

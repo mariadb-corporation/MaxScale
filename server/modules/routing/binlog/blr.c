@@ -54,6 +54,8 @@
  * 26/08/2016   Massimiliano Pinto  Addition of Start Encription Event description
  * 29/08/2016   Massimiliano Pinto  Addition of encrypt_binlog option
  * 08/11/2016   Massimiliano Pinto  Added destroyInstance()
+ * 24/11/2016   Massimiliano Pinto  Addition of encryption options:
+ *                                  encryption_algorithm and encryption_key_file
  *
  * @endverbatim
  */
@@ -113,6 +115,8 @@ int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 static void destroyInstance(ROUTER *instance);
+bool blr_parse_key(char *line, ROUTER_INSTANCE *router);
+bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -297,6 +301,8 @@ createInstance(SERVICE *service, char **options)
 
     /* Binlog encryption */
     inst->encryption.enabled = 0;
+    inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
+    inst->encryption.key_management_filename = NULL;
 
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
@@ -439,6 +445,27 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->encryption.enabled = config_truth_value(value);
                 }
+                else if (strcmp(options[i], "encryption_algorithm") == 0)
+                {
+                    int ret = blr_check_encryption_algorithm(value);
+                    if (ret > -1)
+                    {
+                        inst->encryption.encryption_algorithm = ret;
+                    }
+                    else
+                    {
+                        MXS_ERROR("Service %s, invalid encryption_algorithm '%s'. "
+                                  "Supported algorithms: %s",
+                                  service->name, value, blr_encryption_algorithm_list());
+
+                        free_instance(inst);
+                        return NULL;
+                    }
+                }
+                else if (strcmp(options[i], "encryption_key_file") == 0)
+                {
+                    inst->encryption.key_management_filename = MXS_STRDUP_A(value);
+                }
                 else if (strcmp(options[i], "lowwater") == 0)
                 {
                     inst->low_water = atoi(value);
@@ -567,6 +594,14 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("Service %s, server-id is not configured. "
                   "Please configure it with a unique positive integer value (1..2^32-1)",
                   service->name);
+        free_instance(inst);
+        return NULL;
+    }
+
+
+    /* Get the Encryption key */
+    if (inst->encryption.enabled && !blr_get_encryption_key(inst))
+    {
         free_instance(inst);
         return NULL;
     }
@@ -790,8 +825,11 @@ createInstance(SERVICE *service, char **options)
     /* Log whether the binlog encryption option value is on */
     if (inst->encryption.enabled)
     {
-        MXS_NOTICE("%s: Service has binlog encryption set to ON",
-                 service->name);
+        MXS_NOTICE("%s: Service has binlog encryption set to ON, algorithm: %s,"
+                   " KEY len %lu bits",
+                   service->name,
+                   blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
+                   8 * inst->encryption.key_len);
     }
 
     /**
@@ -2392,4 +2430,123 @@ destroyInstance(ROUTER *instance)
     }
 
     spinlock_release(&inst->lock);
+}
+
+/**
+ * Return the the value from hexadecimal digit
+ *
+ * @param c    Then hex char
+ * @return     The numeric value
+ */
+unsigned int from_hex(char c)
+{
+    return c <= '9' ? c - '0' : tolower(c) - 'a' + 10;
+}
+
+/**
+ * Parse a buffer of HEX data
+ *
+ * An encryption Key and its len are stored
+ * in router->encryption struct
+ *
+ * @param router    The router instance
+ * @param buffer    A buffer of bytes, in hex format
+ * @return          true on success and false on error
+ */
+bool blr_parse_key(char *buffer, ROUTER_INSTANCE *router)
+{
+  char *p = buffer;
+  int length = 0;
+  uint8_t *key = (uint8_t *)router->encryption.key_value;
+
+  while (isspace(*p) && *p != '\n')
+  {
+      p++;
+  }
+
+  while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
+  {
+      key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
+      p+= 2;
+  }
+
+  if (isxdigit(*p) ||
+     (length != 16 && length != 24 && length != 32))
+  {
+      MXS_ERROR("Found invalid Encryption Key at index %lu. File %s",
+                p - buffer,
+                router->encryption.key_management_filename);
+      return false;
+  }
+
+  router->encryption.key_len = length;
+
+  return true;
+}
+
+/**
+ * Read the encryption key form a file
+ *
+ * The key must be written in HEX format
+ *
+ * @param router    The router instance
+ * @return          false on error and true on success
+ */
+bool blr_get_encryption_key(ROUTER_INSTANCE *router)
+{
+    int ret = false;
+    if (router->encryption.key_management_filename == NULL)
+    {
+        MXS_ERROR("Service %s, encryption key is not set. "
+                   "Please specify key filename with 'encryption_key_file'",
+                   router->service->name);
+        return ret;
+    }
+    else
+    {
+        int size = BINLOG_MAX_KEYFILE_LINE_LEN;
+        char *buffer = MXS_CALLOC(1, size * sizeof(char));
+
+        if (buffer)
+        {
+            int file = open(router->encryption.key_management_filename, O_RDONLY);
+            if (file)
+            {
+                int n;
+                if ((n = read(file, buffer, size)) > 0)
+                {
+                    if (buffer[n - 1 ] == '\n')
+                    {
+                        buffer[n - 1] = '\0';
+                        n--;
+                    }
+                    memset(router->encryption.key_value, '\0', sizeof(router->encryption.key_value));
+                    /* Parse buffer for key */
+                    if (blr_parse_key(buffer, router))
+                    {
+                        /* Success */
+                        router->encryption.key_id = BINLOG_SYSTEM_DATA_CRYPTO_SCHEME;
+                        ret = true;
+                    }
+                }
+                close(file);
+            }
+            else
+            {
+                char errbuf[MXS_STRERROR_BUFLEN];
+                MXS_ERROR("%s, Failed to open KEY file '%s': %s",
+                          router->service->name,
+                          router->encryption.key_management_filename,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
+            }
+
+            MXS_FREE(buffer);
+            return ret;
+        }
+        else
+        {
+            MXS_OOM_MESSAGE("Failed to allocate enough memory while reading KEY file.");
+            return ret;
+        }
+    }
 }

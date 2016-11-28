@@ -32,6 +32,8 @@
  * 23/09/16     Massimiliano Pinto  MariaDB 10.1 encrypted binlog compatible:
  *                                  the output shows the START_ENCRYPTION_EVENT and follows
  *                                  binlog positions without dectypting events.
+ * 25/11/16     Massimiliano Pinto  MariaDB 10.1 encrypted files can be checked
+ *                                  with Key and Algo options
  *
  *
  * @endverbatim
@@ -50,6 +52,7 @@
 
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
+static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo);
 
 static struct option long_options[] =
 {
@@ -57,11 +60,13 @@ static struct option long_options[] =
     {"version",   no_argument, 0, 'V'},
     {"fix",       no_argument, 0, 'f'},
     {"mariadb10", no_argument, 0, 'M'},
+    {"key_file",  required_argument, 0, 'K'},
+    {"aes_algo",  required_argument, 0, 'A'},
     {"help",      no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "1.2.0";
+char *binlog_check_version = "2.0.1";
 
 int
 maxscale_uptime()
@@ -75,9 +80,12 @@ int main(int argc, char **argv)
     int debug_out = 0;
     int fix_file = 0;
     int mariadb10_compat = 0;
+    char *key_file = NULL;
+    char *aes_algo = NULL;
+    
 
     char c;
-    while ((c = getopt_long(argc, argv, "dVfM?", long_options, &option_index)) >= 0)
+    while ((c = getopt_long(argc, argv, "dVfMK:A:?", long_options, &option_index)) >= 0)
     {
         switch (c)
         {
@@ -93,6 +101,12 @@ int main(int argc, char **argv)
             break;
         case 'M':
             mariadb10_compat = 1;
+            break;
+        case 'K':
+            key_file = optarg;
+            break;
+        case 'A':
+            aes_algo = optarg;
             break;
         case '?':
             printUsage(*argv);
@@ -148,7 +162,8 @@ int main(int argc, char **argv)
         printf("ERROR: Failed to open binlog file %s: %s.\n",
                path, strerror(errno));
         MXS_FREE(inst);
-        exit(EXIT_FAILURE);
+        mxs_log_flush_sync();
+        mxs_log_finish();
     }
 
     inst->binlog_fd = fd;
@@ -167,6 +182,15 @@ int main(int argc, char **argv)
     if (fstat(inst->binlog_fd, &statb) == 0)
     {
         filelen = statb.st_size;
+    }
+
+    /* If encryption options are in use check  and use them */
+    if (set_encryption_options(inst, key_file, aes_algo))
+    {
+        MXS_FREE(inst);
+        mxs_log_flush_sync();
+        mxs_log_finish();
+        exit(EXIT_FAILURE);
     }
 
     MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
@@ -210,6 +234,69 @@ printUsage(const char *progname)
     printf("  -d|--debug        Print debug messages\n");
     printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
     printf("  -V|--version      print version information and exit\n");
+    printf("  -K|--key_file     AES Key file for MariaDB 10.1 binlog file decryption\n");
+    printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CTR, AES_CBC)\n");
     printf("  -?|--help         Print this help text\n");
 }
 
+/**
+ * Check and set the encryption options
+ *
+ * @param inst        The current binlog instance
+ * @param key_file    The AES Key filename
+ * @param aes_algo    The AES algorithm 
+ * @return            1 on failure, 0 on success
+ */
+static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo)
+{
+    if (aes_algo && !key_file)
+    {
+        MXS_ERROR("AES algorithm set but no KEY file specified, exiting.");
+        return 1;
+    }
+
+    /* Get the encryption KEY */
+    if (key_file)
+    {
+        inst->encryption.key_management_filename = key_file;
+        if (!blr_get_encryption_key(inst))
+        {
+            return 1;
+        }
+        else
+        {
+           /* Check aes algorithm */
+           if (aes_algo)
+           {
+              int ret = blr_check_encryption_algorithm(aes_algo);
+              if (ret > -1)
+              {
+                  inst->encryption.encryption_algorithm = ret;
+              }
+              else
+              {
+                 MXS_ERROR("Invalid encryption_algorithm '%s'. "
+                           "Supported algorithms: %s",
+                           aes_algo,
+                           blr_encryption_algorithm_list());
+                 return 1;
+              }
+           }
+           else
+           {
+              inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
+           }
+
+           MXS_NOTICE("Decrypting binlog file with algorithm: %s,"
+                      " KEY len %lu bits",
+                      blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
+                      8 * inst->encryption.key_len);
+
+           return 0;
+        }
+    }
+    else
+    {
+        return 0;
+    }
+}
