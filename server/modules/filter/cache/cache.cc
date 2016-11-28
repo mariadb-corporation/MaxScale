@@ -90,12 +90,12 @@ bool Cache::Create(const CACHE_CONFIG& config,
     return pFactory != NULL;
 }
 
-bool Cache::shouldStore(const char* zDefaultDb, const GWBUF* pQuery)
+bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
     return cache_rules_should_store(m_pRules, zDefaultDb, pQuery);
 }
 
-bool Cache::shouldUse(const SESSION* pSession)
+bool Cache::should_use(const SESSION* pSession)
 {
     return cache_rules_should_use(m_pRules, pSession);
 }

@@ -110,7 +110,7 @@ typedef struct cache_storage_api
      * Get a value from the cache.
      *
      * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with getKey.
+     * @param key        A key generated with get_key.
      * @param flags      Mask of cache_flags_t values.
      * @param result     Pointer to variable that after a successful return will
      *                   point to a GWBUF.
@@ -129,7 +129,7 @@ typedef struct cache_storage_api
      * Put a value to the cache.
      *
      * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with getKey.
+     * @param key        A key generated with get_key.
      * @param value      Pointer to GWBUF containing the value to be stored.
      *                   Must be one contiguous buffer.
      * @return CACHE_RESULT_OK if item was successfully put,
@@ -144,7 +144,7 @@ typedef struct cache_storage_api
      * Delete a value from the cache.
      *
      * @param storage    Pointer to a CACHE_STORAGE.
-     * @param key        A key generated with getKey.
+     * @param key        A key generated with get_key.
      * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
      *         CACHE_RESULT_OK may be returned also if the entry was not present.
      */

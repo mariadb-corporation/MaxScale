@@ -25,17 +25,17 @@ public:
     static CachePT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
     static CachePT* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
-    bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
+    cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
 
-    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
+    cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
 
-    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
+    cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue);
 
-    cache_result_t delValue(const CACHE_KEY& key);
+    cache_result_t del_value(const CACHE_KEY& key);
 
 private:
     typedef std::tr1::shared_ptr<Cache> SCache;
@@ -52,7 +52,7 @@ private:
                            CACHE_RULES*        pRules,
                            StorageFactory*     pFactory);
 
-    Cache& threadCache();
+    Cache& thread_cache();
 
 private:
     CachePT(const Cache&);

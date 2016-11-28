@@ -23,7 +23,7 @@ public:
     static CacheST* Create(const std::string& name, const CACHE_CONFIG* pConfig);
     static CacheST* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
-    bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
 

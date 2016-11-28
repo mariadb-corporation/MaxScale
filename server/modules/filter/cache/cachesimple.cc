@@ -129,39 +129,39 @@ bool CacheSimple::Create(const CACHE_CONFIG& config,
     return pPending != NULL;
 }
 
-cache_result_t CacheSimple::getKey(const char* zDefaultDb,
-                                   const GWBUF* pQuery,
-                                   CACHE_KEY* pKey)
+cache_result_t CacheSimple::get_key(const char* zDefaultDb,
+                                    const GWBUF* pQuery,
+                                    CACHE_KEY* pKey)
 {
-    return m_pStorage->getKey(zDefaultDb, pQuery, pKey);
+    return m_pStorage->get_key(zDefaultDb, pQuery, pKey);
 }
 
-cache_result_t CacheSimple::getValue(const CACHE_KEY& key,
-                                     uint32_t flags,
-                                     GWBUF** ppValue)
+cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
+                                      uint32_t flags,
+                                      GWBUF** ppValue)
 {
-    return m_pStorage->getValue(key, flags, ppValue);
+    return m_pStorage->get_value(key, flags, ppValue);
 }
 
-cache_result_t CacheSimple::putValue(const CACHE_KEY& key,
-                                     const GWBUF* pValue)
+cache_result_t CacheSimple::put_value(const CACHE_KEY& key,
+                                      const GWBUF* pValue)
 {
-    return m_pStorage->putValue(key, pValue);
+    return m_pStorage->put_value(key, pValue);
 }
 
-cache_result_t CacheSimple::delValue(const CACHE_KEY& key)
+cache_result_t CacheSimple::del_value(const CACHE_KEY& key)
 {
-    return m_pStorage->delValue(key);
-}
-
-// protected
-long CacheSimple::hashOfKey(const CACHE_KEY& key)
-{
-    return hash_of_key(key);
+    return m_pStorage->del_value(key);
 }
 
 // protected
-bool CacheSimple::mustRefresh(long key, const SessionCache* pSessionCache)
+long CacheSimple::hash_of_key(const CACHE_KEY& key)
+{
+    return ::hash_of_key(key);
+}
+
+// protected
+bool CacheSimple::must_refresh(long key, const SessionCache* pSessionCache)
 {
     void *pValue = hashtable_fetch(m_pPending, (void*)key);
     if (!pValue)

@@ -36,7 +36,7 @@ public:
      *
      * @return True of the result should be cached.
      */
-    bool shouldStore(const char* zDefaultDb, const GWBUF* pQuery);
+    bool should_store(const char* zDefaultDb, const GWBUF* pQuery);
 
     /**
      * Returns whether cached results should be used.
@@ -45,7 +45,7 @@ public:
      *
      * @return True of cached results should be used.
      */
-    bool shouldUse(const SESSION* pSession);
+    bool should_use(const SESSION* pSession);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
@@ -55,7 +55,7 @@ public:
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache) = 0;
+    virtual bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
@@ -65,13 +65,13 @@ public:
      */
     virtual void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache) = 0;
 
-    virtual cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
+    virtual cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
 
-    virtual cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) = 0;
+    virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) = 0;
 
-    virtual cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue) = 0;
+    virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue) = 0;
 
-    virtual cache_result_t delValue(const CACHE_KEY& key) = 0;
+    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
 protected:
     Cache(const std::string&  name,

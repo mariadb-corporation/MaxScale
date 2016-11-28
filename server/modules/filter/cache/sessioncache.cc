@@ -138,9 +138,9 @@ int SessionCache::routeQuery(GWBUF* pPacket)
                 if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
                     session_trx_is_read_only(session))
                 {
-                    if (m_pCache->shouldStore(m_zDefaultDb, pPacket))
+                    if (m_pCache->should_store(m_zDefaultDb, pPacket))
                     {
-                        if (m_pCache->shouldUse(m_pSession))
+                        if (m_pCache->should_use(m_pSession))
                         {
                             GWBUF* pResponse;
                             cache_result_t result = get_cached_response(pPacket, &pResponse);
@@ -152,7 +152,7 @@ int SessionCache::routeQuery(GWBUF* pPacket)
                                     // The value was found, but it was stale. Now we need to
                                     // figure out whether somebody else is already fetching it.
 
-                                    if (m_pCache->mustRefresh(m_key, this))
+                                    if (m_pCache->must_refresh(m_key, this))
                                     {
                                         // We were the first ones who hit the stale item. It's
                                         // our responsibility now to fetch it.
@@ -607,13 +607,13 @@ void SessionCache::reset_response_state()
  */
 cache_result_t SessionCache::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
 {
-    cache_result_t result = m_pCache->getKey(m_zDefaultDb, pQuery, &m_key);
+    cache_result_t result = m_pCache->get_key(m_zDefaultDb, pQuery, &m_key);
 
     if (result == CACHE_RESULT_OK)
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
 
-        result = m_pCache->getValue(m_key, flags, ppResponse);
+        result = m_pCache->get_value(m_key, flags, ppResponse);
     }
     else
     {
@@ -638,13 +638,13 @@ void SessionCache::store_result()
     {
         m_res.pData = pData;
 
-        cache_result_t result = m_pCache->putValue(m_key, m_res.pData);
+        cache_result_t result = m_pCache->put_value(m_key, m_res.pData);
 
         if (result != CACHE_RESULT_OK)
         {
             MXS_ERROR("Could not store cache item, deleting it.");
 
-            result = m_pCache->delValue(m_key);
+            result = m_pCache->del_value(m_key);
 
             if ((result != CACHE_RESULT_OK) || (result != CACHE_RESULT_NOT_FOUND))
             {

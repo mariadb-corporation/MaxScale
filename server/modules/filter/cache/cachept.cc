@@ -95,34 +95,34 @@ CachePT* CachePT::Create(const std::string& name,
     return pCache;
 }
 
-bool CachePT::mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
+bool CachePT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    return threadCache().mustRefresh(key, pSessionCache);
+    return thread_cache().must_refresh(key, pSessionCache);
 }
 
 void CachePT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    threadCache().refreshed(key, pSessionCache);
+    thread_cache().refreshed(key, pSessionCache);
 }
 
-cache_result_t CachePT::getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey)
+cache_result_t CachePT::get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
-    return threadCache().getKey(zDefaultDb, pQuery, pKey);
+    return thread_cache().get_key(zDefaultDb, pQuery, pKey);
 }
 
-cache_result_t CachePT::getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue)
+cache_result_t CachePT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue)
 {
-    return threadCache().getValue(key, flags, ppValue);
+    return thread_cache().get_value(key, flags, ppValue);
 }
 
-cache_result_t CachePT::putValue(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t CachePT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    return threadCache().putValue(key, pValue);
+    return thread_cache().put_value(key, pValue);
 }
 
-cache_result_t CachePT::delValue(const CACHE_KEY& key)
+cache_result_t CachePT::del_value(const CACHE_KEY& key)
 {
-    return threadCache().delValue(key);
+    return thread_cache().del_value(key);
 }
 
 // static
@@ -181,7 +181,7 @@ CachePT* CachePT::Create(const std::string&  name,
     return pCache;
 }
 
-Cache& CachePT::threadCache()
+Cache& CachePT::thread_cache()
 {
     int i = thread_index();
     ss_dassert(i < (int)m_caches.size());

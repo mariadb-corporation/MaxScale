@@ -27,27 +27,27 @@ Storage::~Storage()
 {
 }
 
-cache_result_t Storage::getKey(const char* zDefaultDb,
-                               const GWBUF* pQuery,
-                               CACHE_KEY* pKey)
+cache_result_t Storage::get_key(const char* zDefaultDb,
+                                const GWBUF* pQuery,
+                                CACHE_KEY* pKey)
 {
     return m_pApi->getKey(m_pStorage, zDefaultDb, pQuery, pKey);
 }
 
-cache_result_t Storage::getValue(const CACHE_KEY& key,
-                                 uint32_t flags,
-                                 GWBUF** ppValue)
+cache_result_t Storage::get_value(const CACHE_KEY& key,
+                                  uint32_t flags,
+                                  GWBUF** ppValue)
 {
     return m_pApi->getValue(m_pStorage, &key, flags, ppValue);
 }
 
-cache_result_t Storage::putValue(const CACHE_KEY& key,
-                                 const GWBUF* pValue)
+cache_result_t Storage::put_value(const CACHE_KEY& key,
+                                  const GWBUF* pValue)
 {
     return m_pApi->putValue(m_pStorage, &key, pValue);
 }
 
-cache_result_t Storage::delValue(const CACHE_KEY& key)
+cache_result_t Storage::del_value(const CACHE_KEY& key)
 {
     return m_pApi->delValue(m_pStorage, &key);
 }

@@ -23,13 +23,13 @@ class CacheSimple : public Cache
 public:
     ~CacheSimple();
 
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
+    cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
 
-    cache_result_t getValue(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
+    cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
 
-    cache_result_t putValue(const CACHE_KEY& key, const GWBUF* pValue);
+    cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue);
 
-    cache_result_t delValue(const CACHE_KEY& key);
+    cache_result_t del_value(const CACHE_KEY& key);
 
 protected:
     CacheSimple(const std::string&  name,
@@ -49,9 +49,9 @@ protected:
                        StorageFactory**    ppFactory);
 
 
-    long hashOfKey(const CACHE_KEY& key);
+    long hash_of_key(const CACHE_KEY& key);
 
-    bool mustRefresh(long key, const SessionCache* pSessionCache);
+    bool must_refresh(long key, const SessionCache* pSessionCache);
 
     void refreshed(long key, const SessionCache* pSessionCache);
 

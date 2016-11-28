@@ -66,21 +66,21 @@ CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, cons
     return pCache;
 }
 
-bool CacheST::mustRefresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
+bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    long k = hashOfKey(key);
+    long k = hash_of_key(key);
 
-    return CacheSimple::mustRefresh(k, pSessionCache);
+    return CacheSimple::must_refresh(k, pSessionCache);
 }
 
 void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    long k = hashOfKey(key);
+    long k = hash_of_key(key);
 
     CacheSimple::refreshed(k, pSessionCache);
 }
 
-// statis
+// static
 CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
                          CACHE_RULES*        pRules,
