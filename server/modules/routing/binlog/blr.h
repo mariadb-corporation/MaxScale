@@ -83,7 +83,8 @@ MXS_BEGIN_DECLS
 enum blr_aes_mode
 {
     BLR_AES_CBC,
-    BLR_AES_CTR
+    BLR_AES_CTR,
+    BLR_AES_ECB
 };
 
 /* Default encryption alogorithm is AES_CTR */

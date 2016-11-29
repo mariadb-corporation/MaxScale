@@ -44,6 +44,7 @@
  *                                  Events are decrypted before being sent to slaves.
  *                                  Events larger than 16MBytes are currently not suitable
  *                                  for ecryption/decryption.
+ * 29/11/2016   Massimiliano Pinto  Binlog files can be encrypted with AES_CBC
  *
  * @endverbatim
  */
@@ -105,12 +106,30 @@ static inline const EVP_CIPHER *aes_cbc(uint klen)
 }
 
 /**
+ * AES_ECB handling
+ *
+ * @param klen    The AES Key len
+ * @return        The EVP_AES_ECB routine for key len
+ */
+static inline const EVP_CIPHER *aes_ecb(uint klen)
+{
+    switch (klen)
+    {
+        case 16: return EVP_aes_128_ecb();
+        case 24: return EVP_aes_192_ecb();
+        case 32: return EVP_aes_256_ecb();
+        default: return 0;
+    }
+}
+
+/**
  * Array of functions for supported algorithms
  */
 const EVP_CIPHER *(*ciphers[])(unsigned int) =
 {
     aes_cbc,
-    aes_ctr
+    aes_ctr,
+    aes_ecb
 };
 
 static const char *blr_encryption_algorithm_names[BINLOG_MAX_CRYPTO_SCHEME] = {"aes_cbc", "aes_ctr"};
@@ -161,6 +180,12 @@ GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                          uint32_t event_size,
                          uint8_t *iv,
                          int action);
+int blr_aes_create_tail_for_cbc(uint8_t *output,
+                                uint8_t *input,
+                                uint32_t in_size,
+                                uint8_t *iv,
+                                uint8_t *key,
+                                unsigned int key_len);
 
 /** MaxScale generated events */
 typedef enum
@@ -2744,62 +2769,103 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
  */
 GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router, uint8_t *buffer, uint32_t size, uint8_t *iv, int action)
 {
-    EVP_CIPHER_CTX *ctx;
-    ctx = EVP_CIPHER_CTX_new();
-    uint8_t key[BINLOG_AES_MAX_KEY_LEN];
+    EVP_CIPHER_CTX ctx;
+    uint8_t *key = router->encryption.key_value;
+    unsigned int key_len = router->encryption.key_len;
     int outlen;
     int flen;
     uint32_t encrypted_size = size + 4;
     int total_len;
-    GWBUF *outbuf = gwbuf_alloc(encrypted_size);
+    GWBUF *outbuf;
     uint8_t *out_ptr;
 
-    if (outbuf == NULL)
+    if (key_len == 0)
+    {
+        MXS_ERROR("The encrytion key len is 0");
+        return NULL;
+    }
+
+    if ((outbuf = gwbuf_alloc(encrypted_size)) == NULL)
     {
         return NULL;
     }
 
     out_ptr = GWBUF_DATA(outbuf);
 
-    if (router->encryption.key_len == 0)
+    EVP_CIPHER_CTX_init(&ctx);
+
+    /* Set the encryption algorithm accordingly to key_len and encryption mode */
+    if (!EVP_CipherInit_ex(&ctx,
+                           ciphers[router->encryption.encryption_algorithm](router->encryption.key_len),
+                           NULL,
+                           key,
+                           iv,
+                           action))
     {
-        MXS_ERROR("The encrytion key len is 0");
+        MXS_ERROR("Error in EVP_CipherInit_ex for algo %d", router->encryption.encryption_algorithm);
+        EVP_CIPHER_CTX_cleanup(&ctx);
+        MXS_FREE(outbuf);
         return NULL;
+    }
+
+    /* Set no padding */
+    EVP_CIPHER_CTX_set_padding(&ctx, 0);
+
+    /* Encryt/Decrypt the input data */
+    if(!EVP_CipherUpdate(&ctx,
+                         out_ptr + 4,
+                         &outlen,
+                         buffer,
+                         size))
+    {
+        MXS_ERROR("Error in EVP_CipherUpdate");
+        EVP_CIPHER_CTX_cleanup(&ctx);
+        MXS_FREE(outbuf);
+        return NULL;
+    }
+
+    int finale_ret = 1;
+
+    /* Enc/dec finish is differently handled for AES_CBC */ 
+    if (router->encryption.encryption_algorithm != BLR_AES_CBC)
+    {
+        /* Call Final_ex */
+        if (!EVP_CipherFinal_ex(&ctx,
+                                (out_ptr + 4 + outlen),
+                                (int*)&flen))
+        {
+           MXS_ERROR("Error in EVP_CipherFinal_ex");
+           finale_ret = 0;
+        }
     }
     else
     {
-        memcpy(key, router->encryption.key_value, router->encryption.key_len);
+        /**
+         * If some bytes (ctx.buf_len) are still available in ctx.buf
+         * handle them with ECB and XOR
+         */
+        if (ctx.buf_len)
+        {
+            if (!blr_aes_create_tail_for_cbc(out_ptr + 4 + outlen,
+                                             ctx.buf,
+                                             ctx.buf_len,
+                                             ctx.oiv,
+                                             router->encryption.key_value,
+                                             router->encryption.key_len))
+            {
+               MXS_ERROR("Error in blr_aes_create_tail_for_cbc");
+               finale_ret = 0;
+            }
+        }
     }
 
-    EVP_CIPHER_CTX_init(ctx);
-
-    /* Set the encryption algorithm accordingly to key_len and encryption mode */
-    EVP_CipherInit_ex(ctx,
-                      ciphers[router->encryption.encryption_algorithm](router->encryption.key_len),
-                      NULL, key, iv, action);
-
-    /* No padding */
-    EVP_CIPHER_CTX_set_padding(ctx, 0);
-
-    if(!EVP_CipherUpdate(ctx, out_ptr + 4, &outlen, buffer, size))
+    if (!finale_ret)
     {
-        MXS_ERROR("Error in EVP_CipherUpdate");
-        EVP_CIPHER_CTX_free(ctx);
-        MXS_FREE(outbuf);
-
-        return NULL;
+      MXS_FREE(outbuf);
+      outbuf = NULL;
     }
 
-    if (!EVP_CipherFinal_ex(ctx, (out_ptr + 4 + outlen), (int*)&flen))
-    {
-       MXS_ERROR("Error in EVP_CipherFinal_ex");
-       EVP_CIPHER_CTX_free(ctx);
-       MXS_FREE(outbuf);
-
-       return NULL;
-    }
-
-    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_CTX_cleanup(&ctx);
 
     return outbuf;
 }
@@ -2944,3 +3010,74 @@ const char *blr_encryption_algorithm_list(void)
     return blr_encryption_algorithm_list_names;
 }
 
+/**
+ * Creates the final buffer for AES_CBC encryption
+ *
+ * As the encrypted/decrypted data must have same size of inpu data
+ * the remaining data from EVP_CipherUpdate with AES_CBC engine
+ * are handled this way:
+ *
+ * 1) The IV in the previous stage is encrypted with AES_ECB
+ *    using the key and a NULL iv
+ * 2) the remaing data from previous stage are XORed with thant buffer
+ *    and the the ouput buffer contains the result
+ *
+ * @param output    The outut buffer to fill
+ * @param input     The input buffere 8remaining bytes from previous stage)
+ * @param in_size   The inout data size
+ * @param iv        The IV used in previous stage
+ * @param key       The encryption key
+ * @param key_len   The lenght of encrytion key
+ * @return          Return 1 on success, 0 otherwise 
+ */
+int blr_aes_create_tail_for_cbc(uint8_t *output, uint8_t *input, uint32_t in_size, uint8_t *iv, uint8_t *key, unsigned int key_len)
+{
+    EVP_CIPHER_CTX t_ctx;
+    uint8_t mask[AES_BLOCK_SIZE];
+    int mlen = 0;
+
+    EVP_CIPHER_CTX_init(&t_ctx);
+
+    /* Initialise with AES_ECB and NULL iv */
+    if (!EVP_CipherInit_ex(&t_ctx,
+                      ciphers[BLR_AES_ECB](key_len),
+                      NULL,
+                      key,
+                      NULL, /* NULL iv */
+                      BINLOG_FLAG_ENCRYPT))
+    {
+        MXS_ERROR("Error in EVP_CipherInit_ex CBC for last block (ECB)");
+        EVP_CIPHER_CTX_cleanup(&t_ctx);
+        return 0;
+    }
+
+    /* Set no padding */
+    EVP_CIPHER_CTX_set_padding(&t_ctx, 0);
+ 
+    /* Do the enc/dec of the IV (the one from previous stage) */
+    if (!EVP_CipherUpdate(&t_ctx,
+                          mask,
+                          &mlen,
+                          iv,
+                          sizeof(mask)))
+    {
+        MXS_ERROR("Error in EVP_CipherUpdate ECB");
+        EVP_CIPHER_CTX_cleanup(&t_ctx);
+        return 0;
+    }
+
+    /**
+     * Now the output buffer contains
+     * the XORed data of input data and the mask (encryption of IV)
+     *
+     * Note: this also works for decryption
+     */
+    for (int i = 0; i < in_size; i++)
+    {
+        output[i] = input[i] ^ mask[i];
+    }
+
+    EVP_CIPHER_CTX_cleanup(&t_ctx);
+
+    return 1;
+}
