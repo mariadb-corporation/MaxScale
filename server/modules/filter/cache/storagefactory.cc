@@ -26,7 +26,10 @@
 namespace
 {
 
-bool open_cache_storage(const char* zName, void** pHandle, CACHE_STORAGE_API** ppApi)
+bool open_cache_storage(const char* zName,
+                        void** pHandle,
+                        CACHE_STORAGE_API** ppApi,
+                        uint32_t* pCapabilities)
 {
     bool rv = false;
 
@@ -45,7 +48,7 @@ bool open_cache_storage(const char* zName, void** pHandle, CACHE_STORAGE_API** p
 
             if (pApi)
             {
-                if ((pApi->initialize)())
+                if ((pApi->initialize)(pCapabilities))
                 {
                     *pHandle = handle;
                     *ppApi = pApi;
@@ -96,9 +99,12 @@ void close_cache_storage(void* handle, CACHE_STORAGE_API* pApi)
 
 }
 
-StorageFactory::StorageFactory(void* handle, CACHE_STORAGE_API* pApi)
+StorageFactory::StorageFactory(void* handle,
+                               CACHE_STORAGE_API* pApi,
+                               uint32_t capabilities)
     : m_handle(handle)
     , m_pApi(pApi)
+    , m_capabilities(capabilities)
 {
     ss_dassert(handle);
     ss_dassert(pApi);
@@ -118,10 +124,11 @@ StorageFactory* StorageFactory::Open(const char* zName)
 
     void* handle;
     CACHE_STORAGE_API* pApi;
+    uint32_t capabilities;
 
-    if (open_cache_storage(zName, &handle, &pApi))
+    if (open_cache_storage(zName, &handle, &pApi, &capabilities))
     {
-        CPP_GUARD(pFactory = new StorageFactory(handle, pApi));
+        CPP_GUARD(pFactory = new StorageFactory(handle, pApi, capabilities));
 
         if (!pFactory)
         {
@@ -141,7 +148,12 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
     ss_dassert(m_pApi);
 
     Storage* pStorage = 0;
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, argc, argv);
+    // TODO: Handle max_count and max_size.
+    uint32_t max_count = 0;
+    uint32_t max_size = 0;
+
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, max_count, max_size,
+                                                        argc, argv);
 
     if (pRawStorage)
     {

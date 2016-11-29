@@ -32,14 +32,15 @@ public:
                            int argc, char* argv[]);
 
 private:
-    StorageFactory(void* handle, CACHE_STORAGE_API* pApi);
+    StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);
 
     StorageFactory(const StorageFactory&);
     StorageFactory& operator = (const StorageFactory&);
 
 private:
-    void*              m_handle;
-    CACHE_STORAGE_API* m_pApi;
+    void*              m_handle;       /*< dl handle of storage. */
+    CACHE_STORAGE_API* m_pApi;         /*< API of storage. */
+    uint32_t           m_capabilities; /*< Capabilities of storage. */
 };
 
 #endif
