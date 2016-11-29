@@ -1081,6 +1081,18 @@ static void createListener(DCB *dcb, SERVICE *service, char *name, char *address
     }
 }
 
+static void createMonitor(DCB *dcb, const char *name, const char *module)
+{
+    if (runtime_create_monitor(name, module))
+    {
+        dcb_printf(dcb, "Created monitor '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to create monitor '%s', see log for more details\n", name);
+    }
+}
+
 struct subcommand createoptions[] =
 {
     {
@@ -1128,6 +1140,16 @@ struct subcommand createoptions[] =
         }
     },
     {
+        "monitor", 2, 2, createMonitor,
+        "Create a new monitor",
+        "Usage: create monitor NAME MODULE\n"
+        "NAME    Monitor name\n"
+        "MODULE  Monitor module\n",
+        {
+            ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
+    },
+    {
         EMPTY_OPTION
     }
 };
@@ -1162,6 +1184,22 @@ static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
     }
 }
 
+
+static void destroyMonitor(DCB *dcb, MONITOR *monitor)
+{
+    char name[strlen(monitor->name) + 1];
+    strcpy(name, monitor->name);
+
+    if (runtime_destroy_monitor(monitor))
+    {
+        dcb_printf(dcb, "Destroyed monitor '%s'\n", name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to destroy monitor '%s', see log file for more details\n", name);
+    }
+}
+
 struct subcommand destroyoptions[] =
 {
     {
@@ -1175,6 +1213,12 @@ struct subcommand destroyoptions[] =
         "Destroy a listener",
         "Usage: destroy listener SERVICE NAME",
         {ARG_TYPE_SERVICE, ARG_TYPE_STRING}
+    },
+    {
+        "monitor", 1, 1, destroyMonitor,
+        "Destroy a monitor",
+        "Usage: destroy monitor NAME",
+        {ARG_TYPE_MONITOR}
     },
     {
         EMPTY_OPTION

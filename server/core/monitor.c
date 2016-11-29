@@ -397,16 +397,15 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    /** If a pointer to mon->password or mon->user is passed as one of the
-     * parameters the destination and source would overlap. Copy the values to
-     * a local buffer to avoid this. */
-    char pwd[strlen(passwd) + 1];
-    char usr[strlen(user) + 1];
-    strcpy(usr, user);
-    strcpy(pwd, passwd);
+    if (user != mon->user)
+    {
+        snprintf(mon->user, sizeof(mon->user), "%s", user);
+    }
 
-    snprintf(mon->user, sizeof(mon->user), "%s", usr);
-    snprintf(mon->password, sizeof(mon->password), "%s", pwd);
+    if (passwd != mon->password)
+    {
+        snprintf(mon->password, sizeof(mon->password), "%s", passwd);
+    }
 }
 
 /**
