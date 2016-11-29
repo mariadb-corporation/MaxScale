@@ -120,6 +120,9 @@ is the name of the function. _ARGS_ is a function specific list of arguments.
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for more details.
 
+In the 2.1 release of MaxScale, the [_dbfwfilter_}(../Filters/Database-Firewall-Filter.md)
+and [_avrorouter_](../Routers/Avrorouter.md) implement module commands.
+
 ### Amazon RDS Aurora monitor
 
 The new [Aurora Monitor](../Monitors/Aurora-Monitor.md) module allows monitoring
