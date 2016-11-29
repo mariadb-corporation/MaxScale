@@ -100,6 +100,21 @@ path is interpreted relative to the _data directory_ of MariaDB MaxScale.
 rules=/path/to/rules-file
 ```
 
+#### `cached_data`
+
+An enumeration option specifying how data is shared between threads. The
+allowed values are:
+
+   * `shared`: The cached data is shared between threads. On the one hand
+     it implies that there will be synchronization between threads, on
+     the other hand that all threads will use data fetched by any thread.
+   * `thread_specific`: The cached data is specific to a thread. On the
+     one hand it implies that no synchonization is needed between threads,
+     on the other hand that the very same data may be fetched and stored
+     multiple times.
+
+Default is `shared`.
+
 #### `debug`
 
 An integer value, using which the level of debug logging made by the cache

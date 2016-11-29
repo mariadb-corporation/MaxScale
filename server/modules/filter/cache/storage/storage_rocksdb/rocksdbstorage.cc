@@ -345,7 +345,7 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory, const cha
     return pStorage;
 }
 
-cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, char* pKey)
+cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
@@ -380,7 +380,7 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
     string tag;
     for_each(dbs.begin(), dbs.end(), [&tag](const string& db) { tag.append(db); });
 
-    memset(pKey, 0, CACHE_KEY_MAXLEN);
+    memset(pKey->data, 0, CACHE_KEY_MAXLEN);
 
     const unsigned char* pData;
 
@@ -389,7 +389,7 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
     // This will also mean that entries related to the same databases will
     // be placed near each other.
     pData = reinterpret_cast<const unsigned char*>(tag.data());
-    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey));
+    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey->data));
 
     char *pSql;
     int length;
@@ -398,16 +398,16 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
 
     // Then we store the query itself in the second half of the key.
     pData = reinterpret_cast<const unsigned char*>(pSql);
-    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey) + SHA512_DIGEST_LENGTH);
+    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey->data) + SHA512_DIGEST_LENGTH);
 
     return CACHE_RESULT_OK;
 }
 
-cache_result_t RocksDBStorage::getValue(const char* pKey, uint32_t flags, GWBUF** ppResult)
+cache_result_t RocksDBStorage::getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult)
 {
     // Use the root DB so that we get the value *with* the timestamp at the end.
     rocksdb::DB* pDb = m_sDb->GetRootDB();
-    rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
     string value;
 
     rocksdb::Status status = pDb->Get(rocksdb::ReadOptions(), key, &value);
@@ -465,11 +465,11 @@ cache_result_t RocksDBStorage::getValue(const char* pKey, uint32_t flags, GWBUF*
     return result;
 }
 
-cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
+cache_result_t RocksDBStorage::putValue(const CACHE_KEY* pKey, const GWBUF* pValue)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
-    rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
     rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
 
     rocksdb::Status status = m_sDb->Put(writeOptions(), key, value);
@@ -477,11 +477,11 @@ cache_result_t RocksDBStorage::putValue(const char* pKey, const GWBUF* pValue)
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
 
-cache_result_t RocksDBStorage::delValue(const char* pKey)
+cache_result_t RocksDBStorage::delValue(const CACHE_KEY* pKey)
 {
     ss_dassert(pKey);
 
-    rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
 
     rocksdb::Status status = m_sDb->Delete(writeOptions(), key);
 

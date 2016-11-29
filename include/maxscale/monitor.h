@@ -196,6 +196,7 @@ struct monitor
                                      * two times the option value.
                                      */
     MONITOR_OBJECT *module;       /**< The "monitor object" */
+    char *module_name;            /**< Name of the monitor module */
     void *handle;                 /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
     struct monitor *next;         /**< Next monitor in the linked list */
@@ -243,7 +244,7 @@ void mon_log_state_change(MONITOR_SERVERS *ptr);
 void mon_hangup_failed_servers(MONITOR *monitor);
 
 /**
- * @brief Serialize a monitor to a file
+ * @brief Serialize the servers of a monitor to a file
  *
  * This partially converts @c monitor into an INI format file. Only the servers
  * of the monitor are serialized. This allows the monitor to keep monitoring
@@ -257,6 +258,16 @@ void mon_hangup_failed_servers(MONITOR *monitor);
  * @return False if the serialization of the monitor fails, true if it was successful
  */
 bool monitor_serialize_servers(const MONITOR *monitor);
+
+/**
+ * @brief Serialize a monitor to a file
+ *
+ * This converts the static configuration of the monitor into an INI format file.
+ *
+ * @param monitor Monitor to serialize
+ * @return True if serialization was successful
+ */
+bool monitor_serialize(const MONITOR *monitor);
 
 /**
  * Check if a monitor uses @c servers

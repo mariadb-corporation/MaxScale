@@ -226,6 +226,15 @@ bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port);
 bool serviceStopListener(SERVICE *service, const char *name);
 
 /**
+ * @brief Restart a stopped listener
+ *
+ * @param service Service where the listener is linked
+ * @param name Name of the listener
+ * @return True if listener was restarted
+ */
+bool serviceStartListener(SERVICE *service, const char *name);
+
+/**
  * Utility functions
  */
 SERVICE* service_find(const char *name);

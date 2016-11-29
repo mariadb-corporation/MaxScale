@@ -280,6 +280,11 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
         valid = false;
     }
 
+    if (valid)
+    {
+        server_serialize(server);
+    }
+
     spinlock_release(&crt_lock);
     return valid;
 }
@@ -355,6 +360,11 @@ bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
             valid = true;
             monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
+    }
+
+    if (valid)
+    {
+        monitor_serialize(monitor);
     }
 
     spinlock_release(&crt_lock);
@@ -475,6 +485,61 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
         {
             MXS_ERROR("Failed to destroy listener '%s' for service '%s'", name, service->name);
         }
+    }
+
+    spinlock_release(&crt_lock);
+    return rval;
+}
+
+bool runtime_create_monitor(const char *name, const char *module)
+{
+    spinlock_acquire(&crt_lock);
+    bool rval = false;
+    MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
+
+    if (monitor && monitor_serialize(monitor))
+    {
+        rval = true;
+    }
+
+    spinlock_release(&crt_lock);
+    return rval;
+}
+
+bool runtime_destroy_monitor(MONITOR *monitor)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf", get_config_persistdir(), monitor->name);
+
+    spinlock_acquire(&crt_lock);
+
+    if (unlink(filename) == -1)
+    {
+        if (errno != ENOENT)
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
+                      filename, errno, strerror_r(errno, err, sizeof(err)));
+        }
+        else
+        {
+            rval = false;
+            MXS_WARNING("Monitor '%s' was not created at runtime. Remove the "
+                        "monitor manually from the correct configuration file.",
+                        monitor->name);
+        }
+    }
+    else
+    {
+        rval = true;
+    }
+
+    if (rval)
+    {
+        monitorStop(monitor);
+        MXS_NOTICE("Destroyed monitor '%s'. The monitor will be removed "
+                   "after the next restart of MaxScale.", monitor->name);
     }
 
     spinlock_release(&crt_lock);

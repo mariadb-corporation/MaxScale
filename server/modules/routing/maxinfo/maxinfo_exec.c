@@ -880,21 +880,27 @@ static void
 exec_show_variables(DCB *dcb, MAXINFO_TREE *filter)
 {
     RESULTSET *result;
-    VARCONTEXT context;
+    VARCONTEXT *context;
+
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    {
+        return;
+    }
 
     if (filter)
     {
-        context.like = filter->value;
+        context->like = filter->value;
     }
     else
     {
-        context.like = NULL;
+        context->like = NULL;
     }
-    context.index = 0;
+    context->index = 0;
 
-    if ((result = resultset_create(variable_row, &context)) == NULL)
+    if ((result = resultset_create(variable_row, context)) == NULL)
     {
         maxinfo_send_error(dcb, 0, "No resources available");
+        MXS_FREE(context);
         return;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);
@@ -1166,21 +1172,27 @@ static void
 exec_show_status(DCB *dcb, MAXINFO_TREE *filter)
 {
     RESULTSET *result;
-    VARCONTEXT context;
+    VARCONTEXT *context;
+
+    if ((context = MXS_MALLOC(sizeof(VARCONTEXT))) == NULL)
+    {
+        return;
+    }
 
     if (filter)
     {
-        context.like = filter->value;
+        context->like = filter->value;
     }
     else
     {
-        context.like = NULL;
+        context->like = NULL;
     }
-    context.index = 0;
+    context->index = 0;
 
-    if ((result = resultset_create(status_row, &context)) == NULL)
+    if ((result = resultset_create(status_row, context)) == NULL)
     {
         maxinfo_send_error(dcb, 0, "No resources available");
+        MXS_FREE(context);
         return;
     }
     resultset_add_column(result, "Variable_name", 40, COL_TYPE_VARCHAR);

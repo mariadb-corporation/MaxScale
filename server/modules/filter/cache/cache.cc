@@ -19,77 +19,28 @@
 #include "storagefactory.h"
 #include "storage.h"
 
-// Initial size of hashtable used for storing keys of queries that
-// are being fetches.
-#define CACHE_PENDING_ITEMS 50
-
-/**
- * Hashes a cache key to an integer.
- *
- * @param key Pointer to cache key.
- *
- * @returns Corresponding integer hash.
- */
-static int hash_of_key(const void* key)
-{
-    int hash = 0;
-
-    const char* i   = (const char*)key;
-    const char* end = i + CACHE_KEY_MAXLEN;
-
-    while (i < end)
-    {
-        int c = *i;
-        hash = c + (hash << 6) + (hash << 16) - hash;
-        ++i;
-    }
-
-    return hash;
-}
-
-static int hashfn(const void* address)
-{
-    // TODO: Hash the address; pointers are not evenly distributed.
-    return (long)address;
-}
-
-static int hashcmp(const void* address1, const void* address2)
-{
-    return (long)address2 - (long)address1;
-}
-
-
-Cache::Cache(const char* zName,
-             CACHE_CONFIG& config,
+Cache::Cache(const std::string& name,
+             const CACHE_CONFIG* pConfig,
              CACHE_RULES* pRules,
-             StorageFactory* pFactory,
-             Storage* pStorage,
-             HASHTABLE* pPending)
-    : m_zName(zName)
-    , m_config(config)
+             StorageFactory* pFactory)
+    : m_name(name)
+    , m_config(*pConfig)
     , m_pRules(pRules)
     , m_pFactory(pFactory)
-    , m_pStorage(pStorage)
-    , m_pPending(pPending)
 {
-    cache_config_reset(config);
 }
 
 Cache::~Cache()
 {
-    // TODO: Free everything.
-    ss_dassert(false);
+    cache_rules_free(m_pRules);
+    delete m_pFactory;
 }
 
 //static
 bool Cache::Create(const CACHE_CONFIG& config,
-                   CACHE_RULES**       ppRules,
-                   StorageFactory**    ppFactory,
-                   HASHTABLE**         ppPending)
+                   CACHE_RULES**       ppRules)
 {
     CACHE_RULES* pRules = NULL;
-    HASHTABLE* pPending = NULL;
-    StorageFactory* pFactory = NULL;
 
     if (config.rules)
     {
@@ -102,127 +53,49 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
     if (pRules)
     {
-        pPending = hashtable_alloc(CACHE_PENDING_ITEMS, hashfn, hashcmp);
-
-        if (pPending)
-        {
-            pFactory = StorageFactory::Open(config.storage);
-
-            if (!pFactory)
-            {
-                MXS_ERROR("Could not open storage factory '%s'.", config.storage);
-            }
-        }
-    }
-
-    bool rv = (pRules && pPending && pFactory);
-
-    if (rv)
-    {
         *ppRules = pRules;
-        *ppPending = pPending;
-        *ppFactory = pFactory;
     }
     else
     {
-        cache_rules_free(pRules);
-        hashtable_free(pPending);
-        delete pFactory;
+        MXS_ERROR("Could not create rules.");
     }
 
-    return rv;
+    return pRules != NULL;
 }
 
-bool Cache::shouldStore(const char* zDefaultDb, const GWBUF* pQuery)
+//static
+bool Cache::Create(const CACHE_CONFIG& config,
+                   CACHE_RULES**       ppRules,
+                   StorageFactory**    ppFactory)
+{
+    CACHE_RULES* pRules = NULL;
+    StorageFactory* pFactory = NULL;
+
+    if (Create(config, &pRules))
+    {
+        pFactory = StorageFactory::Open(config.storage);
+
+        if (pFactory)
+        {
+            *ppFactory = pFactory;
+            *ppRules = pRules;
+        }
+        else
+        {
+            MXS_ERROR("Could not open storage factory '%s'.", config.storage);
+            cache_rules_free(pRules);
+        }
+    }
+
+    return pFactory != NULL;
+}
+
+bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
     return cache_rules_should_store(m_pRules, zDefaultDb, pQuery);
 }
 
-bool Cache::shouldUse(const SESSION* pSession)
+bool Cache::should_use(const SESSION* pSession)
 {
     return cache_rules_should_use(m_pRules, pSession);
 }
-
-bool Cache::mustRefresh(const char* pKey, const SessionCache* pSessionCache)
-{
-    long key = hash_of_key(pKey);
-
-    spinlock_acquire(&m_lockPending);
-    // TODO: Remove the internal locking of hashtable. The internal
-    // TODO: locking is no good if you need transactional behaviour.
-    // TODO: Now we lock twice.
-    void *pValue = hashtable_fetch(m_pPending, (void*)pKey);
-    if (!pValue)
-    {
-        // It's not being fetched, so we make a note that we are.
-        hashtable_add(m_pPending, (void*)pKey, (void*)pSessionCache);
-    }
-    spinlock_release(&m_lockPending);
-
-    return pValue == NULL;
-}
-
-void Cache::refreshed(const char* pKey,  const SessionCache* pSessionCache)
-{
-    long key = hash_of_key(pKey);
-
-    spinlock_acquire(&m_lockPending);
-    ss_dassert(hashtable_fetch(m_pPending, (void*)pKey) == pSessionCache);
-    ss_debug(int n =) hashtable_delete(m_pPending, (void*)pKey);
-    ss_dassert(n == 1);
-    spinlock_release(&m_lockPending);
-}
-
-cache_result_t Cache::getKey(const char* zDefaultDb,
-                             const GWBUF* pQuery,
-                             char* pKey)
-{
-    return m_pStorage->getKey(zDefaultDb, pQuery, pKey);
-}
-
-cache_result_t Cache::getValue(const char* pKey,
-                               uint32_t flags,
-                               GWBUF** ppValue)
-{
-    return m_pStorage->getValue(pKey, flags, ppValue);
-}
-
-cache_result_t Cache::putValue(const char* pKey,
-                               const GWBUF* pValue)
-{
-    return m_pStorage->putValue(pKey, pValue);
-}
-
-cache_result_t Cache::delValue(const char* pKey)
-{
-    return m_pStorage->delValue(pKey);
-}
-
-// protected
-long Cache::hashOfKey(const char* pKey)
-{
-    return hash_of_key(pKey);
-}
-
-// protected
-bool Cache::mustRefresh(long key, const SessionCache* pSessionCache)
-{
-    void *pValue = hashtable_fetch(m_pPending, (void*)key);
-    if (!pValue)
-    {
-        // It's not being fetched, so we make a note that we are.
-        hashtable_add(m_pPending, (void*)key, (void*)pSessionCache);
-    }
-
-    return !pValue;
-}
-
-// protected
-void Cache::refreshed(long key, const SessionCache* pSessionCache)
-{
-    ss_dassert(hashtable_fetch(m_pPending, (void*)key) == pSessionCache);
-    ss_debug(int n =) hashtable_delete(m_pPending, (void*)key);
-    ss_dassert(n == 1);
-}
-
-

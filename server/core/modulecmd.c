@@ -136,10 +136,11 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
                                  MODULECMDFN entry_point, int argc,
                                  modulecmd_arg_type_t* argv)
 {
+    ss_dassert((argc && argv) || (argc == 0 && argv == NULL));
     MODULECMD *rval = MXS_MALLOC(sizeof(*rval));
     char *id = MXS_STRDUP(identifier);
     char *dm = MXS_STRDUP(domain);
-    modulecmd_arg_type_t *types = MXS_MALLOC(sizeof(*types) * argc);
+    modulecmd_arg_type_t *types = MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
     if (rval && id  && dm && types)
     {
@@ -152,6 +153,13 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
                 argc_min++;
             }
             types[i] = argv[i];
+        }
+
+        if (argc == 0)
+        {
+            /** The command requires no arguments */
+            types[0].type = MODULECMD_ARG_NONE;
+            types[0].description = "";
         }
 
         rval->func = entry_point;

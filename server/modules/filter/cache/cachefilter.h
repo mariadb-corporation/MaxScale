@@ -16,9 +16,12 @@
 
 #include <maxscale/cdefs.h>
 #include <limits.h>
+#include <exception>
+#include <tr1/functional>
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.h>
 #include "rules.h"
+#include "cache_storage_api.h"
 
 class Storage;
 class StorageFactory;
@@ -43,23 +46,59 @@ class StorageFactory;
 #define CACHE_DEFAULT_TTL                10
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
+// Thread model
+#define CACHE_DEFAULT_THREAD_MODEL       CACHE_THREAD_MODEL_MT
 
 typedef struct cache_config
 {
-    uint32_t    max_resultset_rows;
-    uint32_t    max_resultset_size;
-    char*       rules;
-    char*       storage;
-    char*       storage_options;
-    char**      storage_argv;
-    int         storage_argc;
-    uint32_t    ttl;
-    uint32_t    debug;
+    uint32_t max_resultset_rows;       /**< The maximum number of rows of a resultset for it to be cached. */
+    uint32_t max_resultset_size;       /**< The maximum size of a resultset for it to be cached. */
+    char* rules;                       /**< Name of rules file. */
+    char* storage;                     /**< Name of storage module. */
+    char* storage_options;             /**< Raw options for storage module. */
+    char** storage_argv;               /**< Cooked options for storage module. */
+    int storage_argc;                  /**< Number of cooked options. */
+    uint32_t ttl;                      /**< Time to live. */
+    uint32_t debug;                    /**< Debug settings. */
+    cache_thread_model_t thread_model; /**< Thread model. */
 } CACHE_CONFIG;
 
 void cache_config_finish(CACHE_CONFIG& config);
 void cache_config_free(CACHE_CONFIG* pConfig);
 void cache_config_reset(CACHE_CONFIG& config);
+
+size_t cache_key_hash(const CACHE_KEY& key);
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs);
+
+std::string cache_key_to_string(const CACHE_KEY& key);
+
+namespace std
+{
+
+template<>
+struct equal_to<CACHE_KEY>
+{
+    bool operator()(const CACHE_KEY& lhs, const CACHE_KEY& rhs) const
+    {
+        return cache_key_equal_to(lhs, rhs);
+    }
+};
+
+namespace tr1
+{
+
+template<>
+struct hash<CACHE_KEY>
+{
+    size_t operator()(const CACHE_KEY& key) const
+    {
+        return cache_key_hash(key);
+    }
+};
+
+}
+
+}
 
 #define CPP_GUARD(statement)\
     do { try { statement; }                                              \

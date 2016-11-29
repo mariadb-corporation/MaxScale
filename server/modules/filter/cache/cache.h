@@ -13,8 +13,9 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <tr1/functional>
+#include <string>
 #include <maxscale/buffer.h>
-#include <maxscale/filter.h>
 #include <maxscale/session.h>
 #include "cachefilter.h"
 #include "cache_storage_api.h"
@@ -24,7 +25,9 @@ class SessionCache;
 class Cache
 {
 public:
-    ~Cache();
+    virtual ~Cache();
+
+    const CACHE_CONFIG& config() const { return m_config; }
 
     /**
      * Returns whether the results of a particular query should be stored.
@@ -34,7 +37,7 @@ public:
      *
      * @return True of the result should be cached.
      */
-    bool shouldStore(const char* zDefaultDb, const GWBUF* pQuery);
+    bool should_store(const char* zDefaultDb, const GWBUF* pQuery);
 
     /**
      * Returns whether cached results should be used.
@@ -43,65 +46,54 @@ public:
      *
      * @return True of cached results should be used.
      */
-    bool shouldUse(const SESSION* pSession);
+    bool should_use(const SESSION* pSession);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
      *
-     * @param pKey           The hashed key for a query.
+     * @param key            The hashed key for a query.
      * @param pSessionCache  The session cache asking.
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool mustRefresh(const char* pKey, const SessionCache* pSessionCache);
+    virtual bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
      *
-     * @param pKey           The hashed key for a query.
+     * @param key            The hashed key for a query.
      * @param pSessionCache  The session cache informing.
      */
-    virtual void refreshed(const char* pKey,  const SessionCache* pSessionCache);
+    virtual void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache) = 0;
 
-    const CACHE_CONFIG& config() const { return m_config; }
+    virtual cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
 
-    cache_result_t getKey(const char* zDefaultDb, const GWBUF* pQuery, char* pKey);
+    virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) = 0;
 
-    cache_result_t getValue(const char* pKey, uint32_t flags, GWBUF** ppValue);
+    virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue) = 0;
 
-    cache_result_t putValue(const char* pKey, const GWBUF* pValue);
-
-    cache_result_t delValue(const char* pKey);
+    virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
 protected:
-    Cache(const char* zName,
-          CACHE_CONFIG& config,
-          CACHE_RULES* pRules,
-          StorageFactory* pFactory,
-          Storage* pStorage,
-          HASHTABLE* pPending);
+    Cache(const std::string&  name,
+          const CACHE_CONFIG* pConfig,
+          CACHE_RULES*        pRules,
+          StorageFactory*     pFactory);
+
+    static bool Create(const CACHE_CONFIG& config,
+                       CACHE_RULES**       ppRules);
 
     static bool Create(const CACHE_CONFIG& config,
                        CACHE_RULES**       ppRules,
-                       StorageFactory**    ppFactory,
-                       HASHTABLE**         ppPending);
-
-    long hashOfKey(const char* pKey);
-
-    bool mustRefresh(long key, const SessionCache* pSessionCache);
-
-    void refreshed(long key, const SessionCache* pSessionCache);
+                       StorageFactory**    ppFactory);
 
 private:
     Cache(const Cache&);
     Cache& operator = (const Cache&);
 
 protected:
-    const char*     m_zName;       // The name of the instance; the section name in the config.
-    CACHE_CONFIG    m_config;      // The configuration of the cache instance.
-    CACHE_RULES*    m_pRules;      // The rules of the cache instance.
-    StorageFactory* m_pFactory;    // The storage factory.
-    Storage*        m_pStorage;    // The storage instance to use.
-    HASHTABLE*      m_pPending;    // Pending items; being fetched from the backend.
-    SPINLOCK        m_lockPending; // Lock used for protecting 'pending'.
+    const std::string   m_name;     // The name of the instance; the section name in the config.
+    const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
+    CACHE_RULES*        m_pRules;   // The rules of the cache instance.
+    StorageFactory*     m_pFactory; // The storage factory.
 };

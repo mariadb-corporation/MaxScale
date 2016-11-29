@@ -14,11 +14,15 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.h"
 #include <exception>
+#include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
 #include "cachemt.h"
+#include "cachept.h"
 #include "sessioncache.h"
+
+using std::string;
 
 static char VERSION_STRING[] = "V1.0.0";
 
@@ -32,8 +36,31 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     NULL,
     0,
     CACHE_DEFAULT_TTL,
-    CACHE_DEFAULT_DEBUG
+    CACHE_DEFAULT_DEBUG,
+    CACHE_DEFAULT_THREAD_MODEL,
 };
+
+typedef struct cache_filter
+{
+    cache_filter()
+        : config(DEFAULT_CONFIG)
+        , pCache(NULL)
+    {
+    }
+
+    ~cache_filter()
+    {
+        delete pCache;
+        cache_config_finish(config);
+    }
+
+    CACHE_CONFIG config;
+    Cache*       pCache;
+
+private:
+    cache_filter(const cache_filter&);
+    cache_filter& operator = (const cache_filter&);
+} CACHE_FILTER;
 
 static FILTER*  createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
 static void*    newSession(FILTER* pInstance, SESSION* pSession);
@@ -114,20 +141,38 @@ extern "C" FILTER_OBJECT *GetModuleObject()
  */
 static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
 {
-    Cache* pCache = NULL;
-    CACHE_CONFIG config = DEFAULT_CONFIG;
+    CACHE_FILTER* pFilter = new (std::nothrow) CACHE_FILTER;
 
-    if (process_params(pzOptions, ppParams, config))
+    if (pFilter)
     {
-        CPP_GUARD(pCache = CacheMT::Create(zName, config));
-
-        if (!pCache)
+        if (process_params(pzOptions, ppParams, pFilter->config))
         {
-            cache_config_finish(config);
+            switch (pFilter->config.thread_model)
+            {
+            case CACHE_THREAD_MODEL_MT:
+                MXS_NOTICE("Creating shared cache.");
+                CPP_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
+                break;
+
+            case CACHE_THREAD_MODEL_ST:
+                MXS_NOTICE("Creating thread specific cache.");
+                CPP_GUARD(pFilter->pCache = CachePT::Create(zName, &pFilter->config));
+                break;
+
+            default:
+                ss_dassert(!true);
+            }
+        }
+
+        if (!pFilter->pCache)
+        {
+            cache_config_finish(pFilter->config);
+            delete pFilter;
+            pFilter = NULL;
         }
     }
 
-    return reinterpret_cast<FILTER*>(pCache);
+    return reinterpret_cast<FILTER*>(pFilter);
 }
 
 /**
@@ -140,7 +185,8 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
  */
 static void *newSession(FILTER* pInstance, SESSION* pSession)
 {
-    Cache* pCache = reinterpret_cast<Cache*>(pInstance);
+    CACHE_FILTER *pFilter = reinterpret_cast<CACHE_FILTER*>(pInstance);
+    Cache* pCache = pFilter->pCache;
 
     SessionCache* pSessionCache = NULL;
     CPP_GUARD(pSessionCache = SessionCache::Create(pCache, pSession));
@@ -422,6 +468,23 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
                 error = true;
             }
         }
+        else if (strcmp(pParam->name, "cached_data") == 0)
+        {
+            if (strcmp(pParam->value, "shared") == 0)
+            {
+                config.thread_model = CACHE_THREAD_MODEL_MT;
+            }
+            else if (strcmp(pParam->value, "thread_specific") == 0)
+            {
+                config.thread_model = CACHE_THREAD_MODEL_ST;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be either 'shared' or 'thread_specific'.", pParam->name);
+                error = true;
+            }
+        }
         else if (!filter_standard_parameter(pParam->name))
         {
             MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
@@ -447,11 +510,7 @@ void cache_config_finish(CACHE_CONFIG& config)
     MXS_FREE(config.rules);
     MXS_FREE(config.storage);
     MXS_FREE(config.storage_options);
-
-    for (int i = 0; i < config.storage_argc; ++i)
-    {
-        MXS_FREE(config.storage_argv[i]);
-    }
+    MXS_FREE(config.storage_argv); // The items need not be freed, they point into storage_options.
 
     config.max_resultset_rows = 0;
     config.max_resultset_size = 0;
@@ -486,4 +545,60 @@ void cache_config_free(CACHE_CONFIG* pConfig)
 void cache_config_reset(CACHE_CONFIG& config)
 {
     memset(&config, 0, sizeof(config));
+}
+
+/**
+ * Hashes a CACHE_KEY to size_t.
+ *
+ * @param key The key to be hashed.
+ *
+ * @return The corresponding hash.
+ */
+size_t cache_key_hash(const CACHE_KEY& key)
+{
+    size_t hash = 0;
+
+    const char* i   = key.data;
+    const char* end = i + CACHE_KEY_MAXLEN;
+
+    while (i < end)
+    {
+        int c = *i;
+        hash = c + (hash << 6) + (hash << 16) - hash;
+        ++i;
+    }
+
+    return hash;
+}
+
+/**
+ * Are two CACHE_KEYs equal.
+ *
+ * @param lhs One cache key.
+ * @param rhs Another cache key.
+ *
+ * @return True, if the keys are equal.
+ */
+bool cache_key_equal_to(const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+{
+    return memcmp(lhs.data, rhs.data, CACHE_KEY_MAXLEN) == 0;
+}
+
+std::string cache_key_to_string(const CACHE_KEY& key)
+{
+    string s;
+
+    for (int i = 0; i < CACHE_KEY_MAXLEN; ++i)
+    {
+        char c = key.data[i];
+
+        if (!isprint(c))
+        {
+            c = '.';
+        }
+
+        s += c;
+    }
+
+    return s;
 }

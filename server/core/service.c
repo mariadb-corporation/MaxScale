@@ -520,6 +520,31 @@ bool serviceStopListener(SERVICE *service, const char *name)
     return rval;
 }
 
+bool serviceStartListener(SERVICE *service, const char *name)
+{
+    bool rval = false;
+
+    spinlock_acquire(&service->spin);
+
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    {
+        if (strcmp(port->name, name) == 0)
+        {
+            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED &&
+                poll_add_dcb(port->listener) == 0)
+            {
+                port->listener->session->state = SESSION_STATE_LISTENER;
+                rval = true;
+            }
+            break;
+        }
+    }
+
+    spinlock_release(&service->spin);
+
+    return rval;
+}
+
 int service_launch_all()
 {
     SERVICE *ptr;
@@ -1422,18 +1447,20 @@ dListListeners(DCB *dcb)
     if (service)
     {
         dcb_printf(dcb, "Listeners.\n");
-        dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n");
-        dcb_printf(dcb, "%-20s | %-18s | %-15s | Port  | State\n",
-                   "Service Name", "Protocol Module", "Address");
-        dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n");
+        dcb_printf(dcb, "---------------------+---------------------+"
+                   "--------------------+-----------------+-------+--------\n");
+        dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | Port  | State\n",
+                   "Name", "Service Name", "Protocol Module", "Address");
+        dcb_printf(dcb, "---------------------+---------------------+"
+                   "--------------------+-----------------+-------+--------\n");
     }
     while (service)
     {
         lptr = service->ports;
         while (lptr)
         {
-            dcb_printf(dcb, "%-20s | %-18s | %-15s | %5d | %s\n",
-                       service->name, lptr->protocol,
+            dcb_printf(dcb, "%-20s | %-19s | %-18s | %-15s | %5d | %s\n",
+                       lptr->name, service->name, lptr->protocol,
                        (lptr && lptr->address) ? lptr->address : "*",
                        lptr->port,
                        (!lptr->listener ||
@@ -1447,7 +1474,8 @@ dListListeners(DCB *dcb)
     }
     if (allServices)
     {
-        dcb_printf(dcb, "---------------------+--------------------+-----------------+-------+--------\n\n");
+        dcb_printf(dcb, "---------------------+---------------------+"
+                   "--------------------+-----------------+-------+--------\n\n");
     }
     spinlock_release(&service_spin);
 }

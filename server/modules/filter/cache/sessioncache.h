@@ -128,15 +128,15 @@ private:
     SessionCache& operator = (const SessionCache&);
 
 private:
-    cache_session_state_t m_state;                 /**< What state is the session in, what data is expected. */
-    Cache*                m_pCache;                /**< The cache instance the session is associated with. */
-    SESSION*              m_pSession;              /**< The session this data is associated with. */
-    DOWNSTREAM            m_down;                  /**< The previous filter or equivalent. */
-    UPSTREAM              m_up;                    /**< The next filter or equivalent. */
-    CACHE_RESPONSE_STATE  m_res;                   /**< The response state. */
-    char                  m_key[CACHE_KEY_MAXLEN]; /**< Key storage. */
-    char*                 m_zDefaultDb;            /**< The default database. */
-    char*                 m_zUseDb;                /**< Pending default database. Needs server response. */
-    bool                  m_refreshing;            /**< Whether the session is updating a stale cache entry. */
+    cache_session_state_t m_state;       /**< What state is the session in, what data is expected. */
+    Cache*                m_pCache;      /**< The cache instance the session is associated with. */
+    SESSION*              m_pSession;    /**< The session this data is associated with. */
+    DOWNSTREAM            m_down;        /**< The previous filter or equivalent. */
+    UPSTREAM              m_up;          /**< The next filter or equivalent. */
+    CACHE_RESPONSE_STATE  m_res;         /**< The response state. */
+    CACHE_KEY             m_key;         /**< Key storage. */
+    char*                 m_zDefaultDb;  /**< The default database. */
+    char*                 m_zUseDb;      /**< Pending default database. Needs server response. */
+    bool                  m_refreshing;  /**< Whether the session is updating a stale cache entry. */
 };
 

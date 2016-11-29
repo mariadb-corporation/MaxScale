@@ -157,3 +157,23 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
  * @return True if the listener was successfully destroyed
  */
 bool runtime_destroy_listener(SERVICE *service, const char *name);
+
+/**
+ * @brief Create a new monitor
+ *
+ * @param name Name of the monitor
+ * @param module Monitor module
+ * @return True if new monitor was created and persisted
+ */
+bool runtime_create_monitor(const char *name, const char *module);
+
+/**
+ * @brief Destroy a monitor
+ *
+ * Monitors are not removed from the runtime configuration but they are stopped.
+ * Destroyed monitor are removed after a restart.
+ *
+ * @param monitor Monitor to destroy
+ * @return True if monitor was destroyed
+ */
+bool runtime_destroy_monitor(MONITOR *monitor);

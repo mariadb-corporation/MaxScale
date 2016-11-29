@@ -13,37 +13,32 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
 #include "cachesimple.h"
 
-class CacheMT : public CacheSimple
+class CacheST : public CacheSimple
 {
 public:
-    ~CacheMT();
+    ~CacheST();
 
-    static CacheMT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
-    static CacheMT* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
+    static CacheST* Create(const std::string& name, const CACHE_CONFIG* pConfig);
+    static CacheST* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
     bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
 
 private:
-    CacheMT(const std::string&  name,
+    CacheST(const std::string&  name,
             const CACHE_CONFIG* pConfig,
             CACHE_RULES*        pRules,
             StorageFactory*     pFactory,
             Storage*            pStorage);
 
-    static CacheMT* Create(const std::string&  name,
+    static CacheST* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
                            CACHE_RULES*        pRules,
                            StorageFactory*     pFactory);
-
 private:
-    CacheMT(const CacheMT&);
-    CacheMT& operator = (const CacheMT&);
-
-private:
-    SPINLOCK m_lockPending; // Lock used for protecting 'pending'.
+    CacheST(const CacheST&);
+    CacheST& operator = (const CacheST&);
 };
