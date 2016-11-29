@@ -207,7 +207,6 @@ typedef struct queryspeed_t
     int                  limit; /*< Maximum number of queries */
     long                 id;    /*< Unique id of the rule */
     bool                 active; /*< If the rule has been triggered */
-    struct queryspeed_t* next;  /*< Next node in the list */
 } QUERYSPEED;
 
 /**
@@ -287,6 +286,7 @@ typedef struct
 {
     SESSION*   session;         /*< Client session structure */
     char*      errmsg;          /*< Rule specific error message */
+    QUERYSPEED* query_speed;    /*< How fast the user has executed queries */
     DOWNSTREAM down;            /*< Next object in the downstream chain */
     UPSTREAM   up;              /*< Next object in the upstream chain */
 } FW_SESSION;
@@ -1627,10 +1627,8 @@ static void
 freeSession(FILTER *instance, void *session)
 {
     FW_SESSION *my_session = (FW_SESSION *) session;
-    if (my_session->errmsg)
-    {
-        MXS_FREE(my_session->errmsg);
-    }
+    MXS_FREE(my_session->errmsg);
+    MXS_FREE(my_session->query_speed);
     MXS_FREE(my_session);
 }
 
@@ -1814,6 +1812,74 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
     return msg;
 }
 
+bool handle_throttle_rule(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
+{
+    bool matches = false;
+    QUERYSPEED* rule_qs = (QUERYSPEED*)rulebook->rule->data;
+    QUERYSPEED* queryspeed = my_session->query_speed;
+    time_t time_now = time(NULL);
+    char emsg[512];
+
+    if (queryspeed == NULL)
+    {
+        /**No match found*/
+        queryspeed = (QUERYSPEED*)MXS_CALLOC(1, sizeof(QUERYSPEED));
+        MXS_ABORT_IF_NULL(queryspeed);
+        queryspeed->period = rule_qs->period;
+        queryspeed->cooldown = rule_qs->cooldown;
+        queryspeed->limit = rule_qs->limit;
+        my_session->query_speed = queryspeed;
+    }
+
+    if (queryspeed->active)
+    {
+        if (difftime(time_now, queryspeed->triggered) < queryspeed->cooldown)
+        {
+            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            sprintf(emsg, "Queries denied for %f seconds", blocked_for);
+            *msg = MXS_STRDUP_A(emsg);
+            matches = true;
+
+            MXS_INFO("dbfwfilter: rule '%s': user denied for %f seconds",
+                     rulebook->rule->name, blocked_for);
+        }
+        else
+        {
+            queryspeed->active = false;
+            queryspeed->count = 0;
+        }
+    }
+    else
+    {
+        if (queryspeed->count >= queryspeed->limit)
+        {
+            MXS_INFO("dbfwfilter: rule '%s': query limit triggered (%d queries in %d seconds), "
+                     "denying queries from user for %d seconds.", rulebook->rule->name,
+                     queryspeed->limit, queryspeed->period, queryspeed->cooldown);
+
+            queryspeed->triggered = time_now;
+            queryspeed->active = true;
+            matches = true;
+
+            double blocked_for = queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
+            sprintf(emsg, "Queries denied for %f seconds", blocked_for);
+            *msg = MXS_STRDUP_A(emsg);
+        }
+        else if (queryspeed->count > 0 &&
+                 difftime(time_now, queryspeed->first_query) <= queryspeed->period)
+        {
+            queryspeed->count++;
+        }
+        else
+        {
+            queryspeed->first_query = time_now;
+            queryspeed->count = 1;
+        }
+    }
+
+    return matches;
+}
+
 /**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
@@ -1830,19 +1896,12 @@ bool rule_matches(FW_INSTANCE* my_instance,
                   RULE_BOOK *rulebook,
                   char* query)
 {
-    char *ptr, *msg = NULL;
+    char *msg = NULL;
     char emsg[512];
-
-    unsigned char* memptr = (unsigned char*) queue->start;
-    bool is_sql, is_real, matches;
     qc_query_op_t optype = QUERY_OP_UNDEFINED;
-    QUERYSPEED* queryspeed = NULL;
-    QUERYSPEED* rule_qs = NULL;
-    time_t time_now;
-    struct tm tm_now;
-
-    time(&time_now);
-    localtime_r(&time_now, &tm_now);
+    bool matches = false;
+    bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
+    bool is_real = false;
 
     matches = false;
     is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
@@ -1885,10 +1944,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
             }
         }
     }
-    else
-    {
-        is_real = false;
-    }
 
     if (rulebook->rule->on_queries == QUERY_OP_UNDEFINED ||
         rulebook->rule->on_queries & optype ||
@@ -1898,6 +1953,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
         switch (rulebook->rule->type)
         {
             case RT_UNDEFINED:
+                ss_dassert(false);
                 MXS_ERROR("Undefined rule type found.");
                 break;
 
@@ -1920,7 +1976,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
                         {
                             msg = MXS_STRDUP_A("Permission denied, query matched regular expression.");
                             MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulebook->rule->name);
-                            goto queryresolved;
                         }
                     }
                     else
@@ -1932,14 +1987,9 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_PERMISSION:
-                {
                     matches = true;
                     msg = MXS_STRDUP_A("Permission denied at this time.");
-                    char buffer[32]; // asctime documentation requires 26
-                    asctime_r(&tm_now, buffer);
-                    MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulebook->rule->name, buffer);
-                    goto queryresolved;
-                }
+                    MXS_INFO("dbfwfilter: rule '%s': query denied at this time.", rulebook->rule->name);
                 break;
 
             case RT_COLUMN:
@@ -1964,7 +2014,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                                 MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
                                          rulebook->rule->name, strln->value);
                                 msg = MXS_STRDUP_A(emsg);
-                                goto queryresolved;
+                                break;
                             }
                             strln = strln->next;
                         }
@@ -1989,98 +2039,13 @@ bool rule_matches(FW_INSTANCE* my_instance,
                             msg = MXS_STRDUP_A("Usage of wildcard denied.");
                             MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
                                      rulebook->rule->name);
-                            goto queryresolved;
                         }
                     }
                 }
                 break;
 
             case RT_THROTTLE:
-                /**
-                 * Check if this is the first time this rule is matched and if so, allocate
-                 * and initialize a new QUERYSPEED struct for this session.
-                 */
-                spinlock_acquire(&my_instance->lock);
-                rule_qs = (QUERYSPEED*) rulebook->rule->data;
-                spinlock_release(&my_instance->lock);
-
-                spinlock_acquire(&user->lock);
-                queryspeed = user->qs_limit;
-                spinlock_release(&user->lock);
-
-                while (queryspeed)
-                {
-                    if (queryspeed->id == rule_qs->id)
-                    {
-                        break;
-                    }
-                    queryspeed = queryspeed->next;
-                }
-
-                if (queryspeed == NULL)
-                {
-
-                    /**No match found*/
-                    queryspeed = (QUERYSPEED*) MXS_CALLOC(1, sizeof(QUERYSPEED));
-                    MXS_ABORT_IF_NULL(queryspeed);
-                    queryspeed->period = rule_qs->period;
-                    queryspeed->cooldown = rule_qs->cooldown;
-                    queryspeed->limit = rule_qs->limit;
-                    queryspeed->id = rule_qs->id;
-                    queryspeed->next = user->qs_limit;
-                    user->qs_limit = queryspeed;
-                }
-
-                if (queryspeed->active)
-                {
-                    if (difftime(time_now, queryspeed->triggered) < queryspeed->cooldown)
-                    {
-
-                        double blocked_for =
-                            queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
-
-                        sprintf(emsg, "Queries denied for %f seconds", blocked_for);
-                        MXS_INFO("dbfwfilter: rule '%s': user denied for %f seconds",
-                                 rulebook->rule->name, blocked_for);
-                        msg = MXS_STRDUP_A(emsg);
-                        matches = true;
-                    }
-                    else
-                    {
-                        queryspeed->active = false;
-                        queryspeed->count = 0;
-                    }
-                }
-                else
-                {
-                    if (queryspeed->count >= queryspeed->limit)
-                    {
-                        queryspeed->triggered = time_now;
-                        matches = true;
-                        queryspeed->active = true;
-
-                        MXS_INFO("dbfwfilter: rule '%s': query limit triggered (%d queries in %d seconds), "
-                                 "denying queries from user for %d seconds.",
-                                 rulebook->rule->name,
-                                 queryspeed->limit,
-                                 queryspeed->period,
-                                 queryspeed->cooldown);
-                        double blocked_for =
-                            queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
-                        sprintf(emsg, "Queries denied for %f seconds", blocked_for);
-                        msg = MXS_STRDUP_A(emsg);
-                    }
-                    else if (queryspeed->count > 0 &&
-                             difftime(time_now, queryspeed->first_query) <= queryspeed->period)
-                    {
-                        queryspeed->count++;
-                    }
-                    else
-                    {
-                        queryspeed->first_query = time_now;
-                        queryspeed->count = 1;
-                    }
-                }
+                matches = handle_throttle_rule(my_session, rulebook, &msg);
                 break;
 
             case RT_CLAUSE:
