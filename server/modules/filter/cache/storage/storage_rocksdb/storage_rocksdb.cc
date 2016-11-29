@@ -53,6 +53,8 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
     try
     {
         pStorage = reinterpret_cast<CACHE_STORAGE*>(RocksDBStorage::Create(zName, ttl, argc, argv));
+
+        MXS_NOTICE("Storage module created.");
     }
     catch (const std::bad_alloc&)
     {
