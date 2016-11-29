@@ -140,16 +140,15 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
                     result = CACHE_RESULT_OK;
                 }
             }
+            else
+            {
+                result = CACHE_RESULT_OUT_OF_RESOURCES;
+            }
         }
         else
         {
             MXS_NOTICE("Cache item is stale, not using.");
-            result = CACHE_RESULT_NOT_FOUND;
         }
-    }
-    else
-    {
-        result = CACHE_RESULT_NOT_FOUND;
     }
 
     return result;
@@ -159,7 +158,6 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* 
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pvalue));
 
-    const uint8_t* pdata = GWBUF_DATA(pvalue);
     size_t size = GWBUF_LENGTH(pvalue);
 
     Entry& entry = entries_[key];
@@ -176,7 +174,9 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* 
         entry.value.resize(size);
     }
 
-    copy(GWBUF_DATA(pvalue), GWBUF_DATA(pvalue) + size, entry.value.begin());
+    const uint8_t* pdata = GWBUF_DATA(pvalue);
+
+    copy(pdata, pdata + size, entry.value.begin());
     entry.time = time(NULL);
 
     return CACHE_RESULT_OK;
