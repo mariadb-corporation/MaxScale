@@ -104,6 +104,7 @@ monitor_alloc(char *name, char *module)
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
     mon->interval = MONITOR_INTERVAL;
     mon->parameters = NULL;
+    mon->created_online = false;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -144,7 +145,7 @@ monitor_free(MONITOR *mon)
         }
     }
     spinlock_release(&monLock);
-    free_config_parameter(mon->parameters);
+    config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->databases);
     MXS_FREE(mon->name);
     MXS_FREE(mon->module_name);
@@ -765,6 +766,32 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
         }
         params = params->next;
     }
+}
+
+bool monitorRemoveParameter(MONITOR *monitor, const char *key)
+{
+    CONFIG_PARAMETER *prev = NULL;
+
+    for (CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
+    {
+        if (strcmp(p->name, key) == 0)
+        {
+            if (p == monitor->parameters)
+            {
+                monitor->parameters = monitor->parameters->next;
+                p->next = NULL;
+            }
+            else
+            {
+                prev->next = p->next;
+                p->next = NULL;
+            }
+            config_parameter_free(p);
+            return true;
+        }
+        prev = p;
+    }
+    return false;
 }
 
 /**

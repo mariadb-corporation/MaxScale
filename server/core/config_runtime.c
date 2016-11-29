@@ -361,8 +361,27 @@ bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
+    else
+    {
+        /** We're modifying module specific parameters and we need to stop the monitor */
+        monitorStop(monitor);
 
-    if (valid)
+        if (monitorRemoveParameter(monitor, key) || value[0])
+        {
+            /** Either we're removing an existing parameter or adding a new one */
+            valid = true;
+
+            if (value[0])
+            {
+                CONFIG_PARAMETER p = {.name = key, .value = value};
+                monitorAddParameters(monitor, &p);
+            }
+        }
+
+        monitorStart(monitor, monitor->parameters);
+    }
+
+    if (valid && monitor->created_online)
     {
         monitor_serialize(monitor);
     }
@@ -497,9 +516,15 @@ bool runtime_create_monitor(const char *name, const char *module)
     bool rval = false;
     MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
 
-    if (monitor && monitor_serialize(monitor))
+    if (monitor)
     {
-        rval = true;
+        /** Mark that this monitor was created after MaxScale was started */
+        monitor->created_online = true;
+
+        if (monitor_serialize(monitor))
+        {
+            rval = true;
+        }
     }
 
     spinlock_release(&crt_lock);

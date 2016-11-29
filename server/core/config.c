@@ -1070,7 +1070,7 @@ return_p2:
  * Free a configuration parameter
  * @param p1 Parameter to free
  */
-void free_config_parameter(CONFIG_PARAMETER* p1)
+void config_parameter_free(CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
@@ -1089,7 +1089,7 @@ void config_context_free(CONFIG_CONTEXT *context)
     while (context)
     {
         obj = context->next;
-        free_config_parameter(context->parameters);
+        config_parameter_free(context->parameters);
         MXS_FREE(context->object);
         MXS_FREE(context);
         context = obj;

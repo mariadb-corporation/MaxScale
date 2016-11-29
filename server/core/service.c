@@ -665,7 +665,7 @@ void service_free(SERVICE *service)
     MXS_FREE(service->credentials.name);
     MXS_FREE(service->credentials.authdata);
 
-    free_config_parameter(service->svc_config_param);
+    config_parameter_free(service->svc_config_param);
     serviceClearRouterOptions(service);
 
     MXS_FREE(service);

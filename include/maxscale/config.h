@@ -238,7 +238,7 @@ bool                config_set_qualified_param(CONFIG_PARAMETER* param,
                                                config_param_type_t type);
 int                 config_threadcount();
 int                 config_truth_value(char *);
-void                free_config_parameter(CONFIG_PARAMETER* p1);
+void                config_parameter_free(CONFIG_PARAMETER* p1);
 bool                is_internal_service(const char *router);
 
 MXS_END_DECLS

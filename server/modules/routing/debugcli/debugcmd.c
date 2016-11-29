@@ -1290,6 +1290,13 @@ static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v
             {
                 dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
             }
+            else if (!monitor->created_online)
+            {
+                dcb_printf(dcb, "Warning: Altered monitor '%s' which is in the "
+                           "main\nconfiguration file. These changes will not be "
+                           "persisted and need\nto be manually added or set again"
+                           "after a restart.\n", monitor->name);
+            }
         }
         else
         {
@@ -1316,9 +1323,8 @@ struct subcommand alteroptions[] =
         "monitor", 2, 12, alterMonitor,
         "Alter monitor parameters",
         "Usage: alter monitor NAME KEY=VALUE ...\n"
-        "This will alter an existing parameter of a monitor. The accepted values\n"
-        "for KEY are: 'user', 'password', 'monitor_interval',\n"
-        "'backend_connect_timeout', 'backend_write_timeout', 'backend_read_timeout'\n"
+        "This will alter an existing parameter of a monitor. To remove parameters,\n"
+        "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='\n"
         "A maximum of 11 parameters can be changed at one time",
         {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
