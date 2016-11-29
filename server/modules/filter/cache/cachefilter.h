@@ -106,6 +106,31 @@ struct hash<CACHE_KEY>
 
 }
 
+/**
+ * LockGuard is a RAII class whose constructor acquires a spinlock and
+ * destructor releases the same spinlock. To be used for locking a spinlock
+ * in an exceptionsafe manner for the duration of a scope.
+ */
+class LockGuard
+{
+public:
+    LockGuard(SPINLOCK* plock)
+        : lock_(*plock)
+    {
+        spinlock_acquire(&lock_);
+    }
+    ~LockGuard()
+    {
+        spinlock_release(&lock_);
+    }
+
+private:
+    LockGuard(const LockGuard&);
+    LockGuard& operator = (const LockGuard&);
+
+    SPINLOCK& lock_;
+};
+
 #define CPP_GUARD(statement)\
     do { try { statement; }                                              \
     catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\

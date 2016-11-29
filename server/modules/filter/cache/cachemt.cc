@@ -69,18 +69,16 @@ CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, cons
 
 bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    spinlock_acquire(&m_lockPending);
-    bool rv = CacheSimple::do_must_refresh(key, pSessionCache);
-    spinlock_release(&m_lockPending);
+    LockGuard guard(&m_lockPending);
 
-    return rv;
+    return do_must_refresh(key, pSessionCache);
 }
 
 void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    spinlock_acquire(&m_lockPending);
-    CacheSimple::do_refreshed(key, pSessionCache);
-    spinlock_release(&m_lockPending);
+    LockGuard guard(&m_lockPending);
+
+    do_refreshed(key, pSessionCache);
 }
 
 // static

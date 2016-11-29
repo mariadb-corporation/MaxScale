@@ -34,27 +34,21 @@ InMemoryStorageMT* InMemoryStorageMT::create(const std::string& name,
 
 cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t result = do_get_value(key, flags, ppresult);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return result;
+    return do_get_value(key, flags, ppresult);
 }
 
 cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pvalue)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t result = do_put_value(key, pvalue);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return result;
+    return do_put_value(key, pvalue);
 }
 
 cache_result_t InMemoryStorageMT::del_value(const CACHE_KEY& key)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t result = do_del_value(key);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return result;
+    return do_del_value(key);
 }

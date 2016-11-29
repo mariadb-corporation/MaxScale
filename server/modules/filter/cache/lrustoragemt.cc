@@ -39,28 +39,22 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        GWBUF** ppvalue)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t rv =  LRUStorage::do_get_value(key, flags, ppvalue);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return rv;
+    return do_get_value(key, flags, ppvalue);
 }
 
 cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key,
                                        const GWBUF* pvalue)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t rv =  LRUStorage::do_put_value(key, pvalue);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return rv;
+    return do_put_value(key, pvalue);
 }
 
 cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 {
-    spinlock_acquire(&lock_);
-    cache_result_t rv =  LRUStorage::do_del_value(key);
-    spinlock_release(&lock_);
+    LockGuard guard(&lock_);
 
-    return rv;
+    return do_del_value(key);
 }
