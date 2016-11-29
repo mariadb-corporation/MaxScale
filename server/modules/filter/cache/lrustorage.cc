@@ -51,7 +51,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
         {
             if (ptail_ == i->second)
             {
-                ptail_ = i->second->next();
+                ptail_ = i->second->prev();
             }
 
             phead_ = i->second->prepend(phead_);
@@ -217,6 +217,7 @@ LRUStorage::Node* LRUStorage::free_lru()
     if (free_node_data(ptail_))
     {
         pnode = ptail_;
+        ptail_ = ptail_->remove();
     }
 
     return pnode;
@@ -280,7 +281,7 @@ bool LRUStorage::free_node_data(Node* pnode)
 
     NodesPerKey::iterator i = nodes_per_key_.find(*pkey);
 
-    if (i != nodes_per_key_.end())
+    if (i == nodes_per_key_.end())
     {
         MXS_ERROR("Item in LRU list was not found in key mapping.");
     }

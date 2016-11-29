@@ -119,8 +119,10 @@ private:
                     pnode->pprev_->pnext_ = this;
                 }
 
-                pnode->pprev_ = this;
+                pprev_ = pnode->pprev_;
                 pnext_ = pnode;
+
+                pnode->pprev_ = this;
             }
 
             return this;
