@@ -11,12 +11,15 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "lrustoragemt.h"
 
 LRUStorageMT::LRUStorageMT(Storage* pstorage, size_t max_count, size_t max_size)
     : LRUStorage(pstorage, max_count, max_size)
 {
     spinlock_init(&lock_);
+
+    MXS_NOTICE("Created multi threaded LRU storage.");
 }
 
 LRUStorageMT::~LRUStorageMT()

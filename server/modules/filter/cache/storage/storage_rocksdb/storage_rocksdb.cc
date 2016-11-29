@@ -11,7 +11,9 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "storage_rocksdb"
 #include "storage_rocksdb.h"
+#include <inttypes.h>
 #include "../../cache_storage_api.h"
 #include "rocksdbstorage.h"
 
@@ -29,7 +31,7 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
                               const char* zName,
                               uint32_t ttl,
                               uint32_t maxCount,
-                              uint32_t maxSize,
+                              uint64_t maxSize,
                               int argc, char* argv[])
 {
     ss_dassert(zName);
@@ -38,13 +40,13 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
 
     if (maxCount != 0)
     {
-        MXS_WARNING("A maximum item count of %u specifed, although 'storage_rocksdb' "
+        MXS_WARNING("A maximum item count of %" PRIu32 " specifed, although 'storage_rocksdb' "
                     "does not enforce such a limit.", maxCount);
     }
 
     if (maxSize != 0)
     {
-        MXS_WARNING("A maximum size of %u specified, although 'storage_rocksdb' "
+        MXS_WARNING("A maximum size of %" PRIu64 " specified, although 'storage_rocksdb' "
                     "does not enforce such a limit.", maxSize);
     }
 

@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachesimple.h"
 #include "storage.h"
 #include "storagefactory.h"

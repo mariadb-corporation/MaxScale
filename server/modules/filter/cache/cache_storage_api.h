@@ -65,6 +65,11 @@ typedef enum cache_storage_capabilities
     CACHE_STORAGE_CAP_MAX_SIZE  = 0x10, /*< Storage capable of capping size of cache.*/
 } cache_storage_capabilities_t;
 
+static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
+{
+    return (capabilities & mask) == mask;
+}
+
 typedef struct cache_storage_api
 {
     /**
@@ -105,7 +110,7 @@ typedef struct cache_storage_api
                                      const char *name,
                                      uint32_t ttl,
                                      uint32_t max_count,
-                                     uint32_t max_size,
+                                     uint64_t max_size,
                                      int argc, char* argv[]);
 
     /**

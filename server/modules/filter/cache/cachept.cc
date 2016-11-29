@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachept.h"
 #include <maxscale/atomic.h>
 #include <maxscale/platform.h>
@@ -52,6 +53,7 @@ CachePT::CachePT(const std::string&  name,
     : Cache(name, pConfig, pRules, pFactory)
     , m_caches(caches)
 {
+    MXS_NOTICE("Created cache per thread.");
 }
 
 CachePT::~CachePT()

@@ -20,6 +20,8 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include "cachefilter.h"
+#include "lrustoragest.h"
+#include "lrustoragemt.h"
 #include "storagereal.h"
 
 
@@ -142,24 +144,63 @@ StorageFactory* StorageFactory::Open(const char* zName)
 Storage* StorageFactory::createStorage(cache_thread_model_t model,
                                        const char* zName,
                                        uint32_t ttl,
+                                       uint32_t maxCount,
+                                       uint64_t maxSize,
                                        int argc, char* argv[])
 {
     ss_dassert(m_handle);
     ss_dassert(m_pApi);
 
     Storage* pStorage = 0;
-    // TODO: Handle max_count and max_size.
-    uint32_t max_count = 0;
-    uint32_t max_size = 0;
 
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, max_count, max_size,
-                                                        argc, argv);
+    uint32_t mc = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_COUNT) ? maxCount : 0;
+    uint64_t ms = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_SIZE) ? maxSize : 0;
+
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, mc, ms, argc, argv);
 
     if (pRawStorage)
     {
-        CPP_GUARD(pStorage = new StorageReal(m_pApi, pRawStorage));
+        StorageReal* pStorageReal = NULL;
 
-        if (!pStorage)
+        CPP_GUARD(pStorageReal = new StorageReal(m_pApi, pRawStorage));
+
+        if (pStorageReal)
+        {
+            uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
+
+            if (!cache_storage_has_cap(m_capabilities, mask))
+            {
+                // Ok, so the cache cannot handle eviction. Let's decorate the
+                // real storage with a storage than can.
+
+                LRUStorage *pLruStorage = NULL;
+
+                if (model == CACHE_THREAD_MODEL_ST)
+                {
+                    pLruStorage = LRUStorageST::create(pStorageReal, maxCount, maxSize);
+                }
+                else
+                {
+                    ss_dassert(model == CACHE_THREAD_MODEL_MT);
+
+                    pLruStorage = LRUStorageMT::create(pStorageReal, maxCount, maxSize);
+                }
+
+                if (pLruStorage)
+                {
+                    pStorage = pLruStorage;
+                }
+                else
+                {
+                    delete pStorageReal;
+                }
+            }
+            else
+            {
+                pStorage = pStorageReal;
+            }
+        }
+        else
         {
             m_pApi->freeInstance(pRawStorage);
         }

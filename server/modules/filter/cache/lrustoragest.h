@@ -20,7 +20,7 @@ class LRUStorageST : public LRUStorage
 public:
     ~LRUStorageST();
 
-    LRUStorageST* create(Storage* pstorage, size_t max_count, size_t max_size);
+    static LRUStorageST* create(Storage* pstorage, size_t max_count, size_t max_size);
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,

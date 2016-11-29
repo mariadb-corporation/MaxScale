@@ -11,8 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "lrustorage.h"
-
 
 LRUStorage::LRUStorage(Storage* pstorage, size_t max_count, size_t max_size)
     : pstorage_(pstorage)

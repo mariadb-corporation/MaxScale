@@ -29,6 +29,8 @@ public:
     Storage* createStorage(cache_thread_model_t model,
                            const char* zName,
                            uint32_t ttl,
+                           uint32_t max_count,
+                           uint64_t max_size,
                            int argc, char* argv[]);
 
 private:

@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachemt.h"
 #include "storage.h"
 #include "storagefactory.h"
@@ -23,6 +24,8 @@ CacheMT::CacheMT(const std::string& name,
     : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
 {
     spinlock_init(&m_lockPending);
+
+    MXS_NOTICE("Created multi threaded cache.");
 }
 
 CacheMT::~CacheMT()
@@ -89,10 +92,15 @@ CacheMT* CacheMT::Create(const std::string&  name,
     CacheMT* pCache = NULL;
 
     uint32_t ttl = pConfig->ttl;
+    uint32_t maxCount = pConfig->max_count;
+    uint32_t maxSize = pConfig->max_size;
+
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(), ttl, argc, argv);
+    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(),
+                                                ttl, maxCount, maxSize,
+                                                argc, argv);
 
     if (pStorage)
     {

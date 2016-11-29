@@ -91,6 +91,34 @@ If nothing is specified, the default _ttl_ value is 10.
 ttl=60
 ```
 
+#### `max_count`
+
+The maximum number of items the cache may contain. If the limit has been
+reached and a new item should be stored, then an older item will be evicted.
+
+Note that if `cached_data` is `thread_specific` then this limit will be
+applied to each cache _separately_.
+```
+max_size=1000
+```
+The default value is 0, which means no limit.
+
+#### `max_size`
+
+The maximum size - expressed in kibibytes - the cache may occupy. If the limit
+has been reached and a new item should be stored, then some older item(s) will
+be evicted to make space.
+
+Note that the value of `max_size` must be at least as large as the value of
+`max_resultset_size`.
+
+Note that if `cached_data` is `thread_specific` then this limit will be
+applied to each cache _separately_.
+```
+max_count=10000
+```
+The default value is 0, which means no limit.
+
 #### `rules`
 
 Specifies the path of the file where the caching rules are stored. A relative
@@ -113,7 +141,12 @@ allowed values are:
      on the other hand that the very same data may be fetched and stored
      multiple times.
 
-Default is `shared`.
+```
+cached_data=thread_specific
+```
+
+Default is `shared`. See `max_count` and `max_size` what implication changing
+this setting to `thread_specific` has.
 
 #### `debug`
 

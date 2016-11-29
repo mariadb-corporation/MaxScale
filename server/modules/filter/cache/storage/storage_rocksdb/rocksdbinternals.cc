@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "storage_rocksdb"
 #include "rocksdbinternals.h"
 #include <rocksdb/env.h>
 #include <util/coding.h>
