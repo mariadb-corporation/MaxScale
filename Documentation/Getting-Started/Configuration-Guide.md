@@ -563,7 +563,7 @@ grants when loading the users from the backend server.
 
 This parameter takes a boolean value and when enabled, will strip all backslash
 (`\`) characters from the database names. The default value for this parameter
-is true.
+is true since MaxScale 2.0.1. In previous version, the default value was false.
 
 Some visual database management tools automatically escape some characters and
 this might cause conflicts when MariaDB MaxScale tries to authenticate users.
