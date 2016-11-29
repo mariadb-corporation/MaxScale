@@ -233,7 +233,7 @@ printUsage(const char *progname)
     printf("  -f|--fix          Fix binlog file, require write permissions (truncate)\n");
     printf("  -d|--debug        Print debug messages\n");
     printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
-    printf("  -V|--version      print version information and exit\n");
+    printf("  -V|--version      Print version information and exit\n");
     printf("  -K|--key_file     AES Key file for MariaDB 10.1 binlog file decryption\n");
     printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CTR, AES_CBC)\n");
     printf("  -?|--help         Print this help text\n");

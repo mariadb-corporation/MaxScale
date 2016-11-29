@@ -169,23 +169,28 @@ static int blr_write_special_event(ROUTER_INSTANCE *router,
 static uint8_t *blr_create_start_encryption_event(ROUTER_INSTANCE *router,
                                                   uint32_t event_pos,
                                                   bool do_checksum);
-GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
+static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
                                      uint8_t *event,
                                      uint32_t event_size,
                                      uint32_t pos,
                                      const uint8_t *nonce,
                                      int action);
-GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
+static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
                          uint8_t *event,
                          uint32_t event_size,
                          uint8_t *iv,
                          int action);
-int blr_aes_create_tail_for_cbc(uint8_t *output,
+static int blr_aes_create_tail_for_cbc(uint8_t *output,
                                 uint8_t *input,
                                 uint32_t in_size,
                                 uint8_t *iv,
                                 uint8_t *key,
                                 unsigned int key_len);
+static int blr_binlog_event_check(ROUTER_INSTANCE *router,
+                                  unsigned long pos,
+                                  REP_HEADER *hdr,
+                                  char *binlogname,
+                                  char *errmsg);
 
 /** MaxScale generated events */
 typedef enum
@@ -693,7 +698,12 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
  * @return          The binlog record wrapped in a GWBUF structure
  */
 GWBUF *
-blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HEADER *hdr, char *errmsg, const SLAVE_ENCRYPTION_CTX *enc_ctx)
+blr_read_binlog(ROUTER_INSTANCE *router,
+                BLFILE *file,
+                unsigned long pos,
+                REP_HEADER *hdr,
+                char *errmsg,
+                const SLAVE_ENCRYPTION_CTX *enc_ctx)
 {
     uint8_t hdbuf[BINLOG_EVENT_HDR_LEN];
     GWBUF *result;
@@ -837,37 +847,12 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
         hdr->next_pos = EXTRACT32(&hdbuf[13]);
         hdr->flags = EXTRACT16(&hdbuf[17]);
 
-        /* event pos & size checks */
-        if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) &&
-                                     (hdr->event_type != ROTATE_EVENT)))
+        /**
+         * Binlog event check based on Replication Header content and pos
+         */
+        if (!blr_binlog_event_check(router, pos, hdr, file->binlogname, errmsg))
         {
-            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                     "Client requested master to start replication from invalid "
-                     "position %lu in binlog file '%s'", pos,
-                     file->binlogname);
             return NULL;
-        }
-
-        /* event type checks */
-        if (router->mariadb10_compat)
-        {
-            if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10)
-            {
-                snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                         "Invalid MariaDB 10 event type 0x%x at %lu in binlog file '%s'",
-                         hdr->event_type, pos, file->binlogname);
-                return NULL;
-            }
-        }
-        else
-        {
-            if (hdr->event_type > MAX_EVENT_TYPE)
-            {
-                snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
-                         "Invalid event type 0x%x at %lu in binlog file '%s'", hdr->event_type,
-                         pos, file->binlogname);
-                return NULL;
-            }
         }
 
         /* Try to read again the binlog event */
@@ -1018,6 +1003,9 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
                                                            enc_ctx->nonce,
                                                            BINLOG_FLAG_DECRYPT)) == NULL)
         {
+            snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Binlog event decryption error: "
+                     "file size is %lu, event at %lu in binlog file '%s'",
+                     filelen, pos, file->binlogname);
             gwbuf_free(result);
             return NULL;
         }
@@ -1034,6 +1022,15 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
 
         /* Free data read from disk */
         gwbuf_free(result);
+
+        /**
+         * Binlog event check based on Replication Header content and pos
+         */
+        if (!blr_binlog_event_check(router, pos, hdr, file->binlogname, errmsg))
+        {
+            gwbuf_free(decrypted_event);
+            return NULL;
+        }
 
         /* Set the decrypted event as result*/
         result = decrypted_event;
@@ -1478,16 +1475,13 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         {
              uint8_t iv[AES_BLOCK_SIZE + 1] = "";
              char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
+             /* The event size, 4 bytes, is written in clear: use it */
              uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
 
              /**
               * Events are encrypted.
               *
-              * The routine doesn't decrypt them but follows
-              * next event based on the event_size (4 bytes) that is af offset
-              * of BINLOG_EVENT_LEN_OFFSET (9) and it's in clear.
-              *
-              * This version prints to DEBUG the encryption event IV.
+              * Print the IV for the current encrypted event.
               */
 
              /* Get binlog file "nonce" and other data from router encryption_ctx */
@@ -1505,99 +1499,99 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                        iv_hex, (unsigned long)event_size,
                        (unsigned long)(pos + event_size));
 
-            hdr.event_size = event_size;
+             /* Set event size only in hdr struct, before decryption */
+             hdr.event_size = event_size;
 
-        }
-        else {
-
-        /* fill replication header struct */
-        hdr.timestamp = EXTRACT32(hdbuf);
-        hdr.event_type = hdbuf[4];
-        hdr.serverid = EXTRACT32(&hdbuf[5]);
-        hdr.event_size = extract_field(&hdbuf[9], 32);
-        hdr.next_pos = EXTRACT32(&hdbuf[13]);
-        hdr.flags = EXTRACT16(&hdbuf[17]);
-
-        /* Check event type against MAX_EVENT_TYPE */
-
-        if (router->mariadb10_compat)
-        {
-            if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10)
-            {
-                MXS_ERROR("Invalid MariaDB 10 event type 0x%x. "
-                          "Binlog file is %s, position %llu",
-                          hdr.event_type,
-                          router->binlog_name, pos);
-
-                event_error = 1;
-            }
         }
         else
         {
-            if (hdr.event_type > MAX_EVENT_TYPE)
+            /* fill replication header struct */
+            hdr.timestamp = EXTRACT32(hdbuf);
+            hdr.event_type = hdbuf[4];
+            hdr.serverid = EXTRACT32(&hdbuf[5]);
+            hdr.event_size = extract_field(&hdbuf[9], 32);
+            hdr.next_pos = EXTRACT32(&hdbuf[13]);
+            hdr.flags = EXTRACT16(&hdbuf[17]);
+
+            /* Check event type against MAX_EVENT_TYPE */
+
+            if (router->mariadb10_compat)
             {
-                MXS_ERROR("Invalid event type 0x%x. "
-                          "Binlog file is %s, position %llu",
-                          hdr.event_type,
-                          router->binlog_name, pos);
-
-                event_error = 1;
-            }
-        }
-
-        if (event_error)
-        {
-            router->binlog_position = last_known_commit;
-            router->current_safe_event = last_known_commit;
-            router->current_pos = pos;
-
-            MXS_WARNING("an error has been found in %s. "
-                        "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_name,
-                        router->binlog_position,
-                        router->current_pos);
-
-            if (fix)
-            {
-                if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
+                if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10)
                 {
-                    MXS_NOTICE("Binlog file %s has been truncated at %lu",
-                               router->binlog_name,
-                               router->binlog_position);
-                    fsync(router->binlog_fd);
+                    MXS_ERROR("Invalid MariaDB 10 event type 0x%x. "
+                              "Binlog file is %s, position %llu",
+                              hdr.event_type,
+                              router->binlog_name, pos);
+
+                    event_error = 1;
+                }
+            }
+            else
+            {
+                if (hdr.event_type > MAX_EVENT_TYPE)
+                {
+                    MXS_ERROR("Invalid event type 0x%x. "
+                              "Binlog file is %s, position %llu",
+                              hdr.event_type,
+                              router->binlog_name, pos);
+
+                    event_error = 1;
                 }
             }
 
-            return 1;
-        }
-
-        if (hdr.event_size <= 0)
-        {
-            MXS_ERROR("Event size error: "
-                      "size %d at %llu.",
-                      hdr.event_size, pos);
-
-            router->binlog_position = last_known_commit;
-            router->current_safe_event = last_known_commit;
-            router->current_pos = pos;
-
-            MXS_WARNING("an error has been found. "
-                        "Setting safe pos to %lu, current pos %lu",
-                        router->binlog_position, router->current_pos);
-            if (fix)
+            if (event_error)
             {
-                if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
+                router->binlog_position = last_known_commit;
+                router->current_safe_event = last_known_commit;
+                router->current_pos = pos;
+
+                MXS_WARNING("an error has been found in %s. "
+                            "Setting safe pos to %lu, current pos %lu",
+                            router->binlog_name,
+                            router->binlog_position,
+                            router->current_pos);
+
+                if (fix)
                 {
-                    MXS_NOTICE("Binlog file %s has been truncated at %lu",
-                               router->binlog_name,
-                               router->binlog_position);
-                    fsync(router->binlog_fd);
+                    if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
+                    {
+                        MXS_NOTICE("Binlog file %s has been truncated at %lu",
+                                   router->binlog_name,
+                                   router->binlog_position);
+                        fsync(router->binlog_fd);
+                    }
                 }
+
+                return 1;
             }
 
-            return 1;
-        }
+            if (hdr.event_size <= 0)
+            {
+                MXS_ERROR("Event size error: "
+                          "size %d at %llu.",
+                          hdr.event_size, pos);
 
+                router->binlog_position = last_known_commit;
+                router->current_safe_event = last_known_commit;
+                router->current_pos = pos;
+
+                MXS_WARNING("an error has been found. "
+                            "Setting safe pos to %lu, current pos %lu",
+                            router->binlog_position, router->current_pos);
+                if (fix)
+                {
+                    if (ftruncate(router->binlog_fd, router->binlog_position) == 0)
+                    {
+                        MXS_NOTICE("Binlog file %s has been truncated at %lu",
+                                   router->binlog_name,
+                                   router->binlog_position);
+                        fsync(router->binlog_fd);
+                    }
+                }
+
+                return 1;
+            }
         }
 
         /* Allocate a GWBUF for the event */
@@ -1707,6 +1701,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
              char iv_hex[AES_BLOCK_SIZE * 2 + 1] = "";
              uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
              uint8_t *decrypt_ptr;
+             unsigned long next_pos;
 
              /**
               * Events are encrypted.
@@ -1719,6 +1714,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                                                                NULL,
                                                                BINLOG_FLAG_DECRYPT)) == NULL)
             {
+                MXS_ERROR("Error while decrypting event at pos %lu, size %lu",
+                          (unsigned long)pos,
+                          (unsigned long)hdr.event_size);
+                router->m_errno = BINLOG_FATAL_ERROR_READING;
                 gwbuf_free(result);
                 return 1;
             }
@@ -1733,11 +1732,58 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             hdr.next_pos = pos + event_size;
             hdr.flags = EXTRACT16(&decrypt_ptr[17]);
 
+            /* Get next pos from decrypted event header */
+            next_pos = EXTRACT32(&decrypt_ptr[13]);
+
             MXS_DEBUG("Event time %lu\nEvent Type %u (%s)\nServer Id %lu\nNextPos %lu/%lu\nFlags %u",
                        (unsigned long)hdr.timestamp, hdr.event_type,
                        blr_get_event_description(router, hdr.event_type),
-                       (unsigned long)hdr.serverid, (unsigned long)EXTRACT32(&decrypt_ptr[13]),
+                       (unsigned long)hdr.serverid, next_pos,
                        (unsigned long)hdr.next_pos, hdr.flags);
+
+            /* Sanity checks for event type */
+            if (router->mariadb10_compat)
+            {
+                if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10)
+                {
+                    MXS_ERROR("Invalid MariaDB 10 event type 0x%x. "
+                              "Binlog file is %s, position %llu",
+                              hdr.event_type,
+                              router->binlog_name, pos);
+
+                    event_error = 1;
+                }
+            }
+            else
+            {
+                if (hdr.event_type > MAX_EVENT_TYPE)
+                {
+                    MXS_ERROR("Invalid event type 0x%x. "
+                              "Binlog file is %s, position %llu",
+                               hdr.event_type,
+                               router->binlog_name, pos);
+
+                    event_error = 1;
+                }
+            }
+            if (event_error)
+            {
+                MXS_ERROR("Event Type is wrong, check encryption settings");
+                router->m_errno = BINLOG_FATAL_ERROR_READING;
+                gwbuf_free(decrypted_event);
+                gwbuf_free(result);
+                return 1;
+            }
+
+            /* Sanity checks for pos */
+            if (next_pos != hdr.next_pos)
+            {
+                MXS_ERROR("Next pos is wrong, check encryption settings");
+                router->m_errno = BINLOG_FATAL_ERROR_READING;
+                gwbuf_free(decrypted_event);
+                gwbuf_free(result);
+                return 1;
+            }
 
             /* get event content after event header */
             ptr = decrypt_ptr + BINLOG_EVENT_HDR_LEN;
@@ -1851,6 +1897,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
             if (new_encryption_ctx == NULL)
             {
+                router->m_errno = BINLOG_FATAL_ERROR_READING;
                 return 1;
             }
 
@@ -1908,6 +1955,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
             if (router->encryption.key_len == 0)
             {
+                router->m_errno = BINLOG_FATAL_ERROR_READING;
                 MXS_ERROR("*** The binlog is encrypted. No KEY/Algo found for decryption. ***");
                 return 1;
             }
@@ -2767,7 +2815,11 @@ blr_create_start_encryption_event(ROUTER_INSTANCE *router, uint32_t event_pos, b
  * @return          A new allocated, encrypted, GWBUF buffer
  *
  */
-GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router, uint8_t *buffer, uint32_t size, uint8_t *iv, int action)
+static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
+                            uint8_t *buffer,
+                            uint32_t size,
+                            uint8_t *iv,
+                            int action)
 {
     EVP_CIPHER_CTX ctx;
     uint8_t *key = router->encryption.key_value;
@@ -2826,7 +2878,7 @@ GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router, uint8_t *buffer, uint32_t size, ui
 
     int finale_ret = 1;
 
-    /* Enc/dec finish is differently handled for AES_CBC */ 
+    /* Enc/dec finish is differently handled for AES_CBC */
     if (router->encryption.encryption_algorithm != BLR_AES_CBC)
     {
         /* Call Final_ex */
@@ -2883,7 +2935,12 @@ GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router, uint8_t *buffer, uint32_t size, ui
  * @action          Encryption action: 1 Encryp, 0 Decryot
  * @return          A GWBUF buffer or NULL omn error
  */
-GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router, uint8_t *buf, uint32_t size, uint32_t pos, const uint8_t *nonce, int action)
+static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
+                                          uint8_t *buf,
+                                          uint32_t size,
+                                          uint32_t pos,
+                                          const uint8_t *nonce,
+                                          int action)
 {
     uint8_t iv[BLRM_IV_LENGTH];
     uint32_t file_offset = pos;
@@ -3028,9 +3085,14 @@ const char *blr_encryption_algorithm_list(void)
  * @param iv        The IV used in previous stage
  * @param key       The encryption key
  * @param key_len   The lenght of encrytion key
- * @return          Return 1 on success, 0 otherwise 
+ * @return          Return 1 on success, 0 otherwise
  */
-int blr_aes_create_tail_for_cbc(uint8_t *output, uint8_t *input, uint32_t in_size, uint8_t *iv, uint8_t *key, unsigned int key_len)
+static int blr_aes_create_tail_for_cbc(uint8_t *output,
+                                       uint8_t *input,
+                                       uint32_t in_size,
+                                       uint8_t *iv,
+                                       uint8_t *key,
+                                       unsigned int key_len)
 {
     EVP_CIPHER_CTX t_ctx;
     uint8_t mask[AES_BLOCK_SIZE];
@@ -3053,7 +3115,7 @@ int blr_aes_create_tail_for_cbc(uint8_t *output, uint8_t *input, uint32_t in_siz
 
     /* Set no padding */
     EVP_CIPHER_CTX_set_padding(&t_ctx, 0);
- 
+
     /* Do the enc/dec of the IV (the one from previous stage) */
     if (!EVP_CipherUpdate(&t_ctx,
                           mask,
@@ -3079,5 +3141,59 @@ int blr_aes_create_tail_for_cbc(uint8_t *output, uint8_t *input, uint32_t in_siz
 
     EVP_CIPHER_CTX_cleanup(&t_ctx);
 
+    return 1;
+}
+
+/**
+ * Run checks against some fieds in replication header
+ *
+ * @param router        The router instance
+ * @param pos           The current pos in binlog
+ * @param hdr           The replication header struct
+ * @param binlogname    The binlogname, for error message
+ * @param errmsg        The errormessage to fill
+ * @return              0 on error and 1 on success
+ *
+ * 1 ok, 0 err */
+static int blr_binlog_event_check(ROUTER_INSTANCE *router,
+                           unsigned long pos,
+                           REP_HEADER *hdr,
+                           char *binlogname,
+                           char *errmsg)
+{
+    /* event pos & size checks */
+    if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) &&
+                                     (hdr->event_type != ROTATE_EVENT)))
+    {
+        snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                     "Client requested master to start replication from invalid "
+                     "position %lu in binlog file '%s'", pos,
+                     binlogname);
+         return 0;
+    }
+
+    /* event type checks */
+    if (router->mariadb10_compat)
+    {
+        if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10)
+        {
+            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                     "Invalid MariaDB 10 event type 0x%x at %lu in binlog file '%s'",
+                     hdr->event_type, pos, binlogname);
+            return 0;
+        }
+     }
+     else
+     {
+        if (hdr->event_type > MAX_EVENT_TYPE)
+        {
+            snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
+                     "Invalid event type 0x%x at %lu in binlog file '%s'", hdr->event_type,
+                     pos, binlogname);
+            return 0;
+        }
+    }
+
+    /* check is OK */
     return 1;
 }

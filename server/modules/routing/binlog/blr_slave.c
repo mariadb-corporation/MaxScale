@@ -5895,6 +5895,8 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
         /* set the encryption ctx into slave */
         MXS_FREE(slave->encryption_ctx);
         slave->encryption_ctx = new_encryption_ctx;
+        /* Set the slave postion after START_ENCRYPTION_EVENT */
+        slave->binlog_pos = (unsigned long)fde_end_pos + hdr.event_size;
         spinlock_release(&slave->catch_lock);
 
         MXS_INFO("Start Encryption event found. Binlog %s is encrypted. First event at %lu",

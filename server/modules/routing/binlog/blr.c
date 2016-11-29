@@ -2248,7 +2248,10 @@ static int blr_check_binlog(ROUTER_INSTANCE *router)
                  router->binlog_name,
                  router->binlog_position);
         /* set mysql_errno */
-        router->m_errno = 2032;
+        if (!router->m_errno)
+        {
+            router->m_errno = 2032;
+        }
 
         /* set io error message */
         router->m_errmsg = MXS_STRDUP_A(msg_err);
