@@ -99,7 +99,7 @@ reached and a new item should be stored, then an older item will be evicted.
 Note that if `cached_data` is `thread_specific` then this limit will be
 applied to each cache _separately_.
 ```
-max_size=1000
+max_count=1000
 ```
 The default value is 0, which means no limit.
 
@@ -115,7 +115,7 @@ Note that the value of `max_size` must be at least as large as the value of
 Note that if `cached_data` is `thread_specific` then this limit will be
 applied to each cache _separately_.
 ```
-max_count=10000
+max_size=1000
 ```
 The default value is 0, which means no limit.
 
