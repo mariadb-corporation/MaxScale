@@ -48,6 +48,7 @@
 #include <string.h>
 #include <maxscale/atomic.h>
 #include <maxscale/alloc.h>
+#include <maxscale/service.h>
 
 MODULE_INFO info =
 {
@@ -59,12 +60,22 @@ MODULE_INFO info =
 
 static char *version_str = "V1.1.1";
 
-/** Formatting buffer size */
-#define QLA_STRING_BUFFER_SIZE 1024
+/** Date string buffer size */
+#define QLA_DATE_BUFFER_SIZE 20
 
-/** Log file settings flags */
+/** Log file save mode flags */
 #define CONFIG_FILE_SESSION (1 << 0) // Default value, session specific files
 #define CONFIG_FILE_UNIFIED (1 << 1) // One file shared by all sessions
+
+/* Flags for controlling extra log entry contents. The default items are
+ * always on, for now.
+ */
+#define LOG_DATA_SERVICE    (1 << 0)
+#define LOG_DATA_SESSION    (1 << 1)
+#define LOG_DATA_DATE       (1 << 2)
+#define LOG_DATA_USER       (1 << 3)
+#define LOG_DATA_QUERY      (1 << 4)
+#define LOG_DATA_DEFAULT (LOG_DATA_DATE | LOG_DATA_USER | LOG_DATA_QUERY)
 
 /*
  * The filter entry points
@@ -105,17 +116,21 @@ static FILTER_OBJECT MyObject =
 typedef struct
 {
     int sessions; /* The count of sessions */
+    char *name;     /* Filter definition name */
     char *filebase; /* The filename base */
-    char *source; /* The source of the client connection */
-    char *userName; /* The user name to filter on */
+    char *source; /* The source of the client connection to filter on */
+    char *user_name; /* The user name to filter on */
     char *match; /* Optional text to match against */
     regex_t re; /* Compiled regex text */
     char *nomatch; /* Optional text to match against for exclusion */
     regex_t nore; /* Compiled regex nomatch text */
     uint32_t log_mode_flags; /* Log file mode settings */
+    uint32_t log_file_data_flags; /* What data is saved to the files */
     FILE *unified_fp; /* Unified log file. The pointer needs to be shared here
                        * to avoid garbled printing. */
-    bool flush_writes; /* Flush log file after every write */
+    bool flush_writes; /* Flush log file after every write? */
+    bool append;    /* Open files in append-mode? */
+    bool write_warning_given; /* To make sure some warning are only given once */
 } QLA_INSTANCE;
 
 /**
@@ -128,14 +143,19 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down;
-    char *filename;
-    FILE *fp;
     int active;
-    char *user;
+    DOWNSTREAM down;
+    char *filename; /* The session-specific log file name */
+    FILE *fp;       /* The session-specific log file */
     char *remote;
-    size_t ses_id; /* The session this filter serves */
+    char *service;  /* The service name this filter is attached to. Not owned. */
+    size_t ses_id;  /* The session this filter serves */
+    char *user;     /* The client */
 } QLA_SESSION;
+
+static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
+static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
+                           const char*, size_t);
 
 /**
  * Implementation of the mandatory version entry point
@@ -191,14 +211,18 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 
     if (my_instance)
     {
-        my_instance->source = NULL;
-        my_instance->userName = NULL;
-        my_instance->match = NULL;
-        my_instance->nomatch = NULL;
+        my_instance->append = false;
         my_instance->filebase = NULL;
-        my_instance->log_mode_flags = 0;
-        my_instance->unified_fp = NULL;
         my_instance->flush_writes = false;
+        my_instance->log_file_data_flags = LOG_DATA_DEFAULT;
+        my_instance->log_mode_flags = 0;
+        my_instance->match = NULL;
+        my_instance->name = MXS_STRDUP(name);
+        my_instance->nomatch = NULL;
+        my_instance->source = NULL;
+        my_instance->unified_fp = NULL;
+        my_instance->user_name = NULL;
+        my_instance->write_warning_given = false;
         bool error = false;
 
         if (params)
@@ -219,7 +243,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
                 }
                 else if (!strcmp(params[i]->name, "user"))
                 {
-                    my_instance->userName = MXS_STRDUP_A(params[i]->value);
+                    my_instance->user_name = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "filebase"))
                 {
@@ -264,6 +288,18 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
                 {
                     my_instance->flush_writes = true;
                 }
+                else if (!strcasecmp(options[i], "append"))
+                {
+                    my_instance->append = true;
+                }
+                else if (!strcasecmp(options[i], "print_service"))
+                {
+                    my_instance->log_file_data_flags |= LOG_DATA_SERVICE;
+                }
+                else if (!strcasecmp(options[i], "print_session"))
+                {
+                    my_instance->log_file_data_flags |= LOG_DATA_SESSION;
+                }
                 else
                 {
                     MXS_ERROR("qlafilter: Unsupported option '%s'.",
@@ -305,8 +341,8 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             error = true;
         }
         // Try to open the unified log file
-        if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED &&
-            my_instance->filebase != NULL)
+        if (!error && (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED) &&
+            (my_instance->filebase != NULL))
         {
             // First calculate filename length
             const char UNIFIED[] = ".unified";
@@ -316,7 +352,9 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             {
                 snprintf(filename, namelen, "%s.unified", my_instance->filebase);
                 // Open the file. It is only closed at program exit
-                my_instance->unified_fp = fopen(filename, "w");
+                my_instance->unified_fp = open_log_file(my_instance->log_file_data_flags,
+                                                        my_instance, filename);
+
                 if (my_instance->unified_fp == NULL)
                 {
                     char errbuf[MXS_STRERROR_BUFLEN];
@@ -353,7 +391,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             }
             MXS_FREE(my_instance->filebase);
             MXS_FREE(my_instance->source);
-            MXS_FREE(my_instance->userName);
+            MXS_FREE(my_instance->user_name);
             MXS_FREE(my_instance);
             my_instance = NULL;
         }
@@ -392,8 +430,8 @@ newSession(FILTER *instance, SESSION *session)
 
         if ((my_instance->source && remote &&
              strcmp(remote, my_instance->source)) ||
-            (my_instance->userName && userName &&
-             strcmp(userName, my_instance->userName)))
+            (my_instance->user_name && userName &&
+             strcmp(userName, my_instance->user_name)))
         {
             my_session->active = 0;
         }
@@ -401,6 +439,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->user = userName;
         my_session->remote = remote;
         my_session->ses_id = session->ses_id;
+        my_session->service = session->service->name;
 
         sprintf(my_session->filename, "%s.%lu",
                 my_instance->filebase,
@@ -410,9 +449,11 @@ newSession(FILTER *instance, SESSION *session)
         atomic_add(&(my_instance->sessions), 1);
 
         // Only open the session file if the corresponding mode setting is used
-        if (my_session->active && (my_instance->log_mode_flags | CONFIG_FILE_SESSION))
+        if (my_session->active && (my_instance->log_mode_flags & CONFIG_FILE_SESSION))
         {
-            my_session->fp = fopen(my_session->filename, "w");
+            uint32_t data_flags = (my_instance->log_file_data_flags &
+                                   ~LOG_DATA_SESSION); // No point printing "Session"
+            my_session->fp = open_log_file(data_flags, my_instance, my_session->filename);
 
             if (my_session->fp == NULL)
             {
@@ -496,21 +537,21 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session = (QLA_SESSION *) session;
-    char *ptr;
+    char *ptr = NULL;
     int length = 0;
     struct tm t;
     struct timeval tv;
 
     if (my_session->active)
     {
-        if ((ptr = modutil_get_SQL(queue)) != NULL)
+        if (modutil_extract_SQL(queue, &ptr, &length))
         {
             if ((my_instance->match == NULL ||
                  regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
                 (my_instance->nomatch == NULL ||
                  regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
             {
-                char buffer[QLA_STRING_BUFFER_SIZE];
+                char buffer[QLA_DATE_BUFFER_SIZE];
                 gettimeofday(&tv, NULL);
                 localtime_r(&tv.tv_sec, &t);
                 strftime(buffer, sizeof(buffer), "%F %T", &t);
@@ -519,28 +560,39 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                  * Loop over all the possible log file modes and write to
                  * the enabled files.
                  */
-                char *sql_string = trim(squeeze_whitespace(ptr));
+
+                char *sql_string = ptr;
+                bool write_error = false;
                 if (my_instance->log_mode_flags & CONFIG_FILE_SESSION)
                 {
-                    fprintf(my_session->fp, "%s,%s@%s,%s\n", buffer, my_session->user,
-                            my_session->remote, sql_string);
-                    if (my_instance->flush_writes)
+                    // In this case there is no need to write the session
+                    // number into the files.
+                    uint32_t data_flags = (my_instance->log_file_data_flags &
+                                           ~LOG_DATA_SESSION);
+
+                    if (write_log_entry(data_flags, my_session->fp,
+                                        my_instance, my_session, buffer, sql_string, length) < 0)
                     {
-                        fflush(my_session->fp);
+                        write_error = true;
                     }
                 }
                 if (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED)
                 {
-                    fprintf(my_instance->unified_fp, "S%zd,%s,%s@%s,%s\n",
-                            my_session->ses_id, buffer, my_session->user,
-                            my_session->remote, sql_string);
-                    if (my_instance->flush_writes)
+                    uint32_t data_flags = my_instance->log_file_data_flags;
+                    if (write_log_entry(data_flags, my_instance->unified_fp,
+                                        my_instance, my_session, buffer, sql_string, length) < 0)
                     {
-                        fflush(my_instance->unified_fp);
+                        write_error = true;
                     }
                 }
+                if (write_error && !my_instance->write_warning_given)
+                {
+                    MXS_ERROR("qla-filter '%s': Log file write failed. "
+                              "Suppressing further similar warnings.",
+                              my_instance->name);
+                    my_instance->write_warning_given = true;
+                }
             }
-            MXS_FREE(ptr);
         }
     }
     /* Pass the query downstream */
@@ -575,10 +627,10 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tLimit logging to connections from  %s\n",
                    my_instance->source);
     }
-    if (my_instance->userName)
+    if (my_instance->user_name)
     {
         dcb_printf(dcb, "\t\tLimit logging to user      %s\n",
-                   my_instance->userName);
+                   my_instance->user_name);
     }
     if (my_instance->match)
     {
@@ -600,4 +652,245 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
+}
+/**
+ * Open the log file and print a header if appropriate.
+ * @param   data_flags  Data save settings flags
+ * @param   instance    The filter instance
+ * @param   filename    Target file path
+ * @return  A valid file on success, null otherwise.
+ */
+static FILE* open_log_file(uint32_t data_flags, QLA_INSTANCE *instance, const char *filename)
+{
+    bool file_existed = false;
+    FILE *fp = NULL;
+    if (instance->append == false)
+    {
+        // Just open the file (possibly overwriting) and then print header.
+        fp = fopen(filename, "w");
+    }
+    else
+    {
+        // Using fopen() with 'a+' means we will always write to the end but can read
+        // anywhere. Depending on the "append"-setting the file has been
+        // opened in different modes, which should be considered if file handling
+        // changes later (e.g. rewinding).
+        if ((fp = fopen(filename, "a+")) != NULL)
+        {
+            // Check to see if file already has contents
+            fseek(fp, 0, SEEK_END);
+            if (ftell(fp) > 0) // Any errors in ftell cause overwriting
+            {
+                file_existed = true;
+            }
+        }
+    }
+    if (fp && !file_existed)
+    {
+        // Print a header. Luckily, we know the header has limited length
+        const char SERVICE[] = "Service,";
+        const char SESSION[] = "Session,";
+        const char DATE[] = "Date,";
+        const char USERHOST[] = "User@Host,";
+        const char QUERY[] = "Query,";
+
+        const int headerlen = sizeof(SERVICE) + sizeof(SERVICE) + sizeof(DATE) +
+                              sizeof(USERHOST) + sizeof(QUERY);
+
+        char print_str[headerlen];
+        memset(print_str, '\0', headerlen);
+
+        char *current_pos = print_str;
+        if (instance->log_file_data_flags & LOG_DATA_SERVICE)
+        {
+            strcat(current_pos, SERVICE);
+            current_pos += sizeof(SERVICE) - 1;
+        }
+        if (instance->log_file_data_flags & LOG_DATA_SESSION)
+        {
+            strcat(current_pos, SESSION);
+            current_pos += sizeof(SERVICE) - 1;
+        }
+        if (instance->log_file_data_flags & LOG_DATA_DATE)
+        {
+            strcat(current_pos, DATE);
+            current_pos += sizeof(DATE) - 1;
+        }
+        if (instance->log_file_data_flags & LOG_DATA_USER)
+        {
+            strcat(current_pos, USERHOST);
+            current_pos += sizeof(USERHOST) - 1;
+        }
+        if (instance->log_file_data_flags & LOG_DATA_QUERY)
+        {
+            strcat(current_pos, QUERY);
+            current_pos += sizeof(QUERY) - 1;
+        }
+        if (current_pos > print_str)
+        {
+            // Overwrite the last ','.
+            *(current_pos - 1) = '\n';
+        }
+        else
+        {
+            // Nothing to print
+            return fp;
+        }
+
+        // Finally, write the log header.
+        int written = fprintf(fp, "%s", print_str);
+
+        if ((written <= 0) ||
+            ((instance->flush_writes) && (fflush(fp) < 0)))
+        {
+            // Weird error, file opened but a write failed. Best to stop.
+            fclose(fp);
+            MXS_ERROR("qlafilter: Failed to print header to file %s.", filename);
+            return NULL;
+        }
+    }
+    return fp;
+}
+
+/**
+ * Write an entry to the log file.
+ * @param   data_flags    Controls what to write
+ * @param   logfile    Target file
+ * @param   instance    Filter instance
+ * @param   session    Filter session
+ * @param   time_string Date entry
+ * @param   sql_string SQL-query, not NULL terminated!
+ * @param   sql_str_len Length of SQL-string
+ * @return  The number of characters written, or a negative value on failure
+ */
+static int write_log_entry(uint32_t data_flags, FILE *logfile, QLA_INSTANCE *instance,
+                           QLA_SESSION *session, const char *time_string, const char *sql_string,
+                           size_t sql_str_len)
+{
+    ss_dassert(logfile != NULL);
+    size_t print_len = 0;
+
+    // First calculate an upper limit for the total length. The strlen()-calls
+    // could be removed if the values would be saved into the instance or session
+    // or if we had some reasonable max lengths. (Apparently there are max lengths
+    // but they are much higher than what is typically needed)
+
+    // The numbers have some extra for delimiters.
+    if (data_flags & LOG_DATA_SERVICE)
+    {
+        print_len += strlen(session->service) + 1;
+    }
+    if (data_flags & LOG_DATA_SESSION)
+    {
+        print_len += 20; // To print a 64bit integer
+    }
+    if (data_flags & LOG_DATA_DATE)
+    {
+        print_len += QLA_DATE_BUFFER_SIZE + 1;
+    }
+    if (data_flags & LOG_DATA_USER)
+    {
+        print_len += strlen(session->user) + strlen(session->remote) + 2;
+    }
+    if (data_flags & LOG_DATA_QUERY)
+    {
+        print_len += sql_str_len + 1; // Can't use strlen, not null-terminated
+    }
+
+    if (print_len == 0)
+    {
+        return 0; // Nothing to print
+    }
+
+    // Allocate space for a buffer. Printing to the file in parts would likely
+    // cause garbled printing if several threads write simultaneously, so we
+    // have to first print to a string.
+    char *print_str = NULL;
+    if ((print_str = MXS_CALLOC(print_len, sizeof(char))) == NULL)
+    {
+        return -1;
+    }
+
+    bool error = false;
+    char *current_pos = print_str;
+    int rval = 0;
+    if (!error && (data_flags & LOG_DATA_SERVICE))
+    {
+        if ((rval = sprintf(current_pos, "%s,", session->service)) < 0)
+        {
+            error = true;
+        }
+        else
+        {
+            current_pos += rval;
+        }
+    }
+    if (!error && (data_flags & LOG_DATA_SESSION))
+    {
+        if ((rval = sprintf(current_pos, "%lu,", session->ses_id)) < 0)
+        {
+            error = true;
+        }
+        else
+        {
+            current_pos += rval;
+        }
+    }
+    if (!error && (data_flags & LOG_DATA_DATE))
+    {
+        if ((rval = sprintf(current_pos, "%s,", time_string)) < 0)
+        {
+            error = true;
+        }
+        else
+        {
+            current_pos += rval;
+        }
+    }
+    if (!error && (data_flags & LOG_DATA_USER))
+    {
+        if ((rval = sprintf(current_pos, "%s@%s,", session->user, session->remote)) < 0)
+        {
+            error = true;
+        }
+        else
+        {
+            current_pos += rval;
+        }
+    }
+    if (!error && (data_flags & LOG_DATA_QUERY))
+    {
+        strncat(current_pos, sql_string, sql_str_len); // non-null-terminated string
+        current_pos += sql_str_len + 1; // +1 to move to the next char after
+    }
+    if (error || current_pos <= print_str)
+    {
+        MXS_FREE(print_str);
+        MXS_ERROR("qlafilter ('%s'): Failed to format log event.", instance->name);
+        return -1;
+    }
+    else
+    {
+        // Overwrite the last ','. The rest is already filled with 0.
+        *(current_pos - 1) = '\n';
+    }
+
+    // Finally, write the log event.
+    int written = fprintf(logfile, "%s", print_str);
+    MXS_FREE(print_str);
+
+    if ((!instance->flush_writes) || (written <= 0))
+    {
+        return written;
+    }
+    else
+    {
+        // Try flushing. If successful, still return the characters written.
+        int rval = fflush(logfile);
+        if (rval >= 0)
+        {
+            return written;
+        }
+        return rval;
+    }
 }
