@@ -397,8 +397,16 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    snprintf(mon->user, sizeof(mon->user), "%s", user);
-    snprintf(mon->password, sizeof(mon->password), "%s", passwd);
+    /** If a pointer to mon->password or mon->user is passed as one of the
+     * parameters the destination and source would overlap. Copy the values to
+     * a local buffer to avoid this. */
+    char pwd[strlen(passwd) + 1];
+    char usr[strlen(user) + 1];
+    strcpy(usr, user);
+    strcpy(pwd, passwd);
+
+    snprintf(mon->user, sizeof(mon->user), "%s", usr);
+    snprintf(mon->password, sizeof(mon->password), "%s", pwd);
 }
 
 /**
@@ -1350,6 +1358,7 @@ static bool create_monitor_config(const MONITOR *monitor, const char *filename)
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", monitor->name);
+    dprintf(file, "type=monitor\n");
     dprintf(file, "module=%s\n", monitor->module_name);
     dprintf(file, "user=%s\n", monitor->user);
     dprintf(file, "password=%s\n", monitor->password);
