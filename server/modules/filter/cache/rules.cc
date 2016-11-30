@@ -156,13 +156,6 @@ static mysql_account_kind_t mysql_to_pcre(char *pcre, const char *mysql, pcre_qu
  * API begin
  */
 
-/**
- * Returns a string representation of a attribute.
- *
- * @param attribute An attribute type.
- *
- * @return Corresponding string, not to be freed.
- */
 const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute)
 {
     switch (attribute)
@@ -188,13 +181,6 @@ const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute)
     }
 }
 
-/**
- * Returns a string representation of an operator.
- *
- * @param op An operator.
- *
- * @return Corresponding string, not to be freed.
- */
 const char *cache_rule_op_to_string(cache_rule_op_t op)
 {
     switch (op)
@@ -217,13 +203,6 @@ const char *cache_rule_op_to_string(cache_rule_op_t op)
     }
 }
 
-/**
- * Create a default cache rules object.
- *
- * @param debug The debug level.
- *
- * @return The rules object or NULL is allocation fails.
- */
 CACHE_RULES *cache_rules_create(uint32_t debug)
 {
     CACHE_RULES *rules = (CACHE_RULES*)MXS_CALLOC(1, sizeof(CACHE_RULES));
@@ -236,14 +215,6 @@ CACHE_RULES *cache_rules_create(uint32_t debug)
     return rules;
 }
 
-/**
- * Loads the caching rules from a file and returns corresponding object.
- *
- * @param path  The path of the file containing the rules.
- * @param debug The debug level.
- *
- * @return The corresponding rules object, or NULL in case of error.
- */
 CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
 {
     CACHE_RULES *rules = NULL;
@@ -279,14 +250,6 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
     return rules;
 }
 
-/**
- * Parses the caching rules from a string and returns corresponding object.
- *
- * @param json  String containing json.
- * @param debug The debug level.
- *
- * @return The corresponding rules object, or NULL in case of error.
- */
 CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
 {
     CACHE_RULES *rules = NULL;
@@ -308,13 +271,6 @@ CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
     return rules;
 }
 
-/**
- * Frees the rules object.
- *
- * @param path The path of the file containing the rules.
- *
- * @return The corresponding rules object, or NULL in case of error.
- */
 void cache_rules_free(CACHE_RULES *rules)
 {
     if (rules)
@@ -325,15 +281,6 @@ void cache_rules_free(CACHE_RULES *rules)
     }
 }
 
-/**
- * Returns boolean indicating whether the result of the query should be stored.
- *
- * @param self       The CACHE_RULES object.
- * @param default_db The current default database, NULL if there is none.
- * @param query      The query, expected to contain a COM_QUERY.
- *
- * @return True, if the results should be stored.
- */
 bool cache_rules_should_store(CACHE_RULES *self, const char *default_db, const GWBUF* query)
 {
     bool should_store = false;
@@ -356,14 +303,6 @@ bool cache_rules_should_store(CACHE_RULES *self, const char *default_db, const G
     return should_store;
 }
 
-/**
- * Returns boolean indicating whether the cache should be used, that is consulted.
- *
- * @param self     The CACHE_RULES object.
- * @param session  The current session.
- *
- * @return True, if the cache should be used.
- */
 bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
 {
     bool should_use = false;
@@ -399,6 +338,55 @@ bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
     }
 
     return should_use;
+}
+
+
+CacheRules::CacheRules(CACHE_RULES* prules)
+    : prules_(prules)
+{
+}
+
+CacheRules::~CacheRules()
+{
+    cache_rules_free(prules_);
+}
+
+CacheRules* CacheRules::create(uint32_t debug)
+{
+    CacheRules* pthis = NULL;
+
+    CACHE_RULES* prules = cache_rules_create(debug);
+
+    if (prules)
+    {
+        pthis = new (std::nothrow) CacheRules(prules);
+    }
+
+    return pthis;
+}
+
+CacheRules* CacheRules::load(const char *zpath, uint32_t debug)
+{
+    CacheRules* pthis = NULL;
+
+    CACHE_RULES* prules = cache_rules_load(zpath, debug);
+
+    if (prules)
+    {
+        pthis = new (std::nothrow) CacheRules(prules);
+    }
+
+    return pthis;
+}
+
+bool CacheRules::should_store(const char* zdefault_db, const GWBUF* pquery) const
+{
+    return cache_rules_should_store(prules_, zdefault_db, pquery);
+}
+
+bool CacheRules::should_use(const SESSION* psession) const
+{
+    return cache_rules_should_use(prules_, psession);
 }
 
 /*
