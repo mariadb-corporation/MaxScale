@@ -3471,6 +3471,11 @@ static void dcb_remove_from_list(DCB *dcb)
         }
     }
 
+    /** Reset the next and tail pointers so that if this DCB is added to the list
+     * again, it will be in a clean state. */
+    dcb->thread.next = NULL;
+    dcb->thread.tail = NULL;
+
     spinlock_release(&all_dcbs_lock[dcb->thread.id]);
 }
 
