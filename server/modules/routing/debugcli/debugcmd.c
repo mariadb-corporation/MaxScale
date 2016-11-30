@@ -290,8 +290,8 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
 {
     DCB *dcb = (DCB*)data;
 
-    dcb_printf(dcb, "%s::%s(", cmd->domain, cmd->identifier);
-
+    dcb_printf(dcb, "Command: %s %s\n", cmd->domain, cmd->identifier);
+    dcb_printf(dcb, "Parameters: ");
 
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
@@ -309,8 +309,7 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
         }
     }
 
-    dcb_printf(dcb, ")\n");
-
+    dcb_printf(dcb, "\n\n");
 
     for (int i = 0; i < cmd->arg_count_max; i++)
     {
@@ -334,9 +333,9 @@ bool listfuncs_cb(const MODULECMD *cmd, void *data)
     return true;
 }
 
-void dListFunctions(DCB *dcb)
+void dListCommands(DCB *dcb, const char *domain, const char *ident)
 {
-    modulecmd_foreach(NULL, NULL, listfuncs_cb, dcb);
+    modulecmd_foreach(domain, ident, listfuncs_cb, dcb);
 }
 
 /**
@@ -405,10 +404,13 @@ struct subcommand listoptions[] =
         {0, 0, 0}
     },
     {
-        "functions", 0, 0, dListFunctions,
-        "List registered functions",
-        "List all registered functions",
-        {0}
+        "commands", 0, 2, dListCommands,
+        "List registered commands",
+        "Usage list commands [DOMAIN] [COMMAND]\n"
+        "Parameters:\n"
+        "DOMAIN  Regular expressions for filtering module domains\n"
+        "COMMAND Regular expressions for filtering module commands\n",
+        {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     { EMPTY_OPTION}
 };
@@ -1385,9 +1387,9 @@ static inline bool requires_output_dcb(const MODULECMD *cmd)
     return cmd->arg_count_max > 0 && MODULECMD_GET_TYPE(type) == MODULECMD_ARG_OUTPUT;
 }
 
-static void callFunction(DCB *dcb, char *domain, char *id, char *v3,
-                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                         char *v10, char *v11, char *v12)
+static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
+                              char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                              char *v10, char *v11, char *v12)
 {
     const void *values[11] = {v3, v4, v5, v6, v7, v8, v9, v10, v11, v12};
     const int valuelen = sizeof(values) / sizeof(values[0]);
@@ -1404,7 +1406,7 @@ static void callFunction(DCB *dcb, char *domain, char *id, char *v3,
     {
         if (requires_output_dcb(cmd))
         {
-            /** The function requires a DCB for output, add the client DCB
+            /** The command requires a DCB for output, add the client DCB
              * as the first argument */
             for (int i = valuelen - 1; i > 0; i--)
             {
@@ -1438,10 +1440,10 @@ static void callFunction(DCB *dcb, char *domain, char *id, char *v3,
 struct subcommand calloptions[] =
 {
     {
-        "function", 2, 12, callFunction,
-        "Call module function",
-        "Usage: call function NAMESPACE FUNCTION ARGS...\n"
-        "To list all registered functions, run 'list functions'.\n",
+        "command", 2, 12, callModuleCommand,
+        "Call module command",
+        "Usage: call command NAMESPACE COMMAND ARGS...\n"
+        "To list all registered commands, run 'list commands'.\n",
         { ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
