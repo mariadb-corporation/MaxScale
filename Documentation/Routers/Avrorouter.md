@@ -142,6 +142,18 @@ data block. The default value is 1 transaction.
 Controls the number of row events that are grouped into a single Avro
 data block. The default value is 1000 row events.
 
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
+
+The avrorouter supports the following module commands.
+
+### `avrorouter::convert SERVICE {start | stop}`
+
+Start or stop the binary log to Avro conversion. The first parameter is the name
+of the service to stop and the second parameter tells whether to start the
+conversion process or to stop it.
+
 # Files Created by the Avrorouter
 
 The avrorouter creates two files in the location pointed by _avrodir_:

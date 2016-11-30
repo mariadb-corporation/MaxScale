@@ -46,11 +46,15 @@ typedef enum
     POLL_STAT_HANGUP,
     POLL_STAT_ACCEPT,
     POLL_STAT_EVQ_LEN,
-    POLL_STAT_EVQ_PENDING,
     POLL_STAT_EVQ_MAX,
     POLL_STAT_MAX_QTIME,
     POLL_STAT_MAX_EXECTIME
 } POLL_STAT;
+
+enum poll_message
+{
+    POLL_MSG_CLEAN_PERSISTENT = 0x01
+};
 
 extern  void            poll_init();
 extern  int             poll_add_dcb(DCB *);
@@ -71,5 +75,6 @@ extern  void            poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev);
 extern  void            poll_fake_hangup_event(DCB *dcb);
 extern  void            poll_fake_write_event(DCB *dcb);
 extern  void            poll_fake_read_event(DCB *dcb);
+extern  void            poll_send_message(enum poll_message msg, void *data);
 
 MXS_END_DECLS

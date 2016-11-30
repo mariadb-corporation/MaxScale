@@ -11,16 +11,17 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachesimple.h"
 #include "storage.h"
 #include "storagefactory.h"
 
 CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
-                         StorageFactory*     pFactory,
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory,
                          Storage*            pStorage)
-    : Cache(name, pConfig, pRules, pFactory)
+    : Cache(name, pConfig, sRules, sFactory)
     , m_pStorage(pStorage)
 {
 }
@@ -30,31 +31,14 @@ CacheSimple::~CacheSimple()
     delete m_pStorage;
 }
 
-
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CACHE_RULES**       ppRules)
-{
-    int rv = false;
-
-    CACHE_RULES* pRules = NULL;
-
-    if (Cache::Create(config, &pRules))
-    {
-        *ppRules = pRules;
-    }
-
-    return pRules != NULL;;
-}
-
-// static
-bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CACHE_RULES**       ppRules,
+                         CacheRules**        ppRules,
                          StorageFactory**    ppFactory)
 {
     int rv = false;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (Cache::Create(config, &pRules, &pFactory))

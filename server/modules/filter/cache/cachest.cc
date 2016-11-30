@@ -11,17 +11,21 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachest.h"
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheST::CacheST(const std::string& name,
+using std::tr1::shared_ptr;
+
+CacheST::CacheST(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CACHE_RULES* pRules,
-                 StorageFactory* pFactory,
-                 Storage* pStorage)
-    : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
+                 SCacheRules         sRules,
+                 SStorageFactory     sFactory,
+                 Storage*            pStorage)
+    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
+    MXS_NOTICE("Created single threaded cache.");
 }
 
 CacheST::~CacheST()
@@ -34,33 +38,31 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CacheST* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        shared_ptr<CacheRules> sRules(pRules);
+        shared_ptr<StorageFactory> sFactory(pFactory);
+
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
 }
 
 // static
-CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string&  name,
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory,
+                         const CACHE_CONFIG* pConfig)
 {
+    ss_dassert(sRules.get());
+    ss_dassert(sFactory.get());
     ss_dassert(pConfig);
-    ss_dassert(pFactory);
 
-    CacheST* pCache = NULL;
-
-    CACHE_RULES* pRules = NULL;
-
-    if (CacheSimple::Create(*pConfig, &pRules))
-    {
-        pCache = Create(name, pConfig, pRules, pFactory);
-    }
-
-    return pCache;
+    return Create(name, pConfig, sRules, sFactory);
 }
 
 bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
@@ -76,30 +78,33 @@ void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 // static
 CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
-                         StorageFactory*     pFactory)
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory)
 {
     CacheST* pCache = NULL;
 
     uint32_t ttl = pConfig->ttl;
+    uint32_t maxCount = pConfig->max_count;
+    uint32_t maxSize = pConfig->max_size;
+
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_ST, name.c_str(), ttl, argc, argv);
+    Storage* pStorage = sFactory->createStorage(CACHE_THREAD_MODEL_ST, name.c_str(),
+                                                ttl, maxCount, maxSize,
+                                                argc, argv);
 
     if (pStorage)
     {
         CPP_GUARD(pCache = new CacheST(name,
                                        pConfig,
-                                       pRules,
-                                       pFactory,
+                                       sRules,
+                                       sFactory,
                                        pStorage));
 
         if (!pCache)
         {
             delete pStorage;
-            cache_rules_free(pRules);
-            delete pFactory;
         }
     }
 

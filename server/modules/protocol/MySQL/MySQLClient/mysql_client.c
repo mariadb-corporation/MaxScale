@@ -433,19 +433,19 @@ int gw_read_client_event(DCB* dcb)
          * will be changed to MYSQL_IDLE (see below).
          *
          */
-        case MXS_AUTH_STATE_MESSAGE_READ:
-            /* After this call read_buffer will point to freed data */
-            if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
-                                    (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
-                (0 != max_bytes && nbytes_read < max_bytes))
-            {
-                spinlock_acquire(&dcb->authlock);
-                dcb->dcb_readqueue = read_buffer;
-                spinlock_release(&dcb->authlock);
-                return 0;
-            }
-            return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
-            break;
+    case MXS_AUTH_STATE_MESSAGE_READ:
+        /* After this call read_buffer will point to freed data */
+        if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
+            (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
+            (0 != max_bytes && nbytes_read < max_bytes))
+        {
+
+            dcb->dcb_readqueue = read_buffer;
+
+            return 0;
+        }
+        return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
+        break;
 
         /**
          *
@@ -861,9 +861,9 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         if (nbytes_read < 3 || nbytes_read <
             (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
         {
-            spinlock_acquire(&dcb->authlock);
+
             dcb->dcb_readqueue = read_buffer;
-            spinlock_release(&dcb->authlock);
+
             return 0;
         }
         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
@@ -904,9 +904,9 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
         {
             /* Must have been data left over */
             /* Add incomplete mysql packet to read queue */
-            spinlock_acquire(&dcb->authlock);
+
             dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-            spinlock_release(&dcb->authlock);
+
         }
     }
     else if (NULL != session->router_session || (rcap_type_required(capabilities, RCAP_TYPE_NO_RSESSION)))

@@ -39,13 +39,17 @@ class StorageFactory;
 #define CACHE_DEBUG_MAX          (CACHE_DEBUG_RULES | CACHE_DEBUG_USAGE | CACHE_DEBUG_DECISIONS)
 
 // Count
-#define CACHE_DEFAULT_MAX_RESULTSET_ROWS UINT_MAX
+#define CACHE_DEFAULT_MAX_RESULTSET_ROWS UINT32_MAX
 // Bytes
 #define CACHE_DEFAULT_MAX_RESULTSET_SIZE 64 * 1024
 // Seconds
 #define CACHE_DEFAULT_TTL                10
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
+// Positive integer
+#define CACHE_DEFAULT_MAX_COUNT          UINT32_MAX
+// Positive integer
+#define CACHE_DEFAULT_MAX_SIZE           UINT64_MAX
 // Thread model
 #define CACHE_DEFAULT_THREAD_MODEL       CACHE_THREAD_MODEL_MT
 
@@ -59,6 +63,8 @@ typedef struct cache_config
     char** storage_argv;               /**< Cooked options for storage module. */
     int storage_argc;                  /**< Number of cooked options. */
     uint32_t ttl;                      /**< Time to live. */
+    uint32_t max_count;                /**< Maximum number of entries in the cache.*/
+    uint64_t max_size;                 /**< Maximum size of the cache.*/
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */
 } CACHE_CONFIG;
@@ -99,6 +105,31 @@ struct hash<CACHE_KEY>
 }
 
 }
+
+/**
+ * LockGuard is a RAII class whose constructor acquires a spinlock and
+ * destructor releases the same spinlock. To be used for locking a spinlock
+ * in an exceptionsafe manner for the duration of a scope.
+ */
+class LockGuard
+{
+public:
+    LockGuard(SPINLOCK* plock)
+        : lock_(*plock)
+    {
+        spinlock_acquire(&lock_);
+    }
+    ~LockGuard()
+    {
+        spinlock_release(&lock_);
+    }
+
+private:
+    LockGuard(const LockGuard&);
+    LockGuard& operator = (const LockGuard&);
+
+    SPINLOCK& lock_;
+};
 
 #define CPP_GUARD(statement)\
     do { try { statement; }                                              \

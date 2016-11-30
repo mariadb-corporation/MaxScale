@@ -14,6 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <tr1/functional>
+#include <tr1/memory>
 #include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
@@ -25,6 +26,9 @@ class SessionCache;
 class Cache
 {
 public:
+    typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
+    typedef std::tr1::shared_ptr<StorageFactory> SStorageFactory;
+
     virtual ~Cache();
 
     const CACHE_CONFIG& config() const { return m_config; }
@@ -77,14 +81,11 @@ public:
 protected:
     Cache(const std::string&  name,
           const CACHE_CONFIG* pConfig,
-          CACHE_RULES*        pRules,
-          StorageFactory*     pFactory);
+          SCacheRules         sRules,
+          SStorageFactory     sFactory);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules);
-
-    static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules,
+                       CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
 
 private:
@@ -94,6 +95,6 @@ private:
 protected:
     const std::string   m_name;     // The name of the instance; the section name in the config.
     const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
-    CACHE_RULES*        m_pRules;   // The rules of the cache instance.
-    StorageFactory*     m_pFactory; // The storage factory.
+    SCacheRules         m_sRules;   // The rules of the cache instance.
+    SStorageFactory     m_sFactory; // The storage factory.
 };

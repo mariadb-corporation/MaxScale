@@ -37,7 +37,6 @@
 #include <time.h>
 #include <maxscale/atomic.h>
 #include <maxscale/buffer.h>
-#include <maxscale/listmanager.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/resultset.h>
 #include <maxscale/log_manager.h>
@@ -160,7 +159,6 @@ typedef enum
  */
 typedef struct session
 {
-    LIST_ENTRY_FIELDS
     skygw_chk_t     ses_chk_top;
     SPINLOCK        ses_lock;
     session_state_t state;            /*< Current descriptor state */
@@ -185,13 +183,6 @@ typedef struct session
     .stats = SESSION_STATS_INIT, .head = DOWNSTREAM_INIT, .tail = UPSTREAM_INIT, \
     .state = SESSION_STATE_ALLOC, .ses_chk_tail = CHK_NUM_SESSION}
 
-/** Whether to do session timeout checks */
-extern bool check_timeouts;
-
-/** When the next timeout check is done. This is compared to hkheartbeat in
- * hk_heartbeat.h */
-extern long next_timeout_check;
-
 #define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client_dcb, type)
 
 /**
@@ -212,7 +203,6 @@ extern long next_timeout_check;
                                (sess)->tail.session, (buf))
 
 SESSION *session_alloc(struct service *, struct dcb *);
-bool session_pre_alloc(int number);
 SESSION *session_set_dummy(struct dcb *);
 bool session_free(SESSION *);
 int session_isvalid(SESSION *);
@@ -227,12 +217,9 @@ void dprintSession(struct dcb *, SESSION *);
 void dListSessions(struct dcb *);
 char *session_state(session_state_t);
 bool session_link_dcb(SESSION *, struct dcb *);
-SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log_priority(SESSION* ses, int priority);
 void session_disable_log_priority(SESSION* ses, int priority);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
-void process_idle_sessions();
-void enable_session_timeouts();
 
 /**
  * Get the transaction state of the session.

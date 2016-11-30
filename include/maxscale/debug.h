@@ -243,7 +243,8 @@ typedef enum skygw_chk_t
 #define STRDCBROLE(r) ((r) == DCB_ROLE_SERVICE_LISTENER ? "DCB_ROLE_SERVICE_LISTENER" : \
                        ((r) == DCB_ROLE_CLIENT_HANDLER ? "DCB_ROLE_CLIENT_HANDLER" : \
                         ((r) == DCB_ROLE_BACKEND_HANDLER ? "DCB_ROLE_BACKEND_HANDLER" : \
-                         "UNKNOWN DCB ROLE")))
+                         ((r) == DCB_ROLE_INTERNAL ? "DCB_ROLE_INTERNAL" : \
+                          "UNKNOWN DCB ROLE"))))
 
 #define STRBETYPE(t) ((t) == BE_MASTER ? "BE_MASTER" : \
                         ((t) == BE_SLAVE ? "BE_SLAVE" : \
@@ -474,7 +475,6 @@ typedef enum skygw_chk_t
         ss_info_dassert(d->dcb_chk_top == CHK_NUM_DCB &&        \
                 d->dcb_chk_tail == CHK_NUM_DCB,                 \
                         "Dcb under- or overflow");              \
-        CHK_MANAGED_LIST(d)                                     \
         }
 
 #define CHK_PROTOCOL(p) {                                               \
@@ -487,7 +487,6 @@ typedef enum skygw_chk_t
             ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&        \
                             s->ses_chk_tail == CHK_NUM_SESSION,         \
                             "Session under- or overflow");              \
-            CHK_MANAGED_LIST(s)                                         \
     }
 
 #define CHK_SERVER(s) {                                          \

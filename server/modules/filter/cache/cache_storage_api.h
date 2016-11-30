@@ -55,35 +55,62 @@ typedef struct cache_key
     char data[CACHE_KEY_MAXLEN];
 } CACHE_KEY;
 
+typedef enum cache_storage_capabilities
+{
+    CACHE_STORAGE_CAP_NONE      = 0x00,
+    CACHE_STORAGE_CAP_ST        = 0x01, /*< Storage can optimize for single thread. */
+    CACHE_STORAGE_CAP_MT        = 0x02, /*< Storage can handle multiple threads. */
+    CACHE_STORAGE_CAP_LRU       = 0x04, /*< Storage capable of LRU eviction. */
+    CACHE_STORAGE_CAP_MAX_COUNT = 0x08, /*< Storage capable of capping number of entries.*/
+    CACHE_STORAGE_CAP_MAX_SIZE  = 0x10, /*< Storage capable of capping size of cache.*/
+} cache_storage_capabilities_t;
+
+static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
+{
+    return (capabilities & mask) == mask;
+}
+
 typedef struct cache_storage_api
 {
     /**
      * Called immediately after the storage module has been loaded.
      *
+     * @param capabilities On successful return, contains a bitmask of
+     *                     cache_storage_capabilities_t values.
      * @return True if the initialization succeeded, false otherwise.
      */
-    bool (*initialize)();
+    bool (*initialize)(uint32_t* capabilities);
 
     /**
      * Creates an instance of cache storage. This function should, if necessary,
      * create the actual storage, initialize it and prepare to put and get
      * cache items.
      *
-     * @param model Whether the storage will be used in a single thread or
-     *              multi thread context. In the latter case the storage must
-     *              perform thread synchronization as appropriate, in the former
-     *              case it need not.
-     * @param name  The name of the cache instance.
-     * @param ttl   Time to live; number of seconds the value is valid.
-     * @param argc  The number of elements in the argv array.
-     * @param argv  Array of arguments, as passed in the `storage_options` parameter
-     *              in the cache section in the MaxScale configuration file.
+     * @param model     Whether the storage will be used in a single thread or
+     *                  multi thread context. In the latter case the storage must
+     *                  perform thread synchronization as appropriate, in the former
+     *                  case it need not.
+     * @param name      The name of the cache instance.
+     * @param ttl       Time to live; number of seconds the value is valid.
+     * @param max_count The maximum number of items the storage may store, before
+     *                  it should evict some items. Caller should specify 0, unless
+     *                  CACHE_STORAGE_CAP_MAX_COUNT is returned at initialization.
+     * @param max_count The maximum size of the storage may may occupy, before it
+                        should evict some items. Caller should specify 0, unless
+     *                  CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
+     * @param argc      The number of elements in the argv array.
+     * @param argv      Array of arguments, as passed in the `storage_options`
+     *                  parameter in the cache section in the MaxScale configuration
+     *                  file.
+     *
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
     CACHE_STORAGE* (*createInstance)(cache_thread_model_t model,
                                      const char *name,
                                      uint32_t ttl,
+                                     uint32_t max_count,
+                                     uint64_t max_size,
                                      int argc, char* argv[]);
 
     /**

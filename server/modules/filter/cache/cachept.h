@@ -23,7 +23,6 @@ public:
     ~CachePT();
 
     static CachePT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
-    static CachePT* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
     bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
@@ -43,14 +42,14 @@ private:
 
     CachePT(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
-            StorageFactory*     pFactory,
+            SCacheRules         sRules,
+            SStorageFactory     sFactory,
             const Caches&       caches);
 
     static CachePT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
-                           StorageFactory*     pFactory);
+                           SCacheRules         sRules,
+                           SStorageFactory     sFactory);
 
     Cache& thread_cache();
 

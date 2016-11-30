@@ -36,6 +36,8 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     NULL,
     0,
     CACHE_DEFAULT_TTL,
+    CACHE_DEFAULT_MAX_COUNT,
+    CACHE_DEFAULT_MAX_SIZE,
     CACHE_DEFAULT_DEBUG,
     CACHE_DEFAULT_THREAD_MODEL,
 };
@@ -333,24 +335,42 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
 
         if (strcmp(pParam->name, "max_resultset_rows") == 0)
         {
-            int v = atoi(pParam->value);
+            char* end;
+            int32_t value = strtol(pParam->value, &end, 0);
 
-            if (v > 0)
+            if ((*end == 0) && (value >= 0))
             {
-                config.max_resultset_rows = v;
+                if (value != 0)
+                {
+                    config.max_resultset_rows = value;
+                }
+                else
+                {
+                    config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
+                }
             }
             else
             {
-                config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", pParam->name);
+                error = true;
             }
         }
         else if (strcmp(pParam->name, "max_resultset_size") == 0)
         {
-            int v = atoi(pParam->value);
+            char* end;
+            int64_t value = strtoll(pParam->value, &end, 0);
 
-            if (v > 0)
+            if ((*end == 0) && (value >= 0))
             {
-                config.max_resultset_size = v * 1024;
+                if (value != 0)
+                {
+                    config.max_resultset_size = value * 1024;
+                }
+                else
+                {
+                    config.max_resultset_size = CACHE_DEFAULT_MAX_RESULTSET_SIZE;
+                }
             }
             else
             {
@@ -452,6 +472,52 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
                 error = true;
             }
         }
+        else if (strcmp(pParam->name, "max_count") == 0)
+        {
+            char* end;
+            int32_t value = strtoul(pParam->value, &end, 0);
+
+            if ((*end == 0) && (value >= 0))
+            {
+                if (value != 0)
+                {
+                    config.max_count = value;
+                }
+                else
+                {
+                    config.max_count = CACHE_DEFAULT_MAX_COUNT;
+                }
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than or equal to 0.", pParam->name);
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "max_size") == 0)
+        {
+            char* end;
+            int64_t value = strtoull(pParam->value, &end, 0);
+
+            if ((*end == 0) && (value >= 0))
+            {
+                if (value != 0)
+                {
+                    config.max_size = value * 1024;
+                }
+                else
+                {
+                    config.max_size = CACHE_DEFAULT_MAX_SIZE;
+                }
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than or equal to 0.", pParam->name);
+                error = true;
+            }
+        }
         else if (strcmp(pParam->name, "debug") == 0)
         {
             int v = atoi(pParam->value);
@@ -488,6 +554,17 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
         else if (!filter_standard_parameter(pParam->name))
         {
             MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
+            error = true;
+        }
+    }
+
+    if (!error)
+    {
+        if (config.max_size < config.max_resultset_size)
+        {
+            MXS_ERROR("The value of 'max_size' must be at least as larged as that "
+                      "of 'max_resultset_size'.");
+
             error = true;
         }
     }

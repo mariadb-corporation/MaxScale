@@ -68,18 +68,140 @@ typedef struct cache_rules
     CACHE_RULE *use_rules;    // The rules for when to use data from the cache.
 } CACHE_RULES;
 
+/**
+ * Returns a string representation of a attribute.
+ *
+ * @param attribute An attribute type.
+ *
+ * @return Corresponding string, not to be freed.
+ */
 const char *cache_rule_attribute_to_string(cache_rule_attribute_t attribute);
+
+/**
+ * Returns a string representation of an operator.
+ *
+ * @param op An operator.
+ *
+ * @return Corresponding string, not to be freed.
+ */
 const char *cache_rule_op_to_string(cache_rule_op_t op);
 
+/**
+ * Create a default cache rules object.
+ *
+ * @param debug The debug level.
+ *
+ * @return The rules object or NULL is allocation fails.
+ */
 CACHE_RULES *cache_rules_create(uint32_t debug);
+
+/**
+ * Frees the rules object.
+ *
+ * @param path The path of the file containing the rules.
+ *
+ * @return The corresponding rules object, or NULL in case of error.
+ */
 void cache_rules_free(CACHE_RULES *rules);
 
+/**
+ * Loads the caching rules from a file and returns corresponding object.
+ *
+ * @param path  The path of the file containing the rules.
+ * @param debug The debug level.
+ *
+ * @return The corresponding rules object, or NULL in case of error.
+ */
 CACHE_RULES *cache_rules_load(const char *path, uint32_t debug);
+
+/**
+ * Parses the caching rules from a string and returns corresponding object.
+ *
+ * @param json  String containing json.
+ * @param debug The debug level.
+ *
+ * @return The corresponding rules object, or NULL in case of error.
+ */
 CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug);
 
+/**
+ * Returns boolean indicating whether the result of the query should be stored.
+ *
+ * @param rules      The CACHE_RULES object.
+ * @param default_db The current default database, NULL if there is none.
+ * @param query      The query, expected to contain a COM_QUERY.
+ *
+ * @return True, if the results should be stored.
+ */
 bool cache_rules_should_store(CACHE_RULES *rules, const char *default_db, const GWBUF* query);
+
+/**
+ * Returns boolean indicating whether the cache should be used, that is consulted.
+ *
+ * @param rules    The CACHE_RULES object.
+ * @param session  The current session.
+ *
+ * @return True, if the cache should be used.
+ */
 bool cache_rules_should_use(CACHE_RULES *rules, const SESSION *session);
 
 MXS_END_DECLS
+
+#if defined(__cplusplus)
+
+class CacheRules
+{
+public:
+    ~CacheRules();
+
+    /**
+     * Creates an empty rules object.
+     *
+     * @param debug The debug level.
+     *
+     * @return An empty rules object, or NULL in case of error.
+     */
+    static CacheRules* create(uint32_t debug);
+
+    /**
+     * Loads the caching rules from a file and returns corresponding object.
+     *
+     * @param path  The path of the file containing the rules.
+     * @param debug The debug level.
+     *
+     * @return The corresponding rules object, or NULL in case of error.
+     */
+    static CacheRules* load(const char *zpath, uint32_t debug);
+
+   /**
+    * Returns boolean indicating whether the result of the query should be stored.
+    *
+    * @param zdefault_db The current default database, NULL if there is none.
+    * @param pquery      The query, expected to contain a COM_QUERY.
+    *
+    * @return True, if the results should be stored.
+    */
+    bool should_store(const char* zdefault_db, const GWBUF* pquery) const;
+
+   /**
+    * Returns boolean indicating whether the cache should be used, that is consulted.
+    *
+    * @param psession  The current session.
+    *
+    * @return True, if the cache should be used.
+    */
+    bool should_use(const SESSION* psession) const;
+
+private:
+    CacheRules(CACHE_RULES* prules);
+
+    CacheRules(const CacheRules&);
+    CacheRules& operator = (const CacheRules&);
+
+private:
+    CACHE_RULES* prules_;
+};
+
+#endif
 
 #endif

@@ -19,59 +19,39 @@
 #include "storagefactory.h"
 #include "storage.h"
 
-Cache::Cache(const std::string& name,
+Cache::Cache(const std::string&  name,
              const CACHE_CONFIG* pConfig,
-             CACHE_RULES* pRules,
-             StorageFactory* pFactory)
+             SCacheRules         sRules,
+             SStorageFactory     sFactory)
     : m_name(name)
     , m_config(*pConfig)
-    , m_pRules(pRules)
-    , m_pFactory(pFactory)
+    , m_sRules(sRules)
+    , m_sFactory(sFactory)
 {
 }
 
 Cache::~Cache()
 {
-    cache_rules_free(m_pRules);
-    delete m_pFactory;
 }
 
 //static
 bool Cache::Create(const CACHE_CONFIG& config,
-                   CACHE_RULES**       ppRules)
+                   CacheRules**        ppRules,
+                   StorageFactory**    ppFactory)
 {
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
+    StorageFactory* pFactory = NULL;
 
     if (config.rules)
     {
-        pRules = cache_rules_load(config.rules, config.debug);
+        pRules = CacheRules::load(config.rules, config.debug);
     }
     else
     {
-        pRules = cache_rules_create(config.debug);
+        pRules = CacheRules::create(config.debug);
     }
 
     if (pRules)
-    {
-        *ppRules = pRules;
-    }
-    else
-    {
-        MXS_ERROR("Could not create rules.");
-    }
-
-    return pRules != NULL;
-}
-
-//static
-bool Cache::Create(const CACHE_CONFIG& config,
-                   CACHE_RULES**       ppRules,
-                   StorageFactory**    ppFactory)
-{
-    CACHE_RULES* pRules = NULL;
-    StorageFactory* pFactory = NULL;
-
-    if (Create(config, &pRules))
     {
         pFactory = StorageFactory::Open(config.storage);
 
@@ -83,8 +63,12 @@ bool Cache::Create(const CACHE_CONFIG& config,
         else
         {
             MXS_ERROR("Could not open storage factory '%s'.", config.storage);
-            cache_rules_free(pRules);
+            delete pRules;
         }
+    }
+    else
+    {
+        MXS_ERROR("Could not create rules.");
     }
 
     return pFactory != NULL;
@@ -92,10 +76,10 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
 bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
-    return cache_rules_should_store(m_pRules, zDefaultDb, pQuery);
+    return m_sRules->should_store(zDefaultDb, pQuery);
 }
 
 bool Cache::should_use(const SESSION* pSession)
 {
-    return cache_rules_should_use(m_pRules, pSession);
+    return m_sRules->should_use(pSession);
 }

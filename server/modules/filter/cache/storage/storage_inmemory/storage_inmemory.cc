@@ -11,48 +11,59 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "storage_rocksdb"
-#include "storage_rocksdb.h"
+#define MXS_MODULE_NAME "storage_inmemory"
 #include <inttypes.h>
 #include "../../cache_storage_api.h"
-#include "rocksdbstorage.h"
+#include "inmemorystoragest.h"
+#include "inmemorystoragemt.h"
 
 namespace
 {
 
-bool initialize(uint32_t* pCapabilities)
+bool initialize(uint32_t* pcapabilities)
 {
-    *pCapabilities = CACHE_STORAGE_CAP_MT;
+    *pcapabilities = CACHE_STORAGE_CAP_ST;
+    *pcapabilities = CACHE_STORAGE_CAP_MT;
 
-    return RocksDBStorage::Initialize();
+    return true;
 }
 
-CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always MT safe.
-                              const char* zName,
+CACHE_STORAGE* createInstance(cache_thread_model_t model,
+                              const char* zname,
                               uint32_t ttl,
-                              uint32_t maxCount,
-                              uint64_t maxSize,
+                              uint32_t max_count,
+                              uint64_t max_size,
                               int argc, char* argv[])
 {
-    ss_dassert(zName);
+    ss_dassert(zname);
 
     CACHE_STORAGE* pStorage = 0;
 
-    if (maxCount != 0)
+    if (max_count != 0)
     {
-        MXS_WARNING("A maximum item count of %" PRIu32 " specifed, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", maxCount);
+        MXS_WARNING("A maximum item count of %" PRIu32 " specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", max_count);
     }
 
-    if (maxSize != 0)
+    if (max_size != 0)
     {
-        MXS_WARNING("A maximum size of %" PRIu64 " specified, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", maxSize);
+        MXS_WARNING("A maximum size of %" PRIu64 " specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", max_size);
     }
 
     try
     {
-        pStorage = reinterpret_cast<CACHE_STORAGE*>(RocksDBStorage::Create(zName, ttl, argc, argv));
+        switch (model)
+        {
+        case CACHE_THREAD_MODEL_ST:
+            pStorage = reinterpret_cast<CACHE_STORAGE*>(InMemoryStorageST::create(zname, ttl, argc, argv));
+            break;
+
+        default:
+            MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.", (int)model);
+        case CACHE_THREAD_MODEL_MT:
+            pStorage = reinterpret_cast<CACHE_STORAGE*>(InMemoryStorageST::create(zname, ttl, argc, argv));
+        }
 
         MXS_NOTICE("Storage module created.");
     }
@@ -72,26 +83,26 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
     return pStorage;
 }
 
-void freeInstance(CACHE_STORAGE* pInstance)
+void freeInstance(CACHE_STORAGE* pinstance)
 {
-    delete reinterpret_cast<RocksDBStorage*>(pInstance);
+    delete reinterpret_cast<InMemoryStorage*>(pinstance);
 }
 
-cache_result_t getKey(CACHE_STORAGE* pStorage,
-                      const char* zDefaultDB,
-                      const GWBUF* pQuery,
-                      CACHE_KEY* pKey)
+cache_result_t getKey(CACHE_STORAGE* pstorage,
+                      const char* zdefault_db,
+                      const GWBUF* pquery,
+                      CACHE_KEY* pkey)
 {
-    ss_dassert(pStorage);
-    // zDefaultDB may be NULL.
-    ss_dassert(pQuery);
-    ss_dassert(pKey);
+    ss_dassert(pstorage);
+    // zdefault_db may be NULL.
+    ss_dassert(pquery);
+    ss_dassert(pkey);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(zDefaultDB, pQuery, pKey);
+        result = reinterpret_cast<InMemoryStorage*>(pstorage)->get_key(zdefault_db, pquery, pkey);
     }
     catch (const std::bad_alloc&)
     {
@@ -109,20 +120,20 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t getValue(CACHE_STORAGE* pStorage,
-                        const CACHE_KEY* pKey,
+cache_result_t getValue(CACHE_STORAGE* pstorage,
+                        const CACHE_KEY* pkey,
                         uint32_t flags,
-                        GWBUF** ppResult)
+                        GWBUF** ppresult)
 {
-    ss_dassert(pStorage);
-    ss_dassert(pKey);
-    ss_dassert(ppResult);
+    ss_dassert(pstorage);
+    ss_dassert(pkey);
+    ss_dassert(ppresult);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, flags, ppResult);
+        result = reinterpret_cast<InMemoryStorage*>(pstorage)->get_value(*pkey, flags, ppresult);
     }
     catch (const std::bad_alloc&)
     {
@@ -140,19 +151,19 @@ cache_result_t getValue(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t putValue(CACHE_STORAGE* pStorage,
-                        const CACHE_KEY* pKey,
-                        const GWBUF* pValue)
+cache_result_t putValue(CACHE_STORAGE* pstorage,
+                        const CACHE_KEY* pkey,
+                        const GWBUF* pvalue)
 {
-    ss_dassert(pStorage);
-    ss_dassert(pKey);
-    ss_dassert(pValue);
+    ss_dassert(pstorage);
+    ss_dassert(pkey);
+    ss_dassert(pvalue);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->putValue(pKey, pValue);
+        result = reinterpret_cast<InMemoryStorage*>(pstorage)->put_value(*pkey, pvalue);
     }
     catch (const std::bad_alloc&)
     {
@@ -170,17 +181,17 @@ cache_result_t putValue(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t delValue(CACHE_STORAGE* pStorage,
-                        const CACHE_KEY* pKey)
+cache_result_t delValue(CACHE_STORAGE* pstorage,
+                        const CACHE_KEY* pkey)
 {
-    ss_dassert(pStorage);
-    ss_dassert(pKey);
+    ss_dassert(pstorage);
+    ss_dassert(pkey);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
     try
     {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->delValue(pKey);
+        result = reinterpret_cast<InMemoryStorage*>(pstorage)->del_value(*pkey);
     }
     catch (const std::bad_alloc&)
     {

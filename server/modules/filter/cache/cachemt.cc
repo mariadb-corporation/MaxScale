@@ -11,18 +11,23 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cachemt.h"
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheMT::CacheMT(const std::string& name,
+using std::tr1::shared_ptr;
+
+CacheMT::CacheMT(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CACHE_RULES* pRules,
-                 StorageFactory* pFactory,
-                 Storage* pStorage)
-    : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
+                 SCacheRules         sRules,
+                 SStorageFactory     sFactory,
+                 Storage*            pStorage)
+    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
     spinlock_init(&m_lockPending);
+
+    MXS_NOTICE("Created multi threaded cache.");
 }
 
 CacheMT::~CacheMT()
@@ -35,30 +40,15 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CacheMT* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
-    }
+        shared_ptr<CacheRules> sRules(pRules);
+        shared_ptr<StorageFactory> sFactory(pFactory);
 
-    return pCache;
-}
-
-// static
-CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
-{
-    ss_dassert(pConfig);
-    ss_dassert(pFactory);
-
-    CacheMT* pCache = NULL;
-
-    CACHE_RULES* pRules = NULL;
-
-    if (CacheSimple::Create(*pConfig, &pRules))
-    {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -66,47 +56,48 @@ CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, cons
 
 bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
-    spinlock_acquire(&m_lockPending);
-    bool rv = CacheSimple::do_must_refresh(key, pSessionCache);
-    spinlock_release(&m_lockPending);
+    LockGuard guard(&m_lockPending);
 
-    return rv;
+    return do_must_refresh(key, pSessionCache);
 }
 
 void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
 {
-    spinlock_acquire(&m_lockPending);
-    CacheSimple::do_refreshed(key, pSessionCache);
-    spinlock_release(&m_lockPending);
+    LockGuard guard(&m_lockPending);
+
+    do_refreshed(key, pSessionCache);
 }
 
 // static
 CacheMT* CacheMT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
-                         StorageFactory*     pFactory)
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory)
 {
     CacheMT* pCache = NULL;
 
     uint32_t ttl = pConfig->ttl;
+    uint32_t maxCount = pConfig->max_count;
+    uint32_t maxSize = pConfig->max_size;
+
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(), ttl, argc, argv);
+    Storage* pStorage = sFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(),
+                                                ttl, maxCount, maxSize,
+                                                argc, argv);
 
     if (pStorage)
     {
         CPP_GUARD(pCache = new CacheMT(name,
                                        pConfig,
-                                       pRules,
-                                       pFactory,
+                                       sRules,
+                                       sFactory,
                                        pStorage));
 
         if (!pCache)
         {
             delete pStorage;
-            cache_rules_free(pRules);
-            delete pFactory;
         }
     }
 

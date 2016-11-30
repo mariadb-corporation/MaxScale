@@ -21,7 +21,10 @@ public:
     ~CacheST();
 
     static CacheST* Create(const std::string& name, const CACHE_CONFIG* pConfig);
-    static CacheST* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
+    static CacheST* Create(const std::string& name,
+                           SCacheRules sRules,
+                           SStorageFactory sFactory,
+                           const CACHE_CONFIG* pConfig);
 
     bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
@@ -30,14 +33,14 @@ public:
 private:
     CacheST(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
-            StorageFactory*     pFactory,
+            SCacheRules         sRules,
+            SStorageFactory     sFactory,
             Storage*            pStorage);
 
     static CacheST* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
-                           StorageFactory*     pFactory);
+                           SCacheRules         sRules,
+                           SStorageFactory     sFactory);
 private:
     CacheST(const CacheST&);
     CacheST& operator = (const CacheST&);

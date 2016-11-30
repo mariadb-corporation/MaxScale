@@ -702,10 +702,6 @@ config_load(const char *filename)
 {
     ss_dassert(!config_file);
 
-    /* Temporary - should use configuration values and test return value (bool) */
-    dcb_pre_alloc(1000);
-    session_pre_alloc(250);
-
     global_defaults();
     feedback_defaults();
 

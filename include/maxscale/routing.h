@@ -36,6 +36,11 @@ typedef enum routing_capability
     /**< The transaction state and autocommit mode of the session are tracked;
          implies RCAP_TYPE_CONTIGUOUS_INPUT and RCAP_TYPE_STMT_INPUT. */
     RCAP_TYPE_TRANSACTION_TRACKING = 0x0007, /* 0b0000000000000111 */
+    /**< Responses are delivered one per buffer. */
+    RCAP_TYPE_STMT_OUTPUT           = 0x0010, /* 0b0000000000010000 */
+    /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_OUTPUT. */
+    RCAP_TYPE_CONTIGUOUS_OUTPUT     = 0x0030, /* 0b0000000000110000 */
+
 } routing_capability_t;
 
 #define RCAP_TYPE_NONE 0

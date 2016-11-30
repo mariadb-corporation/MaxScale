@@ -91,3 +91,47 @@ int64_t ts_stats_sum(ts_stats_t stats)
     }
     return sum;
 }
+
+/**
+ * @brief Read the value of the statistics object
+ *
+ * Calculate
+ *
+ * @param stats Statistics to read
+ * @param type  The statistics type
+ * @return Value of statistics
+ */
+int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type)
+{
+    ss_dassert(stats_initialized);
+    int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
+
+    for (int i = 0; i < thread_count; i++)
+    {
+        int64_t value = ((int64_t*)stats)[i];
+
+        switch (type)
+        {
+            case TS_STATS_MAX:
+                if (value > best)
+                {
+                    best = value;
+                }
+                break;
+
+            case TS_STATS_MIX:
+                if (value < best)
+                {
+                    best = value;
+                }
+                break;
+
+            case TS_STATS_AVG:
+            case TS_STATS_SUM:
+                best += value;
+                break;
+        }
+    }
+
+    return type == TS_STATS_AVG ? best / thread_count : best;
+}

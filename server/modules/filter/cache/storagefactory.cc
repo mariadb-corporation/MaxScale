@@ -20,13 +20,18 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include "cachefilter.h"
+#include "lrustoragest.h"
+#include "lrustoragemt.h"
 #include "storagereal.h"
 
 
 namespace
 {
 
-bool open_cache_storage(const char* zName, void** pHandle, CACHE_STORAGE_API** ppApi)
+bool open_cache_storage(const char* zName,
+                        void** pHandle,
+                        CACHE_STORAGE_API** ppApi,
+                        uint32_t* pCapabilities)
 {
     bool rv = false;
 
@@ -45,7 +50,7 @@ bool open_cache_storage(const char* zName, void** pHandle, CACHE_STORAGE_API** p
 
             if (pApi)
             {
-                if ((pApi->initialize)())
+                if ((pApi->initialize)(pCapabilities))
                 {
                     *pHandle = handle;
                     *ppApi = pApi;
@@ -96,9 +101,12 @@ void close_cache_storage(void* handle, CACHE_STORAGE_API* pApi)
 
 }
 
-StorageFactory::StorageFactory(void* handle, CACHE_STORAGE_API* pApi)
+StorageFactory::StorageFactory(void* handle,
+                               CACHE_STORAGE_API* pApi,
+                               uint32_t capabilities)
     : m_handle(handle)
     , m_pApi(pApi)
+    , m_capabilities(capabilities)
 {
     ss_dassert(handle);
     ss_dassert(pApi);
@@ -118,10 +126,11 @@ StorageFactory* StorageFactory::Open(const char* zName)
 
     void* handle;
     CACHE_STORAGE_API* pApi;
+    uint32_t capabilities;
 
-    if (open_cache_storage(zName, &handle, &pApi))
+    if (open_cache_storage(zName, &handle, &pApi, &capabilities))
     {
-        CPP_GUARD(pFactory = new StorageFactory(handle, pApi));
+        CPP_GUARD(pFactory = new StorageFactory(handle, pApi, capabilities));
 
         if (!pFactory)
         {
@@ -135,19 +144,63 @@ StorageFactory* StorageFactory::Open(const char* zName)
 Storage* StorageFactory::createStorage(cache_thread_model_t model,
                                        const char* zName,
                                        uint32_t ttl,
+                                       uint32_t maxCount,
+                                       uint64_t maxSize,
                                        int argc, char* argv[])
 {
     ss_dassert(m_handle);
     ss_dassert(m_pApi);
 
     Storage* pStorage = 0;
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, argc, argv);
+
+    uint32_t mc = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_COUNT) ? maxCount : 0;
+    uint64_t ms = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_SIZE) ? maxSize : 0;
+
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, mc, ms, argc, argv);
 
     if (pRawStorage)
     {
-        CPP_GUARD(pStorage = new StorageReal(m_pApi, pRawStorage));
+        StorageReal* pStorageReal = NULL;
 
-        if (!pStorage)
+        CPP_GUARD(pStorageReal = new StorageReal(m_pApi, pRawStorage));
+
+        if (pStorageReal)
+        {
+            uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
+
+            if (!cache_storage_has_cap(m_capabilities, mask))
+            {
+                // Ok, so the cache cannot handle eviction. Let's decorate the
+                // real storage with a storage than can.
+
+                LRUStorage *pLruStorage = NULL;
+
+                if (model == CACHE_THREAD_MODEL_ST)
+                {
+                    pLruStorage = LRUStorageST::create(pStorageReal, maxCount, maxSize);
+                }
+                else
+                {
+                    ss_dassert(model == CACHE_THREAD_MODEL_MT);
+
+                    pLruStorage = LRUStorageMT::create(pStorageReal, maxCount, maxSize);
+                }
+
+                if (pLruStorage)
+                {
+                    pStorage = pLruStorage;
+                }
+                else
+                {
+                    delete pStorageReal;
+                }
+            }
+            else
+            {
+                pStorage = pStorageReal;
+            }
+        }
+        else
         {
             m_pApi->freeInstance(pRawStorage);
         }

@@ -1,1 +1,2 @@
 add_subdirectory(storage_rocksdb)
+add_subdirectory(storage_inmemory)

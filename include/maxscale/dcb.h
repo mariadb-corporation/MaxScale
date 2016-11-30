@@ -48,7 +48,6 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
-#include <maxscale/listmanager.h>
 #include <maxscale/gw_protocol.h>
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/gw_ssl.h>
@@ -216,7 +215,6 @@ typedef enum
  */
 typedef struct dcb
 {
-    LIST_ENTRY_FIELDS
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
@@ -247,7 +245,7 @@ typedef struct dcb
     SPINLOCK        delayqlock;     /**< Delay Backend Write Queue spinlock */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
-    SPINLOCK        authlock;       /**< Generic Authorization spinlock */
+    GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
 
     DCBSTATS        stats;          /**< DCB related statistics */
     unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
@@ -277,17 +275,23 @@ typedef struct dcb
     bool            ssl_write_want_write;    /*< Flag */
     int             dcb_port;       /**< port of target server */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
+    struct
+    {
+        int id; /**< The owning thread's ID */
+        struct dcb *next; /**< Next DCB in owning thread's list */
+        struct dcb *tail; /**< Last DCB in owning thread's list */
+    } thread;
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 
 #define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, .dcb_initlock = SPINLOCK_INIT, \
     .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
     .writeqlock = SPINLOCK_INIT, .delayqlock = SPINLOCK_INIT, \
-    .authlock = SPINLOCK_INIT, .stats = {0}, .memdata = DCBMM_INIT, \
+    .stats = {0}, .memdata = DCBMM_INIT, \
     .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
-    .authenticator_data = NULL}
+    .authenticator_data = NULL, .thread = {0}}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason
@@ -314,10 +318,15 @@ typedef enum
 
 #define DCB_POLL_BUSY(x)                ((x)->evq.next != NULL)
 
-DCB *dcb_get_zombies(void);
+/**
+ * @brief DCB system initialization function
+ *
+ * This function needs to be the first function call into this system.
+ */
+void dcb_global_init();
+
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs);
-bool dcb_pre_alloc(int number);
 DCB *dcb_alloc(dcb_role_t, struct servlistener *);
 void dcb_free(DCB *);
 void dcb_free_all_memory(DCB *dcb);
@@ -326,7 +335,24 @@ DCB *dcb_clone(DCB *);
 int dcb_read(DCB *, GWBUF **, int);
 int dcb_drain_writeq(DCB *);
 void dcb_close(DCB *);
-DCB *dcb_process_zombies(int);              /* Process Zombies except the one behind the pointer */
+
+/**
+ * @brief Process zombie DCBs
+ *
+ * This should only be called from a polling thread in poll.c when no events
+ * are being processed.
+ *
+ * @param threadid Thread ID of the poll thread
+ */
+void dcb_process_zombies(int threadid);
+
+/**
+ * Add a DCB to the owner's list
+ *
+ * @param dcb DCB to add
+ */
+void dcb_add_to_list(DCB *dcb);
+
 void printAllDCBs();                         /* Debug to print all DCB in the system */
 void printDCB(DCB *);                        /* Debug print routine */
 void dprintDCBList(DCB *);                 /* Debug print DCB list statistics */
@@ -342,9 +368,7 @@ int dcb_add_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *
 int dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
 int dcb_isvalid(DCB *);                     /* Check the DCB is in the linked list */
 int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
-int dcb_persistent_clean_count(DCB *, bool);      /* Clean persistent and return count */
-
-void dcb_call_foreach (struct server* server, DCB_REASON reason);
+int dcb_persistent_clean_count(DCB *, int, bool);      /* Clean persistent and return count */
 void dcb_hangup_foreach (struct server* server);
 size_t dcb_get_session_id(DCB* dcb);
 bool dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
@@ -353,6 +377,19 @@ int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
 int dcb_listen(DCB *listener, const char *config, const char *protocol_name);
 void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
+void dcb_enable_session_timeouts();
+void dcb_process_idle_sessions(int thr);
+
+/**
+ * @brief Call a function for each connected DCB
+ *
+ * @param func Function to call. The function should return @c true to continue iteration
+ * and @c false to stop iteration earlier. The first parameter is a DCB and the second
+ * is the value of @c data that the user provided.
+ * @param data User provided data passed as the second parameter to @c func
+ * @return True if all DCBs were iterated, false if the callback returned false
+ */
+bool dcb_foreach(bool (*func)(DCB *, void *), void *data);
 
 /**
  * DCB flags values

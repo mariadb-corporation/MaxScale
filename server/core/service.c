@@ -1052,7 +1052,7 @@ serviceSetTimeout(SERVICE *service, int val)
      * configured with a idle timeout. */
     if ((service->conn_idle_timeout = val))
     {
-        enable_session_timeouts();
+        dcb_enable_session_timeouts();
     }
 
     return 1;

@@ -22,7 +22,6 @@ public:
     ~CacheMT();
 
     static CacheMT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
-    static CacheMT* Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig);
 
     bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
@@ -31,14 +30,14 @@ public:
 private:
     CacheMT(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
-            StorageFactory*     pFactory,
+            SCacheRules         sRules,
+            SStorageFactory     sFactory,
             Storage*            pStorage);
 
     static CacheMT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
-                           StorageFactory*     pFactory);
+                           SCacheRules         sRules,
+                           SStorageFactory     sFactory);
 
 private:
     CacheMT(const CacheMT&);

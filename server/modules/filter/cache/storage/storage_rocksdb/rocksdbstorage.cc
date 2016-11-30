@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "storage_rocksdb"
 #include "rocksdbstorage.h"
 #include <openssl/sha.h>
 #include <sys/stat.h>

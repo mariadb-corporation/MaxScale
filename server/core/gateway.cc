@@ -1941,6 +1941,7 @@ int main(int argc, char **argv)
     /* Init MaxScale poll system */
     poll_init();
 
+    dcb_global_init();
     /**
      * Init mysql thread context for main thread as well. Needed when users
      * are queried from backends.
