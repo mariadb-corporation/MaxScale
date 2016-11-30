@@ -411,6 +411,7 @@ poll_add_dcb(DCB *dcb)
 
     if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
     {
+        spinlock_acquire(&dcb->dcb_initlock);
         /** Listeners are added to all epoll instances */
         int nthr = config_threadcount();
 
@@ -427,6 +428,7 @@ poll_add_dcb(DCB *dcb)
                 break;
             }
         }
+        spinlock_release(&dcb->dcb_initlock);
     }
     else
     {
@@ -507,6 +509,7 @@ poll_remove_dcb(DCB *dcb)
 
         if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
         {
+            spinlock_acquire(&dcb->dcb_initlock);
             /** Listeners are added to all epoll instances */
             int nthr = config_threadcount();
 
@@ -522,6 +525,7 @@ poll_remove_dcb(DCB *dcb)
                     ss_dassert(error_num);
                 }
             }
+            spinlock_release(&dcb->dcb_initlock);
         }
         else
         {
