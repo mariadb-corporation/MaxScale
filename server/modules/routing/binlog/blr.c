@@ -843,8 +843,10 @@ createInstance(SERVICE *service, char **options)
 
         if (!blr_check_binlog(inst))
         {
-            if (inst->trx_safe)
+            if (inst->trx_safe || inst->encryption.enabled)
             {
+                MXS_ERROR("The replication from master cannot be started"
+                          " due to errors in current binlog file");
                 /* Don't start replication, just return */
                 return (ROUTER *)inst;
             }

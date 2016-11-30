@@ -1505,6 +1505,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         }
         else
         {
+            char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
             /* fill replication header struct */
             hdr.timestamp = EXTRACT32(hdbuf);
             hdr.event_type = hdbuf[4];
@@ -1513,34 +1514,12 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             hdr.next_pos = EXTRACT32(&hdbuf[13]);
             hdr.flags = EXTRACT16(&hdbuf[17]);
 
-            /* Check event type against MAX_EVENT_TYPE */
-
-            if (router->mariadb10_compat)
-            {
-                if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10)
-                {
-                    MXS_ERROR("Invalid MariaDB 10 event type 0x%x. "
-                              "Binlog file is %s, position %llu",
-                              hdr.event_type,
-                              router->binlog_name, pos);
-
-                    event_error = 1;
-                }
-            }
-            else
-            {
-                if (hdr.event_type > MAX_EVENT_TYPE)
-                {
-                    MXS_ERROR("Invalid event type 0x%x. "
-                              "Binlog file is %s, position %llu",
-                              hdr.event_type,
-                              router->binlog_name, pos);
-
-                    event_error = 1;
-                }
-            }
-
-            if (event_error)
+            /* Check event */
+            if (!blr_binlog_event_check(router,
+                                        pos,
+                                        &hdr,
+                                        router->binlog_name,
+                                        errmsg))
             {
                 router->binlog_position = last_known_commit;
                 router->current_safe_event = last_known_commit;
@@ -1702,6 +1681,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
              uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
              uint8_t *decrypt_ptr;
              unsigned long next_pos;
+             char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
+             char *event_desc;
 
              /**
               * Events are encrypted.
@@ -1729,59 +1710,29 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             hdr.event_type = decrypt_ptr[4];
             hdr.serverid = EXTRACT32(&decrypt_ptr[5]);
             hdr.event_size = extract_field(&decrypt_ptr[9], 32);
-            hdr.next_pos = pos + event_size;
+            hdr.next_pos = EXTRACT32(&decrypt_ptr[13]);
             hdr.flags = EXTRACT16(&decrypt_ptr[17]);
 
             /* Get next pos from decrypted event header */
             next_pos = EXTRACT32(&decrypt_ptr[13]);
+            event_desc = blr_get_event_description(router, hdr.event_type);
 
-            MXS_DEBUG("Event time %lu\nEvent Type %u (%s)\nServer Id %lu\nNextPos %lu/%lu\nFlags %u",
-                       (unsigned long)hdr.timestamp, hdr.event_type,
-                       blr_get_event_description(router, hdr.event_type),
-                       (unsigned long)hdr.serverid, next_pos,
-                       (unsigned long)hdr.next_pos, hdr.flags);
+            MXS_DEBUG("%8sEvent time %lu\n%39sEvent Type %u (%s)\n%39sServer Id %lu\n%39sNextPos %lu\n%39sFlags %u",
+                       " ", (unsigned long)hdr.timestamp, " ", hdr.event_type,
+                       event_desc ? event_desc : "NULL", " ",
+                       (unsigned long)hdr.serverid, " ", next_pos, " ", hdr.flags);
 
-            /* Sanity checks for event type */
-            if (router->mariadb10_compat)
+            /* Check event */
+            if (!blr_binlog_event_check(router,
+                                        pos,
+                                        &hdr,
+                                        router->binlog_name,
+                                        errmsg))
             {
-                if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10)
-                {
-                    MXS_ERROR("Invalid MariaDB 10 event type 0x%x. "
-                              "Binlog file is %s, position %llu",
-                              hdr.event_type,
-                              router->binlog_name, pos);
-
-                    event_error = 1;
-                }
-            }
-            else
-            {
-                if (hdr.event_type > MAX_EVENT_TYPE)
-                {
-                    MXS_ERROR("Invalid event type 0x%x. "
-                              "Binlog file is %s, position %llu",
-                               hdr.event_type,
-                               router->binlog_name, pos);
-
-                    event_error = 1;
-                }
-            }
-            if (event_error)
-            {
-                MXS_ERROR("Event Type is wrong, check encryption settings");
                 router->m_errno = BINLOG_FATAL_ERROR_READING;
                 gwbuf_free(decrypted_event);
                 gwbuf_free(result);
-                return 1;
-            }
-
-            /* Sanity checks for pos */
-            if (next_pos != hdr.next_pos)
-            {
-                MXS_ERROR("Next pos is wrong, check encryption settings");
-                router->m_errno = BINLOG_FATAL_ERROR_READING;
-                gwbuf_free(decrypted_event);
-                gwbuf_free(result);
+                MXS_ERROR("Error while decrypting event: %s", errmsg);
                 return 1;
             }
 
