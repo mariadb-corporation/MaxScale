@@ -2607,10 +2607,10 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
                   strerror_r(errno, err_msg, sizeof(err_msg)));
 
         /* Remove any partial event that was written */
-        if (ftruncate(router->binlog_fd, router->last_written))
+        if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name, router->last_written,
+                      router->service->name, router->binlog_position,
                       router->binlog_name,
                       strerror_r(errno, err_msg, sizeof(err_msg)));
         }
