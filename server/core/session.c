@@ -661,8 +661,8 @@ session_setup_filters(SESSION *session)
             MXS_ERROR("Service '%s' contians an unresolved filter.", service->name);
             return 0;
         }
-        if ((head = filterApply(service->filters[i], session,
-                                &session->head)) == NULL)
+        if ((head = filter_apply(service->filters[i], session,
+                                 &session->head)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for "
                       "service '%s'.\n",
@@ -679,9 +679,9 @@ session_setup_filters(SESSION *session)
 
     for (i = 0; i < service->n_filters; i++)
     {
-        if ((tail = filterUpstream(service->filters[i],
-                                   session->filters[i].session,
-                                   &session->tail)) == NULL)
+        if ((tail = filter_upstream(service->filters[i],
+                                    session->filters[i].session,
+                                    &session->tail)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
                       service->filters[i]->name,
@@ -690,7 +690,7 @@ session_setup_filters(SESSION *session)
         }
 
         /*
-         * filterUpstream may simply return the 3 parameter if
+         * filter_upstream may simply return the 3 parameter if
          * the filter has no upstream entry point. So no need
          * to copy the contents or free tail in this case.
          */

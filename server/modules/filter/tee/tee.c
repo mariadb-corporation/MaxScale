@@ -596,8 +596,7 @@ newSession(FILTER *instance, SESSION *session)
             my_session->branch_dcb = dcb;
             my_session->dummy_filterdef = dummy;
 
-            if ((dummy_upstream = filterUpstream(
-                                      dummy, my_session, &ses->tail)) == NULL)
+            if ((dummy_upstream = filter_upstream(dummy, my_session, &ses->tail)) == NULL)
             {
                 filter_free(dummy);
                 closeSession(instance, (void*) my_session);

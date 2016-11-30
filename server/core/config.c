@@ -3183,7 +3183,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 char *s = strtok_r(options, ",", &lasts);
                 while (s)
                 {
-                    filterAddOption(obj->element, s);
+                    filter_add_option(obj->element, s);
                     s = strtok_r(NULL, ",", &lasts);
                 }
             }
@@ -3193,7 +3193,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
             {
                 if (strcmp(params->name, "module") && strcmp(params->name, "options"))
                 {
-                    filterAddParameter(obj->element, params->name, params->value);
+                    filter_add_parameter(obj->element, params->name, params->value);
                 }
                 params = params->next;
             }
