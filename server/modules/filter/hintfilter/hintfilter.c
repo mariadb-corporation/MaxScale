@@ -70,7 +70,7 @@ version()
 }
 
 /**
- * The module initialisation routine, called when the module
+ * The module initialization routine, called when the module
  * is first loaded.
  * @see function load_module in load_utils.c for explanation of lint
  */
@@ -205,7 +205,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once applied the
- * query shoudl normally be passed to the downstream component
+ * query should normally be passed to the downstream component
  * (filter or router) in the filter chain.
  *
  * @param instance  The filter instance data
@@ -216,51 +216,18 @@ static int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     HINT_SESSION *my_session = (HINT_SESSION *)session;
-    char *ptr;
-    int rval, len, residual;
-    HINT *hint;
 
-    if (my_session->request == NULL)
+    if (modutil_is_SQL(queue))
     {
-        /*
-         * No stored buffer, so this must be the first
-         * buffer of a new request.
-         */
-        if (modutil_MySQL_Query(queue, &ptr, &len, &residual) == 0)
-        {
-            return my_session->down.routeQuery(
-                       my_session->down.instance,
-                       my_session->down.session, queue);
-        }
-        my_session->request = queue;
-        my_session->query_len = len;
+        my_session->request = NULL;
+        my_session->query_len = 0;
+        HINT *hint = hint_parser(my_session, queue);
+        queue->hint = hint;
     }
-    else
-    {
-        gwbuf_append(my_session->request, queue);
-    }
-
-    if (gwbuf_length(my_session->request) < my_session->query_len)
-    {
-        /*
-         * We have not got the entire SQL text, buffer and wait for
-         * the remainder.
-         */
-        return 1;
-    }
-    /* We have the entire SQL text, parse for hints and attach to the
-     * buffer at the head of the queue.
-     */
-    queue = my_session->request;
-    my_session->request = NULL;
-    my_session->query_len = 0;
-    hint = hint_parser(my_session, queue);
-    queue->hint = hint;
 
     /* Now process the request */
-    rval = my_session->down.routeQuery(my_session->down.instance,
+    return my_session->down.routeQuery(my_session->down.instance,
                                        my_session->down.session, queue);
-    return rval;
 }
 
 /**
@@ -289,5 +256,5 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
