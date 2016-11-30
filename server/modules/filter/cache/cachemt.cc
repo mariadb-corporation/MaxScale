@@ -16,11 +16,11 @@
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheMT::CacheMT(const std::string& name,
+CacheMT::CacheMT(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CACHE_RULES* pRules,
-                 StorageFactory* pFactory,
-                 Storage* pStorage)
+                 CacheRules*         pRules,
+                 StorageFactory*     pFactory,
+                 Storage*            pStorage)
     : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
 {
     spinlock_init(&m_lockPending);
@@ -38,7 +38,7 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CacheMT* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
@@ -57,7 +57,7 @@ CacheMT* CacheMT::Create(const std::string& name, StorageFactory* pFactory, cons
 
     CacheMT* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules))
     {
@@ -84,7 +84,7 @@ void CacheMT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 // static
 CacheMT* CacheMT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
+                         CacheRules*         pRules,
                          StorageFactory*     pFactory)
 {
     CacheMT* pCache = NULL;
@@ -111,7 +111,7 @@ CacheMT* CacheMT::Create(const std::string&  name,
         if (!pCache)
         {
             delete pStorage;
-            cache_rules_free(pRules);
+            delete pRules;
             delete pFactory;
         }
     }

@@ -43,13 +43,13 @@ private:
 
     CachePT(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
+            CacheRules*         pRules,
             StorageFactory*     pFactory,
             const Caches&       caches);
 
     static CachePT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
+                           CacheRules*         pRules,
                            StorageFactory*     pFactory);
 
     Cache& thread_cache();

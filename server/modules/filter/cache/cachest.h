@@ -30,13 +30,13 @@ public:
 private:
     CacheST(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
+            CacheRules*         pRules,
             StorageFactory*     pFactory,
             Storage*            pStorage);
 
     static CacheST* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
+                           CacheRules*         pRules,
                            StorageFactory*     pFactory);
 private:
     CacheST(const CacheST&);

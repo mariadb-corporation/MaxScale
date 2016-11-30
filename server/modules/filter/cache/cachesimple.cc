@@ -18,7 +18,7 @@
 
 CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
+                         CacheRules*         pRules,
                          StorageFactory*     pFactory,
                          Storage*            pStorage)
     : Cache(name, pConfig, pRules, pFactory)
@@ -34,11 +34,11 @@ CacheSimple::~CacheSimple()
 
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CACHE_RULES**       ppRules)
+                         CacheRules**        ppRules)
 {
     int rv = false;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
 
     if (Cache::Create(config, &pRules))
     {
@@ -50,12 +50,12 @@ bool CacheSimple::Create(const CACHE_CONFIG& config,
 
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CACHE_RULES**       ppRules,
+                         CacheRules**        ppRules,
                          StorageFactory**    ppFactory)
 {
     int rv = false;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (Cache::Create(config, &pRules, &pFactory))

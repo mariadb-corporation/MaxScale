@@ -351,6 +351,7 @@ CacheRules::~CacheRules()
     cache_rules_free(prules_);
 }
 
+// static
 CacheRules* CacheRules::create(uint32_t debug)
 {
     CacheRules* pthis = NULL;
@@ -365,6 +366,7 @@ CacheRules* CacheRules::create(uint32_t debug)
     return pthis;
 }
 
+// static
 CacheRules* CacheRules::load(const char *zpath, uint32_t debug)
 {
     CacheRules* pthis = NULL;

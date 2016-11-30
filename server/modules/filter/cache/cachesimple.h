@@ -35,15 +35,15 @@ public:
 protected:
     CacheSimple(const std::string&  name,
                 const CACHE_CONFIG* pConfig,
-                CACHE_RULES*        pRules,
+                CacheRules*         pRules,
                 StorageFactory*     pFactory,
                 Storage*            pStorage);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules);
+                       CacheRules**        ppRules);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules,
+                       CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
 
 

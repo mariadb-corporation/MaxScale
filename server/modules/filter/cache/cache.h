@@ -77,14 +77,14 @@ public:
 protected:
     Cache(const std::string&  name,
           const CACHE_CONFIG* pConfig,
-          CACHE_RULES*        pRules,
+          CacheRules*         pRules,
           StorageFactory*     pFactory);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules);
+                       CacheRules**        ppRules);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CACHE_RULES**       ppRules,
+                       CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
 
 private:
@@ -94,6 +94,6 @@ private:
 protected:
     const std::string   m_name;     // The name of the instance; the section name in the config.
     const CACHE_CONFIG& m_config;   // The configuration of the cache instance.
-    CACHE_RULES*        m_pRules;   // The rules of the cache instance.
+    CacheRules*         m_pRules;   // The rules of the cache instance.
     StorageFactory*     m_pFactory; // The storage factory.
 };

@@ -31,13 +31,13 @@ public:
 private:
     CacheMT(const std::string&  name,
             const CACHE_CONFIG* pConfig,
-            CACHE_RULES*        pRules,
+            CacheRules*         pRules,
             StorageFactory*     pFactory,
             Storage*            pStorage);
 
     static CacheMT* Create(const std::string&  name,
                            const CACHE_CONFIG* pConfig,
-                           CACHE_RULES*        pRules,
+                           CacheRules*         pRules,
                            StorageFactory*     pFactory);
 
 private:

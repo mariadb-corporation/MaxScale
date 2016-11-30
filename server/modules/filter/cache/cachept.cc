@@ -47,7 +47,7 @@ inline int thread_index()
 
 CachePT::CachePT(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CACHE_RULES*        pRules,
+                 CacheRules*         pRules,
                  StorageFactory*     pFactory,
                  const Caches&       caches)
     : Cache(name, pConfig, pRules, pFactory)
@@ -67,7 +67,7 @@ CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CachePT* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (Cache::Create(*pConfig, &pRules, &pFactory))
@@ -87,7 +87,7 @@ CachePT* CachePT::Create(const std::string& name,
 
     CachePT* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
 
     if (Cache::Create(*pConfig, &pRules))
     {
@@ -130,7 +130,7 @@ cache_result_t CachePT::del_value(const CACHE_KEY& key)
 // static
 CachePT* CachePT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
+                         CacheRules*         pRules,
                          StorageFactory*     pFactory)
 {
     CachePT* pCache = NULL;
@@ -176,7 +176,7 @@ CachePT* CachePT::Create(const std::string&  name,
     }
     catch (const std::exception&)
     {
-        cache_rules_free(pRules);
+        delete pRules;
         delete pFactory;
     }
 

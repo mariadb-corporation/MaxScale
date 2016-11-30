@@ -161,7 +161,7 @@ public:
      *
      * @return An empty rules object, or NULL in case of error.
      */
-    CacheRules* create(uint32_t debug);
+    static CacheRules* create(uint32_t debug);
 
     /**
      * Loads the caching rules from a file and returns corresponding object.
@@ -171,7 +171,7 @@ public:
      *
      * @return The corresponding rules object, or NULL in case of error.
      */
-    CacheRules* load(const char *zpath, uint32_t debug);
+    static CacheRules* load(const char *zpath, uint32_t debug);
 
    /**
     * Returns boolean indicating whether the result of the query should be stored.

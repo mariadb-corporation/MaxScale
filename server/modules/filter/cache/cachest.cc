@@ -16,11 +16,11 @@
 #include "storage.h"
 #include "storagefactory.h"
 
-CacheST::CacheST(const std::string& name,
+CacheST::CacheST(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CACHE_RULES* pRules,
-                 StorageFactory* pFactory,
-                 Storage* pStorage)
+                 CacheRules*         pRules,
+                 StorageFactory*     pFactory,
+                 Storage*            pStorage)
     : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
 {
     MXS_NOTICE("Created single threaded cache.");
@@ -36,7 +36,7 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     CacheST* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
     StorageFactory* pFactory = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
@@ -55,7 +55,7 @@ CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, cons
 
     CacheST* pCache = NULL;
 
-    CACHE_RULES* pRules = NULL;
+    CacheRules* pRules = NULL;
 
     if (CacheSimple::Create(*pConfig, &pRules))
     {
@@ -78,7 +78,7 @@ void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 // static
 CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CACHE_RULES*        pRules,
+                         CacheRules*         pRules,
                          StorageFactory*     pFactory)
 {
     CacheST* pCache = NULL;
@@ -105,7 +105,7 @@ CacheST* CacheST::Create(const std::string&  name,
         if (!pCache)
         {
             delete pStorage;
-            cache_rules_free(pRules);
+            delete pRules;
             delete pFactory;
         }
     }
