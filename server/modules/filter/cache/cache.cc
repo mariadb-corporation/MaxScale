@@ -21,19 +21,17 @@
 
 Cache::Cache(const std::string&  name,
              const CACHE_CONFIG* pConfig,
-             CacheRules*         pRules,
-             StorageFactory*     pFactory)
+             SCacheRules         sRules,
+             SStorageFactory     sFactory)
     : m_name(name)
     , m_config(*pConfig)
-    , m_pRules(pRules)
-    , m_pFactory(pFactory)
+    , m_sRules(sRules)
+    , m_sFactory(sFactory)
 {
 }
 
 Cache::~Cache()
 {
-    delete m_pRules;
-    delete m_pFactory;
 }
 
 //static
@@ -92,10 +90,10 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
 bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
-    return m_pRules->should_store(zDefaultDb, pQuery);
+    return m_sRules->should_store(zDefaultDb, pQuery);
 }
 
 bool Cache::should_use(const SESSION* pSession)
 {
-    return m_pRules->should_use(pSession);
+    return m_sRules->should_use(pSession);
 }

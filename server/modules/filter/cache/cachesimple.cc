@@ -18,10 +18,10 @@
 
 CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CacheRules*         pRules,
-                         StorageFactory*     pFactory,
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory,
                          Storage*            pStorage)
-    : Cache(name, pConfig, pRules, pFactory)
+    : Cache(name, pConfig, sRules, sFactory)
     , m_pStorage(pStorage)
 {
 }

@@ -16,12 +16,14 @@
 #include "storage.h"
 #include "storagefactory.h"
 
+using std::tr1::shared_ptr;
+
 CacheST::CacheST(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CacheRules*         pRules,
-                 StorageFactory*     pFactory,
+                 SCacheRules         sRules,
+                 SStorageFactory     sFactory,
                  Storage*            pStorage)
-    : CacheSimple(name, pConfig, pRules, pFactory, pStorage)
+    : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
     MXS_NOTICE("Created single threaded cache.");
 }
@@ -41,17 +43,20 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     if (CacheSimple::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        shared_ptr<CacheRules> sRules(pRules);
+        shared_ptr<StorageFactory> sFactory(pFactory);
+
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
 }
 
 // static
-CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string& name, SStorageFactory sFactory, const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
-    ss_dassert(pFactory);
+    ss_dassert(sFactory.get());
 
     CacheST* pCache = NULL;
 
@@ -59,7 +64,9 @@ CacheST* CacheST::Create(const std::string& name, StorageFactory* pFactory, cons
 
     if (CacheSimple::Create(*pConfig, &pRules))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        shared_ptr<CacheRules> sRules(pRules);
+
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -78,8 +85,8 @@ void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
 // static
 CacheST* CacheST::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CacheRules*         pRules,
-                         StorageFactory*     pFactory)
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory)
 {
     CacheST* pCache = NULL;
 
@@ -90,7 +97,7 @@ CacheST* CacheST::Create(const std::string&  name,
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = pFactory->createStorage(CACHE_THREAD_MODEL_ST, name.c_str(),
+    Storage* pStorage = sFactory->createStorage(CACHE_THREAD_MODEL_ST, name.c_str(),
                                                 ttl, maxCount, maxSize,
                                                 argc, argv);
 
@@ -98,15 +105,13 @@ CacheST* CacheST::Create(const std::string&  name,
     {
         CPP_GUARD(pCache = new CacheST(name,
                                        pConfig,
-                                       pRules,
-                                       pFactory,
+                                       sRules,
+                                       sFactory,
                                        pStorage));
 
         if (!pCache)
         {
             delete pStorage;
-            delete pRules;
-            delete pFactory;
         }
     }
 

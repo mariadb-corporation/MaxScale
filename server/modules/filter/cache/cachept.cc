@@ -47,10 +47,10 @@ inline int thread_index()
 
 CachePT::CachePT(const std::string&  name,
                  const CACHE_CONFIG* pConfig,
-                 CacheRules*         pRules,
-                 StorageFactory*     pFactory,
+                 SCacheRules         sRules,
+                 SStorageFactory     sFactory,
                  const Caches&       caches)
-    : Cache(name, pConfig, pRules, pFactory)
+    : Cache(name, pConfig, sRules, sFactory)
     , m_caches(caches)
 {
     MXS_NOTICE("Created cache per thread.");
@@ -72,15 +72,18 @@ CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
     if (Cache::Create(*pConfig, &pRules, &pFactory))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        shared_ptr<CacheRules> sRules(pRules);
+        shared_ptr<StorageFactory> sFactory(pFactory);
+
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
 }
 
 // static
-CachePT* CachePT::Create(const std::string& name,
-                         StorageFactory* pFactory,
+CachePT* CachePT::Create(const std::string&  name,
+                         SStorageFactory     sFactory,
                          const CACHE_CONFIG* pConfig)
 {
     ss_dassert(pConfig);
@@ -91,7 +94,9 @@ CachePT* CachePT::Create(const std::string& name,
 
     if (Cache::Create(*pConfig, &pRules))
     {
-        pCache = Create(name, pConfig, pRules, pFactory);
+        shared_ptr<CacheRules> sRules(pRules);
+
+        pCache = Create(name, pConfig, sRules, sFactory);
     }
 
     return pCache;
@@ -130,8 +135,8 @@ cache_result_t CachePT::del_value(const CACHE_KEY& key)
 // static
 CachePT* CachePT::Create(const std::string&  name,
                          const CACHE_CONFIG* pConfig,
-                         CacheRules*         pRules,
-                         StorageFactory*     pFactory)
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory)
 {
     CachePT* pCache = NULL;
 
@@ -153,7 +158,7 @@ CachePT* CachePT::Create(const std::string&  name,
 
             CacheST* pCacheST = 0;
 
-            CPP_GUARD(pCacheST = CacheST::Create(namest, pFactory, pConfig));
+            CPP_GUARD(pCacheST = CacheST::Create(namest, sFactory, pConfig));
 
             if (pCacheST)
             {
@@ -171,13 +176,11 @@ CachePT* CachePT::Create(const std::string&  name,
 
         if (!error)
         {
-            pCache = new CachePT(name, pConfig, pRules, pFactory, caches);
+            pCache = new CachePT(name, pConfig, sRules, sFactory, caches);
         }
     }
     catch (const std::exception&)
     {
-        delete pRules;
-        delete pFactory;
     }
 
     return pCache;
