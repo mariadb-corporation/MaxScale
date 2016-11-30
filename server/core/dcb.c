@@ -2157,7 +2157,7 @@ dListDCBs(DCB *pdcb)
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
     while (dcb)
     {
-        if (dcb->dcb_is_in_use)
+        if (dcb->dcb_is_in_use && dcb->state == DCB_STATE_POLLING)
         {
             dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
                        dcb, gw_dcb_state2string(dcb->state),
@@ -2189,7 +2189,8 @@ dListClients(DCB *pdcb)
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
     while (dcb)
     {
-        if (dcb->dcb_is_in_use && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+        if (dcb->dcb_is_in_use && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER &&
+            dcb->state == DCB_STATE_POLLING)
         {
             dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
                        (dcb->remote ? dcb->remote : ""),
