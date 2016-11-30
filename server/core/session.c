@@ -915,3 +915,40 @@ const char* session_trx_state_to_string(session_trx_state_t state)
     MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);
     return "UNKNOWN";
 }
+
+static bool ses_find_id(DCB *dcb, void *data)
+{
+    void **params = (void**)data;
+    SESSION **ses = (SESSION**)params[0];
+    int *id = (int*)params[1];
+    bool rval = true;
+
+    if (dcb->session->ses_id == *id)
+    {
+        /** We need to increment the reference count of the session to prevent it
+         * from being freed while it's in use. */
+        atomic_add(&dcb->session->refcount, 1);
+        *ses = dcb->session;
+        rval = false;
+    }
+
+    return rval;
+}
+
+SESSION* session_get_ref(int id)
+{
+    SESSION *session = NULL;
+    void *params[] = {&session, &id};
+
+    dcb_foreach(ses_find_id, params);
+
+    return session;
+}
+
+void session_put_ref(SESSION *session)
+{
+    if (session)
+    {
+        session_free(session);
+    }
+}

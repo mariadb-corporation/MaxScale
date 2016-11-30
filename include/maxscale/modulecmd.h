@@ -55,14 +55,12 @@ typedef struct
 #define MODULECMD_ARG_NONE        0 /**< Empty argument */
 #define MODULECMD_ARG_STRING      1 /**< String */
 #define MODULECMD_ARG_BOOLEAN     2 /**< Boolean value */
-#define MODULECMD_ARG_SERVICE     3 /**< Service name */
-#define MODULECMD_ARG_SERVER      4 /**< Server name */
-#define MODULECMD_ARG_SESSION     5 /**< SESSION pointer in string format */
-#define MODULECMD_ARG_SESSION_PTR 6 /**< Raw SESSION pointer */
-#define MODULECMD_ARG_DCB         7 /**< DCB pointer in string format*/
-#define MODULECMD_ARG_DCB_PTR     8 /**< Raw DCB pointer*/
-#define MODULECMD_ARG_MONITOR     9 /**< Monitor name */
-#define MODULECMD_ARG_FILTER      10 /**< Filter name */
+#define MODULECMD_ARG_SERVICE     3 /**< Service */
+#define MODULECMD_ARG_SERVER      4 /**< Server */
+#define MODULECMD_ARG_SESSION     6 /**< Session */
+#define MODULECMD_ARG_DCB         8 /**< DCB */
+#define MODULECMD_ARG_MONITOR     9 /**< Monitor */
+#define MODULECMD_ARG_FILTER      10 /**< Filter */
 #define MODULECMD_ARG_OUTPUT      11 /**< DCB suitable for writing results to.
                                           This should always be the first argument
                                           if the function requires an output DCB. */
@@ -156,6 +154,20 @@ const MODULECMD* modulecmd_find_command(const char *domain, const char *identifi
 
 /**
  * @brief Parse arguments for a command
+ *
+ * The argument types expect different forms of input.
+ *
+ * | Argument type         | Expected input    |
+ * |-----------------------|-------------------|
+ * | MODULECMD_ARG_SERVICE | Service name      |
+ * | MODULECMD_ARG_SERVER  | Server name       |
+ * | MODULECMD_ARG_SESSION | Session unique ID |
+ * | MODULECMD_ARG_MONITOR | Monitor name      |
+ * | MODULECMD_ARG_FILTER  | Filter name       |
+ * | MODULECMD_ARG_STRING  | String            |
+ * | MODULECMD_ARG_BOOLEAN | Boolean value     |
+ * | MODULECMD_ARG_DCB     | Raw DCB pointer   |
+ * | MODULECMD_ARG_OUTPUT  | DCB for output    |
  *
  * @param cmd Command for which the parameters are parsed
  * @param argc Number of arguments

@@ -339,4 +339,24 @@ static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
     return prev_autocommit;
 }
 
+/**
+ * @brief Get a session reference by ID
+ *
+ * This creates an additional reference to a session whose unique ID matches @c id.
+ *
+ * @param id Unique session ID
+ * @return Reference to a SESSION or NULL if the session was not found
+ *
+ * @note The caller must free the session reference by passing it to the
+ * @c session_put_ref function
+ */
+SESSION* session_get_ref(int id);
+
+/**
+ * @brief Release a session reference
+ *
+ * @param session Session reference to release
+ */
+void session_put_ref(SESSION *session);
+
 MXS_END_DECLS

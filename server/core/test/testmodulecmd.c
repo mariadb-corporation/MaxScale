@@ -305,16 +305,12 @@ int test_map()
 }
 
 static DCB my_dcb;
-static SESSION my_session;
 
 bool ptrfn(const MODULECMD_ARG *argv)
 {
     bool rval = false;
 
-    if (argv->argc == 4 && argv->argv[0].value.dcb == &my_dcb &&
-        argv->argv[1].value.dcb == &my_dcb &&
-        argv->argv[2].value.session == &my_session &&
-        argv->argv[3].value.session == &my_session)
+    if (argv->argc == 1 && argv->argv[0].value.dcb == &my_dcb)
     {
         rval = true;
     }
@@ -329,26 +325,18 @@ int test_pointers()
 
     modulecmd_arg_type_t args[] =
     {
-        {MODULECMD_ARG_DCB, ""},
-        {MODULECMD_ARG_DCB_PTR, ""},
-        {MODULECMD_ARG_SESSION, ""},
-        {MODULECMD_ARG_SESSION_PTR, ""}
+        {MODULECMD_ARG_DCB, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, ptrfn, 4, args), "Registering a command should succeed");
+    TEST(modulecmd_register_command(ns, id, ptrfn, 1, args), "Registering a command should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
     const MODULECMD *cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
-    char dcb_str[200];
-    char session_str[200];
 
-    sprintf(dcb_str, "%p", &my_dcb);
-    sprintf(session_str, "%p", &my_session);
+    const void* params[] = {&my_dcb};
 
-    const void* params[] = {dcb_str, &my_dcb, session_str, &my_session};
-
-    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 4, params);
+    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 1, params);
     TEST(arg, "Parsing arguments should succeed");
     TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
 
