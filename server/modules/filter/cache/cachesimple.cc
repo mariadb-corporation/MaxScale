@@ -31,23 +31,6 @@ CacheSimple::~CacheSimple()
     delete m_pStorage;
 }
 
-
-// static
-bool CacheSimple::Create(const CACHE_CONFIG& config,
-                         CacheRules**        ppRules)
-{
-    int rv = false;
-
-    CacheRules* pRules = NULL;
-
-    if (Cache::Create(config, &pRules))
-    {
-        *ppRules = pRules;
-    }
-
-    return pRules != NULL;;
-}
-
 // static
 bool CacheSimple::Create(const CACHE_CONFIG& config,
                          CacheRules**        ppRules,

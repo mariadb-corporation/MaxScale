@@ -85,9 +85,6 @@ protected:
           SStorageFactory     sFactory);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CacheRules**        ppRules);
-
-    static bool Create(const CACHE_CONFIG& config,
                        CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
 

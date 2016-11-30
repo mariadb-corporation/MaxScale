@@ -53,23 +53,16 @@ CacheST* CacheST::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 }
 
 // static
-CacheST* CacheST::Create(const std::string& name, SStorageFactory sFactory, const CACHE_CONFIG* pConfig)
+CacheST* CacheST::Create(const std::string&  name,
+                         SCacheRules         sRules,
+                         SStorageFactory     sFactory,
+                         const CACHE_CONFIG* pConfig)
 {
-    ss_dassert(pConfig);
+    ss_dassert(sRules.get());
     ss_dassert(sFactory.get());
+    ss_dassert(pConfig);
 
-    CacheST* pCache = NULL;
-
-    CacheRules* pRules = NULL;
-
-    if (CacheSimple::Create(*pConfig, &pRules))
-    {
-        shared_ptr<CacheRules> sRules(pRules);
-
-        pCache = Create(name, pConfig, sRules, sFactory);
-    }
-
-    return pCache;
+    return Create(name, pConfig, sRules, sFactory);
 }
 
 bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)

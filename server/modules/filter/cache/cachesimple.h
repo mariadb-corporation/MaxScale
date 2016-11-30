@@ -40,9 +40,6 @@ protected:
                 Storage*            pStorage);
 
     static bool Create(const CACHE_CONFIG& config,
-                       CacheRules**        ppRules);
-
-    static bool Create(const CACHE_CONFIG& config,
                        CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
 

@@ -81,27 +81,6 @@ CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     return pCache;
 }
 
-// static
-CachePT* CachePT::Create(const std::string&  name,
-                         SStorageFactory     sFactory,
-                         const CACHE_CONFIG* pConfig)
-{
-    ss_dassert(pConfig);
-
-    CachePT* pCache = NULL;
-
-    CacheRules* pRules = NULL;
-
-    if (Cache::Create(*pConfig, &pRules))
-    {
-        shared_ptr<CacheRules> sRules(pRules);
-
-        pCache = Create(name, pConfig, sRules, sFactory);
-    }
-
-    return pCache;
-}
-
 bool CachePT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
     return thread_cache().must_refresh(key, pSessionCache);
@@ -158,7 +137,7 @@ CachePT* CachePT::Create(const std::string&  name,
 
             CacheST* pCacheST = 0;
 
-            CPP_GUARD(pCacheST = CacheST::Create(namest, sFactory, pConfig));
+            CPP_GUARD(pCacheST = CacheST::Create(namest, sRules, sFactory, pConfig));
 
             if (pCacheST)
             {

@@ -54,26 +54,6 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     return pCache;
 }
 
-// static
-CacheMT* CacheMT::Create(const std::string& name, SStorageFactory sFactory, const CACHE_CONFIG* pConfig)
-{
-    ss_dassert(pConfig);
-    ss_dassert(sFactory.get());
-
-    CacheMT* pCache = NULL;
-
-    CacheRules* pRules = NULL;
-
-    if (CacheSimple::Create(*pConfig, &pRules))
-    {
-        shared_ptr<CacheRules> sRules(pRules);
-
-        pCache = Create(name, pConfig, sRules, sFactory);
-    }
-
-    return pCache;
-}
-
 bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
     LockGuard guard(&m_lockPending);

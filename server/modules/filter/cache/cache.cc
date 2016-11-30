@@ -36,9 +36,11 @@ Cache::~Cache()
 
 //static
 bool Cache::Create(const CACHE_CONFIG& config,
-                   CacheRules**        ppRules)
+                   CacheRules**        ppRules,
+                   StorageFactory**    ppFactory)
 {
     CacheRules* pRules = NULL;
+    StorageFactory* pFactory = NULL;
 
     if (config.rules)
     {
@@ -50,26 +52,6 @@ bool Cache::Create(const CACHE_CONFIG& config,
     }
 
     if (pRules)
-    {
-        *ppRules = pRules;
-    }
-    else
-    {
-        MXS_ERROR("Could not create rules.");
-    }
-
-    return pRules != NULL;
-}
-
-//static
-bool Cache::Create(const CACHE_CONFIG& config,
-                   CacheRules**        ppRules,
-                   StorageFactory**    ppFactory)
-{
-    CacheRules* pRules = NULL;
-    StorageFactory* pFactory = NULL;
-
-    if (Create(config, &pRules))
     {
         pFactory = StorageFactory::Open(config.storage);
 
@@ -83,6 +65,10 @@ bool Cache::Create(const CACHE_CONFIG& config,
             MXS_ERROR("Could not open storage factory '%s'.", config.storage);
             delete pRules;
         }
+    }
+    else
+    {
+        MXS_ERROR("Could not create rules.");
     }
 
     return pFactory != NULL;
