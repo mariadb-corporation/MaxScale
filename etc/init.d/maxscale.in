@@ -47,7 +47,7 @@ _RETVAL_STATUS_NOT_RUNNING=3
 . /etc/rc.d/init.d/functions
 
 # Source additional command line arguments.
-[ -f /etc/sysconfig/maxscale ] &&  . /etc/sysconfig/maxscale
+[ -f /etc/sysconfig/maxscale ] && . /etc/sysconfig/maxscale
 
 # we can rearrange this easily
 processname=maxscale
@@ -90,7 +90,7 @@ start() {
     chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
     chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
-    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale $MAXSCALE_OPTIONS >& /dev/null
+    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale $MAXSCALE_OPTIONS # don't throw away errors!
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
