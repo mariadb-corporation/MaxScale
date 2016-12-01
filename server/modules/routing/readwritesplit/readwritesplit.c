@@ -4532,25 +4532,43 @@ static void handleError(ROUTER *instance, void *router_session,
 
                 RW_CHK_DCB(bref, problem_dcb);
 
-                if (bref == NULL || // No backend found for this DCB
-                    bref->bref_dcb != problem_dcb || // The DCB was replaced
-                    !BREF_IS_IN_USE(bref)) // The backend was closed
+                if (bref)
                 {
-                    dcb_close(problem_dcb);
+                    /** This is a valid DCB for a backend ref */
 
-                    if (bref && bref->bref_dcb == problem_dcb)
+                    if (!BREF_IS_IN_USE(bref) || bref->bref_dcb != problem_dcb)
                     {
+                        /** The backend is closed or the reference was replaced */
+                        dcb_close(problem_dcb);
                         RW_CLOSE_BREF(bref);
+                    }
+                    else
+                    {
+                        MXS_ERROR("Backend '%s' is still in use and points to the problem DCB. Not closing.",
+                                  bref->bref_backend->backend_server->unique_name);
                     }
                 }
                 else
                 {
-                    /** The DCB is not closed. This should not be reached unless
-                     * an attempt to reconnect is make even though all connections
-                     * are already connected. */
-                    const char *remote = problem_dcb->server ?
-                        problem_dcb->server->unique_name : "not a server connection";
-                    MXS_ERROR("DCB at '%s' is still in use, not closing it.", remote);
+                    const char *remote = problem_dcb->state == DCB_STATE_POLLING &&
+                        problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
+
+                    MXS_ERROR("DCB connected to '%s' is not in use by the router "
+                              "session, not closing it. DCB is in state '%s'",
+                              remote, STRDCBSTATE(problem_dcb->state));
+                    MXS_ERROR("Backends currently in use:");
+
+                    for (int i = 0; i < rses->rses_nbackends; i++)
+                    {
+                        dcb_state_t state = DCB_STATE_UNDEFINED;
+                        if (BREF_IS_IN_USE(&rses->rses_backend_ref[i]))
+                        {
+                            state = rses->rses_backend_ref[i].bref_dcb->state;
+                        }
+
+                        MXS_ERROR("%p: %s - %p", &rses->rses_backend_ref[i], STRDCBSTATE(state),
+                                  rses->rses_backend_ref[i].bref_dcb);
+                    }
                 }
 
                 close_dcb = false;
