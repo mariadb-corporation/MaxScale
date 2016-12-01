@@ -16,7 +16,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
-#include "gssapi_auth.h"
+#include "../gssapi_auth.h"
 
 /**
  * @file gssapi_backend_auth.c - GSSAPI backend authenticator

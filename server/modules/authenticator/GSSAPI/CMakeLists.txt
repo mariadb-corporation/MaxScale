@@ -1,0 +1,11 @@
+if (GSSAPI_FOUND AND SQLITE_FOUND)
+  if (NOT SQLITE_VERSION VERSION_LESS "3.7.7")
+    include_directories(${GSSAPI_INCS})
+    include_directories(${SQLITE_INCLUDE_DIR})
+
+    add_subdirectory(GSSAPIAuth)
+    add_subdirectory(GSSAPIBackendAuth)
+  else()
+    message(STATUS "Minimum requires SQLite version for GSSAPIAuth is 3.7.7, current SQLite version is ${SQLITE_VERSION}")
+  endif()
+endif()
