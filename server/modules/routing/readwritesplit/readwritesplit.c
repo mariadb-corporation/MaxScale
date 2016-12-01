@@ -959,12 +959,19 @@ static void closeSession(ROUTER *instance, void *router_session)
                 }
                 bref_clear_state(bref, BREF_IN_USE);
                 bref_set_state(bref, BREF_CLOSED);
-                /**
-                 * closes protocol and dcb
-                 */
+
                 RW_CHK_DCB(bref, dcb);
-                dcb_close(dcb);
+
+                /** MXS-956: This will prevent closed DCBs from being closed twice.
+                 * It should not happen but for currently unknown reasons, a DCB
+                 * gets closed twice; first in handleError and a second time here. */
+                if (dcb && dcb->state == DCB_STATE_POLLING)
+                {
+                    dcb_close(dcb);
+                }
+
                 RW_CLOSE_BREF(bref);
+
                 /** decrease server current connection counters */
                 atomic_add(&bref->bref_backend->backend_conn_count, -1);
             }
