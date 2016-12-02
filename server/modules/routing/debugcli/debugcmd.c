@@ -1755,6 +1755,7 @@ execute_cmd(CLI_SESSION *cli)
                         else
                         {
                             unsigned long arg_list[MAXARGS] = {};
+                            bool ok = true;
 
                             for (int k = 0; k < cmds[i].options[j].argc_max && k < argc; k++)
                             {
@@ -1762,72 +1763,75 @@ execute_cmd(CLI_SESSION *cli)
                                 if (arg_list[k] == 0)
                                 {
                                     dcb_printf(dcb, "Invalid argument: %s\n", args[k + 2]);
-                                    break;
+                                    ok = false;
                                 }
                             }
 
-                            switch (cmds[i].options[j].argc_max)
+                            if (ok)
                             {
-                                case 0:
-                                    cmds[i].options[j].fn(dcb);
-                                    break;
-                                case 1:
-                                    cmds[i].options[j].fn(dcb, arg_list[0]);
-                                    break;
-                                case 2:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
-                                    break;
-                                case 3:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
-                                    break;
-                                case 4:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3]);
-                                    break;
-                                case 5:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4]);
-                                    break;
-                                case 6:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5]);
-                                    break;
-                                case 7:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6]);
-                                    break;
-                                case 8:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7]);
-                                    break;
-                                case 9:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8]);
-                                    break;
-                                case 10:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9]);
-                                    break;
-                                case 11:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9], arg_list[10]);
-                                    break;
-                                case 12:
-                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                          arg_list[3], arg_list[4], arg_list[5],
-                                                          arg_list[6], arg_list[7], arg_list[8],
-                                                          arg_list[9], arg_list[10], arg_list[11]);
-                                    break;
-                                default:
-                                    dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
-                                    break;
+                                switch (cmds[i].options[j].argc_max)
+                                {
+                                    case 0:
+                                        cmds[i].options[j].fn(dcb);
+                                        break;
+                                    case 1:
+                                        cmds[i].options[j].fn(dcb, arg_list[0]);
+                                        break;
+                                    case 2:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
+                                        break;
+                                    case 3:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
+                                        break;
+                                    case 4:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3]);
+                                        break;
+                                    case 5:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4]);
+                                        break;
+                                    case 6:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5]);
+                                        break;
+                                    case 7:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6]);
+                                        break;
+                                    case 8:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6], arg_list[7]);
+                                        break;
+                                    case 9:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6], arg_list[7], arg_list[8]);
+                                        break;
+                                    case 10:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6], arg_list[7], arg_list[8],
+                                                              arg_list[9]);
+                                        break;
+                                    case 11:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6], arg_list[7], arg_list[8],
+                                                              arg_list[9], arg_list[10]);
+                                        break;
+                                    case 12:
+                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                              arg_list[3], arg_list[4], arg_list[5],
+                                                              arg_list[6], arg_list[7], arg_list[8],
+                                                              arg_list[9], arg_list[10], arg_list[11]);
+                                        break;
+                                    default:
+                                        dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
+                                        break;
+                                }
                             }
                         }
                     }
