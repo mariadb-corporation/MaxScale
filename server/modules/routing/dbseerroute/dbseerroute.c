@@ -118,7 +118,6 @@ static ROUTER_OBJECT MyObject =
     clientReply,
     handleError,
     getCapabilities,
-    checkNamedPipe,
     NULL
 };
 
