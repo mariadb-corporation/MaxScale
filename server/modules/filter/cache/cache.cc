@@ -74,6 +74,13 @@ bool Cache::Create(const CACHE_CONFIG& config,
     return pFactory != NULL;
 }
 
+void Cache::show(DCB* pDcb) const
+{
+    dcb_printf(pDcb, "Rules:\n");
+    size_t indent = 2;
+    m_sRules->print(pDcb, indent);
+}
+
 bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 {
     return m_sRules->should_store(zDefaultDb, pQuery);

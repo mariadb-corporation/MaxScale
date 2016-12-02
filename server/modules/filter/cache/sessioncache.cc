@@ -305,7 +305,11 @@ int SessionCache::clientReply(GWBUF* pData)
 
 void SessionCache::diagnostics(DCB* pDcb)
 {
-    dcb_printf(pDcb, "Hello World from Cache!\n");
+    // Not printing anything. Session of the same instance share the same cache, in
+    // which case the same information would be printed once per session, or all
+    // threads (but not sessions) share the same cache, in which case the output
+    // would be nonsensical.
+    dcb_printf(pDcb, "\n");
 }
 
 /**

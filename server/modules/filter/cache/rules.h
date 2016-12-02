@@ -63,6 +63,7 @@ typedef struct cache_rule
 
 typedef struct cache_rules
 {
+    json_t     *root;         // The JSON root object.
     uint32_t    debug;        // The debug level.
     CACHE_RULE *store_rules;  // The rules for when to store data to the cache.
     CACHE_RULE *use_rules;    // The rules for when to use data from the cache.
@@ -125,6 +126,14 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug);
 CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug);
 
 /**
+ * Prints the rules.
+ *
+ * @param pdcb    The DCB where the rules should be printed.
+ * @param indent  By how many spaces to indent the output.
+ */
+void cache_rules_print(const CACHE_RULES *rules, DCB* dcb, size_t indent);
+
+/**
  * Returns boolean indicating whether the result of the query should be stored.
  *
  * @param rules      The CACHE_RULES object.
@@ -173,23 +182,31 @@ public:
      */
     static CacheRules* load(const char *zpath, uint32_t debug);
 
-   /**
-    * Returns boolean indicating whether the result of the query should be stored.
-    *
-    * @param zdefault_db The current default database, NULL if there is none.
-    * @param pquery      The query, expected to contain a COM_QUERY.
-    *
-    * @return True, if the results should be stored.
-    */
+    /**
+     * Prints the rules.
+     *
+     * @param pdcb    DCB where the rules should be printed.
+     * @param indent  By how many spaces to indent the output.
+     */
+    void print(DCB* pdcb, size_t indent) const;
+
+    /**
+     * Returns boolean indicating whether the result of the query should be stored.
+     *
+     * @param zdefault_db The current default database, NULL if there is none.
+     * @param pquery      The query, expected to contain a COM_QUERY.
+     *
+     * @return True, if the results should be stored.
+     */
     bool should_store(const char* zdefault_db, const GWBUF* pquery) const;
 
-   /**
-    * Returns boolean indicating whether the cache should be used, that is consulted.
-    *
-    * @param psession  The current session.
-    *
-    * @return True, if the cache should be used.
-    */
+    /**
+     * Returns boolean indicating whether the cache should be used, that is consulted.
+     *
+     * @param psession  The current session.
+     *
+     * @return True, if the cache should be used.
+     */
     bool should_use(const SESSION* psession) const;
 
 private:

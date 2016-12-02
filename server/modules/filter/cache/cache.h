@@ -31,6 +31,8 @@ public:
 
     virtual ~Cache();
 
+    void show(DCB* pDcb) const;
+
     const CACHE_CONFIG& config() const { return m_config; }
 
     /**

@@ -18,6 +18,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
+#include <maxscale/modulecmd.h>
 #include "cachemt.h"
 #include "cachept.h"
 #include "sessioncache.h"
@@ -78,6 +79,32 @@ static void     destroyInstance(FILTER* pInstance);
 
 static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config);
 
+static bool cache_command_show(const MODULECMD_ARG* pArgs)
+{
+    ss_dassert(pArgs->argc == 2);
+    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_OUTPUT);
+    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
+
+    DCB* pDcb = pArgs->argv[0].value.dcb;
+    ss_dassert(pDcb);
+
+    const FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    ss_dassert(pFilterDef);
+
+    if (strcmp(pFilterDef->module, "cache") == 0)
+    {
+        CACHE_FILTER* pFilter = reinterpret_cast<CACHE_FILTER*>(pFilterDef->filter);
+
+        pFilter->pCache->show(pDcb);
+    }
+    else
+    {
+        dcb_printf(pDcb, "Filter %s exists, but it is not a cache.", pFilterDef->name);
+    }
+
+    return true;
+}
+
 //
 // Global symbols of the Module
 //
@@ -101,6 +128,16 @@ extern "C" char *version()
  */
 extern "C" void ModuleInit()
 {
+    static modulecmd_arg_type_t show_argv[] =
+    {
+        { MODULECMD_ARG_OUTPUT, "The output dcb" },
+        { MODULECMD_ARG_FILTER, "Cache name" }
+    };
+
+    modulecmd_register_command("cache", "show", cache_command_show,
+                               MXS_ARRAY_NELEMS(show_argv), show_argv);
+
+    MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
 }
 
 /**

@@ -229,7 +229,11 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
         if (root)
         {
             rules = cache_rules_create_from_json(root, debug);
-            json_decref(root);
+
+            if (!rules)
+            {
+                json_decref(root);
+            }
         }
         else
         {
@@ -260,7 +264,11 @@ CACHE_RULES *cache_rules_parse(const char *json, uint32_t debug)
     if (root)
     {
         rules = cache_rules_create_from_json(root, debug);
-        json_decref(root);
+
+        if (!rules)
+        {
+            json_decref(root);
+        }
     }
     else
     {
@@ -275,9 +283,33 @@ void cache_rules_free(CACHE_RULES *rules)
 {
     if (rules)
     {
+        if (rules->root)
+        {
+            json_decref(rules->root);
+        }
+
         cache_rule_free(rules->store_rules);
         cache_rule_free(rules->use_rules);
         MXS_FREE(rules);
+    }
+}
+
+void cache_rules_print(const CACHE_RULES *self, DCB *dcb, size_t indent)
+{
+    if (self->root)
+    {
+        size_t flags = JSON_PRESERVE_ORDER;
+        char *s = json_dumps(self->root, JSON_PRESERVE_ORDER | JSON_INDENT(indent));
+
+        if (s)
+        {
+            dcb_printf(dcb, "%s\n", s);
+            free(s);
+        }
+    }
+    else
+    {
+        dcb_printf(dcb, "{\n}\n");
     }
 }
 
@@ -379,6 +411,11 @@ CacheRules* CacheRules::load(const char *zpath, uint32_t debug)
     }
 
     return pthis;
+}
+
+void CacheRules::print(DCB* pdcb, size_t indent) const
+{
+    cache_rules_print(prules_, pdcb, indent);
 }
 
 bool CacheRules::should_store(const char* zdefault_db, const GWBUF* pquery) const
@@ -1807,7 +1844,11 @@ static CACHE_RULES* cache_rules_create_from_json(json_t* root, uint32_t debug)
 
     if (rules)
     {
-        if (!cache_rules_parse_json(rules, root))
+        if (cache_rules_parse_json(rules, root))
+        {
+            rules->root = root;
+        }
+        else
         {
             cache_rules_free(rules);
             rules = NULL;
