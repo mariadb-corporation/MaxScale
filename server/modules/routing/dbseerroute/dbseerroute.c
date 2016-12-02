@@ -925,7 +925,7 @@ clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_d
         }
     }
 
-    ss_dassert(backend_dcb->session->client != NULL);
+    ss_dassert(backend_dcb->session->client_dcb != NULL);
     SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
