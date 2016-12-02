@@ -102,9 +102,8 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, error_action_t action, bool *succp);
-static int getCapabilities();
-
-static void* checkNamedPipe(void *args);
+static uint64_t getCapabilities();
+static void *checkNamedPipe(void *args);
 
 
 /** The module object definition */
@@ -119,6 +118,7 @@ static ROUTER_OBJECT MyObject =
     clientReply,
     handleError,
     getCapabilities,
+    checkNamedPipe,
     NULL
 };
 
@@ -126,7 +126,7 @@ static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 
-static BACKEND *get_root_master(SERVER_REF **servers);
+static SERVER_REF *get_root_master(SERVER_REF *servers);
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -735,7 +735,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
         {
              int query_size = strlen(ptr)+1;
              char *buf = router_cli_ses->buf;
-             for (i = 0; i < query_size && i < buf_size; ++i)
+             for (int i = 0; i < query_size && i < buf_size; ++i)
              {
                  buf[i] = tolower(ptr[i]);
              }
@@ -964,7 +964,7 @@ static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
     }
     spinlock_acquire(&session->ses_lock);
     sesstate = session->state;
-    client_dcb = session->client;
+    client_dcb = session->client_dcb;
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
@@ -977,7 +977,7 @@ static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
         spinlock_release(&session->ses_lock);
     }
 
-    if (dcb_isclient(problem_dcb))
+    if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
     {
         dcb_close(problem_dcb);
     }
