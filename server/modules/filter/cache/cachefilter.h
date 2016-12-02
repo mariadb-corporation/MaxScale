@@ -38,6 +38,14 @@ class StorageFactory;
 #define CACHE_DEBUG_MIN          CACHE_DEBUG_NONE
 #define CACHE_DEBUG_MAX          (CACHE_DEBUG_RULES | CACHE_DEBUG_USAGE | CACHE_DEBUG_DECISIONS)
 
+#if !defined(UINT32_MAX)
+#define UINT32_MAX		(4294967295U)
+#endif
+
+#if !defined(UINT64_MAX)
+#define UINT64_MAX		(18446744073709551615UL)
+#endif
+
 // Count
 #define CACHE_DEFAULT_MAX_RESULTSET_ROWS UINT32_MAX
 // Bytes
