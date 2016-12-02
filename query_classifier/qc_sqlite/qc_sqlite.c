@@ -833,7 +833,15 @@ static void update_field_infos(QC_SQLITE_INFO* info,
                     }
                     else
                     {
-                        info->types |= QUERY_TYPE_SYSVAR_READ;
+                        if ((strcasecmp(&zToken[2], "identity") == 0) ||
+                            (strcasecmp(&zToken[2], "last_insert_id") == 0))
+                        {
+                            info->types |= QUERY_TYPE_MASTER_READ;
+                        }
+                        else
+                        {
+                            info->types |= QUERY_TYPE_SYSVAR_READ;
+                        }
                     }
                 }
                 else
