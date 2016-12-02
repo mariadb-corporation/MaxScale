@@ -409,6 +409,7 @@ newSession(ROUTER *instance, SESSION *session)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+    client_rses->client_dcb = session->client_dcb;
 
     /**
      * Find the Master host from available servers

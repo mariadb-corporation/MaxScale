@@ -138,6 +138,10 @@ static char *service_params[] =
     "log_auth_warnings",
     "source", /**< Avrorouter only */
     "retry_on_failure",
+    "query_delimiter",
+    "log_delimiter",
+    "log_filename",
+    "named_pipe",
     NULL
 };
 
