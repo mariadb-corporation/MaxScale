@@ -31,6 +31,9 @@
 #include <dcb.h>
 #include <buffer.h>
 
+/** MXS-1026: Without MySQL protocol data structures, the NullAuth authenticator will crash. */
+#include <mysql_client_server_protocol.h>
+
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
  */
@@ -124,6 +127,11 @@ null_auth_authenticate(DCB *dcb)
 static int
 null_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 {
+    /** MXS-1026: This will just prevent a crash when the NullAuth authenticator
+     * is used. This does not provide a way to use MaxScale with no authentication. */
+    dcb->data = calloc(1, sizeof(MYSQL_session));
+    dcb->protocol = mysql_protocol_init(dcb, dcb->fd);
+
     return 0;
 }
 
