@@ -14,6 +14,25 @@ options. The `authenticator_options` parameter is supported by listeners
 and servers and expects a comma-separated list of key-value pairs. The
 following options contain examples on how to define it.
 
+### `skip_authentication`
+
+This option takes a boolean value which controls whether MaxScale will fully
+authenticate users. This option is disabled by default.
+
+Disabling authentication in MaxScale will allow MaxScale to act as a security
+gateway to the server. The authentication of users is offloaded to the backend
+server.
+
+For example, creating the user `jdoe@%` will allow the user _jdoe_ to connect
+from any IP address. This can be a problem if all traffic needs to go through
+MaxScale. By enabling this option and replacing the user with
+`jdoe@maxscale-IP`, the users can still connect from any client IP but will be
+forced to go though MaxScale.
+
+```
+authenticator_options=skip_authentication=true
+```
+
 ### `cache_dir`
 
 The location where the user credential cache is stored. The default value
