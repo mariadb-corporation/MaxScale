@@ -913,11 +913,23 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
 
                         /** System session variable */
                     case Item_func::GSYSVAR_FUNC:
-                        func_qtype |= QUERY_TYPE_SYSVAR_READ;
-                        MXS_DEBUG("%lu [resolve_query_type] "
-                                  "functype GSYSVAR_FUNC, system "
-                                  "variable read.",
-                                  pthread_self());
+                        {
+                            const char* name = item->name;
+                            if (name &&
+                                ((strcasecmp(name, "@@last_insert_id") == 0) ||
+                                 (strcasecmp(name, "@@identity") == 0)))
+                            {
+                                func_qtype |= QUERY_TYPE_MASTER_READ;
+                            }
+                            else
+                            {
+                                func_qtype |= QUERY_TYPE_SYSVAR_READ;
+                            }
+                            MXS_DEBUG("%lu [resolve_query_type] "
+                                      "functype GSYSVAR_FUNC, system "
+                                      "variable read.",
+                                      pthread_self());
+                        }
                         break;
 
                         /** User-defined variable read */
