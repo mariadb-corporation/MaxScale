@@ -169,6 +169,11 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->stats.started = time(0);
     service->stats.n_failed_starts = 0;
     service->state = SERVICE_STATE_ALLOC;
+    service->log_filename = NULL;
+    service->log_delimiter = NULL;
+    service->query_delimiter = NULL;
+    service->named_pipe = NULL;
+
     spinlock_init(&service->spin);
     spinlock_init(&service->users_table_spin);
 
@@ -1844,7 +1849,7 @@ serviceWeightBy(SERVICE *service, char *weightby)
 }
 
 /**
- * Return the parameter the wervice shoudl use to weight connections
+ * Return the parameter the service should use to weight connections
  * by
  * @param service               The Service pointer
  */
@@ -1853,6 +1858,123 @@ serviceGetWeightingParameter(SERVICE *service)
 {
     return service->weightby;
 }
+
+/**
+ * Set the log filename for the service
+ * @param       service         The service pointer
+ * @param       param           The log filename that the service uses to print logs
+ */
+void
+serviceSetLogFilename(SERVICE* service, char* param)
+{
+    if (service->log_filename)
+    {
+        MXS_FREE(service->log_filename);
+        service->log_filename = NULL;
+    }
+    if (param)
+    {
+        service->log_filename = MXS_STRDUP(param);
+    }
+}
+
+/**
+ * Return the log filename the service uses to print logs
+ * @param service               The Service pointer
+ */
+char *
+serviceGetLogFilename(SERVICE *service)
+{
+    return service->log_filename;
+}
+
+/**
+ * Set the named pipe for the service that can be used to communicate with 3rd party applications
+ * @param       service         The service pointer
+ * @param       param           The named pipe that the service uses to communicate with 3rd party applications
+ */
+void
+serviceSetNamedPipe(SERVICE* service, char* param)
+{
+    if (service->named_pipe)
+    {
+        MXS_FREE(service->named_pipe);
+        service->named_pipe = NULL;
+    }
+    if (param)
+    {
+        service->named_pipe = MXS_STRDUP(param);
+    }
+}
+
+/**
+ * Return the named pipe that the service uses to communicate with 3rd party applications
+ * @param service               The Service pointer
+ */
+char *
+serviceGetNamedPipe(SERVICE* service)
+{
+    return service->named_pipe;
+}
+
+/**
+ * Set the delimiter for log
+ * @param       service         The service pointer
+ * @param       param           The delimiter that is used in the log
+ */
+void
+serviceSetLogDelimiter(SERVICE* service, char* param)
+{
+    if (service->log_delimiter)
+    {
+        MXS_FREE(service->log_delimiter);
+        service->log_delimiter = NULL;
+    }
+    if (param)
+    {
+        service->log_delimiter = MXS_STRDUP(param);
+    }
+}
+
+/**
+ * Return the delimiter that the service uses in its log
+ * @param service               The Service pointer
+ */
+char *
+serviceGetLogDelimiter(SERVICE *service)
+{
+    return service->log_delimiter;
+}
+
+/**
+ * Set the query delimiter for log
+ * @param       service         The service pointer
+ * @param       param           The query delimiter that is used in the log
+ */
+void
+serviceSetQueryDelimiter(SERVICE* service, char* param)
+{
+    if (service->query_delimiter)
+    {
+        MXS_FREE(service->query_delimiter);
+        service->query_delimiter = NULL;
+    }
+    if (param)
+    {
+        service->query_delimiter = MXS_STRDUP(param);
+    }
+}
+
+/**
+ * Return the query delimiter that the service uses in its log
+ * @param service               The Service pointer
+ */
+char *
+serviceGetQueryDelimiter(SERVICE *service)
+{
+    return service->query_delimiter;
+}
+
 
 /**
  * Enable/Disable localhost authentication match criteria

@@ -1675,8 +1675,17 @@ process_config_update(CONFIG_CONTEXT *context)
                     char *version_string;
                     char *allow_localhost_match_wildcard_host;
 
-                    enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+                    char *log_filename;
+                    char *log_delimiter;
+                    char *query_delimiter;
+                    char *named_pipe;
 
+                    log_filename = config_get_value(obj->parameters, "log_filename");
+                    log_delimiter = config_get_value(obj->parameters, "log_delimiter");
+                    query_delimiter = config_get_value(obj->parameters, "query_delimiter");
+                    named_pipe = config_get_value(obj->parameters, "named_pipe");
+
+                    enable_root_user = config_get_value(obj->parameters, "enable_root_user");
                     connection_timeout = config_get_value(obj->parameters, "connection_timeout");
                     max_connections = config_get_value_string(obj->parameters, "max_connections");
                     max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
@@ -1707,6 +1716,22 @@ process_config_update(CONFIG_CONTEXT *context)
                     if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
                     {
                         service_set_param_value(service, param, param->value, 0, STRING_TYPE);
+                    }
+                    if (log_filename)
+                    {
+                      serviceSetLogFilename(obj->element, log_filename);
+                    }
+                    if (log_delimiter)
+                    {
+                      serviceSetLogDelimiter(obj->element, log_delimiter);
+                    }
+                    if (query_delimiter)
+                    {
+                      serviceSetQueryDelimiter(obj->element, query_delimiter);
+                    }
+                    if (named_pipe)
+                    {
+                      serviceSetNamedPipe(obj->element, named_pipe);
                     }
 
                     if (version_string)
@@ -2690,6 +2715,27 @@ int create_new_service(CONFIG_CONTEXT *obj)
         service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
     }
 
+    char* log_filename = config_get_value(obj->parameters, "log_filename");
+    char* log_delimiter = config_get_value(obj->parameters, "log_delimiter");
+    char* query_delimiter = config_get_value(obj->parameters, "query_delimiter");
+    char* named_pipe = config_get_value(obj->parameters, "named_pipe");
+
+    if (log_filename)
+    {
+      serviceSetLogFilename(obj->element, log_filename);
+    }
+    if (log_delimiter)
+    {
+      serviceSetLogDelimiter(obj->element, log_delimiter);
+    }
+    if (query_delimiter)
+    {
+      serviceSetQueryDelimiter(obj->element, query_delimiter);
+    }
+    if (named_pipe)
+    {
+      serviceSetNamedPipe(obj->element, named_pipe);
+    }
 
     char *version_string = config_get_value(obj->parameters, "version_string");
     if (version_string)
