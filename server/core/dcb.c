@@ -348,7 +348,7 @@ dcb_final_free(DCB *dcb)
             bool is_client_dcb = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ||
                                   DCB_ROLE_INTERNAL == dcb->dcb_role);
 
-            session_free(local_session);
+            session_put_ref(local_session);
 
             if (is_client_dcb)
             {
@@ -1714,7 +1714,7 @@ dcb_maybe_add_persistent(DCB *dcb)
             CHK_SESSION(local_session);
             if (SESSION_STATE_DUMMY != local_session->state)
             {
-                session_free(local_session);
+                session_put_ref(local_session);
             }
         }
         spinlock_acquire(&dcb->cb_lock);

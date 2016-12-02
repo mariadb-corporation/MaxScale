@@ -336,31 +336,14 @@ session_simple_free(SESSION *session, DCB *dcb)
  *
  * @param session       The session to deallocate
  */
-bool
-session_free(SESSION *session)
+static void session_free(SESSION *session)
 {
-    if (NULL == session || SESSION_STATE_DUMMY == session->state)
-    {
-        return true;
-    }
     CHK_SESSION(session);
+    ss_dassert(session->refcount == 0);
 
-    /*
-     * Remove one reference. If there are no references left,
-     * free session.
-     */
-    if (atomic_add(&session->refcount, -1) > 1)
-    {
-        /* Must be one or more references left */
-        return false;
-    }
     session->state = SESSION_STATE_TO_BE_FREED;
-
     atomic_add(&session->service->stats.n_current, -1);
 
-    /***
-     *
-     */
     if (session->client_dcb)
     {
         dcb_free_all_memory(session->client_dcb);
@@ -396,9 +379,7 @@ session_free(SESSION *session)
         MXS_FREE(session->filters);
     }
 
-    MXS_INFO("Stopped %s client session [%lu]",
-             session->service->name,
-             session->ses_id);
+    MXS_INFO("Stopped %s client session [%lu]", session->service->name, session->ses_id);
 
     /** Disable trace and decrease trace logger counter */
     session_disable_log_priority(session, LOG_INFO);
@@ -409,7 +390,6 @@ session_free(SESSION *session)
         session->state = SESSION_STATE_FREE;
         session_final_free(session);
     }
-    return true;
 }
 
 static void
@@ -925,17 +905,14 @@ static bool ses_find_id(DCB *dcb, void *data)
 
     if (dcb->session->ses_id == *id)
     {
-        /** We need to increment the reference count of the session to prevent it
-         * from being freed while it's in use. */
-        atomic_add(&dcb->session->refcount, 1);
-        *ses = dcb->session;
+        *ses = session_get_ref(dcb->session);
         rval = false;
     }
 
     return rval;
 }
 
-SESSION* session_get_ref(int id)
+SESSION* session_get_by_id(int id)
 {
     SESSION *session = NULL;
     void *params[] = {&session, &id};
@@ -945,10 +922,20 @@ SESSION* session_get_ref(int id)
     return session;
 }
 
+SESSION* session_get_ref(SESSION *session)
+{
+    atomic_add(&session->refcount, 1);
+    return session;
+}
+
 void session_put_ref(SESSION *session)
 {
-    if (session)
+    if (session && session->state != SESSION_STATE_DUMMY)
     {
-        session_free(session);
+        /** Remove one reference. If there are no references left, free session */
+        if (atomic_add(&session->refcount, -1) == 1)
+        {
+            session_free(session);
+        }
     }
 }

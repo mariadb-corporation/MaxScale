@@ -701,7 +701,7 @@ freeSession(FILTER *instance, void *session)
 
         if (state == SESSION_STATE_ROUTER_READY)
         {
-            session_free(ses);
+            session_put_ref(ses);
         }
         else if (state == SESSION_STATE_TO_BE_FREED)
         {
