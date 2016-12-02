@@ -118,14 +118,15 @@ static ROUTER_OBJECT MyObject =
     diagnostics,
     clientReply,
     handleError,
-    getCapabilities
+    getCapabilities,
+    NULL
 };
 
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 
-static BACKEND *get_root_master(BACKEND **servers);
+static BACKEND *get_root_master(SERVER_REF **servers);
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
@@ -192,7 +193,6 @@ createInstance(SERVICE *service, char **options)
     SERVER *server;
     SERVER_REF *sref;
     int i, n, ret;
-    BACKEND *backend;
     char *weightby;
     char *log_filename;
     char *log_delimiter;
@@ -388,9 +388,9 @@ newSession(ROUTER *instance, SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
-    BACKEND *candidate = NULL;
+    SERVER_REF *candidate = NULL;
     int i;
-    BACKEND *master_host = NULL;
+    SERVER_REF *master_host = NULL;
 
     MXS_DEBUG("%lu [newSession] new router session with session "
               "%p, and inst %p.",
@@ -414,7 +414,7 @@ newSession(ROUTER *instance, SESSION *session)
     /**
      * Find the Master host from available servers
      */
-    master_host = get_root_master(inst->servers);
+    master_host = get_root_master(inst->service->dbref);
 
     /**
      * Find a backend server to connect to. This is the extent of the
