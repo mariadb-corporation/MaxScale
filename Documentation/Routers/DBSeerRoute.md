@@ -119,7 +119,7 @@ port=3600
 socket=/home/dyoon/maxscale/readconn.sock
 ```
 
-The following is an example log that is generated from the performancelogroute router with the above configuration:
+The following is an example log that is generated from the dbseerroute router with the above configuration:
 
 ```
 1453751768:::server1:::localhost:::3:::UPDATE WAREHOUSE SET W_YTD = W_YTD + 900.86  WHERE W_ID = 2 @@@SELECT W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_NAME FROM WAREHOUSE WHERE W_ID = 2@@@UPDATE DISTRICT SET D_YTD = D_YTD + 900.86 WHERE D_W_ID = 2 AND D_ID = 5@@@SELECT D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_NAME FROM DISTRICT WHERE D_W_ID = 2 AND D_ID = 5@@@SELECT C_FIRST, C_MIDDLE, C_ID, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT, C_SINCE FROM CUSTOMER WHERE C_W_ID = 2 AND C_D_ID = 5 AND C_LAST = 'CALLYCALLYATION' ORDER BY C_FIRST@@@UPDATE CUSTOMER SET C_BALANCE = -90026.89, C_YTD_PAYMENT = 93507.06, C_PAYMENT_CNT = 38 WHERE C_W_ID = 2 AND C_D_ID = 5 AND C_ID = 779@@@INSERT INTO HISTORY (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA)  VALUES (5,2,779,5,2,'2016-01-25 14:56:08',900.86,'gqfla    adopdon')
