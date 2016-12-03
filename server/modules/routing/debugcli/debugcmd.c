@@ -1085,7 +1085,11 @@ static void createListener(DCB *dcb, SERVICE *service, char *name, char *address
 
 static void createMonitor(DCB *dcb, const char *name, const char *module)
 {
-    if (runtime_create_monitor(name, module))
+    if (monitor_find(name))
+    {
+        dcb_printf(dcb, "Monitor '%s' already exists\n", name);
+    }
+    else if (runtime_create_monitor(name, module))
     {
         dcb_printf(dcb, "Created monitor '%s'\n", name);
     }

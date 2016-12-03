@@ -708,9 +708,9 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
  * @param protocol      The name of the protocol module
  * @param address       The address to listen on
  * @param port          The port to listen on
- * @return      TRUE if the protocol/port is already part of the service
+ * @return      True if the protocol/port is already part of the service
  */
-int serviceHasProtocol(SERVICE *service, const char *protocol,
+bool serviceHasListener(SERVICE *service, const char *protocol,
                        const char* address, unsigned short port)
 {
     SERV_LISTENER *proto;

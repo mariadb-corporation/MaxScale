@@ -396,8 +396,6 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *ssl_cert, const char *ssl_ca,
                              const char *ssl_version, const char *ssl_depth)
 {
-    SSL_LISTENER *ssl = NULL;
-    bool rval = true;
 
     if (addr == NULL || strcasecmp(addr, "default") == 0)
     {
@@ -426,34 +424,42 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
     unsigned short u_port = atoi(port);
 
-    if (ssl_key && ssl_cert && ssl_ca)
-    {
-        ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth);
-
-        if (ssl == NULL)
-        {
-            MXS_ERROR("SSL initialization for listener '%s' failed.", name);
-            rval = false;
-        }
-    }
-
     spinlock_acquire(&crt_lock);
 
-    if (rval)
-    {
-        const char *print_addr = addr ? addr : "0.0.0.0";
-        SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
-                                                        u_port, auth, auth_opt, ssl);
+    SSL_LISTENER *ssl = NULL;
+    bool rval = false;
 
-        if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
+    if (!serviceHasListener(service, proto, addr, u_port))
+    {
+        rval = true;
+
+        if (ssl_key && ssl_cert && ssl_ca)
         {
-            MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
-                       name, print_addr, port, service->name);
+            ssl = create_ssl(name, ssl_key, ssl_cert, ssl_ca, ssl_version, ssl_depth);
+
+            if (ssl == NULL)
+            {
+                MXS_ERROR("SSL initialization for listener '%s' failed.", name);
+                rval = false;
+            }
         }
-        else
+
+        if (rval)
         {
-            MXS_ERROR("Failed to start listener '%s' at %s:%s.", name, print_addr, port);
-            rval = false;
+            const char *print_addr = addr ? addr : "0.0.0.0";
+            SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
+                                                            u_port, auth, auth_opt, ssl);
+
+            if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
+            {
+                MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
+                           name, print_addr, port, service->name);
+            }
+            else
+            {
+                MXS_ERROR("Failed to start listener '%s' at %s:%s.", name, print_addr, port);
+                rval = false;
+            }
         }
     }
 
@@ -514,16 +520,20 @@ bool runtime_create_monitor(const char *name, const char *module)
 {
     spinlock_acquire(&crt_lock);
     bool rval = false;
-    MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
 
-    if (monitor)
+    if (monitor_find(name) == NULL)
     {
-        /** Mark that this monitor was created after MaxScale was started */
-        monitor->created_online = true;
+        MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
 
-        if (monitor_serialize(monitor))
+        if (monitor)
         {
-            rval = true;
+            /** Mark that this monitor was created after MaxScale was started */
+            monitor->created_online = true;
+
+            if (monitor_serialize(monitor))
+            {
+                rval = true;
+            }
         }
     }
 
