@@ -1561,6 +1561,7 @@ global_defaults()
 {
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
+    gateway.config_check = false;
     gateway.n_threads = DEFAULT_NTHREADS;
     gateway.n_nbpoll = DEFAULT_NBPOLLS;
     gateway.pollsleep = DEFAULT_POLLSLEEP;

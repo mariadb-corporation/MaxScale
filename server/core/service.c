@@ -478,7 +478,15 @@ int serviceInitialize(SERVICE *service)
 
     if ((service->router_instance = service->router->createInstance(service, router_options)))
     {
-        listeners = serviceStartAllPorts(service);
+        if (!config_get_global_options()->config_check)
+        {
+            listeners = serviceStartAllPorts(service);
+        }
+        else
+        {
+            /** We're only checking that the configuration is valid */
+            listeners++;
+        }
     }
     else
     {

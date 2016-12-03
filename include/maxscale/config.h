@@ -110,6 +110,7 @@ typedef struct config_context
  */
 typedef struct
 {
+    bool          config_check;                        /**< Only check config */
     int           n_threads;                           /**< Number of polling threads */
     char          *version_string;                     /**< The version string of embedded db library */
     char          release_string[_RELEASE_STR_LENGTH]; /**< The release name string of the system */
