@@ -1426,18 +1426,18 @@ static void callModuleCommand(DCB *dcb, char *domain, char *id, char *v3,
         {
             if (!modulecmd_call_command(cmd, arg))
             {
-                dcb_printf(dcb, "Failed to call function: %s\n", modulecmd_get_error());
+                dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
             }
             modulecmd_arg_free(arg);
         }
         else
         {
-            dcb_printf(dcb, "Failed to parse arguments: %s\n", modulecmd_get_error());
+            dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
         }
     }
     else
     {
-        dcb_printf(dcb, "Function not found: %s\n", modulecmd_get_error());
+        dcb_printf(dcb, "Error: %s\n", modulecmd_get_error());
     }
 }
 
