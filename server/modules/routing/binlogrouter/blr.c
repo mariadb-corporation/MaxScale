@@ -1771,7 +1771,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_NO_RSESSION;
+    return RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
 /**
