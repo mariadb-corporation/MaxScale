@@ -231,12 +231,9 @@ static const char BLR_DBUSERS_FILE[] = "dbusers";
 /** Possible states of an event sent by the master */
 enum blr_event_state
 {
-    BLR_EVENT_DONE, /*< No event being processed  */
-    BLR_EVENT_STARTED, /*< The first packet of an event which spans multiple packets
-                        * has been received */
+    BLR_EVENT_STARTED, /*< The first packet of an event has been received */
     BLR_EVENT_ONGOING, /*< Other packets of a multi-packet event are being processed */
-    BLR_EVENT_COMPLETE /*< A multi-packet event has been successfully processed
-                        * but the router is not yet ready to process another one */
+    BLR_EVENT_DONE, /*< The complete event was received */
 };
 
 /* Master Server configuration struct */
@@ -490,19 +487,14 @@ typedef struct router_instance
     unsigned int            master_state;   /*< State of the master FSM */
     uint8_t                 lastEventReceived; /*< Last even received */
     uint32_t                lastEventTimestamp; /*< Timestamp from last event */
-    GWBUF                   *residual;      /*< Any residual binlog event */
     MASTER_RESPONSES        saved_master;   /*< Saved master responses */
     char                    *binlogdir;     /*< The directory with the binlog files */
     SPINLOCK                binlog_lock;    /*< Lock to control update of the binlog position */
     int                     trx_safe;       /*< Detect and handle partial transactions */
     int                     pending_transaction; /*< Pending transaction */
     enum blr_event_state    master_event_state; /*< Packet read state */
-    uint32_t                stored_checksum; /*< The current value of the checksum */
-    uint8_t                 partial_checksum[MYSQL_CHECKSUM_LEN]; /*< The partial value of the checksum
-                                                   * received from the master */
-    uint8_t                 partial_checksum_bytes; /*< How many bytes of the checksum we have read  */
-    uint64_t                checksum_size; /*< Data size for the checksum */
     REP_HEADER              stored_header; /*< Relication header of the event the master is sending */
+    GWBUF                  *stored_event; /*< Partial even buffer */
     uint64_t                last_safe_pos; /* last committed transaction */
     char                    binlog_name[BINLOG_FNAMELEN + 1];
     /*< Name of the current binlog file */

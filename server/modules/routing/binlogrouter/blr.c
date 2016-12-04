@@ -530,7 +530,6 @@ createInstance(SERVICE *service, char **options)
     inst->reconnect_pending = 0;
     inst->handling_threads = 0;
     inst->rotating = 0;
-    inst->residual = NULL;
     inst->slaves = NULL;
     inst->next = NULL;
     inst->lastEventTimestamp = 0;
@@ -2333,13 +2332,6 @@ destroyInstance(ROUTER *instance)
             inst->client = NULL;
         }
     }
-
-    /* Discard the queued residual data */
-    while (inst->residual)
-    {
-        inst->residual = gwbuf_consume(inst->residual, GWBUF_LENGTH(inst->residual));
-    }
-    inst->residual = NULL;
 
     MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",

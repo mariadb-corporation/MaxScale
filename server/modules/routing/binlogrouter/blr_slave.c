@@ -3332,13 +3332,6 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         }
     }
 
-    /* Discard the queued residual data */
-    while (router->residual)
-    {
-        router->residual = gwbuf_consume(router->residual, GWBUF_LENGTH(router->residual));
-    }
-    router->residual = NULL;
-
     /* Now it is safe to unleash other threads on this router instance */
     router->reconnect_pending = 0;
     router->active_logs = 0;
