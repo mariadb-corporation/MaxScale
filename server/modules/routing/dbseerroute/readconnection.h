@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _READCONNECTION_H
-#define _READCONNECTION_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,14 +13,11 @@
  */
 
 /**
- * @file readconnection.h - The read connection balancing query module heder file
- *
  * @verbatim
  * Revision History
  *
  * Date     Who     Description
- * 14/06/13 Mark Riddoch    Initial implementation
- * 27/06/14 Mark Riddoch    Addition of server weight percentage
+ * 05/12/16 Dong Young Yoon    Initial implementation
  *
  * @endverbatim
  */
@@ -90,5 +85,3 @@ typedef struct router_instance
 } ROUTER_INSTANCE;
 
 MXS_END_DECLS
-
-#endif

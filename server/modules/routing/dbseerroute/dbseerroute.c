@@ -69,15 +69,8 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/modutil.h>
-
-/*
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <readconnection.h>
-#include <mysql_client_server_protocol.h>
-#include "modutil.h"
-*/
+#include <maxscale/thread.h>
+#include <maxscale/query_classifier.h>
 
 MODULE_INFO info =
 {
@@ -89,7 +82,10 @@ MODULE_INFO info =
 
 static char *version_str = "V1.0.0";
 static int buf_size = 10;
-static int sql_size_limit = 64 * 1024 * 1024;
+static const int sql_size_limit = 64 * 1024 * 1024;
+static const int default_sql_size = 4 * 1024;
+static const char* default_query_delimiter = "@@@";
+static const char* default_log_delimiter = ":::";
 
 /* The router entry points */
 static ROUTER *createInstance(SERVICE *service, char **options);
@@ -103,7 +99,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
 static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, error_action_t action, bool *succp);
 static uint64_t getCapabilities();
-static void *checkNamedPipe(void *args);
+static void checkNamedPipe(void *args);
 
 
 /** The module object definition */
@@ -148,7 +144,7 @@ version()
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise performancelogroute router module %s.", version_str);
+    MXS_NOTICE("Initialise dbseerroute router module %s.", version_str);
     spinlock_init(&instlock);
     instances = NULL;
 }
@@ -245,7 +241,7 @@ createInstance(SERVICE *service, char **options)
             else
             {
                 MXS_WARNING("Unsupported router "
-                            "option \'%s\' for readconnroute. "
+                            "option \'%s\' for dbseerroute. "
                             "Expected router options are "
                             "[slave|master|synced|ndb]",
                             options[i]);
@@ -273,7 +269,7 @@ createInstance(SERVICE *service, char **options)
     inst->log_enabled = false;
     if ((named_pipe = serviceGetNamedPipe(service)) != NULL)
     {
-        inst->named_pipe = strdup(named_pipe);
+        inst->named_pipe = MXS_STRDUP_A(named_pipe);
         // check if the file exists first.
         if (access(inst->named_pipe, F_OK) == 0)
         {
@@ -285,7 +281,7 @@ createInstance(SERVICE *service, char **options)
             if (ret == -1 && errno != ENOENT)
             {
                 MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
-                free(inst);
+                MXS_FREE(inst);
                 return NULL;
             }
             if (ret == 0 && S_ISFIFO(st.st_mode))
@@ -296,7 +292,7 @@ createInstance(SERVICE *service, char **options)
             else
             {
                 MXS_ERROR("The file '%s' already exists and it is not a named pipe.", inst->named_pipe);
-                free(inst);
+                MXS_FREE(inst);
                 return NULL;
             }
         }
@@ -306,14 +302,14 @@ createInstance(SERVICE *service, char **options)
         if (ret == -1)
         {
             MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
-            free(inst);
+            MXS_FREE(inst);
             return NULL;
         }
     }
     else
     {
         MXS_ERROR("You need to specify a named pipe for dbseerroute router.");
-        free(inst);
+        MXS_FREE(inst);
         return NULL;
     }
 
@@ -323,21 +319,21 @@ createInstance(SERVICE *service, char **options)
     if ((log_filename = serviceGetLogFilename(service)) != NULL)
     {
         MXS_FREE(inst->log_filename);
-        inst->log_filename = strdup(log_filename);
+        inst->log_filename = MXS_STRDUP_A(log_filename);
         /* set default log and query delimiters */
-        inst->log_delimiter = strdup(":::");
-        inst->query_delimiter = strdup("@@@");
+        inst->log_delimiter = MXS_STRDUP_A(default_log_delimiter);
+        inst->query_delimiter = MXS_STRDUP_A(default_query_delimiter);
         inst->query_delimiter_size = 3;
 
         if ((log_delimiter = serviceGetLogDelimiter(service)) != NULL)
         {
             MXS_FREE(inst->log_delimiter);
-            inst->log_delimiter = strdup(log_delimiter);
+            inst->log_delimiter = MXS_STRDUP_A(log_delimiter);
         }
         if ((query_delimiter = serviceGetQueryDelimiter(service)) != NULL)
         {
             MXS_FREE(inst->query_delimiter);
-            inst->query_delimiter = strdup(query_delimiter);
+            inst->query_delimiter = MXS_STRDUP_A(query_delimiter);
             inst->query_delimiter_size = strlen(inst->query_delimiter);
         }
 
@@ -345,7 +341,7 @@ createInstance(SERVICE *service, char **options)
         if (inst->log_file == NULL)
         {
             MXS_ERROR("Failed to open a log file for dbseerroute router.");
-            free(inst);
+            MXS_FREE(inst);
             return NULL;
         }
     }
@@ -353,9 +349,9 @@ createInstance(SERVICE *service, char **options)
     /*
      * Launch a thread that checks the named pipe.
      */
-    pthread_t tid;
-    ret = pthread_create(&tid, NULL, checkNamedPipe, (void*) inst);
-    if (ret == -1)
+
+    THREAD thread;
+    if (thread_start(&thread, checkNamedPipe, (void*) inst) == NULL)
     {
         MXS_ERROR("Couldn't create a thread to check the named pipe: %s", strerror(errno));
         MXS_FREE(inst);
@@ -527,7 +523,7 @@ newSession(ROUTER *instance, SESSION *session)
             MXS_ERROR("Failed to create new routing session. "
                       "Couldn't find eligible candidate server. Freeing "
                       "allocated resources.");
-            free(client_rses);
+            MXS_FREE(client_rses);
             return NULL;
         }
     }
@@ -535,10 +531,10 @@ newSession(ROUTER *instance, SESSION *session)
     /*
      * Set up for logging if log filename is specified.
      */
-    client_rses->max_sql_size = 4 * 1024;
-    client_rses->sql = (char*)malloc(client_rses->max_sql_size);
+    client_rses->max_sql_size = default_sql_size;
+    client_rses->sql = (char*)MXS_MALLOC(client_rses->max_sql_size);
     memset(client_rses->sql, 0x00, client_rses->max_sql_size);
-    client_rses->buf = (char*)malloc(buf_size);
+    client_rses->buf = (char*)MXS_MALLOC(buf_size);
     client_rses->sql_index = 0;
 
     /*
@@ -724,30 +720,23 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 
     char *ptr = NULL;
     ptr = modutil_get_SQL(queue);
+    uint32_t query_type = qc_get_type(queue);
 
     /* do performance logging. */
     if (ptr && inst->log_filename)
     {
         router_cli_ses->sql_end = false;
         int query_len = strlen(ptr);
+
         /* check for commit and rollback */
-        if (query_len > 5)
+        if (query_type & QUERY_TYPE_COMMIT)
         {
-             int query_size = strlen(ptr)+1;
-             char *buf = router_cli_ses->buf;
-             for (int i = 0; i < query_size && i < buf_size; ++i)
-             {
-                 buf[i] = tolower(ptr[i]);
-             }
-             if (strncmp(buf, "commit", 6) == 0)
-             {
-                  router_cli_ses->sql_end = true;
-             }
-             else if (strncmp(buf, "rollback", 8) == 0)
-             {
-                 router_cli_ses->sql_end = true;
-                 router_cli_ses->sql_index = 0;
-             }
+            router_cli_ses->sql_end = true;
+        }
+        else if (query_type & QUERY_TYPE_ROLLBACK)
+        {
+            router_cli_ses->sql_end = true;
+            router_cli_ses->sql_index = 0;
         }
 
         /* for normal sql statements. */
@@ -770,14 +759,14 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
             }
             if (new_sql_size > router_cli_ses->max_sql_size)
             {
-                char* new_sql = (char*)malloc(new_sql_size);
+                char* new_sql = (char*)MXS_MALLOC(new_sql_size);
                 if (new_sql == NULL)
                 {
                     MXS_ERROR("Memory allocation failure.");
                     goto return_rc;
                 }
                 memcpy(new_sql, router_cli_ses->sql, router_cli_ses->sql_index);
-                free(router_cli_ses->sql);
+                MXS_FREE(router_cli_ses->sql);
                 router_cli_ses->sql = new_sql;
                 router_cli_ses->max_sql_size = new_sql_size;
             }
@@ -798,7 +787,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
         }
     }
 
-    free(ptr);
+    MXS_FREE(ptr);
 
     char* trc = NULL;
 
@@ -823,7 +812,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
              backend_dcb->server->unique_name,
              trc ? ": " : ".",
              trc ? trc : "");
-    free(trc);
+    MXS_FREE(trc);
 
 return_rc:
 
@@ -925,7 +914,7 @@ clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_d
         }
     }
 
-    ss_dassert(backend_dcb->session->client != NULL);
+    ss_dassert(backend_dcb->session->client_dcb != NULL);
     SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 
@@ -1053,7 +1042,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
 
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
 /********************************
@@ -1143,7 +1132,7 @@ static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession
     return 0;
 }
 
-static void* checkNamedPipe(void *args)
+static void checkNamedPipe(void *args)
 {
     int ret;
     char buffer[2];
@@ -1174,8 +1163,8 @@ static void* checkNamedPipe(void *args)
     if (inst->named_pipe_fd == -1)
     {
         MXS_ERROR("Failed to open the named pipe '%s': %s", named_pipe, strerror(errno));
-        return NULL;
+        return;
     }
 
-    return NULL;
+    return;
 }

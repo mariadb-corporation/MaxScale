@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <maxscale/alloc.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
@@ -51,6 +52,7 @@
 #include <sys/time.h>
 #include <regex.h>
 #include <maxscale/atomic.h>
+#include <maxscale/query_classifier.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -68,6 +70,9 @@ static char *version_str = "V1.0.0";
 static size_t buf_size = 10;
 static size_t sql_size_limit = 64 * 1024 *
                                1024; /* The maximum size for query statements in a transaction (64MB) */
+static const int default_sql_size = 4 * 1024;
+static const char* default_query_delimiter = "@@@";
+static const char* default_log_delimiter = ":::";
 
 /*
  * The filter entry points
@@ -75,7 +80,7 @@ static size_t sql_size_limit = 64 * 1024 *
 static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static  void    *newSession(FILTER *instance, SESSION *session);
 static  void    closeSession(FILTER *instance, void *session);
-static  void    freeSession(FILTER *instance, void *session);
+static  void    MXS_FREESession(FILTER *instance, void *session);
 static  void    setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
 static  void    setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
@@ -88,7 +93,7 @@ static FILTER_OBJECT MyObject =
     createInstance,
     newSession,
     closeSession,
-    freeSession,
+    MXS_FREESession,
     setDownstream,
     setUpstream,
     routeQuery,
@@ -196,37 +201,37 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->user = NULL;
 
         /* set default log filename */
-        my_instance->filename = strdup("tpm.log");
+        my_instance->filename = MXS_STRDUP_A("tpm.log");
         /* set default delimiter */
-        my_instance->delimiter = strdup("|");
+        my_instance->delimiter = MXS_STRDUP_A("|");
         /* set default query delimiter */
-        my_instance->query_delimiter = strdup(";");
+        my_instance->query_delimiter = MXS_STRDUP_A(";");
         my_instance->query_delimiter_size = 1;
 
         for (i = 0; params && params[i]; i++)
         {
             if (!strcmp(params[i]->name, "filename"))
             {
-                free(my_instance->filename);
-                my_instance->filename = strdup(params[i]->value);
+                MXS_FREE(my_instance->filename);
+                my_instance->filename = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "source"))
             {
-                my_instance->source = strdup(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "user"))
             {
-                my_instance->user = strdup(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "delimiter"))
             {
-                free(my_instance->delimiter);
-                my_instance->delimiter = strdup(params[i]->value);
+                MXS_FREE(my_instance->delimiter);
+                my_instance->delimiter = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "query_delimiter"))
             {
-                free(my_instance->query_delimiter);
-                my_instance->query_delimiter = strdup(params[i]->value);
+                MXS_FREE(my_instance->query_delimiter);
+                my_instance->query_delimiter = MXS_STRDUP_A(params[i]->value);
                 my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
             }
         }
@@ -263,7 +268,7 @@ newSession(FILTER *instance, SESSION *session)
     {
         atomic_add(&my_instance->sessions, 1);
 
-        my_session->max_sql_size = 4 * 1024; // default max query size of 4k.
+        my_session->max_sql_size = default_sql_size; // default max query size of 4k.
         my_session->sql = (char*)malloc(my_session->max_sql_size);
         memset(my_session->sql, 0x00, my_session->max_sql_size);
         my_session->buf = (char*)malloc(buf_size);
@@ -274,7 +279,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->current = NULL;
         if ((remote = session_get_remote(session)) != NULL)
         {
-            my_session->clientHost = strdup(remote);
+            my_session->clientHost = MXS_STRDUP_A(remote);
         }
         else
         {
@@ -282,7 +287,7 @@ newSession(FILTER *instance, SESSION *session)
         }
         if ((user = session_getUser(session)) != NULL)
         {
-            my_session->userName = strdup(user);
+            my_session->userName = MXS_STRDUP_A(user);
         }
         else
         {
@@ -325,21 +330,21 @@ closeSession(FILTER *instance, void *session)
 }
 
 /**
- * Free the memory associated with the session
+ * MXS_FREE the memory associated with the session
  *
  * @param instance  The filter instance
  * @param session   The filter session
  */
 static void
-freeSession(FILTER *instance, void *session)
+MXS_FREESession(FILTER *instance, void *session)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
-    free(my_session->clientHost);
-    free(my_session->userName);
-    free(my_session->sql);
-    free(my_session->buf);
-    free(session);
+    MXS_FREE(my_session->clientHost);
+    MXS_FREE(my_session->userName);
+    MXS_FREE(my_session->sql);
+    MXS_FREE(my_session->buf);
+    MXS_FREE(session);
     return;
 }
 
@@ -395,27 +400,20 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (my_session->active)
     {
+        uint32_t query_type = qc_get_type(queue);
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
             my_session->query_end = false;
+
             /* check for commit and rollback */
-            if (strlen(ptr) > 5)
+            if (query_type & QUERY_TYPE_COMMIT)
             {
-                size_t ptr_size = strlen(ptr) + 1;
-                char* buf = my_session->buf;
-                for (i = 0; i < ptr_size && i < buf_size; ++i)
-                {
-                    buf[i] = tolower(ptr[i]);
-                }
-                if (strncmp(buf, "commit", 6) == 0)
-                {
-                    my_session->query_end = true;
-                }
-                else if (strncmp(buf, "rollback", 8) == 0)
-                {
-                    my_session->query_end = true;
-                    my_session->sql_index = 0;
-                }
+                my_session->query_end = true;
+            }
+            else if (query_type & QUERY_TYPE_ROLLBACK)
+            {
+                my_session->query_end = true;
+                my_session->sql_index = 0;
             }
 
             /* for normal sql statements */
@@ -446,7 +444,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                         goto retblock;
                     }
                     memcpy(new_sql, my_session->sql, my_session->sql_index);
-                    free(my_session->sql);
+                    MXS_FREE(my_session->sql);
                     my_session->sql = new_sql;
                     my_session->max_sql_size = new_sql_size;
                 }
@@ -475,7 +473,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 retblock:
 
-    free(ptr);
+    MXS_FREE(ptr);
     /* Pass the query downstream */
     return my_session->down.routeQuery(my_session->down.instance,
                                        my_session->down.session, queue);

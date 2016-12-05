@@ -1874,7 +1874,7 @@ serviceSetLogFilename(SERVICE* service, char* param)
     }
     if (param)
     {
-        service->log_filename = MXS_STRDUP(param);
+        service->log_filename = MXS_STRDUP_A(param);
     }
 }
 
@@ -1903,7 +1903,7 @@ serviceSetNamedPipe(SERVICE* service, char* param)
     }
     if (param)
     {
-        service->named_pipe = MXS_STRDUP(param);
+        service->named_pipe = MXS_STRDUP_A(param);
     }
 }
 
@@ -1932,7 +1932,7 @@ serviceSetLogDelimiter(SERVICE* service, char* param)
     }
     if (param)
     {
-        service->log_delimiter = MXS_STRDUP(param);
+        service->log_delimiter = MXS_STRDUP_A(param);
     }
 }
 
@@ -1961,7 +1961,7 @@ serviceSetQueryDelimiter(SERVICE* service, char* param)
     }
     if (param)
     {
-        service->query_delimiter = MXS_STRDUP(param);
+        service->query_delimiter = MXS_STRDUP_A(param);
     }
 }
 
