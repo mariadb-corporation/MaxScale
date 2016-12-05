@@ -176,10 +176,9 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                           bref->ref->server->unique_name);
                 close_failed_bref(bref, true);                
 
-                if (bref->bref_dcb)
-                {
-                    dcb_close(bref->bref_dcb);
-                }
+                RW_CHK_DCB(bref, bref->bref_dcb);
+                dcb_close(bref->bref_dcb);
+                RW_CLOSE_BREF(bref);
                 *reconnect = true;
                 gwbuf_free(replybuf);
                 replybuf = NULL;
@@ -217,7 +216,9 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
 
                         if (ses->rses_backend_ref[i].bref_dcb)
                         {
+                            RW_CHK_DCB(&ses->rses_backend_ref[i], ses->rses_backend_ref[i].bref_dcb);
                             dcb_close(ses->rses_backend_ref[i].bref_dcb);
+                            RW_CLOSE_BREF(&ses->rses_backend_ref[i]);
                         }
                         *reconnect = true;
                         MXS_INFO("Disabling slave %s:%d, result differs from "

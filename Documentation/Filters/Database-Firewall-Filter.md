@@ -157,7 +157,7 @@ This limits the rule to be active only on certain types of queries. The possible
 
 The `users` directive defines the users to which the rule should be applied.
 
-`users NAME ... match [any|all|strict_all] rules RULE [,...]`
+`users NAME... match { any | all | strict_all } rules RULE...`
 
 The first keyword is `users`, which identifies this line as a user definition line.
 

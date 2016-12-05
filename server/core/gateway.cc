@@ -1075,6 +1075,11 @@ bool disable_signals(void)
         return false;
     }
 
+    if (!delete_signal(&sigset, SIGCHLD, "SIGCHLD"))
+    {
+        return false;
+    }
+
 #ifdef SIGBUS
     if (!delete_signal(&sigset, SIGBUS, "SIGBUS"))
     {

@@ -301,7 +301,9 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
 
                 /** Decrease backend's connection counter. */
                 atomic_add(&backend_ref[i].ref->connections, -1);
+                RW_CHK_DCB(&backend_ref[i], backend_ref[i].bref_dcb);
                 dcb_close(backend_ref[i].bref_dcb);
+                RW_CLOSE_BREF(&backend_ref[i]);
             }
         }
     }
@@ -411,6 +413,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
     if (bref->bref_dcb != NULL)
     {
         bref_clear_state(bref, BREF_CLOSED);
+        bref->closed_at = 0;
 
         if (!execute_history || execute_sescmd_history(bref))
         {
@@ -429,7 +432,9 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
                       bref->ref->server->unique_name,
                       bref->ref->server->name,
                       bref->ref->server->port);
+            RW_CHK_DCB(bref, bref->bref_dcb);
             dcb_close(bref->bref_dcb);
+            RW_CLOSE_BREF(bref);
             bref->bref_dcb = NULL;
         }
     }
