@@ -100,7 +100,7 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         DCB **target_dcb);
 bool handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-        GWBUF *querybuf, DCB *target_dcb);
+        GWBUF *querybuf, DCB *target_dcb, bool store);
 bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                                 GWBUF *querybuf, ROUTER_INSTANCE *inst,
                                 int packet_type,

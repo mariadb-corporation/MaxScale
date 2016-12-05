@@ -229,6 +229,7 @@ typedef struct rwsplit_config_st
                                              * to the master after a multistatement query. */
     enum failure_mode rw_master_failure_mode; /**< Master server failure handling mode.
                                                * @see enum failure_mode */
+    bool              rw_retry_failed_reads; /**< Retry failed reads on other servers */
 } rwsplit_config_t;
 
 #if defined(PREP_STMT_CACHING)

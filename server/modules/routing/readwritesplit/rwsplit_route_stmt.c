@@ -152,8 +152,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     else if (rses_begin_locked_router_action(rses))
     {
         /* Now we have a lock on the router session */
-        DCB *master_dcb = rses->rses_master_ref ? rses->rses_master_ref->bref_dcb : NULL;
-
+        bool store_stmt = false;
         /**
          * There is a hint which either names the target backend or
          * hint which sets maximum allowed replication lag for the
@@ -167,6 +166,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         else if (TARGET_IS_SLAVE(route_target))
         {
             succp = handle_slave_is_target(inst, rses, &target_dcb);
+            store_stmt = rses->rses_config.rw_retry_failed_reads;
         }
         else if (TARGET_IS_MASTER(route_target))
         {
@@ -175,7 +175,8 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
         if (target_dcb && succp) /*< Have DCB of the target backend */
         {
-            handle_got_target(inst, rses, querybuf, target_dcb);
+            ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
+            handle_got_target(inst, rses, querybuf, target_dcb, store_stmt);
         }
         rses_end_locked_router_action(rses);
     }
@@ -1228,7 +1229,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
  */
 bool
 handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-        GWBUF *querybuf, DCB *target_dcb)
+                  GWBUF *querybuf, DCB *target_dcb, bool store)
 {
     backend_ref_t *bref;
     sescmd_cursor_t *scur;
@@ -1254,6 +1255,11 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (target_dcb->func.write(target_dcb, gwbuf_clone(querybuf)) == 1)
     {
+        if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target_dcb->server))
+        {
+            MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
+        }
+
         backend_ref_t *bref;
 
         atomic_add(&inst->stats.n_queries, 1);

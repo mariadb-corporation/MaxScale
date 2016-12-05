@@ -148,6 +148,16 @@ as slave servers are available.
 to the master is lost, clients will not be able to execute write queries without
 reconnecting to MariaDB MaxScale once a new master is available.
 
+### `retry_failed_reads`
+
+This option controls whether autocommit selects are retried in case of
+failure. This option is enabled by default.
+
+When a simple autocommit select is being executed outside of a transaction
+and the slave server where the query is being executed fails,
+readwritesplit can retry the read on a replacement server. This makes the
+failure of a slave transparent to the client.
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint

@@ -198,6 +198,9 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      * failure is detected */
     router->rwsplit_config.rw_master_failure_mode = RW_FAIL_INSTANTLY;
 
+    /** Try to retry failed reads */
+    router->rwsplit_config.rw_retry_failed_reads = true;
+
     /** Call this before refreshInstance */
     if (options && !rwsplit_process_router_options(router, options))
     {
@@ -670,6 +673,10 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
 
     CHK_BACKEND_REF(bref);
     scur = &bref->bref_sescmd_cur;
+
+    /** Statement was successfully executed, free the stored statement */
+    session_clear_stmt(backend_dcb->session);
+
     /**
      * Active cursor means that reply is from session command
      * execution.
@@ -804,7 +811,7 @@ lock_failed:
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING;
 }
 
 /*
@@ -1233,6 +1240,10 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
             {
                 router->rwsplit_config.rw_strict_multi_stmt = config_truth_value(value);
             }
+            else if (strcmp(options[i], "retry_failed_reads") == 0)
+            {
+                router->rwsplit_config.rw_retry_failed_reads = config_truth_value(value);
+            }
             else if (strcmp(options[i], "master_failure_mode") == 0)
             {
                 if (strcasecmp(value, "fail_instantly") == 0)
@@ -1366,8 +1377,8 @@ static void handleError(ROUTER *instance, void *router_session,
                         MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
                                   "service can't locate the master. Client sessions "
                                   "will be closed.", srv->name, srv->port);
-                            srv->master_err_is_logged = true;
-                        }
+                        srv->master_err_is_logged = true;
+                    }
 
                     *succp = can_continue;
 
@@ -1380,7 +1391,7 @@ static void handleError(ROUTER *instance, void *router_session,
                     {
                         MXS_ERROR("Server %s:%d lost the master status but could not locate the "
                                   "corresponding backend ref.", srv->name, srv->port);
-                }
+                    }
                 }
                 else if (bref)
                 {
@@ -1504,6 +1515,53 @@ static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
     }
 }
 
+static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, backend_ref_t *old, GWBUF *stored)
+{
+    bool success = false;
+
+    if (!session_trx_is_active(rses->client_dcb->session))
+    {
+        /**
+         * Only try to retry the read if autocommit is enabled and we are
+         * outside of a transaction
+         */
+        for (int i = 0; i < rses->rses_nbackends; i++)
+        {
+            backend_ref_t *bref = &rses->rses_backend_ref[i];
+
+            if (BREF_IS_IN_USE(bref) && bref != old &&
+                !SERVER_IS_MASTER(bref->ref->server) &&
+                SERVER_IS_SLAVE(bref->ref->server))
+            {
+                /** Found a valid candidate; a non-master slave that's in use */
+                if (bref->bref_dcb->func.write(bref->bref_dcb, stored))
+                {
+                    MXS_INFO("Retrying failed read at '%s'.", bref->ref->server->unique_name);
+                    success = true;
+                    break;
+                }
+            }
+        }
+
+        if (!success && rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
+        {
+            /**
+             * Either we failed to write to the slave or no valid slave was found.
+             * Try to retry the read on the master.
+             */
+            backend_ref_t *bref = rses->rses_master_ref;
+
+            if (bref->bref_dcb->func.write(bref->bref_dcb, stored))
+            {
+                MXS_INFO("Retrying failed read at '%s'.", bref->ref->server->unique_name);
+                success = true;
+            }
+        }
+    }
+
+    return success;
+}
+
 /**
  * Check if there is backend reference pointing at failed DCB, and reset its
  * flags. Then clear DCB's callback and finally : try to find replacement(s)
@@ -1541,8 +1599,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if ((bref = get_bref_from_dcb(myrses, backend_dcb)) == NULL)
     {
-        succp = true;
-        goto return_succp;
+        return true;
     }
     CHK_BACKEND_REF(bref);
 
@@ -1553,8 +1610,22 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (BREF_IS_WAITING_RESULT(bref))
     {
-        DCB *client_dcb = ses->client_dcb;
-        client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+        GWBUF *stored;
+        const SERVER *target;
+
+        if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
+            target != bref->ref->server ||
+            !reroute_stored_statement(*rses, bref, stored))
+        {
+            /**
+             * We failed to route the stored statement or no statement was
+             * stored for this server. Either way we can safely free the buffer.
+             */
+            gwbuf_free(stored);
+
+            DCB *client_dcb = ses->client_dcb;
+            client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+        }
     }
 
     close_failed_bref(bref, false);
@@ -1566,8 +1637,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      */
     if (backend_dcb->state != DCB_STATE_POLLING)
     {
-        succp = true;
-        goto return_succp;
+        return true;
     }
     /**
      * Remove callback because this DCB won't be used
@@ -1597,7 +1667,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                                ses, inst, true);
     }
 
-return_succp:
     return succp;
 }
 
