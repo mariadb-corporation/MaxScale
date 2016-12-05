@@ -199,6 +199,7 @@ struct monitor
     char *module_name;            /**< Name of the monitor module */
     void *handle;                 /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
+    bool created_online;          /**< Whether this monitor was created at runtime */
     struct monitor *next;         /**< Next monitor in the linked list */
 };
 
@@ -209,6 +210,7 @@ extern void monitorAddServer(MONITOR *mon, SERVER *server);
 extern void monitorRemoveServer(MONITOR *mon, SERVER *server);
 extern void monitorAddUser(MONITOR *, char *, char *);
 extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
+extern bool monitorRemoveParameter(MONITOR *monitor, const char *key);
 extern void monitorStop(MONITOR *);
 extern void monitorStart(MONITOR *, void*);
 extern void monitorStopAll();

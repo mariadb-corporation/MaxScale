@@ -12,3 +12,6 @@ BEGIN;
 ROLLBACK;
 COMMIT;
 use X;
+select last_insert_id();
+select @@last_insert_id;
+select @@identity;

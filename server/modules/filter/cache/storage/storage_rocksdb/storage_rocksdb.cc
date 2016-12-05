@@ -40,14 +40,14 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
 
     if (maxCount != 0)
     {
-        MXS_WARNING("A maximum item count of %" PRIu32 " specifed, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", maxCount);
+        MXS_WARNING("A maximum item count of %u specifed, although 'storage_rocksdb' "
+                    "does not enforce such a limit.", (unsigned int)maxCount);
     }
 
     if (maxSize != 0)
     {
-        MXS_WARNING("A maximum size of %" PRIu64 " specified, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", maxSize);
+        MXS_WARNING("A maximum size of %lu specified, although 'storage_rocksdb' "
+                    "does not enforce such a limit.", (unsigned long)maxSize);
     }
 
     try

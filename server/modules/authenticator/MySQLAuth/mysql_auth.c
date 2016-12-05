@@ -39,6 +39,7 @@ typedef struct mysql_auth
 {
     char *cache_dir;          /**< Custom cache directory location */
     bool inject_service_user; /**< Inject the service user into the list of users */
+    bool skip_auth;           /**< Authentication will always be successful */
 } MYSQL_AUTH;
 
 
@@ -144,6 +145,7 @@ static void* mysql_auth_init(char **options)
         bool error = false;
         instance->cache_dir = NULL;
         instance->inject_service_user = true;
+        instance->skip_auth = false;
 
         for (int i = 0; options[i]; i++)
         {
@@ -164,6 +166,10 @@ static void* mysql_auth_init(char **options)
                 else if (strcmp(options[i], "inject_service_user") == 0)
                 {
                     instance->inject_service_user = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "skip_authentication") == 0)
+                {
+                    instance->skip_auth = config_truth_value(value);
                 }
                 else
                 {
@@ -248,17 +254,21 @@ mysql_auth_authenticate(DCB *dcb)
         auth_ret = combined_auth_check(dcb, client_data->auth_token, client_data->auth_token_len,
                                        protocol, client_data->user, client_data->client_sha1, client_data->db);
 
+        MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+
         /* On failed authentication try to load user table from backend database */
         /* Success for service_refresh_users returns 0 */
-        if (MXS_AUTH_SUCCEEDED != auth_ret && 0 == service_refresh_users(dcb->service))
+        if (MXS_AUTH_SUCCEEDED != auth_ret && !instance->skip_auth &&
+            0 == service_refresh_users(dcb->service))
         {
             auth_ret = combined_auth_check(dcb, client_data->auth_token, client_data->auth_token_len, protocol,
                                            client_data->user, client_data->client_sha1, client_data->db);
         }
 
         /* on successful authentication, set user into dcb field */
-        if (MXS_AUTH_SUCCEEDED == auth_ret)
+        if (MXS_AUTH_SUCCEEDED == auth_ret || instance->skip_auth)
         {
+            auth_ret = MXS_AUTH_SUCCEEDED;
             dcb->user = MXS_STRDUP_A(client_data->user);
             /** Send an OK packet to the client */
         }

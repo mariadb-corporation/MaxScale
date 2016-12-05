@@ -104,6 +104,7 @@ monitor_alloc(char *name, char *module)
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
     mon->interval = MONITOR_INTERVAL;
     mon->parameters = NULL;
+    mon->created_online = false;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -144,7 +145,7 @@ monitor_free(MONITOR *mon)
         }
     }
     spinlock_release(&monLock);
-    free_config_parameter(mon->parameters);
+    config_parameter_free(mon->parameters);
     monitor_server_free_all(mon->databases);
     MXS_FREE(mon->name);
     MXS_FREE(mon->module_name);
@@ -396,8 +397,15 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    snprintf(mon->user, sizeof(mon->user), "%s", user);
-    snprintf(mon->password, sizeof(mon->password), "%s", passwd);
+    if (user != mon->user)
+    {
+        snprintf(mon->user, sizeof(mon->user), "%s", user);
+    }
+
+    if (passwd != mon->password)
+    {
+        snprintf(mon->password, sizeof(mon->password), "%s", passwd);
+    }
 }
 
 /**
@@ -765,6 +773,32 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
         }
         params = params->next;
     }
+}
+
+bool monitorRemoveParameter(MONITOR *monitor, const char *key)
+{
+    CONFIG_PARAMETER *prev = NULL;
+
+    for (CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
+    {
+        if (strcmp(p->name, key) == 0)
+        {
+            if (p == monitor->parameters)
+            {
+                monitor->parameters = monitor->parameters->next;
+                p->next = NULL;
+            }
+            else
+            {
+                prev->next = p->next;
+                p->next = NULL;
+            }
+            config_parameter_free(p);
+            return true;
+        }
+        prev = p;
+    }
+    return false;
 }
 
 /**
@@ -1323,6 +1357,7 @@ static bool create_monitor_config(const MONITOR *monitor, const char *filename)
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", monitor->name);
+    dprintf(file, "type=monitor\n");
     dprintf(file, "module=%s\n", monitor->module_name);
     dprintf(file, "user=%s\n", monitor->user);
     dprintf(file, "password=%s\n", monitor->password);

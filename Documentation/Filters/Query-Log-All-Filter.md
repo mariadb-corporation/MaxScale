@@ -25,14 +25,18 @@ filters=MyLogFilter
 
 The QLA filter accepts the following options.
 
-|Option |Description |
-|----------|--------------------------------------------|
-|ignorecase|Use case-insensitive matching |
-|case |Use case-sensitive matching |
-|extended |Use extended regular expression syntax (ERE)|
-|session_file| Use session-specific file (default)|
-|unified_file| Use one file for all sessions|
-|flush_writes| Flush after every write|
+ Option | Description
+ -------| -----------
+ ignorecase | Use case-insensitive matching
+ case | Use case-sensitive matching
+ extended | Use extended regular expression syntax (ERE)
+ session_file | Write to session-specific files (default)
+ unified_file | Use one file for all sessions
+ flush_writes | Flush after every write
+ append | Append log entries instead of overwriting files
+ print_service | Add service name to log entries
+ print_session | Add session id to log entries (ignored for session-files)
+
 To use multiple filter options, list them in a comma-separated list. If no file settings are given, default will be used. Multiple file settings can be enabled simultaneously.
 
 ```

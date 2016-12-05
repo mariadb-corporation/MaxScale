@@ -478,7 +478,15 @@ int serviceInitialize(SERVICE *service)
 
     if ((service->router_instance = service->router->createInstance(service, router_options)))
     {
-        listeners = serviceStartAllPorts(service);
+        if (!config_get_global_options()->config_check)
+        {
+            listeners = serviceStartAllPorts(service);
+        }
+        else
+        {
+            /** We're only checking that the configuration is valid */
+            listeners++;
+        }
     }
     else
     {
@@ -665,7 +673,7 @@ void service_free(SERVICE *service)
     MXS_FREE(service->credentials.name);
     MXS_FREE(service->credentials.authdata);
 
-    free_config_parameter(service->svc_config_param);
+    config_parameter_free(service->svc_config_param);
     serviceClearRouterOptions(service);
 
     MXS_FREE(service);
@@ -708,9 +716,9 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
  * @param protocol      The name of the protocol module
  * @param address       The address to listen on
  * @param port          The port to listen on
- * @return      TRUE if the protocol/port is already part of the service
+ * @return      True if the protocol/port is already part of the service
  */
-int serviceHasProtocol(SERVICE *service, const char *protocol,
+bool serviceHasListener(SERVICE *service, const char *protocol,
                        const char* address, unsigned short port)
 {
     SERV_LISTENER *proto;

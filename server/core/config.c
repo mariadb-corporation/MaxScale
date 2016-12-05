@@ -1070,7 +1070,7 @@ return_p2:
  * Free a configuration parameter
  * @param p1 Parameter to free
  */
-void free_config_parameter(CONFIG_PARAMETER* p1)
+void config_parameter_free(CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
@@ -1089,7 +1089,7 @@ void config_context_free(CONFIG_CONTEXT *context)
     while (context)
     {
         obj = context->next;
-        free_config_parameter(context->parameters);
+        config_parameter_free(context->parameters);
         MXS_FREE(context->object);
         MXS_FREE(context);
         context = obj;
@@ -1561,6 +1561,7 @@ global_defaults()
 {
     uint8_t mac_addr[6] = "";
     struct utsname uname_data;
+    gateway.config_check = false;
     gateway.n_threads = DEFAULT_NTHREADS;
     gateway.n_nbpoll = DEFAULT_NBPOLLS;
     gateway.pollsleep = DEFAULT_POLLSLEEP;
@@ -3110,7 +3111,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
             SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
             if (socket)
             {
-                if (serviceHasProtocol(service, protocol, address, 0))
+                if (serviceHasListener(service, protocol, address, 0))
                 {
                     MXS_ERROR("Listener '%s' for service '%s' already has a socket at '%s.",
                               obj->object, service_name, socket);
@@ -3125,7 +3126,7 @@ int create_new_listener(CONFIG_CONTEXT *obj)
 
             if (port)
             {
-                if (serviceHasProtocol(service, protocol, address, atoi(port)))
+                if (serviceHasListener(service, protocol, address, atoi(port)))
                 {
                     MXS_ERROR("Listener '%s', for service '%s', already have port %s.",
                               obj->object,
@@ -3183,7 +3184,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 char *s = strtok_r(options, ",", &lasts);
                 while (s)
                 {
-                    filterAddOption(obj->element, s);
+                    filter_add_option(obj->element, s);
                     s = strtok_r(NULL, ",", &lasts);
                 }
             }
@@ -3193,7 +3194,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
             {
                 if (strcmp(params->name, "module") && strcmp(params->name, "options"))
                 {
-                    filterAddParameter(obj->element, params->name, params->value);
+                    filter_add_parameter(obj->element, params->name, params->value);
                 }
                 params = params->next;
             }

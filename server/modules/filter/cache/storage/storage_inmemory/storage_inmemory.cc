@@ -41,14 +41,14 @@ CACHE_STORAGE* createInstance(cache_thread_model_t model,
 
     if (max_count != 0)
     {
-        MXS_WARNING("A maximum item count of %" PRIu32 " specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", max_count);
+        MXS_WARNING("A maximum item count of %u specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", (unsigned int)max_count);
     }
 
     if (max_size != 0)
     {
-        MXS_WARNING("A maximum size of %" PRIu64 " specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", max_size);
+        MXS_WARNING("A maximum size of %lu specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", (unsigned long)max_size);
     }
 
     try

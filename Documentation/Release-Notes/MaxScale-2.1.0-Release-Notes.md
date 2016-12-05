@@ -104,9 +104,7 @@ following new commands were added to maxadmin, see output of `maxadmin help
 With these new features, you can start MaxScale without the servers and define
 them later.
 
-# Module commands
-
-## Module commands
+### Module commands
 
 Introduced in MaxScale 2.1, the module commands are special, module-specific
 commands. They allow the modules to expand beyound the capabilities of the
@@ -144,6 +142,13 @@ A simple failover mode has been added to the MySQL Monitor. This mode is
 aimed for two node master-slave clusters where the slave can act as a
 master in case the original master fails. For more details, please read
 the [MySQL Monitor Documentation](../Monitors/MySQL-Monitor.md).
+
+### Permissive authentication mode for MySQLAuth
+
+The MySQL authentication module supports the `skip_authentication` option which
+allows authentication to always succedd in MaxScale. This option offloads the
+actual authentication to the backend server and it can be used to implement a
+secure version of a wildcard user.
 
 ## Bug fixes
 

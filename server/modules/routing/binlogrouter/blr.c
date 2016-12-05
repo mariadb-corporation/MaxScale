@@ -568,7 +568,6 @@ createInstance(SERVICE *service, char **options)
     inst->reconnect_pending = 0;
     inst->handling_threads = 0;
     inst->rotating = 0;
-    inst->residual = NULL;
     inst->slaves = NULL;
     inst->next = NULL;
     inst->lastEventTimestamp = 0;
@@ -1847,7 +1846,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_NO_RSESSION;
+    return RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
 /**
@@ -2412,13 +2411,6 @@ destroyInstance(ROUTER *instance)
             inst->client = NULL;
         }
     }
-
-    /* Discard the queued residual data */
-    while (inst->residual)
-    {
-        inst->residual = gwbuf_consume(inst->residual, GWBUF_LENGTH(inst->residual));
-    }
-    inst->residual = NULL;
 
     MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",

@@ -74,6 +74,7 @@ static int      routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket
 static int      clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket);
 static void     diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb);
 static uint64_t getCapabilities(void);
+static void     destroyInstance(FILTER* pInstance);
 
 static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config);
 
@@ -121,7 +122,7 @@ extern "C" FILTER_OBJECT *GetModuleObject()
             clientReply,
             diagnostics,
             getCapabilities,
-            NULL, // destroyInstance
+            destroyInstance,
         };
 
     return &object;
@@ -301,7 +302,6 @@ static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
     CPP_GUARD(pSessionCache->diagnostics(pDcb));
 }
 
-
 /**
  * Capability routine.
  *
@@ -310,6 +310,19 @@ static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
 static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_TRANSACTION_TRACKING;
+}
+
+/**
+ * Destroy the filter instance.
+ *
+ * @param pInstance  The filter instance.
+ */
+static void destroyInstance(FILTER* pInstance)
+{
+    MXS_NOTICE("Deleting Cache filter instance.");
+    CACHE_FILTER* pFilter = reinterpret_cast<CACHE_FILTER*>(pInstance);
+
+    delete pFilter;
 }
 
 //

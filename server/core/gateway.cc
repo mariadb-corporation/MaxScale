@@ -1865,12 +1865,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (config_check)
-    {
-        MXS_NOTICE("Configuration was successfully verified.");
-        rc = MAXSCALE_SHUTDOWN;
-        goto return_main;
-    }
+    cnf->config_check = config_check;
 
     if (mysql_library_init(0, NULL, NULL))
     {
@@ -1918,21 +1913,24 @@ int main(int argc, char **argv)
     }
     libmysql_initialized = TRUE;
 
-    /** Check if a MaxScale process is already running */
-    if (pid_file_exists())
+    if (!config_check)
     {
-        /** There is a process with the PID of the maxscale.pid file running.
-         * Assuming that this is an already running MaxScale process, we
-         * should exit with an error code.  */
-        rc = MAXSCALE_ALREADYRUNNING;
-        goto return_main;
-    }
+        /** Check if a MaxScale process is already running */
+        if (pid_file_exists())
+        {
+            /** There is a process with the PID of the maxscale.pid file running.
+             * Assuming that this is an already running MaxScale process, we
+             * should exit with an error code.  */
+            rc = MAXSCALE_ALREADYRUNNING;
+            goto return_main;
+        }
 
-    /* Write process pid into MaxScale pidfile */
-    if (write_pid_file() != 0)
-    {
-        rc = MAXSCALE_ALREADYRUNNING;
-        goto return_main;
+        /* Write process pid into MaxScale pidfile */
+        if (write_pid_file() != 0)
+        {
+            rc = MAXSCALE_ALREADYRUNNING;
+            goto return_main;
+        }
     }
 
     /** Initialize statistics */
@@ -1961,6 +1959,14 @@ int main(int argc, char **argv)
         rc = MAXSCALE_NOSERVICES;
         goto return_main;
     }
+
+    if (config_check)
+    {
+        MXS_NOTICE("Configuration was successfully verified.");
+        rc = MAXSCALE_SHUTDOWN;
+        goto return_main;
+    }
+
     /*<
      * Start periodic log flusher thread.
      */

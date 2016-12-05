@@ -204,7 +204,6 @@ typedef struct session
 
 SESSION *session_alloc(struct service *, struct dcb *);
 SESSION *session_set_dummy(struct dcb *);
-bool session_free(SESSION *);
 int session_isvalid(SESSION *);
 int session_reply(void *inst, void *session, GWBUF *data);
 char *session_get_remote(SESSION *);
@@ -338,5 +337,37 @@ static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
     ses->autocommit = autocommit;
     return prev_autocommit;
 }
+
+/**
+ * @brief Get a session reference by ID
+ *
+ * This creates an additional reference to a session whose unique ID matches @c id.
+ *
+ * @param id Unique session ID
+ * @return Reference to a SESSION or NULL if the session was not found
+ *
+ * @note The caller must free the session reference by calling session_put_ref
+ */
+SESSION* session_get_by_id(int id);
+
+/**
+ * @brief Get a session reference
+ *
+ * This creates an additional reference to a session which allows it to live
+ * as long as it is needed.
+ *
+ * @param session Session reference to get
+ * @return Reference to a SESSION
+ *
+ * @note The caller must free the session reference by calling session_put_ref
+ */
+SESSION* session_get_ref(SESSION *sessoin);
+
+/**
+ * @brief Release a session reference
+ *
+ * @param session Session reference to release
+ */
+void session_put_ref(SESSION *session);
 
 MXS_END_DECLS

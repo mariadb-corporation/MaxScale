@@ -336,31 +336,14 @@ session_simple_free(SESSION *session, DCB *dcb)
  *
  * @param session       The session to deallocate
  */
-bool
-session_free(SESSION *session)
+static void session_free(SESSION *session)
 {
-    if (NULL == session || SESSION_STATE_DUMMY == session->state)
-    {
-        return true;
-    }
     CHK_SESSION(session);
+    ss_dassert(session->refcount == 0);
 
-    /*
-     * Remove one reference. If there are no references left,
-     * free session.
-     */
-    if (atomic_add(&session->refcount, -1) > 1)
-    {
-        /* Must be one or more references left */
-        return false;
-    }
     session->state = SESSION_STATE_TO_BE_FREED;
-
     atomic_add(&session->service->stats.n_current, -1);
 
-    /***
-     *
-     */
     if (session->client_dcb)
     {
         dcb_free_all_memory(session->client_dcb);
@@ -396,9 +379,7 @@ session_free(SESSION *session)
         MXS_FREE(session->filters);
     }
 
-    MXS_INFO("Stopped %s client session [%lu]",
-             session->service->name,
-             session->ses_id);
+    MXS_INFO("Stopped %s client session [%lu]", session->service->name, session->ses_id);
 
     /** Disable trace and decrease trace logger counter */
     session_disable_log_priority(session, LOG_INFO);
@@ -409,7 +390,6 @@ session_free(SESSION *session)
         session->state = SESSION_STATE_FREE;
         session_final_free(session);
     }
-    return true;
 }
 
 static void
@@ -661,8 +641,8 @@ session_setup_filters(SESSION *session)
             MXS_ERROR("Service '%s' contians an unresolved filter.", service->name);
             return 0;
         }
-        if ((head = filterApply(service->filters[i], session,
-                                &session->head)) == NULL)
+        if ((head = filter_apply(service->filters[i], session,
+                                 &session->head)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for "
                       "service '%s'.\n",
@@ -679,9 +659,9 @@ session_setup_filters(SESSION *session)
 
     for (i = 0; i < service->n_filters; i++)
     {
-        if ((tail = filterUpstream(service->filters[i],
-                                   session->filters[i].session,
-                                   &session->tail)) == NULL)
+        if ((tail = filter_upstream(service->filters[i],
+                                    session->filters[i].session,
+                                    &session->tail)) == NULL)
         {
             MXS_ERROR("Failed to create filter '%s' for service '%s'.",
                       service->filters[i]->name,
@@ -690,7 +670,7 @@ session_setup_filters(SESSION *session)
         }
 
         /*
-         * filterUpstream may simply return the 3 parameter if
+         * filter_upstream may simply return the 3 parameter if
          * the filter has no upstream entry point. So no need
          * to copy the contents or free tail in this case.
          */
@@ -914,4 +894,48 @@ const char* session_trx_state_to_string(session_trx_state_t state)
 
     MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);
     return "UNKNOWN";
+}
+
+static bool ses_find_id(DCB *dcb, void *data)
+{
+    void **params = (void**)data;
+    SESSION **ses = (SESSION**)params[0];
+    int *id = (int*)params[1];
+    bool rval = true;
+
+    if (dcb->session->ses_id == *id)
+    {
+        *ses = session_get_ref(dcb->session);
+        rval = false;
+    }
+
+    return rval;
+}
+
+SESSION* session_get_by_id(int id)
+{
+    SESSION *session = NULL;
+    void *params[] = {&session, &id};
+
+    dcb_foreach(ses_find_id, params);
+
+    return session;
+}
+
+SESSION* session_get_ref(SESSION *session)
+{
+    atomic_add(&session->refcount, 1);
+    return session;
+}
+
+void session_put_ref(SESSION *session)
+{
+    if (session && session->state != SESSION_STATE_DUMMY)
+    {
+        /** Remove one reference. If there are no references left, free session */
+        if (atomic_add(&session->refcount, -1) == 1)
+        {
+            session_free(session);
+        }
+    }
 }

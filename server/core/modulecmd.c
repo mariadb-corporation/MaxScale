@@ -277,25 +277,15 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
                 break;
 
             case MODULECMD_ARG_SESSION:
-                arg->type.type = MODULECMD_ARG_SESSION;
-                arg->value.session = (SESSION*)strtol((char*)value, NULL, 0);
-                rval = true;
-                break;
-
-            case MODULECMD_ARG_SESSION_PTR:
-                arg->type.type = MODULECMD_ARG_SESSION_PTR;
-                arg->value.session = (SESSION*)value;
+                if ((arg->value.session = session_get_by_id(atoi(value))))
+                {
+                    arg->type.type = MODULECMD_ARG_SESSION;
+                }
                 rval = true;
                 break;
 
             case MODULECMD_ARG_DCB:
                 arg->type.type = MODULECMD_ARG_DCB;
-                arg->value.dcb = (DCB*)strtol((char*)value, NULL, 0);
-                rval = true;
-                break;
-
-            case MODULECMD_ARG_DCB_PTR:
-                arg->type.type = MODULECMD_ARG_DCB_PTR;
                 arg->value.dcb = (DCB*)value;
                 rval = true;
                 break;
@@ -371,6 +361,10 @@ static void free_argument(struct arg_node *arg)
     {
         case MODULECMD_ARG_STRING:
             MXS_FREE(arg->value.string);
+            break;
+
+        case MODULECMD_ARG_SESSION:
+            session_put_ref(arg->value.session);
             break;
 
         default:
@@ -625,16 +619,8 @@ char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
             strtype = "SESSION";
             break;
 
-        case MODULECMD_ARG_SESSION_PTR:
-            strtype = "SESSION_PTR";
-            break;
-
         case MODULECMD_ARG_DCB:
             strtype = "DCB";
-            break;
-
-        case MODULECMD_ARG_DCB_PTR:
-            strtype = "DCB_PTR";
             break;
 
         case MODULECMD_ARG_MONITOR:

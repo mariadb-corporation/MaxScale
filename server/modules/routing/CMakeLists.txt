@@ -1,8 +1,8 @@
 if(BUILD_AVRO)
-  add_subdirectory(avro)
+  add_subdirectory(avrorouter)
 endif()
 if(BUILD_BINLOG)
-  add_subdirectory(binlog)
+  add_subdirectory(binlogrouter)
 endif()
 
 add_subdirectory(cli)

@@ -68,10 +68,8 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name,
                                      const char *protocol, const char *address,
                                      unsigned short port, const char *authenticator,
                                      const char *options, SSL_LISTENER *ssl);
-int  serviceHasProtocol(SERVICE *service, const char *protocol,
-                        const char* address, unsigned short port);
+
 void serviceRemoveBackend(SERVICE *service, const SERVER *server);
-bool serviceHasBackend(SERVICE *service, SERVER *server);
 
 /**
  * @brief Serialize a service to a file

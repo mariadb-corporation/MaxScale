@@ -48,22 +48,22 @@ static void filter_free_parameters(FILTER_DEF *filter);
  * @return              The newly created filter or NULL if an error occured
  */
 FILTER_DEF *
-filter_alloc(char *name, char *module)
+filter_alloc(const char *name, const char *module)
 {
-    name = MXS_STRDUP(name);
-    module = MXS_STRDUP(module);
+    char* my_name = MXS_STRDUP(name);
+    char* my_module = MXS_STRDUP(module);
 
     FILTER_DEF *filter = (FILTER_DEF *)MXS_MALLOC(sizeof(FILTER_DEF));
 
-    if (!name || !module || !filter)
+    if (!my_name || !my_module || !filter)
     {
-        MXS_FREE(name);
-        MXS_FREE(module);
+        MXS_FREE(my_name);
+        MXS_FREE(my_module);
         MXS_FREE(filter);
         return NULL;
     }
-    filter->name = name;
-    filter->module = module;
+    filter->name = my_name;
+    filter->module = my_module;
     filter->filter = NULL;
     filter->options = NULL;
     filter->obj = NULL;
@@ -140,7 +140,7 @@ filter_free(FILTER_DEF *filter)
  * @return      The server or NULL if not found
  */
 FILTER_DEF *
-filter_find(char *name)
+filter_find(const char *name)
 {
     FILTER_DEF *filter;
 
@@ -164,7 +164,7 @@ filter_find(char *name)
  * @param name  Parameter name to check
  */
 int
-filter_standard_parameter(char *name)
+filter_standard_parameter(const char *name)
 {
     if (strcmp(name, "type") == 0 || strcmp(name, "module") == 0)
     {
@@ -220,7 +220,7 @@ dprintAllFilters(DCB *dcb)
  * to display all active filters in MaxScale
  */
 void
-dprintFilter(DCB *dcb, FILTER_DEF *filter)
+dprintFilter(DCB *dcb, const FILTER_DEF *filter)
 {
     int i;
 
@@ -287,7 +287,7 @@ dListFilters(DCB *dcb)
  * @param option        The option string
  */
 void
-filterAddOption(FILTER_DEF *filter, char *option)
+filter_add_option(FILTER_DEF *filter, const char *option)
 {
     int i;
 
@@ -323,7 +323,7 @@ filterAddOption(FILTER_DEF *filter, char *option)
  * @param value         The parameter value
  */
 void
-filterAddParameter(FILTER_DEF *filter, char *name, char *value)
+filter_add_parameter(FILTER_DEF *filter, const char *name, const char *value)
 {
     int i;
 
@@ -344,13 +344,13 @@ filterAddParameter(FILTER_DEF *filter, char *name, char *value)
                                                       (i + 2) * sizeof(FILTER_PARAMETER *));
     }
     FILTER_PARAMETER *parameter = MXS_CALLOC(1, sizeof(FILTER_PARAMETER));
-    name = MXS_STRDUP(name);
-    value = MXS_STRDUP(value);
+    char* my_name = MXS_STRDUP(name);
+    char* my_value = MXS_STRDUP(value);
 
-    MXS_ABORT_IF_TRUE(!parameters || !parameter || !name || !value);
+    MXS_ABORT_IF_TRUE(!parameters || !parameter || !my_name || !my_value);
 
-    parameter->name = name;
-    parameter->value = value;
+    parameter->name = my_name;
+    parameter->value = my_value;
     parameters[i] = parameter;
     parameters[i + 1] = NULL;
     filter->parameters = parameters;
@@ -433,7 +433,7 @@ bool filter_load(FILTER_DEF* filter)
  *                      if the filter could not be created
  */
 DOWNSTREAM *
-filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
+filter_apply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
     DOWNSTREAM *me;
 
@@ -468,7 +468,7 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
  * @return              The upstream component for the next filter
  */
 UPSTREAM *
-filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
+filter_upstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 {
     UPSTREAM *me = NULL;
 

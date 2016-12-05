@@ -242,6 +242,26 @@ SERVICE* service_find(const char *name);
 // TODO: Change binlogrouter to use the functions in config_runtime.h
 void serviceAddBackend(SERVICE *service, SERVER *server);
 
+/**
+ * @brief Check if a service uses a server
+ * @param service Service to check
+ * @param server Server being used
+ * @return True if service uses the server
+ */
+bool serviceHasBackend(SERVICE *service, SERVER *server);
+
+/**
+ * @brief Check if a service has a listener
+ *
+ * @param service Service to check
+ * @param protocol Listener protocol
+ * @param address Listener address
+ * @param port Listener port
+ * @return True if service has the listener
+ */
+bool serviceHasListener(SERVICE *service, const char *protocol,
+                        const char* address, unsigned short port);
+
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
 int   serviceSetUser(SERVICE *service, char *user, char *auth);
 bool  serviceSetFilters(SERVICE *service, char *filters);
