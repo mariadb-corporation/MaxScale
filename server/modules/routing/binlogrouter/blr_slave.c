@@ -344,6 +344,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     int query_len;
     char *ptr;
     extern char *strcasestr();
+    bool unexpected = true;
 
     qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
@@ -529,6 +530,10 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             MXS_FREE(query_text);
 
             return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
+        }
+        else if (strcasestr(word, "binlog_gtid_pos"))
+        {
+            unexpected = false;
         }
     }
     else if (strcasecmp(word, "SHOW") == 0)
@@ -1118,7 +1123,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     MXS_FREE(query_text);
 
     query_text = strndup(qtext, query_len);
-    MXS_ERROR("Unexpected query from '%s'@'%s': %s", slave->dcb->user, slave->dcb->remote, query_text);
+
+    if (unexpected)
+    {
+        MXS_ERROR("Unexpected query from '%s'@'%s': %s", slave->dcb->user, slave->dcb->remote, query_text);
+    }
+    else
+    {
+        MXS_INFO("Unexpected query from '%s'@'%s', possibly a 10.1 slave: %s",
+                 slave->dcb->user, slave->dcb->remote, query_text);
+    }
+
     MXS_FREE(query_text);
     blr_slave_send_error(router, slave,
                          "You have an error in your SQL syntax; Check the syntax "
