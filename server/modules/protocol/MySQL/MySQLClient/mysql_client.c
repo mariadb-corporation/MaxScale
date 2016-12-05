@@ -1450,8 +1450,10 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
                         {
                             if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
                             {
+                                /** Autocommit is disabled, a transaction will
+                                 * always be open */
                                 session_set_autocommit(session, false);
-                                session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                                session_set_trx_state(session, SESSION_TRX_ACTIVE);
                             }
                             else
                             {
@@ -1474,7 +1476,13 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
                         }
                         else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
                         {
-                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                            if (session_is_autocommit(session) ||
+                                (type & QUERY_TYPE_ENABLE_AUTOCOMMIT))
+                            {
+                                /** Autocommit is either on or being enabled
+                                 * and both of these cause an implicit commit */
+                                session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                            }
 
                             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
                             {
