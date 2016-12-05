@@ -494,7 +494,7 @@ typedef struct router_instance
     int                     pending_transaction; /*< Pending transaction */
     enum blr_event_state    master_event_state; /*< Packet read state */
     REP_HEADER              stored_header; /*< Relication header of the event the master is sending */
-    GWBUF                  *stored_event; /*< Partial even buffer */
+    GWBUF                  *stored_event; /*< Buffer where partial events are stored */
     uint64_t                last_safe_pos; /* last committed transaction */
     char                    binlog_name[BINLOG_FNAMELEN + 1];
     /*< Name of the current binlog file */
