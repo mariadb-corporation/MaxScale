@@ -1333,7 +1333,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         db_name_len = ptr[4 + 20 + 4 + 4];
                         var_block_len = ptr[4 + 20 + 4 + 4 + 1 + 2];
 
-                        statement_len = len - (4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len) - semisync_bytes;
+                        statement_len = len - (4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
                         statement_sql = MXS_CALLOC(1, statement_len + 1);
                         MXS_ABORT_IF_NULL(statement_sql);
                         memcpy(statement_sql,
@@ -1468,7 +1468,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         /* Check for rotate event */
                         if (hdr.event_type == ROTATE_EVENT)
                         {
-                            if (!blr_rotate_event(router, ptr, &hdr))
+                            if (!blr_rotate_event(router, ptr + offset, &hdr))
                             {
                                 gwbuf_free(pkt);
                                 blr_master_close(router);
