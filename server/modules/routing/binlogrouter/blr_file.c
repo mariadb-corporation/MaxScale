@@ -565,7 +565,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
-                      router->service->name, router->last_written,
+                      router->service->name, router->binlog_position,
                       router->binlog_name,
                       strerror_r(errno, err_msg, sizeof(err_msg)));
         }

@@ -54,6 +54,8 @@ If your system does not support systemd you can start MariaDB MaxScale using the
 service maxscale start
 ```
 
+Starting with version 2.0.3, MaxScale also supports Upstart.
+
 An example configuration file is installed into the `/etc/` folder. This file should be changed according to your needs.
 
 ## Install MariaDB MaxScale Using a Tarball

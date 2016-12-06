@@ -78,7 +78,7 @@ avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *qu
             if (avro_client_do_registration(router, client, queue) == 0)
             {
                 client->state = AVRO_CLIENT_ERRORED;
-                dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed");
+                dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed\n");
                 /* force disconnection */
                 dcb_close(client->dcb);
                 rval = 0;
@@ -86,7 +86,7 @@ avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *qu
             else
             {
                 /* Send OK ack to client */
-                dcb_printf(client->dcb, "OK");
+                dcb_printf(client->dcb, "OK\n");
 
                 client->state = AVRO_CLIENT_REGISTERED;
                 MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
@@ -503,7 +503,7 @@ avro_client_process_command(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *q
     {
         GWBUF *reply = gwbuf_alloc(5);
         memcpy(GWBUF_DATA(reply), "ECHO:", 5);
-        reply = gwbuf_append(reply, queue);
+        reply = gwbuf_append(reply, gwbuf_clone(queue));
         client->dcb->func.write(client->dcb, reply);
     }
 }
@@ -556,11 +556,15 @@ const char* get_avrofile_name(const char *file_ptr, int data_len, char *dest)
 static int send_row(DCB *dcb, json_t* row)
 {
     char *json = json_dumps(row, JSON_PRESERVE_ORDER);
-    GWBUF *buf;
+    size_t len = strlen(json);
+    GWBUF *buf = gwbuf_alloc(len + 1);
     int rc = 0;
 
-    if (json && (buf = gwbuf_alloc_and_load(strlen(json), (void*)json)))
+    if (json && buf)
     {
+        uint8_t *data = GWBUF_DATA(buf);
+        memcpy(data, json, len);
+        data[len] = '\n';
         rc = dcb->func.write(dcb, buf);
     }
     else

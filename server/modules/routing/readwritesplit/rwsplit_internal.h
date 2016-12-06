@@ -30,7 +30,17 @@ MXS_BEGIN_DECLS
  * rwsplit_tmp_table_multi functions
  */
 #include <maxscale/protocol/mysql.h>
-    
+
+#define RW_CHK_DCB(bref, dcb) \
+do{ \
+    if(dcb->state == DCB_STATE_DISCONNECTED){ \
+        MXS_NOTICE("DCB was closed on line %d and another attempt to close it is  made on line %d." , \
+            (bref) ? (bref)->closed_at : -1, __LINE__); \
+        } \
+}while (false)
+
+#define RW_CLOSE_BREF(b) do{ if (bref){ bref->closed_at = __LINE__; } } while (false)
+
 /*
  * The following are implemented in rwsplit_mysql.c
  */
