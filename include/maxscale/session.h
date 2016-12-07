@@ -261,7 +261,7 @@ session_trx_state_t session_get_trx_state(const SESSION* ses);
 session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
 
 /**
- * Tells whether an explicit transaction is active.
+ * Tells whether a transaction is active.
  *
  * @see session_get_trx_state
  *
@@ -272,7 +272,7 @@ session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_
  */
 static inline bool session_trx_is_active(const SESSION* ses)
 {
-    return ses->trx_state & SESSION_TRX_ACTIVE_BIT;
+    return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
 }
 
 /**
