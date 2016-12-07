@@ -46,6 +46,7 @@ MXS_BEGIN_DECLS
 struct dcb;
 struct service;
 struct filter_def;
+struct server;
 
 /**
  * The session statistics structure
@@ -176,6 +177,11 @@ typedef struct session
     bool            ses_is_child;     /*< this is a child session */
     session_trx_state_t trx_state;    /*< The current transaction state. */
     bool            autocommit;       /*< Whether autocommit is on. */
+    struct
+    {
+        GWBUF *buffer; /**< Buffer containing the statement */
+        const struct server *target; /**< Where the statement was sent */
+    } stmt;  /**< Current statement being executed */
     skygw_chk_t     ses_chk_tail;
 } SESSION;
 
@@ -255,21 +261,6 @@ session_trx_state_t session_get_trx_state(const SESSION* ses);
 session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
 
 /**
- * Tells whether an explicit transaction is active.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction is active, false otherwise.
- */
-static inline bool session_trx_is_active(const SESSION* ses)
-{
-    return ses->trx_state & SESSION_TRX_ACTIVE_BIT;
-}
-
-/**
  * Tells whether an explicit READ ONLY transaction is active.
  *
  * @see session_get_trx_state
@@ -324,6 +315,21 @@ static inline bool session_is_autocommit(const SESSION* ses)
 }
 
 /**
+ * Tells whether a transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if a transaction is active, false otherwise.
+ */
+static inline bool session_trx_is_active(const SESSION* ses)
+{
+    return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
+}
+
+/**
  * Sets the autocommit state of the session.
  *
  * NOTE: Only the protocol object may call this.
@@ -369,5 +375,44 @@ SESSION* session_get_ref(SESSION *sessoin);
  * @param session Session reference to release
  */
 void session_put_ref(SESSION *session);
+
+/**
+ * @brief Store the current statement into session
+ *
+ * This creates an additional reference to the buffer. If an old statement is stored,
+ * it will be replaced with a clone of @c buf.
+ *
+ * @param session Session where statement is stored
+ * @param buf Buffer containing the current statement
+ * @param server Server where the statement is being executed
+ * @return True if statement was successfully stored, false if the cloning of @c buf failed.
+ */
+bool session_store_stmt(SESSION *session, GWBUF *buf, const struct server *server);
+
+/**
+ * @brief Fetch stored statement
+ *
+ * The value returned by this call must be freed by the caller with gwbuf_free().
+ *
+ * @param session Session with a stored statement
+ * @return Stored statement or NULL if no statement was stored
+ */
+GWBUF* session_fetch_stmt(SESSION *session);
+
+/**
+ * Fetch the stored target
+ *
+ * @param session Session whose target is fetched
+ * @return The server where the statement is executed or NULL if no statement is
+ * stored
+ */
+const struct server* session_fetch_stmt_target(const SESSION *session);
+
+/**
+ * Clear the stored statement
+ *
+ * @param session Session to clear
+ */
+void session_clear_stmt(SESSION *session);
 
 MXS_END_DECLS

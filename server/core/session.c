@@ -105,6 +105,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->service = service;
     session->client_dcb = client_dcb;
     session->stats.connect = time(0);
+    session->stmt.buffer = NULL;
+    session->stmt.target = NULL;
     /*<
      * Associate the session to the client DCB and set the reference count on
      * the session to indicate that there is a single reference to the
@@ -395,6 +397,7 @@ static void session_free(SESSION *session)
 static void
 session_final_free(SESSION *session)
 {
+    gwbuf_free(session->stmt.buffer);
     MXS_FREE(session);
 }
 
@@ -938,4 +941,44 @@ void session_put_ref(SESSION *session)
             session_free(session);
         }
     }
+}
+
+bool session_store_stmt(SESSION *session, GWBUF *buf, const SERVER *server)
+{
+    bool rval = false;
+
+    if (session->stmt.buffer)
+    {
+        /** This should not happen with proper use */
+        ss_dassert(false);
+        gwbuf_free(session->stmt.buffer);
+    }
+
+    if ((session->stmt.buffer = gwbuf_clone(buf)))
+    {
+        session->stmt.target = server;
+        /** No old statements were stored and we successfully cloned the buffer */
+        rval = true;
+    }
+
+    return rval;
+}
+
+GWBUF *session_fetch_stmt(SESSION *session)
+{
+    GWBUF *rval = session->stmt.buffer;
+    session->stmt.buffer = NULL;
+    return rval;
+}
+
+const SERVER* session_fetch_stmt_target(const SESSION *session)
+{
+    return session->stmt.target;
+}
+
+void session_clear_stmt(SESSION *session)
+{
+    gwbuf_free(session->stmt.buffer);
+    session->stmt.buffer = NULL;
+    session->stmt.target = NULL;
 }
