@@ -176,11 +176,33 @@ private:
 private:
     typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesPerKey;
 
+    struct Stats
+    {
+        Stats()
+            : size(0)
+            , items(0)
+            , hits(0)
+            , misses(0)
+            , updates(0)
+            , deletes(0)
+            , evictions(0)
+        {}
+
+        void fill(json_t* pbject) const;
+
+        uint64_t size;       /*< The total size of the stored values. */
+        uint64_t items;      /*< The number of stored items. */
+        uint64_t hits;       /*< How many times a key was found in the cache. */
+        uint64_t misses;     /*< How many times a key was not found in the cache. */
+        uint64_t updates;    /*< How many times an existing key in the cache was updated. */
+        uint64_t deletes;    /*< How many times an existing key in the cache was deleted. */
+        uint64_t evictions;  /*< How many times an item has been evicted from the cache. */
+    };
+
     Storage*    pstorage_;      /*< The actual storage. */
     size_t      max_count_;     /*< The maximum number of items in the LRU list, */
     size_t      max_size_;      /*< The maximum size of all cached items. */
-    size_t      count_;         /*< The current count of cached items. */
-    size_t      size_;          /*< The current size of all cached items. */
+    Stats       stats_;         /*< Cache statistics. */
     NodesPerKey nodes_per_key_; /*< Mapping from cache keys to corresponding Node. */
     Node*       phead_;         /*< The node at the LRU list. */
     Node*       ptail_;         /*< The node at bottom of the LRU list.*/

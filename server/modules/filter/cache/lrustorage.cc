@@ -18,8 +18,6 @@ LRUStorage::LRUStorage(Storage* pstorage, size_t max_count, size_t max_size)
     : pstorage_(pstorage)
     , max_count_(max_count)
     , max_size_(max_size)
-    , count_(0)
-    , size_(0)
     , phead_(NULL)
     , ptail_(NULL)
 {
@@ -36,17 +34,6 @@ cache_result_t LRUStorage::get_key(const char* zdefault_db,
     return pstorage_->get_key(zdefault_db, pquery, pkey);
 }
 
-static void set_integer(json_t* pobject, const char* zname, size_t value)
-{
-    json_t* pvalue = json_integer(value);
-
-    if (pvalue)
-    {
-        json_object_set(pobject, zname, pvalue);
-        json_decref(pvalue);
-    }
-}
-
 cache_result_t LRUStorage::do_get_info(uint32_t what,
                                        json_t** ppinfo) const
 {
@@ -58,8 +45,7 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 
         if (plru)
         {
-            set_integer(plru, "size",  size_);
-            set_integer(plru, "count", count_);
+            stats_.fill(plru);
 
             json_object_set(*ppinfo, "lru", plru);
             json_decref(plru);
@@ -88,6 +74,8 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 
     if (result == CACHE_RESULT_OK)
     {
+        ++stats_.hits;
+
         if (existed)
         {
             if (ptail_ == i->second)
@@ -102,6 +90,15 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
             MXS_ERROR("Item found in storage, but not in key mapping.");
         }
     }
+    else
+    {
+        ++stats_.misses;
+
+        if (existed && (result == CACHE_RESULT_NOT_FOUND))
+        {
+            MXS_ERROR("Item was not found in storage, but was found in key mapping.");
+        }
+    }
 
     return result;
 }
@@ -112,7 +109,7 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
     cache_result_t result = CACHE_RESULT_ERROR;
 
     size_t value_size = GWBUF_LENGTH(pvalue);
-    size_t new_size = size_ + value_size;
+    size_t new_size = stats_.size + value_size;
 
     Node* pnode = NULL;
 
@@ -126,7 +123,7 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
     }
     else
     {
-        if ((new_size > max_size_) || (count_ == max_count_))
+        if ((new_size > max_size_) || (stats_.items == max_count_))
         {
             if (new_size > max_size_)
             {
@@ -137,7 +134,7 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
             }
             else
             {
-                ss_dassert(count_ == max_count_);
+                ss_dassert(stats_.items == max_count_);
                 MXS_NOTICE("Max count %lu reached, removing least recently used.", max_count_);
                 pnode = free_lru();
             }
@@ -174,15 +171,17 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
         {
             if (existed)
             {
-                size_ -= pnode->size();
+                ++stats_.updates;
+                ss_dassert(stats_.size >= pnode->size());
+                stats_.size -= pnode->size();
             }
             else
             {
-                ++count_;
+                ++stats_.items;
             }
 
             pnode->reset(&i->first, value_size);
-            size_ += pnode->size();
+            stats_.size += pnode->size();
 
             if (ptail_ == pnode)
             {
@@ -215,15 +214,17 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
 
     if (result == CACHE_RESULT_OK)
     {
+        ++stats_.deletes;
+
         if (i == nodes_per_key_.end())
         {
             Node* pnode = i->second;
 
-            ss_dassert(size_ > pnode->size());
-            ss_dassert(count_ > 0);
+            ss_dassert(stats_.size > pnode->size());
+            ss_dassert(stats_.items > 0);
 
-            size_ -= pnode->size();
-            --count_;
+            stats_.size -= pnode->size();
+            --stats_.items;
 
             phead_ = pnode->remove();
             delete pnode;
@@ -339,11 +340,12 @@ bool LRUStorage::free_node_data(Node* pnode)
             nodes_per_key_.erase(i);
         }
 
-        ss_dassert(size_ >= pnode->size());
-        ss_dassert(count_ > 0);
+        ss_dassert(stats_.size >= pnode->size());
+        ss_dassert(stats_.items > 0);
 
-        size_ -= pnode->size();
-        count_ -= 1;
+        stats_.size -= pnode->size();
+        stats_.items -= 1;
+        stats_.evictions += 1;
         break;
 
     default:
@@ -353,4 +355,27 @@ bool LRUStorage::free_node_data(Node* pnode)
     }
 
     return success;
+}
+
+
+static void set_integer(json_t* pobject, const char* zname, size_t value)
+{
+    json_t* pvalue = json_integer(value);
+
+    if (pvalue)
+    {
+        json_object_set(pobject, zname, pvalue);
+        json_decref(pvalue);
+    }
+}
+
+void LRUStorage::Stats::fill(json_t* pbject) const
+{
+    set_integer(pbject, "size", size);
+    set_integer(pbject, "items", items);
+    set_integer(pbject, "hits", hits);
+    set_integer(pbject, "misses", misses);
+    set_integer(pbject, "updates", updates);
+    set_integer(pbject, "deletes", deletes);
+    set_integer(pbject, "evictions", evictions);
 }
