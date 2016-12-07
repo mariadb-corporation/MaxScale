@@ -69,15 +69,15 @@ MODULE_INFO info =
  * @endverbatim
  */
 
-#define RW_CHK_DCB(bref, dcb) \
+#define RW_CHK_DCB(b, d) \
 do{ \
-    if(dcb->state == DCB_STATE_DISCONNECTED){ \
+    if((d)->state == DCB_STATE_DISCONNECTED){ \
         MXS_NOTICE("DCB was closed on line %d and another attempt to close it is  made on line %d." , \
-            (bref) ? (bref)->closed_at : -1, __LINE__); \
+            (b) ? (b)->closed_at : -1, __LINE__); \
         } \
 }while (false)
 
-#define RW_CLOSE_BREF(b) do{ if (bref){ bref->closed_at = __LINE__; } } while (false)
+#define RW_CLOSE_BREF(b) do{ if (b){ (b)->closed_at = __LINE__; } } while (false)
 
 static char *version_str = "V1.1.0";
 
@@ -2385,6 +2385,14 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
             {
                 succp = send_readonly_error(rses->client_dcb);
+
+                if (rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
+                {
+                    close_failed_bref(rses->rses_master_ref, true);
+                    RW_CHK_DCB(rses->rses_master_ref, rses->rses_master_ref->bref_dcb);
+                    dcb_close(rses->rses_master_ref->bref_dcb);
+                    RW_CLOSE_BREF(rses->rses_master_ref);
+                }
             }
             else
             {
