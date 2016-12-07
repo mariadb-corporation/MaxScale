@@ -964,16 +964,20 @@ bool session_store_stmt(SESSION *session, GWBUF *buf, const SERVER *server)
     return rval;
 }
 
-GWBUF *session_fetch_stmt(SESSION *session)
+bool session_take_stmt(SESSION *session, GWBUF **buffer, const SERVER **target)
 {
-    GWBUF *rval = session->stmt.buffer;
-    session->stmt.buffer = NULL;
-    return rval;
-}
+    bool rval = false;
 
-const SERVER* session_fetch_stmt_target(const SESSION *session)
-{
-    return session->stmt.target;
+    if (session->stmt.buffer && session->stmt.target)
+    {
+        *buffer = session->stmt.buffer;
+        *target = session->stmt.target;
+        session->stmt.buffer = NULL;
+        session->stmt.target = NULL;
+        rval = true;
+    }
+
+    return rval;
 }
 
 void session_clear_stmt(SESSION *session)

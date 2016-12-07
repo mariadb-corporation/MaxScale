@@ -395,18 +395,11 @@ bool session_store_stmt(SESSION *session, GWBUF *buf, const struct server *serve
  * The value returned by this call must be freed by the caller with gwbuf_free().
  *
  * @param session Session with a stored statement
- * @return Stored statement or NULL if no statement was stored
+ * @param buffer Pointer where the buffer is stored
+ * @param target Pointer where target server is stored
+ * @return True if a statement was stored
  */
-GWBUF* session_fetch_stmt(SESSION *session);
-
-/**
- * Fetch the stored target
- *
- * @param session Session whose target is fetched
- * @return The server where the statement is executed or NULL if no statement is
- * stored
- */
-const struct server* session_fetch_stmt_target(const SESSION *session);
+bool session_take_stmt(SESSION *session, GWBUF **buffer, const struct server **target);
 
 /**
  * Clear the stored statement
