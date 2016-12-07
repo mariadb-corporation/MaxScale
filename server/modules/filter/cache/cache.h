@@ -26,6 +26,14 @@ class SessionCache;
 class Cache
 {
 public:
+    enum what_info_t
+    {
+        INFO_RULES   = 0x01, /*< Include information about the rules. */
+        INFO_PENDING = 0x02, /*< Include information about any pending items. */
+        INFO_STORAGE = 0x04, /*< Include information about the storage. */
+        INFO_ALL     = (INFO_RULES | INFO_PENDING | INFO_STORAGE)
+    };
+
     typedef std::tr1::shared_ptr<CacheRules> SCacheRules;
     typedef std::tr1::shared_ptr<StorageFactory> SStorageFactory;
 
@@ -34,6 +42,8 @@ public:
     void show(DCB* pDcb) const;
 
     const CACHE_CONFIG& config() const { return m_config; }
+
+    virtual json_t* get_info(uint32_t what = INFO_ALL) const = 0;
 
     /**
      * Returns whether the results of a particular query should be stored.
@@ -89,6 +99,8 @@ protected:
     static bool Create(const CACHE_CONFIG& config,
                        CacheRules**        ppRules,
                        StorageFactory**    ppFactory);
+
+    json_t* do_get_info(uint32_t what) const;
 
 private:
     Cache(const Cache&);

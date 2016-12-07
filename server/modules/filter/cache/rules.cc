@@ -413,9 +413,9 @@ CacheRules* CacheRules::load(const char *zpath, uint32_t debug)
     return pthis;
 }
 
-void CacheRules::print(DCB* pdcb, size_t indent) const
+const json_t* CacheRules::json() const
 {
-    cache_rules_print(prules_, pdcb, indent);
+    return prules_->root;
 }
 
 bool CacheRules::should_store(const char* zdefault_db, const GWBUF* pquery) const

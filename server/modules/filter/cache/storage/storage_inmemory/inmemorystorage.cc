@@ -107,6 +107,15 @@ cache_result_t InMemoryStorage::get_key(const char* zdefault_db, const GWBUF* pq
     return CACHE_RESULT_OK;
 }
 
+cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppinfo) const
+{
+    *ppinfo = json_object();
+
+    // TODO: Fill with unordered_map statistics.
+
+    return *ppinfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
 cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;

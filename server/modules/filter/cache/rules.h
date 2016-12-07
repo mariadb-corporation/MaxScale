@@ -183,12 +183,14 @@ public:
     static CacheRules* load(const char *zpath, uint32_t debug);
 
     /**
-     * Prints the rules.
+     * Returns the json rules object.
      *
-     * @param pdcb    DCB where the rules should be printed.
-     * @param indent  By how many spaces to indent the output.
+     * NOTE: The object remains valid only as long as the CacheRules
+     *       object is valid.
+     *
+     * @return The rules object.
      */
-    void print(DCB* pdcb, size_t indent) const;
+    const json_t* json() const;
 
     /**
      * Returns boolean indicating whether the result of the query should be stored.

@@ -65,6 +65,11 @@ CacheST* CacheST::Create(const std::string&  name,
     return Create(name, pConfig, sRules, sFactory);
 }
 
+json_t* CacheST::get_info(uint32_t flags) const
+{
+    return CacheSimple::do_get_info(flags);
+}
+
 bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
     return CacheSimple::do_must_refresh(key, pSessionCache);

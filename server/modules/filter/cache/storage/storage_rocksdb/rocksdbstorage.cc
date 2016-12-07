@@ -346,6 +346,15 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory, const cha
     return pStorage;
 }
 
+cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
+{
+    *ppInfo = json_object();
+
+    // TODO: Fill with RocksDB statistics.
+
+    return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
 cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));

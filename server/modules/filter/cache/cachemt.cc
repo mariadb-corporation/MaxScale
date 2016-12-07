@@ -54,6 +54,13 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     return pCache;
 }
 
+json_t* CacheMT::get_info(uint32_t flags) const
+{
+    LockGuard guard(&m_lockPending);
+
+    return CacheSimple::do_get_info(flags);
+}
+
 bool CacheMT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {
     LockGuard guard(&m_lockPending);

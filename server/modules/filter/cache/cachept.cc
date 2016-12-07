@@ -91,6 +91,37 @@ void CachePT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache
     thread_cache().refreshed(key, pSessionCache);
 }
 
+json_t* CachePT::get_info(uint32_t what) const
+{
+    json_t* pInfo = Cache::do_get_info(what);
+
+    if (pInfo)
+    {
+        if (what & (INFO_PENDING | INFO_STORAGE))
+        {
+            what &= ~INFO_RULES; // The rules are the same, we don't want them duplicated.
+
+            for (size_t i = 0; i < m_caches.size(); ++i)
+            {
+                char key[20]; // Surely enough.
+                sprintf(key, "thread-%u", (unsigned int)i + 1);
+
+                SCache sCache = m_caches[i];
+
+                json_t* pThreadInfo = sCache->get_info(what);
+
+                if (pThreadInfo)
+                {
+                    json_object_set(pInfo, key, pThreadInfo);
+                    json_decref(pThreadInfo);
+                }
+            }
+        }
+    }
+
+    return pInfo;
+}
+
 cache_result_t CachePT::get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     return thread_cache().get_key(zDefaultDb, pQuery, pKey);

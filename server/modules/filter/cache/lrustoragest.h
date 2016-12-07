@@ -22,6 +22,9 @@ public:
 
     static LRUStorageST* create(Storage* pstorage, size_t max_count, size_t max_size);
 
+    cache_result_t get_info(uint32_t what,
+                            json_t** ppInfo) const;
+
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
                              GWBUF** ppValue);

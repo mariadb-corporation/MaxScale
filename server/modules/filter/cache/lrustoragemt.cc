@@ -35,6 +35,14 @@ LRUStorageMT* LRUStorageMT::create(Storage* pstorage, size_t max_count, size_t m
     return plru_storage;
 }
 
+cache_result_t LRUStorageMT::get_info(uint32_t what,
+                                      json_t** ppInfo) const
+{
+    LockGuard guard(&lock_);
+
+    return LRUStorage::do_get_info(what, ppInfo);
+}
+
 cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        GWBUF** ppvalue)

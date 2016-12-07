@@ -23,6 +23,7 @@ public:
 
     static InMemoryStorageMT* create(const std::string& name, uint32_t ttl, int argc, char* argv[]);
 
+    cache_result_t get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult);
     cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pvalue);
     cache_result_t del_value(const CACHE_KEY& key);
@@ -35,5 +36,5 @@ private:
     InMemoryStorageMT& operator = (const InMemoryStorageMT&);
 
 private:
-    SPINLOCK lock_;
+    mutable SPINLOCK lock_;
 };

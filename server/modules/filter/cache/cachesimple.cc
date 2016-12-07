@@ -75,6 +75,30 @@ cache_result_t CacheSimple::del_value(const CACHE_KEY& key)
     return m_pStorage->del_value(key);
 }
 
+// protected:
+json_t* CacheSimple::do_get_info(uint32_t what) const
+{
+    json_t* pInfo = Cache::do_get_info(what);
+
+    if (what & INFO_PENDING)
+    {
+        // TODO: Include information about pending items.
+    }
+
+    if (what & INFO_STORAGE)
+    {
+        json_t* pStorageInfo;
+
+        if (m_pStorage->get_info(Storage::INFO_ALL, &pStorageInfo) == CACHE_RESULT_OK)
+        {
+            json_object_set(pInfo, "storage", pStorageInfo);
+            json_decref(pStorageInfo);
+        }
+    }
+
+    return pInfo;
+}
+
 // protected
 bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
 {

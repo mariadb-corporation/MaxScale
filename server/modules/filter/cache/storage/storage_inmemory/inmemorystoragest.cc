@@ -31,6 +31,11 @@ InMemoryStorageST* InMemoryStorageST::create(const std::string& name,
     return new InMemoryStorageST(name, ttl);
 }
 
+cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppinfo) const
+{
+    return do_get_info(what, ppinfo);
+}
+
 cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
 {
     return do_get_value(key, flags, ppresult);

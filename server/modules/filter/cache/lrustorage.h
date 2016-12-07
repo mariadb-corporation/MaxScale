@@ -33,6 +33,14 @@ protected:
     LRUStorage(Storage* pstorage, size_t max_count, size_t max_size);
 
     /**
+     * Returns information about the LRU storage and the underlying real
+     * storage.
+     *
+     * @see Storage::get_info
+     */
+    cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
+
+    /**
      * Fetches the value from the underlying storage and, if found, moves the
      * entry to the top of the LRU list.
      *

@@ -26,6 +26,8 @@ public:
                            SStorageFactory sFactory,
                            const CACHE_CONFIG* pConfig);
 
+    json_t* get_info(uint32_t what) const;
+
     bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);

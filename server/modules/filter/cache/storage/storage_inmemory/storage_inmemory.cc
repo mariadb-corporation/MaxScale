@@ -88,6 +88,35 @@ void freeInstance(CACHE_STORAGE* pinstance)
     delete reinterpret_cast<InMemoryStorage*>(pinstance);
 }
 
+
+cache_result_t getInfo(CACHE_STORAGE* pStorage,
+                       uint32_t       what,
+                       json_t**       ppInfo)
+{
+    ss_dassert(pStorage);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    try
+    {
+        result = reinterpret_cast<InMemoryStorage*>(pStorage)->get_info(what, ppInfo);
+    }
+    catch (const std::bad_alloc&)
+    {
+        MXS_OOM();
+    }
+    catch (const std::exception& x)
+    {
+        MXS_ERROR("Standard exception caught: %s", x.what());
+    }
+    catch (...)
+    {
+        MXS_ERROR("Unknown exception caught.");
+    }
+
+    return result;
+}
+
 cache_result_t getKey(CACHE_STORAGE* pstorage,
                       const char* zdefault_db,
                       const GWBUF* pquery,
@@ -221,6 +250,7 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
             initialize,
             createInstance,
             freeInstance,
+            getInfo,
             getKey,
             getValue,
             putValue,

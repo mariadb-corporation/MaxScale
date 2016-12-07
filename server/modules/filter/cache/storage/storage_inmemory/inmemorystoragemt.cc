@@ -32,6 +32,13 @@ InMemoryStorageMT* InMemoryStorageMT::create(const std::string& name,
     return new InMemoryStorageMT(name, ttl);
 }
 
+cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const
+{
+    LockGuard guard(&lock_);
+
+    return do_get_info(what, ppInfo);
+}
+
 cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
 {
     LockGuard guard(&lock_);

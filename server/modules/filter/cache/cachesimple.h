@@ -44,6 +44,8 @@ protected:
                        StorageFactory**    ppFactory);
 
 
+    json_t* do_get_info(uint32_t what) const;
+
     bool do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
 
     void do_refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache);

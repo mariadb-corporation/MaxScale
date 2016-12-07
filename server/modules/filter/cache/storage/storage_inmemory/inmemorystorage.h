@@ -26,6 +26,7 @@ public:
 
     cache_result_t get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey);
 
+    virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
     virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult) = 0;
     virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pvalue) = 0;
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
@@ -33,6 +34,7 @@ public:
 protected:
     InMemoryStorage(const std::string& name, uint32_t ttl);
 
+    cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult);
     cache_result_t do_put_value(const CACHE_KEY& key, const GWBUF* pvalue);
     cache_result_t do_del_value(const CACHE_KEY& key);

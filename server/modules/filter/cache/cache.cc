@@ -76,9 +76,30 @@ bool Cache::Create(const CACHE_CONFIG& config,
 
 void Cache::show(DCB* pDcb) const
 {
-    dcb_printf(pDcb, "Rules:\n");
-    size_t indent = 2;
-    m_sRules->print(pDcb, indent);
+    bool showed = false;
+    json_t* pInfo = get_info(INFO_ALL);
+
+    if (pInfo)
+    {
+        size_t flags = JSON_PRESERVE_ORDER;
+        size_t indent = 2;
+        char* z = json_dumps(pInfo, JSON_PRESERVE_ORDER | JSON_INDENT(indent));
+
+        if (z)
+        {
+            dcb_printf(pDcb, "%s\n", z);
+            free(z);
+            showed = true;
+        }
+
+        json_decref(pInfo);
+    }
+
+    if (!showed)
+    {
+        // So as not to upset anyone expecting a JSON object.
+        dcb_printf(pDcb, "{\n}\n");
+    }
 }
 
 bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
@@ -89,4 +110,21 @@ bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
 bool Cache::should_use(const SESSION* pSession)
 {
     return m_sRules->should_use(pSession);
+}
+
+json_t* Cache::do_get_info(uint32_t what) const
+{
+    json_t* pInfo = json_object();
+
+    if (pInfo)
+    {
+        if (what & INFO_RULES)
+        {
+            json_t* pRules = const_cast<json_t*>(m_sRules->json());
+
+            json_object_set(pInfo, "rules", pRules); // Increases ref-count of pRules, we ignore failure.
+        }
+    }
+
+    return pInfo;
 }

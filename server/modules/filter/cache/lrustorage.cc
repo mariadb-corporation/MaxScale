@@ -36,6 +36,47 @@ cache_result_t LRUStorage::get_key(const char* zdefault_db,
     return pstorage_->get_key(zdefault_db, pquery, pkey);
 }
 
+static void set_integer(json_t* pobject, const char* zname, size_t value)
+{
+    json_t* pvalue = json_integer(value);
+
+    if (pvalue)
+    {
+        json_object_set(pobject, zname, pvalue);
+        json_decref(pvalue);
+    }
+}
+
+cache_result_t LRUStorage::do_get_info(uint32_t what,
+                                       json_t** ppinfo) const
+{
+    *ppinfo = json_object();
+
+    if (*ppinfo)
+    {
+        json_t* plru = json_object();
+
+        if (plru)
+        {
+            set_integer(plru, "size",  size_);
+            set_integer(plru, "count", count_);
+
+            json_object_set(*ppinfo, "lru", plru);
+            json_decref(plru);
+        }
+
+        json_t* pstorage_info;
+
+        if (pstorage_->get_info(what, &pstorage_info) == CACHE_RESULT_OK)
+        {
+            json_object_set(*ppinfo, "real_storage", pstorage_info);
+            json_decref(pstorage_info);
+        }
+    }
+
+    return *ppinfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
 cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
                                         GWBUF** ppvalue)

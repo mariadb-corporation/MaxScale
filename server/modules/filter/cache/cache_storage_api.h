@@ -16,6 +16,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <jansson.h>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/debug.h>
@@ -36,6 +37,12 @@ typedef enum cache_flags
     CACHE_FLAGS_NONE          = 0x00,
     CACHE_FLAGS_INCLUDE_STALE = 0x01,
 } cache_flags_t;
+
+typedef enum cache_storage_info
+{
+    // TODO: Provide more granularity.
+    CACHE_STORAGE_INFO_ALL = 0
+} cache_storage_info_t;
 
 typedef enum cache_thread_model
 {
@@ -120,6 +127,20 @@ typedef struct cache_storage_api
      */
     void (*freeInstance)(CACHE_STORAGE* instance);
 
+    /**
+     * Returns information about the storage.
+     *
+     * @param storage  Pointer to a CACHE_STORAGE.
+     * @param what     Bitmask of cache_storage_info_t values.
+     * @param info     Upon successful return points to json_t object containing
+     *                 information. The caller should call @c json_decref on the
+     *                 object when it is no longer needed.
+     *
+     * @return CACHE_RESULT_OK if a json object could be created.
+     */
+    cache_result_t (*getInfo)(CACHE_STORAGE* storage,
+                              uint32_t what,
+                              json_t** info);
     /**
      * Create a key for a GWBUF.
      *

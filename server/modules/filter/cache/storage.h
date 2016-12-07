@@ -18,7 +18,15 @@
 class Storage
 {
 public:
+    enum what_info_t
+    {
+        INFO_ALL = CACHE_STORAGE_INFO_ALL
+    };
+
     virtual ~Storage();
+
+    virtual cache_result_t get_info(uint32_t what,
+                                    json_t** ppInfo) const = 0;
 
     virtual cache_result_t get_key(const char* zDefaultDb,
                                    const GWBUF* pQuery,
