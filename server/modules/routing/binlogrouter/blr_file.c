@@ -176,21 +176,23 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
                                      const uint8_t *nonce,
                                      int action);
 static GWBUF *blr_aes_crypt(ROUTER_INSTANCE *router,
-                         uint8_t *event,
-                         uint32_t event_size,
-                         uint8_t *iv,
-                         int action);
+                            uint8_t *event,
+                            uint32_t event_size,
+                            uint8_t *iv,
+                            int action);
 static int blr_aes_create_tail_for_cbc(uint8_t *output,
-                                uint8_t *input,
-                                uint32_t in_size,
-                                uint8_t *iv,
-                                uint8_t *key,
-                                unsigned int key_len);
+                                       uint8_t *input,
+                                       uint32_t in_size,
+                                       uint8_t *iv,
+                                       uint8_t *key,
+                                       unsigned int key_len);
 static int blr_binlog_event_check(ROUTER_INSTANCE *router,
                                   unsigned long pos,
                                   REP_HEADER *hdr,
                                   char *binlogname,
                                   char *errmsg);
+
+static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *output);
 
 /** MaxScale generated events */
 typedef enum
@@ -516,8 +518,7 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
      * Fill the gap with a self generated ignorable event
      * Binlog file position is incremented by blr_write_special_event()
      */
-    if (router->master_event_state == BLR_EVENT_DONE &&
-        hdr->next_pos && (hdr->next_pos > (file_offset + size)))
+    if (hdr->next_pos && (hdr->next_pos > (file_offset + size)))
     {
         uint64_t hole_size = hdr->next_pos - file_offset - size;
         if (!blr_write_special_event(router, file_offset, hole_size, hdr, BLRM_IGNORABLE))
@@ -990,7 +991,10 @@ blr_read_binlog(ROUTER_INSTANCE *router,
         return NULL;
     }
 
-    /* Check whether we need to decrypt the current event */
+    /**
+     * Check whether we need to decrypt the current event.
+     * Note: if event is before the first_enc_event_pos don't decrypt it
+     */
     if (enc_ctx && pos >= enc_ctx->first_enc_event_pos)
     {
         GWBUF *decrypted_event;
@@ -1484,20 +1488,23 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
               * Print the IV for the current encrypted event.
               */
 
-             /* Get binlog file "nonce" and other data from router encryption_ctx */
-             BINLOG_ENCRYPTION_CTX *enc_ctx = router->encryption_ctx;
+             if (debug & BLR_REPORT_REP_HEADER)
+             {
+                 /* Get binlog file "nonce" and other data from router encryption_ctx */
+                 BINLOG_ENCRYPTION_CTX *enc_ctx = router->encryption_ctx;
 
-             /* Encryption IV is 12 bytes nonce + 4 bytes event position */
-             memcpy(iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
-             gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
+                 /* Encryption IV is 12 bytes nonce + 4 bytes event position */
+                 memcpy(iv, enc_ctx->nonce, BLRM_NONCE_LENGTH);
+                 gw_mysql_set_byte4(iv + BLRM_NONCE_LENGTH, (unsigned long)pos);
 
-             /* Human readable version */
-             gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
+                 /* Human readable version */
+                 gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
 
-             MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
-                       (unsigned long)pos,
-                       iv_hex, (unsigned long)event_size,
-                       (unsigned long)(pos + event_size));
+                 MXS_DEBUG("** Encrypted Event @ %lu: the IV is %s, size is %lu, next pos is %lu\n",
+                           (unsigned long)pos,
+                           iv_hex, (unsigned long)event_size,
+                           (unsigned long)(pos + event_size));
+             }
 
              /* Set event size only in hdr struct, before decryption */
              hdr.event_size = event_size;
@@ -1682,7 +1689,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
              uint8_t *decrypt_ptr;
              unsigned long next_pos;
              char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-             char *event_desc;
 
              /**
               * Events are encrypted.
@@ -1712,15 +1718,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             hdr.event_size = extract_field(&decrypt_ptr[9], 32);
             hdr.next_pos = EXTRACT32(&decrypt_ptr[13]);
             hdr.flags = EXTRACT16(&decrypt_ptr[17]);
-
-            /* Get next pos from decrypted event header */
-            next_pos = EXTRACT32(&decrypt_ptr[13]);
-            event_desc = blr_get_event_description(router, hdr.event_type);
-
-            MXS_DEBUG("%8sEvent time %lu\n%39sEvent Type %u (%s)\n%39sServer Id %lu\n%39sNextPos %lu\n%39sFlags %u",
-                       " ", (unsigned long)hdr.timestamp, " ", hdr.event_type,
-                       event_desc ? event_desc : "NULL", " ",
-                       (unsigned long)hdr.serverid, " ", next_pos, " ", hdr.flags);
 
             /* Check event */
             if (!blr_binlog_event_check(router,
@@ -1831,11 +1828,27 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             }
             if (check_alg == 1)
             {
+                /* Set checksum found indicator */
                 found_chksum = 1;
             }
             else
             {
                 found_chksum = 0;
+            }
+        }
+
+        if ((debug & BLR_REPORT_REP_HEADER))
+        {
+            char *event_desc = blr_get_event_description(router, hdr.event_type);
+            MXS_DEBUG("%8s==== Event Header ====\n%39sEvent time %lu\n%39sEvent Type %u (%s)\n%39sServer Id %lu\n%39sNextPos %lu\n%39sFlags %u",
+                      " ", " ", (unsigned long)hdr.timestamp, " ", hdr.event_type,
+                      event_desc ? event_desc : "NULL", " ",
+                      (unsigned long)hdr.serverid, " ", (unsigned long)hdr.next_pos, " ", hdr.flags);
+            if (found_chksum)
+            {
+                char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(BLR_REPORT_CHECKSUM_FORMAT) + 1];
+                blr_report_checksum(hdr, ptr, hex_checksum);
+                MXS_DEBUG("%8s%s", " ", hex_checksum);
             }
         }
 
@@ -1871,33 +1884,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
             if (debug)
             {
-                char *cksum_format = ", CRC32 0x";
-                char hex_checksum[BINLOG_EVENT_CRC_SIZE * 2 + strlen(cksum_format) + 1];
-                uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
-                hex_checksum[0]='\0';
-
                 /* Hex representation of nonce */
                 gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
 
-                /* Hex representation of checksum */
-                cksum_data[3] = *(ptr + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
-                cksum_data[2] = *(ptr + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
-                cksum_data[1] = *(ptr + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
-                cksum_data[0] = *(ptr + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
-
-                if (found_chksum)
-                {
-                    strcpy(hex_checksum, cksum_format);
-                    gw_bin2hex(hex_checksum + strlen(cksum_format) , cksum_data, BINLOG_EVENT_CRC_SIZE);
-                    for (char *p = hex_checksum + strlen(cksum_format) ; *p; ++p)
-                    {
-                        *p = tolower(*p);
-                    }
-                }
-
-                MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u%s",
-                          pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags,
-                          hex_checksum);
+                MXS_DEBUG("- START_ENCRYPTION event @ %llu, size %lu, next pos is @ %lu, flags %u",
+                          pos, (unsigned long)hdr.event_size, (unsigned long)hdr.next_pos, hdr.flags);
 
                 MXS_DEBUG("        Encryption scheme: %u, key_version: %u,"
                           " nonce: %s\n", ste_event.binlog_crypto_scheme,
@@ -2934,7 +2925,7 @@ static GWBUF *blr_prepare_encrypted_event(ROUTER_INSTANCE *router,
     gw_bin2hex(iv_hex, iv, BLRM_IV_LENGTH);
     gw_bin2hex(nonce_hex, nonce_ptr, BLRM_NONCE_LENGTH);
 
-    MXS_DEBUG("** Decrypting Event @ %lu: the IV is %s, size is %lu, next pos is %lu",
+    MXS_DEBUG("** Encryption/Decryption of Event @ %lu: the IV is %s, size is %lu, next pos is %lu",
               (unsigned long)pos,
               iv_hex, (unsigned long)size,
               (unsigned long)(pos + size));
@@ -3107,10 +3098,10 @@ static int blr_aes_create_tail_for_cbc(uint8_t *output,
  *
  * 1 ok, 0 err */
 static int blr_binlog_event_check(ROUTER_INSTANCE *router,
-                           unsigned long pos,
-                           REP_HEADER *hdr,
-                           char *binlogname,
-                           char *errmsg)
+                                  unsigned long pos,
+                                  REP_HEADER *hdr,
+                                  char *binlogname,
+                                  char *errmsg)
 {
     /* event pos & size checks */
     if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) &&
@@ -3147,4 +3138,31 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
 
     /* check is OK */
     return 1;
+}
+
+/**
+ * Fill a string buffer with HEX representation of CRC32 (4) bytes
+ * at the end of binlog event
+ *
+ * @param hdr    The replication header struct
+ * @param buffer The buffer with binlog event
+ * @output       The output buffer to fill, preallocated by the caller
+ */
+static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *output)
+{
+    uint8_t cksum_data[BINLOG_EVENT_CRC_SIZE];
+    char *ptr = output + strlen(BLR_REPORT_CHECKSUM_FORMAT);
+    strcpy(output, BLR_REPORT_CHECKSUM_FORMAT);
+
+    /* Hex representation of checksum */
+    cksum_data[3] = *(buffer + hdr.event_size - 4 - BINLOG_EVENT_HDR_LEN);
+    cksum_data[2] = *(buffer + hdr.event_size - 3 - BINLOG_EVENT_HDR_LEN);
+    cksum_data[1] = *(buffer + hdr.event_size - 2 - BINLOG_EVENT_HDR_LEN);
+    cksum_data[0] = *(buffer + hdr.event_size - 1 - BINLOG_EVENT_HDR_LEN);
+
+    gw_bin2hex(ptr, cksum_data, BINLOG_EVENT_CRC_SIZE);
+    for (char *p = ptr ; *p; ++p)
+    {
+        *p = tolower(*p);
+    }
 }

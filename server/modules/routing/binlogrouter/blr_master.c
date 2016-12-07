@@ -1148,9 +1148,11 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         break;
                     }
 
-                    /** This is the first (and possibly last) packet of a replication
+                    /**
+                     * This is the first (and possibly last) packet of a replication
                      * event. We store the header in case the event is large and
-                     * it is transmitted over multiple network packets.  */
+                     * it is transmitted over multiple network packets.
+                     */
                     router->master_event_state = BLR_EVENT_STARTED;
                     memcpy(&router->stored_header, &hdr, sizeof(hdr));
                     reset_errors(router, &hdr);
@@ -1234,12 +1236,19 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 continue;
             }
 
-            /** We now have the complete event in one contiguous buffer */
+            /**
+             *  We now have the complete event in one contiguous buffer:
+             *  router->master_event_state is BLR_EVENT_DONE
+             */
             router->stored_event = gwbuf_make_contiguous(router->stored_event);
+            MXS_ABORT_IF_NULL(router->stored_event);
+
             ptr = GWBUF_DATA(router->stored_event);
 
-            /** len is now the length of the complete event plus 4 bytes of network
-             * header and one OK byte. Semi-sync bytes are never stored. */
+            /**
+             * len is now the length of the complete event plus 4 bytes of network
+             * header and one OK byte. Semi-sync bytes are never stored.
+             */
             len = gwbuf_length(router->stored_event);
 
             /**
@@ -1279,14 +1288,15 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 /**
                  * Detect transactions in events
                  * Only complete transactions should be sent to sleves
-                */
-
-                /* If MariaDB 10 compatibility:
-                * check for MARIADB10_GTID_EVENT with flags = 0
-                  * This marks the transaction starts instead of
-                  * QUERY_EVENT with "BEGIN"
                  */
-                if (router->trx_safe && router->master_event_state == BLR_EVENT_DONE)
+
+                /**
+                 * If MariaDB 10 compatibility:
+                 * check for MARIADB10_GTID_EVENT with flags = 0
+                 * This marks the transaction starts instead of
+                 * QUERY_EVENT with "BEGIN"
+                 */
+                if (router->trx_safe)
                 {
                     if (router->mariadb10_compat)
                     {
@@ -1295,9 +1305,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             uint64_t n_sequence;
                             uint32_t domainid;
                             unsigned int flags;
-                            n_sequence = extract_field(ptr + 4 + 20, 64);
-                            domainid = extract_field(ptr + 4 + 20 + 8, 32);
-                            flags = *(ptr + 4 + 20 + 8 + 4);
+                            n_sequence = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, 64);
+                            domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
+                            flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
 
                             if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                             {
@@ -1332,14 +1342,16 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     {
                         char *statement_sql;
                         int db_name_len, var_block_len, statement_len;
-                        db_name_len = ptr[4 + 20 + 4 + 4];
-                        var_block_len = ptr[4 + 20 + 4 + 4 + 1 + 2];
+                        db_name_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4];
+                        var_block_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2];
 
-                        statement_len = len - (4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
+                        statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
+                                        + var_block_len + 1 + db_name_len);
                         statement_sql = MXS_CALLOC(1, statement_len + 1);
                         MXS_ABORT_IF_NULL(statement_sql);
                         memcpy(statement_sql,
-                               (char *)ptr + 4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
+                               (char *)ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
+                               + var_block_len + 1 + db_name_len,
                                statement_len);
 
                         spinlock_acquire(&router->binlog_lock);
@@ -1481,8 +1493,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         /* Handle semi-sync request from master */
                         if (router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE &&
-                            semi_sync_send_ack == BLR_MASTER_SEMI_SYNC_ACK_REQ &&
-                            (router->master_event_state == BLR_EVENT_DONE))
+                            semi_sync_send_ack == BLR_MASTER_SEMI_SYNC_ACK_REQ)
                         {
 
                             MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
@@ -1560,7 +1571,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                   hdr.event_size,
                                   router->binlog_name,
                                   router->current_pos);
-                        ptr += 5;
+                        ptr += MYSQL_HEADER_LEN + 1;
                         if (hdr.event_type == ROTATE_EVENT)
                         {
                             spinlock_acquire(&router->binlog_lock);

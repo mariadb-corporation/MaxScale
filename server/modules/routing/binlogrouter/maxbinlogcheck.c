@@ -28,12 +28,13 @@
  *                                  Currently MariadDB 10 starting transactions
  *                                  are detected checking GTID event
  *                                  with flags = 0
- * 26/04/16     Massimiliano Pinto  MariaDB 10.1 GTID flags are properly parsed
- * 23/09/16     Massimiliano Pinto  MariaDB 10.1 encrypted binlog compatible:
+ * 26/04/2016   Massimiliano Pinto  MariaDB 10.1 GTID flags are properly parsed
+ * 23/09/2016   Massimiliano Pinto  MariaDB 10.1 encrypted binlog compatible:
  *                                  the output shows the START_ENCRYPTION_EVENT and follows
  *                                  binlog positions without dectypting events.
- * 25/11/16     Massimiliano Pinto  MariaDB 10.1 encrypted files can be checked
+ * 25/11/2016   Massimiliano Pinto  MariaDB 10.1 encrypted files can be checked
  *                                  with Key and Algo options
+ * 06/12/2016   Massimiliano Pinto  A new option allows displaying of replication header
  *
  *
  * @endverbatim
@@ -60,13 +61,14 @@ static struct option long_options[] =
     {"version",   no_argument, 0, 'V'},
     {"fix",       no_argument, 0, 'f'},
     {"mariadb10", no_argument, 0, 'M'},
+    {"header",    no_argument, 0, 'H'},
     {"key_file",  required_argument, 0, 'K'},
     {"aes_algo",  required_argument, 0, 'A'},
     {"help",      no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "2.0.1";
+char *binlog_check_version = "2.1.0";
 
 int
 maxscale_uptime()
@@ -82,15 +84,18 @@ int main(int argc, char **argv)
     int mariadb10_compat = 0;
     char *key_file = NULL;
     char *aes_algo = NULL;
-    
-
+    int report_header = 0;
     char c;
-    while ((c = getopt_long(argc, argv, "dVfMK:A:?", long_options, &option_index)) >= 0)
+
+    while ((c = getopt_long(argc, argv, "dVfMHK:A:?", long_options, &option_index)) >= 0)
     {
         switch (c)
         {
         case 'd':
             debug_out = 1;
+            break;
+        case 'H':
+            report_header = BLR_REPORT_REP_HEADER;
             break;
         case 'V':
             printVersion(*argv);
@@ -196,7 +201,7 @@ int main(int argc, char **argv)
     MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
 
     /* read binary log */
-    int ret = blr_read_events_all_events(inst, fix_file, debug_out);
+    int ret = blr_read_events_all_events(inst, fix_file, debug_out | report_header);
 
     mxs_log_flush_sync();
 

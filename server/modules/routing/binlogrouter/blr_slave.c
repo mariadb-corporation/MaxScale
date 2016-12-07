@@ -2389,17 +2389,19 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
              {
                  /* read it, set slave & file context */
                  uint8_t *record_ptr = GWBUF_DATA(record);
-                 SLAVE_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+                 SLAVE_ENCRYPTION_CTX *encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+
+                 MXS_ABORT_IF_NULL(encryption_ctx);
                  record_ptr += BINLOG_EVENT_HDR_LEN;
-                 new_encryption_ctx->binlog_crypto_scheme = record_ptr[0];
-                 memcpy(&new_encryption_ctx->binlog_key_version, record_ptr + 1, BLRM_KEY_VERSION_LENGTH);
-                 memcpy(new_encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
+                 encryption_ctx->binlog_crypto_scheme = record_ptr[0];
+                 memcpy(&encryption_ctx->binlog_key_version, record_ptr + 1, BLRM_KEY_VERSION_LENGTH);
+                 memcpy(encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
 
                  /* Save current first_enc_event_pos */
-                 new_encryption_ctx->first_enc_event_pos = hdr.next_pos;
+                 encryption_ctx->first_enc_event_pos = hdr.next_pos;
 
                  /* set the encryption ctx into slave */
-                 slave->encryption_ctx = new_encryption_ctx;
+                 slave->encryption_ctx = encryption_ctx;
 
                  MXS_INFO("Start Encryption event found while reading. Binlog %s is encrypted. First event at %lu",
                           slave->binlogfile,
@@ -5885,6 +5887,7 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
     if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
     {
         uint8_t *record_ptr = GWBUF_DATA(record);
+        void *old_encryption_ctx = slave->encryption_ctx;
         SLAVE_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
 
         if (!new_encryption_ctx)
@@ -5900,16 +5903,22 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
         new_encryption_ctx->first_enc_event_pos = fde_end_pos + hdr.event_size;
 
         spinlock_acquire(&slave->catch_lock);
-        /* set the encryption ctx into slave */
-        MXS_FREE(slave->encryption_ctx);
+
+        /* Set the new encryption ctx into slave */
         slave->encryption_ctx = new_encryption_ctx;
-        /* Set the slave postion after START_ENCRYPTION_EVENT */
-        slave->binlog_pos = (unsigned long)fde_end_pos + hdr.event_size;
+
         spinlock_release(&slave->catch_lock);
+
+        /* Free previous encryption ctx */
+        MXS_FREE(old->encryption_ctx);
 
         MXS_INFO("Start Encryption event found. Binlog %s is encrypted. First event at %lu",
                  slave->binlogfile,
                  (unsigned long)fde_end_pos + hdr.event_size);
+        /**
+          * Note: if the requested pos is equal to START_ENCRYPTION_EVENT pos
+          * the event will be skipped by blr_read_binlog() routine
+          */
         return 1;
     }
 

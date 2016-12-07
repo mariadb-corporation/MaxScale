@@ -79,6 +79,10 @@ MXS_BEGIN_DECLS
 #define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME 1
 #define BINLOG_MAX_KEYFILE_LINE_LEN     130
 
+/* Event detail routine */
+#define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
+#define BLR_REPORT_REP_HEADER 0x02
+
 /* Supported Encryption algorithms */
 enum blr_aes_mode
 {
