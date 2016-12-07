@@ -285,20 +285,20 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     database->mon_prev_status = database->server->status;
 
     server_transfer_status(&temp_server, database->server);
-    server_clear_status(&temp_server, SERVER_RUNNING);
+    server_clear_status_nolock(&temp_server, SERVER_RUNNING);
     /* Also clear Joined */
-    server_clear_status(&temp_server, SERVER_JOINED);
+    server_clear_status_nolock(&temp_server, SERVER_JOINED);
 
     connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status(&temp_server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(&temp_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status(&temp_server, SERVER_AUTH_ERROR);
+            server_clear_status_nolock(&temp_server, SERVER_AUTH_ERROR);
         }
 
         database->server->node_id = -1;
@@ -314,7 +314,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     }
 
     /* If we get this far then we have a working connection */
-    server_set_status(&temp_server, SERVER_RUNNING);
+    server_set_status_nolock(&temp_server, SERVER_RUNNING);
 
     /* get server version string */
     server_string = (char *) mysql_get_server_info(database->con);
@@ -406,11 +406,11 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             mysql_free_result(result);
         }
 
-        server_set_status(&temp_server, SERVER_JOINED);
+        server_set_status_nolock(&temp_server, SERVER_JOINED);
     }
     else
     {
-        server_clear_status(&temp_server, SERVER_JOINED);
+        server_clear_status_nolock(&temp_server, SERVER_JOINED);
     }
 
     /* clear bits for non member nodes */
@@ -419,11 +419,11 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         database->server->depth = -1;
 
         /* clear M/S status */
-        server_clear_status(&temp_server, SERVER_SLAVE);
-        server_clear_status(&temp_server, SERVER_MASTER);
+        server_clear_status_nolock(&temp_server, SERVER_SLAVE);
+        server_clear_status_nolock(&temp_server, SERVER_MASTER);
 
         /* clear master sticky status */
-        server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
+        server_clear_status_nolock(&temp_server, SERVER_MASTER_STICKINESS);
     }
 
     server_transfer_status(database->server, &temp_server);
@@ -488,8 +488,9 @@ monitorMain(void *arg)
         /* reset cluster members counter */
         is_cluster = 0;
 
-        ptr = mon->databases;
+        lock_monitor_servers(mon);
 
+        ptr = mon->databases;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
@@ -615,6 +616,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        release_monitor_servers(mon);
     }
 }
 

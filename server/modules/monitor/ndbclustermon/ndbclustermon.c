@@ -234,11 +234,11 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
     connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
-        server_clear_status(database->server, SERVER_RUNNING);
+        server_clear_status_nolock(database->server, SERVER_RUNNING);
 
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status(database->server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
         }
 
         database->server->node_id = -1;
@@ -250,9 +250,9 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
         return;
     }
 
-    server_clear_status(database->server, SERVER_AUTH_ERROR);
+    server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
     /* If we get this far then we have a working connection */
-    server_set_status(database->server, SERVER_RUNNING);
+    server_set_status_nolock(database->server, SERVER_RUNNING);
 
     /* get server version string */
     server_string = (char *) mysql_get_server_info(database->con);
@@ -313,12 +313,12 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
 
     if (isjoined)
     {
-        server_set_status(database->server, SERVER_NDB);
+        server_set_status_nolock(database->server, SERVER_NDB);
         database->server->depth = 0;
     }
     else
     {
-        server_clear_status(database->server, SERVER_NDB);
+        server_clear_status_nolock(database->server, SERVER_NDB);
         database->server->depth = -1;
     }
 }
@@ -373,8 +373,9 @@ monitorMain(void *arg)
             continue;
         }
         nrounds += 1;
-        ptr = mon->databases;
 
+        lock_monitor_servers(mon);
+        ptr = mon->databases;
         while (ptr)
         {
             ptr->mon_prev_status = ptr->server->status;
@@ -414,6 +415,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        release_monitor_servers(mon);
     }
 }
 

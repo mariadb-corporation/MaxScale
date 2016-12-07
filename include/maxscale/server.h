@@ -264,8 +264,8 @@ extern void dprintPersistentDCBs(DCB *, SERVER *);
 extern void dListServers(DCB *);
 extern char *server_status(SERVER *);
 extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
-extern void server_set_status(SERVER *, int);
-extern void server_clear_status(SERVER *, int);
+extern void server_set_status_nolock(SERVER *, int);
+extern void server_clear_status_nolock(SERVER *, int);
 extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void serverAddMonUser(SERVER *, char *, char *);
 extern void serverAddParameter(SERVER *, char *, char *);
@@ -277,5 +277,8 @@ extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
 extern unsigned int server_map_status(char *str);
 extern bool server_set_version_string(SERVER* server, const char* string);
+
+extern void server_set_status(SERVER *, int);
+extern void server_clear_status(SERVER *, int);
 
 MXS_END_DECLS

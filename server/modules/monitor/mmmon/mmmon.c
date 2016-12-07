@@ -252,20 +252,20 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status(database->server, SERVER_AUTH_ERROR);
+            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
             monitor_set_pending_status(database, SERVER_AUTH_ERROR);
         }
-        server_clear_status(database->server, SERVER_RUNNING);
+        server_clear_status_nolock(database->server, SERVER_RUNNING);
         monitor_clear_pending_status(database, SERVER_RUNNING);
 
         /* Also clear M/S state in both server and monitor server pending struct */
-        server_clear_status(database->server, SERVER_SLAVE);
-        server_clear_status(database->server, SERVER_MASTER);
+        server_clear_status_nolock(database->server, SERVER_SLAVE);
+        server_clear_status_nolock(database->server, SERVER_MASTER);
         monitor_clear_pending_status(database, SERVER_SLAVE);
         monitor_clear_pending_status(database, SERVER_MASTER);
 
         /* Clean addition status too */
-        server_clear_status(database->server, SERVER_STALE_STATUS);
+        server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
         monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
         if (mon_status_changed(database) && mon_print_fail_status(database))
@@ -276,12 +276,12 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
     }
     else
     {
-        server_clear_status(database->server, SERVER_AUTH_ERROR);
+        server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
         monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
     }
 
     /* Store current status in both server and monitor server pending struct */
-    server_set_status(database->server, SERVER_RUNNING);
+    server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
 
     /* get server version from current server */
@@ -558,6 +558,7 @@ monitorMain(void *arg)
         }
         nrounds += 1;
 
+        lock_monitor_servers(mon);
         /* start from the first server in the list */
         ptr = mon->databases;
 
@@ -612,7 +613,7 @@ monitorMain(void *arg)
                                "use it again even if it could be a stale master, you have "
                                "been warned!", ptr->server->name, ptr->server->port);
                     /* Set the STALE bit for this server in server struct */
-                    server_set_status(ptr->server, SERVER_STALE_STATUS);
+                    server_set_status_nolock(ptr->server, SERVER_STALE_STATUS);
                 }
                 else
                 {
@@ -642,6 +643,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        release_monitor_servers(mon);
     }
 }
 

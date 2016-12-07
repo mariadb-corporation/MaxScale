@@ -1451,3 +1451,26 @@ void mon_hangup_failed_servers(MONITOR *monitor)
         }
     }
 }
+/**
+  * Acquire locks on all servers monitored my this monitor. There should
+  * only be max 1 monitor per server.
+  * @param monitor The target monitor
+  */
+void lock_monitor_servers(MONITOR *monitor)
+{
+    MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        spinlock_acquire(&ptr->server->lock);
+        ptr = ptr->next;
+    }
+}
+void release_monitor_servers(MONITOR *monitor)
+{
+    MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        spinlock_release(&ptr->server->lock);
+        ptr = ptr->next;
+    }
+}

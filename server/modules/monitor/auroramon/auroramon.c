@@ -79,7 +79,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
     if (!SERVER_IN_MAINT(database->server))
     {
         SERVER temp_server = {.status = database->server->status};
-        server_clear_status(&temp_server, SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
+        server_clear_status_nolock(&temp_server, SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_AUTH_ERROR);
         database->mon_prev_status = database->server->status;
 
         /** Try to connect to or ping the database */
@@ -87,7 +87,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
 
         if (rval == MONITOR_CONN_OK)
         {
-            server_set_status(&temp_server, SERVER_RUNNING);
+            server_set_status_nolock(&temp_server, SERVER_RUNNING);
             MYSQL_RES *result;
 
             /** Connection is OK, query for replica status */
@@ -106,7 +106,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
                     status = SERVER_MASTER;
                 }
 
-                server_set_status(&temp_server, status);
+                server_set_status_nolock(&temp_server, status);
                 mysql_free_result(result);
             }
             else
@@ -122,7 +122,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
             /** Failed to connect to the database */
             if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
             {
-                server_set_status(&temp_server, SERVER_AUTH_ERROR);
+                server_set_status_nolock(&temp_server, SERVER_AUTH_ERROR);
             }
 
             if (mon_status_changed(database) && mon_print_fail_status(database))
@@ -187,6 +187,7 @@ monitorMain(void *arg)
 
     while (!handle->shutdown)
     {
+        lock_monitor_servers(monitor);
         for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
@@ -221,6 +222,7 @@ monitorMain(void *arg)
             }
         }
 
+        release_monitor_servers(monitor);
         /** Sleep until the next monitoring interval */
         int ms = 0;
         while (ms < monitor->interval && !handle->shutdown)

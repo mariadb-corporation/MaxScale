@@ -671,48 +671,50 @@ server_status(SERVER *server)
     {
         return NULL;
     }
+
+    unsigned int server_status = server->status;
     status[0] = 0;
-    if (server->status & SERVER_MAINT)
+    if (server_status & SERVER_MAINT)
     {
         strcat(status, "Maintenance, ");
     }
-    if (server->status & SERVER_MASTER)
+    if (server_status & SERVER_MASTER)
     {
         strcat(status, "Master, ");
     }
-    if (server->status & SERVER_RELAY_MASTER)
+    if (server_status & SERVER_RELAY_MASTER)
     {
         strcat(status, "Relay Master, ");
     }
-    if (server->status & SERVER_SLAVE)
+    if (server_status & SERVER_SLAVE)
     {
         strcat(status, "Slave, ");
     }
-    if (server->status & SERVER_JOINED)
+    if (server_status & SERVER_JOINED)
     {
         strcat(status, "Synced, ");
     }
-    if (server->status & SERVER_NDB)
+    if (server_status & SERVER_NDB)
     {
         strcat(status, "NDB, ");
     }
-    if (server->status & SERVER_SLAVE_OF_EXTERNAL_MASTER)
+    if (server_status & SERVER_SLAVE_OF_EXTERNAL_MASTER)
     {
         strcat(status, "Slave of External Server, ");
     }
-    if (server->status & SERVER_STALE_STATUS)
+    if (server_status & SERVER_STALE_STATUS)
     {
         strcat(status, "Stale Status, ");
     }
-    if (server->status & SERVER_MASTER_STICKINESS)
+    if (server_status & SERVER_MASTER_STICKINESS)
     {
         strcat(status, "Master Stickiness, ");
     }
-    if (server->status & SERVER_AUTH_ERROR)
+    if (server_status & SERVER_AUTH_ERROR)
     {
         strcat(status, "Auth Error, ");
     }
-    if (server->status & SERVER_RUNNING)
+    if (server_status & SERVER_RUNNING)
     {
         strcat(status, "Running");
     }
@@ -724,13 +726,13 @@ server_status(SERVER *server)
 }
 
 /**
- * Set a status bit in the server
+ * Set a status bit in the server without locking
  *
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
 void
-server_set_status(SERVER *server, int bit)
+server_set_status_nolock(SERVER *server, int bit)
 {
     server->status |= bit;
 
@@ -744,6 +746,8 @@ server_set_status(SERVER *server, int bit)
 /**
  * Set one or more status bit(s) from a specified set, clearing any others
  * in the specified set
+ *
+ * @attention This function does no locking
  *
  * @param server        The server to update
  * @param bit           The bit to set for the server
@@ -764,19 +768,21 @@ server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set)
 }
 
 /**
- * Clear a status bit in the server
+ * Clear a status bit in the server without locking
  *
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
 void
-server_clear_status(SERVER *server, int bit)
+server_clear_status_nolock(SERVER *server, int bit)
 {
     server->status &= ~bit;
 }
 
 /**
  * Transfer status bitstring from one server to another
+ *
+ * @attention This function does no locking
  *
  * @param dest_server       The server to be updated
  * @param source_server         The server to provide the new bit string
@@ -1071,10 +1077,8 @@ bool server_set_version_string(SERVER* server, const char* string)
 
     if (string)
     {
-        spinlock_acquire(&server->lock);
         char* old = server->server_string;
         server->server_string = (char*)string;
-        spinlock_release(&server->lock);
         MXS_FREE(old);
     }
     else
@@ -1253,4 +1257,32 @@ SERVER* server_find_destroyed(const char *name, const char *protocol,
     spinlock_release(&server_spin);
 
     return server;
+}
+/**
+ * Set a status bit in the server under a lock. This ensures synchronization
+ * with the server monitor thread. Calling this inside the monitor will likely
+ * cause a deadlock.
+ *
+ * @param server        The server to update
+ * @param bit           The bit to set for the server
+ */
+void server_set_status(SERVER *server, int bit)
+{
+    spinlock_acquire(&server->lock);
+    server_set_status_nolock(server, bit);
+    spinlock_release(&server->lock);
+}
+/**
+ * Clear a status bit in the server under a lock. This ensures synchronization
+ * with the server monitor thread. Calling this inside the monitor will likely
+ * cause a deadlock.
+ *
+ * @param server        The server to update
+ * @param bit           The bit to clear for the server
+ */
+void server_clear_status(SERVER *server, int bit)
+{
+    spinlock_acquire(&server->lock);
+    server_clear_status_nolock(server, bit);
+    spinlock_release(&server->lock);
 }

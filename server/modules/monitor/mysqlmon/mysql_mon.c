@@ -685,7 +685,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         connect_result_t rval;
         if ((rval = mon_connect_to_db(mon, database)) == MONITOR_CONN_OK)
         {
-            server_clear_status(database->server, SERVER_AUTH_ERROR);
+            server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
             monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
         }
         else
@@ -697,24 +697,24 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
              */
             if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
             {
-                server_set_status(database->server, SERVER_AUTH_ERROR);
+                server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
                 monitor_set_pending_status(database, SERVER_AUTH_ERROR);
             }
-            server_clear_status(database->server, SERVER_RUNNING);
+            server_clear_status_nolock(database->server, SERVER_RUNNING);
             monitor_clear_pending_status(database, SERVER_RUNNING);
 
             /* Also clear M/S state in both server and monitor server pending struct */
-            server_clear_status(database->server, SERVER_SLAVE);
-            server_clear_status(database->server, SERVER_MASTER);
-            server_clear_status(database->server, SERVER_RELAY_MASTER);
+            server_clear_status_nolock(database->server, SERVER_SLAVE);
+            server_clear_status_nolock(database->server, SERVER_MASTER);
+            server_clear_status_nolock(database->server, SERVER_RELAY_MASTER);
             monitor_clear_pending_status(database, SERVER_SLAVE);
             monitor_clear_pending_status(database, SERVER_MASTER);
             monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
 
             /* Clean addition status too */
-            server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-            server_clear_status(database->server, SERVER_STALE_STATUS);
-            server_clear_status(database->server, SERVER_STALE_SLAVE);
+            server_clear_status_nolock(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+            server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
+            server_clear_status_nolock(database->server, SERVER_STALE_SLAVE);
             monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
             monitor_clear_pending_status(database, SERVER_STALE_STATUS);
             monitor_clear_pending_status(database, SERVER_STALE_SLAVE);
@@ -729,7 +729,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         }
     }
     /* Store current status in both server and monitor server pending struct */
-    server_set_status(database->server, SERVER_RUNNING);
+    server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
 
     /* get server version from current server */
@@ -828,7 +828,7 @@ struct graph_node
  *     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
  */
 static void visit_node(struct graph_node *node, struct graph_node **stack,
-                         int *stacksize, int *index, int *cycle)
+                       int *stacksize, int *index, int *cycle)
 {
     /** Assign an index to this node */
     node->lowest_index = node->index = *index;
@@ -1087,7 +1087,7 @@ void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
         }
         else
         {
-            server_set_status(db->server, SERVER_MAINT);
+            server_set_status_nolock(db->server, SERVER_MAINT);
             monitor_set_pending_status(db, SERVER_MAINT);
         }
         db = db->next;
@@ -1161,6 +1161,7 @@ monitorMain(void *arg)
         /* reset num_servers */
         num_servers = 0;
 
+        lock_monitor_servers(mon);
         /* start from the first server in the list */
         ptr = mon->databases;
 
@@ -1302,7 +1303,7 @@ monitorMain(void *arg)
                      * In this case server->status will not be updated from pending_status
                      * Set the STALE bit for this server in server struct
                      */
-                    server_set_status(ptr->server, SERVER_STALE_STATUS | SERVER_MASTER);
+                    server_set_status_nolock(ptr->server, SERVER_STALE_STATUS | SERVER_MASTER);
                     ptr->pending_status |= SERVER_STALE_STATUS | SERVER_MASTER;
 
                     /** Log the message only if the master server didn't have
@@ -1451,6 +1452,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        release_monitor_servers(mon);
     } /*< while (1) */
 }
 
@@ -1841,7 +1843,7 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
                                         current->node_id);
                     master->server->depth = current->depth - 1;
 
-                    if(handle->master && master->server->depth < handle->master->server->depth)
+                    if (handle->master && master->server->depth < handle->master->server->depth)
                     {
                         /** A master with a lower depth was found, remove
                             the master status from the previous master. */

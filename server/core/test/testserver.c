@@ -82,11 +82,11 @@ test1()
     {
         MXS_FREE(status);
     }
-    server_set_status(server, SERVER_MASTER);
+    server_set_status_nolock(server, SERVER_MASTER);
     status = server_status(server);
     mxs_log_flush_sync();
     ss_info_dassert(0 == strcmp("Master, Running", status), "Should find correct status.");
-    server_clear_status(server, SERVER_MASTER);
+    server_clear_status_nolock(server, SERVER_MASTER);
     MXS_FREE(status);
     status = server_status(server);
     mxs_log_flush_sync();
