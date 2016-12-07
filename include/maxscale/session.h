@@ -261,21 +261,6 @@ session_trx_state_t session_get_trx_state(const SESSION* ses);
 session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
 
 /**
- * Tells whether a transaction is active.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction is active, false otherwise.
- */
-static inline bool session_trx_is_active(const SESSION* ses)
-{
-    return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
-}
-
-/**
  * Tells whether an explicit READ ONLY transaction is active.
  *
  * @see session_get_trx_state
@@ -327,6 +312,21 @@ static inline bool session_trx_is_read_write(const SESSION* ses)
 static inline bool session_is_autocommit(const SESSION* ses)
 {
     return ses->autocommit;
+}
+
+/**
+ * Tells whether a transaction is active.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if a transaction is active, false otherwise.
+ */
+static inline bool session_trx_is_active(const SESSION* ses)
+{
+    return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
 }
 
 /**
