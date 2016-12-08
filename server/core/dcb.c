@@ -3415,20 +3415,30 @@ void dcb_append_readqueue(DCB *dcb, GWBUF *buffer)
 
 void dcb_add_to_list(DCB *dcb)
 {
-    spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
-
-    if (all_dcbs[dcb->thread.id] == NULL)
+    if (dcb->dcb_role != DCB_ROLE_SERVICE_LISTENER ||
+        (dcb->thread.next == NULL && dcb->thread.tail == NULL))
     {
-        all_dcbs[dcb->thread.id] = dcb;
-        all_dcbs[dcb->thread.id]->thread.tail = dcb;
-    }
-    else
-    {
-        all_dcbs[dcb->thread.id]->thread.tail->thread.next = dcb;
-        all_dcbs[dcb->thread.id]->thread.tail = dcb;
-    }
+        /**
+         * This is a DCB which is either not a listener or it is a listener which
+         * is not in the list. Stopped listeners are not removed from the list
+         * as that part is done in the final zombie processing.
+         */
 
-    spinlock_release(&all_dcbs_lock[dcb->thread.id]);
+        spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
+
+        if (all_dcbs[dcb->thread.id] == NULL)
+        {
+            all_dcbs[dcb->thread.id] = dcb;
+            all_dcbs[dcb->thread.id]->thread.tail = dcb;
+        }
+        else
+        {
+            all_dcbs[dcb->thread.id]->thread.tail->thread.next = dcb;
+            all_dcbs[dcb->thread.id]->thread.tail = dcb;
+        }
+
+        spinlock_release(&all_dcbs_lock[dcb->thread.id]);
+    }
 }
 
 /**
