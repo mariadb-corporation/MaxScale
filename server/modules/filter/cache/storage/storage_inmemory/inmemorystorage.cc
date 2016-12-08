@@ -111,7 +111,10 @@ cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppinfo) cons
 {
     *ppinfo = json_object();
 
-    // TODO: Fill with unordered_map statistics.
+    if (*ppinfo)
+    {
+        stats_.fill(*ppinfo);
+    }
 
     return *ppinfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
@@ -124,6 +127,8 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
 
     if (i != entries_.end())
     {
+        stats_.hits += 1;
+
         Entry& entry = i->second;
 
         uint32_t now = time(NULL);
@@ -159,6 +164,10 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
             MXS_NOTICE("Cache item is stale, not using.");
         }
     }
+    else
+    {
+        stats_.misses += 1;
+    }
 
     return result;
 }
@@ -169,24 +178,43 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* 
 
     size_t size = GWBUF_LENGTH(pvalue);
 
-    Entry& entry = entries_[key];
+    Entries::iterator i = entries_.find(key);
+    Entry* pentry;
 
-    if (size < entry.value.capacity())
+    if (i == entries_.end())
     {
-        // If the needed value is less than what is currently stored,
-        // we shrink the buffer so as not to waste space.
-        Value value(size);
-        entry.value.swap(value);
+        stats_.items += 1;
+
+        pentry = &entries_[key];
+        pentry->value.resize(size);
     }
     else
     {
-        entry.value.resize(size);
+        stats_.updates += 1;
+
+        pentry = &i->second;
+
+        stats_.size -= pentry->value.size();
+
+        if (size < pentry->value.capacity())
+        {
+            // If the needed value is less than what is currently stored,
+            // we shrink the buffer so as not to waste space.
+            Value value(size);
+            pentry->value.swap(value);
+        }
+        else
+        {
+            pentry->value.resize(size);
+        }
     }
+
+    stats_.size += size;
 
     const uint8_t* pdata = GWBUF_DATA(pvalue);
 
-    copy(pdata, pdata + size, entry.value.begin());
-    entry.time = time(NULL);
+    copy(pdata, pdata + size, pentry->value.begin());
+    pentry->time = time(NULL);
 
     return CACHE_RESULT_OK;
 }
@@ -197,8 +225,36 @@ cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
 
     if (i != entries_.end())
     {
+        ss_dassert(stats_.size >= i->second.value.size());
+        ss_dassert(stats_.items > 0);
+
+        stats_.size -= i->second.value.size();
+        stats_.items -= 1;
+        stats_.deletes += 1;
+
         entries_.erase(i);
     }
 
     return i != entries_.end() ? CACHE_RESULT_OK : CACHE_RESULT_NOT_FOUND;
+}
+
+static void set_integer(json_t* pobject, const char* zname, size_t value)
+{
+    json_t* pvalue = json_integer(value);
+
+    if (pvalue)
+    {
+        json_object_set(pobject, zname, pvalue);
+        json_decref(pvalue);
+    }
+}
+
+void InMemoryStorage::Stats::fill(json_t* pbject) const
+{
+    set_integer(pbject, "size", size);
+    set_integer(pbject, "items", items);
+    set_integer(pbject, "hits", hits);
+    set_integer(pbject, "misses", misses);
+    set_integer(pbject, "updates", updates);
+    set_integer(pbject, "deletes", deletes);
 }

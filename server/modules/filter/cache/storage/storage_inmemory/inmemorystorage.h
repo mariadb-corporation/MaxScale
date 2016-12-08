@@ -56,9 +56,31 @@ private:
         Value    value;
     };
 
+    struct Stats
+    {
+        Stats()
+            : size(0)
+            , items(0)
+            , hits(0)
+            , misses(0)
+            , updates(0)
+            , deletes(0)
+        {}
+
+        void fill(json_t* pbject) const;
+
+        uint64_t size;       /*< The total size of the stored values. */
+        uint64_t items;      /*< The number of stored items. */
+        uint64_t hits;       /*< How many times a key was found in the cache. */
+        uint64_t misses;     /*< How many times a key was not found in the cache. */
+        uint64_t updates;    /*< How many times an existing key in the cache was updated. */
+        uint64_t deletes;    /*< How many times an existing key in the cache was deleted. */
+    };
+
     typedef std::tr1::unordered_map<CACHE_KEY, Entry> Entries;
 
     std::string name_;
     uint32_t    ttl_;
     Entries     entries_;
+    Stats       stats_;
 };
