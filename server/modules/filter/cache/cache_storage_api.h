@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_CACHE_CACHE_STORAGE_API_H
-#define _MAXSCALE_FILTER_CACHE_CACHE_STORAGE_API_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -14,6 +12,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <jansson.h>
@@ -61,6 +60,25 @@ typedef struct cache_key
 {
     char data[CACHE_KEY_MAXLEN];
 } CACHE_KEY;
+
+/**
+ * Hashes a CACHE_KEY to a size_t
+ *
+ * @param key  The key to be hashed.
+ *
+ * @return The corresponding hash.
+ */
+size_t cache_key_hash(const CACHE_KEY* key);
+
+/**
+ * Are two CACHE_KEYs equal.
+ *
+ * @param lhs One cache key.
+ * @param rhs Another cache key.
+ *
+ * @return True, if the keys are equal.
+ */
+bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs);
 
 typedef enum cache_storage_capabilities
 {
@@ -204,5 +222,3 @@ typedef struct cache_storage_api
 typedef CACHE_STORAGE_API* (*CacheGetStorageAPIFN)();
 
 MXS_END_DECLS
-
-#endif

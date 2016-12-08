@@ -18,6 +18,7 @@
 #include <vector>
 #include <tr1/unordered_map>
 #include "../../cachefilter.h"
+#include "../../cache_storage_api.hh"
 
 class InMemoryStorage
 {

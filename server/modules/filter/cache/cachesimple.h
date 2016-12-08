@@ -16,6 +16,7 @@
 #include <tr1/unordered_map>
 #include <maxscale/hashtable.h>
 #include "cache.h"
+#include "cache_storage_api.hh"
 
 class Storage;
 

@@ -14,8 +14,9 @@
 
 #include <maxscale/cdefs.h>
 #include <tr1/unordered_map>
-#include "storage.h"
 #include "cachefilter.h"
+#include "cache_storage_api.hh"
+#include "storage.h"
 
 class LRUStorage : public Storage
 {
