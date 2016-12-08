@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_CACHE_CACHE_H
-#define _MAXSCALE_FILTER_CACHE_CACHE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -16,15 +14,9 @@
 
 #include <maxscale/cdefs.h>
 #include <limits.h>
-#include <exception>
-#include <tr1/functional>
-#include <maxscale/hashtable.h>
-#include <maxscale/spinlock.h>
-#include "rules.h"
 #include "cache_storage_api.h"
+#include "rules.h"
 
-class Storage;
-class StorageFactory;
 
 #define CACHE_DEBUG_NONE          0  /* 0b00000 */
 #define CACHE_DEBUG_MATCHING      1  /* 0b00001 */
@@ -76,5 +68,3 @@ typedef struct cache_config
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */
 } CACHE_CONFIG;
-
-#endif
