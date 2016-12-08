@@ -20,13 +20,10 @@
 #include <algorithm>
 #include <set>
 #include <rocksdb/env.h>
+#include <rocksdb/statistics.h>
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
-extern "C"
-{
-// TODO: Add extern "C" to modutil.h
 #include <maxscale/modutil.h>
-}
 #include <maxscale/query_classifier.h>
 #include "rocksdbinternals.h"
 
@@ -231,6 +228,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
     ss_dassert(zName);
 
     string storageDirectory = get_cachedir();
+    bool collectStatistics = false;
 
     for (int i = 0; i < argc; ++i)
     {
@@ -261,6 +259,13 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
                             zKey, get_cachedir());
             }
         }
+        else if (strcmp(zKey, "collect_statistics") == 0)
+        {
+            if (zValue)
+            {
+                collectStatistics = config_truth_value(zValue);
+            }
+        }
         else
         {
             MXS_WARNING("Unknown argument '%s'.", zKey);
@@ -269,11 +274,14 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
 
     storageDirectory += "/storage_rocksdb";
 
-    return Create(storageDirectory, zName, ttl);
+    return Create(storageDirectory, zName, ttl, collectStatistics);
 }
 
 // static
-RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory, const char* zName, uint32_t ttl)
+RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory,
+                                       const char* zName,
+                                       uint32_t ttl,
+                                       bool collectStatistics)
 {
     RocksDBStorage* pStorage = nullptr;
 
@@ -301,6 +309,11 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory, const cha
 
             options.create_if_missing = true;
             options.error_if_exists = true;
+
+            if (collectStatistics)
+            {
+                options.statistics = rocksdb::CreateDBStatistics();
+            }
 
             rocksdb::DBWithTTL* pDb;
             rocksdb::Status status;
@@ -348,11 +361,27 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory, const cha
 
 cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
 {
-    *ppInfo = json_object();
+    json_t* pInfo = json_object();
 
-    // TODO: Fill with RocksDB statistics.
+    if (pInfo)
+    {
+        auto sStatistics = m_sDb->GetOptions().statistics;
 
-    return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
+        for_each(rocksdb::TickersNameMap.begin(), rocksdb::TickersNameMap.end(),
+                 [pInfo, sStatistics](const std::pair<rocksdb::Tickers, string>& tickerName) {
+                     json_t* pValue = json_integer(sStatistics->getTickerCount(tickerName.first));
+
+                     if (pValue)
+                     {
+                         json_object_set(pInfo, tickerName.second.c_str(), pValue);
+                         json_decref(pValue);
+                     }
+                 });
+
+        *ppInfo = pInfo;
+    }
+
+    return pInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
 cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)

@@ -46,7 +46,8 @@ private:
 
     static RocksDBStorage* Create(const std::string& storageDirectory,
                                   const char* zName,
-                                  uint32_t ttl);
+                                  uint32_t ttl,
+                                  bool collectStatistics);
 
     static const rocksdb::WriteOptions& writeOptions()
     {

@@ -463,8 +463,9 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
                 int argc = 1;
                 char *arg = config.storage_options;
 
-                while ((arg = strchr(config.storage_options, ',')))
+                while ((arg = strchr(arg, ',')))
                 {
+                    arg = arg + 1;
                     ++argc;
                 }
 

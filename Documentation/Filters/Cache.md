@@ -457,3 +457,18 @@ storage_options=cache_directory=/mnt/maxscale-cache
 
 With the above setting a directory `/mnt/macscale-cache/storage_rocksdb` will
 created, under which the actual instance specific cache directories are created.
+
+#### `collect_statistics`
+
+Specifies whether RocksDB should collect statistics that later can be queried
+using `maxadmin`. It should be noted, though, that collecting RocksDB statistics
+is not without a cost. From the [RocksDB Documentation](https://github.com/facebook/rocksdb/wiki/Statistics)
+
+_The overhead of statistics is usually small but non-negligible. We usually
+observe an overhead of 5%-10%._
+
+The value is a boolean and the default is `false`.
+
+```
+storage_options=collect_statistics=true
+```
