@@ -91,7 +91,6 @@ static void feedback_defaults();
 static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 
-int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
 static int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
@@ -1362,7 +1361,7 @@ handle_global_item(const char *name, const char *value)
                                 lognames[i].name, lognames[i].replacement);
                 }
 
-                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value((char*)value));
+                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value(value));
             }
         }
     }
@@ -1528,7 +1527,7 @@ handle_feedback_item(const char *name, const char *value)
     int i;
     if (strcmp(name, "feedback_enable") == 0)
     {
-        feedback.feedback_enable = config_truth_value((char *)value);
+        feedback.feedback_enable = config_truth_value(value);
     }
     else if (strcmp(name, "feedback_user_info") == 0)
     {
@@ -1996,7 +1995,7 @@ bool config_set_qualified_param(CONFIG_PARAMETER* param,
  * @return      Truth value
  */
 int
-config_truth_value(char *str)
+config_truth_value(const char *str)
 {
     if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 ||
         strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
