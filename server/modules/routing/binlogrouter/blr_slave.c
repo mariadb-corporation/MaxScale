@@ -2948,7 +2948,6 @@ blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
     GWBUF *head;
     uint8_t *ptr;
     uint32_t chksum;
-    char err_msg[BINLOG_ERROR_MSG_LEN + 1];
     uint32_t event_size;
     uint8_t *event_ptr;
 
@@ -2957,7 +2956,6 @@ blr_slave_send_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *fde)
         return 0;
     }
 
-    err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
     event_ptr = GWBUF_DATA(fde);
     head = gwbuf_alloc(5);
     ptr = GWBUF_DATA(head);
@@ -5887,7 +5885,6 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
     if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT)
     {
         uint8_t *record_ptr = GWBUF_DATA(record);
-        void *old_encryption_ctx = slave->encryption_ctx;
         SLAVE_ENCRYPTION_CTX *new_encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
 
         if (!new_encryption_ctx)
@@ -5904,13 +5901,14 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
 
         spinlock_acquire(&slave->catch_lock);
 
+        SLAVE_ENCRYPTION_CTX *old_encryption_ctx = slave->encryption_ctx;
         /* Set the new encryption ctx into slave */
         slave->encryption_ctx = new_encryption_ctx;
 
         spinlock_release(&slave->catch_lock);
 
         /* Free previous encryption ctx */
-        MXS_FREE(old->encryption_ctx);
+        MXS_FREE(old_encryption_ctx);
 
         MXS_INFO("Start Encryption event found. Binlog %s is encrypted. First event at %lu",
                  slave->binlogfile,
