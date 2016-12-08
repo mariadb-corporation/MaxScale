@@ -19,6 +19,7 @@
 #include <maxscale/filter.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/cpp.hh>
 #include "cachemt.h"
 #include "cachept.h"
 #include "cachefiltersession.hh"
@@ -191,12 +192,12 @@ static FILTER *createInstance(const char* zName, char** pzOptions, FILTER_PARAME
             {
             case CACHE_THREAD_MODEL_MT:
                 MXS_NOTICE("Creating shared cache.");
-                CPP_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
+                MXS_EXCEPTION_GUARD(pFilter->pCache = CacheMT::Create(zName, &pFilter->config));
                 break;
 
             case CACHE_THREAD_MODEL_ST:
                 MXS_NOTICE("Creating thread specific cache.");
-                CPP_GUARD(pFilter->pCache = CachePT::Create(zName, &pFilter->config));
+                MXS_EXCEPTION_GUARD(pFilter->pCache = CachePT::Create(zName, &pFilter->config));
                 break;
 
             default:
@@ -229,7 +230,7 @@ static void *newSession(FILTER* pInstance, SESSION* pSession)
     Cache* pCache = pFilter->pCache;
 
     CacheFilterSession* pCacheFilterSession = NULL;
-    CPP_GUARD(pCacheFilterSession = CacheFilterSession::Create(pCache, pSession));
+    MXS_EXCEPTION_GUARD(pCacheFilterSession = CacheFilterSession::Create(pCache, pSession));
 
     return pCacheFilterSession;
 }
@@ -244,7 +245,7 @@ static void closeSession(FILTER* pInstance, void* pSessionData)
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pCacheFilterSession->close());
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->close());
 }
 
 /**
@@ -271,7 +272,7 @@ static void setDownstream(FILTER* pInstance, void* pSessionData, DOWNSTREAM* pDo
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pCacheFilterSession->setDownstream(pDownstream));
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->setDownstream(pDownstream));
 }
 
 /**
@@ -285,7 +286,7 @@ static void setUpstream(FILTER* pInstance, void* pSessionData, UPSTREAM* pUpstre
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pCacheFilterSession->setUpstream(pUpstream));
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->setUpstream(pUpstream));
 }
 
 /**
@@ -300,7 +301,7 @@ static int routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
     int rv = 0;
-    CPP_GUARD(rv = pCacheFilterSession->routeQuery(pPacket));
+    MXS_EXCEPTION_GUARD(rv = pCacheFilterSession->routeQuery(pPacket));
 
     return rv;
 }
@@ -317,7 +318,7 @@ static int clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
     int rv = 0;
-    CPP_GUARD(rv = pCacheFilterSession->clientReply(pPacket));
+    MXS_EXCEPTION_GUARD(rv = pCacheFilterSession->clientReply(pPacket));
 
     return rv;
 }
@@ -336,7 +337,7 @@ static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pCacheFilterSession->diagnostics(pDcb));
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->diagnostics(pDcb));
 }
 
 /**

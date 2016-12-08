@@ -81,34 +81,4 @@ void cache_config_finish(CACHE_CONFIG& config);
 void cache_config_free(CACHE_CONFIG* pConfig);
 void cache_config_reset(CACHE_CONFIG& config);
 
-/**
- * LockGuard is a RAII class whose constructor acquires a spinlock and
- * destructor releases the same spinlock. To be used for locking a spinlock
- * in an exceptionsafe manner for the duration of a scope.
- */
-class LockGuard
-{
-public:
-    LockGuard(SPINLOCK* plock)
-        : lock_(*plock)
-    {
-        spinlock_acquire(&lock_);
-    }
-    ~LockGuard()
-    {
-        spinlock_release(&lock_);
-    }
-
-private:
-    LockGuard(const LockGuard&);
-    LockGuard& operator = (const LockGuard&);
-
-    SPINLOCK& lock_;
-};
-
-#define CPP_GUARD(statement)\
-    do { try { statement; }                                              \
-    catch (const std::exception& x) { MXS_ERROR("Caught standard exception: %s", x.what()); }\
-    catch (...) { MXS_ERROR("Caught unknown exception."); } } while (false)
-
 #endif

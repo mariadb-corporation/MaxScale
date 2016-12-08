@@ -14,6 +14,8 @@
 #define MXS_MODULE_NAME "storage_inmemory"
 #include "inmemorystoragemt.h"
 
+using maxscale::SpinLockGuard;
+
 InMemoryStorageMT::InMemoryStorageMT(const std::string& name, uint32_t ttl)
     : InMemoryStorage(name, ttl)
 {
@@ -34,28 +36,28 @@ InMemoryStorageMT* InMemoryStorageMT::create(const std::string& name,
 
 cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_get_info(what, ppInfo);
 }
 
 cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_get_value(key, flags, ppresult);
 }
 
 cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pvalue)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_put_value(key, pvalue);
 }
 
 cache_result_t InMemoryStorageMT::del_value(const CACHE_KEY& key)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_del_value(key);
 }

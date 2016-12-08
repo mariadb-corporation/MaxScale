@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include "inmemorystorage.h"
 
 class InMemoryStorageMT : public InMemoryStorage

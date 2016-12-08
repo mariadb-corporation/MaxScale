@@ -16,6 +16,7 @@
 #include "storage.h"
 #include "storagefactory.h"
 
+using maxscale::SpinLockGuard;
 using std::tr1::shared_ptr;
 
 CacheMT::CacheMT(const std::string&  name,
@@ -56,21 +57,21 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
 json_t* CacheMT::get_info(uint32_t flags) const
 {
-    LockGuard guard(&m_lockPending);
+    SpinLockGuard guard(m_lockPending);
 
     return CacheSimple::do_get_info(flags);
 }
 
 bool CacheMT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
-    LockGuard guard(&m_lockPending);
+    SpinLockGuard guard(m_lockPending);
 
     return do_must_refresh(key, pSession);
 }
 
 void CacheMT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
 {
-    LockGuard guard(&m_lockPending);
+    SpinLockGuard guard(m_lockPending);
 
     do_refreshed(key, pSession);
 }
@@ -96,11 +97,11 @@ CacheMT* CacheMT::Create(const std::string&  name,
 
     if (pStorage)
     {
-        CPP_GUARD(pCache = new CacheMT(name,
-                                       pConfig,
-                                       sRules,
-                                       sFactory,
-                                       pStorage));
+        MXS_EXCEPTION_GUARD(pCache = new CacheMT(name,
+                                                 pConfig,
+                                                 sRules,
+                                                 sFactory,
+                                                 pStorage));
 
         if (!pCache)
         {

@@ -15,6 +15,7 @@
 #include "cachept.h"
 #include <maxscale/atomic.h>
 #include <maxscale/platform.h>
+#include <maxscale/cpp.hh>
 #include "cachest.h"
 #include "storagefactory.h"
 
@@ -168,7 +169,7 @@ CachePT* CachePT::Create(const std::string&  name,
 
             CacheST* pCacheST = 0;
 
-            CPP_GUARD(pCacheST = CacheST::Create(namest, sRules, sFactory, pConfig));
+            MXS_EXCEPTION_GUARD(pCacheST = CacheST::Create(namest, sRules, sFactory, pConfig));
 
             if (pCacheST)
             {

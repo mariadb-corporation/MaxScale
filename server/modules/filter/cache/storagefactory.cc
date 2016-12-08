@@ -130,7 +130,7 @@ StorageFactory* StorageFactory::Open(const char* zName)
 
     if (open_cache_storage(zName, &handle, &pApi, &capabilities))
     {
-        CPP_GUARD(pFactory = new StorageFactory(handle, pApi, capabilities));
+        MXS_EXCEPTION_GUARD(pFactory = new StorageFactory(handle, pApi, capabilities));
 
         if (!pFactory)
         {
@@ -162,7 +162,7 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
     {
         StorageReal* pStorageReal = NULL;
 
-        CPP_GUARD(pStorageReal = new StorageReal(m_pApi, pRawStorage));
+        MXS_EXCEPTION_GUARD(pStorageReal = new StorageReal(m_pApi, pRawStorage));
 
         if (pStorageReal)
         {

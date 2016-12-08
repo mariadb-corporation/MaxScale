@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "cache"
 #include "cachest.h"
+#include <maxscale/cpp.hh>
 #include "storage.h"
 #include "storagefactory.h"
 
@@ -101,11 +102,11 @@ CacheST* CacheST::Create(const std::string&  name,
 
     if (pStorage)
     {
-        CPP_GUARD(pCache = new CacheST(name,
-                                       pConfig,
-                                       sRules,
-                                       sFactory,
-                                       pStorage));
+        MXS_EXCEPTION_GUARD(pCache = new CacheST(name,
+                                                 pConfig,
+                                                 sRules,
+                                                 sFactory,
+                                                 pStorage));
 
         if (!pCache)
         {

@@ -13,6 +13,7 @@
 
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragest.h"
+#include <maxscale/cpp.hh>
 
 LRUStorageST::LRUStorageST(Storage* pstorage, size_t max_count, size_t max_size)
     : LRUStorage(pstorage, max_count, max_size)
@@ -28,7 +29,7 @@ LRUStorageST* LRUStorageST::create(Storage* pstorage, size_t max_count, size_t m
 {
     LRUStorageST* plru_storage = NULL;
 
-    CPP_GUARD(plru_storage = new LRUStorageST(pstorage, max_count, max_size));
+    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageST(pstorage, max_count, max_size));
 
     return plru_storage;
 }

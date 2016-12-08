@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
+#include <maxscale/spinlock.hh>
 #include "lrustorage.h"
 
 class LRUStorageMT : public LRUStorage

@@ -14,6 +14,8 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragemt.h"
 
+using maxscale::SpinLockGuard;
+
 LRUStorageMT::LRUStorageMT(Storage* pstorage, size_t max_count, size_t max_size)
     : LRUStorage(pstorage, max_count, max_size)
 {
@@ -30,7 +32,7 @@ LRUStorageMT* LRUStorageMT::create(Storage* pstorage, size_t max_count, size_t m
 {
     LRUStorageMT* plru_storage = NULL;
 
-    CPP_GUARD(plru_storage = new LRUStorageMT(pstorage, max_count, max_size));
+    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageMT(pstorage, max_count, max_size));
 
     return plru_storage;
 }
@@ -38,7 +40,7 @@ LRUStorageMT* LRUStorageMT::create(Storage* pstorage, size_t max_count, size_t m
 cache_result_t LRUStorageMT::get_info(uint32_t what,
                                       json_t** ppInfo) const
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return LRUStorage::do_get_info(what, ppInfo);
 }
@@ -47,7 +49,7 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
                                        GWBUF** ppvalue)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_get_value(key, flags, ppvalue);
 }
@@ -55,14 +57,14 @@ cache_result_t LRUStorageMT::get_value(const CACHE_KEY& key,
 cache_result_t LRUStorageMT::put_value(const CACHE_KEY& key,
                                        const GWBUF* pvalue)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_put_value(key, pvalue);
 }
 
 cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 {
-    LockGuard guard(&lock_);
+    SpinLockGuard guard(lock_);
 
     return do_del_value(key);
 }
