@@ -1080,7 +1080,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 event_msg = "error";
             }
             MXS_NOTICE("Non-event message (%s) from master.", event_msg);
-            pkt = gwbuf_consume(pkt, len);
+            gwbuf_free(pkt);
+            break;
         }
         else
         {
