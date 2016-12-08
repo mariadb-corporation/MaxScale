@@ -429,6 +429,11 @@ regardless of what host the `admin` user comes from.
 
 # Storage
 
+## `storage_inmemory`
+
+This simple storage module uses the standard memory allocator for storing
+the cached data.
+
 ## `storage_rocksdb`
 
 This storage module uses RocksDB database for storing the cached data. The
