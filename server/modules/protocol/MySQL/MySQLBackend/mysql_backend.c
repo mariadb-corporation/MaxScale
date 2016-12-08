@@ -848,6 +848,8 @@ gw_read_and_write(DCB *dcb)
              */
             if (!sescmd_response_complete(dcb))
             {
+                stmt = gwbuf_append(stmt, read_buffer);
+                dcb->dcb_readqueue = gwbuf_append(stmt, dcb->dcb_readqueue);
                 return 0;
             }
 

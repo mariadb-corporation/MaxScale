@@ -383,11 +383,11 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             bref_set_state(get_bref_from_dcb(router_cli_ses, backend_ref[i].bref_dcb),
                            BREF_WAITING_RESULT);
             /**
-             * Start execution if cursor is not already executing.
-             * Otherwise, cursor will execute pending commands
-             * when it completes with previous commands.
+             * Start execution if cursor is not already executing or this is the
+             * master server. Otherwise, cursor will execute pending commands
+             * when it completes the previous command.
              */
-            if (sescmd_cursor_is_active(scur))
+            if (sescmd_cursor_is_active(scur) && &backend_ref[i] != router_cli_ses->rses_master_ref)
             {
                 nsucc += 1;
                 MXS_INFO("Backend %s:%d already executing sescmd.",
@@ -1242,24 +1242,13 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
          (SERVER_IS_MASTER(bref->ref->server) ? "master"
           : "slave"), bref->ref->server->name, bref->ref->server->port);
     /**
-     * Store current stmt if execution of previous session command
-     * haven't completed yet.
-     *
-     * !!! Note that according to MySQL protocol
-     * there can only be one such non-sescmd stmt at the time.
-     * It is possible that bref->bref_pending_cmd includes a pending
-     * command if rwsplit is parent or child for another router,
-     * which runs all the same commands.
-     *
-     * If the assertion below traps, pending queries are treated
-     * somehow wrong, or client is sending more queries before
-     * previous is received.
+     * Store current statement if execution of previous session command is still
+     * active. Since the master server's response is always used, we can safely
+     * write session commands to the master even if it is already executing.
      */
-    if (sescmd_cursor_is_active(scur))
+    if (sescmd_cursor_is_active(scur) && bref != rses->rses_master_ref)
     {
-        ss_dassert(bref->bref_pending_cmd == NULL);
-        bref->bref_pending_cmd = gwbuf_clone(querybuf);
-
+        bref->bref_pending_cmd = gwbuf_append(bref->bref_pending_cmd, gwbuf_clone(querybuf));
         return true;
     }
 
