@@ -21,7 +21,7 @@
 
 class Cache;
 
-class SessionCache
+class CacheFilterSession
 {
 public:
     enum cache_session_state_t
@@ -46,21 +46,21 @@ public:
     /**
      * Releases all resources held by the session cache.
      */
-    ~SessionCache();
+    ~CacheFilterSession();
 
     /**
-     * Creates a SessionCache instance.
+     * Creates a CacheFilterSession instance.
      *
      * @param pCache     Pointer to the cache instance to which this session cache
-     *                   belongs. Must remain valid for the lifetime of the SessionCache
+     *                   belongs. Must remain valid for the lifetime of the CacheFilterSession
      *                   instance being created.
      * @param pSession   Pointer to the session this session cache instance is
-     *                   specific for. Must remain valid for the lifetime of the SessionCache
+     *                   specific for. Must remain valid for the lifetime of the CacheFilterSession
      *                   instance being created.
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static SessionCache* Create(Cache* pCache, SESSION* pSession);
+    static CacheFilterSession* Create(Cache* pCache, SESSION* pSession);
 
     /**
      * The session has been closed.
@@ -122,10 +122,10 @@ private:
     void store_result();
 
 private:
-    SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb);
+    CacheFilterSession(Cache* pCache, SESSION* pSession, char* zDefaultDb);
 
-    SessionCache(const SessionCache&);
-    SessionCache& operator = (const SessionCache&);
+    CacheFilterSession(const CacheFilterSession&);
+    CacheFilterSession& operator = (const CacheFilterSession&);
 
 private:
     cache_session_state_t m_state;       /**< What state is the session in, what data is expected. */

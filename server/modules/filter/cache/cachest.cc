@@ -70,14 +70,14 @@ json_t* CacheST::get_info(uint32_t flags) const
     return CacheSimple::do_get_info(flags);
 }
 
-bool CacheST::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
+bool CacheST::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
-    return CacheSimple::do_must_refresh(key, pSessionCache);
+    return CacheSimple::do_must_refresh(key, pSession);
 }
 
-void CacheST::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
+void CacheST::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
 {
-    CacheSimple::do_refreshed(key, pSessionCache);
+    CacheSimple::do_refreshed(key, pSession);
 }
 
 // static

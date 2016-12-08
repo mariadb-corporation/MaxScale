@@ -100,7 +100,7 @@ json_t* CacheSimple::do_get_info(uint32_t what) const
 }
 
 // protected
-bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
+bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     bool rv = false;
     Pending::iterator i = m_pending.find(key);
@@ -109,7 +109,7 @@ bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const SessionCache* pSes
     {
         try
         {
-            m_pending.insert(std::make_pair(key, pSessionCache));
+            m_pending.insert(std::make_pair(key, pSession));
             rv = true;
         }
         catch (const std::exception& x)
@@ -122,10 +122,10 @@ bool CacheSimple::do_must_refresh(const CACHE_KEY& key, const SessionCache* pSes
 }
 
 // protected
-void CacheSimple::do_refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache)
+void CacheSimple::do_refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
     Pending::iterator i = m_pending.find(key);
     ss_dassert(i != m_pending.end());
-    ss_dassert(i->second == pSessionCache);
+    ss_dassert(i->second == pSession);
     m_pending.erase(i);
 }

@@ -24,9 +24,9 @@ public:
 
     static CachePT* Create(const std::string& name, const CACHE_CONFIG* pConfig);
 
-    bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
-    void refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    void refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
     json_t* get_info(uint32_t what) const;
 

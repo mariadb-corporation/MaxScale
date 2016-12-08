@@ -81,14 +81,14 @@ CachePT* CachePT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
     return pCache;
 }
 
-bool CachePT::must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache)
+bool CachePT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
-    return thread_cache().must_refresh(key, pSessionCache);
+    return thread_cache().must_refresh(key, pSession);
 }
 
-void CachePT::refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache)
+void CachePT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
 {
-    thread_cache().refreshed(key, pSessionCache);
+    thread_cache().refreshed(key, pSession);
 }
 
 json_t* CachePT::get_info(uint32_t what) const

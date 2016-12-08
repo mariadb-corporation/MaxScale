@@ -46,16 +46,16 @@ protected:
 
     json_t* do_get_info(uint32_t what) const;
 
-    bool do_must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    bool do_must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
-    void do_refreshed(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    void do_refreshed(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
 private:
     CacheSimple(const Cache&);
     CacheSimple& operator = (const CacheSimple&);
 
 protected:
-    typedef std::tr1::unordered_map<CACHE_KEY, const SessionCache*> Pending;
+    typedef std::tr1::unordered_map<CACHE_KEY, const CacheFilterSession*> Pending;
 
     Pending  m_pending;  // Pending items; being fetched from the backend.
     Storage* m_pStorage; // The storage instance to use.

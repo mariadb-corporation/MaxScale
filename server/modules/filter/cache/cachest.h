@@ -28,9 +28,9 @@ public:
 
     json_t* get_info(uint32_t what) const;
 
-    bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache);
+    bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession);
 
-    void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache);
+    void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession);
 
 private:
     CacheST(const std::string&  name,

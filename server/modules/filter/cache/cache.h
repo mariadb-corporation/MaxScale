@@ -21,7 +21,7 @@
 #include "cachefilter.h"
 #include "cache_storage_api.h"
 
-class SessionCache;
+class CacheFilterSession;
 
 class Cache
 {
@@ -67,20 +67,20 @@ public:
     /**
      * Specifies whether a particular SessioCache should refresh the data.
      *
-     * @param key            The hashed key for a query.
-     * @param pSessionCache  The session cache asking.
+     * @param key       The hashed key for a query.
+     * @param pSession  The session cache asking.
      *
      * @return True, if the session cache should refresh the data.
      */
-    virtual bool must_refresh(const CACHE_KEY& key, const SessionCache* pSessionCache) = 0;
+    virtual bool must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession) = 0;
 
     /**
      * To inform the cache that a particular item has been updated upon request.
      *
-     * @param key            The hashed key for a query.
-     * @param pSessionCache  The session cache informing.
+     * @param key       The hashed key for a query.
+     * @param pSession  The session cache informing.
      */
-    virtual void refreshed(const CACHE_KEY& key,  const SessionCache* pSessionCache) = 0;
+    virtual void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession) = 0;
 
     virtual cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
 

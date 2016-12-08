@@ -12,14 +12,14 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "sessioncache.h"
+#include "cachefiltersession.hh"
 #include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/mysql_utils.h>
 #include "storage.h"
 
-SessionCache::SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb)
+CacheFilterSession::CacheFilterSession(Cache* pCache, SESSION* pSession, char* zDefaultDb)
     : m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
     , m_pSession(pSession)
@@ -34,16 +34,16 @@ SessionCache::SessionCache(Cache* pCache, SESSION* pSession, char* zDefaultDb)
     reset_response_state();
 }
 
-SessionCache::~SessionCache()
+CacheFilterSession::~CacheFilterSession()
 {
     MXS_FREE(m_zUseDb);
     MXS_FREE(m_zDefaultDb);
 }
 
 //static
-SessionCache* SessionCache::Create(Cache* pCache, SESSION* pSession)
+CacheFilterSession* CacheFilterSession::Create(Cache* pCache, SESSION* pSession)
 {
-    SessionCache* pSessionCache = NULL;
+    CacheFilterSession* pCacheFilterSession = NULL;
 
     ss_dassert(pSession->client_dcb);
     ss_dassert(pSession->client_dcb->data);
@@ -58,32 +58,32 @@ SessionCache* SessionCache::Create(Cache* pCache, SESSION* pSession)
 
     if ((pMysqlSession->db[0] == 0) || zDefaultDb)
     {
-        pSessionCache = new (std::nothrow) SessionCache(pCache, pSession, zDefaultDb);
+        pCacheFilterSession = new (std::nothrow) CacheFilterSession(pCache, pSession, zDefaultDb);
 
-        if (!pSessionCache)
+        if (!pCacheFilterSession)
         {
             MXS_FREE(zDefaultDb);
         }
     }
 
-    return pSessionCache;
+    return pCacheFilterSession;
 }
 
-void SessionCache::close()
+void CacheFilterSession::close()
 {
 }
 
-void SessionCache::setDownstream(DOWNSTREAM* pDown)
+void CacheFilterSession::setDownstream(DOWNSTREAM* pDown)
 {
     m_down = *pDown;
 }
 
-void SessionCache::setUpstream(UPSTREAM* pUp)
+void CacheFilterSession::setUpstream(UPSTREAM* pUp)
 {
     m_up = *pUp;
 }
 
-int SessionCache::routeQuery(GWBUF* pPacket)
+int CacheFilterSession::routeQuery(GWBUF* pPacket)
 {
     uint8_t* pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket));
 
@@ -237,7 +237,7 @@ int SessionCache::routeQuery(GWBUF* pPacket)
     return rv;
 }
 
-int SessionCache::clientReply(GWBUF* pData)
+int CacheFilterSession::clientReply(GWBUF* pData)
 {
     int rv;
 
@@ -303,7 +303,7 @@ int SessionCache::clientReply(GWBUF* pData)
     return rv;
 }
 
-void SessionCache::diagnostics(DCB* pDcb)
+void CacheFilterSession::diagnostics(DCB* pDcb)
 {
     // Not printing anything. Session of the same instance share the same cache, in
     // which case the same information would be printed once per session, or all
@@ -315,7 +315,7 @@ void SessionCache::diagnostics(DCB* pDcb)
 /**
  * Called when resultset field information is handled.
  */
-int SessionCache::handle_expecting_fields()
+int CacheFilterSession::handle_expecting_fields()
 {
     ss_dassert(m_state == CACHE_EXPECTING_FIELDS);
     ss_dassert(m_res.pData);
@@ -366,7 +366,7 @@ int SessionCache::handle_expecting_fields()
 /**
  * Called when data is received (even if nothing is expected) from the server.
  */
-int SessionCache::handle_expecting_nothing()
+int CacheFilterSession::handle_expecting_nothing()
 {
     ss_dassert(m_state == CACHE_EXPECTING_NOTHING);
     ss_dassert(m_res.pData);
@@ -379,7 +379,7 @@ int SessionCache::handle_expecting_nothing()
 /**
  * Called when a response is received from the server.
  */
-int SessionCache::handle_expecting_response()
+int CacheFilterSession::handle_expecting_response()
 {
     ss_dassert(m_state == CACHE_EXPECTING_RESPONSE);
     ss_dassert(m_res.pData);
@@ -451,7 +451,7 @@ int SessionCache::handle_expecting_response()
 /**
  * Called when resultset rows are handled.
  */
-int SessionCache::handle_expecting_rows()
+int CacheFilterSession::handle_expecting_rows()
 {
     ss_dassert(m_state == CACHE_EXPECTING_ROWS);
     ss_dassert(m_res.pData);
@@ -517,7 +517,7 @@ int SessionCache::handle_expecting_rows()
 /**
  * Called when a response to a "USE db" is received from the server.
  */
-int SessionCache::handle_expecting_use_response()
+int CacheFilterSession::handle_expecting_use_response()
 {
     ss_dassert(m_state == CACHE_EXPECTING_USE_RESPONSE);
     ss_dassert(m_res.pData);
@@ -567,7 +567,7 @@ int SessionCache::handle_expecting_use_response()
 /**
  * Called when all data from the server is ignored.
  */
-int SessionCache::handle_ignoring_response()
+int CacheFilterSession::handle_ignoring_response()
 {
     ss_dassert(m_state == CACHE_IGNORING_RESPONSE);
     ss_dassert(m_res.pData);
@@ -580,7 +580,7 @@ int SessionCache::handle_ignoring_response()
  *
  * @return Whatever the upstream returns.
  */
-int SessionCache::send_upstream()
+int CacheFilterSession::send_upstream()
 {
     ss_dassert(m_res.pData != NULL);
 
@@ -593,7 +593,7 @@ int SessionCache::send_upstream()
 /**
  * Reset cache response state
  */
-void SessionCache::reset_response_state()
+void CacheFilterSession::reset_response_state()
 {
     m_res.pData = NULL;
     m_res.nTotalFields = 0;
@@ -609,7 +609,7 @@ void SessionCache::reset_response_state()
  * @param value The result.
  * @return True if the query was satisfied from the query.
  */
-cache_result_t SessionCache::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
+cache_result_t CacheFilterSession::get_cached_response(const GWBUF *pQuery, GWBUF **ppResponse)
 {
     cache_result_t result = m_pCache->get_key(m_zDefaultDb, pQuery, &m_key);
 
@@ -632,7 +632,7 @@ cache_result_t SessionCache::get_cached_response(const GWBUF *pQuery, GWBUF **pp
  *
  * @param csdata Session data
  */
-void SessionCache::store_result()
+void CacheFilterSession::store_result()
 {
     ss_dassert(m_res.pData);
 

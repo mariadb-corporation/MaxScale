@@ -21,7 +21,7 @@
 #include <maxscale/modulecmd.h>
 #include "cachemt.h"
 #include "cachept.h"
-#include "sessioncache.h"
+#include "cachefiltersession.hh"
 
 using std::string;
 
@@ -228,10 +228,10 @@ static void *newSession(FILTER* pInstance, SESSION* pSession)
     CACHE_FILTER *pFilter = reinterpret_cast<CACHE_FILTER*>(pInstance);
     Cache* pCache = pFilter->pCache;
 
-    SessionCache* pSessionCache = NULL;
-    CPP_GUARD(pSessionCache = SessionCache::Create(pCache, pSession));
+    CacheFilterSession* pCacheFilterSession = NULL;
+    CPP_GUARD(pCacheFilterSession = CacheFilterSession::Create(pCache, pSession));
 
-    return pSessionCache;
+    return pCacheFilterSession;
 }
 
 /**
@@ -242,9 +242,9 @@ static void *newSession(FILTER* pInstance, SESSION* pSession)
  */
 static void closeSession(FILTER* pInstance, void* pSessionData)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pSessionCache->close());
+    CPP_GUARD(pCacheFilterSession->close());
 }
 
 /**
@@ -255,9 +255,9 @@ static void closeSession(FILTER* pInstance, void* pSessionData)
  */
 static void freeSession(FILTER* pInstance, void* pSessionData)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    delete pSessionCache;
+    delete pCacheFilterSession;
 }
 
 /**
@@ -269,9 +269,9 @@ static void freeSession(FILTER* pInstance, void* pSessionData)
  */
 static void setDownstream(FILTER* pInstance, void* pSessionData, DOWNSTREAM* pDownstream)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pSessionCache->setDownstream(pDownstream));
+    CPP_GUARD(pCacheFilterSession->setDownstream(pDownstream));
 }
 
 /**
@@ -283,9 +283,9 @@ static void setDownstream(FILTER* pInstance, void* pSessionData, DOWNSTREAM* pDo
  */
 static void setUpstream(FILTER* pInstance, void* pSessionData, UPSTREAM* pUpstream)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pSessionCache->setUpstream(pUpstream));
+    CPP_GUARD(pCacheFilterSession->setUpstream(pUpstream));
 }
 
 /**
@@ -297,10 +297,10 @@ static void setUpstream(FILTER* pInstance, void* pSessionData, UPSTREAM* pUpstre
  */
 static int routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
     int rv = 0;
-    CPP_GUARD(rv = pSessionCache->routeQuery(pPacket));
+    CPP_GUARD(rv = pCacheFilterSession->routeQuery(pPacket));
 
     return rv;
 }
@@ -314,10 +314,10 @@ static int routeQuery(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
  */
 static int clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
     int rv = 0;
-    CPP_GUARD(rv = pSessionCache->clientReply(pPacket));
+    CPP_GUARD(rv = pCacheFilterSession->clientReply(pPacket));
 
     return rv;
 }
@@ -334,9 +334,9 @@ static int clientReply(FILTER* pInstance, void* pSessionData, GWBUF* pPacket)
  */
 static void diagnostics(FILTER* pInstance, void* pSessionData, DCB* pDcb)
 {
-    SessionCache* pSessionCache = static_cast<SessionCache*>(pSessionData);
+    CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    CPP_GUARD(pSessionCache->diagnostics(pDcb));
+    CPP_GUARD(pCacheFilterSession->diagnostics(pDcb));
 }
 
 /**

@@ -2,6 +2,7 @@ if (JANSSON_FOUND)
   add_library(cache SHARED
     cache.cc
     cachefilter.cc
+    cachefiltersession.cc
     cachemt.cc
     cachept.cc
     cachesimple.cc
@@ -10,7 +11,6 @@ if (JANSSON_FOUND)
     lrustoragemt.cc
     lrustoragest.cc
     rules.cc
-    sessioncache.cc
     storage.cc
     storagefactory.cc
     storagereal.cc
