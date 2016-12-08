@@ -14,14 +14,12 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
-#include <maxscale/filter.h>
+#include <maxscale/filter.hh>
 #include "cache.h"
 #include "cachefilter.h"
 #include "cache_storage_api.h"
 
-class Cache;
-
-class CacheFilterSession
+class CacheFilterSession : public maxscale::FilterSession
 {
 public:
     enum cache_session_state_t
@@ -68,20 +66,6 @@ public:
     void close();
 
     /**
-     * Set the downstream component for this session.
-     *
-     * @param pDown  The downstream filter or router
-     */
-    void setDownstream(DOWNSTREAM* pDownstream);
-
-    /**
-     * Set the upstream component for this session.
-     *
-     * @param pUp  The upstream filter or router
-     */
-    void setUpstream(UPSTREAM* pUpstream);
-
-    /**
      * A request on its way to a backend is delivered to this function.
      *
      * @param pPacket  Buffer containing an MySQL protocol packet.
@@ -122,7 +106,7 @@ private:
     void store_result();
 
 private:
-    CacheFilterSession(Cache* pCache, SESSION* pSession, char* zDefaultDb);
+    CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
     CacheFilterSession(const CacheFilterSession&);
     CacheFilterSession& operator = (const CacheFilterSession&);
@@ -130,9 +114,6 @@ private:
 private:
     cache_session_state_t m_state;       /**< What state is the session in, what data is expected. */
     Cache*                m_pCache;      /**< The cache instance the session is associated with. */
-    SESSION*              m_pSession;    /**< The session this data is associated with. */
-    DOWNSTREAM            m_down;        /**< The previous filter or equivalent. */
-    UPSTREAM              m_up;          /**< The next filter or equivalent. */
     CACHE_RESPONSE_STATE  m_res;         /**< The response state. */
     CACHE_KEY             m_key;         /**< Key storage. */
     char*                 m_zDefaultDb;  /**< The default database. */

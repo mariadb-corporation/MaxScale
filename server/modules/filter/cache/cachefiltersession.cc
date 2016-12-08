@@ -19,16 +19,14 @@
 #include <maxscale/mysql_utils.h>
 #include "storage.h"
 
-CacheFilterSession::CacheFilterSession(Cache* pCache, SESSION* pSession, char* zDefaultDb)
-    : m_state(CACHE_EXPECTING_NOTHING)
+CacheFilterSession::CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb)
+    : maxscale::FilterSession(pSession)
+    , m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
-    , m_pSession(pSession)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
 {
-    memset(&m_down, 0, sizeof(m_down));
-    memset(&m_up, 0, sizeof(m_up));
     memset(m_key.data, 0, CACHE_KEY_MAXLEN);
 
     reset_response_state();
@@ -58,7 +56,7 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, SESSION* pSession)
 
     if ((pMysqlSession->db[0] == 0) || zDefaultDb)
     {
-        pCacheFilterSession = new (std::nothrow) CacheFilterSession(pCache, pSession, zDefaultDb);
+        pCacheFilterSession = new (std::nothrow) CacheFilterSession(pSession, pCache, zDefaultDb);
 
         if (!pCacheFilterSession)
         {
@@ -71,16 +69,6 @@ CacheFilterSession* CacheFilterSession::Create(Cache* pCache, SESSION* pSession)
 
 void CacheFilterSession::close()
 {
-}
-
-void CacheFilterSession::setDownstream(DOWNSTREAM* pDown)
-{
-    m_down = *pDown;
-}
-
-void CacheFilterSession::setUpstream(UPSTREAM* pUp)
-{
-    m_up = *pUp;
 }
 
 int CacheFilterSession::routeQuery(GWBUF* pPacket)
@@ -231,7 +219,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     if (fetch_from_server)
     {
-        rv = m_down.routeQuery(m_down.instance, m_down.session, pPacket);
+        rv = m_down.routeQuery(pPacket);
     }
 
     return rv;
@@ -584,7 +572,7 @@ int CacheFilterSession::send_upstream()
 {
     ss_dassert(m_res.pData != NULL);
 
-    int rv = m_up.clientReply(m_up.instance, m_up.session, m_res.pData);
+    int rv = m_up.clientReply(m_res.pData);
     m_res.pData = NULL;
 
     return rv;

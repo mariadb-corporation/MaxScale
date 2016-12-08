@@ -272,7 +272,9 @@ static void setDownstream(FILTER* pInstance, void* pSessionData, DOWNSTREAM* pDo
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    MXS_EXCEPTION_GUARD(pCacheFilterSession->setDownstream(pDownstream));
+    CacheFilterSession::Downstream down(*pDownstream);
+
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->setDownstream(down));
 }
 
 /**
@@ -286,7 +288,9 @@ static void setUpstream(FILTER* pInstance, void* pSessionData, UPSTREAM* pUpstre
 {
     CacheFilterSession* pCacheFilterSession = static_cast<CacheFilterSession*>(pSessionData);
 
-    MXS_EXCEPTION_GUARD(pCacheFilterSession->setUpstream(pUpstream));
+    CacheFilterSession::Upstream up(*pUpstream);
+
+    MXS_EXCEPTION_GUARD(pCacheFilterSession->setUpstream(up));
 }
 
 /**
