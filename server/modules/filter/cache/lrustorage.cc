@@ -72,7 +72,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 
     cache_result_t result = pstorage_->get_value(key, flags, ppvalue);
 
-    if (result == CACHE_RESULT_OK)
+    if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
     {
         ++stats_.hits;
 
@@ -87,6 +87,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
         }
         else
         {
+            ss_dassert(!true);
             MXS_ERROR("Item found in storage, but not in key mapping.");
         }
     }
@@ -96,6 +97,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 
         if (existed && (result == CACHE_RESULT_NOT_FOUND))
         {
+            ss_dassert(!true);
             MXS_ERROR("Item was not found in storage, but was found in key mapping.");
         }
     }
@@ -238,6 +240,7 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
         }
         else
         {
+            ss_dassert(!true);
             MXS_ERROR("Key was found from storage, but not from LRU register.");
         }
     }
@@ -325,6 +328,7 @@ bool LRUStorage::free_node_data(Node* pnode)
 
     if (i == nodes_per_key_.end())
     {
+        ss_dassert(!true);
         MXS_ERROR("Item in LRU list was not found in key mapping.");
     }
 
@@ -333,6 +337,7 @@ bool LRUStorage::free_node_data(Node* pnode)
     switch (result)
     {
     case CACHE_RESULT_NOT_FOUND:
+        ss_dassert(!true);
         MXS_ERROR("Item in LRU list was not found in storage.");
     case CACHE_RESULT_OK:
         if (i != nodes_per_key_.end())
@@ -349,6 +354,7 @@ bool LRUStorage::free_node_data(Node* pnode)
         break;
 
     default:
+        ss_dassert(!true);
         MXS_ERROR("Could not remove value from storage, cannot "
                   "remove from LRU list or key mapping either.");
         success = false;
