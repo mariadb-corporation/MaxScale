@@ -46,10 +46,18 @@ void service_free(SERVICE *service);
 /**
  * @brief Shut all services down
  *
- * Stops all services and calls the destroyInstance entry points for all routers
- * and filter. This should only be called once by the main shutdown code.
+ * Turns on the shutdown flag in each service. This should be done as
+ * part of the MaxScale shutdown.
  */
 void service_shutdown(void);
+
+/**
+ * @brief Destroy all service router and filter instances
+ *
+ * Calls the @c destroyInstance entry point of each service' router and
+ * filters. This should be done after all worker threads have exited.
+ */
+void service_destroy_instances(void);
 
 /**
  * @brief Launch all services

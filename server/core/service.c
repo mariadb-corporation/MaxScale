@@ -1892,6 +1892,18 @@ void service_shutdown()
     while (svc != NULL)
     {
         svc->svc_do_shutdown = true;
+        svc = svc->next;
+    }
+    spinlock_release(&service_spin);
+}
+
+void service_destroy_instances(void)
+{
+    spinlock_acquire(&service_spin);
+    SERVICE* svc = allServices;
+    while (svc != NULL)
+    {
+        ss_dassert(svc->svc_do_shutdown);
         /* Call destroyInstance hook for routers */
         if (svc->router->destroyInstance && svc->router_instance)
         {

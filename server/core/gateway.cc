@@ -2044,6 +2044,12 @@ int main(int argc, char **argv)
     {
         thread_wait(threads[thread_id]);
     }
+
+    /*<
+     * Destroy the router and filter instances of all services.
+     */
+    service_destroy_instances();
+
     /*<
      * Wait the flush thread.
      */
