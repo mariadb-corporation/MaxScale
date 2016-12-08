@@ -235,7 +235,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
         }
     }
 
-    ss_dassert(slaves_connected < max_nslaves);
+    ss_dassert(slaves_connected < max_nslaves || max_nslaves == 0);
 
     backend_ref_t *bref = get_slave_candidate(backend_ref, router_nservers, master_host, p);
 
