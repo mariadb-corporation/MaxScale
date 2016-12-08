@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/cpp.hh>
 #include "cache_storage_api.h"
 
 class Storage

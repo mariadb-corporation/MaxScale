@@ -18,10 +18,12 @@
 #include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
+#include <maxscale/cpp.hh>
 #include "cachefilter.h"
 #include "cache_storage_api.h"
 
 class CacheFilterSession;
+class StorageFactory;
 
 class Cache
 {

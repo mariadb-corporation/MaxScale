@@ -15,6 +15,7 @@
 #include "rules.h"
 #include <errno.h>
 #include <stdio.h>
+#include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
 #include <maxscale/protocol/mysql.h>

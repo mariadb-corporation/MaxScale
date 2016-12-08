@@ -77,8 +77,4 @@ typedef struct cache_config
     cache_thread_model_t thread_model; /**< Thread model. */
 } CACHE_CONFIG;
 
-void cache_config_finish(CACHE_CONFIG& config);
-void cache_config_free(CACHE_CONFIG* pConfig);
-void cache_config_reset(CACHE_CONFIG& config);
-
 #endif

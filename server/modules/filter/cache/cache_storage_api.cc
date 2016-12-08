@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "cache"
 #include "cache_storage_api.hh"
 #include <ctype.h>
 

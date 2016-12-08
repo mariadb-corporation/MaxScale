@@ -28,6 +28,9 @@ using std::string;
 
 static char VERSION_STRING[] = "V1.0.0";
 
+namespace
+{
+
 static const CACHE_CONFIG DEFAULT_CONFIG =
 {
     CACHE_DEFAULT_MAX_RESULTSET_ROWS,
@@ -43,6 +46,56 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
     CACHE_DEFAULT_DEBUG,
     CACHE_DEFAULT_THREAD_MODEL,
 };
+
+
+/**
+ * Frees all data of a config object, but not the object itself
+ *
+ * @param pConfig  Pointer to a config object.
+ */
+void cache_config_finish(CACHE_CONFIG& config)
+{
+    MXS_FREE(config.rules);
+    MXS_FREE(config.storage);
+    MXS_FREE(config.storage_options);
+    MXS_FREE(config.storage_argv); // The items need not be freed, they point into storage_options.
+
+    config.max_resultset_rows = 0;
+    config.max_resultset_size = 0;
+    config.rules = NULL;
+    config.storage = NULL;
+    config.storage_options = NULL;
+    config.storage_argc = 0;
+    config.storage_argv = NULL;
+    config.ttl = 0;
+    config.debug = 0;
+}
+
+/**
+ * Frees all data of a config object, and the object itself
+ *
+ * @param pConfig  Pointer to a config object.
+ */
+void cache_config_free(CACHE_CONFIG* pConfig)
+{
+    if (pConfig)
+    {
+        cache_config_finish(*pConfig);
+        MXS_FREE(pConfig);
+    }
+}
+
+/**
+ * Resets the data without freeing anything.
+ *
+ * @param config  Reference to a config object.
+ */
+void cache_config_reset(CACHE_CONFIG& config)
+{
+    memset(&config, 0, sizeof(config));
+}
+
+}
 
 typedef struct cache_filter
 {
@@ -631,51 +684,4 @@ static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_
     }
 
     return !error;
-}
-
-/**
- * Frees all data of a config object, but not the object itself
- *
- * @param pConfig  Pointer to a config object.
- */
-void cache_config_finish(CACHE_CONFIG& config)
-{
-    MXS_FREE(config.rules);
-    MXS_FREE(config.storage);
-    MXS_FREE(config.storage_options);
-    MXS_FREE(config.storage_argv); // The items need not be freed, they point into storage_options.
-
-    config.max_resultset_rows = 0;
-    config.max_resultset_size = 0;
-    config.rules = NULL;
-    config.storage = NULL;
-    config.storage_options = NULL;
-    config.storage_argc = 0;
-    config.storage_argv = NULL;
-    config.ttl = 0;
-    config.debug = 0;
-}
-
-/**
- * Frees all data of a config object, and the object itself
- *
- * @param pConfig  Pointer to a config object.
- */
-void cache_config_free(CACHE_CONFIG* pConfig)
-{
-    if (pConfig)
-    {
-        cache_config_finish(*pConfig);
-        MXS_FREE(pConfig);
-    }
-}
-
-/**
- * Resets the data without freeing anything.
- *
- * @param config  Reference to a config object.
- */
-void cache_config_reset(CACHE_CONFIG& config)
-{
-    memset(&config, 0, sizeof(config));
 }
