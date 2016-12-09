@@ -12,12 +12,12 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "cache.h"
+#include "cache.hh"
 #include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
-#include "storagefactory.h"
-#include "storage.h"
+#include "storagefactory.hh"
+#include "storage.hh"
 
 Cache::Cache(const std::string&  name,
              const CACHE_CONFIG* pConfig,

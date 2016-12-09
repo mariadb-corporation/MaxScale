@@ -17,8 +17,8 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/cpp.hh>
-#include "cachemt.h"
-#include "cachept.h"
+#include "cachemt.hh"
+#include "cachept.hh"
 
 using std::auto_ptr;
 using std::string;

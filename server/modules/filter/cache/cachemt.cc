@@ -12,9 +12,9 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "cachemt.h"
-#include "storage.h"
-#include "storagefactory.h"
+#include "cachemt.hh"
+#include "storage.hh"
+#include "storagefactory.hh"
 
 using maxscale::SpinLockGuard;
 using std::tr1::shared_ptr;

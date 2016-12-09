@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _ROCKSDBINTERNALS_H
-#define _ROCKSDBINTERNALS_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,7 +13,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "storage_rocksdb.h"
 #include <rocksdb/env.h>
 #include <rocksdb/version.h>
 #include <rocksdb/slice.h>
@@ -38,5 +35,3 @@ static const uint32_t TS_LENGTH = sizeof(int32_t);
 bool IsStale(const rocksdb::Slice& slice, int32_t ttl, rocksdb::Env* pEnv);
 
 }
-
-#endif

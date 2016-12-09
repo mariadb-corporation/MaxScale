@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "storagereal.h"
+#include "storagereal.hh"
 
 
 StorageReal::StorageReal(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)

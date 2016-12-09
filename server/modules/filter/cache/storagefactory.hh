@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _MAXSCALE_FILTER_CACHE_STORAGEFACTORY_H
-#define _MAXSCALE_FILTER_CACHE_STORAGEFACTORY_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -44,5 +42,3 @@ private:
     CACHE_STORAGE_API* m_pApi;         /*< API of storage. */
     uint32_t           m_capabilities; /*< Capabilities of storage. */
 };
-
-#endif

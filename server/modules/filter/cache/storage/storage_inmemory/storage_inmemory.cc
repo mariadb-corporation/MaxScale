@@ -14,8 +14,8 @@
 #define MXS_MODULE_NAME "storage_inmemory"
 #include <inttypes.h>
 #include "../../cache_storage_api.h"
-#include "inmemorystoragest.h"
-#include "inmemorystoragemt.h"
+#include "inmemorystoragest.hh"
+#include "inmemorystoragemt.hh"
 
 namespace
 {

@@ -12,12 +12,12 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "cachept.h"
+#include "cachept.hh"
 #include <maxscale/atomic.h>
 #include <maxscale/platform.h>
 #include <maxscale/cpp.hh>
-#include "cachest.h"
-#include "storagefactory.h"
+#include "cachest.hh"
+#include "storagefactory.hh"
 
 using std::tr1::shared_ptr;
 using std::string;

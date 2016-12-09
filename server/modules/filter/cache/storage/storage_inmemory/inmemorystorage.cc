@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_inmemory"
-#include "inmemorystorage.h"
+#include "inmemorystorage.hh"
 #include <openssl/sha.h>
 #include <algorithm>
 #include <set>

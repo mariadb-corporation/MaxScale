@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_inmemory"
-#include "inmemorystoragemt.h"
+#include "inmemorystoragemt.hh"
 
 using maxscale::SpinLockGuard;
 

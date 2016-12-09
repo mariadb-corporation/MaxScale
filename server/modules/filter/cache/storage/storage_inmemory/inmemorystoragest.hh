@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "inmemorystorage.h"
+#include "inmemorystorage.hh"
 
 class InMemoryStorageST : public InMemoryStorage
 {

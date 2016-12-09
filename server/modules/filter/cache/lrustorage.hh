@@ -16,7 +16,7 @@
 #include <tr1/unordered_map>
 #include "cachefilter.h"
 #include "cache_storage_api.hh"
-#include "storage.h"
+#include "storage.hh"
 
 class LRUStorage : public Storage
 {

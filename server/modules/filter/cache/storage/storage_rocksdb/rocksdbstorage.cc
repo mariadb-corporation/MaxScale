@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
-#include "rocksdbstorage.h"
+#include "rocksdbstorage.hh"
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -25,7 +25,7 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
-#include "rocksdbinternals.h"
+#include "rocksdbinternals.hh"
 
 using std::for_each;
 using std::set;

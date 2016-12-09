@@ -17,7 +17,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/mysql_utils.h>
-#include "storage.h"
+#include "storage.hh"
 
 CacheFilterSession::CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)

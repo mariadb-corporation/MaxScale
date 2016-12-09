@@ -1,6 +1,4 @@
 #pragma once
-#ifndef _ROCKSDBSTORAGE_H
-#define _ROCKSDBSTORAGE_H
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -15,7 +13,6 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "storage_rocksdb.h"
 #include <memory>
 #include <string>
 #include <rocksdb/utilities/db_ttl.h>
@@ -62,5 +59,3 @@ private:
 
     static rocksdb::WriteOptions        s_writeOptions;
 };
-
-#endif

@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "lrustoragest.h"
+#include "lrustoragest.hh"
 #include <maxscale/cpp.hh>
 
 LRUStorageST::LRUStorageST(Storage* pstorage, size_t max_count, size_t max_size)

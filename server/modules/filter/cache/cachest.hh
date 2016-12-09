@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "cachesimple.h"
+#include "cachesimple.hh"
 
 class CacheST : public CacheSimple
 {

@@ -14,7 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.hh>
-#include "cachesimple.h"
+#include "cachesimple.hh"
 
 class CacheMT : public CacheSimple
 {

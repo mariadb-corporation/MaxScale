@@ -12,9 +12,9 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "cachesimple.h"
-#include "storage.h"
-#include "storagefactory.h"
+#include "cachesimple.hh"
+#include "storage.hh"
+#include "storagefactory.hh"
 
 CacheSimple::CacheSimple(const std::string&  name,
                          const CACHE_CONFIG* pConfig,

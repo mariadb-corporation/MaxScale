@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "lrustoragemt.h"
+#include "lrustoragemt.hh"
 
 using maxscale::SpinLockGuard;
 

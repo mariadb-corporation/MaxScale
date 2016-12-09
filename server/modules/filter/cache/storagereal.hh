@@ -13,7 +13,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "storage.h"
+#include "storage.hh"
 
 class StorageReal : public Storage
 {

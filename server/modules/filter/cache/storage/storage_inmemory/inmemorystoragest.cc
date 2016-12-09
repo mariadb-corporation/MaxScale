@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_inmemory"
-#include "inmemorystoragest.h"
+#include "inmemorystoragest.hh"
 
 InMemoryStorageST::InMemoryStorageST(const std::string& name, uint32_t ttl)
     : InMemoryStorage(name, ttl)

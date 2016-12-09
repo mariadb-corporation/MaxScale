@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
-#include "rocksdbinternals.h"
+#include "rocksdbinternals.hh"
 #include <rocksdb/env.h>
 #include <util/coding.h>
 

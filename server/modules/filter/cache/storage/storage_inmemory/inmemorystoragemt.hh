@@ -14,7 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.hh>
-#include "inmemorystorage.h"
+#include "inmemorystorage.hh"
 
 class InMemoryStorageMT : public InMemoryStorage
 {

@@ -12,7 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "cache"
-#include "storagefactory.h"
+#include "storagefactory.hh"
 #include <dlfcn.h>
 #include <sys/param.h>
 #include <new>
@@ -20,9 +20,9 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
 #include "cachefilter.h"
-#include "lrustoragest.h"
-#include "lrustoragemt.h"
-#include "storagereal.h"
+#include "lrustoragest.hh"
+#include "lrustoragemt.hh"
+#include "storagereal.hh"
 
 
 namespace

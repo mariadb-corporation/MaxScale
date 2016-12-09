@@ -15,7 +15,7 @@
 #include <maxscale/cdefs.h>
 #include <tr1/memory>
 #include <vector>
-#include "cache.h"
+#include "cache.hh"
 
 class CachePT : public Cache
 {

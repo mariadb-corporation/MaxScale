@@ -13,30 +13,34 @@
  */
 
 #include <maxscale/cdefs.h>
-#include "lrustorage.h"
+#include <maxscale/spinlock.hh>
+#include "lrustorage.hh"
 
-class LRUStorageST : public LRUStorage
+class LRUStorageMT : public LRUStorage
 {
 public:
-    ~LRUStorageST();
+    ~LRUStorageMT();
 
-    static LRUStorageST* create(Storage* pstorage, size_t max_count, size_t max_size);
+    static LRUStorageMT* create(Storage* pstorage, size_t max_count, size_t max_size);
 
     cache_result_t get_info(uint32_t what,
                             json_t** ppInfo) const;
 
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
-                             GWBUF** ppValue);
+                             GWBUF** ppvalue);
 
     cache_result_t put_value(const CACHE_KEY& key,
-                             const GWBUF* pValue);
+                             const GWBUF* pvalue);
 
     cache_result_t del_value(const CACHE_KEY& key);
 
 private:
-    LRUStorageST(Storage* pstorage, size_t max_count, size_t max_size);
+    LRUStorageMT(Storage* pstorage, size_t max_count, size_t max_size);
 
-    LRUStorageST(const LRUStorageST&);
-    LRUStorageST& operator = (const LRUStorageST&);
+    LRUStorageMT(const LRUStorageMT&);
+    LRUStorageMT& operator = (const LRUStorageMT&);
+
+private:
+    mutable SPINLOCK lock_;
 };

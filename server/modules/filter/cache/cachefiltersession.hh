@@ -15,7 +15,7 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/buffer.h>
 #include <maxscale/filter.hh>
-#include "cache.h"
+#include "cache.hh"
 #include "cachefilter.h"
 #include "cache_storage_api.h"
 

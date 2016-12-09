@@ -12,10 +12,9 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
-#include "storage_rocksdb.h"
 #include <inttypes.h>
 #include "../../cache_storage_api.h"
-#include "rocksdbstorage.h"
+#include "rocksdbstorage.hh"
 
 namespace
 {
