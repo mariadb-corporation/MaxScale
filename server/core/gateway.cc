@@ -2084,6 +2084,8 @@ return_main:
         write_child_exit_code(daemon_pipe[1], rc);
     }
 
+    MXS_FREE(cnf_file_arg);
+
     if (threads)
     {
         MXS_FREE(threads);

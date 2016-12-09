@@ -94,7 +94,7 @@ monitor_alloc(char *name, char *module)
     }
     mon->state = MONITOR_STATE_ALLOC;
     mon->name = name;
-    mon->module_name = module;
+    mon->module_name = my_module;
     mon->handle = NULL;
     mon->databases = NULL;
     *mon->password = '\0';
