@@ -12,6 +12,7 @@
  */
 
 #define MXS_MODULE_NAME "storage_rocksdb"
+#include <maxscale/cppdefs.hh>
 #include <inttypes.h>
 #include "../../cache_storage_api.h"
 #include "rocksdbstorage.hh"
@@ -35,8 +36,6 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
 {
     ss_dassert(zName);
 
-    CACHE_STORAGE* pStorage = 0;
-
     if (maxCount != 0)
     {
         MXS_WARNING("A maximum item count of %u specifed, although 'storage_rocksdb' "
@@ -49,26 +48,16 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
                     "does not enforce such a limit.", (unsigned long)maxSize);
     }
 
-    try
-    {
-        pStorage = reinterpret_cast<CACHE_STORAGE*>(RocksDBStorage::Create(zName, ttl, argc, argv));
+    RocksDBStorage* pStorage = NULL;
 
+    MXS_EXCEPTION_GUARD(pStorage = RocksDBStorage::Create(zName, ttl, argc, argv));
+
+    if (pStorage)
+    {
         MXS_NOTICE("Storage module created.");
     }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
 
-    return pStorage;
+    return reinterpret_cast<CACHE_STORAGE*>(pStorage);
 }
 
 void freeInstance(CACHE_STORAGE* pInstance)
@@ -84,22 +73,7 @@ cache_result_t getInfo(CACHE_STORAGE* pStorage,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    try
-    {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getInfo(what, ppInfo);
-    }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->getInfo(what, ppInfo));
 
     return result;
 }
@@ -116,22 +90,9 @@ cache_result_t getKey(CACHE_STORAGE* pStorage,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    try
-    {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(zDefaultDB, pQuery, pKey);
-    }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(zDefaultDB,
+                                                                                     pQuery,
+                                                                                     pKey));
 
     return result;
 }
@@ -147,22 +108,9 @@ cache_result_t getValue(CACHE_STORAGE* pStorage,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    try
-    {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey, flags, ppResult);
-    }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->getValue(pKey,
+                                                                                       flags,
+                                                                                       ppResult));
 
     return result;
 }
@@ -177,22 +125,7 @@ cache_result_t putValue(CACHE_STORAGE* pStorage,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    try
-    {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->putValue(pKey, pValue);
-    }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->putValue(pKey, pValue));
 
     return result;
 }
@@ -205,22 +138,7 @@ cache_result_t delValue(CACHE_STORAGE* pStorage,
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    try
-    {
-        result = reinterpret_cast<RocksDBStorage*>(pStorage)->delValue(pKey);
-    }
-    catch (const std::bad_alloc&)
-    {
-        MXS_OOM();
-    }
-    catch (const std::exception& x)
-    {
-        MXS_ERROR("Standard exception caught: %s", x.what());
-    }
-    catch (...)
-    {
-        MXS_ERROR("Unknown exception caught.");
-    }
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->delValue(pKey));
 
     return result;
 }
