@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <rocksdb/env.h>
 #include <rocksdb/version.h>
 #include <rocksdb/slice.h>

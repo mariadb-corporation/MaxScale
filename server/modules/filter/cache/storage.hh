@@ -12,8 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <maxscale/cpp.hh>
+#include <maxscale/cppdefs.hh>
 #include "cache_storage_api.h"
 
 class Storage

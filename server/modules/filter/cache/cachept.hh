@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <tr1/memory>
 #include <vector>
 #include "cache.hh"

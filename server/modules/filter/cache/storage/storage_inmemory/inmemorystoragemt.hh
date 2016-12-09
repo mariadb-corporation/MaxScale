@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <maxscale/spinlock.hh>
 #include "inmemorystorage.hh"
 

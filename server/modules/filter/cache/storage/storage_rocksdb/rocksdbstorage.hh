@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <memory>
 #include <string>
 #include <rocksdb/utilities/db_ttl.h>

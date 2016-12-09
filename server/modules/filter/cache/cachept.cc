@@ -15,7 +15,6 @@
 #include "cachept.hh"
 #include <maxscale/atomic.h>
 #include <maxscale/platform.h>
-#include <maxscale/cpp.hh>
 #include "cachest.hh"
 #include "storagefactory.hh"
 

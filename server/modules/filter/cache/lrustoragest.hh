@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include "lrustorage.hh"
 
 class LRUStorageST : public LRUStorage

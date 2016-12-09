@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <tr1/unordered_map>
 #include "cachefilter.h"
 #include "cache_storage_api.hh"

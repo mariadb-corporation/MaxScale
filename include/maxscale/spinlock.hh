@@ -12,9 +12,8 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <maxscale/spinlock.h>
-#include <maxscale/cpp.hh>
 
 namespace maxscale
 {

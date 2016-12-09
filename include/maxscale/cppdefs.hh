@@ -13,9 +13,9 @@
  */
 
 /**
- * @file cpp.hh
+ * @file cppdefs.hh
  *
- * Common stuff for C++ code.
+ * This file is to be included first by all C++ headers.
  */
 
 #if !defined(__cplusplus)

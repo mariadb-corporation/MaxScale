@@ -16,7 +16,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/modulecmd.h>
-#include <maxscale/cpp.hh>
 #include "cachemt.hh"
 #include "cachept.hh"
 

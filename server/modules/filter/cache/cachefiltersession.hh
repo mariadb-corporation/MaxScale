@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <maxscale/buffer.h>
 #include <maxscale/filter.hh>
 #include "cache.hh"

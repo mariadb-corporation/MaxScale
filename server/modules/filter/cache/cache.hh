@@ -12,13 +12,12 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
+#include <maxscale/cppdefs.hh>
 #include <tr1/functional>
 #include <tr1/memory>
 #include <string>
 #include <maxscale/buffer.h>
 #include <maxscale/session.h>
-#include <maxscale/cpp.hh>
 #include "cachefilter.h"
 #include "cache_storage_api.h"
 
