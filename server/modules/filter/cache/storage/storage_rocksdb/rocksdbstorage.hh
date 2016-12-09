@@ -21,9 +21,11 @@
 class RocksDBStorage
 {
 public:
+    typedef std::unique_ptr<RocksDBStorage> SRocksDBStorage;
+
     static bool Initialize();
 
-    static RocksDBStorage* Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
+    static SRocksDBStorage Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
     ~RocksDBStorage();
 
     cache_result_t getInfo(uint32_t flags, json_t** ppInfo) const;
@@ -41,7 +43,7 @@ private:
     RocksDBStorage(const RocksDBStorage&) = delete;
     RocksDBStorage& operator = (const RocksDBStorage&) = delete;
 
-    static RocksDBStorage* Create(const std::string& storageDirectory,
+    static SRocksDBStorage Create(const std::string& storageDirectory,
                                   const char* zName,
                                   uint32_t ttl,
                                   bool collectStatistics);

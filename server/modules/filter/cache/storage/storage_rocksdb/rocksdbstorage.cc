@@ -223,7 +223,9 @@ bool RocksDBStorage::Initialize()
 }
 
 //static
-RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc, char* argv[])
+unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
+                                                  uint32_t ttl,
+                                                  int argc, char* argv[])
 {
     ss_dassert(zName);
 
@@ -278,12 +280,12 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
 }
 
 // static
-RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory,
-                                       const char* zName,
-                                       uint32_t ttl,
-                                       bool collectStatistics)
+unique_ptr<RocksDBStorage> RocksDBStorage::Create(const string& storageDirectory,
+                                                  const char* zName,
+                                                  uint32_t ttl,
+                                                  bool collectStatistics)
 {
-    RocksDBStorage* pStorage = nullptr;
+    unique_ptr<RocksDBStorage> sStorage;
 
     if (mkdir(storageDirectory.c_str(), S_IRWXU) == 0)
     {
@@ -341,7 +343,7 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory,
 
                 unique_ptr<rocksdb::DBWithTTL> sDb(pDb);
 
-                pStorage = new RocksDBStorage(sDb, zName, path, ttl);
+                sStorage = unique_ptr<RocksDBStorage>(new RocksDBStorage(sDb, zName, path, ttl));
             }
             else
             {
@@ -356,7 +358,7 @@ RocksDBStorage* RocksDBStorage::Create(const string& storageDirectory,
         }
     }
 
-    return pStorage;
+    return sStorage;
 }
 
 cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const

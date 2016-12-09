@@ -17,6 +17,8 @@
 #include "../../cache_storage_api.h"
 #include "rocksdbstorage.hh"
 
+using std::unique_ptr;
+
 namespace
 {
 
@@ -48,21 +50,21 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
                     "does not enforce such a limit.", (unsigned long)maxSize);
     }
 
-    RocksDBStorage* pStorage = NULL;
+    unique_ptr<RocksDBStorage> sStorage;
 
-    MXS_EXCEPTION_GUARD(pStorage = RocksDBStorage::Create(zName, ttl, argc, argv));
+    MXS_EXCEPTION_GUARD(sStorage = RocksDBStorage::Create(zName, ttl, argc, argv));
 
-    if (pStorage)
+    if (sStorage)
     {
         MXS_NOTICE("Storage module created.");
     }
 
-    return reinterpret_cast<CACHE_STORAGE*>(pStorage);
+    return reinterpret_cast<CACHE_STORAGE*>(sStorage.release());
 }
 
 void freeInstance(CACHE_STORAGE* pInstance)
 {
-    delete reinterpret_cast<RocksDBStorage*>(pInstance);
+    MXS_EXCEPTION_GUARD(delete reinterpret_cast<RocksDBStorage*>(pInstance));
 }
 
 cache_result_t getInfo(CACHE_STORAGE* pStorage,
