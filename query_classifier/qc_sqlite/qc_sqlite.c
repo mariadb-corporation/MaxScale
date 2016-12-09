@@ -2971,6 +2971,8 @@ static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnam
     char** table_names = NULL;
     QC_SQLITE_INFO* info = get_query_info(query);
 
+    *tblsize = 0;
+
     if (info)
     {
         if (qc_info_is_valid(info->status))
@@ -3053,6 +3055,8 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
 
     char** database_names = NULL;
     QC_SQLITE_INFO* info = get_query_info(query);
+
+    *sizep = 0;
 
     if (info)
     {

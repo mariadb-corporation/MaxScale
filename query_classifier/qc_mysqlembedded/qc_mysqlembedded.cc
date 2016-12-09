@@ -1342,11 +1342,7 @@ char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
     } /*< while(lex->current_select) */
 
 retblock:
-
-    if (tblsize)
-    {
-        *tblsize = i;
-    }
+    *tblsize = i;
 
     return tables;
 }
