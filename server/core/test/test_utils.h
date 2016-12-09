@@ -20,7 +20,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/statistics.h>
+#include "../maxscale/statistics.h"
 
 void init_test_env(char *path)
 {

@@ -37,6 +37,12 @@ MXS_BEGIN_DECLS
 
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array)/sizeof(array[0])))
 
+/** Macro for safe pointer arithmetic on void pointers
+ * @param a The void pointer
+ * @param b The offset into @c a
+ */
+#define MXS_PTR(a, b) (((uint8_t*)(a)) + (b))
+
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
 

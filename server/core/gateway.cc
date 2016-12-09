@@ -67,12 +67,12 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
-#include <maxscale/statistics.h>
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
 #include "maxscale/service.h"
+#include "maxscale/statistics.h"
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1

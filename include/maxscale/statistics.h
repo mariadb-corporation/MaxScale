@@ -40,13 +40,18 @@ enum ts_stats_type
     TS_STATS_AVG  /**< Average of all values */
 };
 
-/** stats_init should be called only once */
-void ts_stats_init();
-
-/** No-op for now */
-void ts_stats_end();
-
+/**
+ * @brief Allocate a new statistics object
+ *
+ * @return New statistics object or NULL if memory allocation failed
+ */
 ts_stats_t ts_stats_alloc();
+
+/**
+ * @brief Free statistics
+ *
+ * @param stats Statistics to free
+ */
 void ts_stats_free(ts_stats_t stats);
 
 /**
@@ -66,11 +71,7 @@ int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type);
  * @param stats     Statistics to add to
  * @param thread_id ID of thread
  */
-static void inline
-ts_stats_increment(ts_stats_t stats, int thread_id)
-{
-    ((int64_t*)stats)[thread_id]++;
-}
+void ts_stats_increment(ts_stats_t stats, int thread_id);
 
 /**
  * @brief Assign a value to a statistics element
@@ -81,11 +82,7 @@ ts_stats_increment(ts_stats_t stats, int thread_id)
  * @param value     Value to set to
  * @param thread_id ID of thread
  */
-static void inline
-ts_stats_set(ts_stats_t stats, int value, int thread_id)
-{
-    ((int64_t*)stats)[thread_id] = value;
-}
+void ts_stats_set(ts_stats_t stats, int value, int thread_id);
 
 /**
  * @brief Assign the maximum value to a statistics element
@@ -96,16 +93,7 @@ ts_stats_set(ts_stats_t stats, int value, int thread_id)
  * @param value     Value to set to
  * @param thread_id ID of thread
  */
-static void inline
-ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
-{
-    int64_t *p = (int64_t*) stats;
-
-    if (value > p[thread_id])
-    {
-        p[thread_id] = value;
-    }
-}
+void ts_stats_set_max(ts_stats_t stats, int value, int thread_id);
 
 /**
  * @brief Assign the minimum value to a statistics element
@@ -116,15 +104,6 @@ ts_stats_set_max(ts_stats_t stats, int value, int thread_id)
  * @param value     Value to set to
  * @param thread_id ID of thread
  */
-static void inline
-ts_stats_set_min(ts_stats_t stats, int value, int thread_id)
-{
-    int64_t *p = (int64_t*) stats;
-
-    if (value < p[thread_id])
-    {
-        p[thread_id] = value;
-    }
-}
+void ts_stats_set_min(ts_stats_t stats, int value, int thread_id);
 
 MXS_END_DECLS
