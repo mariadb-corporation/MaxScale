@@ -829,7 +829,6 @@ server_update_credentials(SERVER *server, char *user, char *passwd)
     if (user != NULL && passwd != NULL)
     {
         serverAddMonUser(server, user, passwd);
-        MXS_NOTICE("Updated monitor credentials for server '%s'", server->name);
     }
 }
 
@@ -997,8 +996,6 @@ server_update_address(SERVER *server, char *address)
     spinlock_acquire(&server_spin);
     if (server && address)
     {
-        MXS_NOTICE("Updated the address of server '%s' from '%s' to '%s'.",
-                   server->unique_name, server->name, address);
         strcpy(server->name, address);
     }
     spinlock_release(&server_spin);
@@ -1017,8 +1014,6 @@ server_update_port(SERVER *server, unsigned short port)
     spinlock_acquire(&server_spin);
     if (server && port > 0)
     {
-        MXS_NOTICE("Updated the port of server '%s' from %d to %d.",
-                   server->unique_name, server->port, port);
         server->port = port;
     }
     spinlock_release(&server_spin);

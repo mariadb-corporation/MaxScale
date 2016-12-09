@@ -136,6 +136,8 @@ bool runtime_create_server(const char *name, const char *address, const char *po
 
         if (server && server_serialize(server))
         {
+            MXS_NOTICE("Created server '%s' at %s:%u", server->unique_name,
+                       server->name, server->port);
             rval = true;
         }
     }
@@ -245,6 +247,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 
             if (server_serialize(server))
             {
+                MXS_NOTICE("Enabled SSL for server '%s'", server->unique_name);
                 rval = true;
             }
         }
@@ -283,6 +286,7 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
     if (valid)
     {
         server_serialize(server);
+        MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
     }
 
     spinlock_release(&crt_lock);
@@ -381,9 +385,14 @@ bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
         monitorStart(monitor, monitor->parameters);
     }
 
-    if (valid && monitor->created_online)
+    if (valid)
     {
-        monitor_serialize(monitor);
+        if (monitor->created_online)
+        {
+            monitor_serialize(monitor);
+        }
+
+        MXS_NOTICE("Updated monitor '%s': %s=%s", monitor->name, key, value);
     }
 
     spinlock_release(&crt_lock);
@@ -452,7 +461,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
             if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
             {
-                MXS_NOTICE("Listener '%s' at %s:%s for service '%s' created",
+                MXS_NOTICE("Created listener '%s' at %s:%s for service '%s'",
                            name, print_addr, port, service->name);
             }
             else
@@ -532,6 +541,7 @@ bool runtime_create_monitor(const char *name, const char *module)
 
             if (monitor_serialize(monitor))
             {
+                MXS_NOTICE("Created monitor '%s'", name);
                 rval = true;
             }
         }
