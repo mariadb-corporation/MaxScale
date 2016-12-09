@@ -27,6 +27,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
+#include "testreader.hh"
 using std::cerr;
 using std::cin;
 using std::cout;
@@ -1108,312 +1109,39 @@ static void trim(std::string &s)
     rtrim(s);
 }
 
-enum skip_action_t
-{
-    SKIP_NOTHING,        // Skip nothing.
-    SKIP_BLOCK,          // Skip until the end of next { ... }
-    SKIP_DELIMITER,      // Skip the new delimiter.
-    SKIP_LINE,           // Skip current line.
-    SKIP_NEXT_STATEMENT, // Skip statement starting on line following this line.
-    SKIP_STATEMENT,      // Skip statment starting on this line.
-    SKIP_TERMINATE,      // Cannot handle this, terminate.
-};
-
-typedef std::map<std::string, skip_action_t> KeywordActionMapping;
-
-static KeywordActionMapping mtl_keywords;
-
-void init_keywords()
-{
-    struct Keyword
-    {
-        const char* z_keyword;
-        skip_action_t action;
-    };
-
-    static const Keyword KEYWORDS[] =
-    {
-        { "append_file",                SKIP_LINE },
-        { "cat_file",                   SKIP_LINE },
-        { "change_user",                SKIP_LINE },
-        { "character_set",              SKIP_LINE },
-        { "chmod",                      SKIP_LINE },
-        { "connect",                    SKIP_LINE },
-        { "connection",                 SKIP_LINE },
-        { "copy_file",                  SKIP_LINE },
-        { "dec",                        SKIP_LINE },
-        { "delimiter",                  SKIP_DELIMITER },
-        { "die",                        SKIP_LINE },
-        { "diff_files",                 SKIP_LINE },
-        { "dirty_close",                SKIP_LINE },
-        { "disable_abort_on_error",     SKIP_LINE },
-        { "disable_connect_log",        SKIP_LINE },
-        { "disable_info",               SKIP_LINE },
-        { "disable_metadata",           SKIP_LINE },
-        { "disable_parsing",            SKIP_LINE },
-        { "disable_ps_protocol",        SKIP_LINE },
-        { "disable_query_log",          SKIP_LINE },
-        { "disable_reconnect",          SKIP_LINE },
-        { "disable_result_log",         SKIP_LINE },
-        { "disable_rpl_parse",          SKIP_LINE },
-        { "disable_session_track_info", SKIP_LINE },
-        { "disable_warnings",           SKIP_LINE },
-        { "disconnect",                 SKIP_LINE },
-        { "echo",                       SKIP_LINE },
-        { "enable_abort_on_error",      SKIP_LINE },
-        { "enable_connect_log",         SKIP_LINE },
-        { "enable_info",                SKIP_LINE },
-        { "enable_metadata",            SKIP_LINE },
-        { "enable_parsing",             SKIP_LINE },
-        { "enable_ps_protocol",         SKIP_LINE },
-        { "enable_query_log",           SKIP_LINE },
-        { "enable_reconnect",           SKIP_LINE },
-        { "enable_result_log",          SKIP_LINE },
-        { "enable_rpl_parse",           SKIP_LINE },
-        { "enable_session_track_info",  SKIP_LINE },
-        { "enable_warnings",            SKIP_LINE },
-        { "end_timer",                  SKIP_LINE },
-        { "error",                      SKIP_NEXT_STATEMENT },
-        { "eval",                       SKIP_STATEMENT },
-        { "exec",                       SKIP_LINE },
-        { "exit",                       SKIP_LINE },
-        { "file_exists",                SKIP_LINE },
-        { "horizontal_results",         SKIP_LINE },
-        { "if",                         SKIP_BLOCK },
-        { "inc",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "let",                        SKIP_LINE },
-        { "list_files",                 SKIP_LINE },
-        { "list_files_append_file",     SKIP_LINE },
-        { "list_files_write_file",      SKIP_LINE },
-        { "lowercase_result",           SKIP_LINE },
-        { "mkdir",                      SKIP_LINE },
-        { "move_file",                  SKIP_LINE },
-        { "output",                     SKIP_LINE },
-        { "perl",                       SKIP_TERMINATE },
-        { "ping",                       SKIP_LINE },
-        { "print",                      SKIP_LINE },
-        { "query",                      SKIP_LINE },
-        { "query_get_value",            SKIP_LINE },
-        { "query_horizontal",           SKIP_LINE },
-        { "query_vertical",             SKIP_LINE },
-        { "real_sleep",                 SKIP_LINE },
-        { "reap",                       SKIP_LINE },
-        { "remove_file",                SKIP_LINE },
-        { "remove_files_wildcard",      SKIP_LINE },
-        { "replace_column",             SKIP_LINE },
-        { "replace_regex",              SKIP_LINE },
-        { "replace_result",             SKIP_LINE },
-        { "require",                    SKIP_LINE },
-        { "reset_connection",           SKIP_LINE },
-        { "result",                     SKIP_LINE },
-        { "result_format",              SKIP_LINE },
-        { "rmdir",                      SKIP_LINE },
-        { "same_master_pos",            SKIP_LINE },
-        { "send",                       SKIP_LINE },
-        { "send_eval",                  SKIP_LINE },
-        { "send_quit",                  SKIP_LINE },
-        { "send_shutdown",              SKIP_LINE },
-        { "skip",                       SKIP_LINE },
-        { "sleep",                      SKIP_LINE },
-        { "sorted_result",              SKIP_LINE },
-        { "source",                     SKIP_LINE },
-        { "start_timer",                SKIP_LINE },
-        { "sync_slave_with_master",     SKIP_LINE },
-        { "sync_with_master",           SKIP_LINE },
-        { "system",                     SKIP_LINE },
-        { "vertical_results",           SKIP_LINE },
-        { "while",                      SKIP_BLOCK },
-        { "write_file",                 SKIP_LINE },
-    };
-
-    const size_t N_KEYWORDS = sizeof(KEYWORDS)/sizeof(KEYWORDS[0]);
-
-    for (size_t i = 0; i < N_KEYWORDS; ++i)
-    {
-        mtl_keywords[KEYWORDS[i].z_keyword] = KEYWORDS[i].action;
-    }
-}
-
-skip_action_t get_action(const string& keyword)
-{
-    skip_action_t action = SKIP_NOTHING;
-
-    string key(keyword);
-
-    std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
-    KeywordActionMapping::iterator i = mtl_keywords.find(key);
-
-    if (i != mtl_keywords.end())
-    {
-        action = i->second;
-    }
-
-    return action;
-}
-
-void skip_block(istream& in)
-{
-    int c;
-
-    // Find first '{'
-    while (in && ((c = in.get()) != '{'))
-    {
-        if (c == '\n')
-        {
-            ++global.line;
-        }
-    }
-
-    int n = 1;
-
-    while ((n > 0) && in)
-    {
-        c = in.get();
-
-        switch (c)
-        {
-        case '{':
-            ++n;
-            break;
-
-        case '}':
-            --n;
-            break;
-
-        case '\n':
-            ++global.line;
-            break;
-
-        default:
-            ;
-        }
-    }
-}
-
-
 int run(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, istream& in)
 {
     bool stop = false; // Whether we should exit.
-    bool skip = false; // Whether next statement should be skipped.
-    char delimiter = ';';
-    string query;
 
-    while (!stop && std::getline(in, query))
+    maxscale::TestReader reader(in);
+
+    while (!stop && (reader.get_statement(global.query) == maxscale::TestReader::RESULT_STMT))
     {
-        trim(query);
+        global.line = reader.line();
+        global.query_printed = false;
+        global.result_printed = false;
 
-        global.line++;
+        ++global.n_statements;
 
-        if (!query.empty() && (query.at(0) != '#'))
+        if (global.verbosity >= VERBOSITY_EXTENDED)
         {
-            if (!skip)
+            // In case the execution crashes, we want the query printed.
+            report_query();
+        }
+
+        bool success = compare(pClassifier1, pClassifier2, global.query);
+
+        if (!success)
+        {
+            ++global.n_errors;
+
+            if (global.stop_at_error)
             {
-                if (query.substr(0, 2) == "--")
-                {
-                    query = query.substr(2);
-                    trim(query);
-                }
-
-                string::iterator i = std::find_if(query.begin(), query.end(),
-                                                  std::ptr_fun<int,int>(std::isspace));
-                string keyword = query.substr(0, i - query.begin());
-
-                skip_action_t action = get_action(keyword);
-
-                switch (action)
-                {
-                case SKIP_NOTHING:
-                    break;
-
-                case SKIP_BLOCK:
-                    skip_block(in);
-                    continue;
-
-                case SKIP_DELIMITER:
-                    query = query.substr(i - query.begin());
-                    trim(query);
-                    if (query.length() > 0)
-                    {
-                        delimiter = query.at(0);
-                    }
-                    continue;
-
-                case SKIP_LINE:
-                    continue;
-
-                case SKIP_NEXT_STATEMENT:
-                    skip = true;
-                    continue;
-
-                case SKIP_STATEMENT:
-                    skip = true;
-                    break;
-
-                case SKIP_TERMINATE:
-                    cout << "error: Cannot handle line " << global.line
-                         << ", terminating: " << query << endl;
-                    stop = true;
-                    break;
-                }
-            }
-
-            global.query += query;
-
-            char c = query.at(query.length() - 1);
-
-            if (c == delimiter)
-            {
-                if (c != ';')
-                {
-                    // If the delimiter was something else but ';' we need to
-                    // remove that before giving the query to the classifiers.
-                    global.query.erase(global.query.length() - 1);
-                }
-
-                if (!skip)
-                {
-                    global.query_printed = false;
-                    global.result_printed = false;
-
-                    ++global.n_statements;
-
-                    if (global.verbosity >= VERBOSITY_EXTENDED)
-                    {
-                        // In case the execution crashes, we want the query printed.
-                        report_query();
-                    }
-
-                    bool success = compare(pClassifier1, pClassifier2, global.query);
-
-                    if (!success)
-                    {
-                        ++global.n_errors;
-
-                        if (global.stop_at_error)
-                        {
-                            stop = true;
-                        }
-                    }
-                }
-                else
-                {
-                    skip = false;
-                }
-
-                global.query.clear();
-            }
-            else
-            {
-                global.query += " ";
+                stop = true;
             }
         }
-        else if (query.substr(0, 7) == "--error")
-        {
-            // Next statement is supposed to fail, no need to check.
-            skip = true;
-        }
+
+        global.query.clear();
     }
 
     return global.n_errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -1502,8 +1230,6 @@ int main(int argc, char* argv[])
 
     if ((rc == EXIT_SUCCESS) && (v >= VERBOSITY_MIN && v <= VERBOSITY_MAX))
     {
-        init_keywords();
-
         rc = EXIT_FAILURE;
         global.verbosity = static_cast<verbosity_t>(v);
 
