@@ -18,6 +18,8 @@
 #include "inmemorystoragest.hh"
 #include "inmemorystoragemt.hh"
 
+using std::auto_ptr;
+
 namespace
 {
 
@@ -50,33 +52,33 @@ CACHE_STORAGE* createInstance(cache_thread_model_t model,
                     "does not enforce such a limit.", (unsigned long)max_size);
     }
 
-    InMemoryStorage* pStorage = NULL;
+    auto_ptr<InMemoryStorage> sStorage;
 
     switch (model)
     {
     case CACHE_THREAD_MODEL_ST:
-        MXS_EXCEPTION_GUARD(pStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
+        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
         break;
 
     default:
         ss_dassert(!true);
         MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.", (int)model);
     case CACHE_THREAD_MODEL_MT:
-        MXS_EXCEPTION_GUARD(pStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
+        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
         break;
     }
 
-    if (pStorage)
+    if (sStorage.get())
     {
         MXS_NOTICE("Storage module created.");
     }
 
-    return reinterpret_cast<CACHE_STORAGE*>(pStorage);
+    return reinterpret_cast<CACHE_STORAGE*>(sStorage.release());
 }
 
 void freeInstance(CACHE_STORAGE* pinstance)
 {
-    delete reinterpret_cast<InMemoryStorage*>(pinstance);
+    MXS_EXCEPTION_GUARD(delete reinterpret_cast<InMemoryStorage*>(pinstance));
 }
 
 cache_result_t getInfo(CACHE_STORAGE* pStorage,

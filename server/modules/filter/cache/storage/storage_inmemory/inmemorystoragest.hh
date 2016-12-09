@@ -20,7 +20,9 @@ class InMemoryStorageST : public InMemoryStorage
 public:
     ~InMemoryStorageST();
 
-    static InMemoryStorageST* create(const std::string& name, uint32_t ttl, int argc, char* argv[]);
+    typedef std::auto_ptr<InMemoryStorageST> SInMemoryStorageST;
+
+    static SInMemoryStorageST create(const std::string& name, uint32_t ttl, int argc, char* argv[]);
 
     cache_result_t get_info(uint32_t what, json_t** ppinfo) const;
     cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult);

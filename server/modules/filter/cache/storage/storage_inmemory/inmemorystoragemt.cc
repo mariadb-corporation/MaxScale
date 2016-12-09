@@ -15,6 +15,7 @@
 #include "inmemorystoragemt.hh"
 
 using maxscale::SpinLockGuard;
+using std::auto_ptr;
 
 InMemoryStorageMT::InMemoryStorageMT(const std::string& name, uint32_t ttl)
     : InMemoryStorage(name, ttl)
@@ -27,11 +28,11 @@ InMemoryStorageMT::~InMemoryStorageMT()
 }
 
 // static
-InMemoryStorageMT* InMemoryStorageMT::create(const std::string& name,
-                                             uint32_t ttl,
-                                             int argc, char* argv[])
+auto_ptr<InMemoryStorageMT> InMemoryStorageMT::create(const std::string& name,
+                                                      uint32_t ttl,
+                                                      int argc, char* argv[])
 {
-    return new InMemoryStorageMT(name, ttl);
+    return auto_ptr<InMemoryStorageMT>(new InMemoryStorageMT(name, ttl));
 }
 
 cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const

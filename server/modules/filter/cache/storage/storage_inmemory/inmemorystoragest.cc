@@ -14,6 +14,8 @@
 #define MXS_MODULE_NAME "storage_inmemory"
 #include "inmemorystoragest.hh"
 
+using std::auto_ptr;
+
 InMemoryStorageST::InMemoryStorageST(const std::string& name, uint32_t ttl)
     : InMemoryStorage(name, ttl)
 {
@@ -24,11 +26,11 @@ InMemoryStorageST::~InMemoryStorageST()
 }
 
 // static
-InMemoryStorageST* InMemoryStorageST::create(const std::string& name,
-                                             uint32_t ttl,
-                                             int argc, char* argv[])
+auto_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name,
+                                                      uint32_t ttl,
+                                                      int argc, char* argv[])
 {
-    return new InMemoryStorageST(name, ttl);
+    return auto_ptr<InMemoryStorageST>(new InMemoryStorageST(name, ttl));
 }
 
 cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppinfo) const
