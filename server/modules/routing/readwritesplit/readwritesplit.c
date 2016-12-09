@@ -2421,23 +2421,11 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                  bref->bref_backend->backend_server->port);
         /**
          * Store current stmt if execution of previous session command
-         * haven't completed yet.
-         *
-         * !!! Note that according to MySQL protocol
-         * there can only be one such non-sescmd stmt at the time.
-         * It is possible that bref->bref_pending_cmd includes a pending
-         * command if rwsplit is parent or child for another router,
-         * which runs all the same commands.
-         *
-         * If the assertion below traps, pending queries are treated
-         * somehow wrong, or client is sending more queries before
-         * previous is received.
+         * hasn't completed yet.
          */
-        if (sescmd_cursor_is_active(scur))
+        if (sescmd_cursor_is_active(scur) && bref != rses->rses_master_ref)
         {
-            ss_dassert(bref->bref_pending_cmd == NULL);
-            bref->bref_pending_cmd = gwbuf_clone(querybuf);
-
+            bref->bref_pending_cmd = gwbuf_append(bref->bref_pending_cmd, gwbuf_clone(querybuf));
             rses_end_locked_router_action(rses);
             goto retblock;
         }
@@ -4247,7 +4235,7 @@ static bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
              * Otherwise, cursor will execute pending commands
              * when it completes with previous commands.
              */
-            if (sescmd_cursor_is_active(scur))
+            if (sescmd_cursor_is_active(scur) && &backend_ref[i] != router_cli_ses->rses_master_ref)
             {
                 nsucc += 1;
                 MXS_INFO("Backend %s:%d already executing sescmd.",
