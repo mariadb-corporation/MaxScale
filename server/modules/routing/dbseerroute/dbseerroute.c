@@ -1148,6 +1148,14 @@ static void checkNamedPipe(void *args)
         {
             if (buffer[0] == '1')
             {
+                // reopens the log file.
+                inst->log_file = fopen(inst->log_filename, "w");
+                if (inst->log_file == NULL)
+                {
+                    MXS_ERROR("Failed to open a log file for dbseerroute router.");
+                    MXS_FREE(inst);
+                    return NULL;
+                }
                 inst->log_enabled = true;
             }
             else if (buffer[0] == '0')
