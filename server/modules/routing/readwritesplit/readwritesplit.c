@@ -4439,6 +4439,7 @@ static void handleError(ROUTER *instance, void *router_session,
     if (!rses_begin_locked_router_action(rses))
     {
         /** Session is already closed */
+        problem_dcb->dcb_errhandle_called = true;
         *succp = false;
         return;
     }
