@@ -768,15 +768,17 @@ static SERVER_REF* server_ref_create(SERVER *server)
  * @param service       The service to add the server to
  * @param server        The server to add
  */
-void
-serviceAddBackend(SERVICE *service, SERVER *server)
+bool serviceAddBackend(SERVICE *service, SERVER *server)
 {
+    bool rval = false;
+
     if (!serviceHasBackend(service, server))
     {
         SERVER_REF *new_ref = server_ref_create(server);
 
         if (new_ref)
         {
+            rval = true;
             spinlock_acquire(&service->spin);
 
             service->n_dbref++;
@@ -816,6 +818,8 @@ serviceAddBackend(SERVICE *service, SERVER *server)
             spinlock_release(&service->spin);
         }
     }
+
+    return rval;
 }
 
 /**

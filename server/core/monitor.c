@@ -247,24 +247,17 @@ monitorStopAll()
  * @param mon           The Monitor instance
  * @param server        The Server to add to the monitoring
  */
-void
-monitorAddServer(MONITOR *mon, SERVER *server)
+bool monitorAddServer(MONITOR *mon, SERVER *server)
 {
-    bool new_server = true;
-    spinlock_acquire(&mon->lock);
+    bool rval = false;
 
-    for (MONITOR_SERVERS *db = mon->databases; db; db = db->next)
+    if (monitor_server_in_use(server))
     {
-        if (db->server == server)
-        {
-            new_server = false;
-        }
+        MXS_ERROR("Server '%s' is already monitored.", server->unique_name);
     }
-
-    spinlock_release(&mon->lock);
-
-    if (new_server)
+    else
     {
+        rval = true;
         MONITOR_SERVERS *db = (MONITOR_SERVERS *)MXS_MALLOC(sizeof(MONITOR_SERVERS));
         MXS_ABORT_IF_NULL(db);
 
@@ -307,6 +300,8 @@ monitorAddServer(MONITOR *mon, SERVER *server)
             monitorStart(mon, mon->parameters);
         }
     }
+
+    return rval;
 }
 
 static void monitor_server_free(MONITOR_SERVERS *tofree)

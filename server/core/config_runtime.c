@@ -29,23 +29,26 @@ bool runtime_link_server(SERVER *server, const char *target)
     SERVICE *service = service_find(target);
     MONITOR *monitor = service ? NULL : monitor_find(target);
 
-    if (service || monitor)
+    if (service)
     {
-        rval = true;
-
-        if (service)
+        if (serviceAddBackend(service, server))
         {
-            serviceAddBackend(service, server);
             service_serialize_servers(service);
+            rval = true;
         }
-        else if (monitor)
+    }
+    else if (monitor)
+    {
+        if (monitorAddServer(monitor, server))
         {
-            monitorAddServer(monitor, server);
             monitor_serialize_servers(monitor);
+            rval = true;
         }
+    }
 
+    if (rval)
+    {
         const char *type = service ? "service" : "monitor";
-
         MXS_NOTICE("Added server '%s' to %s '%s'", server->unique_name, type, target);
     }
 

@@ -852,7 +852,8 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
         }
         else
         {
-            dcb_printf(dcb, "No service or monitor with the name '%s'\n", values[i]);
+            dcb_printf(dcb, "Could not add server '%s' to object '%s'. See error log for more details.\n",
+                       server->unique_name, values[i]);
         }
     }
 }

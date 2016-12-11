@@ -240,7 +240,7 @@ bool serviceStartListener(SERVICE *service, const char *name);
 SERVICE* service_find(const char *name);
 
 // TODO: Change binlogrouter to use the functions in config_runtime.h
-void serviceAddBackend(SERVICE *service, SERVER *server);
+bool serviceAddBackend(SERVICE *service, SERVER *server);
 
 /**
  * @brief Check if a service uses a server
