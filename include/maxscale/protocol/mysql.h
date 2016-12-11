@@ -287,7 +287,9 @@ typedef struct
 /** Defines for response codes */
 #define MYSQL_REPLY_ERR               0xff
 #define MYSQL_REPLY_OK                0x00
-#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe
+#define MYSQL_REPLY_EOF               0xfe
+#define MYSQL_REPLY_LOCAL_INFILE      0xfb
+#define MYSQL_REPLY_AUTHSWITCHREQUEST 0xfe /**< Only sent during authentication */
 
 static inline mysql_server_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
 {
@@ -398,5 +400,8 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
 
 /** Check for OK packet */
 bool mxs_mysql_is_ok_packet(GWBUF *buffer);
+
+/** Check for result set */
+bool mxs_mysql_is_result_set(GWBUF *buffer);
 
 MXS_END_DECLS

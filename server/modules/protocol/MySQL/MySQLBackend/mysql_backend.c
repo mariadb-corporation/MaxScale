@@ -787,6 +787,19 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
+        if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
+        {
+            if (mxs_mysql_is_result_set(read_buffer))
+            {
+                int more = 0;
+                if (modutil_count_signal_packets(read_buffer, 0, 0, &more) != 2)
+                {
+                    dcb->dcb_readqueue = read_buffer;
+                    return 0;
+                }
+            }
+        }
+
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
@@ -862,7 +875,8 @@ gw_read_and_write(DCB *dcb)
                 return 0;
             }
         }
-        else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
+        else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) &&
+                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
         }

@@ -40,6 +40,8 @@ typedef enum routing_capability
     RCAP_TYPE_STMT_OUTPUT           = 0x0010, /* 0b0000000000010000 */
     /**< Each delivered buffer is contiguous; implies RCAP_TYPE_STMT_OUTPUT. */
     RCAP_TYPE_CONTIGUOUS_OUTPUT     = 0x0030, /* 0b0000000000110000 */
+    /** Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT. */
+    RCAP_TYPE_RESULTSET_OUTPUT      = 0x0050, /* 0b0000000001110000 */
 
 } routing_capability_t;
 

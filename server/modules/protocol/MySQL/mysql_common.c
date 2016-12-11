@@ -1559,3 +1559,31 @@ bool mxs_mysql_is_ok_packet(GWBUF *buffer)
 
     return rval;
 }
+
+bool mxs_mysql_is_result_set(GWBUF *buffer)
+{
+    bool rval = false;
+    uint8_t cmd;
+
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd))
+    {
+        switch (cmd)
+        {
+
+            case MYSQL_REPLY_OK:
+            case MYSQL_REPLY_ERR:
+            case MYSQL_REPLY_LOCAL_INFILE:
+            case MYSQL_REPLY_EOF:
+                /** Not a result set */
+                break;
+            default:
+                if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 1, &cmd) && cmd > 1)
+                {
+                    rval = true;
+                }
+                break;
+        }
+    }
+
+    return rval;
+}
