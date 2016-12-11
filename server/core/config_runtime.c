@@ -586,6 +586,11 @@ bool runtime_destroy_monitor(MONITOR *monitor)
     if (rval)
     {
         monitorStop(monitor);
+
+        while (monitor->databases)
+        {
+            monitorRemoveServer(monitor, monitor->databases->server);
+        }
         MXS_NOTICE("Destroyed monitor '%s'. The monitor will be removed "
                    "after the next restart of MaxScale.", monitor->name);
     }
