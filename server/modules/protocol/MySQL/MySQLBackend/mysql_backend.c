@@ -709,6 +709,12 @@ static inline bool session_ok_to_route(DCB *dcb)
     return rval;
 }
 
+static inline bool expecting_resultset(MySQLProtocol *proto)
+{
+    return proto->current_command == MYSQL_COM_QUERY ||
+        proto->current_command == MYSQL_COM_STMT_FETCH;
+}
+
 /**
  * @brief With authentication completed, read new data and write to backend
  *
@@ -787,19 +793,6 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
-        {
-            if (mxs_mysql_is_result_set(read_buffer))
-            {
-                int more = 0;
-                if (modutil_count_signal_packets(read_buffer, 0, 0, &more) != 2)
-                {
-                    dcb->dcb_readqueue = read_buffer;
-                    return 0;
-                }
-            }
-        }
-
         if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
@@ -812,6 +805,19 @@ gw_read_and_write(DCB *dcb)
                 gwbuf_free(read_buffer);
                 poll_fake_hangup_event(dcb);
                 return 0;
+            }
+
+            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+            if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
+                expecting_resultset(proto) && mxs_mysql_is_result_set(read_buffer))
+            {
+                int more = 0;
+                if (modutil_count_signal_packets(read_buffer, 0, 0, &more) != 2)
+                {
+                    dcb->dcb_readqueue = read_buffer;
+                    return 0;
+                }
             }
         }
     }
@@ -1047,6 +1053,10 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         {
             uint8_t* ptr = GWBUF_DATA(queue);
             mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
+
+            /** Copy the current command being executed to this backend */
+            MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
+            backend_protocol->current_command = client_proto->current_command;
 
             MXS_DEBUG("%lu [gw_MySQLWrite_backend] write to dcb %p "
                       "fd %d protocol state %s.",
