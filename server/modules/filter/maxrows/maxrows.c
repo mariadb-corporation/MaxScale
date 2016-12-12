@@ -419,7 +419,7 @@ static void diagnostics(FILTER *instance, void *sdata, DCB *dcb)
  */
 static uint64_t getCapabilities(void)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
 /* API END */
