@@ -31,7 +31,7 @@ public:
                            CACHE_KEY* pKey);
 
 protected:
-    LRUStorage(Storage* pstorage, size_t max_count, size_t max_size);
+    LRUStorage(Storage* pstorage, uint64_t max_count, uint64_t max_size);
 
     /**
      * Returns information about the LRU storage and the underlying real
@@ -201,8 +201,8 @@ private:
     };
 
     Storage*    pstorage_;      /*< The actual storage. */
-    size_t      max_count_;     /*< The maximum number of items in the LRU list, */
-    size_t      max_size_;      /*< The maximum size of all cached items. */
+    uint64_t    max_count_;     /*< The maximum number of items in the LRU list, */
+    uint64_t    max_size_;      /*< The maximum size of all cached items. */
     Stats       stats_;         /*< Cache statistics. */
     NodesPerKey nodes_per_key_; /*< Mapping from cache keys to corresponding Node. */
     Node*       phead_;         /*< The node at the LRU list. */

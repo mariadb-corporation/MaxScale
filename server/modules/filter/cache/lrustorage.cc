@@ -16,8 +16,8 @@
 
 LRUStorage::LRUStorage(Storage* pstorage, size_t max_count, size_t max_size)
     : pstorage_(pstorage)
-    , max_count_(max_count)
-    , max_size_(max_size)
+    , max_count_(max_count != 0 ? max_count : UINT64_MAX)
+    , max_size_(max_size != 0 ? max_size : UINT64_MAX)
     , phead_(NULL)
     , ptail_(NULL)
 {

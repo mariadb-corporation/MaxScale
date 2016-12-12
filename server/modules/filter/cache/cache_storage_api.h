@@ -117,11 +117,15 @@ typedef struct cache_storage_api
      *                  case it need not.
      * @param name      The name of the cache instance.
      * @param ttl       Time to live; number of seconds the value is valid.
+     *                  A value of 0 means that there is no time-to-live, but that
+     *                  the value is considered fresh as long as it is available.
      * @param max_count The maximum number of items the storage may store, before
-     *                  it should evict some items. Caller should specify 0, unless
+     *                  it should evict some items. A value of 0 means that there is
+     *                  no limit. The caller should specify 0, unless
      *                  CACHE_STORAGE_CAP_MAX_COUNT is returned at initialization.
      * @param max_count The maximum size of the storage may may occupy, before it
-                        should evict some items. Caller should specify 0, unless
+     *                  should evict some items. A value if 0 means that there is
+     *                  no limit. The caller should specify 0, unless
      *                  CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
      * @param argc      The number of elements in the argv array.
      * @param argv      Array of arguments, as passed in the `storage_options`

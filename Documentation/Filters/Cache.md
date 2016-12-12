@@ -66,9 +66,7 @@ stored in the cache. A resultset larger than this, will not be stored.
 ```
 max_resultset_rows=1000
 ```
-Zero or a negative value is interpreted as no limitation.
-
-The default value is `-1`.
+The default value is `0`, which means no limit.
 
 #### `max_resultset_size`
 
@@ -78,18 +76,17 @@ not be stored.
 ```
 max_resultset_size=128
 ```
-The default value is 64.
+The default value is `0`, which means no limit.
 
 #### `ttl`
 
 _Time to live_; the amount of time - in seconds - the cached result is used
 before it is refreshed from the server.
 
-If nothing is specified, the default _ttl_ value is 10.
-
 ```
 ttl=60
 ```
+The default value is `0`, which means no limit.
 
 #### `max_count`
 
@@ -101,7 +98,7 @@ applied to each cache _separately_.
 ```
 max_count=1000
 ```
-The default value is 0, which means no limit.
+The default value is `0`, which means no limit.
 
 #### `max_size`
 
@@ -117,7 +114,7 @@ applied to each cache _separately_.
 ```
 max_size=1000
 ```
-The default value is 0, which means no limit.
+The default value is `0`, which means no limit.
 
 #### `rules`
 

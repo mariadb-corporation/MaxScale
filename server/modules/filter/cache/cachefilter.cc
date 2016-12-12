@@ -123,6 +123,68 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     return true;
 }
 
+/**
+ * Get a 32-bit unsigned value.
+ *
+ * Note that the value itself is converted a signed integer to detect
+ * configuration errors.
+ *
+ * @param param   The parameter entry.
+ * @param pValue  Pointer to variable where result is stored.
+ *
+ * @return True if the parameter was an unsigned integer.
+ */
+bool config_get_uint32(const FILTER_PARAMETER& param, uint32_t* pValue)
+{
+    bool rv = false;
+    char* end;
+    int32_t value = strtol(param.value, &end, 0);
+
+    if ((*end == 0) && (value >= 0))
+    {
+        *pValue = value;
+        rv = true;
+    }
+    else
+    {
+        MXS_ERROR("The value of the configuration entry '%s' must "
+                  "be an integer larger than or equal to 0.", param.name);
+    }
+
+    return rv;
+}
+
+/**
+ * Get a 64-bit unsigned value.
+ *
+ * Note that the value itself is converted a signed integer to detect
+ * configuration errors.
+ *
+ * @param param   The parameter entry.
+ * @param pValue  Pointer to variable where result is stored.
+ *
+ * @return True if the parameter was an unsigned integer.
+ */
+bool config_get_uint64(const FILTER_PARAMETER& param, uint64_t* pValue)
+{
+    bool rv = false;
+    char* end;
+    int64_t value = strtoll(param.value, &end, 0);
+
+    if ((*end == 0) && (value >= 0))
+    {
+        *pValue = value;
+        rv = true;
+    }
+    else
+    {
+        MXS_ERROR("The value of the configuration entry '%s' must "
+                  "be an integer larger than or equal to 0.", param.name);
+    }
+
+    return rv;
+}
+
 }
 
 //
@@ -246,47 +308,19 @@ bool CacheFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, 
 
         if (strcmp(pParam->name, "max_resultset_rows") == 0)
         {
-            char* end;
-            int32_t value = strtol(pParam->value, &end, 0);
-
-            if ((*end == 0) && (value >= 0))
+            if (!config_get_uint64(*pParam, &config.max_resultset_rows))
             {
-                if (value != 0)
-                {
-                    config.max_resultset_rows = value;
-                }
-                else
-                {
-                    config.max_resultset_rows = CACHE_DEFAULT_MAX_RESULTSET_ROWS;
-                }
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", pParam->name);
                 error = true;
             }
         }
         else if (strcmp(pParam->name, "max_resultset_size") == 0)
         {
-            char* end;
-            int64_t value = strtoll(pParam->value, &end, 0);
-
-            if ((*end == 0) && (value >= 0))
+            if (config_get_uint64(*pParam, &config.max_resultset_size))
             {
-                if (value != 0)
-                {
-                    config.max_resultset_size = value * 1024;
-                }
-                else
-                {
-                    config.max_resultset_size = CACHE_DEFAULT_MAX_RESULTSET_SIZE;
-                }
+                config.max_resultset_size *= 1024;
             }
             else
             {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", pParam->name);
                 error = true;
             }
         }
@@ -371,62 +405,26 @@ bool CacheFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, 
         }
         else if (strcmp(pParam->name, "ttl") == 0)
         {
-            int v = atoi(pParam->value);
-
-            if (v > 0)
+            if (!config_get_uint32(*pParam, &config.ttl))
             {
-                config.ttl = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", pParam->name);
                 error = true;
             }
         }
         else if (strcmp(pParam->name, "max_count") == 0)
         {
-            char* end;
-            int32_t value = strtoul(pParam->value, &end, 0);
-
-            if ((*end == 0) && (value >= 0))
+            if (!config_get_uint64(*pParam, &config.max_count))
             {
-                if (value != 0)
-                {
-                    config.max_count = value;
-                }
-                else
-                {
-                    config.max_count = CACHE_DEFAULT_MAX_COUNT;
-                }
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than or equal to 0.", pParam->name);
                 error = true;
             }
         }
         else if (strcmp(pParam->name, "max_size") == 0)
         {
-            char* end;
-            int64_t value = strtoull(pParam->value, &end, 0);
-
-            if ((*end == 0) && (value >= 0))
+            if (config_get_uint64(*pParam, &config.max_size))
             {
-                if (value != 0)
-                {
-                    config.max_size = value * 1024;
-                }
-                else
-                {
-                    config.max_size = CACHE_DEFAULT_MAX_SIZE;
-                }
+                config.max_size = config.max_size * 1024;
             }
             else
             {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than or equal to 0.", pParam->name);
                 error = true;
             }
         }

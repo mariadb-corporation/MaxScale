@@ -133,7 +133,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
 
         uint32_t now = time(NULL);
 
-        bool is_stale = (now - entry.time > ttl_);
+        bool is_stale = ttl_ == 0 ? false : (now - entry.time > ttl_);
 
         if (!is_stale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
         {

@@ -19,6 +19,21 @@
 #include <maxscale/mysql_utils.h>
 #include "storage.hh"
 
+namespace
+{
+
+inline bool cache_max_resultset_rows_exceeded(const CACHE_CONFIG& config, uint64_t rows)
+{
+    return config.max_resultset_rows == 0 ? false : rows > config.max_resultset_rows;
+}
+
+inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64_t size)
+{
+    return config.max_resultset_size == 0 ? false : size > config.max_resultset_size;
+}
+
+}
+
 CacheFilterSession::CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
     , m_state(CACHE_EXPECTING_NOTHING)
@@ -240,12 +255,12 @@ int CacheFilterSession::clientReply(GWBUF* pData)
 
     if (m_state != CACHE_IGNORING_RESPONSE)
     {
-        if (gwbuf_length(m_res.pData) > m_pCache->config().max_resultset_size)
+        if (cache_max_resultset_size_exceeded(m_pCache->config(), gwbuf_length(m_res.pData)))
         {
             if (log_decisions())
             {
                 MXS_NOTICE("Current size %uB of resultset, at least as much "
-                           "as maximum allowed size %uKiB. Not caching.",
+                           "as maximum allowed size %luKiB. Not caching.",
                            gwbuf_length(m_res.pData),
                            m_pCache->config().max_resultset_size / 1024);
             }
@@ -479,7 +494,7 @@ int CacheFilterSession::handle_expecting_rows()
                 m_res.offset += packetlen;
                 ++m_res.nRows;
 
-                if (m_res.nRows > m_pCache->config().max_resultset_rows)
+                if (cache_max_resultset_rows_exceeded(m_pCache->config(), m_res.nRows))
                 {
                     if (log_decisions())
                     {

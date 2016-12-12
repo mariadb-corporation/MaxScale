@@ -39,31 +39,31 @@
 #endif
 
 // Count
-#define CACHE_DEFAULT_MAX_RESULTSET_ROWS UINT32_MAX
+#define CACHE_DEFAULT_MAX_RESULTSET_ROWS 0
 // Bytes
-#define CACHE_DEFAULT_MAX_RESULTSET_SIZE 64 * 1024
+#define CACHE_DEFAULT_MAX_RESULTSET_SIZE 0
 // Seconds
-#define CACHE_DEFAULT_TTL                10
+#define CACHE_DEFAULT_TTL                0
 // Integer value
 #define CACHE_DEFAULT_DEBUG              0
 // Positive integer
-#define CACHE_DEFAULT_MAX_COUNT          UINT32_MAX
+#define CACHE_DEFAULT_MAX_COUNT          0
 // Positive integer
-#define CACHE_DEFAULT_MAX_SIZE           UINT64_MAX
+#define CACHE_DEFAULT_MAX_SIZE           0
 // Thread model
 #define CACHE_DEFAULT_THREAD_MODEL       CACHE_THREAD_MODEL_MT
 
 typedef struct cache_config
 {
-    uint32_t max_resultset_rows;       /**< The maximum number of rows of a resultset for it to be cached. */
-    uint32_t max_resultset_size;       /**< The maximum size of a resultset for it to be cached. */
+    uint64_t max_resultset_rows;       /**< The maximum number of rows of a resultset for it to be cached. */
+    uint64_t max_resultset_size;       /**< The maximum size of a resultset for it to be cached. */
     char* rules;                       /**< Name of rules file. */
     char* storage;                     /**< Name of storage module. */
     char* storage_options;             /**< Raw options for storage module. */
     char** storage_argv;               /**< Cooked options for storage module. */
     int storage_argc;                  /**< Number of cooked options. */
     uint32_t ttl;                      /**< Time to live. */
-    uint32_t max_count;                /**< Maximum number of entries in the cache.*/
+    uint64_t max_count;                /**< Maximum number of entries in the cache.*/
     uint64_t max_size;                 /**< Maximum size of the cache.*/
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */

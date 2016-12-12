@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragest.hh"
 
-LRUStorageST::LRUStorageST(Storage* pstorage, size_t max_count, size_t max_size)
+LRUStorageST::LRUStorageST(Storage* pstorage, uint64_t max_count, uint64_t max_size)
     : LRUStorage(pstorage, max_count, max_size)
 {
     MXS_NOTICE("Created single threaded LRU storage.");
@@ -24,7 +24,7 @@ LRUStorageST::~LRUStorageST()
 {
 }
 
-LRUStorageST* LRUStorageST::create(Storage* pstorage, size_t max_count, size_t max_size)
+LRUStorageST* LRUStorageST::create(Storage* pstorage, uint64_t max_count, uint64_t max_size)
 {
     LRUStorageST* plru_storage = NULL;
 

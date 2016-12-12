@@ -20,7 +20,7 @@ class LRUStorageST : public LRUStorage
 public:
     ~LRUStorageST();
 
-    static LRUStorageST* create(Storage* pstorage, size_t max_count, size_t max_size);
+    static LRUStorageST* create(Storage* pstorage, uint64_t max_count, uint64_t max_size);
 
     cache_result_t get_info(uint32_t what,
                             json_t** ppInfo) const;
@@ -35,7 +35,7 @@ public:
     cache_result_t del_value(const CACHE_KEY& key);
 
 private:
-    LRUStorageST(Storage* pstorage, size_t max_count, size_t max_size);
+    LRUStorageST(Storage* pstorage, uint64_t max_count, uint64_t max_size);
 
     LRUStorageST(const LRUStorageST&);
     LRUStorageST& operator = (const LRUStorageST&);
