@@ -240,7 +240,8 @@ printUsage(const char *progname)
     printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
     printf("  -V|--version      Print version information and exit\n");
     printf("  -K|--key_file     AES Key file for MariaDB 10.1 binlog file decryption\n");
-    printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CTR, AES_CBC)\n");
+    printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
+    printf("  -H|--header       Print content of binlog event header\n");
     printf("  -?|--help         Print this help text\n");
 }
 

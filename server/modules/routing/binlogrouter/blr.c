@@ -2455,6 +2455,37 @@ bool blr_parse_key(char *buffer, ROUTER_INSTANCE *router)
   char *p = buffer;
   int length = 0;
   uint8_t *key = (uint8_t *)router->encryption.key_value;
+  unsigned int id = strtoll(p, &p, 10);
+
+  /* key range is 1 .. 255 */
+  if (id < 1 || id > 255)
+  {
+      MXS_ERROR("Invalid Key Id (values 1..255) in Encryption Key file at index 0. File %s",
+                router->encryption.key_management_filename);
+      return false;
+  }
+
+  /* Valid key is only BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
+  if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
+  {
+      MXS_ERROR("The Key Id %d is not valid: binlog encryption needs Key Id %d. File %s",
+                id,
+                BINLOG_SYSTEM_DATA_CRYPTO_SCHEME,
+                router->encryption.key_management_filename);
+      return false;
+  }
+
+  /* Look for ';' separator */
+  if (*p != ';')
+  {
+      MXS_ERROR("Syntax error in Encryption Key file at index %lu. File %s",
+                p - buffer,
+                router->encryption.key_management_filename);
+      return false;
+  }
+
+  /* Now read the hex data */
+  p++;
 
   while (isspace(*p) && *p != '\n')
   {

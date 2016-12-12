@@ -1444,7 +1444,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         if (new_fde)
                         {
-                            memcpy(new_fde, ptr + 5, hdr.event_size);
+                            memcpy(new_fde, ptr + MYSQL_HEADER_LEN + 1, hdr.event_size);
                             if (router->saved_master.fde_event)
                             {
                                 MXS_FREE(router->saved_master.fde_event);

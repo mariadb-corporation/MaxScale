@@ -2141,7 +2141,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     /* FDE ends at pos 4 + FDE size */
     fde_end_pos = 4 + GWBUF_LENGTH(fde);
 
-    /* Send the FORMAT_DESCRIPTION_EVENT */
+    /* Send a Fake FORMAT_DESCRIPTION_EVENT */
     if (slave->binlog_pos != 4)
     {
         blr_slave_send_fde(router, slave, fde);

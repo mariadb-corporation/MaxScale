@@ -83,7 +83,13 @@ MXS_BEGIN_DECLS
 #define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
 #define BLR_REPORT_REP_HEADER 0x02
 
-/* Supported Encryption algorithms */
+/**
+ * Supported Encryption algorithms
+ *
+ * Note: AES_ECB is only internally used
+ * Available algorithms for binlog files
+ * Encryption/Decryption are AES_CBC and AES_CTR
+ */
 enum blr_aes_mode
 {
     BLR_AES_CBC,
@@ -91,8 +97,8 @@ enum blr_aes_mode
     BLR_AES_ECB
 };
 
-/* Default encryption alogorithm is AES_CTR */
-#define BINLOG_DEFAULT_ENC_ALGO    BLR_AES_CTR
+/* Default encryption alogorithm is AES_CBC */
+#define BINLOG_DEFAULT_ENC_ALGO    BLR_AES_CBC
 
 /**
  * Binlog event types
