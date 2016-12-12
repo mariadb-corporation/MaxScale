@@ -1056,7 +1056,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
             /** Copy the current command being executed to this backend */
             MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
-            backend_protocol->current_command = client_proto->current_command;
+            backend_protocol->current_command = client_proto ? client_proto->current_command : -1;
 
             MXS_DEBUG("%lu [gw_MySQLWrite_backend] write to dcb %p "
                       "fd %d protocol state %s.",
