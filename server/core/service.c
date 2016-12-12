@@ -170,7 +170,6 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->stats.n_failed_starts = 0;
     service->state = SERVICE_STATE_ALLOC;
     spinlock_init(&service->spin);
-    spinlock_init(&service->users_table_spin);
 
     spinlock_acquire(&service_spin);
     service->next = allServices;
@@ -209,7 +208,12 @@ service_isvalid(SERVICE *service)
 
 static inline void close_port(SERV_LISTENER *port)
 {
-    port->service->state = SERVICE_STATE_FAILED;
+    if (port->service->state == SERVICE_STATE_ALLOC)
+    {
+        /** The service failed when it was being allocated */
+        port->service->state = SERVICE_STATE_FAILED;
+    }
+
     if (port->listener)
     {
         dcb_close(port->listener);
@@ -499,9 +503,59 @@ int serviceInitialize(SERVICE *service)
     return listeners;
 }
 
+/**
+ * @brief Remove a failed listener
+ *
+ * This should only be called when a newly created listener fails to start.
+ *
+ * @note The service spinlock must be held when this function is called.
+ *
+ * @param service Service where @c port points to
+ * @param port Port to remove
+ */
+void serviceRemoveListener(SERVICE *service, SERV_LISTENER *port)
+{
+
+    if (service->ports == port)
+    {
+        service->ports = service->ports->next;
+    }
+    else
+    {
+        SERV_LISTENER *prev = service->ports;
+        SERV_LISTENER *current = service->ports->next;
+
+        while (current)
+        {
+            if (current == port)
+            {
+                prev->next = current->next;
+                break;
+            }
+            prev = current;
+            current = current->next;
+        }
+    }
+}
+
 bool serviceLaunchListener(SERVICE *service, SERV_LISTENER *port)
 {
-    return serviceStartPort(service, port);
+    ss_dassert(service->state != SERVICE_STATE_FAILED);
+    bool rval = true;
+
+    spinlock_acquire(&service->spin);
+
+    if (serviceStartPort(service, port) == 0)
+    {
+        /** Failed to start the listener */
+        serviceRemoveListener(service, port);
+        listener_free(port);
+        rval = false;
+    }
+
+    spinlock_release(&service->spin);
+
+    return rval;
 }
 
 bool serviceStopListener(SERVICE *service, const char *name)
@@ -692,8 +746,8 @@ void service_free(SERVICE *service)
  * @return Created listener or NULL on error
  */
 SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const char *protocol,
-                   const char *address, unsigned short port, const char *authenticator,
-                   const char *options, SSL_LISTENER *ssl)
+                                     const char *address, unsigned short port, const char *authenticator,
+                                     const char *options, SSL_LISTENER *ssl)
 {
     SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
                                           port, authenticator, options, ssl);
@@ -719,7 +773,7 @@ SERV_LISTENER* serviceCreateListener(SERVICE *service, const char *name, const c
  * @return      True if the protocol/port is already part of the service
  */
 bool serviceHasListener(SERVICE *service, const char *protocol,
-                       const char* address, unsigned short port)
+                        const char* address, unsigned short port)
 {
     SERV_LISTENER *proto;
 
@@ -1545,7 +1599,7 @@ int service_refresh_users(SERVICE *service)
 {
     int ret = 1;
 
-    if (spinlock_acquire_nowait(&service->users_table_spin))
+    if (spinlock_acquire_nowait(&service->spin))
     {
         time_t now = time(NULL);
 
@@ -1571,7 +1625,7 @@ int service_refresh_users(SERVICE *service)
             for (SERV_LISTENER *port = service->ports; port; port = port->next)
             {
                 /** Load the authentication users before before starting the listener */
-                if (port->listener->authfunc.loadusers)
+                if (port->listener && port->listener->authfunc.loadusers)
                 {
                     switch (port->listener->authfunc.loadusers(port))
                     {
@@ -1594,7 +1648,7 @@ int service_refresh_users(SERVICE *service)
             }
         }
 
-        spinlock_release(&service->users_table_spin);
+        spinlock_release(&service->spin);
     }
 
     return ret;
@@ -1911,12 +1965,12 @@ void service_destroy_instances(void)
         /* Call destroyInstance hook for routers */
         if (svc->router->destroyInstance && svc->router_instance)
         {
-           svc->router->destroyInstance(svc->router_instance);
+            svc->router->destroyInstance(svc->router_instance);
         }
         if (svc->n_filters)
         {
             FILTER_DEF **filters = svc->filters;
-            for (int i=0; i < svc->n_filters; i++)
+            for (int i = 0; i < svc->n_filters; i++)
             {
                 if (filters[i]->obj->destroyInstance && filters[i]->filter)
                 {

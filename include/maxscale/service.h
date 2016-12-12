@@ -162,7 +162,6 @@ typedef struct service
     bool strip_db_esc;                 /**< Remove the '\' characters from database names
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
-    SPINLOCK users_table_spin;         /**< The spinlock for users data refresh */
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     FILTER_DEF **filters;              /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
