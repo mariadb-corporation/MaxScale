@@ -64,7 +64,7 @@ CACHE_STORAGE* createInstance(cache_thread_model_t model,
         ss_dassert(!true);
         MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.", (int)model);
     case CACHE_THREAD_MODEL_MT:
-        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
+        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageMT::create(zname, ttl, argc, argv));
         break;
     }
 
