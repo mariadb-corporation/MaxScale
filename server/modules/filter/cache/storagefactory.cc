@@ -106,10 +106,15 @@ StorageFactory::StorageFactory(void* handle,
                                uint32_t capabilities)
     : m_handle(handle)
     , m_pApi(pApi)
-    , m_capabilities(capabilities)
+    , m_storage_caps(capabilities)
+    , m_caps(capabilities)
 {
     ss_dassert(handle);
     ss_dassert(pApi);
+
+    m_caps |= CACHE_STORAGE_CAP_LRU;
+    m_caps |= CACHE_STORAGE_CAP_MAX_COUNT;
+    m_caps |= CACHE_STORAGE_CAP_MAX_SIZE;
 }
 
 StorageFactory::~StorageFactory()
@@ -151,59 +156,66 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
     ss_dassert(m_handle);
     ss_dassert(m_pApi);
 
-    Storage* pStorage = 0;
+    uint32_t mc = cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_COUNT) ? maxCount : 0;
+    uint64_t ms = cache_storage_has_cap(m_storage_caps, CACHE_STORAGE_CAP_MAX_SIZE) ? maxSize : 0;
 
-    uint32_t mc = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_COUNT) ? maxCount : 0;
-    uint64_t ms = cache_storage_has_cap(m_capabilities, CACHE_STORAGE_CAP_MAX_SIZE) ? maxSize : 0;
+    Storage* pStorage = createRawStorage(model, zName, ttl, mc, ms, argc, argv);
 
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, mc, ms, argc, argv);
-
-    if (pRawStorage)
+    if (pStorage)
     {
-        StorageReal* pStorageReal = NULL;
+        uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
 
-        MXS_EXCEPTION_GUARD(pStorageReal = new StorageReal(m_pApi, pRawStorage));
-
-        if (pStorageReal)
+        if (!cache_storage_has_cap(m_storage_caps, mask))
         {
-            uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
+            // Ok, so the cache cannot handle eviction. Let's decorate the
+            // real storage with a storage than can.
 
-            if (!cache_storage_has_cap(m_capabilities, mask))
+            LRUStorage *pLruStorage = NULL;
+
+            if (model == CACHE_THREAD_MODEL_ST)
             {
-                // Ok, so the cache cannot handle eviction. Let's decorate the
-                // real storage with a storage than can.
-
-                LRUStorage *pLruStorage = NULL;
-
-                if (model == CACHE_THREAD_MODEL_ST)
-                {
-                    pLruStorage = LRUStorageST::create(pStorageReal, maxCount, maxSize);
-                }
-                else
-                {
-                    ss_dassert(model == CACHE_THREAD_MODEL_MT);
-
-                    pLruStorage = LRUStorageMT::create(pStorageReal, maxCount, maxSize);
-                }
-
-                if (pLruStorage)
-                {
-                    pStorage = pLruStorage;
-                }
-                else
-                {
-                    delete pStorageReal;
-                }
+                pLruStorage = LRUStorageST::create(pStorage, maxCount, maxSize);
             }
             else
             {
-                pStorage = pStorageReal;
+                ss_dassert(model == CACHE_THREAD_MODEL_MT);
+
+                pLruStorage = LRUStorageMT::create(pStorage, maxCount, maxSize);
+            }
+
+            if (pLruStorage)
+            {
+                pStorage = pLruStorage;
+            }
+            else
+            {
+                delete pStorage;
+                pStorage = NULL;
             }
         }
-        else
-        {
-            m_pApi->freeInstance(pRawStorage);
-        }
+    }
+
+    return pStorage;
+}
+
+
+Storage* StorageFactory::createRawStorage(cache_thread_model_t model,
+                                          const char* zName,
+                                          uint32_t ttl,
+                                          uint32_t maxCount,
+                                          uint64_t maxSize,
+                                          int argc, char* argv[])
+{
+    ss_dassert(m_handle);
+    ss_dassert(m_pApi);
+
+    Storage* pStorage = 0;
+
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, maxCount, maxSize, argc, argv);
+
+    if (pRawStorage)
+    {
+        MXS_EXCEPTION_GUARD(pStorage = new StorageReal(m_pApi, pRawStorage));
     }
 
     return pStorage;
