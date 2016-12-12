@@ -101,6 +101,7 @@ static struct option long_options[] =
     {"version", no_argument, 0, 'v'},
     {"help", no_argument, 0, '?'},
     {"emacs", no_argument, 0, 'e'},
+    {"vim", no_argument, 0, 'i'},
     {0, 0, 0, 0}
 };
 
@@ -132,7 +133,7 @@ main(int argc, char **argv)
     char *user = NULL;
     char *passwd = NULL;
     char *socket_path = NULL;
-    int use_emacs = 0;
+    int use_emacs = 1;
 
     read_inifile(&socket_path, &hostname, &port, &user, &passwd, &use_emacs);
 
@@ -141,7 +142,7 @@ main(int argc, char **argv)
 
     int option_index = 0;
     char c;
-    while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?e",
+    while ((c = getopt_long(argc, argv, "h:p::P:u:S:v?ei",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
@@ -182,6 +183,10 @@ main(int argc, char **argv)
 
             case 'e':
                 use_emacs = 1;
+                break;
+
+            case 'i':
+                use_emacs = 0;
                 break;
 
             case '?':
@@ -358,7 +363,6 @@ main(int argc, char **argv)
         }
 
 #ifdef HISTORY
-        el_line(el);
         history(hist, &ev, H_ENTER, buf);
 #endif
 
@@ -767,7 +771,7 @@ DoSource(int so, char *file)
             pe--;
         }
 
-        if (*ptr != '#') /* Comment */
+        if (*ptr != '#' && *ptr != '\0') /* Comment or empty */
         {
             if (!sendCommand(so, ptr))
             {
