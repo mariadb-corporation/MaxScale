@@ -18,8 +18,10 @@
 #include <vector>
 #include <pthread.h>
 #include <tr1/unordered_map>
-#include <maxscale/query_classifier.h>
+#include <maxscale/alloc.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/query_classifier.h>
 #include "storagefactory.hh"
 #include "storage.hh"
 #include "cache_storage_api.hh"
@@ -208,7 +210,7 @@ int test(size_t n_threads, size_t seconds, Storage& storage, const Statements& s
 
     sleep(seconds);
 
-    cout << "Woke up, now waiting for workers to terminate\n." << flush;
+    cout << "Woke up, now waiting for workers to terminate.\n" << flush;
 
     for (size_t i = 0; i < n_threads; ++i)
     {
@@ -278,6 +280,11 @@ int test(size_t n_threads, size_t seconds, Storage& storage, istream& in)
     if (rv == EXIT_SUCCESS)
     {
         rv = test(n_threads, seconds, storage, statements);
+
+        for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
+        {
+            gwbuf_free(i->second);
+        }
     }
 
     return rv;
@@ -319,6 +326,12 @@ int main(int argc, char* argv[])
             if (qc_init(NULL, NULL))
             {
                 const char* zModule = argv[2];
+
+                const char FORMAT[] = "../storage/%s";
+                char libdir[sizeof(FORMAT) + strlen(zModule)];
+                sprintf(libdir, FORMAT, zModule);
+
+                set_libdir(MXS_STRDUP_A(libdir));
 
                 StorageFactory* pFactory = StorageFactory::Open(zModule);
 
