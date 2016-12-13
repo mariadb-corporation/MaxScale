@@ -531,8 +531,9 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
         query = modutil_get_SQL(buffer);
         if ((tmp = strcasestr(query, "from")))
         {
-            char *saved, *tok = strtok_r(tmp, " ;", &saved);
-            tok = strtok_r(NULL, " ;", &saved);
+            const char *delim = "` \n\t;";
+            char *saved, *tok = strtok_r(tmp, delim, &saved);
+            tok = strtok_r(NULL, delim, &saved);
             ss_dassert(tok != NULL);
             tmp = (char*) hashtable_fetch(ht, tok);
 

@@ -22,8 +22,8 @@
  */
 bool extract_database(GWBUF* buf, char* str)
 {
-     uint8_t* packet;
-    char *saved,*tok,*query = NULL;
+    uint8_t* packet;
+    char *saved, *tok, *query = NULL;
     bool succp = true;
     unsigned int plen;
 
@@ -31,33 +31,37 @@ bool extract_database(GWBUF* buf, char* str)
     plen = gw_mysql_get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
-    if(qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
+    if (qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
-	query = modutil_get_SQL(buf);
-	tok = strtok_r(query," ;",&saved);
-	if(tok == NULL || strcasecmp(tok,"use") != 0)
-	{
-	    MXS_ERROR("extract_database: Malformed chage database packet.");
-	    succp = false;
-	    goto retblock;
-	}
+        const char *delim = "` \n\t;";
 
-	tok = strtok_r(NULL," ;",&saved);
-	if(tok == NULL)
-	{
-	    MXS_ERROR("extract_database: Malformed chage database packet.");
-	    succp = false;
-	    goto retblock;
-	}
+        query = modutil_get_SQL(buf);
+        tok = strtok_r(query, delim, &saved);
 
-	strncpy(str,tok,MYSQL_DATABASE_MAXLEN);
+        if (tok == NULL || strcasecmp(tok, "use") != 0)
+        {
+            MXS_ERROR("extract_database: Malformed chage database packet.");
+            succp = false;
+            goto retblock;
+        }
+
+        tok = strtok_r(NULL, delim, &saved);
+
+        if (tok == NULL)
+        {
+            MXS_ERROR("extract_database: Malformed change database packet.");
+            succp = false;
+            goto retblock;
+        }
+
+        strncpy(str, tok, MYSQL_DATABASE_MAXLEN);
     }
     else
     {
-	memcpy(str,packet + 5,plen);
-	memset(str + plen,0,1);
+        memcpy(str, packet + 5, plen);
+        memset(str + plen, 0, 1);
     }
-    retblock:
+retblock:
     free(query);
     return succp;
 }
