@@ -115,8 +115,9 @@ int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 static void destroyInstance(ROUTER *instance);
-bool blr_parse_key(char *line, ROUTER_INSTANCE *router);
+bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
+int blr_parse_key_file(ROUTER_INSTANCE *router);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -2446,62 +2447,70 @@ unsigned int from_hex(char c)
  * An encryption Key and its len are stored
  * in router->encryption struct
  *
- * @param router    The router instance
  * @param buffer    A buffer of bytes, in hex format
+ * @param nline     The line number in the key file
+ * @param router    The router instance
  * @return          true on success and false on error
  */
-bool blr_parse_key(char *buffer, ROUTER_INSTANCE *router)
+bool blr_extract_key(const char *buffer, int nline, ROUTER_INSTANCE *router)
 {
-  char *p = buffer;
+  char *p = (char *)buffer;
   int length = 0;
   uint8_t *key = (uint8_t *)router->encryption.key_value;
-  unsigned int id = strtoll(p, &p, 10);
-
-  /* key range is 1 .. 255 */
-  if (id < 1 || id > 255)
-  {
-      MXS_ERROR("Invalid Key Id (values 1..255) in Encryption Key file at index 0. File %s",
-                router->encryption.key_management_filename);
-      return false;
-  }
-
-  /* Valid key is only BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
-  if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
-  {
-      MXS_ERROR("The Key Id %d is not valid: binlog encryption needs Key Id %d. File %s",
-                id,
-                BINLOG_SYSTEM_DATA_CRYPTO_SCHEME,
-                router->encryption.key_management_filename);
-      return false;
-  }
-
-  /* Look for ';' separator */
-  if (*p != ';')
-  {
-      MXS_ERROR("Syntax error in Encryption Key file at index %lu. File %s",
-                p - buffer,
-                router->encryption.key_management_filename);
-      return false;
-  }
-
-  /* Now read the hex data */
-  p++;
 
   while (isspace(*p) && *p != '\n')
   {
       p++;
   }
 
+  /* Skip comments */
+  if (*p == '#')
+  {
+      return false;
+  }
+
+  unsigned int id = strtoll(p, &p, 10);
+
+  /* key range is 1 .. 255 */
+  if (id < 1 || id > 255)
+  {
+      MXS_WARNING("Invalid Key Id (values 1..255) found in file %s. Line %d, index 0.",
+                  router->encryption.key_management_filename,
+                  nline);
+      return false;
+  }
+
+  /* Continue only if read id is BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
+  if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
+  {
+      return false;
+  }
+
+  /* Look for ';' separator */
+  if (*p != ';')
+  {
+      MXS_ERROR("Syntax error in Encryption Key file at line %d, index %lu. File %s",
+                nline,
+                p - buffer,
+                router->encryption.key_management_filename);
+      return false;
+  }
+
+  p++;
+
+  /* Now read the hex data */
+
   while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
   {
       key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
-      p+= 2;
+      p += 2;
   }
 
   if (isxdigit(*p) ||
      (length != 16 && length != 24 && length != 32))
   {
-      MXS_ERROR("Found invalid Encryption Key at index %lu. File %s",
+      MXS_ERROR("Found invalid Encryption Key at line %d, index %lu. File %s",
+                nline,
                 p - buffer,
                 router->encryption.key_management_filename);
       return false;
@@ -2522,59 +2531,94 @@ bool blr_parse_key(char *buffer, ROUTER_INSTANCE *router)
  */
 bool blr_get_encryption_key(ROUTER_INSTANCE *router)
 {
-    int ret = false;
     if (router->encryption.key_management_filename == NULL)
     {
         MXS_ERROR("Service %s, encryption key is not set. "
                    "Please specify key filename with 'encryption_key_file'",
                    router->service->name);
-        return ret;
+        return false;
     }
     else
     {
-        int size = BINLOG_MAX_KEYFILE_LINE_LEN;
-        char *buffer = MXS_CALLOC(1, size * sizeof(char));
+        int ret;
+        memset(router->encryption.key_value, '\0', sizeof(router->encryption.key_value));
 
-        if (buffer)
+        /* Parse key file */
+        if (blr_parse_key_file(router) == 0)
         {
-            int file = open(router->encryption.key_management_filename, O_RDONLY);
-            if (file)
-            {
-                int n;
-                if ((n = read(file, buffer, size)) > 0)
-                {
-                    if (buffer[n - 1 ] == '\n')
-                    {
-                        buffer[n - 1] = '\0';
-                        n--;
-                    }
-                    memset(router->encryption.key_value, '\0', sizeof(router->encryption.key_value));
-                    /* Parse buffer for key */
-                    if (blr_parse_key(buffer, router))
-                    {
-                        /* Success */
-                        router->encryption.key_id = BINLOG_SYSTEM_DATA_CRYPTO_SCHEME;
-                        ret = true;
-                    }
-                }
-                close(file);
-            }
-            else
-            {
-                char errbuf[MXS_STRERROR_BUFLEN];
-                MXS_ERROR("%s, Failed to open KEY file '%s': %s",
-                          router->service->name,
-                          router->encryption.key_management_filename,
-                          strerror_r(errno, errbuf, sizeof(errbuf)));
-            }
+            /* Success */
+            router->encryption.key_id = BINLOG_SYSTEM_DATA_CRYPTO_SCHEME;
+            return true;
+        }
+    }
 
-            MXS_FREE(buffer);
-            return ret;
-        }
-        else
+    return false;
+}
+
+/**
+ * Read encryotion key(s) from a file
+ *
+ * The file could be the MariaDB 10.1 file_key_management_filename
+ * where the keys are not encrypted or it could be a file
+ * with a single line containing the key id 1
+ *
+ * @param router    The router instance
+ * @return          0 on success (key id 1 found), -1 on errors
+ *                  or the number or read lines if key id was not found
+ */
+int blr_parse_key_file(ROUTER_INSTANCE *router)
+{
+    char *line = NULL;
+    size_t linesize = 0;
+    ssize_t linelen;
+    bool found_keyid = false;
+    int n_lines = 0;
+    FILE *file = fopen(router->encryption.key_management_filename, "r");
+
+    if (!file)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open KEY file '%s': %s",
+                  router->encryption.key_management_filename,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        return -1;
+    }
+
+    /* Read all lines from the key_file */
+    while ((linelen = getline(&line, &linesize, file)) != -1)
+    {
+        n_lines++;
+
+        /* Parse buffer for key id = 1*/
+        if (blr_extract_key(line, n_lines, router))
         {
-            MXS_OOM_MESSAGE("Failed to allocate enough memory while reading KEY file.");
-            return ret;
+            router->encryption.key_id = BINLOG_SYSTEM_DATA_CRYPTO_SCHEME;
+            found_keyid = true;
+            break;
         }
+    }
+
+    MXS_FREE(line);
+
+    fclose(file);
+
+    /* Check result */
+    if (n_lines == 0)
+    {
+        MXS_ERROR("KEY file '%s' has no lines.",
+                  router->encryption.key_management_filename);
+        return -1;
+    }
+
+    if (!found_keyid)
+    {
+        MXS_ERROR("No Key with Id = 1 has been found in file %s. Read %d lines.",
+                   router->encryption.key_management_filename,
+                   n_lines);
+        return n_lines;
+    }
+    else
+    {
+        return 0;
     }
 }
