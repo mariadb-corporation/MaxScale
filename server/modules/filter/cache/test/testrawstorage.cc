@@ -64,8 +64,67 @@ GWBUF* create_gwbuf(const string& s)
     return pBuf;
 }
 
-typedef unordered_map<CACHE_KEY, GWBUF*> StatementsByKey;
 typedef vector<pair<CACHE_KEY, GWBUF*> > Statements;
+
+bool get_statements(istream& in, Storage& storage, size_t n_statements, Statements* pStatements)
+{
+    bool success = true;
+    typedef unordered_map<CACHE_KEY, GWBUF*> StatementsByKey;
+
+    StatementsByKey statements_by_key;
+
+    TestReader reader(in);
+
+    size_t n = 0;
+    string line;
+    while (success &&
+           (n < n_statements) &&
+           (reader.get_statement(line) == TestReader::RESULT_STMT))
+    {
+        GWBUF* pStmt = create_gwbuf(line);
+
+        CACHE_KEY key;
+        cache_result_t result = storage.get_key(NULL, pStmt, &key);
+
+        if (result == CACHE_RESULT_OK)
+        {
+            StatementsByKey::iterator i = statements_by_key.find(key);
+
+            if (i == statements_by_key.end())
+            {
+                ++n;
+                statements_by_key.insert(make_pair(key, pStmt));
+            }
+            else
+            {
+                // Duplicate
+                gwbuf_free(pStmt);
+            }
+        }
+        else
+        {
+            cerr << "error: Could not generate a key for '" << line << "'." << endl;
+            success = false;
+        }
+    }
+
+    if (success)
+    {
+        copy(statements_by_key.begin(), statements_by_key.end(), back_inserter(*pStatements));
+    }
+    else
+    {
+        StatementsByKey::iterator i = statements_by_key.begin();
+
+        while (i != statements_by_key.end())
+        {
+            delete i->second;
+            ++i;
+        }
+    }
+
+    return success;
+}
 
 enum storage_action_t
 {
@@ -79,7 +138,6 @@ inline storage_action_t& operator++ (storage_action_t& action)
     action = static_cast<storage_action_t>((action + 1) % 3);
     return action;
 }
-
 
 struct ThreadData
 {
@@ -100,7 +158,16 @@ struct ThreadData
     storage_action_t  start_action;
 };
 
-void* thread_main(void* pData)
+/**
+ * Thread function for test_thread_hitting
+ *
+ * The thread will loop over the provided statements and get, put and delete
+ * the corresponding item from the storage, and keep doing that until the
+ * specified time has elapsed.
+ *
+ * @param pData  Pointer to a ThreadData instance.
+ */
+void* test_thread_hitting_thread(void* pData)
 {
     cout << "Thread starting.\n" << flush;
     ThreadData* pThreadData = static_cast<ThreadData*>(pData);
@@ -196,7 +263,23 @@ void* thread_main(void* pData)
     return 0;
 }
 
-int test_storage(size_t n_threads, size_t seconds, Storage& storage, const Statements& statements)
+/**
+ * test_thread_hitting
+ *
+ * This test will create a number of threads that will keep on hitting the
+ * provided storage until the specified time has elapsed.
+ *
+ * The purpose of the test is to reveal locking issues that may cause
+ * deadlocks or crashes, and leaks (when run under valgrind).
+ *
+ * @param n_threads   The number of threads that should be used.
+ * @param n_seconds   The number of seconds the test should run.
+ * @param storage     The storage instance to use.
+ * @param statements  The statements to be used.
+ *
+ * @return EXIT_SUCCESS if successful, otherwise EXIT_FAILURE.
+ */
+int test_thread_hitting(size_t n_threads, size_t n_seconds, Storage& storage, const Statements& statements)
 {
     int rv = EXIT_SUCCESS;
 
@@ -212,7 +295,7 @@ int test_storage(size_t n_threads, size_t seconds, Storage& storage, const State
         pThreadData->pStatements = &statements;
         pThreadData->start_action = start_action;
 
-        if (pthread_create(&pThreadData->thread, NULL, thread_main, pThreadData) != 0)
+        if (pthread_create(&pThreadData->thread, NULL, test_thread_hitting_thread, pThreadData) != 0)
         {
             // This is impossible, so we just return.
             return EXIT_FAILURE;
@@ -226,7 +309,7 @@ int test_storage(size_t n_threads, size_t seconds, Storage& storage, const State
 
     cout << ss.str() << flush;
 
-    sleep(seconds);
+    sleep(n_seconds);
 
     cout << "Woke up, now waiting for workers to terminate.\n" << flush;
 
@@ -246,58 +329,30 @@ int test_storage(size_t n_threads, size_t seconds, Storage& storage, const State
     return rv;
 }
 
-int test_storage(size_t n_threads, size_t seconds, Storage& storage, istream& in)
+/**
+ * test_thread_hitting
+ *
+ * @see test_thread_hitting above.
+ *
+ * @param n_threads   The number of threads that should be used.
+ * @param n_seconds   The number of seconds the test should run.
+ * @param storage     The storage instance to use.
+ * @param istream     Stream, expected to refer to a MySQL/MariaDB test file.
+ *
+ * @return EXIT_SUCCESS if successful, otherwise EXIT_FAILURE.
+ */
+int test_thread_hitting(size_t n_threads, size_t n_seconds, Storage& storage, istream& in)
 {
-    int rv = EXIT_SUCCESS;
-
-    StatementsByKey statementsByKey;
-
-    TestReader reader(in);
+    int rv = EXIT_FAILURE;
 
     // Adjust the number of items according to number of threads and duration
-    // of test-run to ensure that there are collisions.
-    size_t n_max_items = n_threads * seconds * 50;
-    size_t n_items = 0;
-
-    string line;
-    while ((rv == EXIT_SUCCESS) &&
-           (n_items < n_max_items) &&
-           (reader.get_statement(line) == TestReader::RESULT_STMT))
-    {
-        GWBUF* pStmt = create_gwbuf(line);
-
-        CACHE_KEY key;
-        cache_result_t result = storage.get_key(NULL, pStmt, &key);
-
-        if (result == CACHE_RESULT_OK)
-        {
-            StatementsByKey::iterator i = statementsByKey.find(key);
-
-            if (i == statementsByKey.end())
-            {
-                ++n_items;
-                statementsByKey.insert(make_pair(key, pStmt));
-            }
-            else
-            {
-                // Duplicate
-                gwbuf_free(pStmt);
-            }
-        }
-        else
-        {
-            cerr << "error: Could not generate a key for '" << line << "'." << endl;
-            rv = EXIT_FAILURE;
-        }
-    }
+    // of test-run, in the hope of ensuring collisions.
+    size_t n_statements = n_threads * n_seconds * 50;
 
     Statements statements;
-
-    copy(statementsByKey.begin(), statementsByKey.end(), back_inserter(statements));
-
-    if (rv == EXIT_SUCCESS)
+    if (get_statements(in, storage, n_statements, &statements))
     {
-        rv = test_storage(n_threads, seconds, storage, statements);
+        rv = test_thread_hitting(n_threads, n_seconds, storage, statements);
 
         for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
         {
@@ -308,7 +363,19 @@ int test_storage(size_t n_threads, size_t seconds, Storage& storage, istream& in
     return rv;
 }
 
-int test_storagefactory(size_t n_threads, size_t seconds, StorageFactory& factory, istream& in)
+/**
+ * test_raw_storage
+ *
+ * This function will run the tests relevant for raw storage.
+ *
+ * @param n_threads   The number of threads that should be used.
+ * @param n_seconds   The number of seconds the test should run.
+ * @param factory     The storage factory using which to create the storage.
+ * @param istream     Stream, expected to refer to a MySQL/MariaDB test file.
+ *
+ * @return EXIT_SUCCESS if successful, otherwise EXIT_FAILURE.
+ */
+int test_raw_storage(size_t n_threads, size_t n_seconds, StorageFactory& factory, istream& in)
 {
     int rv = EXIT_FAILURE;
 
@@ -321,7 +388,7 @@ int test_storagefactory(size_t n_threads, size_t seconds, StorageFactory& factor
 
     if (pStorage)
     {
-        rv = test_storage(n_threads, seconds, *pStorage, in);
+        rv = test_thread_hitting(n_threads, n_seconds, *pStorage, in);
 
         delete pStorage;
     }
@@ -339,7 +406,7 @@ int main(int argc, char* argv[])
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            size_t seconds = atoi(argv[1]);
+            size_t n_seconds = atoi(argv[1]);
 
             if (qc_init(NULL, NULL))
             {
@@ -359,7 +426,7 @@ int main(int argc, char* argv[])
 
                     if (argc == 3)
                     {
-                        rv = test_storagefactory(n_threads, seconds, *pFactory, cin);
+                        rv = test_raw_storage(n_threads, n_seconds, *pFactory, cin);
                     }
                     else
                     {
@@ -367,7 +434,7 @@ int main(int argc, char* argv[])
 
                         if (in)
                         {
-                            rv = test_storagefactory(n_threads, seconds, *pFactory, in);
+                            rv = test_raw_storage(n_threads, n_seconds, *pFactory, in);
                         }
                         else
                         {
