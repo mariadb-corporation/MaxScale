@@ -182,12 +182,13 @@ protected:
  *
  *      MyFilterSession* newSession(SESSION* pSession);
  *
+ *      void diagnostics(DCB* pDcb);
  *      static uint64_t getCapabilities();
  * };
  * @endcode
  *
- * The concrete filter class must implement the methods @c create, @c newSession and
- * @c getCapabilities, with the prototypes as shown above.
+ * The concrete filter class must implement the methods @c create, @c newSession,
+ * @c diagnostics and @c getCapabilities, with the prototypes as shown above.
  *
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
@@ -223,21 +224,21 @@ public:
 
     static void closeSession(FILTER*, void* pData)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pFilterSession->close());
     }
 
     static void freeSession(FILTER*, void* pData)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
     static void setDownstream(FILTER*, void* pData, DOWNSTREAM* pDownstream)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         typename FilterSessionType::Downstream down(*pDownstream);
 
@@ -246,7 +247,7 @@ public:
 
     static void setUpstream(FILTER* pInstance, void* pData, UPSTREAM* pUpstream)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         typename FilterSessionType::Upstream up(*pUpstream);
 
@@ -255,7 +256,7 @@ public:
 
     static int routeQuery(FILTER* pInstance, void* pData, GWBUF* pPacket)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         int rv = 0;
         MXS_EXCEPTION_GUARD(rv = pFilterSession->routeQuery(pPacket));
@@ -265,7 +266,7 @@ public:
 
     static int clientReply(FILTER* pInstance, void* pData, GWBUF* pPacket)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         int rv = 0;
         MXS_EXCEPTION_GUARD(rv = pFilterSession->clientReply(pPacket));
@@ -275,9 +276,18 @@ public:
 
     static void diagnostics(FILTER* pInstance, void* pData, DCB* pDcb)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        if (pData)
+        {
+            FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
-        MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
+            MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
+        }
+        else
+        {
+            FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+
+            MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
+        }
     }
 
     static uint64_t getCapabilities(void)

@@ -224,6 +224,12 @@ CacheFilterSession* CacheFilter::newSession(SESSION* pSession)
 }
 
 // static
+void CacheFilter::diagnostics(DCB* pDcb)
+{
+    m_sCache->show(pDcb);
+}
+
+// static
 uint64_t CacheFilter::getCapabilities()
 {
     return RCAP_TYPE_TRANSACTION_TRACKING;

@@ -29,6 +29,8 @@ public:
 
     CacheFilterSession* newSession(SESSION* pSession);
 
+    void diagnostics(DCB* pDcb);
+
     static uint64_t getCapabilities();
 
 private:
