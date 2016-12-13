@@ -57,6 +57,15 @@ by default, is configured using the new global configuration entry `log_throttli
 For more information about this configuration entry, please see
 [Global Settings](../Getting-Started/Configuration-Guide.md#global-settings).
 
+### Readwritesplit Read Retry
+
+In 2.1, Readwritesplit will retry failed SELECT statements that are
+executed outside of transaction and with autocommit enabled. This allows
+seamless slave failover and makes it transparent to the client.
+
+Read the [Readwritesplit documentation](../Routers/ReadWriteSplit.md) on
+`retry_failed_reads` for more details.
+
 ### Persistent Connections
 
 Starting with the 2.1 version of MariaDB MaxScale, when a MySQL protocol
