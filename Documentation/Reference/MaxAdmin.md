@@ -215,6 +215,16 @@ The MaxAdmin command accepts a number of switches
     <td>--version</td>
     <td>Print the maxadmin version information and exit</td>
   </tr>
+  <tr>
+    <td>-e</td>
+    <td>--emacs</td>
+    <td>Use Emacs editing mode (on by default)</td>
+  </tr>
+  <tr>
+    <td>-i</td>
+    <td>--vim</td>
+    <td>Use Vim editing mode</td>
+  </tr>
 </table>
 
 
