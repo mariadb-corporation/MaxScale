@@ -67,6 +67,20 @@ GWBUF* create_gwbuf(const string& s)
 typedef unordered_map<CACHE_KEY, GWBUF*> StatementsByKey;
 typedef vector<pair<CACHE_KEY, GWBUF*> > Statements;
 
+enum storage_action_t
+{
+    STORAGE_PUT,
+    STORAGE_GET,
+    STORAGE_DEL
+};
+
+inline storage_action_t& operator++ (storage_action_t& action)
+{
+    action = static_cast<storage_action_t>((action + 1) % 3);
+    return action;
+}
+
+
 struct ThreadData
 {
     ThreadData()
@@ -75,6 +89,7 @@ struct ThreadData
         , thread(0)
         , terminate(false)
         , rv(EXIT_SUCCESS)
+        , start_action(STORAGE_PUT)
     {}
 
     Storage*          pStorage;
@@ -82,6 +97,7 @@ struct ThreadData
     pthread_t         thread;
     bool              terminate;
     int               rv;
+    storage_action_t  start_action;
 };
 
 void* thread_main(void* pData)
@@ -94,40 +110,37 @@ void* thread_main(void* pData)
     bool& terminate = pThreadData->terminate;
 
     size_t n = statements.size();
+    ss_dassert(n > 0);
 
-    enum action_t
-    {
-        PUT,
-        GET,
-        DEL
-    };
-
-    action_t action = PUT;
+    storage_action_t action = pThreadData->start_action;
 
     size_t n_puts = 0;
     size_t n_gets = 0;
     size_t n_dels = 0;
     size_t n_misses = 0;
 
+    size_t i = 0;
+
     while (!terminate)
     {
-        size_t i = n * ((double) random() / RAND_MAX);
-        ss_dassert(i < n);
+        if (i >= n)
+        {
+            i = 0;
+        }
 
         const Statements::value_type& statement = statements[i];
 
         switch (action)
         {
-        case PUT:
+        case STORAGE_PUT:
             {
                 cache_result_t result = storage.put_value(statement.first, statement.second);
                 ss_dassert(result == CACHE_RESULT_OK);
-                action = GET;
                 ++n_puts;
             }
             break;
 
-        case GET:
+        case STORAGE_GET:
             {
                 GWBUF* pQuery;
                 cache_result_t result = storage.get_value(statement.first, 0, &pQuery);
@@ -146,11 +159,10 @@ void* thread_main(void* pData)
                     ss_dassert(result == CACHE_RESULT_NOT_FOUND);
                     ++n_misses;
                 }
-                action = DEL;
             }
             break;
 
-        case DEL:
+        case STORAGE_DEL:
             {
                 cache_result_t result = storage.del_value(statement.first);
 
@@ -166,13 +178,14 @@ void* thread_main(void* pData)
                 {
                     ss_dassert(!true);
                 }
-                action = PUT;
             }
             break;
 
         default:
             ss_dassert(!true);
         }
+
+        ++action;
     }
 
     pThreadData->rv = EXIT_SUCCESS;
@@ -183,11 +196,13 @@ void* thread_main(void* pData)
     return 0;
 }
 
-int test(size_t n_threads, size_t seconds, Storage& storage, const Statements& statements)
+int test_storage(size_t n_threads, size_t seconds, Storage& storage, const Statements& statements)
 {
     int rv = EXIT_SUCCESS;
 
     ThreadData threadDatas[n_threads];
+
+    storage_action_t start_action = STORAGE_PUT;
 
     for (size_t i = 0; i < n_threads; ++i)
     {
@@ -195,12 +210,15 @@ int test(size_t n_threads, size_t seconds, Storage& storage, const Statements& s
 
         pThreadData->pStorage = &storage;
         pThreadData->pStatements = &statements;
+        pThreadData->start_action = start_action;
 
         if (pthread_create(&pThreadData->thread, NULL, thread_main, pThreadData) != 0)
         {
             // This is impossible, so we just return.
             return EXIT_FAILURE;
         }
+
+        ++start_action;
     }
 
     stringstream ss;
@@ -228,7 +246,7 @@ int test(size_t n_threads, size_t seconds, Storage& storage, const Statements& s
     return rv;
 }
 
-int test(size_t n_threads, size_t seconds, Storage& storage, istream& in)
+int test_storage(size_t n_threads, size_t seconds, Storage& storage, istream& in)
 {
     int rv = EXIT_SUCCESS;
 
@@ -279,7 +297,7 @@ int test(size_t n_threads, size_t seconds, Storage& storage, istream& in)
 
     if (rv == EXIT_SUCCESS)
     {
-        rv = test(n_threads, seconds, storage, statements);
+        rv = test_storage(n_threads, seconds, storage, statements);
 
         for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
         {
@@ -290,7 +308,7 @@ int test(size_t n_threads, size_t seconds, Storage& storage, istream& in)
     return rv;
 }
 
-int test(size_t n_threads, size_t seconds, StorageFactory& factory, istream& in)
+int test_storagefactory(size_t n_threads, size_t seconds, StorageFactory& factory, istream& in)
 {
     int rv = EXIT_FAILURE;
 
@@ -303,7 +321,7 @@ int test(size_t n_threads, size_t seconds, StorageFactory& factory, istream& in)
 
     if (pStorage)
     {
-        rv = test(n_threads, seconds, *pStorage, in);
+        rv = test_storage(n_threads, seconds, *pStorage, in);
 
         delete pStorage;
     }
@@ -341,7 +359,7 @@ int main(int argc, char* argv[])
 
                     if (argc == 3)
                     {
-                        rv = test(n_threads, seconds, *pFactory, cin);
+                        rv = test_storagefactory(n_threads, seconds, *pFactory, cin);
                     }
                     else
                     {
@@ -349,7 +367,7 @@ int main(int argc, char* argv[])
 
                         if (in)
                         {
-                            rv = test(n_threads, seconds, *pFactory, in);
+                            rv = test_storagefactory(n_threads, seconds, *pFactory, in);
                         }
                         else
                         {
