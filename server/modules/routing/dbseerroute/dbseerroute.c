@@ -1154,7 +1154,7 @@ static void checkNamedPipe(void *args)
                 {
                     MXS_ERROR("Failed to open a log file for dbseerroute router.");
                     MXS_FREE(inst);
-                    return NULL;
+                    return;
                 }
                 inst->log_enabled = true;
             }
