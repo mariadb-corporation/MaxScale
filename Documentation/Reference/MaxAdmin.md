@@ -15,6 +15,10 @@
  - [Working with Monitors](#working-with-monitors)
  - [MariaDB MaxScale Status Commands](#maxscale-status-commands)
  - [Administration Commands](#administration-commands)
+ - [Runtime Configuration Changes](#runtime-configuration-changes)
+   - [Servers](#servers)
+   - [Listeners](#listeners)
+   - [Monitors](#monitors)
  - [Tuning MariaDB MaxScale](#tuning-mariadb-maxscale)
 
 # Overview
@@ -276,7 +280,7 @@ be given in this line. For example to create a script file that runs a set of
 list commands
 
 ```
-#!/usr/local/bin/maxadmin
+#!/usr/bin/maxadmin
 list modules
 list servers
 list services
@@ -328,40 +332,84 @@ the command help.
 ```
 MaxScale> help
 Available commands:
-    add user
+    add [user|server]
+    remove [user|server]
+    create [server|listener|monitor]
+    destroy [server|listener|monitor]
+    alter [server|monitor]
+    set [server|pollsleep|nbpolls|log_throttling]
     clear server
-    disable [heartbeat|log|root]
-    enable [heartbeat|log|root]
-    list [clients|dcbs|filters|listeners|modules|monitors|services|servers|sessions]
+    disable [heartbeat|log|log-priority|sessionlog|sessionlog-priority|root|feedback|syslog|maxlog|account]
+    enable [heartbeat|log|log-priority|sessionlog|sessionlog-priority|root|feedback|syslog|maxlog|account]
+    flush [log|logs]
+    list [clients|dcbs|filters|listeners|modules|monitors|services|servers|sessions|threads|commands]
     reload [config|dbusers]
-    remove user
-    restart [monitor|service]
-    set server
-    show [dcbs|dcb|dbusers|epoll|filter|filters|modules|monitor|monitors|server|servers|services|service|session|sessions|users]
-    shutdown [maxscale|monitor|service]
+    restart [monitor|service|listener]
+    shutdown [maxscale|monitor|service|listener]
+    show [dcblist|dcbs|dcb|dbusers|epoll|eventq|eventstats|feedbackreport|filter|filters|log_throttling|modules|monitor|monitors|persistent|server|servers|serversjson|services|service|session|sessionlist|sessions|tasks|threads|users]
+    sync logs
+    call command
 
-Type help command to see details of each command.
-Where commands require names as arguments and these names contain
-whitespace either the \ character may be used to escape the whitespace
-or the name may be enclosed in double quotes ".
+Type help command to see details of each command.  Where commands require names
+as arguments and these names contain whitespace either the \ character may be
+used to escape the whitespace or the name may be enclosed in double quotes ".
+
 MaxScale>
 ```
 
-To see more detail on a particular command, and a list of the sub commands of
+To see more details on a particular command, and a list of the sub commands of
 the command, type help followed by the command name.
 
 ```
 MaxScale> help list
 Available options to the list command:
-    clients    List all the client connections to MaxScale
-    dcbs       List all the DCBs active within MaxScale
-    filters    List all the filters defined within MaxScale
-    listeners  List all the listeners defined within MaxScale
-    modules    List all currently loaded modules
-    monitors   List all monitors
-    services   List all the services defined within MaxScale
-    servers    List all the servers defined within MaxScale
-    sessions   List all the active sessions within MaxScale
+'clients' - List all clients
+
+List all the client connections to MaxScale
+
+'dcbs' - List all DCBs
+
+List all the DCBs active within MaxScale
+
+'filters' - List all filters
+
+List all the filters defined within MaxScale
+
+'listeners' - List all listeners
+
+List all the listeners defined within MaxScale
+
+'modules' - List all currently loaded modules
+
+List all currently loaded modules
+
+'monitors' - List all monitors
+
+List all monitors
+
+'services' - List all the services
+
+List all the services defined within MaxScale
+
+'servers' - List all servers
+
+List all the servers defined within MaxScale
+
+'sessions' - List all sessions
+
+List all the active sessions within MaxScale
+
+'threads' - List polling threads
+
+List the status of the polling threads in MaxScale
+
+'commands' - List registered commands
+
+Usage list commands [DOMAIN] [COMMAND]
+Parameters:
+DOMAIN  Regular expressions for filtering module domains
+COMMAND Regular expressions for filtering module commands
+
 MaxScale>
 ```
 
@@ -1154,12 +1202,224 @@ of the values to 0, disables the throttling.
 ## Reloading The Configuration
 
 A command, _reload config_, is available that will cause MariaDB MaxScale to
-reload the maxscale.cnf configuration file.
+reload the maxscale.cnf configuration file. Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
+for a list of parameters that can be changed with it.
 
 ## Shutting Down MariaDB MaxScale
 
 The MariaDB MaxScale server may be shutdown using the _shutdown maxscale_
 command.
+
+# Runtime Configuration Changes
+
+Starting with the 2.1 version of MaxScale, you can modify the runtime
+configuration.
+
+## Servers
+
+### Creating a New Server
+
+In order to add new servers into MaxScale, they must first be created. They can
+be created with the `create server` command. Any runtime configuration changes
+to servers are persisted meaning that they will still be in effect even after a
+restart.
+
+```
+'server' - Create a new server
+
+Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
+
+Create a new server from the following parameters.
+
+NAME          Server name
+HOST          Server host address
+PORT          Server port (default 3306)
+PROTOCOL      Server protocol (default MySQLBackend)
+AUTHENTICATOR Authenticator module name (default MySQLAuth)
+OPTIONS       Options for the authenticator module
+
+The first three parameters are required, the others are optional.
+```
+
+### Adding Servers to Services and Monitors
+
+To add a server to a service or a monitor, use the `add server` command. Any
+changes to the servers of a service or a monitor are persisted meaning that they
+will still be in effect even after a restart.
+
+Servers added to services will only be taken into use by new sessions. Old
+sessions will only use the servers that were a part of the service when they
+were created.
+
+```
+'server' - Add a new server to a service
+
+Usage: add server SERVER TARGET...
+
+The TARGET must be a list of service and monitor names
+e.g. add server my-db my-service 'Cluster Monitor'
+
+A server can be assigned to a maximum of 11 objects in one command
+```
+
+### Removing Servers from Services and Monitors
+
+To remove servers from a service or a monitor, use the `remove server`
+command. The same rules about server usage for services that apply to `add
+server` also apply to `remove server`. The servers will only be removed from new
+sessions created after the command is executed.
+
+```
+'server' - Remove a server from a service or a monitor
+
+Usage: remove server SERVER TARGET...
+
+The TARGET must be a list of service and monitor names
+e.g. remove server my-db my-service 'Cluster Monitor'
+
+A server can be removed from a maximum of 11 objects in one command
+```
+
+### Altering Servers
+
+You can alter server parameters with the `alter server` command. Any changes to
+the address or port of the server will take effect for new connections
+only. Changes to other parameters will take effect immediately.
+
+Please note that in order for SSL to be enabled for a created server, all of the
+required SSL parameters (`ssl`, `ssl_key`, `ssl_cert` and `ssl_ca_cert`) must be
+given in the same command.
+
+```
+Usage: alter server NAME KEY=VALUE ...
+
+This will alter an existing parameter of a server. The accepted values for KEY are:
+
+address               Server address
+port                  Server port
+monuser               Monitor user for this server
+monpw                 Monitor password for this server
+ssl                   Enable SSL, value must be 'required'
+ssl_key               Path to SSL private key
+ssl_cert              Path to SSL certificate
+ssl_ca_cert           Path to SSL CA certificate
+ssl_version           SSL version
+ssl_cert_verify_depth Certificate verification depth
+
+A maximum of 11 parameters can be changed at one time.
+To configure SSL for a newly created server, the 'ssl', 'ssl_cert',
+'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.
+```
+
+### Destroying Servers
+
+You can destroy created servers with the `destroy server` command. Only servers
+created with the `create server` command should be destroyed. A server can only
+be destroyed once it has been removed from all services and monitors.
+
+```
+'server' - Destroy a server
+
+Usage: destroy server NAME
+```
+
+## Listeners
+
+### Creating New Listeners
+
+To create a new listener for a service, use the `create listener` command. This
+will create and start a new listener for a service which will immediately start
+listening for new connections on the specified port.
+
+Please note that in order for SSL to be enabled for a created listeners, all of
+the required SSL parameters (`ssl`, `ssl_key`, `ssl_cert` and `ssl_ca_cert`)
+must be given. All the `create listener` parameters do not need to be defined in
+order for SSL to be enabled. The _default_ parameter can be used to signal that
+MaxScale should use a default value for the parameter in question.
+
+```
+'listener' - Create a new listener for a service
+
+Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
+                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]
+
+Create a new server from the following parameters.
+
+SERVICE       Service where this listener is added
+NAME          Listener name
+HOST          Listener host address (default 0.0.0.0)
+PORT          Listener port (default 3306)
+PROTOCOL      Listener protocol (default MySQLClient)
+AUTHENTICATOR Authenticator module name (default MySQLAuth)
+OPTIONS       Options for the authenticator module
+SSL_KEY       Path to SSL private key
+SSL_CERT      Path to SSL certificate
+SSL_CA        Path to CA certificate
+SSL_VERSION   SSL version (default MAX)
+SSL_VERIFY_DEPTH Certificate verification depth
+
+The first two parameters are required, the others are optional.
+Any of the optional parameters can also have the value 'default'
+which will be replaced with the default value.
+```
+
+### Destroying Listeners
+
+You can destroy created listeners with the `destroy listener` command. This will
+remove the persisted configuration and it will not be created on the next
+startup. The listener is stopped but it will remain a part of the runtime
+configuration until the next restart.
+
+```
+'listener' - Destroy a listener
+
+Usage: destroy listener SERVICE NAME
+```
+
+## Monitors
+
+### Creating New Monitors
+
+The `create monitor` command creates a new monitor that is initially
+stopped. Configure the monitor with the `alter monitor` command and then start
+it with the `restart monitor` command. The _user_ and _password_ parameters of
+the monitor must be defined before the monitor is started.
+
+```
+'monitor' - Create a new monitor
+
+Usage: create monitor NAME MODULE
+NAME    Monitor name
+MODULE  Monitor module
+```
+
+### Altering Monitors
+
+To alter a monitor, use the `alter monitor` command. Module specific parameters
+can also be altered.
+
+```
+'monitor' - Alter monitor parameters
+
+Usage: alter monitor NAME KEY=VALUE ...
+
+This will alter an existing parameter of a monitor. To remove parameters,
+pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='
+A maximum of 11 key-value pairs can be changed at one time
+```
+
+### Destroying Monitors
+
+To destroy a monitor, use the `destroy monitor` command. All servers need to be
+removed from the monitor before it can be destroyed. Only created monitors
+should be destroyed and they will remain a part of the runtime configuration
+until the next restart.
+
+```
+'monitor' - Destroy a monitor
+
+Usage: destroy monitor NAME
+```
 
 # Tuning MariaDB MaxScale
 
