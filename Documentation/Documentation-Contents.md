@@ -26,7 +26,7 @@
 
 ## Reference
 
- - [MaxAdmin](Reference/MaxAdmin.md)
+ - [MaxAdmin - Admin Interface](Reference/MaxAdmin.md)
  - [How Errors are Handled in MariaDB MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
