@@ -29,7 +29,7 @@ LRUStorage::~LRUStorage()
 
 cache_result_t LRUStorage::get_key(const char* zdefault_db,
                                    const GWBUF* pquery,
-                                   CACHE_KEY* pkey)
+                                   CACHE_KEY* pkey) const
 {
     return pstorage_->get_key(zdefault_db, pquery, pkey);
 }
@@ -65,7 +65,7 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 
 cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
-                                        GWBUF** ppvalue)
+                                        GWBUF** ppvalue) const
 {
     NodesPerKey::iterator i = nodes_per_key_.find(key);
     bool existed = (i != nodes_per_key_.end());
@@ -121,8 +121,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
     return result;
 }
 
-cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key,
-                                        const GWBUF* pvalue)
+cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalue)
 {
     cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -264,8 +263,7 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     return result;
 }
 
-cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey,
-                                       GWBUF** ppValue)
+cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue) const
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
@@ -285,8 +283,7 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey,
     return result;
 }
 
-cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey,
-                                       GWBUF** ppValue)
+cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey, GWBUF** ppValue) const
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
