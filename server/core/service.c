@@ -1438,8 +1438,9 @@ void dprintService(DCB *dcb, SERVICE *service)
     {
         if (SERVER_REF_IS_ACTIVE(server))
         {
-            dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name,
-                       server->server->port, server->server->protocol);
+            dcb_printf(dcb, "\t\t%s:%d    Protocol: %s    Name: %s\n",
+                       server->server->name, server->server->port,
+                       server->server->protocol, server->server->unique_name);
         }
         server = server->next;
     }
@@ -1471,28 +1472,49 @@ void
 dListServices(DCB *dcb)
 {
     SERVICE *service;
-
+    const char HORIZ_SEPARATOR[] = "--------------------------+-------------------"
+                                   "+--------+----------------+-------------------\n";
     spinlock_acquire(&service_spin);
     service = allServices;
     if (service)
     {
         dcb_printf(dcb, "Services.\n");
-        dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n");
-        dcb_printf(dcb, "%-25s | %-20s | #Users | Total Sessions\n",
+        dcb_printf(dcb, HORIZ_SEPARATOR);
+        dcb_printf(dcb, "%-25s | %-17s | #Users | Total Sessions | Backend databases\n",
                    "Service Name", "Router Module");
-        dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n");
+        dcb_printf(dcb, HORIZ_SEPARATOR);
     }
     while (service)
     {
         ss_dassert(service->stats.n_current >= 0);
-        dcb_printf(dcb, "%-25s | %-20s | %6d | %5d\n",
+        dcb_printf(dcb, "%-25s | %-17s | %6d | %14d | ",
                    service->name, service->routerModule,
                    service->stats.n_current, service->stats.n_sessions);
+
+        SERVER_REF* server_ref = service->dbref;
+        bool first = true;
+        while (server_ref)
+        {
+            if (SERVER_REF_IS_ACTIVE(server_ref))
+            {
+                if (first)
+                {
+                    dcb_printf(dcb, "%s", server_ref->server->unique_name);
+                }
+                else
+                {
+                    dcb_printf(dcb, ", %s ", server_ref->server->unique_name);
+                }
+                first = false;
+            }
+            server_ref = server_ref->next;
+        }
+        dcb_printf(dcb, "\n");
         service = service->next;
     }
     if (allServices)
     {
-        dcb_printf(dcb, "--------------------------+----------------------+--------+---------------\n\n");
+        dcb_printf(dcb, "%s\n", HORIZ_SEPARATOR);
     }
     spinlock_release(&service_spin);
 }
