@@ -31,6 +31,11 @@ public:
     virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pvalue) = 0;
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
+    cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) const;
+    cache_result_t get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const;
+    cache_result_t get_size(uint64_t* pSize) const;
+    cache_result_t get_items(uint64_t* pItems) const;
+
 protected:
     InMemoryStorage(const std::string& name, uint32_t ttl);
 

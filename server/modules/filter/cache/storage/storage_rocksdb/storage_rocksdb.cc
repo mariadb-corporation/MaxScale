@@ -145,6 +145,56 @@ cache_result_t delValue(CACHE_STORAGE* pStorage,
     return result;
 }
 
+cache_result_t getHead(CACHE_STORAGE* pstorage,
+                       CACHE_KEY* pkey,
+                       GWBUF** pphead)
+{
+    ss_dassert(pstorage);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pstorage)->getHead(pkey, pphead));
+
+    return result;
+}
+
+cache_result_t getTail(CACHE_STORAGE* pstorage,
+                       CACHE_KEY* pkey,
+                       GWBUF** pptail)
+{
+    ss_dassert(pstorage);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pstorage)->getTail(pkey, pptail));
+
+    return result;
+}
+
+cache_result_t getSize(CACHE_STORAGE* pstorage,
+                       uint64_t* psize)
+{
+    ss_dassert(pstorage);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pstorage)->getSize(psize));
+
+    return result;
+}
+
+
+cache_result_t getItems(CACHE_STORAGE* pstorage,
+                        uint64_t* pitems)
+{
+    ss_dassert(pstorage);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pstorage)->getItems(pitems));
+
+    return result;
+}
 }
 
 extern "C"
@@ -162,6 +212,10 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
             getValue,
             putValue,
             delValue,
+            getHead,
+            getTail,
+            getSize,
+            getItems
         };
 
     return &api;

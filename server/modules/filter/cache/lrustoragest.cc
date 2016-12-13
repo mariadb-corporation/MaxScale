@@ -56,3 +56,25 @@ cache_result_t LRUStorageST::del_value(const CACHE_KEY& key)
 {
     return LRUStorage::do_del_value(key);
 }
+
+cache_result_t LRUStorageST::get_head(CACHE_KEY* pKey,
+                                      GWBUF** ppValue)
+{
+    return LRUStorage::do_get_head(pKey, ppValue);
+}
+
+cache_result_t LRUStorageST::get_tail(CACHE_KEY* pKey,
+                                      GWBUF** ppValue)
+{
+    return LRUStorage::do_get_tail(pKey, ppValue);
+}
+
+cache_result_t LRUStorageST::get_size(uint64_t* pSize) const
+{
+    return LRUStorage::do_get_size(pSize);
+}
+
+cache_result_t LRUStorageST::get_items(uint64_t* pItems) const
+{
+    return LRUStorage::do_get_items(pItems);
+}

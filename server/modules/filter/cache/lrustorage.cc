@@ -97,8 +97,24 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 
         if (existed && (result == CACHE_RESULT_NOT_FOUND))
         {
-            ss_dassert(!true);
-            MXS_ERROR("Item was not found in storage, but was found in key mapping.");
+            // We'll assume this is because ttl has hit in. We need to remove
+            // the mapping and the node.
+
+            Node* pnode = i->second;
+
+            if (phead_ == pnode)
+            {
+                phead_ = pnode->next();
+            }
+
+            if (ptail_ == pnode)
+            {
+                ptail_ = pnode->prev();
+            }
+
+            delete pnode;
+
+            nodes_per_key_.erase(i);
         }
     }
 
@@ -246,6 +262,59 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     }
 
     return result;
+}
+
+cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey,
+                                       GWBUF** ppValue)
+{
+    cache_result_t result = CACHE_RESULT_NOT_FOUND;
+
+    // Since it's the head it's unlikely to have happened, but we need to loop to
+    // cater for the case that ttl has hit in.
+    while (phead_ && (result == CACHE_RESULT_NOT_FOUND))
+    {
+        ss_dassert(phead_->key());
+        result = do_get_value(*phead_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
+    }
+
+    if (result == CACHE_RESULT_OK)
+    {
+        *pKey = *phead_->key();
+    }
+
+    return result;
+}
+
+cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey,
+                                       GWBUF** ppValue)
+{
+    cache_result_t result = CACHE_RESULT_NOT_FOUND;
+
+    // We need to loop to cater for the case that ttl has hit in.
+    while (ptail_ && (result == CACHE_RESULT_NOT_FOUND))
+    {
+        ss_dassert(ptail_->key());
+        result = do_get_value(*ptail_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
+    }
+
+    if (result == CACHE_RESULT_OK)
+    {
+        *pKey = *ptail_->key();
+    }
+
+    return result;
+}
+
+cache_result_t LRUStorage::do_get_size(uint64_t* pSize) const
+{
+    *pSize = stats_.size;
+    return CACHE_RESULT_OK;
+}
+
+cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
+{
+    *pItems = stats_.items;
+    return CACHE_RESULT_OK;
 }
 
 /**

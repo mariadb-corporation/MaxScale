@@ -41,6 +41,16 @@ public:
 
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
+    virtual cache_result_t get_head(CACHE_KEY* pKey,
+                                    GWBUF** ppValue) = 0;
+
+    virtual cache_result_t get_tail(CACHE_KEY* pKey,
+                                    GWBUF** ppValue) = 0;
+
+    virtual cache_result_t get_size(uint64_t* pSize) const = 0;
+
+    virtual cache_result_t get_items(uint64_t* pItems) const = 0;
+
 protected:
     Storage();
 

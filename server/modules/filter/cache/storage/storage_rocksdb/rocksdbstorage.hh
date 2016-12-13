@@ -34,6 +34,11 @@ public:
     cache_result_t putValue(const CACHE_KEY* pKey, const GWBUF* pValue);
     cache_result_t delValue(const CACHE_KEY* pKey);
 
+    cache_result_t getHead(CACHE_KEY* pKey, GWBUF** ppHead) const;
+    cache_result_t getTail(CACHE_KEY* pKey, GWBUF** ppHead) const;
+    cache_result_t getSize(uint64_t* pSize) const;
+    cache_result_t getItems(uint64_t* pItems) const;
+
 private:
     RocksDBStorage(std::unique_ptr<rocksdb::DBWithTTL>& sDb,
                    const std::string& name,

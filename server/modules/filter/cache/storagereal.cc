@@ -57,3 +57,25 @@ cache_result_t StorageReal::del_value(const CACHE_KEY& key)
 {
     return m_pApi->delValue(m_pStorage, &key);
 }
+
+cache_result_t StorageReal::get_head(CACHE_KEY* pKey,
+                                    GWBUF** ppValue)
+{
+    return m_pApi->getHead(m_pStorage, pKey, ppValue);
+}
+
+cache_result_t StorageReal::get_tail(CACHE_KEY* pKey,
+                                     GWBUF** ppValue)
+{
+    return m_pApi->getTail(m_pStorage, pKey, ppValue);
+}
+
+cache_result_t StorageReal::get_size(uint64_t* pSize) const
+{
+    return m_pApi->getSize(m_pStorage, pSize);
+}
+
+cache_result_t StorageReal::get_items(uint64_t* pItems) const
+{
+    return m_pApi->getItems(m_pStorage, pItems);
+}

@@ -69,6 +69,36 @@ protected:
      */
     cache_result_t do_del_value(const CACHE_KEY& key);
 
+    /**
+     * Returns the head item.
+     *
+     * @see Storage::get_head
+     */
+    cache_result_t do_get_head(CACHE_KEY* pKey,
+                               GWBUF** ppValue);
+
+    /**
+     * Returns the tail item.
+     *
+     * @see Storage::get_tail
+     */
+    cache_result_t do_get_tail(CACHE_KEY* pKey,
+                               GWBUF** ppValue);
+
+    /**
+     * Returns the size of the storage.
+     *
+     * @see Storage::getSize
+     */
+    cache_result_t do_get_size(uint64_t* pSize) const;
+
+    /**
+     * Returns the number of items in the storage.
+     *
+     * @see Storage::getItems
+     */
+    cache_result_t do_get_items(uint64_t* pItems) const;
+
 private:
     LRUStorage(const LRUStorage&);
     LRUStorage& operator = (const LRUStorage&);
@@ -87,15 +117,7 @@ private:
         {}
         ~Node()
         {
-            if (pnext_)
-            {
-                pnext_->pprev_ = pprev_;
-            }
-
-            if (pprev_)
-            {
-                pprev_->pnext_ = pnext_;
-            }
+            remove();
         }
 
         const CACHE_KEY* key() const { return pkey_; }

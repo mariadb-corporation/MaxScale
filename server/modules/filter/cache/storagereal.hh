@@ -36,6 +36,16 @@ public:
 
     cache_result_t del_value(const CACHE_KEY& key);
 
+    cache_result_t get_head(CACHE_KEY* pKey,
+                            GWBUF** ppValue);
+
+    cache_result_t get_tail(CACHE_KEY* pKey,
+                            GWBUF** ppValue);
+
+    cache_result_t get_size(uint64_t* pSize) const;
+
+    cache_result_t get_items(uint64_t* pItems) const;
+
 private:
     friend class StorageFactory;
 

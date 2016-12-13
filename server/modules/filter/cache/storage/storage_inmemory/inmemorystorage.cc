@@ -107,6 +107,26 @@ cache_result_t InMemoryStorage::get_key(const char* zdefault_db, const GWBUF* pq
     return CACHE_RESULT_OK;
 }
 
+cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t InMemoryStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t InMemoryStorage::get_size(uint64_t* pSize) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t InMemoryStorage::get_items(uint64_t* pItems) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
 cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppinfo) const
 {
     *ppinfo = json_object();

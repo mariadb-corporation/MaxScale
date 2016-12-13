@@ -176,6 +176,7 @@ typedef struct cache_storage_api
                              const char* default_db,
                              const GWBUF* query,
                              CACHE_KEY* key);
+
     /**
      * Get a value from the cache.
      *
@@ -220,6 +221,86 @@ typedef struct cache_storage_api
      */
     cache_result_t (*delValue)(CACHE_STORAGE* storage,
                                const CACHE_KEY* key);
+
+    /**
+     * Get the head item from the storage. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may be incorrect the moment it has
+     * been returned.
+     *
+     * @param storage  Pointer to a CACHE_STORAGE.
+     * @param key      Pointer to variable that after a successful return will
+     *                 contain the key.
+     * @param head     Pointer to variable that after a successful return will
+     *                 point to a GWBUF.
+     *
+     * @return CACHE_RESULT_OK if the head item was returned,
+     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
+     *         returning the head, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    cache_result_t (*getHead)(CACHE_STORAGE* storage,
+                              CACHE_KEY* key,
+                              GWBUF** head);
+
+    /**
+     * Get the tail item from the cache. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may become incorrect the moment it
+     * has been returned.
+     *
+     * @param storage  Pointer to a CACHE_STORAGE.
+     * @param key      Pointer to variable that after a successful return will
+     *                 contain the key.
+     * @param tail     Pointer to variable that after a successful return will
+     *                 point to a GWBUF.
+     *
+     * @return CACHE_RESULT_OK if the head item was returned,
+     *         CACHE_RESULT_NOT_FOUND if the cache is empty,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage is incapable of
+     *         returning the tail, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    cache_result_t (*getTail)(CACHE_STORAGE* storage,
+                              CACHE_KEY* key,
+                              GWBUF** tail);
+
+    /**
+     * Get the current size of the storage. This is only intended for testing and
+     * debugging purposes and if the storage is being used by different threads
+     * at the same time, the returned result may become incorrect the moment it
+     * has been returned.
+     *
+     * @param storage    Pointer to a CACHE_STORAGE.
+     * @param size       Pointer to variable that after a successful return will
+     *                   contain the current size of the storage.
+     *
+     * @return CACHE_RESULT_OK if the size was returned,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
+     *         is incapable of returning the size, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    cache_result_t (*getSize)(CACHE_STORAGE* storage,
+                              uint64_t* size);
+
+    /**
+     * Get the current number of items in the storage. This is only intended for
+     * testing and debugging purposes and if the storage is being used by different
+     * threads at the same time, the returned result may become incorrect the moment
+     * it has been returned.
+     *
+     * @param storage    Pointer to a CACHE_STORAGE.
+     * @param items      Pointer to variable that after a successful return will
+     *                   contain the current number of items in the storage.
+     *
+     * @return CACHE_RESULT_OK if the size was returned,
+     *         CACHE_RESULT_OUT_OF_RESOURCES if the storage
+     *         is incapable of returning the size, and
+     *         CACHE_RESULT_ERROR otherwise.
+     */
+    cache_result_t (*getItems)(CACHE_STORAGE* storage,
+                               uint64_t* items);
 } CACHE_STORAGE_API;
 
 #define CACHE_STORAGE_ENTRY_POINT "CacheGetStorageAPI"

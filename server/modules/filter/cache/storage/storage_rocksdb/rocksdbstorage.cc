@@ -528,3 +528,23 @@ cache_result_t RocksDBStorage::delValue(const CACHE_KEY* pKey)
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
+
+cache_result_t RocksDBStorage::getHead(CACHE_KEY* pKey, GWBUF** ppHead) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t RocksDBStorage::getTail(CACHE_KEY* pKey, GWBUF** ppHead) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t RocksDBStorage::getSize(uint64_t* pSize) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}
+
+cache_result_t RocksDBStorage::getItems(uint64_t* pItems) const
+{
+    return CACHE_RESULT_OUT_OF_RESOURCES;
+}

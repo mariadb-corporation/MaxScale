@@ -68,3 +68,33 @@ cache_result_t LRUStorageMT::del_value(const CACHE_KEY& key)
 
     return do_del_value(key);
 }
+
+cache_result_t LRUStorageMT::get_head(CACHE_KEY* pKey,
+                                      GWBUF** ppValue)
+{
+    SpinLockGuard guard(lock_);
+
+    return LRUStorage::do_get_head(pKey, ppValue);
+}
+
+cache_result_t LRUStorageMT::get_tail(CACHE_KEY* pKey,
+                                      GWBUF** ppValue)
+{
+    SpinLockGuard guard(lock_);
+
+    return LRUStorage::do_get_tail(pKey, ppValue);
+}
+
+cache_result_t LRUStorageMT::get_size(uint64_t* pSize) const
+{
+    SpinLockGuard guard(lock_);
+
+    return LRUStorage::do_get_size(pSize);
+}
+
+cache_result_t LRUStorageMT::get_items(uint64_t* pItems) const
+{
+    SpinLockGuard guard(lock_);
+
+    return LRUStorage::do_get_items(pItems);
+}
