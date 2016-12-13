@@ -78,12 +78,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
 
         if (existed)
         {
-            if (ptail_ == i->second)
-            {
-                ptail_ = i->second->prev();
-            }
-
-            phead_ = i->second->prepend(phead_);
+            move_to_head(i->second);
         }
         else
         {
@@ -98,23 +93,8 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
         if (existed && (result == CACHE_RESULT_NOT_FOUND))
         {
             // We'll assume this is because ttl has hit in. We need to remove
-            // the mapping and the node.
-
-            Node* pnode = i->second;
-
-            if (phead_ == pnode)
-            {
-                phead_ = pnode->next();
-            }
-
-            if (ptail_ == pnode)
-            {
-                ptail_ = pnode->prev();
-            }
-
-            delete pnode;
-
-            nodes_per_key_.erase(i);
+            // the node and the mapping.
+            free_node(i);
         }
     }
 
@@ -152,7 +132,6 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
             else
             {
                 ss_dassert(stats_.items == max_count_);
-                MXS_NOTICE("Max count %lu reached, removing least recently used.", max_count_);
                 pnode = free_lru();
             }
         }
@@ -200,23 +179,12 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
             pnode->reset(&i->first, value_size);
             stats_.size += pnode->size();
 
-            if (ptail_ == pnode)
-            {
-                ptail_ = pnode->prev();
-            }
-
-            phead_ = pnode->prepend(phead_);
-
-            if (!ptail_)
-            {
-                ptail_ = phead_;
-            }
+            move_to_head(pnode);
         }
         else if (!existed)
         {
             MXS_ERROR("Could not put a value to the storage.");
-            nodes_per_key_.erase(i);
-            delete pnode;
+            free_node(i);
         }
     }
 
@@ -226,38 +194,31 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
 cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
 {
     NodesPerKey::iterator i = nodes_per_key_.find(key);
+    bool existed = (i != nodes_per_key_.end());
 
     cache_result_t result = pstorage_->del_value(key);
 
     if (result == CACHE_RESULT_OK)
     {
-        ++stats_.deletes;
-
-        if (i == nodes_per_key_.end())
-        {
-            Node* pnode = i->second;
-
-            ss_dassert(stats_.size > pnode->size());
-            ss_dassert(stats_.items > 0);
-
-            stats_.size -= pnode->size();
-            --stats_.items;
-
-            phead_ = pnode->remove();
-            delete pnode;
-
-            if (!phead_)
-            {
-                ptail_ = NULL;
-            }
-
-            nodes_per_key_.erase(i);
-        }
-        else
+        if (!existed)
         {
             ss_dassert(!true);
             MXS_ERROR("Key was found from storage, but not from LRU register.");
         }
+    }
+
+    if (existed && ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_NOT_FOUND)))
+    {
+        // If it wasn't found, we'll assume it was because ttl has hit in.
+        ++stats_.deletes;
+
+        ss_dassert(stats_.size >= i->second->size());
+        ss_dassert(stats_.items > 0);
+
+        stats_.size -= i->second->size();
+        --stats_.items;
+
+        free_node(i);
     }
 
     return result;
@@ -328,7 +289,8 @@ LRUStorage::Node* LRUStorage::free_lru()
     if (free_node_data(ptail_))
     {
         pnode = ptail_;
-        ptail_ = ptail_->remove();
+
+        remove_node(pnode);
     }
 
     return pnode;
@@ -356,7 +318,8 @@ LRUStorage::Node* LRUStorage::free_lru(size_t needed_space)
             freed_space += size;
 
             pnode = ptail_;
-            ptail_ = ptail_->remove();
+
+            remove_node(pnode);
 
             if (freed_space < needed_space)
             {
@@ -429,6 +392,85 @@ bool LRUStorage::free_node_data(Node* pnode)
     return success;
 }
 
+/**
+ * Free a node and update head/tail accordingly.
+ *
+ * @param pnode  The node to be freed.
+ */
+void LRUStorage::free_node(Node* pnode) const
+{
+    remove_node(pnode);
+    delete pnode;
+
+    ss_dassert(!phead_ || (phead_->prev() == NULL));
+    ss_dassert(!ptail_ || (ptail_->next() == NULL));
+}
+
+/**
+ * Free the node referred to by the iterator and update head/tail accordingly.
+ *
+ * @param i   The map iterator.
+ */
+void LRUStorage::free_node(NodesPerKey::iterator& i) const
+{
+    free_node(i->second); // A Node
+    nodes_per_key_.erase(i);
+}
+
+/**
+ * Remove a node and update head/tail accordingly.
+ *
+ * @param pnode  The node to be removed.
+ */
+void LRUStorage::remove_node(Node* pnode) const
+{
+    ss_dassert(phead_->prev() == NULL);
+    ss_dassert(ptail_->next() == NULL);
+
+    if (phead_ == pnode)
+    {
+        phead_ = phead_->next();
+    }
+
+    if (ptail_ == pnode)
+    {
+        ptail_ = ptail_->prev();
+    }
+
+    pnode->remove();
+
+    ss_dassert(!phead_ || (phead_->prev() == NULL));
+    ss_dassert(!ptail_ || (ptail_->next() == NULL));
+}
+
+/**
+ * Move a node to head.
+ *
+ * @param pnode  The node to be moved to head.
+ */
+void LRUStorage::move_to_head(Node* pnode) const
+{
+    ss_dassert(!phead_ || (phead_->prev() == NULL));
+    ss_dassert(!ptail_ || (ptail_->next() == NULL));
+
+    if (ptail_ == pnode)
+    {
+        ptail_ = pnode->prev();
+    }
+
+    phead_ = pnode->prepend(phead_);
+
+    if (!ptail_)
+    {
+        ptail_ = phead_;
+    }
+
+    ss_dassert(phead_);
+    ss_dassert(ptail_);
+    ss_dassert((phead_ != ptail_) || (phead_ == pnode));
+    ss_dassert(phead_->prev() == NULL);
+    ss_dassert(ptail_->next() == NULL);
+}
 
 static void set_integer(json_t* pobject, const char* zname, size_t value)
 {

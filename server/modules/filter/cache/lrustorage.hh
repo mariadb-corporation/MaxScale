@@ -112,7 +112,7 @@ private:
          */
         Node* prepend(Node* pnode)
         {
-            if (pnode)
+            if (pnode && (pnode != this))
             {
                 if (pprev_)
                 {
@@ -155,7 +155,12 @@ private:
                 pnext_->pprev_ = pprev_;
             }
 
-            return pprev_ ? pprev_ : pnext_;
+            Node* pnode = (pprev_ ? pprev_ : pnext_);
+
+            pprev_ = NULL;
+            pnext_ = NULL;
+
+            return pnode;
         }
 
         void reset(const CACHE_KEY* pkey = NULL, size_t size = 0)
@@ -171,13 +176,17 @@ private:
         Node*            pprev_; /*< The previous node in the LRU list. */
     };
 
+    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesPerKey;
+
     Node* free_lru();
     Node* free_lru(size_t space);
     bool free_node_data(Node* pnode);
+    void free_node(Node* pnode) const;
+    void free_node(NodesPerKey::iterator& i) const;
+    void remove_node(Node* pnode) const;
+    void move_to_head(Node* pnode) const;
 
 private:
-    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesPerKey;
-
     struct Stats
     {
         Stats()
