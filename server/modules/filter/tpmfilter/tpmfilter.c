@@ -79,6 +79,8 @@ static size_t sql_size_limit = 64 * 1024 *
 static const int default_sql_size = 4 * 1024;
 static const char* default_query_delimiter = "@@@";
 static const char* default_log_delimiter = ":::";
+static const char* default_file_name = "tpm.log";
+static const char* default_named_pipe = "/tmp/tpmfilter";
 
 /*
  * The filter entry points
@@ -209,16 +211,17 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
     {
         my_instance->source = NULL;
         my_instance->user = NULL;
-        my_instance->named_pipe = NULL;
         my_instance->log_enabled = false;
 
         /* set default log filename */
-        my_instance->filename = MXS_STRDUP_A("tpm.log");
+        my_instance->filename = MXS_STRDUP_A(default_file_name);
         /* set default delimiter */
         my_instance->delimiter = MXS_STRDUP_A(default_log_delimiter);
         /* set default query delimiter */
         my_instance->query_delimiter = MXS_STRDUP_A(default_query_delimiter);
         my_instance->query_delimiter_size = 3;
+        /* set default named pipe */
+        my_instance->named_pipe = MXS_STRDUP_A(default_named_pipe);
 
         for (i = 0; params && params[i]; i++)
         {
