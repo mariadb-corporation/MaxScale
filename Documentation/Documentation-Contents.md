@@ -26,7 +26,7 @@
 
 ## Reference
 
- - [MaxAdmin](Reference/MaxAdmin.md)
+ - [MaxAdmin - Admin Interface](Reference/MaxAdmin.md)
  - [How Errors are Handled in MariaDB MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
@@ -86,6 +86,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
+ - [Luafilter](Filters/Luafilter.md)
  - [Gatekeeper - Adaptive Firewall](Filters/Gatekeeper.md)
 
 ## Monitors
