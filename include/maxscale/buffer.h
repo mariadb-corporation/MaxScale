@@ -51,6 +51,8 @@
 
 MXS_BEGIN_DECLS
 
+struct server;
+
 /**
  * Buffer properties - used to store properties related to the buffer
  * contents. This may be added at any point during the processing of the
@@ -145,6 +147,7 @@ typedef struct gwbuf
     gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */
+    struct server   *server;
 } GWBUF;
 
 /*<
