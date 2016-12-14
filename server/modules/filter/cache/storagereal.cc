@@ -25,6 +25,7 @@ StorageReal::StorageReal(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
 
 StorageReal::~StorageReal()
 {
+    m_pApi->freeInstance(m_pStorage);
 }
 
 cache_result_t StorageReal::get_info(uint32_t flags, json_t** ppInfo) const

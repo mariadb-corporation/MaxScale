@@ -25,6 +25,14 @@ LRUStorage::LRUStorage(Storage* pstorage, size_t max_count, size_t max_size)
 
 LRUStorage::~LRUStorage()
 {
+    Node* pnode = phead_;
+
+    while (phead_)
+    {
+        free_node(phead_); // Adjusts phead_
+    }
+
+    delete pstorage_;
 }
 
 cache_result_t LRUStorage::get_key(const char* zdefault_db,
