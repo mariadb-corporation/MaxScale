@@ -186,6 +186,12 @@ private:
     void remove_node(Node* pnode) const;
     void move_to_head(Node* pnode) const;
 
+    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppnode);
+    cache_result_t get_new_node(const CACHE_KEY& key,
+                                const GWBUF* pvalue,
+                                NodesByKey::iterator* pI,
+                                Node** ppnode);
+
 private:
     struct Stats
     {

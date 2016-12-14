@@ -114,7 +114,6 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
     cache_result_t result = CACHE_RESULT_ERROR;
 
     size_t value_size = GWBUF_LENGTH(pvalue);
-    size_t new_size = stats_.size + value_size;
 
     Node* pnode = NULL;
 
@@ -123,52 +122,17 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
 
     if (existed)
     {
-        // TODO: Also in this case max_size_ needs to be honoured.
-        pnode = i->second;
+        result = get_existing_node(i, pvalue, &pnode);
     }
     else
     {
-        if ((new_size > max_size_) || (stats_.items == max_count_))
-        {
-            if (new_size > max_size_)
-            {
-                MXS_NOTICE("New size %lu > max size %lu. Removing least recently used.",
-                           new_size, max_size_);
-
-                pnode = vacate_lru(value_size);
-            }
-            else
-            {
-                ss_dassert(stats_.items == max_count_);
-                pnode = vacate_lru();
-            }
-        }
-        else
-        {
-            pnode = new (std::nothrow) Node;
-        }
-
-        if (pnode)
-        {
-            try
-            {
-                std::pair<NodesByKey::iterator, bool>
-                    rv = nodes_by_key_.insert(std::make_pair(key, pnode));
-                ss_dassert(rv.second);
-
-                i = rv.first;
-            }
-            catch (const std::exception& x)
-            {
-                delete pnode;
-                pnode = NULL;
-                result = CACHE_RESULT_OUT_OF_RESOURCES;
-            }
-        }
+        result = get_new_node(key, pvalue, &i, &pnode);
     }
 
-    if (pnode)
+    if (result == CACHE_RESULT_OK)
     {
+        ss_dassert(pnode);
+
         result = pstorage_->put_value(key, pvalue);
 
         if (result == CACHE_RESULT_OK)
@@ -480,6 +444,131 @@ void LRUStorage::move_to_head(Node* pnode) const
     ss_dassert((phead_ != ptail_) || (phead_ == pnode));
     ss_dassert(phead_->prev() == NULL);
     ss_dassert(ptail_->next() == NULL);
+}
+
+cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppnode)
+{
+    cache_result_t result = CACHE_RESULT_OK;
+
+    size_t value_size = GWBUF_LENGTH(pvalue);
+
+    if (value_size > max_size_)
+    {
+        // If the size of the new item is more than what is allowed in total,
+        // we must remove the value.
+        const CACHE_KEY* pkey = i->second->key();
+        ss_dassert(pkey);
+
+        result = do_del_value(*pkey);
+
+        if (result != CACHE_RESULT_ERROR)
+        {
+            result = CACHE_RESULT_OUT_OF_RESOURCES;
+        }
+    }
+    else
+    {
+        Node* pnode = i->second;
+
+        size_t new_size = stats_.size - pnode->size() + value_size;
+
+        if (new_size > max_size_)
+        {
+            ss_dassert(value_size > pnode->size());
+
+            // We move it to the front, so that we do not have to deal with the case
+            // that 'pnode' is subject to removal.
+            move_to_head(pnode);
+
+            size_t extra_size = value_size - pnode->size();
+
+            Node* pvacant_node = vacate_lru(extra_size);
+
+            if (pvacant_node)
+            {
+                // We won't be using the node.
+                free_node(pvacant_node);
+
+                *ppnode = pnode;
+            }
+            else
+            {
+                ss_dassert(!true);
+                // If we could not vacant nodes, we are hosed.
+                result = CACHE_RESULT_ERROR;
+            }
+        }
+        else
+        {
+            ss_dassert(stats_.items <= max_count_);
+            *ppnode = pnode;
+        }
+    }
+
+    return result;
+}
+
+cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
+                                        const GWBUF* pvalue,
+                                        NodesByKey::iterator* pI,
+                                        Node** ppnode)
+{
+    cache_result_t result = CACHE_RESULT_OK;
+
+    size_t value_size = GWBUF_LENGTH(pvalue);
+    size_t new_size = stats_.size + value_size;
+
+    Node* pnode = NULL;
+
+    if ((new_size > max_size_) || (stats_.items == max_count_))
+    {
+        if (new_size > max_size_)
+        {
+            MXS_NOTICE("New size %lu > max size %lu. Removing least recently used.",
+                       new_size, max_size_);
+
+            pnode = vacate_lru(value_size);
+        }
+        else if (stats_.items == max_count_)
+        {
+            ss_dassert(stats_.items == max_count_);
+            pnode = vacate_lru();
+        }
+
+        if (!pnode)
+        {
+            result = CACHE_RESULT_ERROR;
+        }
+    }
+    else
+    {
+        pnode = new (std::nothrow) Node;
+    }
+
+    if (pnode)
+    {
+        try
+        {
+            std::pair<NodesByKey::iterator, bool> rv;
+            rv = nodes_by_key_.insert(std::make_pair(key, pnode));
+            ss_dassert(rv.second); // If true, the item was inserted as new (and not updated).
+            *pI = rv.first;
+        }
+        catch (const std::exception& x)
+        {
+            delete pnode;
+            pnode = NULL;
+            result = CACHE_RESULT_OUT_OF_RESOURCES;
+        }
+    }
+
+    if (result == CACHE_RESULT_OK)
+    {
+        ss_dassert(pnode);
+        *ppnode = pnode;
+    }
+
+    return result;
 }
 
 static void set_integer(json_t* pobject, const char* zname, size_t value)
