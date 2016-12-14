@@ -170,19 +170,19 @@ private:
         }
 
     private:
-        const CACHE_KEY* pkey_;  /*< Points at the key stored in nodes_per_key_ below. */
+        const CACHE_KEY* pkey_;  /*< Points at the key stored in nodes_by_key_ below. */
         size_t           size_;  /*< The size of the data referred to by pkey_. */
         Node*            pnext_; /*< The next node in the LRU list. */
         Node*            pprev_; /*< The previous node in the LRU list. */
     };
 
-    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesPerKey;
+    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesByKey;
 
-    Node* free_lru();
-    Node* free_lru(size_t space);
+    Node* vacate_lru();
+    Node* vacate_lru(size_t space);
     bool free_node_data(Node* pnode);
     void free_node(Node* pnode) const;
-    void free_node(NodesPerKey::iterator& i) const;
+    void free_node(NodesByKey::iterator& i) const;
     void remove_node(Node* pnode) const;
     void move_to_head(Node* pnode) const;
 
@@ -210,11 +210,11 @@ private:
         uint64_t evictions;  /*< How many times an item has been evicted from the cache. */
     };
 
-    Storage*            pstorage_;      /*< The actual storage. */
-    uint64_t            max_count_;     /*< The maximum number of items in the LRU list, */
-    uint64_t            max_size_;      /*< The maximum size of all cached items. */
-    mutable Stats       stats_;         /*< Cache statistics. */
-    mutable NodesPerKey nodes_per_key_; /*< Mapping from cache keys to corresponding Node. */
-    mutable Node*       phead_;         /*< The node at the LRU list. */
-    mutable Node*       ptail_;         /*< The node at bottom of the LRU list.*/
+    Storage*           pstorage_;     /*< The actual storage. */
+    uint64_t           max_count_;    /*< The maximum number of items in the LRU list, */
+    uint64_t           max_size_;     /*< The maximum size of all cached items. */
+    mutable Stats      stats_;        /*< Cache statistics. */
+    mutable NodesByKey nodes_by_key_; /*< Mapping from cache keys to corresponding Node. */
+    mutable Node*      phead_;        /*< The node at the LRU list. */
+    mutable Node*      ptail_;        /*< The node at bottom of the LRU list.*/
 };
