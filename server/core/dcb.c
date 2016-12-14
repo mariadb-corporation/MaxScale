@@ -295,6 +295,7 @@ dcb_clone(DCB *orig)
         clonedcb->ssl_state = orig->ssl_state;
         clonedcb->remote = remote;
         clonedcb->user = user;
+        clonedcb->thread.id = orig->thread.id;
         clonedcb->protocol = orig->protocol;
 
         clonedcb->func.write = dcb_null_write;
