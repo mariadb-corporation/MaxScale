@@ -7,6 +7,34 @@ the GSSAPI authentication in MaxScale.
 The _GSSAPIAuth_ module implements the client side authentication and the
 _GSSAPIBackendAuth_ module implements the backend authentication.
 
+## Preparing the GSSAPI system
+
+For Unix systems, the usual GSSAPI implementation is Kerberos. This is a short
+guide on how to set up Kerberos for MaxScale.
+
+The first step is to create a new principal for MaxScale. This can be done with
+the _kadmin_ or _kadmin.local_ tools.
+
+```
+kadmin.local -q "addprinc -nokey mariadb/example.com@EXAMPLE.COM"
+```
+
+The _-nokey_ option will make the principal a passwordless one. This allows the
+_maxscale_ user to acquire a ticket for it without a password being prompted.
+
+The next step is to export this principal into the Kerberos keytab file.
+
+```
+kadmin.local -q "ktadd -k /etc/krb5.keytab -norandkey mariadb/example.com@EXAMPLE.COM"
+```
+
+This adds the _mariadb/example.com@EXAMPLE.COM_ principal into the keytab
+file. The `-norandkey` option tells that the password we defined earlier,
+i.e. no password at all, should be used instead of a random password.
+
+The MariaDB documentation for the [GSSAPI Authentication Plugin](https://mariadb.com/kb/en/mariadb/gssapi-authentication-plugin/)
+is a good example on how to set up a new principal for the MariaDB server.
+
 ## Authenticator options
 
 The client side GSSAPIAuth authenticator supports one option, the service
