@@ -482,7 +482,9 @@ monitorMain(void *arg)
          * interval, then skip monitoring checks. Excluding the first
          * round.
          */
-        if (nrounds != 0 && ((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >= MON_BASE_INTERVAL_MS)
+        if (nrounds != 0 &&
+                (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
+                MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -494,6 +496,7 @@ monitorMain(void *arg)
         is_cluster = 0;
 
         lock_monitor_servers(mon);
+        servers_status_pending_to_current(mon);
 
         ptr = mon->databases;
         while (ptr)
@@ -619,6 +622,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        servers_status_current_to_pending(mon);
         release_monitor_servers(mon);
     }
 }

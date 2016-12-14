@@ -550,8 +550,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            ((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-            MON_BASE_INTERVAL_MS)
+            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
+            MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -559,6 +559,8 @@ monitorMain(void *arg)
         nrounds += 1;
 
         lock_monitor_servers(mon);
+        servers_status_pending_to_current(mon);
+
         /* start from the first server in the list */
         ptr = mon->databases;
 
@@ -643,6 +645,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        servers_status_current_to_pending(mon);
         release_monitor_servers(mon);
     }
 }

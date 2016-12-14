@@ -200,6 +200,9 @@ struct monitor
     void *handle;                 /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
     bool created_online;          /**< Whether this monitor was created at runtime */
+    volatile bool server_pending_changes;
+                                  /**< Are there any pending changes to a server?
+                                     * If yes, the next monitor loop starts early.  */
     struct monitor *next;         /**< Next monitor in the linked list */
 };
 
@@ -237,7 +240,8 @@ void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
 void lock_monitor_servers(MONITOR *monitor);
 void release_monitor_servers(MONITOR *monitor);
-
+void servers_status_pending_to_current(MONITOR *monitor);
+void servers_status_current_to_pending(MONITOR *monitor);
 /**
  * @brief Hangup connections to failed servers
  *
@@ -274,10 +278,10 @@ bool monitor_serialize_servers(const MONITOR *monitor);
 bool monitor_serialize(const MONITOR *monitor);
 
 /**
- * Check if a monitor uses @c servers
+ * Check if a server is being monitored and return the monitor.
  * @param server Server that is queried
- * @return True if server is used by at least one monitor
+ * @return The monitor watching this server, or NULL if not monitored
  */
-bool monitor_server_in_use(const SERVER *server);
+MONITOR* monitor_server_in_use(const SERVER *server);
 
 MXS_END_DECLS

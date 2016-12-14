@@ -188,6 +188,8 @@ monitorMain(void *arg)
     while (!handle->shutdown)
     {
         lock_monitor_servers(monitor);
+        servers_status_pending_to_current(monitor);
+
         for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
@@ -221,12 +223,18 @@ monitorMain(void *arg)
                 }
             }
         }
-
+        servers_status_current_to_pending(monitor);
         release_monitor_servers(monitor);
+
         /** Sleep until the next monitoring interval */
         int ms = 0;
         while (ms < monitor->interval && !handle->shutdown)
         {
+            if (monitor->server_pending_changes)
+            {
+                // Admin has changed something, skip sleep
+                break;
+            }
             thread_millisleep(MON_BASE_INTERVAL_MS);
             ms += MON_BASE_INTERVAL_MS;
         }

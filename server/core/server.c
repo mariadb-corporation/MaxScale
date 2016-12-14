@@ -121,6 +121,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->auth_options = my_auth_options;
     server->port = port;
     server->status = SERVER_RUNNING;
+    server->status_pending = SERVER_RUNNING;
     server->node_id = -1;
     server->rlag = -2;
     server->master_id = -1;
@@ -1264,28 +1265,58 @@ SERVER* server_find_destroyed(const char *name, const char *protocol,
 /**
  * Set a status bit in the server under a lock. This ensures synchronization
  * with the server monitor thread. Calling this inside the monitor will likely
- * cause a deadlock.
+ * cause a deadlock. If the server is monitored, only set the pending bit.
  *
  * @param server        The server to update
  * @param bit           The bit to set for the server
  */
 void server_set_status(SERVER *server, int bit)
 {
+    /* First check if the server is monitored. This isn't done under a lock
+     * but the race condition cannot cause significant harm. Monitors are never
+     * freed so the pointer stays valid.
+     */
+    MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
-    server_set_status_nolock(server, bit);
+    if (mon)
+    {
+        /* Set a pending status bit. It will be activated on the next monitor
+         * loop. Also set a flag so the next loop happens sooner.
+         */
+        server->status_pending |= bit;
+        mon->server_pending_changes = true;
+    }
+    else
+    {
+        /* Set the bit directly */
+        server_set_status_nolock(server, bit);
+    }
     spinlock_release(&server->lock);
 }
 /**
  * Clear a status bit in the server under a lock. This ensures synchronization
  * with the server monitor thread. Calling this inside the monitor will likely
- * cause a deadlock.
+ * cause a deadlock. If the server is monitored, only clear the pending bit.
  *
  * @param server        The server to update
  * @param bit           The bit to clear for the server
  */
 void server_clear_status(SERVER *server, int bit)
 {
+    MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
-    server_clear_status_nolock(server, bit);
+    if (mon)
+    {
+        /* Clear a pending status bit. It will be activated on the next monitor
+         * loop. Also set a flag so the next loop happens sooner.
+         */
+        server->status_pending &= ~bit;
+        mon->server_pending_changes = true;
+    }
+    else
+    {
+        /* Clear bit directly */
+        server_clear_status_nolock(server, bit);
+    }
     spinlock_release(&server->lock);
 }

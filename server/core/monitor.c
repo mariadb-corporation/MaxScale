@@ -105,6 +105,7 @@ monitor_alloc(char *name, char *module)
     mon->interval = MONITOR_INTERVAL;
     mon->parameters = NULL;
     mon->created_online = false;
+    mon->server_pending_changes = false;
     spinlock_init(&mon->lock);
     spinlock_acquire(&monLock);
     mon->next = allMonitors;
@@ -1248,9 +1249,9 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     MXS_FREE(next);
 }
 
-bool monitor_server_in_use(const SERVER *server)
+MONITOR* monitor_server_in_use(const SERVER *server)
 {
-    bool rval = false;
+    MONITOR *rval = NULL;
 
     spinlock_acquire(&monLock);
 
@@ -1262,7 +1263,7 @@ bool monitor_server_in_use(const SERVER *server)
         {
             if (db->server == server)
             {
-                rval = true;
+                rval = mon;
             }
         }
 
@@ -1439,7 +1440,7 @@ void mon_hangup_failed_servers(MONITOR *monitor)
     }
 }
 /**
-  * Acquire locks on all servers monitored my this monitor. There should
+  * Acquire locks on all servers monitored by this monitor. There should
   * only be max 1 monitor per server.
   * @param monitor The target monitor
   */
@@ -1452,12 +1453,48 @@ void lock_monitor_servers(MONITOR *monitor)
         ptr = ptr->next;
     }
 }
+/**
+  * Release locks on all servers monitored by this monitor. There should
+  * only be max 1 monitor per server.
+  * @param monitor The target monitor
+  */
 void release_monitor_servers(MONITOR *monitor)
 {
     MONITOR_SERVERS *ptr = monitor->databases;
     while (ptr)
     {
         spinlock_release(&ptr->server->lock);
+        ptr = ptr->next;
+    }
+}
+/**
+  * Sets the current status of all servers monitored by this monitor to
+  * the pending status. This should only be called at the beginning of
+  * a monitor loop, after the servers are locked.
+  * @param monitor The target monitor
+  */
+void servers_status_pending_to_current(MONITOR *monitor)
+{
+    MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        ptr->server->status = ptr->server->status_pending;
+        ptr = ptr->next;
+    }
+    monitor->server_pending_changes = false;
+}
+/**
+  *  Sets the pending status of all servers monitored by this monitor to
+  *  the current status. This should only be called at the end of
+  *  a monitor loop, before the servers are released.
+  *  @param monitor The target monitor
+  */
+void servers_status_current_to_pending(MONITOR *monitor)
+{
+    MONITOR_SERVERS *ptr = monitor->databases;
+    while (ptr)
+    {
+        ptr->server->status_pending = ptr->server->status;
         ptr = ptr->next;
     }
 }

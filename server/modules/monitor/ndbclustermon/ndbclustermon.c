@@ -375,6 +375,8 @@ monitorMain(void *arg)
         nrounds += 1;
 
         lock_monitor_servers(mon);
+        servers_status_pending_to_current(mon);
+
         ptr = mon->databases;
         while (ptr)
         {
@@ -415,6 +417,7 @@ monitorMain(void *arg)
         }
 
         mon_hangup_failed_servers(mon);
+        servers_status_current_to_pending(mon);
         release_monitor_servers(mon);
     }
 }

@@ -96,6 +96,7 @@ typedef struct server
     char           *auth_options;  /**< Authenticator options */
     SSL_LISTENER   *server_ssl;    /**< SSL data structure for server, if any */
     unsigned int   status;         /**< Status flag bitmap for the server */
+    unsigned int   status_pending; /**< Pending status flag bitmap for the server */
     char           monuser[MAX_SERVER_MONUSER_LEN]; /**< User name to use to monitor the db */
     char           monpw[MAX_SERVER_MONPW_LEN]; /**< Password to use to monitor the db */
     SERVER_STATS   stats;          /**< The server statistics */
