@@ -406,7 +406,7 @@ struct subcommand listoptions[] =
     {
         "commands", 0, 2, dListCommands,
         "List registered commands",
-        "Usage list commands [DOMAIN] [COMMAND]\n"
+        "Usage list commands [DOMAIN] [COMMAND]\n\n"
         "Parameters:\n"
         "DOMAIN  Regular expressions for filtering module domains\n"
         "COMMAND Regular expressions for filtering module commands\n",
@@ -873,7 +873,7 @@ struct subcommand addoptions[] =
     {
         "server", 2, 12, cmd_AddServer,
         "Add a new server to a service",
-        "Usage: add server SERVER TARGET...\n"
+        "Usage: add server SERVER TARGET...\n\n"
         "The TARGET must be a list of service and monitor names\n"
         "e.g. add server my-db my-service 'Cluster Monitor'\n"
         "A server can be assigned to a maximum of 11 objects in one command",
@@ -924,7 +924,7 @@ struct subcommand removeoptions[] =
     {
         "server", 2, 12, cmd_RemoveServer,
         "Remove a server from a service or a monitor",
-        "Usage: remove server SERVER TARGET...\n"
+        "Usage: remove server SERVER TARGET...\n\n"
         "The TARGET must be a list of service and monitor names\n"
         "e.g. remove server my-db my-service 'Cluster Monitor'\n"
         "A server can be removed from a maximum of 11 objects in one command",
@@ -1105,15 +1105,15 @@ struct subcommand createoptions[] =
     {
         "server", 2, 6, createServer,
         "Create a new server",
-        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
-        "Create a new server from the following parameters.\n"
+        "Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n\n"
+        "Create a new server from the following parameters.\n\n"
         "NAME          Server name\n"
         "HOST          Server host address\n"
-        "PORT          Server port\n"
+        "PORT          Server port (default 3306)\n"
         "PROTOCOL      Server protocol (default MySQLBackend)\n"
         "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"
         "OPTIONS       Options for the authenticator module\n\n"
-        "The first three parameters are required, the others are optional.\n",
+        "The first two parameters are required, the others are optional.\n",
         {
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING
@@ -1124,7 +1124,7 @@ struct subcommand createoptions[] =
         "Create a new listener for a service",
         "Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]\n"
         "                       [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]\n\n"
-        "Create a new server from the following parameters.\n"
+        "Create a new server from the following parameters.\n\n"
         "SERVICE       Service where this listener is added\n"
         "NAME          Listener name\n"
         "HOST          Listener host address (default 0.0.0.0)\n"
@@ -1149,7 +1149,7 @@ struct subcommand createoptions[] =
     {
         "monitor", 2, 2, createMonitor,
         "Create a new monitor",
-        "Usage: create monitor NAME MODULE\n"
+        "Usage: create monitor NAME MODULE\n\n"
         "NAME    Monitor name\n"
         "MODULE  Monitor module\n",
         {
@@ -1362,10 +1362,20 @@ struct subcommand alteroptions[] =
     {
         "server", 2, 12, alterServer,
         "Alter server parameters",
-        "Usage: alter server NAME KEY=VALUE ...\n"
-        "This will alter an existing parameter of a server. The accepted values\n"
-        "for KEY are: 'address', 'port', 'monuser', 'monpw'\n"
-        "A maximum of 11 parameters can be changed at one time",
+        "Usage: alter server NAME KEY=VALUE ...\n\n"
+        "This will alter an existing parameter of a server. The accepted values for KEY are:\n\n"
+        "address               Server address\n"
+        "port                  Server port\n"
+        "monuser               Monitor user for this server\n"
+        "monpw                 Monitor password for this server\n"
+        "ssl                   Enable SSL, value must be 'required'\n"
+        "ssl_key               Path to SSL private key\n"
+        "ssl_cert              Path to SSL certificate\n"
+        "ssl_ca_cert           Path to SSL CA certificate\n"
+        "ssl_version           SSL version\n"
+        "ssl_cert_verify_depth Certificate verification depth\n\n"
+        "To configure SSL for a newly created server, the 'ssl', 'ssl_cert',\n"
+        "'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.\n",
         { ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
@@ -1373,10 +1383,9 @@ struct subcommand alteroptions[] =
     {
         "monitor", 2, 12, alterMonitor,
         "Alter monitor parameters",
-        "Usage: alter monitor NAME KEY=VALUE ...\n"
+        "Usage: alter monitor NAME KEY=VALUE ...\n\n"
         "This will alter an existing parameter of a monitor. To remove parameters,\n"
-        "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='\n"
-        "A maximum of 11 parameters can be changed at one time",
+        "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='",
         {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
@@ -1447,7 +1456,7 @@ struct subcommand calloptions[] =
     {
         "command", 2, 12, callModuleCommand,
         "Call module command",
-        "Usage: call command NAMESPACE COMMAND ARGS...\n"
+        "Usage: call command NAMESPACE COMMAND ARGS...\n\n"
         "To list all registered commands, run 'list commands'.\n",
         { ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
