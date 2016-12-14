@@ -895,6 +895,7 @@ gw_read_and_write(DCB *dcb)
         if (session_ok_to_route(dcb))
         {
             gwbuf_set_type(stmt, GWBUF_TYPE_MYSQL);
+            stmt->server = dcb->server;
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);
