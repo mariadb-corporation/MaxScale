@@ -293,8 +293,6 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     client_rses->router = router;
     client_rses->client_dcb = session->client_dcb;
-    client_rses->rses_autocommit_enabled = true;
-    client_rses->rses_transaction_active = false;
     client_rses->have_tmp_tables = false;
     client_rses->forced_node = NULL;
     spinlock_init(&client_rses->rses_lock);
