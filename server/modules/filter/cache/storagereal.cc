@@ -37,7 +37,7 @@ cache_result_t StorageReal::get_key(const char* zDefaultDb,
                                     const GWBUF* pQuery,
                                     CACHE_KEY* pKey) const
 {
-    return m_pApi->getKey(m_pStorage, zDefaultDb, pQuery, pKey);
+    return m_pApi->getKey(zDefaultDb, pQuery, pKey);
 }
 
 cache_result_t StorageReal::get_value(const CACHE_KEY& key,

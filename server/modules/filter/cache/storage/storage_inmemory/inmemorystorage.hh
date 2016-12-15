@@ -24,7 +24,7 @@ class InMemoryStorage
 public:
     virtual ~InMemoryStorage();
 
-    cache_result_t get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey);
+    static cache_result_t get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey);
 
     virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
     virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult) = 0;

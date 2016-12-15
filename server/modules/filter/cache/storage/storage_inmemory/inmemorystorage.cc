@@ -46,6 +46,7 @@ InMemoryStorage::~InMemoryStorage()
 {
 }
 
+// static
 cache_result_t InMemoryStorage::get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pquery));

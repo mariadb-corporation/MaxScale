@@ -361,32 +361,8 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const string& storageDirectory
     return sStorage;
 }
 
-cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
-{
-    json_t* pInfo = json_object();
-
-    if (pInfo)
-    {
-        auto sStatistics = m_sDb->GetOptions().statistics;
-
-        for_each(rocksdb::TickersNameMap.begin(), rocksdb::TickersNameMap.end(),
-                 [pInfo, sStatistics](const std::pair<rocksdb::Tickers, string>& tickerName) {
-                     json_t* pValue = json_integer(sStatistics->getTickerCount(tickerName.first));
-
-                     if (pValue)
-                     {
-                         json_object_set(pInfo, tickerName.second.c_str(), pValue);
-                         json_decref(pValue);
-                     }
-                 });
-
-        *ppInfo = pInfo;
-    }
-
-    return pInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
-}
-
-cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
+// static
+cache_result_t RocksDBStorage::GetKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
@@ -442,6 +418,31 @@ cache_result_t RocksDBStorage::getKey(const char* zDefaultDB, const GWBUF* pQuer
     SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey->data) + SHA512_DIGEST_LENGTH);
 
     return CACHE_RESULT_OK;
+}
+
+cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
+{
+    json_t* pInfo = json_object();
+
+    if (pInfo)
+    {
+        auto sStatistics = m_sDb->GetOptions().statistics;
+
+        for_each(rocksdb::TickersNameMap.begin(), rocksdb::TickersNameMap.end(),
+                 [pInfo, sStatistics](const std::pair<rocksdb::Tickers, string>& tickerName) {
+                     json_t* pValue = json_integer(sStatistics->getTickerCount(tickerName.first));
+
+                     if (pValue)
+                     {
+                         json_object_set(pInfo, tickerName.second.c_str(), pValue);
+                         json_decref(pValue);
+                     }
+                 });
+
+        *ppInfo = pInfo;
+    }
+
+    return pInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
 cache_result_t RocksDBStorage::getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult)
