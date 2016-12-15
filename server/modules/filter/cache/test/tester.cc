@@ -15,7 +15,7 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
-#include "storage.hh"
+#include "storagefactory.hh"
 // TODO: Move this to a common place.
 #include "../../../../../query_classifier/test/testreader.hh"
 
@@ -175,7 +175,9 @@ bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* p
 }
 
 // static
-bool Tester::get_cache_items(const Statements& statements, const Storage& storage, CacheItems* pItems)
+bool Tester::get_cache_items(const Statements& statements,
+                             const StorageFactory& factory,
+                             CacheItems* pItems)
 {
     bool success = true;
 
@@ -187,7 +189,7 @@ bool Tester::get_cache_items(const Statements& statements, const Storage& storag
         if (pQuery)
         {
             CACHE_KEY key;
-            cache_result_t result = storage.get_key(NULL, pQuery, &key);
+            cache_result_t result = factory.get_key(NULL, pQuery, &key);
 
             if (result == CACHE_RESULT_OK)
             {
@@ -214,7 +216,7 @@ bool Tester::get_cache_items(const Statements& statements, const Storage& storag
 //static
 bool Tester::get_cache_items(std::istream& in,
                              size_t n_items,
-                             const Storage& storage,
+                             const StorageFactory& factory,
                              CacheItems* pItems)
 {
     Statements statements;
@@ -223,7 +225,7 @@ bool Tester::get_cache_items(std::istream& in,
 
     if (rv)
     {
-        rv = get_cache_items(statements, storage, pItems);
+        rv = get_cache_items(statements, factory, pItems);
     }
 
     return rv;

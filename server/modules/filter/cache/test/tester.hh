@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include "cache_storage_api.hh"
 
-class Storage;
+class StorageFactory;
 
 class Tester
 {
@@ -157,13 +157,13 @@ public:
      * Converts a set of statements into cache items (i.e. key + statement).
      *
      * @param statements  A number of statements.
-     * @param storage     The storage using which the cache keys should be generated.
+     * @param factory     The storage factory using which the cache keys should be generated.
      * @param pItems      Pointer to vector where the items will be back inserted.
      *
      * @return  Whether the conversion was successful.
      */
     static bool get_cache_items(const Statements& statements,
-                                const Storage& storage,
+                                const StorageFactory& factory,
                                 CacheItems* pItems);
 
     /**
@@ -171,7 +171,7 @@ public:
      *
      * @param statements  A number of statements.
      * @param n_items     How many items should be returned.
-     * @param storage     The storage using which the cache keys should be generated.
+     * @param factory     The storage factory using which the cache keys should be generated.
      * @param pItems      Pointer to vector where the items will be back inserted.
      *
      * @return  Whether reading and conversion was successful, not whether @n_items
@@ -179,7 +179,7 @@ public:
      */
     static bool get_cache_items(std::istream& in,
                                 size_t n_items,
-                                const Storage& storage,
+                                const StorageFactory& factory,
                                 CacheItems* pItems);
 
     /**

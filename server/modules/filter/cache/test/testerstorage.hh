@@ -14,6 +14,7 @@
 #include <maxscale/cppdefs.hh>
 #include "tester.hh"
 
+class Storage;
 class StorageFactory;
 
 class TesterStorage : public Tester
@@ -85,13 +86,11 @@ public:
      *
      * @param n_threads    How many threads to use.
      * @param n_seconds    For how many seconds to run the test.
-     * @param cache_items  The cache items to use. Assumed to have been created using
-     *                     @c storage.
-     * @param storage      The storage items to use.
+     * @param cache_items  The cache items to use.
      *
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      */
-    virtual int run(size_t n_threads, size_t n_seconds, const CacheItems& cache_items, Storage& storage);
+    virtual int run(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
     /**
      * Runs the HitTask using as many threads as specified, for the specified
@@ -99,9 +98,8 @@ public:
      *
      * @param n_threads    How many threads to use.
      * @param n_seconds    For how many seconds to run the test.
-     * @param cache_items  The cache items to use. Assumed to have been created using
-     *                     @c storage.
-     * @param storage      The storage items to use.
+     * @param cache_items  The cache items to use.
+     * @param storage      The storage to use.
      *
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      */
