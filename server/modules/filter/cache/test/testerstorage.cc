@@ -153,34 +153,29 @@ int TesterStorage::run(size_t n_threads, size_t n_seconds, std::istream& in)
 
     if (get_cache_items(in, n_items, m_factory, &cache_items))
     {
-        rv = run(n_threads, n_seconds, cache_items);
+        rv = execute(n_threads, n_seconds, cache_items);
     }
 
     return rv;
 }
 
-int TesterStorage::run(size_t n_threads,
-                       size_t n_seconds,
-                       const CacheItems& cache_items)
+int TesterStorage::execute_tasks(size_t n_threads,
+                                 size_t n_seconds,
+                                 const CacheItems& cache_items,
+                                 Storage& storage)
 {
     int rv = EXIT_FAILURE;
 
-    Storage* pStorage = get_storage();
-
-    if (pStorage)
-    {
-        rv = run_hit_task(n_threads, n_seconds, cache_items, *pStorage);
-
-        delete pStorage;
-    }
+    // Just one, for now.
+    rv = execute_hit_task(n_threads, n_seconds, cache_items, storage);
 
     return rv;
 }
 
-int TesterStorage::run_hit_task(size_t n_threads,
-                                size_t n_seconds,
-                                const CacheItems& cache_items,
-                                Storage& storage)
+int TesterStorage::execute_hit_task(size_t n_threads,
+                                    size_t n_seconds,
+                                    const CacheItems& cache_items,
+                                    Storage& storage)
 {
     int rv = EXIT_FAILURE;
 
@@ -191,7 +186,7 @@ int TesterStorage::run_hit_task(size_t n_threads,
         tasks.push_back(new HitTask(&out(), &storage, &cache_items));
     }
 
-    rv = Tester::run(out(), n_seconds, tasks);
+    rv = Tester::execute(out(), n_seconds, tasks);
 
     for_each(tasks.begin(), tasks.end(), Task::free);
 

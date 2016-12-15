@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -206,7 +207,7 @@ protected:
     std::ostream& out() const { return m_out; }
 
     /**
-     * Run a specific number of tasks in as many threads.
+     * Execute a specific number of tasks in as many threads.
      *
      * @param out        The stream to be used for (user) output.
      * @param n_seconds  How many seconds the tasks should run.
@@ -214,7 +215,7 @@ protected:
      *
      * @return EXIT_SUCCESS if each task returned EXIT_SUCCESS, otherwise EXIT_FAILURE.
      */
-    static int run(std::ostream& out, size_t n_seconds, const Tasks& tasks);
+    static int execute(std::ostream& out, size_t n_seconds, const Tasks& tasks);
 
 private:
     std::ostream& m_out;

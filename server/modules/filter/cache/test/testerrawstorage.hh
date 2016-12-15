@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -26,14 +27,12 @@ public:
      */
     TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory);
 
-protected:
     /**
-     * Returns a raw storage.
-     *
-     * @return A storage instance or NULL.
+     * @see TesterStorage::run
      */
-    Storage* get_storage();
+    int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
+protected:
     /**
      * @see TesterStorage::get_n_items
      */

@@ -12,6 +12,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include "storage.hh"
 #include "storagefactory.hh"
 #include "testerrawstorage.hh"
 
@@ -21,14 +22,24 @@ TesterRawStorage::TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory)
 {
 }
 
-Storage* TesterRawStorage::get_storage()
+int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items)
 {
-    return m_factory.createRawStorage(CACHE_THREAD_MODEL_MT,
-                                      "unspecified",
-                                      0, // No TTL
-                                      0, // No max count
-                                      0, // No max size
-                                      0, NULL);
+    int rv = EXIT_FAILURE;
+
+    Storage* pStorage = m_factory.createRawStorage(CACHE_THREAD_MODEL_MT,
+                                                   "unspecified",
+                                                   0, // No TTL
+                                                   0, // No max count
+                                                   0, // No max size
+                                                   0, NULL);
+
+    if (pStorage)
+    {
+        rv = execute_tasks(n_threads, n_seconds, cache_items, *pStorage);
+        delete pStorage;
+    }
+
+    return rv;
 }
 
 size_t TesterRawStorage::get_n_items(size_t n_threads, size_t n_seconds)

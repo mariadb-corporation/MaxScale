@@ -243,7 +243,7 @@ void Tester::clear_cache_items(CacheItems& cache_items)
 }
 
 // static
-int Tester::run(ostream& out, size_t n_seconds, const vector<Task*>& tasks)
+int Tester::execute(ostream& out, size_t n_seconds, const vector<Task*>& tasks)
 {
     vector<Thread> threads;
 
