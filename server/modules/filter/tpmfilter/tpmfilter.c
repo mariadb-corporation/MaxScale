@@ -585,6 +585,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
         /* print to log. */
         if (my_instance->log_enabled)
         {
+            /* this prints "timestamp | server_name | user_name | latency | sql_statements" */
             fprintf(my_instance->fp, "%ld%s%s%s%s%s%ld%s%s\n",
                     timestamp,
                     my_instance->delimiter,
