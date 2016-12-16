@@ -681,25 +681,13 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
 
     for (MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
     {
-        MYSQL *mysql = mysql_init(NULL);
-
-        if (mysql == NULL)
-        {
-            MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
-            break;
-        }
-
-        mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-        mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-        mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
-
-        if (mxs_mysql_real_connect(mysql, mondb->server, user, dpasswd) == NULL)
+        if (mon_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
                       " checking monitor user credentials and permissions: %s",
                       monitor->name, mondb->server->unique_name, mondb->server->name,
-                      mondb->server->port, mysql_error(mysql));
-            switch (mysql_errno(mysql))
+                      mondb->server->port, mysql_error(mondb->con));
+            switch (mysql_errno(mondb->con))
             {
                 case ER_ACCESS_DENIED_ERROR:
                 case ER_DBACCESS_DENIED_ERROR:
@@ -710,9 +698,9 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
                     break;
             }
         }
-        else if (mysql_query(mysql, query) != 0)
+        else if (mysql_query(mondb->con, query) != 0)
         {
-            switch (mysql_errno(mysql))
+            switch (mysql_errno(mondb->con))
             {
                 case ER_TABLEACCESS_DENIED_ERROR:
                 case ER_COLUMNACCESS_DENIED_ERROR:
@@ -728,23 +716,22 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
-                      monitor->name, query, user, mysql_error(mysql));
+                      monitor->name, query, user, mysql_error(mondb->con));
         }
         else
         {
             rval = true;
-            MYSQL_RES *res = mysql_use_result(mysql);
+            MYSQL_RES *res = mysql_use_result(mondb->con);
             if (res == NULL)
             {
                 MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
-                          monitor->name, mysql_error(mysql));
+                          monitor->name, mysql_error(mondb->con));
             }
             else
             {
                 mysql_free_result(res);
             }
         }
-        mysql_close(mysql);
     }
 
     MXS_FREE(dpasswd);
