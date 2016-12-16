@@ -646,8 +646,9 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
             const char* persist_cnf = get_config_persistdir();
             mxs_mkdir_all(persist_cnf, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-            if (is_directory(persist_cnf))
+            if (is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
             {
+                MXS_NOTICE("Loading generated configuration files from '%s'", persist_cnf);
                 DUPLICATE_CONTEXT p_dcontext;
                 /**
                  * We need to initialize a second duplicate context for the
