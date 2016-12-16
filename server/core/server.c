@@ -804,12 +804,15 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    if (snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
+    if (user != server->monuser &&
+        snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
     {
         MXS_WARNING("Truncated monitor user for server '%s', maximum username "
                     "length is %lu characters.", server->unique_name, sizeof(server->monuser));
     }
-    if (snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > sizeof(server->monpw))
+
+    if (passwd != server->monpw &&
+        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > sizeof(server->monpw))
     {
         MXS_WARNING("Truncated monitor password for server '%s', maximum password "
                     "length is %lu characters.", server->unique_name, sizeof(server->monpw));
