@@ -171,11 +171,16 @@ GWBUF* Tester::gwbuf_from_vector(const std::vector<uint8_t>& v)
 }
 
 // static
-bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* pStatements)
+bool Tester::get_unique_statements(std::istream& in, size_t n_statements, Statements* pStatements)
 {
-    TestReader::result_t result = TestReader::RESULT_ERROR;
-    typedef set<string> StatementsSet;
+    if (n_statements == 0)
+    {
+        n_statements = UINT_MAX;
+    }
 
+    TestReader::result_t result = TestReader::RESULT_ERROR;
+
+    typedef set<string> StatementsSet;
     StatementsSet statements;
 
     TestReader reader(in);
@@ -193,6 +198,30 @@ bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* p
             pStatements->push_back(statement);
             ++n;
         }
+    }
+
+    return result != TestReader::RESULT_ERROR;
+}
+
+// static
+bool Tester::get_statements(std::istream& in, size_t n_statements, Statements* pStatements)
+{
+    if (n_statements == 0)
+    {
+        n_statements = UINT_MAX;
+    }
+
+    TestReader::result_t result = TestReader::RESULT_ERROR;
+
+    TestReader reader(in);
+
+    size_t n = 0;
+    string statement;
+    while ((n < n_statements) &&
+           ((result = reader.get_statement(statement)) == TestReader::RESULT_STMT))
+    {
+        pStatements->push_back(statement);
+        ++n;
     }
 
     return result != TestReader::RESULT_ERROR;
@@ -245,7 +274,7 @@ bool Tester::get_cache_items(std::istream& in,
 {
     Statements statements;
 
-    bool rv = get_statements(in, n_items, &statements);
+    bool rv = get_unique_statements(in, n_items, &statements);
 
     if (rv)
     {

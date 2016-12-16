@@ -154,11 +154,24 @@ public:
     static GWBUF* gwbuf_from_vector(const std::vector<uint8_t>& v);
 
     /**
-     * Returns statements from a MySQL/MariaDB server test file.
+     * Returns unique statements from a MySQL/MariaDB server test file.
      *
      * @param in            The stream from which input should be read. Assumed to refer to a
      *                      MySQL/MariaDB test file.
-     * @param n_statements  How many statements to return.
+     * @param n_statements  How many statements to return; a value of 0 means no limit.
+     * @param pStatements   Pointer to vector where statements will be back inserted.
+     *                      May contain less statements that specified in @n_statements.
+     *
+     * @return  Whether reading was successful, not whether @n_statements statements were returned.
+     */
+    static bool get_unique_statements(std::istream& in, size_t n_statements, Statements* pStatements);
+
+    /**
+     * Returns all statements from a MySQL/MariaDB server test file.
+     *
+     * @param in            The stream from which input should be read. Assumed to refer to a
+     *                      MySQL/MariaDB test file.
+     * @param n_statements  How many statements to return; a value of 0 means no limit.
      * @param pStatements   Pointer to vector where statements will be back inserted.
      *                      May contain less statements that specified in @n_statements.
      *

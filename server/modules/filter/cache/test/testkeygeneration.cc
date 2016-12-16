@@ -18,11 +18,8 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/log_manager.h>
 #include "storagefactory.hh"
-#include "storage.hh"
 #include "cache_storage_api.hh"
-// TODO: Move this to a common place.
-#include "../../../../../query_classifier/test/testreader.hh"
-
+#include "tester.hh"
 
 using namespace std;
 using namespace std::tr1;
@@ -39,105 +36,82 @@ void print_usage(const char* zProgram)
          << "  test-file       is the name of a text file." << endl;
 }
 
-GWBUF* create_gwbuf(const string& s)
-{
-    size_t len = s.length();
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, s.c_str(), len);
-
-    return pBuf;
-}
-
-int test(Storage& storage, istream& in)
+int test(StorageFactory& factory, istream& in)
 {
     int rv = EXIT_SUCCESS;
 
-    typedef unordered_map<CACHE_KEY, string> Keys;
-    Keys keys;
+    typedef vector<string> Statements;
+    Statements statements;
 
-    maxscale::TestReader reader(in);
-
-    size_t n_statements = 0;
-    size_t n_keys = 0;
-    size_t n_collisions = 0;
-
-    string line;
-    while ((rv == EXIT_SUCCESS) && (reader.get_statement(line) == maxscale::TestReader::RESULT_STMT))
+    if (Tester::get_statements(in, 0, &statements))
     {
-        ++n_statements;
+        typedef unordered_map<CACHE_KEY, string> Keys;
+        Keys keys;
 
-        GWBUF* pQuery = create_gwbuf(line);
+        size_t n_keys = 0;
+        size_t n_collisions = 0;
 
-        CACHE_KEY key;
-        cache_result_t result = storage.get_key(NULL, pQuery, &key);
-
-        if (result == CACHE_RESULT_OK)
+        for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
         {
-            Keys::iterator i = keys.find(key);
+            string statement = *i;
+            GWBUF* pQuery = Tester::gwbuf_from_string(statement);
+            ss_dassert(pQuery);
 
-            if (i != keys.end())
+            if (pQuery)
             {
-                if (i->second != line)
+                CACHE_KEY key;
+                cache_result_t result = factory.get_key(NULL, pQuery, &key);
+
+                if (result == CACHE_RESULT_OK)
                 {
-                    ++n_collisions;
-                    cerr << "error: Same key generated for '" << i->second << "' and '"
-                         << line <<  "'." << endl;
+                    Keys::iterator i = keys.find(key);
+
+                    if (i != keys.end())
+                    {
+                        if (i->second != statement)
+                        {
+                            ++n_collisions;
+                            cerr << "error: Same key generated for '" << i->second << "' and '"
+                                 << statement <<  "'." << endl;
+                        }
+                    }
+                    else
+                    {
+                        ++n_keys;
+                        keys.insert(make_pair(key, statement));
+                    }
                 }
+                else
+                {
+                    cerr << "error: Could not generate a key for '" << statement << "'." << endl;
+                    rv = EXIT_FAILURE;
+                }
+
+                gwbuf_free(pQuery);
             }
             else
             {
-                ++n_keys;
-                keys.insert(make_pair(key, line));
+                rv = EXIT_FAILURE;
             }
         }
-        else
+
+        cout << statements.size() << " statements, "
+             << n_keys << " unique keys, "
+             << n_collisions << " collisions."
+             << endl;
+
+
+        if (rv == EXIT_SUCCESS)
         {
-            cerr << "error: Could not generate a key for '" << line << "'." << endl;
-            rv = EXIT_FAILURE;
+            if (n_collisions != 0)
+            {
+                rv = EXIT_FAILURE;
+            }
         }
     }
-
-    cout << n_statements << " statements, "
-         << n_keys << " unique keys, "
-         << n_collisions << " collisions."
-         << endl;
-
-    if (rv == EXIT_SUCCESS)
+    else
     {
-        if (n_collisions != 0)
-        {
-            rv = EXIT_FAILURE;
-        }
-    }
-
-    return rv;
-}
-
-int test(StorageFactory& factory, istream& in)
-{
-    int rv = EXIT_FAILURE;
-
-    Storage* pStorage = factory.createStorage(CACHE_THREAD_MODEL_ST,
-                                              "unspecified",
-                                              INT_MAX,
-                                              INT_MAX,
-                                              INT_MAX,
-                                              0, NULL);
-
-    if (pStorage)
-    {
-        rv = test(*pStorage, in);
-
-        delete pStorage;
+        rv = EXIT_FAILURE;
     }
 
     return rv;
