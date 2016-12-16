@@ -104,7 +104,7 @@ static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 static GWBITMASK poll_mask;
 
 /** Poll cross-thread messaging variables */
-static int     *poll_msg;
+static volatile int     *poll_msg;
 static void    *poll_msg_data = NULL;
 static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
 
@@ -1767,11 +1767,6 @@ void poll_send_message(enum poll_message msg, void *data)
 
     for (int i = 0; i < nthr; i++)
     {
-        if (i != thread_id)
-        {
-            /** Synchronize writes to poll_msg */
-            atomic_synchronize();
-        }
         poll_msg[i] |= msg;
     }
 

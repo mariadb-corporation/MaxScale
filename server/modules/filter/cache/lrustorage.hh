@@ -28,73 +28,52 @@ public:
      */
     cache_result_t get_key(const char* zDefaultDb,
                            const GWBUF* pQuery,
-                           CACHE_KEY* pKey);
+                           CACHE_KEY* pKey) const;
 
 protected:
     LRUStorage(Storage* pstorage, uint64_t max_count, uint64_t max_size);
 
     /**
-     * Returns information about the LRU storage and the underlying real
-     * storage.
-     *
      * @see Storage::get_info
      */
     cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
 
     /**
-     * Fetches the value from the underlying storage and, if found, moves the
-     * entry to the top of the LRU list.
-     *
      * @see Storage::get_value
      */
     cache_result_t do_get_value(const CACHE_KEY& key,
                                 uint32_t flags,
-                                GWBUF** ppValue);
+                                GWBUF** ppValue) const;
 
     /**
-     * Stores the value to the underlying storage and, if successful, either
-     * places the entry at or moves the existing entry to the top of the LRU
-     * list.
-     *
      * @see Storage::put_value
      */
     cache_result_t do_put_value(const CACHE_KEY& key,
                                 const GWBUF* pValue);
 
     /**
-     * Deletes the value from the underlying storage and, if successful, removes
-     * the entry from the LRU list.
-     *
      * @see Storage::del_value
      */
     cache_result_t do_del_value(const CACHE_KEY& key);
 
     /**
-     * Returns the head item.
-     *
      * @see Storage::get_head
      */
     cache_result_t do_get_head(CACHE_KEY* pKey,
-                               GWBUF** ppValue);
+                               GWBUF** ppValue) const;
 
     /**
-     * Returns the tail item.
-     *
      * @see Storage::get_tail
      */
     cache_result_t do_get_tail(CACHE_KEY* pKey,
-                               GWBUF** ppValue);
+                               GWBUF** ppValue) const;
 
     /**
-     * Returns the size of the storage.
-     *
      * @see Storage::getSize
      */
     cache_result_t do_get_size(uint64_t* pSize) const;
 
     /**
-     * Returns the number of items in the storage.
-     *
      * @see Storage::getItems
      */
     cache_result_t do_get_items(uint64_t* pItems) const;
@@ -133,7 +112,7 @@ private:
          */
         Node* prepend(Node* pnode)
         {
-            if (pnode)
+            if (pnode && (pnode != this))
             {
                 if (pprev_)
                 {
@@ -176,7 +155,12 @@ private:
                 pnext_->pprev_ = pprev_;
             }
 
-            return pprev_ ? pprev_ : pnext_;
+            Node* pnode = (pprev_ ? pprev_ : pnext_);
+
+            pprev_ = NULL;
+            pnext_ = NULL;
+
+            return pnode;
         }
 
         void reset(const CACHE_KEY* pkey = NULL, size_t size = 0)
@@ -186,19 +170,29 @@ private:
         }
 
     private:
-        const CACHE_KEY* pkey_;  /*< Points at the key stored in nodes_per_key_ below. */
+        const CACHE_KEY* pkey_;  /*< Points at the key stored in nodes_by_key_ below. */
         size_t           size_;  /*< The size of the data referred to by pkey_. */
         Node*            pnext_; /*< The next node in the LRU list. */
         Node*            pprev_; /*< The previous node in the LRU list. */
     };
 
-    Node* free_lru();
-    Node* free_lru(size_t space);
+    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesByKey;
+
+    Node* vacate_lru();
+    Node* vacate_lru(size_t space);
     bool free_node_data(Node* pnode);
+    void free_node(Node* pnode) const;
+    void free_node(NodesByKey::iterator& i) const;
+    void remove_node(Node* pnode) const;
+    void move_to_head(Node* pnode) const;
+
+    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppnode);
+    cache_result_t get_new_node(const CACHE_KEY& key,
+                                const GWBUF* pvalue,
+                                NodesByKey::iterator* pI,
+                                Node** ppnode);
 
 private:
-    typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesPerKey;
-
     struct Stats
     {
         Stats()
@@ -222,11 +216,11 @@ private:
         uint64_t evictions;  /*< How many times an item has been evicted from the cache. */
     };
 
-    Storage*    pstorage_;      /*< The actual storage. */
-    uint64_t    max_count_;     /*< The maximum number of items in the LRU list, */
-    uint64_t    max_size_;      /*< The maximum size of all cached items. */
-    Stats       stats_;         /*< Cache statistics. */
-    NodesPerKey nodes_per_key_; /*< Mapping from cache keys to corresponding Node. */
-    Node*       phead_;         /*< The node at the LRU list. */
-    Node*       ptail_;         /*< The node at bottom of the LRU list.*/
+    Storage*           pstorage_;     /*< The actual storage. */
+    uint64_t           max_count_;    /*< The maximum number of items in the LRU list, */
+    uint64_t           max_size_;     /*< The maximum size of all cached items. */
+    mutable Stats      stats_;        /*< Cache statistics. */
+    mutable NodesByKey nodes_by_key_; /*< Mapping from cache keys to corresponding Node. */
+    mutable Node*      phead_;        /*< The node at the LRU list. */
+    mutable Node*      ptail_;        /*< The node at bottom of the LRU list.*/
 };

@@ -102,6 +102,7 @@ typedef struct cache_storage_api
      *
      * @param capabilities On successful return, contains a bitmask of
      *                     cache_storage_capabilities_t values.
+     *
      * @return True if the initialization succeeded, false otherwise.
      */
     bool (*initialize)(uint32_t* capabilities);
@@ -185,6 +186,7 @@ typedef struct cache_storage_api
      * @param flags      Mask of cache_flags_t values.
      * @param result     Pointer to variable that after a successful return will
      *                   point to a GWBUF.
+     *
      * @return CACHE_RESULT_OK if item was found,
      *         CACHE_RESULT_STALE if CACHE_FLAGS_INCLUDE_STALE was specified in
      *         flags and the item was found but stale,
@@ -203,6 +205,7 @@ typedef struct cache_storage_api
      * @param key        A key generated with get_key.
      * @param value      Pointer to GWBUF containing the value to be stored.
      *                   Must be one contiguous buffer.
+     *
      * @return CACHE_RESULT_OK if item was successfully put,
      *         CACHE_RESULT_OUT_OF_RESOURCES if item could not be put, due to
      *         some resource having become exhausted, or some other error code.
@@ -216,6 +219,7 @@ typedef struct cache_storage_api
      *
      * @param storage    Pointer to a CACHE_STORAGE.
      * @param key        A key generated with get_key.
+     *
      * @return CACHE_RESULT_OK if item was successfully deleted.  Note that
      *         CACHE_RESULT_OK may be returned also if the entry was not present.
      */

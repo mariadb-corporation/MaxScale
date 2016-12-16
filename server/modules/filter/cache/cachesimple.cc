@@ -52,14 +52,14 @@ bool CacheSimple::Create(const CACHE_CONFIG& config,
 
 cache_result_t CacheSimple::get_key(const char* zDefaultDb,
                                     const GWBUF* pQuery,
-                                    CACHE_KEY* pKey)
+                                    CACHE_KEY* pKey) const
 {
     return m_pStorage->get_key(zDefaultDb, pQuery, pKey);
 }
 
 cache_result_t CacheSimple::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
-                                      GWBUF** ppValue)
+                                      GWBUF** ppValue) const
 {
     return m_pStorage->get_value(key, flags, ppValue);
 }

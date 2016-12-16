@@ -83,12 +83,28 @@ public:
      */
     virtual void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession) = 0;
 
-    virtual cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) = 0;
+    /**
+     * See @Storage::get_key
+     */
+    virtual cache_result_t get_key(const char* zDefaultDb,
+                                   const GWBUF* pQuery,
+                                   CACHE_KEY* pKey) const = 0;
 
-    virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) = 0;
+    /**
+     * See @Storage::get_value
+     */
+    virtual cache_result_t get_value(const CACHE_KEY& key,
+                                     uint32_t flags,
+                                     GWBUF** ppValue) const = 0;
 
+    /**
+     * See @Storage::put_value
+     */
     virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue) = 0;
 
+    /**
+     * See @Storage::del_value
+     */
     virtual cache_result_t del_value(const CACHE_KEY& key) = 0;
 
 protected:

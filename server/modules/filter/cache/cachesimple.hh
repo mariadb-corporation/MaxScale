@@ -25,9 +25,9 @@ class CacheSimple : public Cache
 public:
     ~CacheSimple();
 
-    cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey);
+    cache_result_t get_key(const char* zDefaultDb, const GWBUF* pQuery, CACHE_KEY* pKey) const;
 
-    cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue);
+    cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppValue) const;
 
     cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue);
 

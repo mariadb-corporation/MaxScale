@@ -25,30 +25,29 @@ StorageReal::StorageReal(CACHE_STORAGE_API* pApi, CACHE_STORAGE* pStorage)
 
 StorageReal::~StorageReal()
 {
+    m_pApi->freeInstance(m_pStorage);
 }
 
-cache_result_t StorageReal::get_info(uint32_t flags,
-                                     json_t** ppInfo) const
+cache_result_t StorageReal::get_info(uint32_t flags, json_t** ppInfo) const
 {
     return m_pApi->getInfo(m_pStorage, flags, ppInfo);
 }
 
 cache_result_t StorageReal::get_key(const char* zDefaultDb,
                                     const GWBUF* pQuery,
-                                    CACHE_KEY* pKey)
+                                    CACHE_KEY* pKey) const
 {
     return m_pApi->getKey(m_pStorage, zDefaultDb, pQuery, pKey);
 }
 
 cache_result_t StorageReal::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
-                                      GWBUF** ppValue)
+                                      GWBUF** ppValue) const
 {
     return m_pApi->getValue(m_pStorage, &key, flags, ppValue);
 }
 
-cache_result_t StorageReal::put_value(const CACHE_KEY& key,
-                                      const GWBUF* pValue)
+cache_result_t StorageReal::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
     return m_pApi->putValue(m_pStorage, &key, pValue);
 }
@@ -58,16 +57,14 @@ cache_result_t StorageReal::del_value(const CACHE_KEY& key)
     return m_pApi->delValue(m_pStorage, &key);
 }
 
-cache_result_t StorageReal::get_head(CACHE_KEY* pKey,
-                                    GWBUF** ppValue)
+cache_result_t StorageReal::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
-    return m_pApi->getHead(m_pStorage, pKey, ppValue);
+    return m_pApi->getHead(m_pStorage, pKey, ppHead);
 }
 
-cache_result_t StorageReal::get_tail(CACHE_KEY* pKey,
-                                     GWBUF** ppValue)
+cache_result_t StorageReal::get_tail(CACHE_KEY* pKey, GWBUF** ppTail) const
 {
-    return m_pApi->getTail(m_pStorage, pKey, ppValue);
+    return m_pApi->getTail(m_pStorage, pKey, ppTail);
 }
 
 cache_result_t StorageReal::get_size(uint64_t* pSize) const
