@@ -350,9 +350,9 @@ newSession(FILTER *instance, SESSION *session)
         atomic_add(&my_instance->sessions, 1);
 
         my_session->max_sql_size = default_sql_size; // default max query size of 4k.
-        my_session->sql = (char*)MXS_MALLOC(my_session->max_sql_size);
+        my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
         memset(my_session->sql, 0x00, my_session->max_sql_size);
-        my_session->buf = (char*)MXS_MALLOC(buf_size);
+        my_session->buf = (char*)MXS_CALLOC(buf_size, sizeof(char));
         my_session->sql_index = 0;
         my_session->n_statements = 0;
         my_session->total.tv_sec = 0;
@@ -519,7 +519,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 }
                 if (new_sql_size > my_session->max_sql_size)
                 {
-                    char* new_sql = (char*)MXS_MALLOC(new_sql_size);
+                    char* new_sql = (char*)MXS_CALLOC(new_sql_size, sizeof(char));
                     if (new_sql == NULL)
                     {
                         MXS_ERROR("Memory allocation failure.");
@@ -590,7 +590,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
                     my_instance->delimiter,
                     reply->server->unique_name,
                     my_instance->delimiter,
-                    reply->server->name,
+                    my_session->userName,
                     my_instance->delimiter,
                     millis,
                     my_instance->delimiter,

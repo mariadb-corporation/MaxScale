@@ -147,7 +147,7 @@ typedef struct gwbuf
     gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */
-    struct server   *server;
+    struct server   *server; /*< The target server where the buffer is executed */
 } GWBUF;
 
 /*<
