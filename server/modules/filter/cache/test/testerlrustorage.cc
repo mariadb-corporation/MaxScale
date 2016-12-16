@@ -30,6 +30,8 @@ int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
 
     size_t max_count = cache_items.size() / 4;
 
+    out() << "LRU max-count: " << max_count << "\n" << endl;
+
     pStorage = m_factory.createStorage(CACHE_THREAD_MODEL_MT,
                                        "unspecified",
                                        0, // No TTL

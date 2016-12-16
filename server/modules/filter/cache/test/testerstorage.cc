@@ -191,6 +191,13 @@ int TesterStorage::run(size_t n_threads,
         {
             rv = EXIT_FAILURE;
         }
+
+        ++i;
+    }
+
+    if (rv == EXIT_SUCCESS)
+    {
+        rv = execute(n_threads, n_seconds, cache_items);
     }
 
     clear_cache_items(cache_items);

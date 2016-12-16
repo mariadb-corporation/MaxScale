@@ -5,6 +5,7 @@ add_library(cachetester
   testerstorage.cc
   testerlrustorage.cc
   testerrawstorage.cc
+  teststorage.cc
   ../../../../../query_classifier/test/testreader.cc
   )
 
@@ -28,8 +29,10 @@ add_test(TestCache_rules testrules)
 add_test(TestCache_inmemory_keygeneration testkeygeneration storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
 add_test(TestCache_rocksdb_keygeneration testkeygeneration storage_rocksdb ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
 
-add_test(TestCache_storage_inmemory testrawstorage 10 storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
-add_test(TestCache_storage_rocksdb  testrawstorage 10 storage_rocksdb ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
+#usage: testrawstorage storage-module [threads [time [items [min-size [max-size]]]]]\n"
+add_test(TestCache_storage_inmemory testrawstorage storage_inmemory 0 10 1000 1024 1024000)
+add_test(TestCache_storage_rocksdb  testrawstorage storage_rocksdb  0 10 1000 1024 1024000)
 
-add_test(TestCache_lru_inmemory testlrustorage 10 storage_inmemory ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
-add_test(TestCache_lru_rocksdb  testlrustorage 10 storage_rocksdb ${CMAKE_CURRENT_SOURCE_DIR}/input.test)
+#usage: testlrustorage storage-module [threads [time [items [min-size [max-size]]]]]\n"
+add_test(TestCache_lru_inmemory testlrustorage storage_inmemory 0 10 1000 1024 1024000)
+add_test(TestCache_lru_rocksdb  testlrustorage storage_inmemory 0 10 1000 1024 1024000)

@@ -13,12 +13,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <iostream>
-#include <fstream>
-#include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/query_classifier.h>
-#include "storagefactory.hh"
+#include "teststorage.hh"
 #include "testerlrustorage.hh"
 
 using namespace std;
@@ -26,88 +21,32 @@ using namespace std;
 namespace
 {
 
-void print_usage(const char* zProgram)
+class TestLRUStorage : public TestStorage
 {
-    cout << "usage: " << zProgram << " time storage-module text-file\n"
-         << "\n"
-         << "where:\n"
-         << "  time            is the number of seconds we should run,\n"
-         << "  storage-module  is the name of a storage module,\n"
-         << "  test-file       is the name of a text file." << endl;
-}
+public:
+    TestLRUStorage(std::ostream* pOut)
+        : TestStorage(pOut)
+    {}
+
+private:
+    int execute(StorageFactory& factory,
+                size_t threads,
+                size_t seconds,
+                size_t items,
+                size_t min_size,
+                size_t max_size)
+    {
+        TesterLRUStorage tester(&out(), &factory);
+
+        return tester.run(threads, seconds, items, min_size, max_size);
+    }
+};
 
 }
 
 int main(int argc, char* argv[])
 {
-    int rv = EXIT_FAILURE;
+    TestLRUStorage test(&cout);
 
-    if ((argc == 3) || (argc == 4))
-    {
-        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
-        {
-            size_t n_seconds = atoi(argv[1]);
-
-            if (qc_init(NULL, NULL))
-            {
-                const char* zModule = argv[2];
-
-                const char FORMAT[] = "../storage/%s";
-                char libdir[sizeof(FORMAT) + strlen(zModule)];
-                sprintf(libdir, FORMAT, zModule);
-
-                set_libdir(MXS_STRDUP_A(libdir));
-
-                StorageFactory* pFactory = StorageFactory::Open(zModule);
-
-                if (pFactory)
-                {
-                    TesterLRUStorage tester(&cout, pFactory);
-
-                    size_t n_threads = get_processor_count() + 1;
-                    size_t n_max_items = n_threads * n_seconds * 10;
-
-                    if (argc == 3)
-                    {
-                        rv = tester.run(n_threads, n_seconds, n_max_items, cin);
-                    }
-                    else
-                    {
-                        fstream in(argv[3]);
-
-                        if (in)
-                        {
-                            rv = tester.run(n_threads, n_seconds, n_max_items, in);
-                        }
-                        else
-                        {
-                            cerr << "error: Could not open " << argv[3] << "." << endl;
-                        }
-                    }
-
-                    delete pFactory;
-                }
-                else
-                {
-                    cerr << "error: Could not initialize factory " << zModule << "." << endl;
-                }
-            }
-            else
-            {
-                cerr << "error: Could not initialize query classifier." << endl;
-            }
-
-            mxs_log_finish();
-        }
-        else
-        {
-            cerr << "error: Could not initialize log." << endl;
-        }
-    }
-    else
-    {
-        print_usage(argv[0]);
-    }
-
-    return rv;
+    return test.run(argc, argv);
 }
