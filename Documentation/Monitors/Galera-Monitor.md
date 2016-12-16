@@ -62,6 +62,20 @@ Enable interaction with server priorities. This will allow the monitor to determ
 use_priority=true
 ```
 
+### `root_node_as_master`
+
+This option controls whether the write master Galera node requires a
+_wsrep_local_index_ value of 0. This option is enabled by default and was
+introduced in MaxScale 2.1.0.
+
+A Galera cluster will always have a node which has a _wsrep_local_index_ value
+of 0. Based on this information, multiple MaxScale instances can always pick the
+same node for writes.
+
+If the `root_node_as_master` option is disabled for galeramon, the node with the
+lowest index will always be chosen as the master. If it is enabled, only the
+node with a a _wsrep_local_index_ value of 0 can be chosed as the master.
+
 ## Interaction with Server Priorities
 
 If the `use_priority` option is set and a server is configured with the
