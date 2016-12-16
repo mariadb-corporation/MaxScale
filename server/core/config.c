@@ -179,6 +179,7 @@ static char *monitor_params[] =
     "backend_write_timeout",
     "available_when_donor",
     "disable_master_role_setting",
+    "root_node_as_master",
     "use_priority",
     "multimaster",
     "failover",
