@@ -551,6 +551,10 @@ static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
     {
         sprintf(msg, "Server '%s' was removed from the service.", ref->server->unique_name);
     }
+    else if(SERVER_IN_MAINT(ref->server))
+    {
+        sprintf(msg, "Server '%s' is in maintenance.", ref->server->unique_name);
+    }
 
     MXS_ERROR("Failed to route MySQL command %d to backend server. %s",
               mysql_command, msg);
@@ -601,7 +605,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 
     if (rses_is_closed || backend_dcb == NULL ||
         !SERVER_REF_IS_ACTIVE(router_cli_ses->backend) ||
-        SERVER_IS_DOWN(router_cli_ses->backend->server))
+        !SERVER_IS_RUNNING(router_cli_ses->backend->server))
     {
         log_closed_session(mysql_command, rses_is_closed, router_cli_ses->backend);
         gwbuf_free(queue);
