@@ -879,6 +879,8 @@ int dcb_read(DCB   *dcb,
                 /* </editor-fold> */
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
+                /*< Assign the target server for the gwbuf */
+                buffer->server = dcb->server;
             }
             else
             {
