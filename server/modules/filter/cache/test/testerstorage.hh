@@ -84,6 +84,27 @@ public:
     virtual int run(size_t n_threads, size_t n_seconds, std::istream& in);
 
     /**
+     * Creates cache items with the size varying between the specified minimum
+     * and maximum sizes.
+     *
+     * Will call back into the virtual @c execute function below.
+     *
+     * @param n_threads   How many threads to use.
+     * @param n_seconds   For how many seconds to run the test.
+     * @param n_items     How many items to create.
+     * @param n_min_size  The minimum size of a cache value.
+     * @param n_max_size  The maximum size of a cache value.
+     *
+     * @return EXIT_SUCCESS or EXIT_FAILURE.
+     *
+     */
+    virtual int run(size_t n_threads,
+                    size_t n_seconds,
+                    size_t n_items,
+                    size_t n_min_size,
+                    size_t n_max_size);
+
+    /**
      * Execute tests; implemented by derived class.
      *
      * @param n_threads    How many threads to use.

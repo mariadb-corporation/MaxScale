@@ -49,3 +49,11 @@ struct hash<CACHE_KEY>
 
 std::string cache_key_to_string(const CACHE_KEY& key);
 
+class CacheKey : public CACHE_KEY
+{
+public:
+    CacheKey()
+    {
+        memset(data, 0, sizeof(data));
+    }
+};

@@ -159,6 +159,47 @@ int TesterStorage::run(size_t n_threads, size_t n_seconds, std::istream& in)
     return rv;
 }
 
+int TesterStorage::run(size_t n_threads,
+                       size_t n_seconds,
+                       size_t n_items,
+                       size_t n_min_size,
+                       size_t n_max_size)
+{
+    int rv = EXIT_SUCCESS;
+
+    CacheItems cache_items;
+
+    size_t i = 0;
+
+    while ((rv == EXIT_SUCCESS) && (i < n_items))
+    {
+        size_t size = n_min_size + ((static_cast<double>(random()) / RAND_MAX) * (n_max_size - n_min_size));
+        ss_dassert(size >= n_min_size);
+        ss_dassert(size <= n_max_size);
+
+        CacheKey key;
+
+        sprintf(key.data, "%lu", i);
+
+        vector<uint8_t> value(size, static_cast<uint8_t>(i));
+
+        GWBUF* pBuf = gwbuf_from_vector(value);
+
+        if (pBuf)
+        {
+            cache_items.push_back(std::make_pair(key, pBuf));
+        }
+        else
+        {
+            rv = EXIT_FAILURE;
+        }
+    }
+
+    clear_cache_items(cache_items);
+
+    return rv;
+}
+
 int TesterStorage::execute_tasks(size_t n_threads,
                                  size_t n_seconds,
                                  const CacheItems& cache_items,
