@@ -75,13 +75,15 @@ public:
      *
      * Will call back into the virtual @c execute function below.
      *
-     * @param n_threads  How many threads to use.
-     * @param n_seconds  For how many seconds to run the test.
-     * @param in         Stream, assumed to refer to a file containing statements.
+     * @param n_threads    How many threads to use.
+     * @param n_seconds    For how many seconds to run the test.
+     * @param n_max_items  How many items to read from the stream at most; 0 means
+     *                     no limit.
+     * @param in           Stream, assumed to refer to a file containing statements.
      *
      * @return EXIT_SUCCESS or EXIT_FAILURE.
      */
-    virtual int run(size_t n_threads, size_t n_seconds, std::istream& in);
+    virtual int run(size_t n_threads, size_t n_seconds, size_t n_max_items, std::istream& in);
 
     /**
      * Creates cache items with the size varying between the specified minimum
@@ -161,16 +163,6 @@ protected:
      * @param pFactory  Pointer to factory to be used.
      */
     TesterStorage(std::ostream* pOut, StorageFactory* pFactory);
-
-    /**
-     * Return the desired number of cache items to be used in the tests.
-     *
-     * @param n_threads  How many threads are used.
-     * @param n_seconds  For how many seconds the tests will be run.
-     *
-     * @return The desired number of items to use.
-     */
-    virtual size_t get_n_items(size_t n_threads, size_t n_seconds);
 
 protected:
     StorageFactory& m_factory;  /*< The storage factory that is used. */

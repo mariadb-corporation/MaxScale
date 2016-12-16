@@ -143,15 +143,13 @@ TesterStorage::TesterStorage(std::ostream* pOut, StorageFactory* pFactory)
 {
 }
 
-int TesterStorage::run(size_t n_threads, size_t n_seconds, std::istream& in)
+int TesterStorage::run(size_t n_threads, size_t n_seconds, size_t n_max_items, std::istream& in)
 {
     int rv = EXIT_FAILURE;
 
-    size_t n_items = get_n_items(n_threads, n_seconds);
-
     CacheItems cache_items;
 
-    if (get_cache_items(in, n_items, m_factory, &cache_items))
+    if (get_cache_items(in, n_max_items, m_factory, &cache_items))
     {
         rv = execute(n_threads, n_seconds, cache_items);
     }
@@ -254,9 +252,4 @@ TesterStorage::storage_action_t TesterStorage::get_random_action()
     }
 
     return action;
-}
-
-size_t TesterStorage::get_n_items(size_t n_threads, size_t n_seconds)
-{
-    return n_threads * n_seconds * 10; // From the sleeve...
 }

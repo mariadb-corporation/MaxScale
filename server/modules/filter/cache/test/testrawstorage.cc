@@ -65,10 +65,11 @@ int main(int argc, char* argv[])
                     TesterRawStorage tester(&cout, pFactory);
 
                     size_t n_threads = get_processor_count() + 1;
+                    size_t n_max_items = n_threads * n_seconds * 10;
 
                     if (argc == 3)
                     {
-                        rv = tester.run(n_threads, n_seconds, cin);
+                        rv = tester.run(n_threads, n_seconds, n_max_items, cin);
                     }
                     else
                     {
@@ -76,7 +77,7 @@ int main(int argc, char* argv[])
 
                         if (in)
                         {
-                            rv = tester.run(n_threads, n_seconds, in);
+                            rv = tester.run(n_threads, n_seconds, n_max_items, in);
                         }
                         else
                         {
