@@ -34,6 +34,10 @@ public:
     int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
 private:
+    int test_max_count(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
+    int test_max_size(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
+
+private:
     TesterLRUStorage(const TesterLRUStorage&);
     TesterLRUStorage& operator = (const TesterLRUStorage&);
 };
