@@ -11,10 +11,9 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include "testerrawstorage.hh"
 #include "storage.hh"
 #include "storagefactory.hh"
-#include "testerrawstorage.hh"
 
 
 TesterRawStorage::TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory)
@@ -40,9 +39,4 @@ int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
     }
 
     return rv;
-}
-
-size_t TesterRawStorage::get_n_items(size_t n_threads, size_t n_seconds)
-{
-    return n_threads * n_seconds * 10; // From the sleeve...
 }

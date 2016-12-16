@@ -215,3 +215,7 @@ TesterStorage::storage_action_t TesterStorage::get_random_action()
     return action;
 }
 
+size_t TesterStorage::get_n_items(size_t n_threads, size_t n_seconds)
+{
+    return n_threads * n_seconds * 10; // From the sleeve...
+}

@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -16,7 +17,7 @@
 #include "testerstorage.hh"
 
 
-class TesterRawStorage : public TesterStorage
+class TesterLRUStorage : public TesterStorage
 {
 public:
     /**
@@ -25,7 +26,7 @@ public:
      * @param pOut      Pointer to the stream to be used for (user) output.
      * @param pFactory  Pointer to factory to be used.
      */
-    TesterRawStorage(std::ostream* pOut, StorageFactory* pFactory);
+    TesterLRUStorage(std::ostream* pOut, StorageFactory* pFactory);
 
     /**
      * @see TesterStorage::run
@@ -33,6 +34,6 @@ public:
     int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
 private:
-    TesterRawStorage(const TesterRawStorage&);
-    TesterRawStorage& operator = (const TesterRawStorage&);
+    TesterLRUStorage(const TesterLRUStorage&);
+    TesterLRUStorage& operator = (const TesterLRUStorage&);
 };

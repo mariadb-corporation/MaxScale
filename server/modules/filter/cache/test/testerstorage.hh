@@ -149,7 +149,7 @@ protected:
      *
      * @return The desired number of items to use.
      */
-    virtual size_t get_n_items(size_t n_threads, size_t n_seconds) = 0;
+    virtual size_t get_n_items(size_t n_threads, size_t n_seconds);
 
 protected:
     StorageFactory& m_factory;  /*< The storage factory that is used. */
