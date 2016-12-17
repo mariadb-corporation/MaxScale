@@ -44,7 +44,6 @@ static const char* column_type_to_avro_type(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_NEWDECIMAL:
         case TABLE_COL_TYPE_TINY:
         case TABLE_COL_TYPE_SHORT:
         case TABLE_COL_TYPE_LONG:
@@ -56,6 +55,7 @@ static const char* column_type_to_avro_type(uint8_t type)
             return "float";
 
         case TABLE_COL_TYPE_DOUBLE:
+        case TABLE_COL_TYPE_NEWDECIMAL:
             return "double";
 
         case TABLE_COL_TYPE_NULL:
