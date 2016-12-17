@@ -539,26 +539,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             }
             else if (column_is_decimal(map->column_types[i]))
             {
-                const int dec_dig = 9;
-                int precision = metadata[metadata_offset];
-                int decimals = metadata[metadata_offset + 1];
-                int dig_bytes[] = {0, 1, 1, 2, 2, 3, 3, 4, 4, 4};
-                int ipart = precision - decimals;
-                int ipart1 = ipart / dec_dig;
-                int fpart1 = decimals / dec_dig;
-                int ipart2 = ipart - ipart1 * dec_dig;
-                int fpart2 = decimals - fpart1 * dec_dig;
-                int ibytes = ipart1 * 4 + dig_bytes[ipart2];
-                int fbytes = fpart1 * 4 + dig_bytes[fpart2];
-                ptr += ibytes + fbytes;
-
-                // TODO: Add support for DECIMAL
-                if (!warn_decimal)
-                {
-                    warn_decimal = true;
-                    MXS_WARNING("DECIMAL is not currently supported, values are stored as 0.");
-                }
-                avro_value_set_int(&field, 0);
+                double f_value = 0.0;
+                ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
+                avro_value_set_double(&field, f_value);
             }
             else if (column_is_variable_string(map->column_types[i]))
             {

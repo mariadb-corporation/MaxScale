@@ -85,11 +85,12 @@ bool column_is_decimal(uint8_t type);
 bool fixed_string_is_enum(uint8_t type);
 
 /** Value unpacking */
-uint64_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t* metadata, struct tm *tm);
-uint64_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest);
-uint64_t unpack_numeric_field(uint8_t *ptr, uint8_t type, uint8_t* metadata, uint8_t* val);
-uint64_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
+size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t* metadata, struct tm *tm);
+size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest);
+size_t unpack_numeric_field(uint8_t *ptr, uint8_t type, uint8_t* metadata, uint8_t* val);
+size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
                     uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest);
+size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float);
 
 void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm);
 
