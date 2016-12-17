@@ -1274,6 +1274,18 @@ diagnostics(ROUTER *router, DCB *dcb)
         }
     }
 
+    /* Binlog Encryption options */
+    if (router_inst->encryption.enabled)
+    {
+        dcb_printf(dcb, "\tBinlog Encryption is ON:\n");
+        dcb_printf(dcb, "\t\tEncryption Key File:      %s\n",
+                   router_inst->encryption.key_management_filename);
+        dcb_printf(dcb, "\t\tEncryption Key Algorithm: %s\n",
+                   blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm));
+        dcb_printf(dcb, "\t\tEncryption Key length:    %lu bits\n",
+                   8 * router_inst->encryption.key_len);
+    }
+
     dcb_printf(dcb, "\tMaster connection state:                     %s\n",
                blrm_states[router_inst->master_state]);
 

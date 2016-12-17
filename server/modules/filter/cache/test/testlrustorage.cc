@@ -19,7 +19,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include "storagefactory.hh"
-#include "testerrawstorage.hh"
+#include "testerlrustorage.hh"
 
 using namespace std;
 
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
                 if (pFactory)
                 {
-                    TesterRawStorage tester(&cout, pFactory);
+                    TesterLRUStorage tester(&cout, pFactory);
 
                     size_t n_threads = get_processor_count() + 1;
 

@@ -95,6 +95,19 @@ public:
                               uint64_t max_size,
                               int argc, char* argv[]);
 
+    /**
+     * Create a key for a GWBUF.
+     *
+     * @param zDefaultDb  The default DB or NULL.
+     * @param query       An SQL query. Must be one contiguous buffer.
+     * @param pKey        Pointer to object where key will be stored.
+     *
+     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
+     */
+    cache_result_t get_key(const char* zDefaultDb,
+                           const GWBUF* pQuery,
+                           CACHE_KEY* pKey) const;
+
 private:
     StorageFactory(void* handle, CACHE_STORAGE_API* pApi, uint32_t capabilities);
 

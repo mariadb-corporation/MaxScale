@@ -144,6 +144,18 @@ typedef struct cache_storage_api
                                      int argc, char* argv[]);
 
     /**
+     * Create a key for a GWBUF.
+     *
+     * @param query      An SQL query. Must be one contiguous buffer.
+     * @param key        Pointer to key.
+     *
+     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
+     */
+    cache_result_t (*getKey)(const char* default_db,
+                             const GWBUF* query,
+                             CACHE_KEY* key);
+
+    /**
      * Frees an CACHE_STORAGE instance earlier created with createInstance.
      *
      * @param instance The CACHE_STORAGE instance to be freed.
@@ -164,20 +176,6 @@ typedef struct cache_storage_api
     cache_result_t (*getInfo)(CACHE_STORAGE* storage,
                               uint32_t what,
                               json_t** info);
-    /**
-     * Create a key for a GWBUF.
-     *
-     * @param storage    Pointer to a CACHE_STORAGE.
-     * @param query      An SQL query. Must be one contiguous buffer.
-     * @param key        Pointer to key.
-     *
-     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
-     */
-    cache_result_t (*getKey)(CACHE_STORAGE* storage,
-                             const char* default_db,
-                             const GWBUF* query,
-                             CACHE_KEY* key);
-
     /**
      * Get a value from the cache.
      *

@@ -78,41 +78,6 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         }
         handle_multi_temp_and_load(rses, querybuf, packet_type, (int *)&qtype);
         rses_end_locked_router_action(rses);
-        /**
-         * If autocommit is disabled or transaction is explicitly started
-         * transaction becomes active and master gets all statements until
-         * transaction is committed and autocommit is enabled again.
-         */
-        if (rses->rses_autocommit_enabled &&
-            qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
-        {
-            rses->rses_autocommit_enabled = false;
-
-            if (!rses->rses_transaction_active)
-            {
-                rses->rses_transaction_active = true;
-            }
-        }
-        else if (!rses->rses_transaction_active &&
-                 qc_query_is_type(qtype, QUERY_TYPE_BEGIN_TRX))
-        {
-            rses->rses_transaction_active = true;
-        }
-        /**
-         * Explicit COMMIT and ROLLBACK, implicit COMMIT.
-         */
-        if (rses->rses_autocommit_enabled && rses->rses_transaction_active &&
-            (qc_query_is_type(qtype, QUERY_TYPE_COMMIT) ||
-             qc_query_is_type(qtype, QUERY_TYPE_ROLLBACK)))
-        {
-            rses->rses_transaction_active = false;
-        }
-        else if (!rses->rses_autocommit_enabled &&
-                 qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT))
-        {
-            rses->rses_autocommit_enabled = true;
-            rses->rses_transaction_active = false;
-        }
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -721,13 +686,20 @@ return_succp:
 route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
                                 qc_query_type_t qtype, HINT *hint)
 {
-    bool trx_active = rses->rses_transaction_active;
+    bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->rses_load_active;
     target_t use_sql_variables_in = rses->rses_config.rw_use_sql_variables_in;
     route_target_t target = TARGET_UNDEFINED;
 
     if (rses->rses_config.rw_strict_multi_stmt && rses->forced_node &&
         rses->forced_node == rses->rses_master_ref)
+    {
+        target = TARGET_MASTER;
+    }
+    /**
+     * A cloned session, route everything to the master
+     */
+    else if (DCB_IS_CLONE(rses->client_dcb))
     {
         target = TARGET_MASTER;
     }

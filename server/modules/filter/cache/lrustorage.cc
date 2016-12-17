@@ -75,35 +75,32 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
                                         GWBUF** ppvalue) const
 {
+    cache_result_t result = CACHE_RESULT_NOT_FOUND;
+
     NodesByKey::iterator i = nodes_by_key_.find(key);
     bool existed = (i != nodes_by_key_.end());
 
-    cache_result_t result = pstorage_->get_value(key, flags, ppvalue);
-
-    if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
+    if (existed)
     {
-        ++stats_.hits;
+        result = pstorage_->get_value(key, flags, ppvalue);
 
-        if (existed)
+        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
         {
+            ++stats_.hits;
             move_to_head(i->second);
         }
-        else
+        else if (result == CACHE_RESULT_NOT_FOUND)
         {
-            ss_dassert(!true);
-            MXS_ERROR("Item found in storage, but not in key mapping.");
+            ++stats_.misses;
+
+            // We'll assume this is because ttl has hit in. We need to remove
+            // the node and the mapping.
+            free_node(i);
         }
     }
     else
     {
         ++stats_.misses;
-
-        if (existed && (result == CACHE_RESULT_NOT_FOUND))
-        {
-            // We'll assume this is because ttl has hit in. We need to remove
-            // the node and the mapping.
-            free_node(i);
-        }
     }
 
     return result;
@@ -165,32 +162,28 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
 
 cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
 {
+    cache_result_t result = CACHE_RESULT_NOT_FOUND;
+
     NodesByKey::iterator i = nodes_by_key_.find(key);
     bool existed = (i != nodes_by_key_.end());
 
-    cache_result_t result = pstorage_->del_value(key);
-
-    if (result == CACHE_RESULT_OK)
+    if (existed)
     {
-        if (!existed)
+        result = pstorage_->del_value(key);
+
+        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_NOT_FOUND))
         {
-            ss_dassert(!true);
-            MXS_ERROR("Key was found from storage, but not from LRU register.");
+            // If it wasn't found, we'll assume it was because ttl has hit in.
+            ++stats_.deletes;
+
+            ss_dassert(stats_.size >= i->second->size());
+            ss_dassert(stats_.items > 0);
+
+            stats_.size -= i->second->size();
+            --stats_.items;
+
+            free_node(i);
         }
-    }
-
-    if (existed && ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_NOT_FOUND)))
-    {
-        // If it wasn't found, we'll assume it was because ttl has hit in.
-        ++stats_.deletes;
-
-        ss_dassert(stats_.size >= i->second->size());
-        ss_dassert(stats_.items > 0);
-
-        stats_.size -= i->second->size();
-        --stats_.items;
-
-        free_node(i);
     }
 
     return result;

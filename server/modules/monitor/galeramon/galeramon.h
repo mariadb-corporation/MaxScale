@@ -58,6 +58,8 @@ typedef struct
     int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
     MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script;
+    bool root_node_as_master; /**< Whether we require that the Master should
+                                    * have a wsrep_local_index of 0 */
     bool use_priority; /*< Use server priorities */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } GALERA_MONITOR;

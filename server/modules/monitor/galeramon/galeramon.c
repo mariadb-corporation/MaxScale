@@ -145,6 +145,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         handle->disableMasterRoleSetting = 0;
         handle->master = NULL;
         handle->script = NULL;
+        handle->root_node_as_master = true;
         handle->use_priority = false;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
@@ -164,6 +165,10 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         else if (!strcmp(params->name, "disable_master_role_setting"))
         {
             handle->disableMasterRoleSetting = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "root_node_as_master"))
+        {
+            handle->root_node_as_master = config_truth_value(params->value);
         }
         else if (!strcmp(params->name, "use_priority"))
         {
@@ -548,29 +553,27 @@ monitorMain(void *arg)
             const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
             if (SERVER_IS_JOINED(ptr->server))
             {
-                if (handle->master)
+                if (ptr != handle->master)
                 {
-                    if (ptr != handle->master)
+                    /* set the Slave role and clear master stickiness */
+                    server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
+                }
+                else
+                {
+                    if (candidate_master &&
+                        handle->master->server->node_id != candidate_master->server->node_id)
                     {
-                        /* set the Slave role and clear master stickiness */
-                        server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
+                        /* set master role and master stickiness */
+                        server_clear_set_status(ptr->server, repl_bits,
+                                                (SERVER_MASTER | SERVER_MASTER_STICKINESS));
                     }
                     else
                     {
-                        if (candidate_master &&
-                            handle->master->server->node_id != candidate_master->server->node_id)
-                        {
-                            /* set master role and master stickiness */
-                            server_clear_set_status(ptr->server, repl_bits,
-                                                    (SERVER_MASTER | SERVER_MASTER_STICKINESS));
-                        }
-                        else
-                        {
-                            /* set master role and clear master stickiness */
-                            server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
-                        }
+                        /* set master role and clear master stickiness */
+                        server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
                     }
                 }
+
                 is_cluster++;
             }
             else
@@ -672,6 +675,17 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
             }
         }
         moitor_servers = moitor_servers->next;
+    }
+
+    if (!handle->use_priority && !handle->disableMasterFailback  &&
+        handle->root_node_as_master && min_id > 0)
+    {
+        /** The monitor couldn't find the node with wsrep_local_index of 0.
+         * This means that we can't connect to the root node of the cluster.
+         *
+         * If the node is down, the cluster would recalculate the index values
+         * and we would find it. In this case, we just can't connect to it.  */
+        candidate_master = NULL;
     }
 
     return candidate_master;

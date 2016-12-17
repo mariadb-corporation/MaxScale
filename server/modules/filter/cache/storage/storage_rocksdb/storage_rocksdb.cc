@@ -80,21 +80,17 @@ cache_result_t getInfo(CACHE_STORAGE* pStorage,
     return result;
 }
 
-cache_result_t getKey(CACHE_STORAGE* pStorage,
-                      const char* zDefaultDB,
+cache_result_t getKey(const char* zDefaultDB,
                       const GWBUF* pQuery,
                       CACHE_KEY* pKey)
 {
-    ss_dassert(pStorage);
     // zDefaultDB may be NULL.
     ss_dassert(pQuery);
     ss_dassert(pKey);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    MXS_EXCEPTION_GUARD(result = reinterpret_cast<RocksDBStorage*>(pStorage)->getKey(zDefaultDB,
-                                                                                     pQuery,
-                                                                                     pKey));
+    MXS_EXCEPTION_GUARD(result = RocksDBStorage::GetKey(zDefaultDB, pQuery, pKey));
 
     return result;
 }
@@ -206,9 +202,9 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
         {
             initialize,
             createInstance,
+            getKey,
             freeInstance,
             getInfo,
-            getKey,
             getValue,
             putValue,
             delValue,

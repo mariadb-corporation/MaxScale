@@ -76,6 +76,21 @@ CACHE_STORAGE* createInstance(cache_thread_model_t model,
     return reinterpret_cast<CACHE_STORAGE*>(sStorage.release());
 }
 
+cache_result_t getKey(const char* zdefault_db,
+                      const GWBUF* pquery,
+                      CACHE_KEY* pkey)
+{
+    // zdefault_db may be NULL.
+    ss_dassert(pquery);
+    ss_dassert(pkey);
+
+    cache_result_t result = CACHE_RESULT_ERROR;
+
+    MXS_EXCEPTION_GUARD(result = InMemoryStorage::get_key(zdefault_db, pquery, pkey));
+
+    return result;
+}
+
 void freeInstance(CACHE_STORAGE* pinstance)
 {
     MXS_EXCEPTION_GUARD(delete reinterpret_cast<InMemoryStorage*>(pinstance));
@@ -90,25 +105,6 @@ cache_result_t getInfo(CACHE_STORAGE* pStorage,
     cache_result_t result = CACHE_RESULT_ERROR;
 
     MXS_EXCEPTION_GUARD(result = reinterpret_cast<InMemoryStorage*>(pStorage)->get_info(what, ppInfo));
-
-    return result;
-}
-
-cache_result_t getKey(CACHE_STORAGE* pstorage,
-                      const char* zdefault_db,
-                      const GWBUF* pquery,
-                      CACHE_KEY* pkey)
-{
-    ss_dassert(pstorage);
-    // zdefault_db may be NULL.
-    ss_dassert(pquery);
-    ss_dassert(pkey);
-
-    cache_result_t result = CACHE_RESULT_ERROR;
-
-    MXS_EXCEPTION_GUARD(result = reinterpret_cast<InMemoryStorage*>(pstorage)->get_key(zdefault_db,
-                                                                                       pquery,
-                                                                                       pkey));
 
     return result;
 }
@@ -221,9 +217,9 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
         {
             initialize,
             createInstance,
+            getKey,
             freeInstance,
             getInfo,
-            getKey,
             getValue,
             putValue,
             delValue,

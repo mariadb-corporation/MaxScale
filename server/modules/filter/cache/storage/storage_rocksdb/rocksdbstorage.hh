@@ -28,8 +28,9 @@ public:
     static SRocksDBStorage Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
     ~RocksDBStorage();
 
+    static cache_result_t GetKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey);
+
     cache_result_t getInfo(uint32_t flags, json_t** ppInfo) const;
-    cache_result_t getKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey);
     cache_result_t getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult);
     cache_result_t putValue(const CACHE_KEY* pKey, const GWBUF* pValue);
     cache_result_t delValue(const CACHE_KEY* pKey);

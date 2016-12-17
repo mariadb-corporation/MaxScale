@@ -167,9 +167,10 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
          char *data = (char *)&packet[5];
          char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
          char *qtypestr = qc_typemask_to_string(qtype);
+         SESSION *ses = rses->client_dcb->session;
          MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
-           (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
-           (rses->rses_transaction_active ? "[open]" : "[not open]"),
+           (session_is_autocommit(ses) ? "[enabled]" : "[disabled]"),
+           (session_trx_is_active(ses) ? "[open]" : "[not open]"),
            STRPACKETTYPE(ptype), (qtypestr == NULL ? "N/A" : qtypestr),
            contentstr, (querybuf->hint == NULL ? "" : ", Hint:"),
            (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));

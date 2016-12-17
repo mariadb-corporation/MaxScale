@@ -94,6 +94,15 @@ In 2.1.0, each listener has its own sub-directory in the service cache
 directory. The old caches in `/var/cache/maxscale` will need to be manually
 removed if they are no longer used by older versions of MaxScale.
 
+### Galeramon Monitoring Algorithm
+
+The galeramon monitor will only choose nodes with a _wsrep_local_index_
+value of 0 as the master. This allows multiple MaxScales to always choose
+the same node as the write master node for the cluster. The old behavior
+can be taken into use by disabling the new `root_node_as_master` option.
+
+For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.md).
+
 ## New Features
 
 ### Dynamic server configuration
