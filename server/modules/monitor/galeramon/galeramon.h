@@ -55,7 +55,7 @@ typedef struct
     unsigned long id; /**< Monitor ID */
     int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
-    int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
+    bool disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
     MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script;
     bool root_node_as_master; /**< Whether we require that the Master should

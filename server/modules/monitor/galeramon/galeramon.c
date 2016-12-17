@@ -142,7 +142,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         handle->id = MONITOR_DEFAULT_ID;
         handle->disableMasterFailback = 0;
         handle->availableWhenDonor = 0;
-        handle->disableMasterRoleSetting = 0;
+        handle->disableMasterRoleSetting = false;
         handle->master = NULL;
         handle->script = NULL;
         handle->root_node_as_master = true;
@@ -259,7 +259,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
     dcb_printf(dcb, "Master Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
     dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
-               (handle->disableMasterRoleSetting == 1) ? "on" : "off");
+               handle->disableMasterRoleSetting ? "on" : "off");
 }
 
 /**
@@ -539,22 +539,14 @@ monitorMain(void *arg)
         /* get the candidate master, following MXS_MIN(node_id) rule */
         candidate_master = get_candidate_master(mon);
 
-        /* Select the master, based on master_stickiness */
-        if (1 == handle->disableMasterRoleSetting)
-        {
-            handle->master = NULL;
-        }
-        else
-        {
-            handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
-        }
+        handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
 
         ptr = mon->databases;
 
         while (ptr)
         {
             const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
-            if (SERVER_IS_JOINED(ptr->server))
+            if (SERVER_IS_JOINED(ptr->server) && !handle->disableMasterRoleSetting)
             {
                 if (ptr != handle->master)
                 {
