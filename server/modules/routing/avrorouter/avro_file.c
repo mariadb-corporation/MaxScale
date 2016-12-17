@@ -501,7 +501,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         return AVRO_BINLOG_ERROR;
     }
 
-    while (1)
+    while (!router->service->svc_do_shutdown)
     {
         int n;
         /* Read the header information from the file */
