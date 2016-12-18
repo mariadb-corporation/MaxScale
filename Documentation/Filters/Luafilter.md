@@ -42,10 +42,6 @@ The entry points for the Lua script expect the following signatures:
 
     - This function first loads the session script and executes in on a global
       level.  After this, the newSession function in the Lua scripts is called.
-      There is a single C function exported as a global variable for the session
-      script named id_gen. The id_gen function returns an integer that is unique
-      for this service only. This function is only accessible to the session
-      level scripts.
 
   - `nil closeSession()` - session is closed
 
@@ -73,3 +69,27 @@ The entry points for the Lua script expect the following signatures:
 
 These functions, if found in the script, will be called whenever a call to the
 matching entry point is made.
+
+### Functions Exposed by the Luafilter
+
+The luafilter exposes three functions that can be called from the Lua script.
+
+- `string lua_qc_get_type()`
+
+  - Returns the type of the current query being executed as a string. The values
+    are the string versions of the query types defined in _query_classifier.h_
+    are separated by vertical bars (`|`).
+
+    This function can only be called from the `routeQuery` entry point.
+
+- `string lua_qc_get_operation()`
+
+  - Returns the current operation type as a string. The values are defined in
+    _query_classifier.h_.
+
+    This function can only be called from the `routeQuery` entry point.
+
+- `number id_gen()`
+
+  - This function generates unique integers that can be used to distinct
+    sessions from each other.

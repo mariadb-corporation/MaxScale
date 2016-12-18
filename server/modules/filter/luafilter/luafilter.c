@@ -36,17 +36,19 @@
  * or diagnostic being made for the session script.
  */
 
-#include <maxscale/spinlock.h>
-#include <maxscale/debug.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/cdefs.h>
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
 #include <string.h>
-#include <maxscale/filter.h>
-#include <maxscale/session.h>
-#include <maxscale/modutil.h>
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
 #include <maxscale/alloc.h>
+#include <maxscale/debug.h>
+#include <maxscale/filter.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modutil.h>
+#include <maxscale/query_classifier.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
 
 MODULE_INFO info =
 {
@@ -126,6 +128,45 @@ static int id_gen(lua_State* state)
     return 1;
 }
 
+static int lua_qc_get_type(lua_State* state)
+{
+    int ibuf = lua_upvalueindex(1);
+    GWBUF *buf = *((GWBUF**)lua_touserdata(state, ibuf));
+
+    if (buf)
+    {
+        uint32_t type = qc_get_type(buf);
+        char *mask = qc_typemask_to_string(type);
+        lua_pushstring(state, mask);
+        MXS_FREE(mask);
+    }
+    else
+    {
+        lua_pushliteral(state, "");
+    }
+
+    return 1;
+}
+
+static int lua_qc_get_operation(lua_State* state)
+{
+    int ibuf = lua_upvalueindex(1);
+    GWBUF *buf = *((GWBUF**)lua_touserdata(state, ibuf));
+
+    if (buf)
+    {
+        qc_query_op_t op = qc_get_operation(buf);
+        const char *opstring = qc_op_to_string(op);
+        lua_pushstring(state, opstring);
+    }
+    else
+    {
+        lua_pushliteral(state, "");
+    }
+
+    return 1;
+}
+
 /**
  * The Lua filter instance.
  */
@@ -144,6 +185,7 @@ typedef struct
 {
     SESSION* session;
     lua_State* lua_state;
+    GWBUF* current_query;
     SPINLOCK lock;
     DOWNSTREAM down;
     UPSTREAM up;
@@ -290,9 +332,20 @@ static void * newSession(FILTER *instance, SESSION *session)
         }
         else
         {
+            /** Expose an ID generation function */
             lua_pushcfunction(my_session->lua_state, id_gen);
             lua_setglobal(my_session->lua_state, "id_gen");
 
+            /** Expose a part of the query classifier API */
+            lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
+            lua_pushcclosure(my_session->lua_state, lua_qc_get_type, 1);
+            lua_setglobal(my_session->lua_state, "lua_qc_get_type");
+
+            lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
+            lua_pushcclosure(my_session->lua_state, lua_qc_get_operation, 1);
+            lua_setglobal(my_session->lua_state, "lua_qc_get_operation");
+
+            /** Call the newSession entry point */
             lua_getglobal(my_session->lua_state, "newSession");
             if (lua_pcall(my_session->lua_state, 0, 0, 0))
             {
@@ -475,6 +528,10 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
         if (fullquery && my_session->lua_state)
         {
             spinlock_acquire(&my_session->lock);
+
+            /** Store the current query being processed */
+            my_session->current_query = queue;
+
             lua_getglobal(my_session->lua_state, "routeQuery");
             lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
             if (lua_pcall(my_session->lua_state, 1, 1, 0))
@@ -497,6 +554,9 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     route = lua_toboolean(my_session->lua_state, -1);
                 }
             }
+
+            my_session->current_query = NULL;
+
             spinlock_release(&my_session->lock);
         }
 
