@@ -238,7 +238,6 @@ and routed. Here is a list of the current limitations.
 
 The avrorouter does not support the following data types and conversions.
 
-* DECIMAL
 * BIT
 * Fields CAST from integer types to string types
 
