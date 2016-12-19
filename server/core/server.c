@@ -136,6 +136,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->monuser[0] = '\0';
     server->monpw[0] = '\0';
     server->is_active = true;
+    server->created_online = false;
     server->charset = SERVER_DEFAULT_CHARSET;
 
     spinlock_acquire(&server_spin);

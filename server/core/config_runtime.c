@@ -139,6 +139,9 @@ bool runtime_create_server(const char *name, const char *address, const char *po
 
         if (server && server_serialize(server))
         {
+            /** Mark that the server was created after startup */
+            server->created_online = true;
+
             MXS_NOTICE("Created server '%s' at %s:%u", server->unique_name,
                        server->name, server->port);
             rval = true;
@@ -288,7 +291,10 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
 
     if (valid)
     {
-        server_serialize(server);
+        if (server->created_online)
+        {
+            server_serialize(server);
+        }
         MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
     }
 

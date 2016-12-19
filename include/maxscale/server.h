@@ -117,6 +117,7 @@ typedef struct server
     int            persistmax;     /**< Maximum pool size actually achieved since startup */
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
+    bool           created_online; /**< Whether this server was created after startup */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
