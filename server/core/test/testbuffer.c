@@ -323,7 +323,7 @@ void test_consume()
 static int
 test1()
 {
-    GWBUF   *buffer, *extra, *clone, *partclone, *transform;
+    GWBUF   *buffer, *extra, *clone, *partclone;
     HINT    *hint;
     int     size = 100;
     int     bite1 = 35;
@@ -357,16 +357,6 @@ test1()
     strcpy((char*)GWBUF_DATA(buffer), "1234\x03SELECT * FROM sometable");
     ss_dfprintf(stderr, "\t..done\nLoad SQL data into the buffer");
     ss_info_dassert(1 == GWBUF_IS_SQL(buffer), "Must say buffer is SQL, as it does have marker");
-    transform = gwbuf_clone_transform(buffer, GWBUF_TYPE_PLAINSQL);
-    ss_dfprintf(stderr, "\t..done\nAttempt to transform buffer to plain SQL - should fail");
-    ss_info_dassert(NULL == transform, "Buffer cannot be transformed to plain SQL");
-    gwbuf_set_type(buffer, GWBUF_TYPE_MYSQL);
-    ss_dfprintf(stderr, "\t..done\nChanged buffer type to MySQL");
-    ss_info_dassert(GWBUF_IS_TYPE_MYSQL(buffer), "Buffer type changed to MySQL");
-    transform = gwbuf_clone_transform(buffer, GWBUF_TYPE_PLAINSQL);
-    ss_dfprintf(stderr, "\t..done\nAttempt to transform buffer to plain SQL - should succeed");
-    ss_info_dassert((NULL != transform) &&
-                    (GWBUF_IS_TYPE_PLAINSQL(transform)), "Transformed buffer is plain SQL");
     clone = gwbuf_clone(buffer);
     ss_dfprintf(stderr, "\t..done\nCloned buffer");
     buflen = GWBUF_LENGTH(clone);

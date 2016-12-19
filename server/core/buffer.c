@@ -11,32 +11,6 @@
  * Public License.
  */
 
-/**
- * @file buffer.h  - The MaxScale buffer management functions
- *
- * The buffer management is based on the principle of a linked list
- * of variable size buffer, the intention being to allow longer
- * content to be buffered in a list and minimise any need to copy
- * data between buffers.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 10/06/13     Mark Riddoch            Initial implementation
- * 11/07/13     Mark Riddoch            Add reference count mechanism
- * 16/07/2013   Massimiliano Pinto      Added command type to gwbuf struct
- * 24/06/2014   Mark Riddoch            Addition of gwbuf_trim
- * 15/07/2014   Mark Riddoch            Addition of properties
- * 28/08/2014   Mark Riddoch            Adition of tail pointer to speed
- *                                      the gwbuf_append process
- * 09/11/2015   Martin Brampton         Add buffer tracing (conditional compilation),
- *                                      accessed by "show buffers" maxadmin command
- * 20/12/2015   Martin Brampton         Change gwbuf_free to free the whole list; add the
- *                                      gwbuf_count and gwbuf_alloc_and_load functions.
- *
- * @endverbatim
- */
 #include <maxscale/buffer.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -349,15 +323,6 @@ gwbuf_clone_one(GWBUF *buf)
     return rval;
 }
 
-/**
- * Clone a GWBUF. Note that if the GWBUF is actually a list of
- * GWBUFs, then every GWBUF in the list will be cloned.
- *
- * @param buf  The GWBUF to be cloned.
- *
- * @return The cloned GWBUF, or NULL if @buf was NULL or if any part
- *         of @buf could not be cloned.
- */
 GWBUF* gwbuf_clone(GWBUF* buf)
 {
     if (buf == NULL)
@@ -422,16 +387,6 @@ static GWBUF *gwbuf_clone_portion(GWBUF *buf,
     return clonebuf;
 }
 
-/**
- * @brief Split a buffer in two
- *
- * The returned value will be @c length bytes long. If the length of @c buf
- * exceeds @c length, the remaining buffers are stored in @buf.
- *
- * @param buf Buffer chain to split
- * @param length Number of bytes that the returned buffer should contain
- * @return Head of the buffer chain.
- */
 GWBUF* gwbuf_split(GWBUF **buf, size_t length)
 {
     GWBUF* head = NULL;
@@ -484,66 +439,6 @@ GWBUF* gwbuf_split(GWBUF **buf, size_t length)
     return head;
 }
 
-/**
- * Returns pointer to GWBUF of a requested type.
- * As of 10.3.14 only MySQL to plain text conversion is supported.
- * Return NULL if conversion between types is not supported or due lacking
- * type information.
- */
-GWBUF *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t targettype)
-{
-    gwbuf_type_t src_type;
-    GWBUF*       clonebuf;
-
-    CHK_GWBUF(head);
-    src_type = head->gwbuf_type;
-
-    if (targettype == GWBUF_TYPE_UNDEFINED ||
-        src_type == GWBUF_TYPE_UNDEFINED ||
-        src_type == GWBUF_TYPE_PLAINSQL ||
-        targettype == src_type)
-    {
-        clonebuf = NULL;
-        goto return_clonebuf;
-    }
-
-    if (GWBUF_IS_TYPE_MYSQL(head))
-    {
-        if (GWBUF_TYPE_PLAINSQL == targettype)
-        {
-            /** Crete reference to string part of buffer */
-            clonebuf = gwbuf_clone_portion(head,
-                                           5,
-                                           GWBUF_LENGTH(head) - 5);
-            ss_dassert(clonebuf != NULL);
-            /** Overwrite the type with new format */
-            gwbuf_set_type(clonebuf, targettype);
-        }
-        else
-        {
-            clonebuf = NULL;
-        }
-    }
-    else
-    {
-        clonebuf = NULL;
-    }
-
-return_clonebuf:
-    return clonebuf;
-}
-
-
-/**
- * Append a buffer onto a linked list of buffer structures.
- *
- * This call should be made with the caller holding the lock for the linked
- * list.
- *
- * @param head  The current head of the linked list
- * @param tail  The new buffer to make the tail of the linked list
- * @return      The new head of the linked list
- */
 GWBUF *
 gwbuf_append(GWBUF *head, GWBUF *tail)
 {
@@ -562,18 +457,6 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
     return head;
 }
 
-/**
- * @brief Consume data from buffer chain
- *
- * Data is consumed from @p head until either @p length bytes have been
- * processed or @p head is empty. If @p head points to a chain of buffers,
- * those buffers are counted as a part of @p head and will also be consumed if
- * @p length exceeds the size of the first buffer.
- *
- * @param head   The head of the linked list
- * @param length Number of bytes to consume
- * @return       The head of the linked list or NULL if everything was consumed
- */
 GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
@@ -601,14 +484,8 @@ gwbuf_consume(GWBUF *head, unsigned int length)
     return head;
 }
 
-/**
- * Return the number of bytes of data in the linked list.
- *
- * @param head  The current head of the linked list
- * @return The number of bytes of data in the linked list
- */
 unsigned int
-gwbuf_length(GWBUF *head)
+gwbuf_length(const GWBUF *head)
 {
     int rval = 0;
 
@@ -624,16 +501,8 @@ gwbuf_length(GWBUF *head)
     return rval;
 }
 
-/**
- * Return the number of individual buffers in the linked list.
- *
- * Currently not used, provided mainly for use during debugging sessions.
- *
- * @param head  The current head of the linked list
- * @return The number of bytes of data in the linked list
- */
 int
-gwbuf_count(GWBUF *head)
+gwbuf_count(const GWBUF *head)
 {
     int result = 0;
     while (head)
@@ -644,41 +513,6 @@ gwbuf_count(GWBUF *head)
     return result;
 }
 
-/**
- * Trim bytes form the end of a GWBUF structure. If the
- * buffer has n_bytes or less then it will be freed and
- * NULL will be returned.
- *
- * This routine assumes the buffer is not part of a chain
- *
- * @param buf           The buffer to trim
- * @param n_bytes       The number of bytes to trim off
- * @return              The buffer chain or NULL if buffer has <= n_bytes
- */
-GWBUF *
-gwbuf_trim(GWBUF *buf, unsigned int n_bytes)
-{
-    ss_dassert(buf->next == NULL);
-
-    if (GWBUF_LENGTH(buf) <= n_bytes)
-    {
-        gwbuf_consume(buf, GWBUF_LENGTH(buf));
-        return NULL;
-    }
-    buf->end = (void *)((char *)buf->end - n_bytes);
-
-    return buf;
-}
-
-/**
- * Trim bytes from the end of a GWBUF structure that may be the first
- * in a list. If the buffer has n_bytes or less then it will be freed and
- * the next buffer in the list will be returned, or if none, NULL.
- *
- * @param head          The buffer to trim
- * @param n_bytes       The number of bytes to trim off
- * @return              The buffer chain or NULL if buffer chain now empty
- */
 GWBUF *
 gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
 {
@@ -695,15 +529,7 @@ gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
     return rval;
 }
 
-/**
- * Set given type to all buffers on the list.
- * *
- * @param buf           The shared buffer
- * @param type          Type to be added
- */
-void gwbuf_set_type(
-    GWBUF*       buf,
-    gwbuf_type_t type)
+void gwbuf_set_type(GWBUF* buf, gwbuf_type_t type)
 {
     /** Set type consistenly to all buffers on the list */
     while (buf != NULL)
@@ -714,14 +540,6 @@ void gwbuf_set_type(
     }
 }
 
-/**
- * Add a buffer object to GWBUF buffer.
- *
- * @param buf           GWBUF where object is added
- * @param id            Type identifier for object
- * @param data          Object data
- * @param donefun_fp    Clean-up function to be executed before buffer is freed.
- */
 void gwbuf_add_buffer_object(GWBUF* buf,
                              bufobj_id_t id,
                              void*  data,
@@ -753,14 +571,6 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     spinlock_release(&buf->gwbuf_lock);
 }
 
-/**
- * Search buffer object which matches with the id.
- *
- * @param buf   GWBUF to be searched
- * @param id    Identifier for the object
- *
- * @return Searched buffer object or NULL if not found
- */
 void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
 {
     buffer_object_t* bo;
@@ -797,15 +607,7 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     return next;
 }
 
-/**
- * Add a property to a buffer.
- *
- * @param buf   The buffer to add the property to
- * @param name  The property name
- * @param value The property value
- * @return      Non-zero on success
- */
-int
+bool
 gwbuf_add_property(GWBUF *buf, char *name, char *value)
 {
     name = MXS_STRDUP(name);
@@ -818,7 +620,7 @@ gwbuf_add_property(GWBUF *buf, char *name, char *value)
         MXS_FREE(name);
         MXS_FREE(value);
         MXS_FREE(prop);
-        return 0;
+        return false;
     }
 
     prop->name = name;
@@ -827,15 +629,9 @@ gwbuf_add_property(GWBUF *buf, char *name, char *value)
     prop->next = buf->properties;
     buf->properties = prop;
     spinlock_release(&buf->gwbuf_lock);
-    return 1;
+    return true;
 }
 
-/**
- * Return the value of a buffer property
- * @param buf   The buffer itself
- * @param name  The name of the property to return
- * @return The property value or NULL if the property was not found.
- */
 char *
 gwbuf_get_property(GWBUF *buf, char *name)
 {
@@ -855,13 +651,6 @@ gwbuf_get_property(GWBUF *buf, char *name)
     return NULL;
 }
 
-
-/**
- * Convert a chain of GWBUF structures into a single GWBUF structure
- *
- * @param orig          The chain to convert
- * @return              The contiguous buffer
- */
 GWBUF *
 gwbuf_make_contiguous(GWBUF *orig)
 {
@@ -895,14 +684,7 @@ gwbuf_make_contiguous(GWBUF *orig)
     return newbuf;
 }
 
-/**
- * Add hint to a buffer.
- *
- * @param buf   The buffer to add the hint to
- * @param hint  The hint itself
- * @return      Non-zero on success
- */
-int
+void
 gwbuf_add_hint(GWBUF *buf, HINT *hint)
 {
     HINT *ptr;
@@ -922,22 +704,9 @@ gwbuf_add_hint(GWBUF *buf, HINT *hint)
         buf->hint = hint;
     }
     spinlock_release(&buf->gwbuf_lock);
-    return 1;
 }
 
-/**
- * @brief Copy bytes from a buffer
- *
- * Copy bytes from a chain of buffers. Supports copying data from buffers where
- * the data is spread across multiple buffers.
- *
- * @param buffer Buffer to copy from
- * @param offset Offset into the buffer
- * @param bytes Number of bytes to copy
- * @param dest Destination where the bytes are copied
- * @return Number of bytes copied
- */
-size_t gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
+size_t gwbuf_copy_data(const GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
 {
     uint32_t buflen;
 
