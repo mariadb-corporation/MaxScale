@@ -212,6 +212,26 @@ extern void gwbuf_free(GWBUF *buf);
 extern GWBUF *gwbuf_clone(GWBUF *buf);
 
 /**
+ * Compare two GWBUFs. Two GWBUFs are considered identical if their
+ * content is identical, irrespective of whether one is segmented and
+ * the other is not.
+ *
+ * @param lhs  One GWBUF
+ * @param rhs  Another GWBUF
+ *
+ * @return  0 if the content is identical,
+ *         -1 if @c lhs is less than @c rhs, and
+ *          1 if @c lhs is more than @c rhs.
+ *
+ * @attention A NULL @c GWBUF is considered to be less than a non-NULL one,
+ *            and a shorter @c GWBUF less than a longer one. Otherwise the
+ *            the sign of the return value is determined by the sign of the
+ *            difference between the first pair of bytes (interpreted as
+ *            unsigned char) that differ in lhs and rhs.
+ */
+extern int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs);
+
+/**
  * Append a buffer onto a linked list of buffer structures.
  *
  * This call should be made with the caller holding the lock for the linked

@@ -439,6 +439,122 @@ GWBUF* gwbuf_split(GWBUF **buf, size_t length)
     return head;
 }
 
+/**
+ * Get a byte from a GWBUF at a particular offset. Intended to be use like:
+ *
+ *     GWBUF *buf = ...;
+ *     size_t offset = 0;
+ *     uint8_t c;
+ *
+ *     while (gwbuf_get_byte(&buf, &offset, &c))
+ *     {
+ *         printf("%c", c);
+ *     }
+ *
+ * @param buf     Pointer to pointer to GWBUF. The GWBUF pointed to may be adjusted
+ *                as a result of the call.
+ * @param offset  Pointer to variable containing the offset. Value of variable will
+ *                incremented as a result of the call.
+ * @param b       Pointer to variable that upon successful return will contain the
+ *                next byte.
+ *
+ * @return True, if offset refers to a byte in the GWBUF.
+ */
+static inline bool gwbuf_get_byte(const GWBUF** buf, size_t* offset, uint8_t* b)
+{
+    bool rv = false;
+
+    // Ignore NULL buffer and walk past empty or too short buffers.
+    while (*buf && (GWBUF_LENGTH(*buf) <= *offset))
+    {
+        *offset -= GWBUF_LENGTH(*buf);
+        *buf = (*buf)->next;
+    }
+
+    ss_dassert(!*buf || (GWBUF_LENGTH(*buf) > *offset));
+
+    if (*buf)
+    {
+        *b = *(GWBUF_DATA(*buf) + *offset);
+        *offset += 1;
+
+        rv = true;
+    }
+
+    return rv;
+}
+
+int gwbuf_compare(const GWBUF* lhs, const GWBUF* rhs)
+{
+    int rv;
+
+    if ((lhs == NULL) && (rhs == NULL))
+    {
+        rv = 0;
+    }
+    else if (lhs == NULL)
+    {
+        ss_dassert(rhs);
+        rv = -1;
+    }
+    else if (rhs == NULL)
+    {
+        ss_dassert(lhs);
+        rv = 1;
+    }
+    else
+    {
+        ss_dassert(lhs && rhs);
+
+        size_t llen = gwbuf_length(lhs);
+        size_t rlen = gwbuf_length(rhs);
+
+        if (llen < rlen)
+        {
+            rv = -1;
+        }
+        else if (rlen < llen)
+        {
+            rv = 1;
+        }
+        else
+        {
+            ss_dassert(llen == rlen);
+
+            rv = 0;
+            size_t i = 0;
+            size_t loffset = 0;
+            size_t roffset = 0;
+
+            while ((rv == 0) && (i < llen))
+            {
+                uint8_t lc;
+                uint8_t rc;
+
+                ss_debug(bool rv1 =) gwbuf_get_byte(&lhs, &loffset, &lc);
+                ss_debug(bool rv2 =) gwbuf_get_byte(&rhs, &roffset, &rc);
+
+                ss_dassert(rv1 && rv2);
+
+                rv = (int)lc - (int)rc;
+
+                ++i;
+            }
+
+            if (rv < 0)
+            {
+                rv = -1;
+            }
+            else if (rv > 0)
+            {
+                rv = 1;
+            }
+        }
+    }
+
+    return rv;
+}
+
 GWBUF *
 gwbuf_append(GWBUF *head, GWBUF *tail)
 {

@@ -316,6 +316,78 @@ void test_consume()
     consume_buffer(n_buffers - 1, -1);
 }
 
+void test_compare()
+{
+    static const uint8_t data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    ss_dfprintf(stderr, "testbuffer : testing GWBUF comparisons\n");
+
+    GWBUF* lhs = NULL;
+    GWBUF* rhs = NULL;
+
+    // Both NULL
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+
+    // Either (but not both) NULL
+    lhs = gwbuf_alloc_and_load(10, data);
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0);
+
+    // The same array
+    ss_dassert(gwbuf_compare(lhs, lhs) == 0);
+
+    // Identical array
+    gwbuf_free(rhs);
+    rhs = gwbuf_alloc_and_load(10, data);
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+
+    // One shorter
+    gwbuf_free(rhs);
+    rhs = gwbuf_alloc_and_load(9, data + 1);
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0);
+
+    // One segmented, but otherwise identical.
+    gwbuf_free(rhs);
+    rhs = NULL;
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(3, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(3, data + 3));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(4, data + 3 + 3));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, rhs) == 0);
+
+    // Both segmented, but otherwise identical.
+    gwbuf_free(lhs);
+    lhs = NULL;
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data));
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) == 0);
+
+    // Both segmented and of same length, but different.
+    gwbuf_free(lhs);
+    lhs = NULL;
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data + 5)); // Values in different order
+    lhs = gwbuf_append(lhs, gwbuf_alloc_and_load(5, data));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) > 0); // 5 > 1
+    ss_dassert(gwbuf_compare(rhs, lhs) < 0); // 5 > 1
+
+    // Identical, but one containing empty segments.
+    gwbuf_free(rhs);
+    rhs = NULL;
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data + 5));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(5, data));
+    rhs = gwbuf_append(rhs, gwbuf_alloc_and_load(0, data));
+
+    ss_dassert(gwbuf_compare(lhs, rhs) == 0);
+    ss_dassert(gwbuf_compare(rhs, lhs) == 0);
+}
+
 /**
  * test1    Allocate a buffer and do lots of things
  *
@@ -433,6 +505,7 @@ test1()
     test_split();
     test_load_and_copy();
     test_consume();
+    test_compare();
 
     return 0;
 }
