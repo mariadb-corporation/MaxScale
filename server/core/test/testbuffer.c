@@ -434,7 +434,7 @@ test1()
     ss_info_dassert(append == head, "gwbuf_append should return head");
     ss_info_dassert(append->next == tail, "After append tail should be in the next pointer of head");
     ss_info_dassert(append->tail == tail, "After append tail should be in the tail pointer of head");
-    GWBUF* all_clones = gwbuf_clone_all(head);
+    GWBUF* all_clones = gwbuf_clone(head);
     ss_info_dassert(all_clones && all_clones->next, "Cloning all should work");
     ss_info_dassert(GWBUF_LENGTH(all_clones) == headsize, "First buffer should be 10 bytes");
     ss_info_dassert(GWBUF_LENGTH(all_clones->next) == tailsize, "Second buffer should be 20 bytes");

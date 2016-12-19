@@ -321,7 +321,7 @@ GWBUF *sescmd_cursor_clone_querybuf(sescmd_cursor_t *scur)
     }
     ss_dassert(scur->scmd_cur_cmd != NULL);
 
-    buf = gwbuf_clone_all(scur->scmd_cur_cmd->my_sescmd_buf);
+    buf = gwbuf_clone(scur->scmd_cur_cmd->my_sescmd_buf);
 
     CHK_GWBUF(buf);
     return buf;

@@ -916,7 +916,7 @@ GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* bu
 
     if ((!my_instance->match && !my_instance->nomatch) || packet_is_required(buffer))
     {
-        clone = gwbuf_clone_all(buffer);
+        clone = gwbuf_clone(buffer);
     }
     else
     {
@@ -927,7 +927,7 @@ GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* bu
             if ((my_instance->match && regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) ||
                 (my_instance->nomatch && regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
             {
-                clone = gwbuf_clone_all(buffer);
+                clone = gwbuf_clone(buffer);
             }
             MXS_FREE(ptr);
         }

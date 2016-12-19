@@ -200,7 +200,6 @@ extern size_t           gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t byt
                                         uint8_t* dest);
 extern GWBUF            *gwbuf_split(GWBUF **buf, size_t length);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
-extern GWBUF            *gwbuf_clone_all(GWBUF* head);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
 extern int              gwbuf_add_property(GWBUF *buf, char *name, char *value);
 extern char             *gwbuf_get_property(GWBUF *buf, char *name);

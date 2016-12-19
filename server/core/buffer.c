@@ -323,8 +323,8 @@ gwbuf_free_one(GWBUF *buf)
  * @param buf The buffer to use
  * @return A new GWBUF structure
  */
-GWBUF *
-gwbuf_clone(GWBUF *buf)
+static GWBUF *
+gwbuf_clone_one(GWBUF *buf)
 {
     GWBUF *rval;
 
@@ -350,31 +350,42 @@ gwbuf_clone(GWBUF *buf)
 }
 
 /**
- * Clone whole GWBUF list instead of single buffer.
+ * Clone a GWBUF. Note that if the GWBUF is actually a list of
+ * GWBUFs, then every GWBUF in the list will be cloned.
  *
- * @param buf   head of the list to be cloned till the tail of it
+ * @param buf  The GWBUF to be cloned.
  *
- * @return head of the cloned list or NULL if the list was empty.
+ * @return The cloned GWBUF, or NULL if @buf was NULL or if any part
+ *         of @buf could not be cloned.
  */
-GWBUF* gwbuf_clone_all(GWBUF* buf)
+GWBUF* gwbuf_clone(GWBUF* buf)
 {
-    GWBUF* rval;
-    GWBUF* clonebuf;
-
     if (buf == NULL)
     {
         return NULL;
     }
-    /** Store the head of the list to rval. */
-    clonebuf = gwbuf_clone(buf);
-    rval = clonebuf;
 
-    while (buf->next)
+    GWBUF *rval = gwbuf_clone_one(buf);
+
+    if (rval)
     {
-        buf = buf->next;
-        clonebuf->next = gwbuf_clone(buf);
-        clonebuf = clonebuf->next;
+        GWBUF* clonebuf = rval;
+
+        while (clonebuf && buf->next)
+        {
+            buf = buf->next;
+            clonebuf->next = gwbuf_clone(buf);
+            clonebuf = clonebuf->next;
+        }
+
+        if (!clonebuf && buf->next)
+        {
+            // A gwbuf_clone failed, we need to free everything cloned sofar.
+            gwbuf_free(rval);
+            rval = NULL;
+        }
     }
+
     return rval;
 }
 
