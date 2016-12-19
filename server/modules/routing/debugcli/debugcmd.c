@@ -46,7 +46,7 @@
  *
  * @endverbatim
  */
-#include <my_config.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,7 +74,7 @@
 #include <maxscale/listmanager.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/config_runtime.h>
-
+#include <maxscale/version.h>
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
 
@@ -112,6 +112,11 @@ struct subcommand
 
 static void telnetdShowUsers(DCB *);
 static void show_log_throttling(DCB *);
+
+static void showVersion(DCB *dcb)
+{
+    dcb_printf(dcb, "%s\n", MAXSCALE_VERSION);
+}
 
 /**
  * The subcommands of the show command
@@ -281,6 +286,12 @@ struct subcommand showoptions[] =
         "users", 0, 0, telnetdShowUsers,
         "Show enabled Linux accounts",
         "Show all maxadmin enabled Linux accounts and created maxadmin users",
+        {0, 0, 0}
+    },
+    {
+        "version", 0, 0, showVersion,
+        "Show MaxScale version",
+        "Show the MaxScale version number",
         {0, 0, 0}
     },
     { EMPTY_OPTION}
