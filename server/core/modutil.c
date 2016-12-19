@@ -987,25 +987,20 @@ bool is_mysql_sp_end(const char* start, int len)
 /**
  * Create a COM_QUERY packet from a string.
  * @param query Query to create.
- * @return Pointer to GWBUF with the query or NULL if an error occurred.
+ * @return Pointer to GWBUF with the query or NULL if memory allocation failed
  */
-GWBUF* modutil_create_query(char* query)
+GWBUF* modutil_create_query(const char* query)
 {
-    if (query == NULL)
-    {
-        return NULL;
-    }
-
-    GWBUF* rval = gwbuf_alloc(strlen(query) + 5);
-    int pktlen = strlen(query) + 1;
-    unsigned char* ptr;
+    ss_dassert(query);
+    size_t len = strlen(query) + 1; // Query plus the command byte
+    GWBUF* rval = gwbuf_alloc(len + MYSQL_HEADER_LEN);
 
     if (rval)
     {
-        ptr = (unsigned char*)rval->start;
-        *ptr++ = (pktlen);
-        *ptr++ = (pktlen) >> 8;
-        *ptr++ = (pktlen) >> 16;
+        uint8_t *ptr = (uint8_t*)rval->start;
+        *ptr++ = (len);
+        *ptr++ = (len) >> 8;
+        *ptr++ = (len) >> 16;
         *ptr++ = 0x0;
         *ptr++ = 0x03;
         memcpy(ptr, query, strlen(query));

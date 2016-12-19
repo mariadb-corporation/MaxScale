@@ -587,7 +587,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     if (lua_isstring(my_session->lua_state, -1))
                     {
                         gwbuf_free(forward);
-                        forward = modutil_create_query((char*)lua_tostring(my_session->lua_state, -1));
+                        forward = modutil_create_query(lua_tostring(my_session->lua_state, -1));
                     }
                     else if (lua_isboolean(my_session->lua_state, -1))
                     {
@@ -622,8 +622,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     if (lua_isstring(my_instance->global_lua_state, -1))
                     {
                         gwbuf_free(forward);
-                        forward = modutil_create_query((char*)
-                                                       lua_tostring(my_instance->global_lua_state, -1));
+                        forward = modutil_create_query(lua_tostring(my_instance->global_lua_state, -1));
                     }
                     else if (lua_isboolean(my_instance->global_lua_state, -1))
                     {
