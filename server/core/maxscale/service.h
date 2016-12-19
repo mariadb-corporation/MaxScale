@@ -109,6 +109,9 @@ int      service_isvalid(SERVICE *service);
  */
 bool service_server_in_use(const SERVER *server);
 
+/** Update the server weights used by services */
+void service_update_weights();
+
 /**
  * Alteration of the service configuration
  */

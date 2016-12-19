@@ -286,7 +286,20 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
     }
     else
     {
-        valid = false;
+        if (!serverRemoveParameter(server, key) && !value[0])
+        {
+            valid = false;
+        }
+        else if (value[0])
+        {
+            serverAddParameter(server, key, value);
+
+            /**
+             * It's likely that this parameter is used as a weighting parameter.
+             * We need to update the weights of services that use this.
+             */
+            service_update_weights();
+        }
     }
 
     if (valid)

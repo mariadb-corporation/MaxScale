@@ -2271,7 +2271,7 @@ static void service_calculate_weights(SERVICE *service)
 
                     if (perc == 0)
                     {
-                        MXS_ERROR("Weighting parameter '%s' with a value of %d for"
+                        MXS_WARNING("Weighting parameter '%s' with a value of %d for"
                                   " server '%s' rounds down to zero with total weight"
                                   " of %d for service '%s'. No queries will be "
                                   "routed to this server as long as a server with"
@@ -2298,6 +2298,18 @@ static void service_calculate_weights(SERVICE *service)
             }
         }
     }
+}
+
+void service_update_weights()
+{
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        service_calculate_weights(service);
+    }
+
+    spinlock_release(&service_spin);
 }
 
 bool service_server_in_use(const SERVER *server)

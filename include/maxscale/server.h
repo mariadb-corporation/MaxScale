@@ -60,6 +60,7 @@ typedef struct server_params
 {
     char *name;                 /**< Parameter name */
     char *value;                /**< Parameter value */
+    bool active;                /**< Whether the parameter is valid */
     struct server_params *next; /**< Next Paramter in the linked list */
 } SERVER_PARAM;
 
@@ -254,6 +255,24 @@ SERVER* server_find_destroyed(const char *name, const char *protocol,
  */
 bool server_serialize(const SERVER *server);
 
+/**
+ * @brief Add a server parameter
+ *
+ * @param server Server where the parameter is added
+ * @param name Parameter name
+ * @param value Parameter value
+ */
+void serverAddParameter(SERVER *server, const char *name, const char *value);
+
+/**
+ * @brief Remove a server parameter
+ *
+ * @param server Server to remove the parameter from
+ * @param name The name of the parameter to remove
+ * @return True if a parameter was removed
+ */
+bool serverRemoveParameter(SERVER *server, const char *name);
+
 extern int server_free(SERVER *);
 extern SERVER *server_find_by_unique_name(const char *name);
 extern SERVER *server_find(char *, unsigned short);
@@ -270,7 +289,6 @@ extern void server_set_status_nolock(SERVER *, int);
 extern void server_clear_status_nolock(SERVER *, int);
 extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void serverAddMonUser(SERVER *, char *, char *);
-extern void serverAddParameter(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
 extern void server_update_credentials(SERVER *, char *, char *);
 extern DCB  *server_get_persistent(SERVER *, char *, const char *, int);

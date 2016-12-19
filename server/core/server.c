@@ -545,7 +545,11 @@ dprintServer(DCB *dcb, SERVER *server)
         dcb_printf(dcb, "\tServer Parameters:\n");
         while (param)
         {
-            dcb_printf(dcb, "\t                                       %s\t%s\n", param->name, param->value);
+            if (param->active)
+            {
+                dcb_printf(dcb, "\t                                       %s\t%s\n",
+                           param->name, param->value);
+            }
             param = param->next;
         }
     }
@@ -854,26 +858,48 @@ server_update_credentials(SERVER *server, char *user, char *passwd)
  * @param       name    The parameter name
  * @param       value   The parameter value
  */
-void
-serverAddParameter(SERVER *server, char *name, char *value)
+void serverAddParameter(SERVER *server, const char *name, const char *value)
 {
-    name = MXS_STRDUP(name);
-    value = MXS_STRDUP(value);
+    char *my_name = MXS_STRDUP(name);
+    char *my_value = MXS_STRDUP(value);
 
     SERVER_PARAM *param = (SERVER_PARAM *)MXS_MALLOC(sizeof(SERVER_PARAM));
 
-    if (!name || !value || !param)
+    if (!my_name || !my_value || !param)
     {
-        MXS_FREE(name);
-        MXS_FREE(value);
+        MXS_FREE(my_name);
+        MXS_FREE(my_value);
         MXS_FREE(param);
         return;
     }
 
-    param->name = name;
-    param->value = value;
+    param->active = true;
+    param->name = my_name;
+    param->value = my_value;
+
+    spinlock_acquire(&server->lock);
     param->next = server->parameters;
     server->parameters = param;
+    spinlock_release(&server->lock);
+}
+
+bool serverRemoveParameter(SERVER *server, const char *name)
+{
+    bool rval = false;
+    spinlock_acquire(&server->lock);
+
+    for (SERVER_PARAM *p = server->parameters; p; p = p->next)
+    {
+        if (strcmp(p->name, name) == 0 && p->active)
+        {
+            p->active = false;
+            rval = true;
+            break;
+        }
+    }
+
+    spinlock_release(&server->lock);
+    return rval;
 }
 
 /**
@@ -908,7 +934,7 @@ serverGetParameter(SERVER *server, char *name)
 
     while (param)
     {
-        if (strcmp(param->name, name) == 0)
+        if (strcmp(param->name, name) == 0 && param->active)
         {
             return param->value;
         }
@@ -1140,6 +1166,14 @@ static bool create_server_config(const SERVER *server, const char *filename)
     if (server->persistmaxtime)
     {
         dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+    }
+
+    for (SERVER_PARAM *p = server->parameters; p; p = p->next)
+    {
+        if (p->active)
+        {
+            dprintf(file, "%s=%s\n", p->name, p->value);
+        }
     }
 
     if (server->server_ssl)
