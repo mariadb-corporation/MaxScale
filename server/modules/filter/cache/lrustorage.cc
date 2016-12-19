@@ -75,35 +75,7 @@ cache_result_t LRUStorage::do_get_value(const CACHE_KEY& key,
                                         uint32_t flags,
                                         GWBUF** ppvalue) const
 {
-    cache_result_t result = CACHE_RESULT_NOT_FOUND;
-
-    NodesByKey::iterator i = nodes_by_key_.find(key);
-    bool existed = (i != nodes_by_key_.end());
-
-    if (existed)
-    {
-        result = pstorage_->get_value(key, flags, ppvalue);
-
-        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
-        {
-            ++stats_.hits;
-            move_to_head(i->second);
-        }
-        else if (result == CACHE_RESULT_NOT_FOUND)
-        {
-            ++stats_.misses;
-
-            // We'll assume this is because ttl has hit in. We need to remove
-            // the node and the mapping.
-            free_node(i);
-        }
-    }
-    else
-    {
-        ++stats_.misses;
-    }
-
-    return result;
+    return access_value(APPROACH_GET, key, flags, ppvalue);
 }
 
 cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalue)
@@ -217,7 +189,7 @@ cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey, GWBUF** ppValue) const
     while (ptail_ && (result == CACHE_RESULT_NOT_FOUND))
     {
         ss_dassert(ptail_->key());
-        result = do_get_value(*ptail_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
+        result = peek_value(*ptail_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
     }
 
     if (result == CACHE_RESULT_OK)
@@ -238,6 +210,46 @@ cache_result_t LRUStorage::do_get_items(uint64_t* pItems) const
 {
     *pItems = stats_.items;
     return CACHE_RESULT_OK;
+}
+
+cache_result_t LRUStorage::access_value(access_approach_t approach,
+                                        const CACHE_KEY& key,
+                                        uint32_t flags,
+                                        GWBUF** ppvalue) const
+{
+    cache_result_t result = CACHE_RESULT_NOT_FOUND;
+
+    NodesByKey::iterator i = nodes_by_key_.find(key);
+    bool existed = (i != nodes_by_key_.end());
+
+    if (existed)
+    {
+        result = pstorage_->get_value(key, flags, ppvalue);
+
+        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
+        {
+            ++stats_.hits;
+
+            if (approach == APPROACH_GET)
+            {
+                move_to_head(i->second);
+            }
+        }
+        else if (result == CACHE_RESULT_NOT_FOUND)
+        {
+            ++stats_.misses;
+
+            // We'll assume this is because ttl has hit in. We need to remove
+            // the node and the mapping.
+            free_node(i);
+        }
+    }
+    else
+    {
+        ++stats_.misses;
+    }
+
+    return result;
 }
 
 /**

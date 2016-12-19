@@ -82,6 +82,24 @@ private:
     LRUStorage(const LRUStorage&);
     LRUStorage& operator = (const LRUStorage&);
 
+    enum access_approach_t
+    {
+        APPROACH_GET,  // Update head
+        APPROACH_PEEK  // Do not update head
+    };
+
+    cache_result_t access_value(access_approach_t approach,
+                                const CACHE_KEY& key,
+                                uint32_t flags,
+                                GWBUF** ppValue) const;
+
+    cache_result_t peek_value(const CACHE_KEY& key,
+                              uint32_t flags,
+                              GWBUF** ppValue) const
+    {
+        return access_value(APPROACH_PEEK, key, flags, ppValue);
+    }
+
     /**
      * The Node class is used for maintaining LRU information.
      */
