@@ -268,9 +268,9 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
             }
             else if (my_instance->global_lua_state)
             {
-                int type = lua_getglobal(my_instance->global_lua_state, "createInstance");
+                lua_getglobal(my_instance->global_lua_state, "createInstance");
 
-                if (type == LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0))
+                if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
                 {
                     MXS_WARNING("luafilter: Failed to get global variable 'createInstance':  %s."
                                 " The createInstance entry point will not be called for the global script.",
@@ -359,9 +359,9 @@ static void * newSession(FILTER *instance, SESSION *session)
             lua_setglobal(my_session->lua_state, "lua_qc_get_operation");
 
             /** Call the newSession entry point */
-            int type = lua_getglobal(my_session->lua_state, "newSession");
+            lua_getglobal(my_session->lua_state, "newSession");
 
-            if (type == LUA_TFUNCTION && lua_pcall(my_session->lua_state, 0, 0, 0))
+            if (lua_pcall(my_session->lua_state, 0, 0, 0))
             {
                 MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
                             " The newSession entry point will not be called.",
@@ -375,9 +375,9 @@ static void * newSession(FILTER *instance, SESSION *session)
     {
         spinlock_acquire(&my_instance->lock);
 
-        int type = lua_getglobal(my_instance->global_lua_state, "newSession");
+        lua_getglobal(my_instance->global_lua_state, "newSession");
 
-        if (type == LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
         {
             MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
@@ -409,9 +409,9 @@ static void closeSession(FILTER *instance, void *session)
     {
         spinlock_acquire(&my_session->lock);
 
-        int type = lua_getglobal(my_session->lua_state, "closeSession");
+        lua_getglobal(my_session->lua_state, "closeSession");
 
-        if (type == LUA_TFUNCTION && lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
+        if (LUA_TFUNCTION && lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
         {
             MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called.",
@@ -425,9 +425,9 @@ static void closeSession(FILTER *instance, void *session)
     {
         spinlock_acquire(&my_instance->lock);
 
-        int type = lua_getglobal(my_instance->global_lua_state, "closeSession");
+        lua_getglobal(my_instance->global_lua_state, "closeSession");
 
-        if (type == LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
         {
             MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called for the global script.",
@@ -500,9 +500,9 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
     {
         spinlock_acquire(&my_session->lock);
 
-        int type = lua_getglobal(my_session->lua_state, "clientReply");
+        lua_getglobal(my_session->lua_state, "clientReply");
 
-        if (type == LUA_TFUNCTION && lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
         {
             MXS_ERROR("luafilter: Session scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
@@ -515,9 +515,9 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
     {
         spinlock_acquire(&my_instance->lock);
 
-        int type = lua_getglobal(my_instance->global_lua_state, "clientReply");
+        lua_getglobal(my_instance->global_lua_state, "clientReply");
 
-        if (type == LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
         {
             MXS_ERROR("luafilter: Global scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
@@ -570,29 +570,26 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
             /** Store the current query being processed */
             my_session->current_query = queue;
 
-            int type = lua_getglobal(my_session->lua_state, "routeQuery");
+            lua_getglobal(my_session->lua_state, "routeQuery");
 
-            if (type == LUA_TFUNCTION)
+            lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
+
+            if (lua_pcall(my_session->lua_state, 1, 1, 0) != LUA_OK)
             {
-                lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
-
-                if (lua_pcall(my_session->lua_state, 1, 1, 0) != LUA_OK)
+                MXS_ERROR("luafilter: Session scope call to 'routeQuery' failed: '%s'.",
+                          lua_tostring(my_session->lua_state, -1));
+                lua_pop(my_session->lua_state, -1);
+            }
+            else if (lua_gettop(my_session->lua_state))
+            {
+                if (lua_isstring(my_session->lua_state, -1))
                 {
-                    MXS_ERROR("luafilter: Session scope call to 'routeQuery' failed: '%s'.",
-                              lua_tostring(my_session->lua_state, -1));
-                    lua_pop(my_session->lua_state, -1);
+                    gwbuf_free(forward);
+                    forward = modutil_create_query(lua_tostring(my_session->lua_state, -1));
                 }
-                else if (lua_gettop(my_session->lua_state))
+                else if (lua_isboolean(my_session->lua_state, -1))
                 {
-                    if (lua_isstring(my_session->lua_state, -1))
-                    {
-                        gwbuf_free(forward);
-                        forward = modutil_create_query(lua_tostring(my_session->lua_state, -1));
-                    }
-                    else if (lua_isboolean(my_session->lua_state, -1))
-                    {
-                        route = lua_toboolean(my_session->lua_state, -1);
-                    }
+                    route = lua_toboolean(my_session->lua_state, -1);
                 }
             }
             my_session->current_query = NULL;
@@ -605,29 +602,26 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
             spinlock_acquire(&my_instance->lock);
             current_global_query = queue;
 
-            int type = lua_getglobal(my_instance->global_lua_state, "routeQuery");
+            lua_getglobal(my_instance->global_lua_state, "routeQuery");
 
-            if (type == LUA_TFUNCTION)
+            lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
+
+            if (lua_pcall(my_instance->global_lua_state, 1, 0, 0) != LUA_OK)
             {
-                lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
-
-                if (lua_pcall(my_instance->global_lua_state, 1, 0, 0) != LUA_OK)
+                MXS_ERROR("luafilter: Global scope call to 'routeQuery' failed: '%s'.",
+                          lua_tostring(my_instance->global_lua_state, -1));
+                lua_pop(my_instance->global_lua_state, -1);
+            }
+            else if (lua_gettop(my_instance->global_lua_state))
+            {
+                if (lua_isstring(my_instance->global_lua_state, -1))
                 {
-                    MXS_ERROR("luafilter: Global scope call to 'routeQuery' failed: '%s'.",
-                              lua_tostring(my_instance->global_lua_state, -1));
-                    lua_pop(my_instance->global_lua_state, -1);
+                    gwbuf_free(forward);
+                    forward = modutil_create_query(lua_tostring(my_instance->global_lua_state, -1));
                 }
-                else if (lua_gettop(my_instance->global_lua_state))
+                else if (lua_isboolean(my_instance->global_lua_state, -1))
                 {
-                    if (lua_isstring(my_instance->global_lua_state, -1))
-                    {
-                        gwbuf_free(forward);
-                        forward = modutil_create_query(lua_tostring(my_instance->global_lua_state, -1));
-                    }
-                    else if (lua_isboolean(my_instance->global_lua_state, -1))
-                    {
-                        route = lua_toboolean(my_instance->global_lua_state, -1);
-                    }
+                    route = lua_toboolean(my_instance->global_lua_state, -1);
                 }
             }
 
@@ -672,9 +666,9 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         {
             spinlock_acquire(&my_instance->lock);
 
-            int type = lua_getglobal(my_instance->global_lua_state, "diagnostic");
+            lua_getglobal(my_instance->global_lua_state, "diagnostic");
 
-            if (type == LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 1, 0) == 0)
+            if (lua_pcall(my_instance->global_lua_state, 0, 1, 0) == 0)
             {
                 lua_gettop(my_instance->global_lua_state);
                 if (lua_isstring(my_instance->global_lua_state, -1))
