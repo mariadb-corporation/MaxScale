@@ -34,8 +34,13 @@ public:
     int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
 private:
-    int test_max_count(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
-    int test_max_size(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
+    int test_lru(const CacheItems& cache_items, uint64_t size);
+    int test_max_count(size_t n_threads, size_t n_seconds,
+                       const CacheItems& cache_items, uint64_t size);
+    int test_max_size(size_t n_threads, size_t n_seconds,
+                      const CacheItems& cache_items, uint64_t size);
+    int test_max_count_and_size(size_t n_threads, size_t n_seconds,
+                                const CacheItems& cache_items, uint64_t size);
 
 private:
     TesterLRUStorage(const TesterLRUStorage&);

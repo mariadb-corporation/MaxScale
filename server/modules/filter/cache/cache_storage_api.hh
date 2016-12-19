@@ -49,6 +49,16 @@ struct hash<CACHE_KEY>
 
 std::string cache_key_to_string(const CACHE_KEY& key);
 
+inline bool operator == (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+{
+    return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
+}
+
+inline bool operator != (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
+{
+    return !(lhs == rhs);
+}
+
 class CacheKey : public CACHE_KEY
 {
 public:
