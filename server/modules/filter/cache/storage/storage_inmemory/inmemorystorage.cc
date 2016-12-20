@@ -51,8 +51,7 @@ InMemoryStorage::~InMemoryStorage()
 
 bool InMemoryStorage::Initialize(uint32_t* pCapabilities)
 {
-    *pCapabilities = CACHE_STORAGE_CAP_ST;
-    *pCapabilities = CACHE_STORAGE_CAP_MT;
+    *pCapabilities = (CACHE_STORAGE_CAP_ST | CACHE_STORAGE_CAP_MT);
 
     return true;
 }
