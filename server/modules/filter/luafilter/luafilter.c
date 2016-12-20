@@ -377,7 +377,7 @@ static void * newSession(FILTER *instance, SESSION *session)
 
         lua_getglobal(my_instance->global_lua_state, "newSession");
 
-        if (LUA_TFUNCTION && lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
             MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
@@ -411,7 +411,7 @@ static void closeSession(FILTER *instance, void *session)
 
         lua_getglobal(my_session->lua_state, "closeSession");
 
-        if (LUA_TFUNCTION && lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
             MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called.",
@@ -427,7 +427,7 @@ static void closeSession(FILTER *instance, void *session)
 
         lua_getglobal(my_instance->global_lua_state, "closeSession");
 
-        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
             MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called for the global script.",
@@ -502,7 +502,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 
         lua_getglobal(my_session->lua_state, "clientReply");
 
-        if (lua_pcall(my_session->lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
             MXS_ERROR("luafilter: Session scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
@@ -517,7 +517,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 
         lua_getglobal(my_instance->global_lua_state, "clientReply");
 
-        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0) != LUA_OK)
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
             MXS_ERROR("luafilter: Global scope call to 'clientReply' failed: '%s'.",
                       lua_tostring(my_session->lua_state, -1));
@@ -574,7 +574,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
             lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
 
-            if (lua_pcall(my_session->lua_state, 1, 1, 0) != LUA_OK)
+            if (lua_pcall(my_session->lua_state, 1, 1, 0))
             {
                 MXS_ERROR("luafilter: Session scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_session->lua_state, -1));
@@ -606,7 +606,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
             lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
 
-            if (lua_pcall(my_instance->global_lua_state, 1, 0, 0) != LUA_OK)
+            if (lua_pcall(my_instance->global_lua_state, 1, 0, 0))
             {
                 MXS_ERROR("luafilter: Global scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_instance->global_lua_state, -1));
