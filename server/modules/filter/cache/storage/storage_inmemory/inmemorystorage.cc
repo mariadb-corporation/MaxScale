@@ -15,11 +15,15 @@
 #include "inmemorystorage.hh"
 #include <openssl/sha.h>
 #include <algorithm>
+#include <memory>
 #include <set>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
+#include "inmemorystoragest.hh"
+#include "inmemorystoragemt.hh"
 
+using std::auto_ptr;
 using std::set;
 using std::string;
 
@@ -45,8 +49,55 @@ InMemoryStorage::~InMemoryStorage()
 {
 }
 
-// static
-cache_result_t InMemoryStorage::get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey)
+bool InMemoryStorage::Initialize(uint32_t* pcapabilities)
+{
+    *pcapabilities = CACHE_STORAGE_CAP_ST;
+    *pcapabilities = CACHE_STORAGE_CAP_MT;
+
+    return true;
+}
+
+InMemoryStorage* InMemoryStorage::Create_instance(const char* zname,
+                                                  const CACHE_STORAGE_CONFIG& config,
+                                                  int argc, char* argv[])
+{
+    ss_dassert(zname);
+
+    if (config.max_count != 0)
+    {
+        MXS_WARNING("A maximum item count of %u specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", (unsigned int)config.max_count);
+    }
+
+    if (config.max_size != 0)
+    {
+        MXS_WARNING("A maximum size of %lu specified, although 'storage_inMemory' "
+                    "does not enforce such a limit.", (unsigned long)config.max_size);
+    }
+
+    auto_ptr<InMemoryStorage> sstorage;
+
+    switch (config.thread_model)
+    {
+    case CACHE_THREAD_MODEL_ST:
+        sstorage = InMemoryStorageST::create(zname, config, argc, argv);
+        break;
+
+    default:
+        ss_dassert(!true);
+        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
+                  (int)config.thread_model);
+    case CACHE_THREAD_MODEL_MT:
+        sstorage = InMemoryStorageMT::create(zname, config, argc, argv);
+        break;
+    }
+
+    MXS_NOTICE("Storage module created.");
+
+    return sstorage.release();
+}
+
+cache_result_t InMemoryStorage::Get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pquery));
 

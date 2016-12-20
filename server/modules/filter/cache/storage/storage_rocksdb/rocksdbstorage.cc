@@ -208,9 +208,10 @@ RocksDBStorage::~RocksDBStorage()
 {
 }
 
-//static
-bool RocksDBStorage::Initialize()
+bool RocksDBStorage::Initialize(uint32_t* pCapabilities)
 {
+    *pCapabilities = CACHE_STORAGE_CAP_MT;
+
     auto pEnv = rocksdb::Env::Default();
     pEnv->SetBackgroundThreads(ROCKSDB_N_LOW_THREADS, rocksdb::Env::LOW);
     pEnv->SetBackgroundThreads(ROCKSDB_N_HIGH_THREADS, rocksdb::Env::HIGH);
@@ -222,10 +223,9 @@ bool RocksDBStorage::Initialize()
     return true;
 }
 
-//static
-unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
-                                                  const CACHE_STORAGE_CONFIG& config,
-                                                  int argc, char* argv[])
+RocksDBStorage* RocksDBStorage::Create_instance(const char* zName,
+                                                const CACHE_STORAGE_CONFIG& config,
+                                                int argc, char* argv[])
 {
     ss_dassert(zName);
 
@@ -279,11 +279,10 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
     return Create(zName, config, storageDirectory, collectStatistics);
 }
 
-// static
-unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
-                                                  const CACHE_STORAGE_CONFIG& config,
-                                                  const string& storageDirectory,
-                                                  bool collectStatistics)
+RocksDBStorage* RocksDBStorage::Create(const char* zName,
+                                       const CACHE_STORAGE_CONFIG& config,
+                                       const string& storageDirectory,
+                                       bool collectStatistics)
 {
     unique_ptr<RocksDBStorage> sStorage;
 
@@ -358,11 +357,10 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
         }
     }
 
-    return sStorage;
+    return sStorage.release();
 }
 
-// static
-cache_result_t RocksDBStorage::GetKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
+cache_result_t RocksDBStorage::Get_key(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
@@ -420,12 +418,12 @@ cache_result_t RocksDBStorage::GetKey(const char* zDefaultDB, const GWBUF* pQuer
     return CACHE_RESULT_OK;
 }
 
-void RocksDBStorage::getConfig(CACHE_STORAGE_CONFIG* pConfig)
+void RocksDBStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
 {
     *pConfig = m_config;
 }
 
-cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
+cache_result_t RocksDBStorage::get_info(uint32_t what, json_t** ppInfo) const
 {
     json_t* pInfo = json_object();
 
@@ -450,14 +448,14 @@ cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
     return pInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t RocksDBStorage::getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult)
+cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
 {
     // Use the root DB so that we get the value *with* the timestamp at the end.
     rocksdb::DB* pDb = m_sDb->GetRootDB();
-    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
     string value;
 
-    rocksdb::Status status = pDb->Get(rocksdb::ReadOptions(), key, &value);
+    rocksdb::Status status = pDb->Get(rocksdb::ReadOptions(), rocksdb_key, &value);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
@@ -512,45 +510,43 @@ cache_result_t RocksDBStorage::getValue(const CACHE_KEY* pKey, uint32_t flags, G
     return result;
 }
 
-cache_result_t RocksDBStorage::putValue(const CACHE_KEY* pKey, const GWBUF* pValue)
+cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
-    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
     rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
 
-    rocksdb::Status status = m_sDb->Put(writeOptions(), key, value);
+    rocksdb::Status status = m_sDb->Put(writeOptions(), rocksdb_key, value);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
 
-cache_result_t RocksDBStorage::delValue(const CACHE_KEY* pKey)
+cache_result_t RocksDBStorage::del_value(const CACHE_KEY& key)
 {
-    ss_dassert(pKey);
+    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
 
-    rocksdb::Slice key(pKey->data, ROCKSDB_KEY_LENGTH);
-
-    rocksdb::Status status = m_sDb->Delete(writeOptions(), key);
+    rocksdb::Status status = m_sDb->Delete(writeOptions(), rocksdb_key);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
 
-cache_result_t RocksDBStorage::getHead(CACHE_KEY* pKey, GWBUF** ppHead) const
+cache_result_t RocksDBStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t RocksDBStorage::getTail(CACHE_KEY* pKey, GWBUF** ppHead) const
+cache_result_t RocksDBStorage::get_tail(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t RocksDBStorage::getSize(uint64_t* pSize) const
+cache_result_t RocksDBStorage::get_size(uint64_t* pSize) const
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t RocksDBStorage::getItems(uint64_t* pItems) const
+cache_result_t RocksDBStorage::get_items(uint64_t* pItems) const
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
