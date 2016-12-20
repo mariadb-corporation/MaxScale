@@ -171,6 +171,12 @@ typedef struct service
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service. */
+    char* log_delimiter;               /**< Delimiter for service log */
+    char* query_delimiter;             /**< Query delimiter for service log */
+    char* log_filename;                /**< Log filename*/
+    char* named_pipe;                  /**< Named pipe for service*/
+    int named_pipe_fd;                 /**< FD for the named pipe*/
+    bool log_enabled;                  /**< Is log enabled*/
 } SERVICE;
 
 typedef enum count_spec_t
@@ -274,6 +280,15 @@ int   serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action);
 int   serviceStripDbEsc(SERVICE* service, int action);
 int   serviceAuthAllServers(SERVICE *service, int action);
 int   service_refresh_users(SERVICE *service);
+
+void serviceSetLogFilename(SERVICE *service, char *value);
+void serviceSetLogDelimiter(SERVICE *service, char *value);
+void serviceSetQueryDelimiter(SERVICE *service, char *value);
+void serviceSetNamedPipe(SERVICE *service, char *value);
+char* serviceGetLogFilename(SERVICE *service);
+char* serviceGetLogDelimiter(SERVICE *service);
+char* serviceGetQueryDelimiter(SERVICE *service);
+char* serviceGetNamedPipe(SERVICE *service);
 
 /**
  * Diagnostics

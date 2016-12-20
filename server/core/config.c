@@ -137,6 +137,10 @@ static char *service_params[] =
     "log_auth_warnings",
     "source", /**< Avrorouter only */
     "retry_on_failure",
+    "query_delimiter",
+    "log_delimiter",
+    "log_filename",
+    "named_pipe",
     NULL
 };
 
@@ -1678,7 +1682,6 @@ process_config_update(CONFIG_CONTEXT *context)
                     char *allow_localhost_match_wildcard_host;
 
                     enable_root_user = config_get_value(obj->parameters, "enable_root_user");
-
                     connection_timeout = config_get_value(obj->parameters, "connection_timeout");
                     max_connections = config_get_value_string(obj->parameters, "max_connections");
                     max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
@@ -2692,7 +2695,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
         service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
     }
 
-
     char *version_string = config_get_value(obj->parameters, "version_string");
     if (version_string)
     {
@@ -2892,6 +2894,13 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
     char *servers = config_get_value(obj->parameters, "servers");
     char *roptions = config_get_value(obj->parameters, "router_options");
     char *router = config_get_value(obj->parameters, "router");
+
+    /* options specific to dbseerroute. */
+    char *log_filename = config_get_value(obj->parameters, "log_filename");
+    char *log_delimiter = config_get_value(obj->parameters, "log_delimiter");
+    char *query_delimiter = config_get_value(obj->parameters, "query_delimiter");
+    char *named_pipe = config_get_value(obj->parameters, "named_pipe");
+
     SERVICE *service = obj->element;
 
     if (service)
@@ -2941,6 +2950,24 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
             {
                 error_count++;
             }
+        }
+
+        // set dbseerroute specific options
+        if (log_filename)
+        {
+            serviceSetLogFilename(service, log_filename);
+        }
+        if (query_delimiter)
+        {
+            serviceSetQueryDelimiter(service, query_delimiter);
+        }
+        if (log_delimiter)
+        {
+            serviceSetLogDelimiter(service, log_delimiter);
+        }
+        if (named_pipe)
+        {
+            serviceSetNamedPipe(service, named_pipe);
         }
     }
 
