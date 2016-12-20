@@ -162,7 +162,7 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
 
     uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
 
-    if (cache_storage_has_cap(m_storage_caps, mask))
+    if (!cache_storage_has_cap(m_storage_caps, mask))
     {
         // Since we will wrap the native storage with a LRUStorage, according
         // to the used threading model, the storage itself may be single
