@@ -260,3 +260,130 @@ TesterStorage::storage_action_t TesterStorage::get_random_action()
 
     return action;
 }
+
+// static
+int TesterStorage::test_smoke(const CacheItems& cache_items)
+{
+    return test_ttl(cache_items);
+}
+
+int TesterStorage::test_ttl(const CacheItems& cache_items)
+{
+    CacheStorageConfig config;
+
+    out() << "ST" << endl;
+
+    config.thread_model = CACHE_THREAD_MODEL_ST;
+    config.ttl = 5;
+
+    Storage* pStorage;
+
+    int rv1 = EXIT_FAILURE;
+    pStorage = get_storage(config);
+
+    if (pStorage)
+    {
+        rv1 = test_ttl(cache_items, *pStorage);
+        delete pStorage;
+    }
+
+    out() << "MT" << endl;
+
+    config.thread_model = CACHE_THREAD_MODEL_MT;
+    config.ttl = 5;
+
+    int rv2 = EXIT_FAILURE;
+    pStorage = get_storage(config);
+
+    if (pStorage)
+    {
+        rv2 = test_ttl(cache_items, *pStorage);
+        delete pStorage;
+    }
+
+    return combine_rvs(rv1, rv2);
+}
+
+int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
+{
+    int rv = EXIT_SUCCESS;
+
+    out() << "Testing ttl." << endl;
+
+    CacheStorageConfig config;
+    storage.get_config(&config);
+
+    uint32_t ttl = config.ttl;
+
+    if (ttl != 0)
+    {
+        ss_dassert(cache_items.size() > 0);
+
+        const CacheItems::value_type& cache_item = cache_items[0];
+
+        cache_result_t result = storage.put_value(cache_item.first, cache_item.second);
+
+        if (result != CACHE_RESULT_OK)
+        {
+            out() << "Could not put item." << endl;
+            rv = EXIT_FAILURE;
+        }
+        else
+        {
+            sleep(ttl - 1);
+
+            GWBUF* pValue;
+
+            pValue = NULL;
+            result = storage.get_value(cache_item.first, 0, &pValue);
+
+            if (result != CACHE_RESULT_OK)
+            {
+                out() << "Did not get value withing ttl." << endl;
+                rv = EXIT_FAILURE;
+            }
+
+            gwbuf_free(pValue);
+
+            sleep(2); // Should get us past the ttl
+
+            pValue = NULL;
+            result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+
+            if (result == CACHE_RESULT_OK)
+            {
+                out() << "Got value normally when accepting stale, although ttl has passed." << endl;
+                rv = EXIT_FAILURE;
+            }
+            else if (result != CACHE_RESULT_STALE)
+            {
+                out() << "Did not get expected stale value after ttl." << endl;
+                rv = EXIT_FAILURE;
+            }
+
+            gwbuf_free(pValue);
+
+            pValue = NULL;
+            result = storage.get_value(cache_item.first, 0, &pValue);
+
+            if (result == CACHE_RESULT_OK)
+            {
+                out() << "Got value normally, although ttl has passed." << endl;
+                rv = EXIT_FAILURE;
+            }
+            else if (result != CACHE_RESULT_NOT_FOUND)
+            {
+                out() << "Unexpected failure." << endl;
+                rv = EXIT_FAILURE;
+            }
+
+            gwbuf_free(pValue);
+        }
+    }
+    else
+    {
+        out() << "No ttl, not testing." << endl;
+    }
+
+    return rv;
+}

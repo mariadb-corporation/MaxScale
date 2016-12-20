@@ -33,6 +33,11 @@ public:
      */
     int execute(size_t n_threads, size_t n_seconds, const CacheItems& cache_items);
 
+    /**
+     * @see TesterStorage::get_storage
+     */
+    Storage* get_storage(const CACHE_STORAGE_CONFIG& config) const;
+
 private:
     int test_lru(const CacheItems& cache_items, uint64_t size);
     int test_max_count(size_t n_threads, size_t n_seconds,

@@ -215,6 +215,26 @@ public:
      */
     static void clear_cache_items(CacheItems& cache_items);
 
+    static int combine_rvs(int rv1, int rv2)
+    {
+        return ((rv1 == EXIT_FAILURE) || (rv2 == EXIT_FAILURE)) ? EXIT_FAILURE : EXIT_SUCCESS;
+    }
+
+    static int combine_rvs(int rv1, int rv2, int rv3)
+    {
+        return combine_rvs(rv1, combine_rvs(rv2, rv3));
+    }
+
+    static int combine_rvs(int rv1, int rv2, int rv3, int rv4)
+    {
+        return combine_rvs(rv1, combine_rvs(rv2, rv3, rv4));
+    }
+
+    static int combine_rvs(int rv1, int rv2, int rv3, int rv4, int rv5)
+    {
+        return combine_rvs(rv1, combine_rvs(rv2, rv3, rv4, rv5));
+    }
+
 protected:
     /**
      * Constructor

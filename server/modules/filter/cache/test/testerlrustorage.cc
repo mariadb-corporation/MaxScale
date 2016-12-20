@@ -32,27 +32,22 @@ int TesterLRUStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
         size += gwbuf_length(i->second);
     }
 
-    int rv1 = test_lru(cache_items, size);
+    int rv1 = test_smoke(cache_items);
     out() << endl;
-    int rv2 = test_max_count(n_threads, n_seconds, cache_items, size);
+    int rv2 = test_lru(cache_items, size);
     out() << endl;
-    int rv3 = test_max_size(n_threads, n_seconds, cache_items, size);
+    int rv3 = test_max_count(n_threads, n_seconds, cache_items, size);
     out() << endl;
-    int rv4 = test_max_count_and_size(n_threads, n_seconds, cache_items, size);
+    int rv4 = test_max_size(n_threads, n_seconds, cache_items, size);
+    out() << endl;
+    int rv5 = test_max_count_and_size(n_threads, n_seconds, cache_items, size);
 
-    int rv = EXIT_SUCCESS;
+    return combine_rvs(rv1, rv2, rv3, rv4, rv5);
+}
 
-    if ((rv1 == EXIT_SUCCESS) && (rv2 == EXIT_SUCCESS) &&
-        (rv3 == EXIT_SUCCESS) && (rv4 == EXIT_SUCCESS))
-    {
-        rv = EXIT_SUCCESS;
-    }
-    else
-    {
-        rv = EXIT_FAILURE;
-    }
-
-    return rv;
+Storage* TesterLRUStorage::get_storage(const CACHE_STORAGE_CONFIG& config) const
+{
+    return m_factory.createStorage("unspecified", config);
 }
 
 int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
@@ -64,7 +59,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
 
     CacheStorageConfig config(CACHE_THREAD_MODEL_MT);
 
-    Storage* pStorage = m_factory.createStorage("unspecified", config);
+    Storage* pStorage = get_storage(config);
 
     if (pStorage)
     {
@@ -163,7 +158,7 @@ int TesterLRUStorage::test_max_count(size_t n_threads, size_t n_seconds,
     CacheStorageConfig config(CACHE_THREAD_MODEL_MT);
     config.max_count = max_count;
 
-    pStorage = m_factory.createStorage("unspecified", config);
+    pStorage = get_storage(config);
 
     if (pStorage)
     {
@@ -200,7 +195,7 @@ int TesterLRUStorage::test_max_size(size_t n_threads, size_t n_seconds,
     CacheStorageConfig config(CACHE_THREAD_MODEL_MT);
     config.max_size = max_size;
 
-    pStorage = m_factory.createStorage("unspecified", config);
+    pStorage = get_storage(config);
 
     if (pStorage)
     {
@@ -240,7 +235,7 @@ int TesterLRUStorage::test_max_count_and_size(size_t n_threads, size_t n_seconds
     config.max_count = max_count;
     config.max_size = max_size;
 
-    pStorage = m_factory.createStorage("unspecified", config);
+    pStorage = get_storage(config);
 
     if (pStorage)
     {

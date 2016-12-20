@@ -149,11 +149,25 @@ public:
                                  Storage& storage);
 
     /**
+     * Return a storage.
+     *
+     * @param config  The storage configuration
+     *
+     * @return A storage or NULL in case of error.
+     */
+    virtual Storage* get_storage(const CACHE_STORAGE_CONFIG& config) const = 0;
+
+    /**
      * Get a random action.
      *
      * @return Some storage action.
      */
     static storage_action_t get_random_action();
+
+    int test_smoke(const CacheItems& cache_items);
+
+    int test_ttl(const CacheItems& cache_items);
+    int test_ttl(const CacheItems& cache_items, Storage& storage);
 
 protected:
     /**
