@@ -97,13 +97,13 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
     return sStorage.release();
 }
 
-cache_result_t InMemoryStorage::Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey)
+cache_result_t InMemoryStorage::Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(&query));
 
     int n;
     bool fullnames = true;
-    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
+    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(&query), &n, fullnames);
 
     set<string> dbs; // Elements in set are sorted.
 
@@ -149,7 +149,7 @@ cache_result_t InMemoryStorage::Get_key(const char* zDefault_db, const GWBUF* pQ
     char *pSql;
     int length;
 
-    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
+    modutil_extract_SQL(const_cast<GWBUF*>(&query), &pSql, &length);
 
     // Then we store the query itself in the second half of the key.
     pData = reinterpret_cast<const unsigned char*>(pSql);
@@ -248,11 +248,11 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
     return result;
 }
 
-cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF& value)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(&value));
 
-    size_t size = GWBUF_LENGTH(pValue);
+    size_t size = GWBUF_LENGTH(&value);
 
     Entries::iterator i = m_entries.find(key);
     Entry* pEntry;
@@ -276,8 +276,8 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* 
         {
             // If the needed value is less than what is currently stored,
             // we shrink the buffer so as not to waste space.
-            Value value(size);
-            pEntry->value.swap(value);
+            Value entry_value(size);
+            pEntry->value.swap(entry_value);
         }
         else
         {
@@ -287,7 +287,7 @@ cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* 
 
     m_stats.size += size;
 
-    const uint8_t* pData = GWBUF_DATA(pValue);
+    const uint8_t* pData = GWBUF_DATA(&value);
 
     copy(pData, pData + size, pEntry->value.begin());
     pEntry->time = time(NULL);

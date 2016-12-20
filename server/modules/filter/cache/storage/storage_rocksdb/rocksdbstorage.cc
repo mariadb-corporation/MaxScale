@@ -360,13 +360,13 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
     return sStorage.release();
 }
 
-cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey)
+cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(&query));
 
     int n;
     bool fullnames = true;
-    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
+    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(&query), &n, fullnames);
 
     set<string> dbs; // Elements in set are sorted.
 
@@ -409,7 +409,7 @@ cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF* pQu
     char *pSql;
     int length;
 
-    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
+    modutil_extract_SQL(const_cast<GWBUF*>(&query), &pSql, &length);
 
     // Then we store the query itself in the second half of the key.
     pData = reinterpret_cast<const unsigned char*>(pSql);
@@ -510,14 +510,14 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
     return result;
 }
 
-cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF& value)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(&value));
 
     rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
-    rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
+    rocksdb::Slice rocksdb_value((char*)GWBUF_DATA(&value), GWBUF_LENGTH(&value));
 
-    rocksdb::Status status = m_sDb->Put(Write_options(), rocksdb_key, value);
+    rocksdb::Status status = m_sDb->Put(Write_options(), rocksdb_key, rocksdb_value);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }

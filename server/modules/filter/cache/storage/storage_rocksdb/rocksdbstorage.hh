@@ -30,12 +30,12 @@ public:
                                            int argc, char* argv[]);
     ~RocksDBStorage();
 
-    static cache_result_t Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey);
+    static cache_result_t Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey);
 
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
     cache_result_t get_info(uint32_t flags, json_t** ppInfo) const;
     cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult);
-    cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pValue);
+    cache_result_t put_value(const CACHE_KEY& key, const GWBUF& value);
     cache_result_t del_value(const CACHE_KEY& key);
 
     cache_result_t get_head(CACHE_KEY* pKey, GWBUF** ppHead) const;

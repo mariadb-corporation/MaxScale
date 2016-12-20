@@ -49,11 +49,11 @@ cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags
     return do_get_value(key, flags, ppResult);
 }
 
-cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF& value)
 {
     SpinLockGuard guard(lock_);
 
-    return do_put_value(key, pValue);
+    return do_put_value(key, value);
 }
 
 cache_result_t InMemoryStorageMT::del_value(const CACHE_KEY& key)

@@ -47,7 +47,7 @@ public:
 
         cache_result_t result = CACHE_RESULT_ERROR;
 
-        MXS_EXCEPTION_GUARD(result = StorageType::Get_key(zDefault_db, pQuery, pKey));
+        MXS_EXCEPTION_GUARD(result = StorageType::Get_key(zDefault_db, *pQuery, pKey));
 
         return result;
     }
@@ -113,7 +113,7 @@ public:
 
         StorageType* pStorage = reinterpret_cast<StorageType*>(pCache_storage);
 
-        MXS_EXCEPTION_GUARD(result = pStorage->put_value(*pKey, pValue));
+        MXS_EXCEPTION_GUARD(result = pStorage->put_value(*pKey, *pValue));
 
         return result;
     }

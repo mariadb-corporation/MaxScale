@@ -43,9 +43,9 @@ cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key, uint32_t flags
     return do_get_value(key, flags, ppResult);
 }
 
-cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key, const GWBUF* pValue)
+cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key, const GWBUF& value)
 {
-    return do_put_value(key, pValue);
+    return do_put_value(key, value);
 }
 
 cache_result_t InMemoryStorageST::del_value(const CACHE_KEY& key)
