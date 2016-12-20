@@ -190,7 +190,7 @@ bool deletePath(const string& path)
 }
 
 //private
-rocksdb::WriteOptions RocksDBStorage::s_writeOptions;
+rocksdb::WriteOptions RocksDBStorage::s_write_options;
 
 //private
 RocksDBStorage::RocksDBStorage(const string& name,
@@ -218,7 +218,7 @@ bool RocksDBStorage::Initialize(uint32_t* pCapabilities)
 
     // No logging; the database will always be deleted at startup, so there's
     // no reason for usinf space and processing for writing the write ahead log.
-    s_writeOptions.disableWAL = true;
+    s_write_options.disableWAL = true;
 
     return true;
 }
@@ -330,7 +330,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
                 rocksdb::Slice value(reinterpret_cast<const char*>(&STORAGE_ROCKSDB_VERSION),
                                      sizeof(STORAGE_ROCKSDB_VERSION));
 
-                status = pDb->Put(writeOptions(), key, value);
+                status = pDb->Put(Write_options(), key, value);
 
                 if (!status.ok())
                 {
@@ -360,7 +360,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
     return sStorage.release();
 }
 
-cache_result_t RocksDBStorage::Get_key(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey)
+cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
@@ -380,12 +380,12 @@ cache_result_t RocksDBStorage::Get_key(const char* zDefaultDB, const GWBUF* pQue
             *zDot = 0;
             dbs.insert(zTable);
         }
-        else if (zDefaultDB)
+        else if (zDefault_db)
         {
             // If zDefaultDB is NULL, then there will be a table for which we
             // do not know the database. However, that will fail in the server,
             // so nothing will be stored.
-            dbs.insert(zDefaultDB);
+            dbs.insert(zDefault_db);
         }
         MXS_FREE(zTable);
     }
@@ -517,7 +517,7 @@ cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF* pVal
     rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
     rocksdb::Slice value((char*)GWBUF_DATA(pValue), GWBUF_LENGTH(pValue));
 
-    rocksdb::Status status = m_sDb->Put(writeOptions(), rocksdb_key, value);
+    rocksdb::Status status = m_sDb->Put(Write_options(), rocksdb_key, value);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }
@@ -526,7 +526,7 @@ cache_result_t RocksDBStorage::del_value(const CACHE_KEY& key)
 {
     rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
 
-    rocksdb::Status status = m_sDb->Delete(writeOptions(), rocksdb_key);
+    rocksdb::Status status = m_sDb->Delete(Write_options(), rocksdb_key);
 
     return status.ok() ? CACHE_RESULT_OK : CACHE_RESULT_ERROR;
 }

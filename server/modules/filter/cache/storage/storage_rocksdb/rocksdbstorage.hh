@@ -30,7 +30,7 @@ public:
                                            int argc, char* argv[]);
     ~RocksDBStorage();
 
-    static cache_result_t Get_key(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey);
+    static cache_result_t Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey);
 
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
     cache_result_t get_info(uint32_t flags, json_t** ppInfo) const;
@@ -54,12 +54,12 @@ private:
 
     static RocksDBStorage* Create(const char* zName,
                                   const CACHE_STORAGE_CONFIG& config,
-                                  const std::string& storageDirectory,
-                                  bool collectStatistics);
+                                  const std::string& storage_directory,
+                                  bool collect_statistics);
 
-    static const rocksdb::WriteOptions& writeOptions()
+    static const rocksdb::WriteOptions& Write_options()
     {
-        return s_writeOptions;
+        return s_write_options;
     }
 
 private:
@@ -68,5 +68,5 @@ private:
     std::string                         m_path;
     std::unique_ptr<rocksdb::DBWithTTL> m_sDb;
 
-    static rocksdb::WriteOptions        s_writeOptions;
+    static rocksdb::WriteOptions        s_write_options;
 };

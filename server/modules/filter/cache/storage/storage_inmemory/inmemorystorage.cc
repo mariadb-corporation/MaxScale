@@ -40,8 +40,8 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 }
 
 InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
-    : name_(name)
-    , config_(config)
+    : m_name(name)
+    , m_config(config)
 {
 }
 
@@ -49,19 +49,19 @@ InMemoryStorage::~InMemoryStorage()
 {
 }
 
-bool InMemoryStorage::Initialize(uint32_t* pcapabilities)
+bool InMemoryStorage::Initialize(uint32_t* pCapabilities)
 {
-    *pcapabilities = CACHE_STORAGE_CAP_ST;
-    *pcapabilities = CACHE_STORAGE_CAP_MT;
+    *pCapabilities = CACHE_STORAGE_CAP_ST;
+    *pCapabilities = CACHE_STORAGE_CAP_MT;
 
     return true;
 }
 
-InMemoryStorage* InMemoryStorage::Create_instance(const char* zname,
+InMemoryStorage* InMemoryStorage::Create_instance(const char* zName,
                                                   const CACHE_STORAGE_CONFIG& config,
                                                   int argc, char* argv[])
 {
-    ss_dassert(zname);
+    ss_dassert(zName);
 
     if (config.max_count != 0)
     {
@@ -75,12 +75,12 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zname,
                     "does not enforce such a limit.", (unsigned long)config.max_size);
     }
 
-    auto_ptr<InMemoryStorage> sstorage;
+    auto_ptr<InMemoryStorage> sStorage;
 
     switch (config.thread_model)
     {
     case CACHE_THREAD_MODEL_ST:
-        sstorage = InMemoryStorageST::create(zname, config, argc, argv);
+        sStorage = InMemoryStorageST::Create(zName, config, argc, argv);
         break;
 
     default:
@@ -88,45 +88,45 @@ InMemoryStorage* InMemoryStorage::Create_instance(const char* zname,
         MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
                   (int)config.thread_model);
     case CACHE_THREAD_MODEL_MT:
-        sstorage = InMemoryStorageMT::create(zname, config, argc, argv);
+        sStorage = InMemoryStorageMT::Create(zName, config, argc, argv);
         break;
     }
 
     MXS_NOTICE("Storage module created.");
 
-    return sstorage.release();
+    return sStorage.release();
 }
 
-cache_result_t InMemoryStorage::Get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey)
+cache_result_t InMemoryStorage::Get_key(const char* zDefault_db, const GWBUF* pQuery, CACHE_KEY* pKey)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pquery));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
     int n;
     bool fullnames = true;
-    char** pztables = qc_get_table_names(const_cast<GWBUF*>(pquery), &n, fullnames);
+    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
 
     set<string> dbs; // Elements in set are sorted.
 
     for (int i = 0; i < n; ++i)
     {
-        char *ztable = pztables[i];
-        char *zdot = strchr(ztable, '.');
+        char *zTable = pzTables[i];
+        char *zDot = strchr(zTable, '.');
 
-        if (zdot)
+        if (zDot)
         {
-            *zdot = 0;
-            dbs.insert(ztable);
+            *zDot = 0;
+            dbs.insert(zTable);
         }
-        else if (zdefault_db)
+        else if (zDefault_db)
         {
             // If zdefault_db is NULL, then there will be a table for which we
             // do not know the database. However, that will fail in the server,
             // so nothing will be stored.
-            dbs.insert(zdefault_db);
+            dbs.insert(zDefault_db);
         }
-        MXS_FREE(ztable);
+        MXS_FREE(zTable);
     }
-    MXS_FREE(pztables);
+    MXS_FREE(pzTables);
 
     // dbs now contain each accessed database in sorted order. Now copy them to a single string.
     string tag;
@@ -135,32 +135,32 @@ cache_result_t InMemoryStorage::Get_key(const char* zdefault_db, const GWBUF* pq
         tag.append(*i);
     }
 
-    memset(pkey->data, 0, CACHE_KEY_MAXLEN);
+    memset(pKey->data, 0, CACHE_KEY_MAXLEN);
 
-    const unsigned char* pdata;
+    const unsigned char* pData;
 
     // We store the databases in the first half of the key. That will ensure that
     // identical queries targeting different default databases will not clash.
     // This will also mean that entries related to the same databases will
     // be placed near each other.
-    pdata = reinterpret_cast<const unsigned char*>(tag.data());
-    SHA512(pdata, tag.length(), reinterpret_cast<unsigned char*>(pkey->data));
+    pData = reinterpret_cast<const unsigned char*>(tag.data());
+    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey->data));
 
-    char *psql;
+    char *pSql;
     int length;
 
-    modutil_extract_SQL(const_cast<GWBUF*>(pquery), &psql, &length);
+    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
 
     // Then we store the query itself in the second half of the key.
-    pdata = reinterpret_cast<const unsigned char*>(psql);
-    SHA512(pdata, length, reinterpret_cast<unsigned char*>(pkey->data) + SHA512_DIGEST_LENGTH);
+    pData = reinterpret_cast<const unsigned char*>(pSql);
+    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey->data) + SHA512_DIGEST_LENGTH);
 
     return CACHE_RESULT_OK;
 }
 
 void InMemoryStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
 {
-    *pConfig = config_;
+    *pConfig = m_config;
 }
 
 cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
@@ -183,43 +183,43 @@ cache_result_t InMemoryStorage::get_items(uint64_t* pItems) const
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppinfo) const
+cache_result_t InMemoryStorage::do_get_info(uint32_t what, json_t** ppInfo) const
 {
-    *ppinfo = json_object();
+    *ppInfo = json_object();
 
-    if (*ppinfo)
+    if (*ppInfo)
     {
-        stats_.fill(*ppinfo);
+        m_stats.fill(*ppInfo);
     }
 
-    return *ppinfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
+    return *ppInfo ? CACHE_RESULT_OK : CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
+cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
-    Entries::iterator i = entries_.find(key);
+    Entries::iterator i = m_entries.find(key);
 
-    if (i != entries_.end())
+    if (i != m_entries.end())
     {
-        stats_.hits += 1;
+        m_stats.hits += 1;
 
         Entry& entry = i->second;
 
         uint32_t now = time(NULL);
 
-        bool is_stale = config_.ttl == 0 ? false : (now - entry.time > config_.ttl);
+        bool is_stale = m_config.ttl == 0 ? false : (now - entry.time > m_config.ttl);
 
         if (!is_stale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
         {
             size_t length = entry.value.size();
 
-            *ppresult = gwbuf_alloc(length);
+            *ppResult = gwbuf_alloc(length);
 
-            if (*ppresult)
+            if (*ppResult)
             {
-                memcpy(GWBUF_DATA(*ppresult), entry.value.data(), length);
+                memcpy(GWBUF_DATA(*ppResult), entry.value.data(), length);
 
                 if (is_stale)
                 {
@@ -242,95 +242,95 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
     }
     else
     {
-        stats_.misses += 1;
+        m_stats.misses += 1;
     }
 
     return result;
 }
 
-cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalue)
+cache_result_t InMemoryStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    ss_dassert(GWBUF_IS_CONTIGUOUS(pvalue));
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pValue));
 
-    size_t size = GWBUF_LENGTH(pvalue);
+    size_t size = GWBUF_LENGTH(pValue);
 
-    Entries::iterator i = entries_.find(key);
-    Entry* pentry;
+    Entries::iterator i = m_entries.find(key);
+    Entry* pEntry;
 
-    if (i == entries_.end())
+    if (i == m_entries.end())
     {
-        stats_.items += 1;
+        m_stats.items += 1;
 
-        pentry = &entries_[key];
-        pentry->value.resize(size);
+        pEntry = &m_entries[key];
+        pEntry->value.resize(size);
     }
     else
     {
-        stats_.updates += 1;
+        m_stats.updates += 1;
 
-        pentry = &i->second;
+        pEntry = &i->second;
 
-        stats_.size -= pentry->value.size();
+        m_stats.size -= pEntry->value.size();
 
-        if (size < pentry->value.capacity())
+        if (size < pEntry->value.capacity())
         {
             // If the needed value is less than what is currently stored,
             // we shrink the buffer so as not to waste space.
             Value value(size);
-            pentry->value.swap(value);
+            pEntry->value.swap(value);
         }
         else
         {
-            pentry->value.resize(size);
+            pEntry->value.resize(size);
         }
     }
 
-    stats_.size += size;
+    m_stats.size += size;
 
-    const uint8_t* pdata = GWBUF_DATA(pvalue);
+    const uint8_t* pData = GWBUF_DATA(pValue);
 
-    copy(pdata, pdata + size, pentry->value.begin());
-    pentry->time = time(NULL);
+    copy(pData, pData + size, pEntry->value.begin());
+    pEntry->time = time(NULL);
 
     return CACHE_RESULT_OK;
 }
 
 cache_result_t InMemoryStorage::do_del_value(const CACHE_KEY& key)
 {
-    Entries::iterator i = entries_.find(key);
+    Entries::iterator i = m_entries.find(key);
 
-    if (i != entries_.end())
+    if (i != m_entries.end())
     {
-        ss_dassert(stats_.size >= i->second.value.size());
-        ss_dassert(stats_.items > 0);
+        ss_dassert(m_stats.size >= i->second.value.size());
+        ss_dassert(m_stats.items > 0);
 
-        stats_.size -= i->second.value.size();
-        stats_.items -= 1;
-        stats_.deletes += 1;
+        m_stats.size -= i->second.value.size();
+        m_stats.items -= 1;
+        m_stats.deletes += 1;
 
-        entries_.erase(i);
+        m_entries.erase(i);
     }
 
-    return i != entries_.end() ? CACHE_RESULT_OK : CACHE_RESULT_NOT_FOUND;
+    return i != m_entries.end() ? CACHE_RESULT_OK : CACHE_RESULT_NOT_FOUND;
 }
 
-static void set_integer(json_t* pobject, const char* zname, size_t value)
+static void set_integer(json_t* pObject, const char* zName, size_t value)
 {
-    json_t* pvalue = json_integer(value);
+    json_t* pValue = json_integer(value);
 
-    if (pvalue)
+    if (pValue)
     {
-        json_object_set(pobject, zname, pvalue);
-        json_decref(pvalue);
+        json_object_set(pObject, zName, pValue);
+        json_decref(pValue);
     }
 }
 
-void InMemoryStorage::Stats::fill(json_t* pbject) const
+void InMemoryStorage::Stats::fill(json_t* pObject) const
 {
-    set_integer(pbject, "size", size);
-    set_integer(pbject, "items", items);
-    set_integer(pbject, "hits", hits);
-    set_integer(pbject, "misses", misses);
-    set_integer(pbject, "updates", updates);
-    set_integer(pbject, "deletes", deletes);
+    set_integer(pObject, "size", size);
+    set_integer(pObject, "items", items);
+    set_integer(pObject, "hits", hits);
+    set_integer(pObject, "misses", misses);
+    set_integer(pObject, "updates", updates);
+    set_integer(pObject, "deletes", deletes);
 }

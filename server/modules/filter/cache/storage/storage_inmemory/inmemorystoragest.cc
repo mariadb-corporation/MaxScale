@@ -26,27 +26,26 @@ InMemoryStorageST::~InMemoryStorageST()
 {
 }
 
-// static
-auto_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name,
+auto_ptr<InMemoryStorageST> InMemoryStorageST::Create(const std::string& name,
                                                       const CACHE_STORAGE_CONFIG& config,
                                                       int argc, char* argv[])
 {
     return auto_ptr<InMemoryStorageST>(new InMemoryStorageST(name, config));
 }
 
-cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppinfo) const
+cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppInfo) const
 {
-    return do_get_info(what, ppinfo);
+    return do_get_info(what, ppInfo);
 }
 
-cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult)
+cache_result_t InMemoryStorageST::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
 {
-    return do_get_value(key, flags, ppresult);
+    return do_get_value(key, flags, ppResult);
 }
 
-cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key, const GWBUF* pvalue)
+cache_result_t InMemoryStorageST::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    return do_put_value(key, pvalue);
+    return do_put_value(key, pValue);
 }
 
 cache_result_t InMemoryStorageST::del_value(const CACHE_KEY& key)
