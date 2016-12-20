@@ -29,30 +29,27 @@ bool initialize(uint32_t* pCapabilities)
     return RocksDBStorage::Initialize();
 }
 
-CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always MT safe.
-                              const char* zName,
-                              uint32_t ttl,
-                              uint32_t maxCount,
-                              uint64_t maxSize,
+CACHE_STORAGE* createInstance(const char* zName,
+                              const CACHE_STORAGE_CONFIG* pConfig,
                               int argc, char* argv[])
 {
     ss_dassert(zName);
 
-    if (maxCount != 0)
+    if (pConfig->max_count != 0)
     {
         MXS_WARNING("A maximum item count of %u specifed, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", (unsigned int)maxCount);
+                    "does not enforce such a limit.", (unsigned int)pConfig->max_count);
     }
 
-    if (maxSize != 0)
+    if (pConfig->max_size != 0)
     {
         MXS_WARNING("A maximum size of %lu specified, although 'storage_rocksdb' "
-                    "does not enforce such a limit.", (unsigned long)maxSize);
+                    "does not enforce such a limit.", (unsigned long)pConfig->max_size);
     }
 
     unique_ptr<RocksDBStorage> sStorage;
 
-    MXS_EXCEPTION_GUARD(sStorage = RocksDBStorage::Create(zName, ttl, argc, argv));
+    MXS_EXCEPTION_GUARD(sStorage = RocksDBStorage::Create(zName, *pConfig, argc, argv));
 
     if (sStorage)
     {
@@ -65,6 +62,13 @@ CACHE_STORAGE* createInstance(cache_thread_model_t, // Ignored, RocksDB always M
 void freeInstance(CACHE_STORAGE* pInstance)
 {
     MXS_EXCEPTION_GUARD(delete reinterpret_cast<RocksDBStorage*>(pInstance));
+}
+
+void getConfig(CACHE_STORAGE* pStorage, CACHE_STORAGE_CONFIG* pConfig)
+{
+    ss_dassert(pStorage);
+
+    MXS_EXCEPTION_GUARD(reinterpret_cast<RocksDBStorage*>(pStorage)->getConfig(pConfig));
 }
 
 cache_result_t getInfo(CACHE_STORAGE* pStorage,
@@ -204,6 +208,7 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
             createInstance,
             getKey,
             freeInstance,
+            getConfig,
             getInfo,
             getValue,
             putValue,

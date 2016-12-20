@@ -35,4 +35,4 @@ add_test(TestCache_storage_rocksdb  testrawstorage storage_rocksdb  0 10 1000 10
 
 #usage: testlrustorage storage-module [threads [time [items [min-size [max-size]]]]]\n"
 add_test(TestCache_lru_inmemory testlrustorage storage_inmemory 0 10 1000 1024 1024000)
-add_test(TestCache_lru_rocksdb  testlrustorage storage_inmemory 0 10 1000 1024 1024000)
+add_test(TestCache_lru_rocksdb  testlrustorage storage_rocksdb  0 10 1000 1024 1024000)

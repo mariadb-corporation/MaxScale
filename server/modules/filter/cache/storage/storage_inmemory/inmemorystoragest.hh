@@ -22,7 +22,9 @@ public:
 
     typedef std::auto_ptr<InMemoryStorageST> SInMemoryStorageST;
 
-    static SInMemoryStorageST create(const std::string& name, uint32_t ttl, int argc, char* argv[]);
+    static SInMemoryStorageST create(const std::string& name,
+                                     const CACHE_STORAGE_CONFIG& config,
+                                     int argc, char* argv[]);
 
     cache_result_t get_info(uint32_t what, json_t** ppinfo) const;
     cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult);
@@ -30,7 +32,7 @@ public:
     cache_result_t del_value(const CACHE_KEY& key);
 
 private:
-    InMemoryStorageST(const std::string& name, uint32_t ttl);
+    InMemoryStorageST(const std::string& name, const CACHE_STORAGE_CONFIG& config);
 
 private:
     InMemoryStorageST(const InMemoryStorageST&);

@@ -25,11 +25,14 @@ public:
 
     static bool Initialize();
 
-    static SRocksDBStorage Create(const char* zName, uint32_t ttl, int argc, char* argv[]);
+    static SRocksDBStorage Create(const char* zName,
+                                  const CACHE_STORAGE_CONFIG& config,
+                                  int argc, char* argv[]);
     ~RocksDBStorage();
 
     static cache_result_t GetKey(const char* zDefaultDB, const GWBUF* pQuery, CACHE_KEY* pKey);
 
+    void getConfig(CACHE_STORAGE_CONFIG* pConfig);
     cache_result_t getInfo(uint32_t flags, json_t** ppInfo) const;
     cache_result_t getValue(const CACHE_KEY* pKey, uint32_t flags, GWBUF** ppResult);
     cache_result_t putValue(const CACHE_KEY* pKey, const GWBUF* pValue);
@@ -41,17 +44,17 @@ public:
     cache_result_t getItems(uint64_t* pItems) const;
 
 private:
-    RocksDBStorage(std::unique_ptr<rocksdb::DBWithTTL>& sDb,
-                   const std::string& name,
+    RocksDBStorage(const std::string& name,
+                   const CACHE_STORAGE_CONFIG& config,
                    const std::string& path,
-                   uint32_t ttl);
+                   std::unique_ptr<rocksdb::DBWithTTL>& sDb);
 
     RocksDBStorage(const RocksDBStorage&) = delete;
     RocksDBStorage& operator = (const RocksDBStorage&) = delete;
 
-    static SRocksDBStorage Create(const std::string& storageDirectory,
-                                  const char* zName,
-                                  uint32_t ttl,
+    static SRocksDBStorage Create(const char* zName,
+                                  const CACHE_STORAGE_CONFIG& config,
+                                  const std::string& storageDirectory,
                                   bool collectStatistics);
 
     static const rocksdb::WriteOptions& writeOptions()
@@ -60,10 +63,10 @@ private:
     }
 
 private:
-    std::unique_ptr<rocksdb::DBWithTTL> m_sDb;
     std::string                         m_name;
+    const CACHE_STORAGE_CONFIG          m_config;
     std::string                         m_path;
-    uint32_t                            m_ttl;
+    std::unique_ptr<rocksdb::DBWithTTL> m_sDb;
 
     static rocksdb::WriteOptions        s_writeOptions;
 };

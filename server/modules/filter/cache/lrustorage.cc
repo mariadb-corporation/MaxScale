@@ -14,10 +14,11 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustorage.hh"
 
-LRUStorage::LRUStorage(Storage* pstorage, size_t max_count, size_t max_size)
-    : pstorage_(pstorage)
-    , max_count_(max_count != 0 ? max_count : UINT64_MAX)
-    , max_size_(max_size != 0 ? max_size : UINT64_MAX)
+LRUStorage::LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
+    : config_(config)
+    , pstorage_(pstorage)
+    , max_count_(config.max_count != 0 ? config.max_count : UINT64_MAX)
+    , max_size_(config.max_size != 0 ? config.max_size : UINT64_MAX)
     , phead_(NULL)
     , ptail_(NULL)
 {
@@ -33,6 +34,11 @@ LRUStorage::~LRUStorage()
     }
 
     delete pstorage_;
+}
+
+void LRUStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
+{
+    *pConfig = config_;
 }
 
 cache_result_t LRUStorage::get_key(const char* zdefault_db,

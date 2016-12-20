@@ -49,24 +49,16 @@ public:
      * implementation that will be provided on top of what is "natively"
      * provided.
      *
-     * @param model      The needed thread model.
      * @param zName      The name of the storage.
-     * @param ttl        Time to live. 0 means no limit.
-     * @param max_count  The maximum number of items in the cache.
-     *                   0 means no limit.
-     * @param max_size   The maximum size of the cache. 0 means
-     *                   no limit.
+     * @param config     The storagfe configuration.
      * @argc             Number of items in argv.
      * @argv             Storage specific arguments.
      *
      * @return A storage instance or NULL in case of errors.
      */
-    Storage* createStorage(cache_thread_model_t model,
-                           const char* zName,
-                           uint32_t ttl,
-                           uint64_t max_count,
-                           uint64_t max_size,
-                           int argc, char* argv[]);
+    Storage* createStorage(const char* zName,
+                           const CACHE_STORAGE_CONFIG& config,
+                           int argc = 0, char* argv[] = NULL);
 
     /**
      * Create raw storage instance.
@@ -76,24 +68,16 @@ public:
      * arguments (notably max_count and max_size) should be adjusted
      * accordingly.
      *
-     * @param model      The needed thread model.
      * @param zName      The name of the storage.
-     * @param ttl        Time to live. 0 means no limit.
-     * @param max_count  The maximum number of items in the cache.
-     *                   0 means no limit.
-     * @param max_size   The maximum size of the cache. 0 means
-     *                   no limit.
+     * @param config     The storagfe configuration.
      * @argc             Number of items in argv.
      * @argv             Storage specific arguments.
      *
      * @return A storage instance or NULL in case of errors.
      */
-    Storage* createRawStorage(cache_thread_model_t model,
-                              const char* zName,
-                              uint32_t ttl,
-                              uint64_t max_count,
-                              uint64_t max_size,
-                              int argc, char* argv[]);
+    Storage* createRawStorage(const char* zName,
+                              const CACHE_STORAGE_CONFIG& config,
+                              int argc = 0, char* argv[] = NULL);
 
     /**
      * Create a key for a GWBUF.

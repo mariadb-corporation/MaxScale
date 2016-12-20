@@ -16,8 +16,8 @@
 
 using maxscale::SpinLockGuard;
 
-LRUStorageMT::LRUStorageMT(Storage* pstorage, uint64_t max_count, uint64_t max_size)
-    : LRUStorage(pstorage, max_count, max_size)
+LRUStorageMT::LRUStorageMT(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
+    : LRUStorage(config, pstorage)
 {
     spinlock_init(&lock_);
 
@@ -28,11 +28,11 @@ LRUStorageMT::~LRUStorageMT()
 {
 }
 
-LRUStorageMT* LRUStorageMT::create(Storage* pstorage, uint64_t max_count, uint64_t max_size)
+LRUStorageMT* LRUStorageMT::create(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
 {
     LRUStorageMT* plru_storage = NULL;
 
-    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageMT(pstorage, max_count, max_size));
+    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageMT(config, pstorage));
 
     return plru_storage;
 }

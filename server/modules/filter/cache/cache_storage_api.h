@@ -95,6 +95,38 @@ static inline bool cache_storage_has_cap(uint32_t capabilities, uint32_t mask)
     return (capabilities & mask) == mask;
 }
 
+typedef struct cache_storage_config_t
+{
+    /**
+     * Specifies whether the storage will be used in a single thread or multi
+     * thread context. In the latter case the storage must perform thread
+     * synchronization as appropriate, in the former  case it need not.
+     */
+    cache_thread_model_t thread_model;
+
+    /**
+     * Time to live; number of seconds the value is valid. A value of 0 means
+     * that there is no time-to-live, but that the value is considered fresh
+     * as long as it is available.
+     */
+    uint32_t ttl;
+
+    /**
+     * The maximum number of items the storage may store, before it should
+     * evict some items. A value of 0 means that there is no limit. The caller
+     * should specify 0, unless CACHE_STORAGE_CAP_MAX_COUNT is returned at
+     * initialization.
+     */
+    uint32_t max_count;
+
+    /**
+     * The maximum size of the storage may may occupy, before it should evict
+     * some items. A value if 0 means that there is no limit. The caller should
+     * specify 0, unless CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
+     */
+    uint64_t max_size;
+} CACHE_STORAGE_CONFIG;
+
 typedef struct cache_storage_api
 {
     /**
@@ -112,22 +144,8 @@ typedef struct cache_storage_api
      * create the actual storage, initialize it and prepare to put and get
      * cache items.
      *
-     * @param model     Whether the storage will be used in a single thread or
-     *                  multi thread context. In the latter case the storage must
-     *                  perform thread synchronization as appropriate, in the former
-     *                  case it need not.
      * @param name      The name of the cache instance.
-     * @param ttl       Time to live; number of seconds the value is valid.
-     *                  A value of 0 means that there is no time-to-live, but that
-     *                  the value is considered fresh as long as it is available.
-     * @param max_count The maximum number of items the storage may store, before
-     *                  it should evict some items. A value of 0 means that there is
-     *                  no limit. The caller should specify 0, unless
-     *                  CACHE_STORAGE_CAP_MAX_COUNT is returned at initialization.
-     * @param max_count The maximum size of the storage may may occupy, before it
-     *                  should evict some items. A value if 0 means that there is
-     *                  no limit. The caller should specify 0, unless
-     *                  CACHE_STORAGE_CAP_MAX_SIZE is returned at initialization.
+     * @param config    The storage configuration.
      * @param argc      The number of elements in the argv array.
      * @param argv      Array of arguments, as passed in the `storage_options`
      *                  parameter in the cache section in the MaxScale configuration
@@ -136,11 +154,8 @@ typedef struct cache_storage_api
      * @return A new cache instance, or NULL if the instance could not be
      *         created.
      */
-    CACHE_STORAGE* (*createInstance)(cache_thread_model_t model,
-                                     const char *name,
-                                     uint32_t ttl,
-                                     uint32_t max_count,
-                                     uint64_t max_size,
+    CACHE_STORAGE* (*createInstance)(const char *name,
+                                     const CACHE_STORAGE_CONFIG* config,
                                      int argc, char* argv[]);
 
     /**
@@ -161,6 +176,15 @@ typedef struct cache_storage_api
      * @param instance The CACHE_STORAGE instance to be freed.
      */
     void (*freeInstance)(CACHE_STORAGE* instance);
+
+    /**
+     * Returns the configuration the storage was created with.
+     *
+     * @param storage  Pointer to a CACHE_STORAGE
+     * @param config   Pointer to variable that will be updated with the config.
+     */
+    void (*getConfig)(CACHE_STORAGE* storage,
+                      CACHE_STORAGE_CONFIG* config);
 
     /**
      * Returns information about the storage.

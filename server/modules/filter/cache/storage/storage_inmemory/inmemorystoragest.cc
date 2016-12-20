@@ -16,8 +16,9 @@
 
 using std::auto_ptr;
 
-InMemoryStorageST::InMemoryStorageST(const std::string& name, uint32_t ttl)
-    : InMemoryStorage(name, ttl)
+InMemoryStorageST::InMemoryStorageST(const std::string& name,
+                                     const CACHE_STORAGE_CONFIG& config)
+    : InMemoryStorage(name, config)
 {
 }
 
@@ -27,10 +28,10 @@ InMemoryStorageST::~InMemoryStorageST()
 
 // static
 auto_ptr<InMemoryStorageST> InMemoryStorageST::create(const std::string& name,
-                                                      uint32_t ttl,
+                                                      const CACHE_STORAGE_CONFIG& config,
                                                       int argc, char* argv[])
 {
-    return auto_ptr<InMemoryStorageST>(new InMemoryStorageST(name, ttl));
+    return auto_ptr<InMemoryStorageST>(new InMemoryStorageST(name, config));
 }
 
 cache_result_t InMemoryStorageST::get_info(uint32_t what, json_t** ppinfo) const

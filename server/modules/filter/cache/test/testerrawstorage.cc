@@ -25,12 +25,9 @@ int TesterRawStorage::execute(size_t n_threads, size_t n_seconds, const CacheIte
 {
     int rv = EXIT_FAILURE;
 
-    Storage* pStorage = m_factory.createRawStorage(CACHE_THREAD_MODEL_MT,
-                                                   "unspecified",
-                                                   0, // No TTL
-                                                   0, // No max count
-                                                   0, // No max size
-                                                   0, NULL);
+    CacheStorageConfig config(CACHE_THREAD_MODEL_MT);
+
+    Storage* pStorage = m_factory.createRawStorage("unspecified", config);
 
     if (pStorage)
     {

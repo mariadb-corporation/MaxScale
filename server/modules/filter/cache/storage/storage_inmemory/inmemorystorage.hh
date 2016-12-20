@@ -26,6 +26,7 @@ public:
 
     static cache_result_t get_key(const char* zdefault_db, const GWBUF* pquery, CACHE_KEY* pkey);
 
+    void get_config(CACHE_STORAGE_CONFIG* pConfig);
     virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
     virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult) = 0;
     virtual cache_result_t put_value(const CACHE_KEY& key, const GWBUF* pvalue) = 0;
@@ -37,7 +38,8 @@ public:
     cache_result_t get_items(uint64_t* pItems) const;
 
 protected:
-    InMemoryStorage(const std::string& name, uint32_t ttl);
+    InMemoryStorage(const std::string& name,
+                    const CACHE_STORAGE_CONFIG& config);
 
     cache_result_t do_get_info(uint32_t what, json_t** ppInfo) const;
     cache_result_t do_get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppresult);
@@ -84,8 +86,8 @@ private:
 
     typedef std::tr1::unordered_map<CACHE_KEY, Entry> Entries;
 
-    std::string name_;
-    uint32_t    ttl_;
-    Entries     entries_;
-    Stats       stats_;
+    std::string                name_;
+    const CACHE_STORAGE_CONFIG config_;
+    Entries                    entries_;
+    Stats                      stats_;
 };

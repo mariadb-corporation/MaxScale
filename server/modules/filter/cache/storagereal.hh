@@ -20,6 +20,8 @@ class StorageReal : public Storage
 public:
     ~StorageReal();
 
+    void get_config(CACHE_STORAGE_CONFIG* pConfig);
+    
     cache_result_t get_info(uint32_t flags,
                             json_t** ppInfo) const;
 

@@ -26,6 +26,13 @@ public:
     virtual ~Storage();
 
     /**
+     * Returns the configuration the storage was created with.
+     *
+     * @param pConfig  Pointer to object that will be updated.
+     */
+    virtual void get_config(CACHE_STORAGE_CONFIG* pConfig) = 0;
+
+    /**
      * Returns information about the storage.
      *
      * @param what  Bitmask of cache_storage_info_t values.

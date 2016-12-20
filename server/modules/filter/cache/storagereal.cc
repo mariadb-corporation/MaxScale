@@ -28,6 +28,11 @@ StorageReal::~StorageReal()
     m_pApi->freeInstance(m_pStorage);
 }
 
+void StorageReal::get_config(CACHE_STORAGE_CONFIG* pConfig)
+{
+    m_pApi->getConfig(m_pStorage, pConfig);
+}
+
 cache_result_t StorageReal::get_info(uint32_t flags, json_t** ppInfo) const
 {
     return m_pApi->getInfo(m_pStorage, flags, ppInfo);

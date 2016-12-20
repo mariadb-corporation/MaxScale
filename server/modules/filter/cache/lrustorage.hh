@@ -24,6 +24,11 @@ public:
     ~LRUStorage();
 
     /**
+     * @see Storage::get_config
+     */
+    void get_config(CACHE_STORAGE_CONFIG* pConfig);
+
+    /**
      * @see Storage::get_key
      */
     cache_result_t get_key(const char* zDefaultDb,
@@ -31,7 +36,7 @@ public:
                            CACHE_KEY* pKey) const;
 
 protected:
-    LRUStorage(Storage* pstorage, uint64_t max_count, uint64_t max_size);
+    LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
 
     /**
      * @see Storage::get_info
@@ -234,11 +239,12 @@ private:
         uint64_t evictions;  /*< How many times an item has been evicted from the cache. */
     };
 
-    Storage*           pstorage_;     /*< The actual storage. */
-    uint64_t           max_count_;    /*< The maximum number of items in the LRU list, */
-    uint64_t           max_size_;     /*< The maximum size of all cached items. */
-    mutable Stats      stats_;        /*< Cache statistics. */
-    mutable NodesByKey nodes_by_key_; /*< Mapping from cache keys to corresponding Node. */
-    mutable Node*      phead_;        /*< The node at the LRU list. */
-    mutable Node*      ptail_;        /*< The node at bottom of the LRU list.*/
+    const CACHE_STORAGE_CONFIG config_;       /*< The configuration. */
+    Storage*                   pstorage_;     /*< The actual storage. */
+    const uint64_t             max_count_;    /*< The maximum number of items in the LRU list, */
+    const uint64_t             max_size_;     /*< The maximum size of all cached items. */
+    mutable Stats              stats_;        /*< Cache statistics. */
+    mutable NodesByKey         nodes_by_key_; /*< Mapping from cache keys to corresponding Node. */
+    mutable Node*              phead_;        /*< The node at the LRU list. */
+    mutable Node*              ptail_;        /*< The node at bottom of the LRU list.*/
 };

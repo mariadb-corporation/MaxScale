@@ -31,40 +31,38 @@ bool initialize(uint32_t* pcapabilities)
     return true;
 }
 
-CACHE_STORAGE* createInstance(cache_thread_model_t model,
-                              const char* zname,
-                              uint32_t ttl,
-                              uint32_t max_count,
-                              uint64_t max_size,
+CACHE_STORAGE* createInstance(const char* zname,
+                              const CACHE_STORAGE_CONFIG* pConfig,
                               int argc, char* argv[])
 {
     ss_dassert(zname);
 
-    if (max_count != 0)
+    if (pConfig->max_count != 0)
     {
         MXS_WARNING("A maximum item count of %u specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", (unsigned int)max_count);
+                    "does not enforce such a limit.", (unsigned int)pConfig->max_count);
     }
 
-    if (max_size != 0)
+    if (pConfig->max_size != 0)
     {
         MXS_WARNING("A maximum size of %lu specified, although 'storage_inMemory' "
-                    "does not enforce such a limit.", (unsigned long)max_size);
+                    "does not enforce such a limit.", (unsigned long)pConfig->max_size);
     }
 
     auto_ptr<InMemoryStorage> sStorage;
 
-    switch (model)
+    switch (pConfig->thread_model)
     {
     case CACHE_THREAD_MODEL_ST:
-        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageST::create(zname, ttl, argc, argv));
+        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageST::create(zname, *pConfig, argc, argv));
         break;
 
     default:
         ss_dassert(!true);
-        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.", (int)model);
+        MXS_ERROR("Unknown thread model %d, creating multi-thread aware storage.",
+                  (int)pConfig->thread_model);
     case CACHE_THREAD_MODEL_MT:
-        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageMT::create(zname, ttl, argc, argv));
+        MXS_EXCEPTION_GUARD(sStorage = InMemoryStorageMT::create(zname, *pConfig, argc, argv));
         break;
     }
 
@@ -94,6 +92,15 @@ cache_result_t getKey(const char* zdefault_db,
 void freeInstance(CACHE_STORAGE* pinstance)
 {
     MXS_EXCEPTION_GUARD(delete reinterpret_cast<InMemoryStorage*>(pinstance));
+}
+
+void getConfig(CACHE_STORAGE* pStorage,
+               CACHE_STORAGE_CONFIG* pConfig)
+{
+    ss_dassert(pStorage);
+    ss_dassert(pConfig);
+
+    MXS_EXCEPTION_GUARD(reinterpret_cast<InMemoryStorage*>(pStorage)->get_config(pConfig));
 }
 
 cache_result_t getInfo(CACHE_STORAGE* pStorage,
@@ -219,6 +226,7 @@ CACHE_STORAGE_API* CacheGetStorageAPI()
             createInstance,
             getKey,
             freeInstance,
+            getConfig,
             getInfo,
             getValue,
             putValue,

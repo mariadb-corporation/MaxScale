@@ -84,16 +84,15 @@ CacheMT* CacheMT::Create(const std::string&  name,
 {
     CacheMT* pCache = NULL;
 
-    uint32_t ttl = pConfig->ttl;
-    uint32_t maxCount = pConfig->max_count;
-    uint32_t maxSize = pConfig->max_size;
+    CacheStorageConfig storage_config(CACHE_THREAD_MODEL_MT,
+                                      pConfig->ttl,
+                                      pConfig->max_count,
+                                      pConfig->max_size);
 
     int argc = pConfig->storage_argc;
     char** argv = pConfig->storage_argv;
 
-    Storage* pStorage = sFactory->createStorage(CACHE_THREAD_MODEL_MT, name.c_str(),
-                                                ttl, maxCount, maxSize,
-                                                argc, argv);
+    Storage* pStorage = sFactory->createStorage(name.c_str(), storage_config, argc, argv);
 
     if (pStorage)
     {

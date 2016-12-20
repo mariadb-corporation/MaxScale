@@ -146,19 +146,14 @@ StorageFactory* StorageFactory::Open(const char* zName)
     return pFactory;
 }
 
-Storage* StorageFactory::createStorage(cache_thread_model_t model,
-                                       const char* zName,
-                                       uint32_t ttl,
-                                       uint64_t max_count,
-                                       uint64_t max_size,
+Storage* StorageFactory::createStorage(const char* zName,
+                                       const CACHE_STORAGE_CONFIG& config,
                                        int argc, char* argv[])
 {
     ss_dassert(m_handle);
     ss_dassert(m_pApi);
 
-    cache_thread_model_t used_model;
-    uint64_t used_max_count;
-    uint64_t used_max_size;
+    CacheStorageConfig used_config(config);
 
     uint32_t mask = CACHE_STORAGE_CAP_MAX_COUNT | CACHE_STORAGE_CAP_MAX_SIZE;
 
@@ -167,19 +162,12 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
         // Since we will wrap the native storage with a LRUStorage, according
         // to the used threading model, the storage itself may be single
         // threaded. No point in locking twice.
-        used_model = CACHE_THREAD_MODEL_ST;
-        used_max_count = 0;
-        used_max_size = 0;
-    }
-    else
-    {
-        used_model = model;
-        used_max_count = max_count;
-        used_max_size = max_size;
+        used_config.thread_model = CACHE_THREAD_MODEL_ST;
+        used_config.max_count = 0;
+        used_config.max_size = 0;
     }
 
-    Storage* pStorage = createRawStorage(used_model, zName, ttl, used_max_count, used_max_size,
-                                         argc, argv);
+    Storage* pStorage = createRawStorage(zName, config, argc, argv);
 
     if (pStorage)
     {
@@ -190,15 +178,15 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
 
             LRUStorage *pLruStorage = NULL;
 
-            if (model == CACHE_THREAD_MODEL_ST)
+            if (config.thread_model == CACHE_THREAD_MODEL_ST)
             {
-                pLruStorage = LRUStorageST::create(pStorage, max_count, max_size);
+                pLruStorage = LRUStorageST::create(config, pStorage);
             }
             else
             {
-                ss_dassert(model == CACHE_THREAD_MODEL_MT);
+                ss_dassert(config.thread_model == CACHE_THREAD_MODEL_MT);
 
-                pLruStorage = LRUStorageMT::create(pStorage, max_count, max_size);
+                pLruStorage = LRUStorageMT::create(config, pStorage);
             }
 
             if (pLruStorage)
@@ -217,11 +205,8 @@ Storage* StorageFactory::createStorage(cache_thread_model_t model,
 }
 
 
-Storage* StorageFactory::createRawStorage(cache_thread_model_t model,
-                                          const char* zName,
-                                          uint32_t ttl,
-                                          uint64_t max_count,
-                                          uint64_t max_size,
+Storage* StorageFactory::createRawStorage(const char* zName,
+                                          const CACHE_STORAGE_CONFIG& config,
                                           int argc, char* argv[])
 {
     ss_dassert(m_handle);
@@ -229,7 +214,7 @@ Storage* StorageFactory::createRawStorage(cache_thread_model_t model,
 
     Storage* pStorage = 0;
 
-    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(model, zName, ttl, max_count, max_size, argc, argv);
+    CACHE_STORAGE* pRawStorage = m_pApi->createInstance(zName, &config, argc, argv);
 
     if (pRawStorage)
     {

@@ -35,10 +35,9 @@ const size_t INMEMORY_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 
 }
 
-InMemoryStorage::InMemoryStorage(const string& name,
-                                 uint32_t ttl)
+InMemoryStorage::InMemoryStorage(const string& name, const CACHE_STORAGE_CONFIG& config)
     : name_(name)
-    , ttl_(ttl)
+    , config_(config)
 {
 }
 
@@ -108,6 +107,11 @@ cache_result_t InMemoryStorage::get_key(const char* zdefault_db, const GWBUF* pq
     return CACHE_RESULT_OK;
 }
 
+void InMemoryStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
+{
+    *pConfig = config_;
+}
+
 cache_result_t InMemoryStorage::get_head(CACHE_KEY* pKey, GWBUF** ppHead) const
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
@@ -154,7 +158,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
 
         uint32_t now = time(NULL);
 
-        bool is_stale = ttl_ == 0 ? false : (now - entry.time > ttl_);
+        bool is_stale = config_.ttl == 0 ? false : (now - entry.time > config_.ttl);
 
         if (!is_stale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
         {

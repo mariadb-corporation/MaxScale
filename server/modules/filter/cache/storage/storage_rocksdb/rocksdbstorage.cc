@@ -193,14 +193,14 @@ bool deletePath(const string& path)
 rocksdb::WriteOptions RocksDBStorage::s_writeOptions;
 
 //private
-RocksDBStorage::RocksDBStorage(unique_ptr<rocksdb::DBWithTTL>& sDb,
-                               const string& name,
+RocksDBStorage::RocksDBStorage(const string& name,
+                               const CACHE_STORAGE_CONFIG& config,
                                const string& path,
-                               uint32_t ttl)
-    : m_sDb(std::move(sDb))
-    , m_name(name)
+                               unique_ptr<rocksdb::DBWithTTL>& sDb)
+    : m_name(name)
+    , m_config(config)
     , m_path(path)
-    , m_ttl(ttl)
+    , m_sDb(std::move(sDb))
 {
 }
 
@@ -224,7 +224,7 @@ bool RocksDBStorage::Initialize()
 
 //static
 unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
-                                                  uint32_t ttl,
+                                                  const CACHE_STORAGE_CONFIG& config,
                                                   int argc, char* argv[])
 {
     ss_dassert(zName);
@@ -276,13 +276,13 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
 
     storageDirectory += "/storage_rocksdb";
 
-    return Create(storageDirectory, zName, ttl, collectStatistics);
+    return Create(zName, config, storageDirectory, collectStatistics);
 }
 
 // static
-unique_ptr<RocksDBStorage> RocksDBStorage::Create(const string& storageDirectory,
-                                                  const char* zName,
-                                                  uint32_t ttl,
+unique_ptr<RocksDBStorage> RocksDBStorage::Create(const char* zName,
+                                                  const CACHE_STORAGE_CONFIG& config,
+                                                  const string& storageDirectory,
                                                   bool collectStatistics)
 {
     unique_ptr<RocksDBStorage> sStorage;
@@ -321,7 +321,7 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const string& storageDirectory
             rocksdb::Status status;
             rocksdb::Slice key(STORAGE_ROCKSDB_VERSION_KEY);
 
-            status = rocksdb::DBWithTTL::Open(options, path, &pDb, ttl);
+            status = rocksdb::DBWithTTL::Open(options, path, &pDb, config.ttl);
 
             if (status.ok())
             {
@@ -343,7 +343,7 @@ unique_ptr<RocksDBStorage> RocksDBStorage::Create(const string& storageDirectory
 
                 unique_ptr<rocksdb::DBWithTTL> sDb(pDb);
 
-                sStorage = unique_ptr<RocksDBStorage>(new RocksDBStorage(sDb, zName, path, ttl));
+                sStorage = unique_ptr<RocksDBStorage>(new RocksDBStorage(zName, config, path, sDb));
             }
             else
             {
@@ -420,6 +420,11 @@ cache_result_t RocksDBStorage::GetKey(const char* zDefaultDB, const GWBUF* pQuer
     return CACHE_RESULT_OK;
 }
 
+void RocksDBStorage::getConfig(CACHE_STORAGE_CONFIG* pConfig)
+{
+    *pConfig = m_config;
+}
+
 cache_result_t RocksDBStorage::getInfo(uint32_t what, json_t** ppInfo) const
 {
     json_t* pInfo = json_object();
@@ -461,7 +466,7 @@ cache_result_t RocksDBStorage::getValue(const CACHE_KEY* pKey, uint32_t flags, G
     case rocksdb::Status::kOk:
         if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            bool isStale = RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default());
+            bool isStale = RocksDBInternals::IsStale(value, m_config.ttl, rocksdb::Env::Default());
 
             if (!isStale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
             {
