@@ -65,11 +65,10 @@ public:
      * @param ppValue  Pointer to variable that after a successful return will
      *                 point to a GWBUF.
      *
-     * @return CACHE_RESULT_OK if item was found,
-     *         CACHE_RESULT_STALE if CACHE_FLAGS_INCLUDE_STALE was specified in
-     *         flags and the item was found but stale,
-     *         CACHE_RESULT_NOT_FOUND if item was not found (which may be because
-     *         the ttl was reached), or some other error code.
+     * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
+     *         item was not found or some other error code. In the OK an NOT_FOUND
+     *         cased, the bit CACHE_RESULT_STALE is set if the item exists but the
+     *         soft TTL has passed.
      */
     virtual cache_result_t get_value(const CACHE_KEY& key,
                                      uint32_t flags,

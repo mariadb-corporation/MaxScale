@@ -464,9 +464,10 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
     case rocksdb::Status::kOk:
         if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            bool isStale = RocksDBInternals::IsStale(value, m_config.ttl, rocksdb::Env::Default());
+            bool is_stale = RocksDBInternals::IsStale(value, m_config.ttl, rocksdb::Env::Default());
+            bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
 
-            if (!isStale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
+            if (!is_stale || include_stale)
             {
                 size_t length = value.length() - RocksDBInternals::TS_LENGTH;
 
@@ -476,20 +477,18 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
                 {
                     memcpy(GWBUF_DATA(*ppResult), value.data(), length);
 
-                    if (isStale)
+                    result = CACHE_RESULT_OK;
+
+                    if (is_stale)
                     {
-                        result = CACHE_RESULT_STALE;
-                    }
-                    else
-                    {
-                        result = CACHE_RESULT_OK;
+                        result |= CACHE_RESULT_STALE;
                     }
                 }
             }
             else
             {
-                MXS_NOTICE("Cache item is stale, not using.");
-                result = CACHE_RESULT_NOT_FOUND;
+                ss_dassert(is_stale);
+                result = (CACHE_RESULT_NOT_FOUND | CACHE_RESULT_STALE);
             }
         }
         else

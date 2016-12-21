@@ -148,9 +148,9 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                             GWBUF* pResponse;
                             cache_result_t result = get_cached_response(pPacket, &pResponse);
 
-                            switch (result)
+                            if (CACHE_RESULT_IS_OK(result))
                             {
-                            case CACHE_RESULT_STALE:
+                                if (CACHE_RESULT_IS_STALE(result))
                                 {
                                     // The value was found, but it was stale. Now we need to
                                     // figure out whether somebody else is already fetching it.
@@ -179,17 +179,17 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                                         fetch_from_server = false;
                                     }
                                 }
-                                break;
-
-                            case CACHE_RESULT_OK:
-                                if (log_decisions())
+                                else
                                 {
-                                    MXS_NOTICE("Using fresh data from cache.");
+                                    if (log_decisions())
+                                    {
+                                        MXS_NOTICE("Using fresh data from cache.");
+                                    }
+                                    fetch_from_server = false;
                                 }
-                                fetch_from_server = false;
-                                break;
-
-                            default:
+                            }
+                            else
+                            {
                                 fetch_from_server = true;
                             }
 
@@ -616,7 +616,7 @@ cache_result_t CacheFilterSession::get_cached_response(const GWBUF *pQuery, GWBU
 {
     cache_result_t result = m_pCache->get_key(m_zDefaultDb, pQuery, &m_key);
 
-    if (result == CACHE_RESULT_OK)
+    if (CACHE_RESULT_IS_OK(result))
     {
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
 
@@ -647,13 +647,13 @@ void CacheFilterSession::store_result()
 
         cache_result_t result = m_pCache->put_value(m_key, m_res.pData);
 
-        if (result != CACHE_RESULT_OK)
+        if (!CACHE_RESULT_IS_OK(result))
         {
             MXS_ERROR("Could not store cache item, deleting it.");
 
             result = m_pCache->del_value(m_key);
 
-            if ((result != CACHE_RESULT_OK) || (result != CACHE_RESULT_NOT_FOUND))
+            if (!CACHE_RESULT_IS_OK(result) || !CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 MXS_ERROR("Could not delete cache item.");
             }

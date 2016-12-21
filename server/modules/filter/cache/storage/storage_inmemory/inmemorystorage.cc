@@ -209,8 +209,9 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
         uint32_t now = time(NULL);
 
         bool is_stale = m_config.ttl == 0 ? false : (now - entry.time > m_config.ttl);
+        bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
 
-        if (!is_stale || ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0))
+        if (!is_stale || include_stale)
         {
             size_t length = entry.value.size();
 
@@ -220,13 +221,11 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
             {
                 memcpy(GWBUF_DATA(*ppResult), entry.value.data(), length);
 
+                result = CACHE_RESULT_OK;
+
                 if (is_stale)
                 {
-                    result = CACHE_RESULT_STALE;
-                }
-                else
-                {
-                    result = CACHE_RESULT_OK;
+                    result |= CACHE_RESULT_STALE;
                 }
             }
             else
@@ -236,7 +235,8 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
         }
         else
         {
-            MXS_NOTICE("Cache item is stale, not using.");
+            ss_dassert(is_stale);
+            result |= CACHE_RESULT_STALE;
         }
     }
     else

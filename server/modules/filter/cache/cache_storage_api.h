@@ -22,14 +22,23 @@
 
 MXS_BEGIN_DECLS
 
-typedef enum cache_result
+typedef enum cache_result_bits
 {
-    CACHE_RESULT_OK,
-    CACHE_RESULT_NOT_FOUND,
-    CACHE_RESULT_STALE,
-    CACHE_RESULT_OUT_OF_RESOURCES,
-    CACHE_RESULT_ERROR
-} cache_result_t;
+    CACHE_RESULT_OK               = 0x01,
+    CACHE_RESULT_NOT_FOUND        = 0x02,
+    CACHE_RESULT_ERROR            = 0x03,
+    CACHE_RESULT_OUT_OF_RESOURCES = 0x04,
+
+    CACHE_RESULT_STALE            = 0x10000 /*< Possibly combined with OK and NOT_FOUND. */
+} cache_result_bits_t;
+
+typedef uint32_t cache_result_t;
+
+#define CACHE_RESULT_IS_OK(result)               (result & CACHE_RESULT_OK)
+#define CACHE_RESULT_IS_NOT_FOUND(result)        (result & CACHE_RESULT_NOT_FOUND)
+#define CACHE_RESULT_IS_ERROR(result)            (result & CACHE_RESULT_ERROR)
+#define CACHE_RESULT_IS_OUT_OF_RESOURCES(result) (result & CACHE_RESULT_OUT_OF_RESOURCES)
+#define CACHE_RESULT_IS_STALE(result)            (result & CACHE_RESULT_STALE)
 
 typedef enum cache_flags
 {
@@ -209,11 +218,10 @@ typedef struct cache_storage_api
      * @param result     Pointer to variable that after a successful return will
      *                   point to a GWBUF.
      *
-     * @return CACHE_RESULT_OK if item was found,
-     *         CACHE_RESULT_STALE if CACHE_FLAGS_INCLUDE_STALE was specified in
-     *         flags and the item was found but stale,
-     *         CACHE_RESULT_NOT_FOUND if item was not found (which may be because
-     *         the ttl was reached), or some other error code.
+     * @return CACHE_RESULT_OK if item was found, CACHE_RESULT_NOT_FOUND if
+     *         item was not found or some other error code. In the OK an NOT_FOUND
+     *         cased, the bit CACHE_RESULT_STALE is set if the item exists but the
+     *         soft TTL has passed.
      */
     cache_result_t (*getValue)(CACHE_STORAGE* storage,
                                const CACHE_KEY* key,

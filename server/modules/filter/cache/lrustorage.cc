@@ -67,7 +67,9 @@ cache_result_t LRUStorage::do_get_info(uint32_t what,
 
         json_t* pstorage_info;
 
-        if (pstorage_->get_info(what, &pstorage_info) == CACHE_RESULT_OK)
+        cache_result_t result = pstorage_->get_info(what, &pstorage_info);
+
+        if (CACHE_RESULT_IS_OK(result))
         {
             json_object_set(*ppinfo, "real_storage", pstorage_info);
             json_decref(pstorage_info);
@@ -104,13 +106,13 @@ cache_result_t LRUStorage::do_put_value(const CACHE_KEY& key, const GWBUF* pvalu
         result = get_new_node(key, pvalue, &i, &pnode);
     }
 
-    if (result == CACHE_RESULT_OK)
+    if (CACHE_RESULT_IS_OK(result))
     {
         ss_dassert(pnode);
 
         result = pstorage_->put_value(key, pvalue);
 
-        if (result == CACHE_RESULT_OK)
+        if (CACHE_RESULT_IS_OK(result))
         {
             if (existed)
             {
@@ -149,7 +151,7 @@ cache_result_t LRUStorage::do_del_value(const CACHE_KEY& key)
     {
         result = pstorage_->del_value(key);
 
-        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_NOT_FOUND))
+        if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
         {
             // If it wasn't found, we'll assume it was because ttl has hit in.
             ++stats_.deletes;
@@ -173,13 +175,13 @@ cache_result_t LRUStorage::do_get_head(CACHE_KEY* pKey, GWBUF** ppValue) const
 
     // Since it's the head it's unlikely to have happened, but we need to loop to
     // cater for the case that ttl has hit in.
-    while (phead_ && (result == CACHE_RESULT_NOT_FOUND))
+    while (phead_ && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
         ss_dassert(phead_->key());
         result = do_get_value(*phead_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
     }
 
-    if (result == CACHE_RESULT_OK)
+    if (CACHE_RESULT_IS_OK(result))
     {
         *pKey = *phead_->key();
     }
@@ -192,13 +194,13 @@ cache_result_t LRUStorage::do_get_tail(CACHE_KEY* pKey, GWBUF** ppValue) const
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
     // We need to loop to cater for the case that ttl has hit in.
-    while (ptail_ && (result == CACHE_RESULT_NOT_FOUND))
+    while (ptail_ && CACHE_RESULT_IS_NOT_FOUND(result))
     {
         ss_dassert(ptail_->key());
         result = peek_value(*ptail_->key(), CACHE_FLAGS_INCLUDE_STALE, ppValue);
     }
 
-    if (result == CACHE_RESULT_OK)
+    if (CACHE_RESULT_IS_OK(result))
     {
         *pKey = *ptail_->key();
     }
@@ -232,7 +234,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
     {
         result = pstorage_->get_value(key, flags, ppvalue);
 
-        if ((result == CACHE_RESULT_OK) || (result == CACHE_RESULT_STALE))
+        if (CACHE_RESULT_IS_OK(result))
         {
             ++stats_.hits;
 
@@ -241,13 +243,15 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
                 move_to_head(i->second);
             }
         }
-        else if (result == CACHE_RESULT_NOT_FOUND)
+        else if (CACHE_RESULT_IS_NOT_FOUND(result))
         {
             ++stats_.misses;
 
-            // We'll assume this is because ttl has hit in. We need to remove
-            // the node and the mapping.
-            free_node(i);
+            if (!CACHE_RESULT_IS_STALE(result))
+            {
+                // If it wasn't just stale we'll remove it.
+                free_node(i);
+            }
         }
     }
     else
@@ -348,12 +352,14 @@ bool LRUStorage::free_node_data(Node* pnode)
 
     cache_result_t result = pstorage_->del_value(*pkey);
 
-    switch (result)
+    if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
     {
-    case CACHE_RESULT_NOT_FOUND:
-        ss_dassert(!true);
-        MXS_ERROR("Item in LRU list was not found in storage.");
-    case CACHE_RESULT_OK:
+        if (CACHE_RESULT_IS_NOT_FOUND(result))
+        {
+            ss_dassert(!true);
+            MXS_ERROR("Item in LRU list was not found in storage.");
+        }
+
         if (i != nodes_by_key_.end())
         {
             nodes_by_key_.erase(i);
@@ -365,9 +371,9 @@ bool LRUStorage::free_node_data(Node* pnode)
         stats_.size -= pnode->size();
         stats_.items -= 1;
         stats_.evictions += 1;
-        break;
-
-    default:
+    }
+    else
+    {
         ss_dassert(!true);
         MXS_ERROR("Could not remove value from storage, cannot "
                   "remove from LRU list or key mapping either.");
@@ -472,8 +478,9 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
 
         result = do_del_value(*pkey);
 
-        if (result != CACHE_RESULT_ERROR)
+        if (!CACHE_RESULT_IS_ERROR(result))
         {
+            // If we failed to remove the value, we do not have enough space.
             result = CACHE_RESULT_OUT_OF_RESOURCES;
         }
     }
@@ -573,7 +580,7 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
         }
     }
 
-    if (result == CACHE_RESULT_OK)
+    if (CACHE_RESULT_IS_OK(result))
     {
         ss_dassert(pnode);
         *ppnode = pnode;

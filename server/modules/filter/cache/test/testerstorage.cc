@@ -59,7 +59,7 @@ int TesterStorage::HitTask::run()
         case STORAGE_PUT:
             {
                 cache_result_t result = m_storage.put_value(cache_item.first, cache_item.second);
-                if (result == CACHE_RESULT_OK)
+                if (CACHE_RESULT_IS_OK(result))
                 {
                     ++m_puts;
                 }
@@ -76,7 +76,7 @@ int TesterStorage::HitTask::run()
                 GWBUF* pQuery;
                 cache_result_t result = m_storage.get_value(cache_item.first, 0, &pQuery);
 
-                if (result == CACHE_RESULT_OK)
+                if (CACHE_RESULT_IS_OK(result))
                 {
                     ss_dassert(GWBUF_LENGTH(pQuery) == GWBUF_LENGTH(cache_item.second));
                     ss_dassert(memcmp(GWBUF_DATA(pQuery), GWBUF_DATA(cache_item.second),
@@ -85,7 +85,7 @@ int TesterStorage::HitTask::run()
                     gwbuf_free(pQuery);
                     ++m_gets;
                 }
-                else if (result == CACHE_RESULT_NOT_FOUND)
+                else if (CACHE_RESULT_IS_NOT_FOUND(result))
                 {
                     ++m_misses;
                 }
@@ -101,11 +101,11 @@ int TesterStorage::HitTask::run()
             {
                 cache_result_t result = m_storage.del_value(cache_item.first);
 
-                if (result == CACHE_RESULT_OK)
+                if (CACHE_RESULT_IS_OK(result))
                 {
                     ++m_dels;
                 }
-                else if (result == CACHE_RESULT_NOT_FOUND)
+                else if (CACHE_RESULT_IS_NOT_FOUND(result))
                 {
                     ++m_misses;
                 }
@@ -323,7 +323,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
 
         cache_result_t result = storage.put_value(cache_item.first, cache_item.second);
 
-        if (result != CACHE_RESULT_OK)
+        if (!CACHE_RESULT_IS_OK(result))
         {
             out() << "Could not put item." << endl;
             rv = EXIT_FAILURE;
@@ -337,7 +337,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
 
-            if (result != CACHE_RESULT_OK)
+            if (!CACHE_RESULT_IS_OK(result))
             {
                 out() << "Did not get value withing ttl." << endl;
                 rv = EXIT_FAILURE;
@@ -350,12 +350,12 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
 
-            if (result == CACHE_RESULT_OK)
+            if (CACHE_RESULT_IS_OK(result) && !CACHE_RESULT_IS_STALE(result))
             {
                 out() << "Got value normally when accepting stale, although ttl has passed." << endl;
                 rv = EXIT_FAILURE;
             }
-            else if (result != CACHE_RESULT_STALE)
+            else if (!CACHE_RESULT_IS_STALE(result))
             {
                 out() << "Did not get expected stale value after ttl." << endl;
                 rv = EXIT_FAILURE;
@@ -366,12 +366,12 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
 
-            if (result == CACHE_RESULT_OK)
+            if (CACHE_RESULT_IS_OK(result))
             {
                 out() << "Got value normally, although ttl has passed." << endl;
                 rv = EXIT_FAILURE;
             }
-            else if (result != CACHE_RESULT_NOT_FOUND)
+            else if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 out() << "Unexpected failure." << endl;
                 rv = EXIT_FAILURE;
