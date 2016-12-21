@@ -1313,7 +1313,7 @@ void server_set_status(SERVER *server, int bit)
      */
     MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
-    if (mon)
+    if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
         /* Set a pending status bit. It will be activated on the next monitor
          * loop. Also set a flag so the next loop happens sooner.
@@ -1340,7 +1340,7 @@ void server_clear_status(SERVER *server, int bit)
 {
     MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
-    if (mon)
+    if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
         /* Clear a pending status bit. It will be activated on the next monitor
          * loop. Also set a flag so the next loop happens sooner.
