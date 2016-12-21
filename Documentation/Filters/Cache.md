@@ -13,7 +13,8 @@ existing service.
 [Cache]
 type=filter
 module=cache
-ttl=5
+hard_ttl=30
+soft_ttl=20
 storage=...
 storage_options=...
 rules=...
@@ -59,6 +60,34 @@ depend upon the specific module. For instance,
 storage_options=storage_specific_option1=value1,storage_specific_option2=value2
 ```
 
+#### `hard_ttl`
+
+_Hard time to live_; the maximum amount of time - in seconds - the cached
+result is used before it is discarded and the result is fetched from the
+backend (and cached). See also `soft_ttl` below.
+
+```
+hard_ttl=60
+```
+The default value is `0`, which means no limit.
+
+#### `soft_ttl`
+
+_Soft time to live_; the amount of time - in seconds - the cached result is
+used before it is refreshed from the server. When `soft_ttl` has passed, the
+result will be refreshed when the _first_ client requests the value.
+
+However, as long as `hard_ttl` has not passed, _all_ other clients requesting
+the same value will use the result from the cache while it is being fetched
+from the backend. That is, as long as `soft_ttl` but not `hard_ttl` has passed,
+even if several clients request the same value at the same time, there will be
+just one request to the backend.
+```
+soft_ttl=60
+```
+The default value is `0`, which means no limit. If the value of `soft_ttl` is
+larger than `hard_ttl` it will be adjusted down to the same value.
+
 #### `max_resultset_rows`
 
 Specifies the maximum number of rows a resultset can have in order to be
@@ -75,16 +104,6 @@ in order to be stored in the cache. A resultset larger than this, will
 not be stored.
 ```
 max_resultset_size=128
-```
-The default value is `0`, which means no limit.
-
-#### `ttl`
-
-_Time to live_; the amount of time - in seconds - the cached result is used
-before it is refreshed from the server.
-
-```
-ttl=60
 ```
 The default value is `0`, which means no limit.
 

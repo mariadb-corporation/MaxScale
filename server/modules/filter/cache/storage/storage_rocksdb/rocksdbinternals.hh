@@ -32,6 +32,24 @@ namespace RocksDBInternals
  */
 static const uint32_t TS_LENGTH = sizeof(int32_t);
 
-bool IsStale(const rocksdb::Slice& slice, int32_t ttl, rocksdb::Env* pEnv);
+/**
+ * Check whether a value is stale or not.
+ *
+ * @param value A value with the timestamp at the end.
+ * @param ttl   The time-to-live in seconds.
+ * @param pEnv  The used RocksDB environment instance.
+ *
+ * @return True of the value is stale.
+ */
+bool is_stale(const rocksdb::Slice& slice, int32_t ttl, rocksdb::Env* pEnv);
+
+/**
+ * Extract the timestamp from a slice coming from a rocksdb::DBWithTTL.
+ *
+ * @param value  The slice whose timestamp should be extracted.
+ *
+ * @return The timestamp
+ */
+int32_t extract_timestamp(const rocksdb::Slice& value);
 
 }

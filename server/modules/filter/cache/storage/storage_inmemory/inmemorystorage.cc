@@ -208,10 +208,15 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
 
         uint32_t now = time(NULL);
 
-        bool is_stale = m_config.ttl == 0 ? false : (now - entry.time > m_config.ttl);
+        bool is_hard_stale = m_config.hard_ttl == 0 ? false : (now - entry.time > m_config.hard_ttl);
+        bool is_soft_stale = m_config.soft_ttl == 0 ? false : (now - entry.time > m_config.soft_ttl);
         bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
 
-        if (!is_stale || include_stale)
+        if (is_hard_stale)
+        {
+            m_entries.erase(i);
+        }
+        else if (!is_soft_stale || include_stale)
         {
             size_t length = entry.value.size();
 
@@ -223,7 +228,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
 
                 result = CACHE_RESULT_OK;
 
-                if (is_stale)
+                if (is_soft_stale)
                 {
                     result |= CACHE_RESULT_STALE;
                 }
@@ -235,7 +240,7 @@ cache_result_t InMemoryStorage::do_get_value(const CACHE_KEY& key, uint32_t flag
         }
         else
         {
-            ss_dassert(is_stale);
+            ss_dassert(is_soft_stale);
             result |= CACHE_RESULT_STALE;
         }
     }

@@ -85,7 +85,8 @@ CacheMT* CacheMT::Create(const std::string&  name,
     CacheMT* pCache = NULL;
 
     CacheStorageConfig storage_config(CACHE_THREAD_MODEL_MT,
-                                      pConfig->ttl,
+                                      pConfig->hard_ttl,
+                                      pConfig->soft_ttl,
                                       pConfig->max_count,
                                       pConfig->max_size);
 

@@ -31,12 +31,13 @@ static const CACHE_CONFIG DEFAULT_CONFIG =
 {
     CACHE_DEFAULT_MAX_RESULTSET_ROWS,
     CACHE_DEFAULT_MAX_RESULTSET_SIZE,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    0,
-    CACHE_DEFAULT_TTL,
+    NULL,                              // rules
+    NULL,                              // storage
+    NULL,                              // storage_options
+    NULL,                              // storage_argv
+    0,                                 // storage_argc
+    CACHE_DEFAULT_HARD_TTL,
+    CACHE_DEFAULT_SOFT_TTL,
     CACHE_DEFAULT_MAX_COUNT,
     CACHE_DEFAULT_MAX_SIZE,
     CACHE_DEFAULT_DEBUG,
@@ -62,7 +63,8 @@ void cache_config_finish(CACHE_CONFIG& config)
     config.storage_options = NULL;
     config.storage_argc = 0;
     config.storage_argv = NULL;
-    config.ttl = 0;
+    config.hard_ttl = 0;
+    config.soft_ttl = 0;
     config.debug = 0;
 }
 
@@ -403,9 +405,16 @@ bool CacheFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, 
                 error = true;
             }
         }
-        else if (strcmp(pParam->name, "ttl") == 0)
+        else if (strcmp(pParam->name, "hard_ttl") == 0)
         {
-            if (!config_get_uint32(*pParam, &config.ttl))
+            if (!config_get_uint32(*pParam, &config.hard_ttl))
+            {
+                error = true;
+            }
+        }
+        else if (strcmp(pParam->name, "soft_ttl") == 0)
+        {
+            if (!config_get_uint32(*pParam, &config.soft_ttl))
             {
                 error = true;
             }
@@ -470,6 +479,13 @@ bool CacheFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, 
 
     if (!error)
     {
+        if (config.soft_ttl > config.hard_ttl)
+        {
+            MXS_WARNING("The value of 'soft_ttl' must be less than or equal to that of 'hard_ttl'. "
+                        "Setting 'soft_ttl' to the same value as 'hard_ttl'.");
+            config.soft_ttl = config.hard_ttl;
+        }
+
         if (config.max_size < config.max_resultset_size)
         {
             MXS_ERROR("The value of 'max_size' must be at least as larged as that "

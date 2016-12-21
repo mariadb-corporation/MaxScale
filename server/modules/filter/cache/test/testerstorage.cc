@@ -274,7 +274,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "ST" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_ST;
-    config.ttl = 5;
+    config.hard_ttl = 6;
+    config.soft_ttl = 3;
 
     Storage* pStorage;
 
@@ -290,7 +291,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items)
     out() << "MT" << endl;
 
     config.thread_model = CACHE_THREAD_MODEL_MT;
-    config.ttl = 5;
+    config.hard_ttl = 6;
+    config.soft_ttl = 3;
 
     int rv2 = EXIT_FAILURE;
     pStorage = get_storage(config);
@@ -313,11 +315,18 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
     CacheStorageConfig config;
     storage.get_config(&config);
 
-    uint32_t ttl = config.ttl;
+    uint32_t hard_ttl = config.hard_ttl;
+    uint32_t soft_ttl = config.soft_ttl;
+    uint32_t diff = hard_ttl - soft_ttl;
 
-    if (ttl != 0)
+    if (diff != 0)
     {
         ss_dassert(cache_items.size() > 0);
+
+        out() << "Hard TTL: " << hard_ttl << endl;
+        out() << "Soft TTL: " << soft_ttl << endl;
+
+        uint32_t slept = 0;
 
         const CacheItems::value_type& cache_item = cache_items[0];
 
@@ -330,34 +339,59 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         }
         else
         {
-            sleep(ttl - 1);
+            // Let's stay just below the soft_ttl value.
+            sleep(soft_ttl - 1);
+            slept += soft_ttl - 1;
 
             GWBUF* pValue;
 
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
 
-            if (!CACHE_RESULT_IS_OK(result))
+            // We should get the item normally as we are below the soft ttl, i.e. no stale bit.
+            if (result != CACHE_RESULT_OK)
             {
-                out() << "Did not get value withing ttl." << endl;
+                out() << "Excpected to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
 
             gwbuf_free(pValue);
 
-            sleep(2); // Should get us past the ttl
+            sleep(2); // Expected to get us passed the soft ttl.
+            slept += 2;
+
+            pValue = NULL;
+            result = storage.get_value(cache_item.first, 0, &pValue);
+
+            // We should not get the item and the stale bit should be on.
+            if (!(CACHE_RESULT_IS_NOT_FOUND(result) && CACHE_RESULT_IS_STALE(result)))
+            {
+                out() << "Expected not to be found, and with stale bit." << endl;
+                rv = EXIT_FAILURE;
+            }
+
+            gwbuf_free(pValue);
 
             pValue = NULL;
             result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
 
-            if (CACHE_RESULT_IS_OK(result) && !CACHE_RESULT_IS_STALE(result))
+            if (!(CACHE_RESULT_IS_OK(result) && CACHE_RESULT_IS_STALE(result)))
             {
-                out() << "Got value normally when accepting stale, although ttl has passed." << endl;
+                out() << "Expected to be found, and with stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
-            else if (!CACHE_RESULT_IS_STALE(result))
+
+            gwbuf_free(pValue);
+
+            sleep(hard_ttl - slept + 1); // Expected to get us passed the hard ttl.
+            slept += hard_ttl - slept + 1;
+
+            pValue = NULL;
+            result = storage.get_value(cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+
+            if (result != CACHE_RESULT_NOT_FOUND)
             {
-                out() << "Did not get expected stale value after ttl." << endl;
+                out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
 
@@ -366,23 +400,19 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             pValue = NULL;
             result = storage.get_value(cache_item.first, 0, &pValue);
 
-            if (CACHE_RESULT_IS_OK(result))
+            if (result != CACHE_RESULT_NOT_FOUND)
             {
-                out() << "Got value normally, although ttl has passed." << endl;
+                out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
-            else if (!CACHE_RESULT_IS_NOT_FOUND(result))
-            {
-                out() << "Unexpected failure." << endl;
-                rv = EXIT_FAILURE;
-            }
+
 
             gwbuf_free(pValue);
         }
     }
     else
     {
-        out() << "No ttl, not testing." << endl;
+        out() << "No difference between soft and hard ttl, not testing." << endl;
     }
 
     return rv;

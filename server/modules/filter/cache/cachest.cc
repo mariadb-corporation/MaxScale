@@ -89,7 +89,8 @@ CacheST* CacheST::Create(const std::string&  name,
     CacheST* pCache = NULL;
 
     CacheStorageConfig storage_config(CACHE_THREAD_MODEL_ST,
-                                      pConfig->ttl,
+                                      pConfig->hard_ttl,
+                                      pConfig->soft_ttl,
                                       pConfig->max_count,
                                       pConfig->max_size);
 

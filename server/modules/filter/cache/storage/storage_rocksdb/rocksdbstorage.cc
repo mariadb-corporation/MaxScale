@@ -320,7 +320,7 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
             rocksdb::Status status;
             rocksdb::Slice key(STORAGE_ROCKSDB_VERSION_KEY);
 
-            status = rocksdb::DBWithTTL::Open(options, path, &pDb, config.ttl);
+            status = rocksdb::DBWithTTL::Open(options, path, &pDb, config.hard_ttl);
 
             if (status.ok())
             {
@@ -464,10 +464,32 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
     case rocksdb::Status::kOk:
         if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            bool is_stale = RocksDBInternals::IsStale(value, m_config.ttl, rocksdb::Env::Default());
+            rocksdb::Env* pEnv = rocksdb::Env::Default();
+            int64_t now;
+
+            if (!pEnv->GetCurrentTime(&now).ok())
+            {
+                ss_dassert(!true);
+                now = INT64_MAX;
+            }
+
+            int32_t timestamp = RocksDBInternals::extract_timestamp(value);
+
+            bool is_hard_stale = m_config.hard_ttl == 0 ? false : (now - timestamp > m_config.hard_ttl);
+            bool is_soft_stale = m_config.soft_ttl == 0 ? false : (now - timestamp > m_config.soft_ttl);
             bool include_stale = ((flags & CACHE_FLAGS_INCLUDE_STALE) != 0);
 
-            if (!is_stale || include_stale)
+            if (is_hard_stale)
+            {
+                status = m_sDb->Delete(Write_options(), rocksdb_key);
+
+                if (!status.ok())
+                {
+                    MXS_WARNING("Failed when deleting stale item from RocksDB.");
+                }
+                result = CACHE_RESULT_NOT_FOUND;
+            }
+            else if (!is_soft_stale || include_stale)
             {
                 size_t length = value.length() - RocksDBInternals::TS_LENGTH;
 
@@ -479,15 +501,19 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
 
                     result = CACHE_RESULT_OK;
 
-                    if (is_stale)
+                    if (is_soft_stale)
                     {
                         result |= CACHE_RESULT_STALE;
                     }
                 }
+                else
+                {
+                    result = CACHE_RESULT_OUT_OF_RESOURCES;
+                }
             }
             else
             {
-                ss_dassert(is_stale);
+                ss_dassert(is_soft_stale);
                 result = (CACHE_RESULT_NOT_FOUND | CACHE_RESULT_STALE);
             }
         }

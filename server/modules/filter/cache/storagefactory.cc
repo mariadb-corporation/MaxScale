@@ -167,7 +167,7 @@ Storage* StorageFactory::createStorage(const char* zName,
         used_config.max_size = 0;
     }
 
-    Storage* pStorage = createRawStorage(zName, config, argc, argv);
+    Storage* pStorage = createRawStorage(zName, used_config, argc, argv);
 
     if (pStorage)
     {

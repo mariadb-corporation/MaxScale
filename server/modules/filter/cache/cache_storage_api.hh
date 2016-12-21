@@ -72,20 +72,23 @@ class CacheStorageConfig : public CACHE_STORAGE_CONFIG
 {
 public:
     CacheStorageConfig(cache_thread_model_t thread_model,
-                       uint32_t ttl = 0,
+                       uint32_t hard_ttl = 0,
+                       uint32_t soft_ttl = 0,
                        uint32_t max_count = 0,
                        uint64_t max_size = 0)
     {
         this->thread_model = thread_model;
-        this->ttl = ttl;
+        this->hard_ttl = hard_ttl;
+        this->soft_ttl = soft_ttl;
         this->max_count = max_count;
-        this->max_size = max_count;
+        this->max_size = max_size;
     }
 
     CacheStorageConfig()
     {
         thread_model = CACHE_THREAD_MODEL_MT;
-        ttl = 0;
+        hard_ttl = 0;
+        soft_ttl = 0;
         max_count = 0;
         max_size = 0;
     }
@@ -93,7 +96,8 @@ public:
     CacheStorageConfig(const CACHE_STORAGE_CONFIG& config)
     {
         thread_model = config.thread_model;
-        ttl = config.ttl;
+        hard_ttl = config.hard_ttl;
+        soft_ttl = config.soft_ttl;
         max_count = config.max_count;
         max_size = config.max_size;
     }

@@ -114,11 +114,20 @@ typedef struct cache_storage_config_t
     cache_thread_model_t thread_model;
 
     /**
-     * Time to live; number of seconds the value is valid. A value of 0 means
+     * Hard Time-to-live; number of seconds the value is valid. A value of 0 means
      * that there is no time-to-live, but that the value is considered fresh
      * as long as it is available.
      */
-    uint32_t ttl;
+    uint32_t hard_ttl;
+
+    /**
+     * Soft Time-to-live; number of seconds the value is valid. A value of 0 means
+     * that there is no time-to-live, but that the value is considered fresh
+     * as long as it is available. When the soft TTL has passed, but the hard TTL
+     * has not yet been reached, the stale cached value will be returned, provided
+     * the flag @c CACHE_FLAGS_INCLUDE_STALE is specified when getting the value.
+     */
+    uint32_t soft_ttl;
 
     /**
      * The maximum number of items the storage may store, before it should
