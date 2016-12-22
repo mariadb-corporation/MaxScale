@@ -144,16 +144,10 @@ struct subcommand showoptions[] =
         {0}
     },
     {
-        "dcb", 1, 1, dprintDCB,
-        "Show a DCB",
-        "Show a single descriptor control block e.g. show dcb 0x493340",
-        {ARG_TYPE_DCB, 0, 0}
-    },
-    {
         "dbusers", 1, 1, dcb_usersPrint,
         "Show user statistics",
         "Show statistics and user names for a service's user table.\n"
-        "\t\tExample : show dbusers <ptr of 'User's data' from services list>|<service name>",
+        "\t\tExample : show dbusers <service name>",
         {ARG_TYPE_SERVICE, 0, 0}
     },
     {
@@ -219,7 +213,7 @@ struct subcommand showoptions[] =
     {
         "persistent", 1, 1, dprintPersistentDCBs,
         "Show persistent connection pool",
-        "Show persistent pool for a server, e.g. show persistent dbnode1. ",
+        "Show persistent pool for a server, e.g. show persistent dbnode1",
         {ARG_TYPE_SERVER, 0, 0}
     },
     {
@@ -255,7 +249,7 @@ struct subcommand showoptions[] =
     {
         "session", 1, 1, dprintSession,
         "Show session details",
-        "Show a single session in MaxScale, e.g. show session 0x284830",
+        "Show a single session in MaxScale, e.g. show session 5",
         {ARG_TYPE_SESSION, 0, 0}
     },
     {
@@ -1507,7 +1501,6 @@ static struct
     { NULL,         NULL    }
 };
 
-
 /**
  * Convert a string argument to a numeric, observing prefixes
  * for number bases, e.g. 0x for hex, 0 for octal
@@ -1518,83 +1511,66 @@ static struct
  * @return The argument as a long integer
  */
 static unsigned long
-convert_arg(int mode, char *arg, int arg_type)
+convert_arg(char *arg, int arg_type)
 {
-    unsigned long  rval;
-    SERVICE       *service;
+    unsigned long rval;
 
     switch (arg_type)
     {
         case ARG_TYPE_ADDRESS:
-            return (unsigned long)strtol(arg, NULL, 0);
+            rval = (unsigned long)strtol(arg, NULL, 0);
+            break;
+
         case ARG_TYPE_STRING:
-            return (unsigned long)arg;
+            rval = (unsigned long)arg;
+            break;
+
         case ARG_TYPE_SERVICE:
-            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-            {
-                rval = (unsigned long)service_find(arg);
-            }
-            return rval;
+            rval = (unsigned long)service_find(arg);
+            break;
+
         case ARG_TYPE_SERVER:
-            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-            {
-                rval = (unsigned long)server_find_by_unique_name(arg);
-            }
-            return rval;
-        case ARG_TYPE_DBUSERS:
-            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-            {
-                service = service_find(arg);
-                if (service)
-                {
-                    return (unsigned long)(service->ports->users);
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-            return rval;
-        case ARG_TYPE_DCB:
-            rval = (unsigned long)strtol(arg, NULL, 0);
-            if (mode == CLIM_USER && dcb_isvalid((DCB *)rval) == 0)
-            {
-                rval = 0;
-            }
-            return rval;
+            rval = (unsigned long)server_find_by_unique_name(arg);
+            break;
+
         case ARG_TYPE_SESSION:
-            rval = (unsigned long)strtol(arg, NULL, 0);
-            if (mode == CLIM_USER && session_isvalid((SESSION *)rval) == 0)
-            {
-                rval = 0;
-            }
-            return rval;
+            rval = (unsigned long)session_get_by_id(strtol(arg, NULL, 0));
+            break;
+
         case ARG_TYPE_MONITOR:
-            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-            {
-                rval = (unsigned long)monitor_find(arg);
-            }
-            return rval;
+            rval = (unsigned long)monitor_find(arg);
+            break;
+
         case ARG_TYPE_FILTER:
-            if (mode == CLIM_USER || (rval = (unsigned long)strtol(arg, NULL, 0)) == 0)
-            {
-                rval = (unsigned long)filter_find(arg);
-            }
-            return rval;
+            rval = (unsigned long)filter_find(arg);
+            break;
+
         case ARG_TYPE_NUMERIC:
-        {
-            int i;
-            for (i = 0; arg[i]; i++)
+
+            for (int i = 0; arg[i]; i++)
             {
-                if (arg[i] < '0' || arg[i] > '9')
+                if (isdigit(arg[i]))
                 {
-                    return 0;
+                    break;
                 }
             }
-            return atoi(arg);
-        }
+            rval = atoi(arg);
     }
-    return 0;
+
+    return rval;
+}
+
+static void free_arg(int arg_type, void *value)
+{
+    switch (arg_type)
+    {
+        case ARG_TYPE_SESSION:
+            session_put_ref(value);
+            break;
+
+        default:
+            break;
+    }
 }
 
 static SPINLOCK debugcmd_lock = SPINLOCK_INIT;
@@ -1857,6 +1833,11 @@ execute_cmd(CLI_SESSION *cli)
                                         dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
                                         break;
                                 }
+                            }
+
+                            for (int k = 0; k < cmds[i].options[j].argc_max && k < argc; k++)
+                            {
+                                free_arg(cmds[i].options[j].arg_types[k], (void*)arg_list[k]);
                             }
                         }
                     }

@@ -1306,10 +1306,9 @@ printService(SERVICE *service)
     char time_buf[30];
     int i;
 
-    printf("Service %p\n", (void *)service);
+
     printf("\tService:                              %s\n", service->name);
-    printf("\tRouter:                               %s (%p)\n",
-           service->routerModule, (void *)service->router);
+    printf("\tRouter:                               %s\n", service->routerModule);
     printf("\tStarted:              %s",
            asctime_r(localtime_r(&service->stats.started, &result), time_buf));
     printf("\tBackend databases\n");
@@ -1327,13 +1326,6 @@ printService(SERVICE *service)
                    i + 1 < service->n_filters ? "|" : "");
         }
         printf("\n");
-    }
-
-    SERV_LISTENER *port = service->ports;
-    while (port)
-    {
-        printf("\tUsers data:           %p\n", (void *)port->users);
-        port = port->next;
     }
 
     printf("\tTotal connections:    %d\n", service->stats.n_sessions);
@@ -1395,11 +1387,8 @@ void dprintService(DCB *dcb, SERVICE *service)
     char timebuf[30];
     int i;
 
-    dcb_printf(dcb, "Service %p\n", service);
-    dcb_printf(dcb, "\tService:                             %s\n",
-               service->name);
-    dcb_printf(dcb, "\tRouter:                              %s (%p)\n",
-               service->routerModule, service->router);
+    dcb_printf(dcb, "\tService:                             %s\n", service->name);
+    dcb_printf(dcb, "\tRouter:                              %s\n", service->routerModule);
     switch (service->state)
     {
         case SERVICE_STATE_STARTED:
@@ -1448,13 +1437,6 @@ void dprintService(DCB *dcb, SERVICE *service)
     {
         dcb_printf(dcb, "\tRouting weight parameter:            %s\n",
                    service->weightby);
-    }
-
-    SERV_LISTENER *port = service->ports;
-    while (port)
-    {
-        dcb_printf(dcb, "\tUsers data:                          %p\n", port->users);
-        port = port->next;
     }
 
     dcb_printf(dcb, "\tTotal connections:                   %d\n",

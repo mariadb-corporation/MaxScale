@@ -506,10 +506,9 @@ dprintSession(DCB *dcb, SESSION *print_session)
     char buf[30];
     int i;
 
-    dcb_printf(dcb, "Session %lu (%p)\n", print_session->ses_id, print_session);
+    dcb_printf(dcb, "Session %lu\n", print_session->ses_id);
     dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
-    dcb_printf(dcb, "\tService:             %s (%p)\n", print_session->service->name, print_session->service);
-    dcb_printf(dcb, "\tClient DCB:          %p\n", print_session->client_dcb);
+    dcb_printf(dcb, "\tService:             %s\n", print_session->service->name);
 
     if (print_session->client_dcb && print_session->client_dcb->remote)
     {
@@ -547,7 +546,7 @@ bool dListSessions_cb(DCB *dcb, void *data)
     {
         DCB *out_dcb = (DCB*)data;
         SESSION *session = dcb->session;
-        dcb_printf(out_dcb, "%-16p | %-15s | %-14s | %s\n", session,
+        dcb_printf(out_dcb, "%-16lu | %-15s | %-14s | %s\n", session->ses_id,
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
                    session->service && session->service->name ?

@@ -2063,7 +2063,12 @@ dprintDCB(DCB *pdcb, DCB *dcb)
         dcb_printf(pdcb, "\tProtocol:                   %s\n",
                    dcb->protoname);
     }
-    dcb_printf(pdcb, "\tOwning Session:     %p\n", dcb->session);
+
+    if (dcb->session && dcb->session->state != SESSION_STATE_DUMMY)
+    {
+        dcb_printf(pdcb, "\tOwning Session:     %lu\n", dcb->session->ses_id);
+    }
+
     if (dcb->writeq)
     {
         dcb_printf(pdcb, "\tQueued write data:  %d\n", gwbuf_length(dcb->writeq));
