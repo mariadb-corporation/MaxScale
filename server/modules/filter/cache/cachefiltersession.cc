@@ -163,6 +163,10 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                                         {
                                             MXS_NOTICE("Cache data is stale, fetching fresh from server.");
                                         }
+
+                                        // As we don't use the response it must be freed.
+                                        gwbuf_free(pResponse);
+
                                         m_refreshing = true;
                                         fetch_from_server = true;
                                     }
