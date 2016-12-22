@@ -317,15 +317,14 @@ static gss_name_t server_name = GSS_C_NO_NAME;
  * @param len Length of the token
  * @return True if client token is valid
  */
-static bool validate_gssapi_token(uint8_t* token, size_t len)
+static bool validate_gssapi_token(char* principal, uint8_t* token, size_t len)
 {
     OM_uint32 major = 0, minor = 0;
     gss_buffer_desc server_buf = {0, 0};
     gss_cred_id_t credentials;
 
-    /** TODO: Make this configurable */
-    server_buf.value = (void*)default_princ_name;
-    server_buf.length = sizeof(default_princ_name);
+    server_buf.value = (void*)principal;
+    server_buf.length = strlen(principal) + 1;
 
     major = gss_import_name(&minor, &server_buf, GSS_C_NT_USER_NAME, &server_name);
 
@@ -453,7 +452,7 @@ int gssapi_auth_authenticate(DCB *dcb)
 
         MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
-        if (validate_gssapi_token(ses->auth_token, ses->auth_token_len) &&
+        if (validate_gssapi_token(instance->principal_name, ses->auth_token, ses->auth_token_len) &&
             validate_user(auth, dcb, ses))
         {
             rval = MXS_AUTH_SUCCEEDED;
