@@ -38,10 +38,11 @@ The entry points for the Lua script expect the following signatures:
     - The global script will be loaded in this function and executed once on a
       global level before calling the createInstance function in the Lua script.
 
-  - `nil newSession()` - new session is created
+  - `nil newSession(string, string)` - new session is created
 
-    - This function first loads the session script and executes in on a global
-      level.  After this, the newSession function in the Lua scripts is called.
+    - After the session script is loaded, the newSession function in the Lua
+      scripts is called. The first parameter is the username of the client and
+      the second parameter is the client's network address.
 
   - `nil closeSession()` - session is closed
 

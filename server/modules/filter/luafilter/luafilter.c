@@ -18,7 +18,7 @@
  *
  * The entry points for the Lua script expect the following signatures:
  *  * nil createInstance() - global script only
- *  * nil newSession()
+ *  * nil newSession(string, string)
  *  * nil closeSession()
  *  * (nil | bool | string) routeQuery(string)
  *  * nil clientReply()
@@ -360,8 +360,10 @@ static void * newSession(FILTER *instance, SESSION *session)
 
             /** Call the newSession entry point */
             lua_getglobal(my_session->lua_state, "newSession");
+            lua_pushstring(my_session->lua_state, session->client_dcb->user);
+            lua_pushstring(my_session->lua_state, session->client_dcb->remote);
 
-            if (lua_pcall(my_session->lua_state, 0, 0, 0))
+            if (lua_pcall(my_session->lua_state, 2, 0, 0))
             {
                 MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
                             " The newSession entry point will not be called.",
@@ -376,8 +378,10 @@ static void * newSession(FILTER *instance, SESSION *session)
         spinlock_acquire(&my_instance->lock);
 
         lua_getglobal(my_instance->global_lua_state, "newSession");
+        lua_pushstring(my_instance->global_lua_state, session->client_dcb->user);
+        lua_pushstring(my_instance->global_lua_state, session->client_dcb->remote);
 
-        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
+        if (lua_pcall(my_instance->global_lua_state, 2, 0, 0))
         {
             MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
                         " The newSession entry point will not be called for the global script.",
