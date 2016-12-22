@@ -147,6 +147,23 @@ This parameter sets the maximum length of the certificate authority chain that w
 This applies to SSL connection to master server that could be acivated either by writing options in master.ini or later via CHANGE MASTER TO.
 This parameter cannot be modified at runtime, default is 9.
 
+### `encrypt_binlog`
+Whether to encrypt binlog files: the default is Off
+
+When set to On the binlog files will be encrypted using specified AES algorithm and the KEY in the specified key file.
+
+### `encryption_algorithm`
+aes_ctr or aes_cbc
+
+The default is 'aes_cbc'
+
+### `encryption_key_file`
+The specified key file must have this format:
+a line with `1;HEX(KEY)`
+
+Additional informatons about Binlog files encryption can be found here:
+[Binlogrouter - The replication protocol proxy module for MariaDB MaxScale](../Routers/Binlogrouter.md).
+
 A complete example of a service entry for a binlog router service would be as follows.
 
 ```
@@ -156,7 +173,7 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,ssl_cert_verification_depth=9,semisync=1
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,ssl_cert_verification_depth=9,semisync=1,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
 ```
 
 The minimum set of router options that must be given in the configuration are are *server-id* and *master-id*, default values may be used for all other options.

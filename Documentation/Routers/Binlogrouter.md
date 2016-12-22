@@ -124,6 +124,47 @@ Please note that semi-sync replication is only related to binlog server to Maste
 
 This parameter sets the maximum length of the certificate authority chain that will be accepted. Legal values are positive integers. This applies to SSL connection to master server that could be acivated either by writing options in master.ini or later via CHANGE MASTER TO. This parameter cannot be modified at runtime, default is 9.
 
+### `encrypt_binlog`
+Whether to encrypt binlog files: the default is Off.
+
+When set to On the binlog files will be encrypted using specified AES algorithm and the KEY in the specified key file.
+
+**Note:** binlog encryption must be used while replicating from a MariaDB 10.1 server and serving data to MariaDB 10.x slaves.
+In order to use binlog encryption the master server MariaDB 10.1 must have encryption active (encrypt-binlog=1 in my.cnf).
+This is required because both master and maxscale must store encrypted data for a working scenario for Secure data-at-rest. Additionally, as long as Master server doesn't send the StartEncryption event (which contains encryption setup information for the binlog file), there is a position gap between end of FormatDescription event pos and next event start pos.
+The StartEncryption event size is 36 or 40 (depending on CRC32 being used), so the gap has that size.
+
+MaxScale binlog server adds its own StartEncryption to binlog files consequently the binlog events positions in binlog file are the same as in the master binlog file and there is no position mismatch.
+
+### `encryption_algorithm`
+'aes_ctr' or 'aes_cbc'
+
+The default is 'aes_cbc'
+
+### `encryption_key_file`
+The specified key file must contains lines with following format:
+
+`id;HEX(KEY)`
+
+Id is the scheme identifier, which must have the value 1 for binlog encryption
+, the ';' is a separator and HEX(KEY) contains the hex representation of the KEY.
+The KEY must have exact 16, 24 or 32 bytes size and the selected algorithm (aes_ctr or aes_cbc) with 128, 192 or 256 ciphers will be used.
+
+**Note:** the key file has the same format as MariaDB 10.1 server so it's possible to use an existing key file (not ecncrypted) which could contain several scheme;keys: only key id with value 1 will be parsed, and if not found an error will be reported.
+
+Example:
+
+```
+#
+# This is the Encryption Key File
+# key id 1 is for binlog files encryption: it's mandatory
+# The keys come from a 32bytes value, 64 bytes with HEX format
+#
+2;abcdef1234567890abcdef12345678901234567890abcdefabcdef1234567890
+1;5132bbabcde33ffffff12345ffffaaabbbbbbaacccddeee11299000111992aaa
+3;bbbbbbbbbaaaaaaabbbbbccccceeeddddd3333333ddddaaaaffffffeeeeecccd
+```
+
 A complete example of a service entry for a binlog router service would be as follows.
 ```
     [Replication]
@@ -133,7 +174,7 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1,,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
 ```
 
 The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
