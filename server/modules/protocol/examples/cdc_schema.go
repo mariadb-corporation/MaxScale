@@ -19,6 +19,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"fmt"
 )
 
 import _ "github.com/go-sql-driver/mysql"
@@ -28,6 +29,19 @@ var port = flag.Int("port", 3306, "Server port")
 var user = flag.String("user", "", "Server user")
 var passwd = flag.String("password", "", "Server password")
 var debug = flag.Bool("debug", false, "Debug output")
+
+func PrintUsage() {
+	fmt.Println(`Usage: cdc_schema [OPTIONS]
+
+This program generates CDC schema files for all the tables in a database. The
+schema files need to be generated if the binary log files do not contain the
+CREATE TABLE events that define the table layout.
+
+The "user" and "password" flags are required.
+`)
+
+	flag.PrintDefaults()
+}
 
 // Avro field
 type Field struct {
@@ -64,12 +78,11 @@ func (f *Field) ToAvroType() {
 		f.Type = "string"
 	case "tinyblob", "blob", "mediumblob", "longblob", "binary", "varbinary":
 		f.Type = "bytes"
-	case "int", "smallint", "mediumint", "integer", "tinyint", "short",
-		"decimal", "bit":
+	case "int", "smallint", "mediumint", "integer", "tinyint", "short", "bit":
 		f.Type = "int"
 	case "float":
 		f.Type = "float"
-	case "double":
+	case "double", "decimal":
 		f.Type = "double"
 	case "null":
 		f.Type = "null"
@@ -118,7 +131,12 @@ func main() {
 		log.Fatal("Error: ", err)
 	}
 
+	flag.Usage = PrintUsage;
 	flag.Parse()
+
+	if len(*user) == 0 || len(*passwd) == 0 {
+		log.Fatal("Both the -user and -password flags are mandatory. See output of -help for more details.")
+	}
 
 	var connect_str string = *user + ":" + *passwd + "@tcp(" + *host + ":" + strconv.Itoa(*port) + ")/"
 
