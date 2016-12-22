@@ -757,15 +757,16 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
 
                 break;
 
-            case 0x0: // OK packet after the rows.
-                /* OK could the last packet in the Multi-Resultset transmission:
-                 * handle DISCARD or send all the data.
-                 *
-                 * It could also be sent instead of EOF from as in MySQL 5.7.5
-                 * if client sends CLIENT_DEPRECATE_EOF capability OK packet could
-                 * have the SERVER_MORE_RESULTS_EXIST flag.
-                 * Note: Flags in the OK packet are at the same offset as in EOF.
-                 */
+            /* OK could the last packet in the Multi-Resultset transmission:
+             * this is handled by handle_expecting_response()
+             *
+             * It could also be sent instead of EOF from as in MySQL 5.7.5
+             * if client sends CLIENT_DEPRECATE_EOF capability OK packet could
+             * have the SERVER_MORE_RESULTS_EXIST flag.
+             * Flags in the OK packet are at the same offset as in EOF.
+             *
+             * NOTE: not supported right now
+             */
             case 0xfe: // EOF, the one after the rows.
                 csdata->res.offset += packetlen;
                 ss_dassert(csdata->res.offset == buflen);
