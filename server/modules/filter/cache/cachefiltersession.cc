@@ -165,7 +165,6 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                                         }
                                         m_refreshing = true;
                                         fetch_from_server = true;
-                                        break;
                                     }
                                     else
                                     {
