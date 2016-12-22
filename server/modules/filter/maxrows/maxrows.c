@@ -674,26 +674,55 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
     int rv = 1;
     bool insufficient = false;
     size_t buflen = gwbuf_length(csdata->res.data);
-    // reset large packet indicator
-    csdata->large_packet = false;
 
     while (!insufficient && (buflen - csdata->res.offset >= MYSQL_HEADER_LEN))
     {
+        bool pending_large_data = csdata->large_packet;
         // header array holds a full EOF packet
         uint8_t header[MAXROWS_EOF_PACKET_LEN];
         gwbuf_copy_data(csdata->res.data, csdata->res.offset, MAXROWS_EOF_PACKET_LEN, header);
 
         size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
 
-        // Mark the beginning of a large packet
-        if (packetlen >= MYSQL_PACKET_LENGTH_MAX)
-        {
-            csdata->large_packet = true;
-        }
-
         if (csdata->res.offset + packetlen <= buflen)
         {
-            // We have at least one complete packet.
+            /* Check for large packet packet terminator:
+             * min is 4 bytes "0x0 0x0 0x0 0xseq_no and
+             * max is 1 byte less than EOF_PACKET_LEN
+             * If true skip data processing.
+             */
+            if (pending_large_data && (packetlen >= MYSQL_HEADER_LEN && packetlen < MAXROWS_EOF_PACKET_LEN))
+            {
+                // Update offset, number of rows and break
+                csdata->res.offset += packetlen;
+                csdata->res.n_rows++;
+
+                ss_dassert(csdata->res.offset == buflen);
+                break;
+            }
+
+           /*
+            * Check packet size against MYSQL_PACKET_LENGTH_MAX
+            * If true then break as received could be not complete
+            * EOF or OK packet could be seen after receiving the full large packet
+            */
+            if (packetlen == (MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN))
+            {
+                // Mark the beginning of a large packet receiving
+                csdata->large_packet = true;
+                // Just update offset and break
+                csdata->res.offset += packetlen;
+
+                ss_dassert(csdata->res.offset == buflen);
+                break;
+            }
+            else
+            {
+                // Reset large packet indicator
+                csdata->large_packet = false;
+            }
+
+            // We have at least one complete packet and we can process the command byte.
             int command = (int)MYSQL_GET_COMMAND(header);
 
             switch (command)
@@ -709,6 +738,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 {
                     MXS_NOTICE("Error packet seen while handling result set");
                 }
+
                 /*
                  * This is the ERR packet that could terminate a Multi-Resultset.
                  */
@@ -759,12 +789,6 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 if (!(flags & SERVER_MORE_RESULTS_EXIST))
                 {
                     // End of the resultset
-                    if (csdata->large_packet)
-                    {
-                        // Reset large packet indicator
-                        csdata->large_packet = false;
-                    }
-
                     if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
                     {
                         MXS_NOTICE("OK or EOF packet seen: the resultset has %lu rows.%s",
@@ -794,14 +818,6 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                      */
 
                     csdata->state = MAXROWS_EXPECTING_RESPONSE;
-
-                    // Increase res.n_rows counter at the beginning of a large packet
-                    if (csdata->large_packet)
-                    {
-                        // Turn off large packet indicator
-                        csdata->large_packet = false;
-                        csdata->res.n_rows++;
-                    }
 
                     if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
                     {
