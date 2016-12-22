@@ -1175,6 +1175,14 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
             {
                 succp = send_readonly_error(rses->client_dcb);
+
+                if (rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
+                {
+                    close_failed_bref(rses->rses_master_ref, true);
+                    RW_CHK_DCB(rses->rses_master_ref, rses->rses_master_ref->bref_dcb);
+                    dcb_close(rses->rses_master_ref->bref_dcb);
+                    RW_CLOSE_BREF(rses->rses_master_ref);
+                }
             }
             else
             {

@@ -12,7 +12,7 @@ respawn
 # respawn limit 2 5
 
 # Unlimited open files
-limit nofile unlimited unlimited
+limit nofile 65535 65535
 
 # Make sure /var/run/maxscale exists
 pre-start exec /usr/bin/install -d -o maxscale -g maxscale @MAXSCALE_VARDIR@/run/maxscale

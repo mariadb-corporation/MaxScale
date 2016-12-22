@@ -31,6 +31,8 @@ issues and communicate with the MaxScale community.
 - Email: maxscale@googlegroups.com
 - Forum: http://groups.google.com/forum/#!forum/maxscale
 
+We're also on the #maria and #maxscale channels on FreeNode.
+
 Please report all feature requests, improvements and bugs in the [MariaDB Jira](https://jira.mariadb.org/projects/MXS/issues).
 
 # Documentation

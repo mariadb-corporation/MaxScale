@@ -622,6 +622,10 @@ serverB  |   15     |     27%
 serverC  |   10     |     18%
 serverD  |   20     |     36%
 
+_**Note**: If the value of the weighting parameter of an individual server is
+zero or the relative weight rounds down to zero, no queries will be routed to
+that server as long as a server with a positive weight is available._
+
 Here is an excerpt from an example configuration with the `serv_weight` parameter
 used as the weighting parameter.
 
