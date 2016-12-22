@@ -154,7 +154,7 @@ struct subcommand showoptions[] =
         "Show user statistics",
         "Show statistics and user names for a service's user table.\n"
         "\t\tExample : show dbusers <ptr of 'User's data' from services list>|<service name>",
-        {ARG_TYPE_DBUSERS, 0, 0}
+        {ARG_TYPE_SERVICE, 0, 0}
     },
     {
         "epoll", 0, 0, dprintPollStats,

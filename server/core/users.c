@@ -168,48 +168,51 @@ usersPrint(const USERS *users)
  * @param users         The users table
  */
 void
-dcb_usersPrint(DCB *dcb, const USERS *users)
+dcb_usersPrint(DCB *dcb, const SERVICE *service)
 {
-    if (users == NULL || users->data == NULL)
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
     {
-        dcb_printf(dcb, "Users table is empty\n");
-    }
-    else
-    {
-        HASHITERATOR *iter;
-
-        if ((iter = hashtable_iterator(users->data)) != NULL)
+        if (port->users && port->users->data)
         {
-            dcb_printf(dcb, "User names: ");
-            char *sep = "";
-            void *user;
+            HASHITERATOR *iter = hashtable_iterator(port->users->data);
 
-            if (users->usersCustomUserFormat != NULL)
+            if (iter)
             {
-                while ((user = hashtable_next(iter)) != NULL)
+                dcb_printf(dcb, "User names: ");
+                char *sep = "";
+                void *user;
+
+                if (port->users->usersCustomUserFormat != NULL)
                 {
-                    char *custom_user;
-                    custom_user = users->usersCustomUserFormat(user);
-                    if (custom_user)
+                    while ((user = hashtable_next(iter)) != NULL)
                     {
-                        dcb_printf(dcb, "%s%s", sep, custom_user);
-                        MXS_FREE(custom_user);
+                        char *custom_user = port->users->usersCustomUserFormat(user);
+                        if (custom_user)
+                        {
+                            dcb_printf(dcb, "%s%s", sep, custom_user);
+                            MXS_FREE(custom_user);
+                            sep = ", ";
+                        }
+                    }
+                }
+                else
+                {
+                    while ((user = hashtable_next(iter)) != NULL)
+                    {
+                        dcb_printf(dcb, "%s%s", sep, (char *)user);
                         sep = ", ";
                     }
                 }
-            }
-            else
-            {
-                while ((user = hashtable_next(iter)) != NULL)
-                {
-                    dcb_printf(dcb, "%s%s", sep, (char *)user);
-                    sep = ", ";
-                }
-            }
 
-            hashtable_iterator_free(iter);
+                hashtable_iterator_free(iter);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Users table is empty\n");
         }
     }
+
     dcb_printf(dcb, "\n");
 }
 

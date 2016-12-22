@@ -32,6 +32,7 @@
 #include <maxscale/hashtable.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
+#include <maxscale/service.h>
 #include <openssl/sha.h>
 
 MXS_BEGIN_DECLS
@@ -71,6 +72,6 @@ extern int users_update(USERS *, const char *, const char *); /**< Change the pa
 extern int users_default_loadusers(SERV_LISTENER *port);      /**< A generic implementation of the
                                                                    authenticator loadusers entry point */
 extern void usersPrint(const USERS *);                        /**< Print data about the users loaded */
-extern void dcb_usersPrint(DCB *, const USERS *);             /**< Print data about the users loaded */
+extern void dcb_usersPrint(DCB *, const SERVICE *);                 /**< Print data about the users loaded */
 
 MXS_END_DECLS
