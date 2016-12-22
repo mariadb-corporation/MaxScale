@@ -139,26 +139,6 @@ createInstance(SERVICE *service, char **options)
     inst->service = service;
     spinlock_init(&inst->lock);
     inst->sessions = NULL;
-    inst->mode = CLIM_USER;
-
-    if (options)
-    {
-        for (i = 0; options[i]; i++)
-        {
-            if (!strcasecmp(options[i], "developer"))
-            {
-                inst->mode = CLIM_DEVELOPER;
-            }
-            else if (!strcasecmp(options[i], "user"))
-            {
-                inst->mode = CLIM_USER;
-            }
-            else
-            {
-                MXS_ERROR("Unknown option for CLI '%s'", options[i]);
-            }
-        }
-    }
 
     /*
      * We have completed the creation of the instance data, so now
@@ -200,16 +180,9 @@ newSession(ROUTER *instance, SESSION *session)
     spinlock_release(&inst->lock);
 
     session->state = SESSION_STATE_READY;
-    client->mode = inst->mode;
 
     dcb_printf(session->client_dcb, "Welcome to the MariaDB Corporation MaxScale Debug Interface (%s).\n",
                version_str);
-    if (client->mode == CLIM_DEVELOPER)
-    {
-        dcb_printf(session->client_dcb, "WARNING: This interface is meant for developer usage,\n");
-        dcb_printf(session->client_dcb,
-                   "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
-    }
     dcb_printf(session->client_dcb, "Type help for a list of available commands.\n\n");
 
     return (void *)client;

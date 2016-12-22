@@ -140,7 +140,6 @@ createInstance(SERVICE *service, char **options)
     inst->service = service;
     spinlock_init(&inst->lock);
     inst->sessions = NULL;
-    inst->mode = CLIM_USER;
 
     if (options)
     {
@@ -190,7 +189,6 @@ newSession(ROUTER *instance, SESSION *session)
     spinlock_release(&inst->lock);
 
     session->state = SESSION_STATE_READY;
-    client->mode = inst->mode;
 
     return (void *)client;
 }

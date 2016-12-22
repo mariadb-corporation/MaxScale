@@ -1784,7 +1784,7 @@ execute_cmd(CLI_SESSION *cli)
 
                             for (int k = 0; k < cmds[i].options[j].argc_max && k < argc; k++)
                             {
-                                arg_list[k] = convert_arg(cli->mode, args[k + 2], cmds[i].options[j].arg_types[k]);
+                                arg_list[k] = convert_arg(args[k + 2], cmds[i].options[j].arg_types[k]);
                                 if (arg_list[k] == 0)
                                 {
                                     dcb_printf(dcb, "Invalid argument: %s\n", args[k + 2]);
