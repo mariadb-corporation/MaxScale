@@ -34,16 +34,20 @@ bool extract_database(GWBUF* buf, char* str)
     /** Copy database name from MySQL packet to session */
     if (qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
+        const char *delim = "` \n\t;";
+
         query = modutil_get_SQL(buf);
-        tok = strtok_r(query, " ;", &saved);
+        tok = strtok_r(query, delim, &saved);
+
         if (tok == NULL || strcasecmp(tok, "use") != 0)
         {
-            MXS_ERROR("extract_database: Malformed change database packet.");
+            MXS_ERROR("extract_database: Malformed chage database packet.");
             succp = false;
             goto retblock;
         }
 
-        tok = strtok_r(NULL, " ;", &saved);
+        tok = strtok_r(NULL, delim, &saved);
+
         if (tok == NULL)
         {
             MXS_ERROR("extract_database: Malformed change database packet.");
@@ -51,16 +55,7 @@ bool extract_database(GWBUF* buf, char* str)
             goto retblock;
         }
 
-        size_t len = strlen(tok);
-        if (len > MYSQL_DATABASE_MAXLEN)
-        {
-            MXS_ERROR("extract_database: Malformed change database packet, "
-                      "too long database name.");
-            succp = false;
-            goto retblock;
-        }
-
-        strcpy(str, tok);
+        strncpy(str, tok, MYSQL_DATABASE_MAXLEN);
     }
     else
     {
