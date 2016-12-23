@@ -20,6 +20,15 @@ password=cdc_password
 
 ## Creating new CDC users
 
+Starting with MaxScale 2.1, users can also be created through MaxAdmin:
+
+```
+maxadmin call command cdc add_user <service> <name> <password>
+```
+
+The _<name>_ should be the service name where the user is created. Older
+versions of MaxScale should use the _cdc_users.py_ script.
+
 ```
 bash$ cdc_users.py [-h] USER PASSWORD
 ```

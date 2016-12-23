@@ -32,12 +32,15 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/modutil.h>
 #include <maxscale/users.h>
+#include <maxscale/utils.h>
+#include <maxscale/modulecmd.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30
 /* Max number of load calls within the time interval */
 #define CDC_USERS_REFRESH_MAX_PER_TIME 4
 
+const char CDC_USERS_FILENAME[] = "cdcusers";
 
 MODULE_INFO info =
 {
@@ -56,12 +59,6 @@ static void cdc_auth_free_client_data(DCB *dcb);
 
 static int cdc_set_service_user(SERV_LISTENER *listener);
 static int cdc_replace_users(SERV_LISTENER *listener);
-
-extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
-extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
-extern char *create_hex_sha1_sha1_passwd(char *passwd);
-extern char *decryptPassword(char *crypt);
-
 
 /*
  * The "module object" for mysql client authenticator module.
@@ -104,11 +101,89 @@ char* version()
 }
 
 /**
+ * @brief Add a new CDC user
+ *
+ * This function should not be called directly. The module command system will
+ * call it when necessary.
+ *
+ * @param args Arguments for this command
+ * @return True if user was successfully added
+ */
+static bool cdc_add_new_user(const MODULECMD_ARG *args)
+{
+    const char *user = args->argv[1].value.string;
+    size_t userlen = strlen(user);
+    const char *password = args->argv[2].value.string;
+    uint8_t phase1[SHA_DIGEST_LENGTH];
+    uint8_t phase2[SHA_DIGEST_LENGTH];
+    SHA1((uint8_t*)password, strlen(password), phase1);
+    SHA1(phase1, sizeof(phase1), phase2);
+
+    size_t data_size = userlen + 2 + SHA_DIGEST_LENGTH * 2; // Extra for the : and newline
+    char final_data[data_size];
+    strcpy(final_data, user);
+    strcat(final_data, ":");
+    gw_bin2hex(final_data + userlen + 1, phase2, sizeof(phase2));
+    final_data[data_size - 1] = '\n';
+
+    SERVICE *service = args->argv[0].value.service;
+    char path[PATH_MAX + 1];
+    snprintf(path, PATH_MAX, "%s/%s/", get_datadir(), service->name);
+    bool rval = false;
+
+    if (mxs_mkdir_all(path, 0777))
+    {
+        strcat(path, CDC_USERS_FILENAME);
+        int fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0660);
+
+        if (fd != -1)
+        {
+            if (write(fd, final_data, sizeof(final_data)) != sizeof(final_data))
+            {
+                MXS_NOTICE("Added user '%s' to service '%s'", user, service->name);
+                rval = true;
+            }
+            else
+            {
+                char err[MXS_STRERROR_BUFLEN];
+                char *real_err = strerror_r(errno, err, sizeof(err));
+                MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
+                modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
+            }
+
+            close(fd);
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            char *real_err = strerror_r(errno, err, sizeof(err));
+            MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
+            modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
+        }
+    }
+    else
+    {
+        modulecmd_set_error("Failed to create directory '%s'. Read the MaxScale "
+                            "log for more details.", path);
+    }
+
+    return rval;
+}
+
+/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void ModuleInit()
 {
+    modulecmd_arg_type_t args[] =
+    {
+        { MODULECMD_ARG_SERVICE, "Service where the user is added"},
+        { MODULECMD_ARG_STRING, "User to add"},
+        { MODULECMD_ARG_STRING, "Password of the user"}
+    };
+
+    modulecmd_register_command("cdc", "add_user", cdc_add_new_user, 3, args);
 }
 
 /**
@@ -151,7 +226,7 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint
             gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
 
             return memcmp(user_password, hex_step1, SHA_DIGEST_LENGTH) == 0 ?
-                CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
+                   CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
         }
     }
 
@@ -498,7 +573,8 @@ int cdc_replace_users(SERV_LISTENER *listener)
     if (newusers)
     {
         char path[PATH_MAX + 1];
-        snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), listener->service->name);
+        snprintf(path, PATH_MAX, "%s/%s/%s", get_datadir(), listener->service->name,
+                 CDC_USERS_FILENAME);
 
         int i = cdc_read_users(newusers, path);
         USERS *oldusers = NULL;
