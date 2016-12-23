@@ -104,6 +104,10 @@ alice@host$ maxadmin -u maxscale-admin
 Password:
 MaxScale>
 ```
+When internet sockets are enabled, initially it is possible to connect using
+the username `admin` and the password `mariadb`. These remain in effect as long
+as no other users have been created. As soon as the first user is added, the use
+of `admin/mariadb` as login credentials is disabled.
 
 If Unix domain sockets are used, then initially only `root` has access. MaxAdmin
 usage can subsequently be enabled for other Linux users.
