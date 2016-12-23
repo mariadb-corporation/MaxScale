@@ -37,15 +37,25 @@ cache.
 This is used to set the unique uuid that the binlog router uses when it connects to the master server.
 If no explicit value is given for the uuid in the configuration file then a uuid will be generated.
 
-### `server-id`
+### `server_id`
 
-As with uuid, MariaDB MaxScale must have a unique server-id for the connection it makes to the master, this parameter provides the value of server-id that MariaDB MaxScale will use when connecting to the master.
+As with uuid, MariaDB MaxScale must have a unique _server id_ for the connection
+it makes to the master. This parameter provides the value of the server id that
+MariaDB MaxScale will use when connecting to the master.
 
-### `master-id`
+The id can also be specified using `server-id` but that is deprecated
+and will be removed in a future release of MariaDB MaxScale.
 
-The server-id value that MariaDB MaxScale should use to report to the slaves that connect to MariaDB MaxScale.
-This may either be the same as the server-id of the real master or can be chosen to be different if the slaves need to be aware of the proxy layer.
-The real master server-id will be used if the option is not set.
+### `master_id`
+
+The _server id_ value that MariaDB MaxScale should use to report to the slaves
+that connect to MariaDB MaxScale. This may either be the same as the server id
+of the real master or can be chosen to be different if the slaves need to be
+aware of the proxy layer. The real master server id will be used if the option
+is not set.
+
+The id can also be specified using `master-id` but that is deprecated
+and will be removed in a future release of MariaDB MaxScale.
 
 ### `master_uuid`
 
@@ -174,10 +184,10 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1,,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server_id=3,user=repl,password=slavepass,master_id=32,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1,encrypt_binlog=1,encryption_algorithm=aes_ctr,encryption_key_file=/var/binlogs/enc_key.txt
 ```
 
-The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
+The minimum set of router options that must be given in the configuration are `server_id` and `master_id` (unless the real master id should be used); default values may be used for all other options.
 
 ## Examples
 
