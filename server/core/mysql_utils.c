@@ -34,7 +34,7 @@
  * @param ptr Start of the length encoded value
  * @return Number of bytes before the actual value
  */
-size_t leint_bytes(uint8_t* ptr)
+size_t leint_bytes(const uint8_t* ptr)
 {
     uint8_t val = *ptr;
     if (val < 0xfb)
@@ -62,7 +62,7 @@ size_t leint_bytes(uint8_t* ptr)
  * @param c Pointer to the first byte of a length-encoded integer
  * @return The value converted to a standard unsigned integer
  */
-uint64_t leint_value(uint8_t* c)
+uint64_t leint_value(const uint8_t* c)
 {
     uint64_t sz = 0;
 
