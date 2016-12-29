@@ -632,9 +632,9 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
             }
             else
             {
-                // leint_bytes() returns the length of the int type field + the size of the
+                // mxs_leint_bytes() returns the length of the int type field + the size of the
                 // integer.
-                size_t n_bytes = leint_bytes(&header[4]);
+                size_t n_bytes = mxs_leint_bytes(&header[4]);
 
                 if (MYSQL_HEADER_LEN + n_bytes <= buflen)
                 {
@@ -643,7 +643,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
                     gwbuf_copy_data(csdata->res.data,
                                     MYSQL_HEADER_LEN + 1, n_bytes - 1, &header[MYSQL_HEADER_LEN + 1]);
 
-                    csdata->res.n_totalfields = leint_value(&header[4]);
+                    csdata->res.n_totalfields = mxs_leint_value(&header[4]);
                     csdata->res.offset += MYSQL_HEADER_LEN + n_bytes;
 
                     csdata->state = MAXROWS_EXPECTING_FIELDS;

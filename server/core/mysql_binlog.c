@@ -30,7 +30,7 @@
  *
  * @param type The table column type
  * @return The type of the column in human readable format
- * @see lestr_consume
+ * @see mxs_lestr_consume
  */
 const char* column_type_to_string(uint8_t type)
 {
@@ -120,7 +120,7 @@ bool column_is_blob(uint8_t type)
  *
  * @param type Type of the column
  * @return True if the column is a string type column
- * @see lestr_consume
+ * @see mxs_lestr_consume
  */
 bool column_is_variable_string(uint8_t type)
 {
@@ -175,7 +175,7 @@ bool column_is_temporal(uint8_t type)
  *
  * @param type Type of the column
  * @return True if the column is a string type column
- * @see lestr_consume
+ * @see mxs_lestr_consume
  */
 bool column_is_fixed_string(uint8_t type)
 {

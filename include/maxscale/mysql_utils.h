@@ -21,13 +21,13 @@
 MXS_BEGIN_DECLS
 
 /** Length-encoded integers */
-size_t leint_bytes(const uint8_t* ptr);
-uint64_t leint_value(const uint8_t* c);
-uint64_t leint_consume(uint8_t ** c);
+size_t mxs_leint_bytes(const uint8_t* ptr);
+uint64_t mxs_leint_value(const uint8_t* c);
+uint64_t mxs_leint_consume(uint8_t ** c);
 
 /** Length-encoded strings */
-char* lestr_consume_dup(uint8_t** c);
-char* lestr_consume(uint8_t** c, size_t *size);
+char* mxs_lestr_consume_dup(uint8_t** c);
+char* mxs_lestr_consume(uint8_t** c, size_t *size);
 
 MYSQL *mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
 

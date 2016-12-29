@@ -425,9 +425,9 @@ int CacheFilterSession::handle_expecting_response()
             }
             else
             {
-                // leint_bytes() returns the length of the int type field + the size of the
+                // mxs_leint_bytes() returns the length of the int type field + the size of the
                 // integer.
-                size_t n_bytes = leint_bytes(&header[4]);
+                size_t n_bytes = mxs_leint_bytes(&header[4]);
 
                 if (MYSQL_HEADER_LEN + n_bytes <= buflen)
                 {
@@ -436,7 +436,7 @@ int CacheFilterSession::handle_expecting_response()
                     gwbuf_copy_data(m_res.pData,
                                     MYSQL_HEADER_LEN + 1, n_bytes - 1, &header[MYSQL_HEADER_LEN + 1]);
 
-                    m_res.nTotalFields = leint_value(&header[4]);
+                    m_res.nTotalFields = mxs_leint_value(&header[4]);
                     m_res.offset = MYSQL_HEADER_LEN + n_bytes;
 
                     m_state = CACHE_EXPECTING_FIELDS;

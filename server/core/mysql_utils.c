@@ -34,7 +34,7 @@
  * @param ptr Start of the length encoded value
  * @return Number of bytes before the actual value
  */
-size_t leint_bytes(const uint8_t* ptr)
+size_t mxs_leint_bytes(const uint8_t* ptr)
 {
     uint8_t val = *ptr;
     if (val < 0xfb)
@@ -62,7 +62,7 @@ size_t leint_bytes(const uint8_t* ptr)
  * @param c Pointer to the first byte of a length-encoded integer
  * @return The value converted to a standard unsigned integer
  */
-uint64_t leint_value(const uint8_t* c)
+uint64_t mxs_leint_value(const uint8_t* c)
 {
     uint64_t sz = 0;
 
@@ -98,10 +98,10 @@ uint64_t leint_value(const uint8_t* c)
  *
  * @param c Pointer to the first byte of a length-encoded integer
  */
-uint64_t leint_consume(uint8_t ** c)
+uint64_t mxs_leint_consume(uint8_t ** c)
 {
-    uint64_t rval = leint_value(*c);
-    *c += leint_bytes(*c);
+    uint64_t rval = mxs_leint_value(*c);
+    *c += mxs_leint_bytes(*c);
     return rval;
 }
 
@@ -114,9 +114,9 @@ uint64_t leint_consume(uint8_t ** c)
  * @param c Pointer to the first byte of a valid packet.
  * @return The newly allocated string or NULL if memory allocation failed
  */
-char* lestr_consume_dup(uint8_t** c)
+char* mxs_lestr_consume_dup(uint8_t** c)
 {
-    uint64_t slen = leint_consume(c);
+    uint64_t slen = mxs_leint_consume(c);
     char *str = MXS_MALLOC((slen + 1) * sizeof(char));
 
     if (str)
@@ -138,9 +138,9 @@ char* lestr_consume_dup(uint8_t** c)
  * @param size Pointer to a variable where the size of the string is stored
  * @return Pointer to the start of the string
  */
-char* lestr_consume(uint8_t** c, size_t *size)
+char* mxs_lestr_consume(uint8_t** c, size_t *size)
 {
-    uint64_t slen = leint_consume(c);
+    uint64_t slen = mxs_leint_consume(c);
     *size = slen;
     char* start = (char*) *c;
     *c += slen;

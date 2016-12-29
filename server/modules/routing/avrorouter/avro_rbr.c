@@ -247,7 +247,7 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     }
 
     /** Number of columns in the table */
-    uint64_t ncolumns = leint_consume(&ptr);
+    uint64_t ncolumns = mxs_leint_consume(&ptr);
 
     /** If full row image is used, all columns are present. Currently only full
      * row image is supported and thus the bitfield should be all ones. In
@@ -546,7 +546,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             else if (column_is_variable_string(map->column_types[i]))
             {
                 size_t sz;
-                char *str = lestr_consume(&ptr, &sz);
+                char *str = mxs_lestr_consume(&ptr, &sz);
                 char buf[sz + 1];
                 memcpy(buf, str, sz);
                 buf[sz] = '\0';
