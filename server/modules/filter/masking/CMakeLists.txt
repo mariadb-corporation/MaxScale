@@ -1,9 +1,18 @@
-add_library(masking SHARED
-  maskingfilter.cc
-  maskingfiltersession.cc
-  )
+if (JANSSON_FOUND)
+  add_library(masking SHARED
+    maskingfilter.cc
+    maskingfiltersession.cc
+    maskingrules.cc
+    )
 
-target_link_libraries(masking maxscale-common)
-set_target_properties(masking PROPERTIES VERSION "1.0.0")
-set_target_properties(masking PROPERTIES LINK_FLAGS -Wl,-z,defs)
-install_module(masking experimental)
+  target_link_libraries(masking maxscale-common jansson)
+  set_target_properties(masking PROPERTIES VERSION "1.0.0")
+  set_target_properties(masking PROPERTIES LINK_FLAGS -Wl,-z,defs)
+  install_module(masking experimental)
+
+  if(BUILD_TESTS)
+    add_subdirectory(test)
+  endif()
+else()
+  message(STATUS "No Jansson libraries found, not building cache filter.")
+endif()
