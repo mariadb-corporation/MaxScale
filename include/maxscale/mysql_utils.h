@@ -31,4 +31,17 @@ char* mxs_lestr_consume(uint8_t** c, size_t *size);
 
 MYSQL *mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, const char *passwd);
 
+/**
+ * Trim MySQL quote characters surrounding a string.
+ *
+ *   'abcd' => abcd
+ *   "abcd" => abcd
+ *   `abcd` => abcd
+ *
+ * @param s  The string to be trimmed.
+ *
+ * @note The string is modified in place.
+ */
+bool mxs_mysql_trim_quotes(char *s);
+
 MXS_END_DECLS

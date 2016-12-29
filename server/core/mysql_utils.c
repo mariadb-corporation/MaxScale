@@ -168,3 +168,70 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
 
     return mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);
 }
+
+bool mxs_mysql_trim_quotes(char *s)
+{
+    bool dequoted = true;
+
+    char *i = s;
+    char *end = s + strlen(s);
+
+    // Remove space from the beginning
+    while (*i && isspace(*i))
+    {
+        ++i;
+    }
+
+    if (*i)
+    {
+        // Remove space from the end
+        while (isspace(*(end - 1)))
+        {
+            *(end - 1) = 0;
+            --end;
+        }
+
+        ss_dassert(end > i);
+
+        char quote;
+
+        switch (*i)
+        {
+        case '\'':
+        case '"':
+        case '`':
+            quote = *i;
+            ++i;
+            break;
+
+        default:
+            quote = 0;
+        }
+
+        if (quote)
+        {
+            --end;
+
+            if (*end == quote)
+            {
+                *end = 0;
+
+                memmove(s, i, end - i + 1);
+            }
+            else
+            {
+                dequoted = false;
+            }
+        }
+        else if (i != s)
+        {
+            memmove(s, i, end - i + 1);
+        }
+    }
+    else
+    {
+        *s = 0;
+    }
+
+    return dequoted;
+}

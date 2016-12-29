@@ -18,6 +18,7 @@
 #include <new>
 #include <maxscale/alloc.h>
 #include <maxscale/modutil.h>
+#include <maxscale/mysql_utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/session.h>
@@ -137,7 +138,6 @@ static bool cache_rules_parse_array(CACHE_RULES *self, json_t *store, const char
 static bool cache_rules_parse_store_element(CACHE_RULES *self, json_t *object, size_t index);
 static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, size_t index);
 
-static bool dequote_mysql(char *s);
 
 typedef enum pcre_quote_approach
 {
@@ -608,7 +608,7 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
         host = any;
     }
 
-    if (dequote_mysql(user))
+    if (mxs_mysql_trim_quotes(user))
     {
         char pcre_user[2 * len + 1]; // Surely enough
 
@@ -621,7 +621,7 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
             mysql_to_pcre(pcre_user, user, PCRE_QUOTE_VERBATIM);
         }
 
-        if (dequote_mysql(host))
+        if (mxs_mysql_trim_quotes(host))
         {
             char pcre_host[2 * len + 1]; // Surely enough
 
@@ -661,12 +661,12 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
         }
         else
         {
-            MXS_ERROR("Could not dequote host %s.", cvalue);
+            MXS_ERROR("Could not trim quotes from host %s.", cvalue);
         }
     }
     else
     {
-        MXS_ERROR("Could not dequote user %s.", cvalue);
+        MXS_ERROR("Could not trim quotes from user %s.", cvalue);
     }
 
     return rule;
@@ -2043,83 +2043,6 @@ static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, siz
     }
 
     return rule != NULL;
-}
-
-/**
- * Remove quote characters surrounding a string.
- * 'abcd' => abcd
- * "abcd" => abcd
- * `abcd` => abcd
- *
- * @param s The string to be dequoted.
- *
- * @note The string is modified in place.
- */
-static bool dequote_mysql(char *s)
-{
-    bool dequoted = true;
-
-    char *i = s;
-    char *end = s + strlen(s);
-
-    // Remove space from the beginning
-    while (*i && isspace(*i))
-    {
-        ++i;
-    }
-
-    if (*i)
-    {
-        // Remove space from the end
-        while (isspace(*(end - 1)))
-        {
-            *(end - 1) = 0;
-            --end;
-        }
-
-        ss_dassert(end > i);
-
-        char quote;
-
-        switch (*i)
-        {
-        case '\'':
-        case '"':
-        case '`':
-            quote = *i;
-            ++i;
-            break;
-
-        default:
-            quote = 0;
-        }
-
-        if (quote)
-        {
-            --end;
-
-            if (*end == quote)
-            {
-                *end = 0;
-
-                memmove(s, i, end - i + 1);
-            }
-            else
-            {
-                dequoted = false;
-            }
-        }
-        else if (i != s)
-        {
-            memmove(s, i, end - i + 1);
-        }
-    }
-    else
-    {
-        *s = 0;
-    }
-
-    return dequoted;
 }
 
 /**
