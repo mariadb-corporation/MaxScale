@@ -603,16 +603,16 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
         }
         else
         {
-            mxs_mysql_account_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
+            mxs_mysql_name_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
         }
 
         if (mxs_mysql_trim_quotes(host))
         {
             char pcre_host[2 * len + 1]; // Surely enough
 
-            mxs_mysql_account_kind_t rv = mxs_mysql_account_to_pcre(pcre_host, host, MXS_PCRE_QUOTE_QUERY);
+            mxs_mysql_name_kind_t rv = mxs_mysql_name_to_pcre(pcre_host, host, MXS_PCRE_QUOTE_WILDCARD);
 
-            if (rv == MXS_MYSQL_ACCOUNT_WITH_WILDCARD)
+            if (rv == MXS_MYSQL_NAME_WITH_WILDCARD)
             {
                 op = (op == CACHE_OP_EQ ? CACHE_OP_LIKE : CACHE_OP_UNLIKE);
 

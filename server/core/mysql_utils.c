@@ -237,24 +237,24 @@ bool mxs_mysql_trim_quotes(char *s)
 }
 
 
-mxs_mysql_account_kind_t mxs_mysql_account_to_pcre(char *pcre,
-                                                   const char *mysql,
-                                                   mxs_pcre_quote_approach_t approach)
+mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
+                                             const char *mysql,
+                                             mxs_pcre_quote_approach_t approach)
 {
-    mxs_mysql_account_kind_t rv = MXS_MYSQL_ACCOUNT_WITHOUT_WILDCARD;
+    mxs_mysql_name_kind_t rv = MXS_MYSQL_NAME_WITHOUT_WILDCARD;
 
     while (*mysql)
     {
         switch (*mysql)
         {
         case '%':
-            if (approach == MXS_PCRE_QUOTE_QUERY)
+            if (approach == MXS_PCRE_QUOTE_WILDCARD)
             {
                 *pcre = '.';
                 pcre++;
                 *pcre = '*';
             }
-            rv = MXS_MYSQL_ACCOUNT_WITH_WILDCARD;
+            rv = MXS_MYSQL_NAME_WITH_WILDCARD;
             break;
 
         case '\'':
