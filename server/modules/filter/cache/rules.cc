@@ -138,21 +138,6 @@ static bool cache_rules_parse_array(CACHE_RULES *self, json_t *store, const char
 static bool cache_rules_parse_store_element(CACHE_RULES *self, json_t *object, size_t index);
 static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, size_t index);
 
-
-typedef enum pcre_quote_approach
-{
-    PCRE_QUOTE_VERBATIM,
-    PCRE_QUOTE_QUERY
-} pcre_quote_approach_t;
-
-typedef enum mysql_account_kind
-{
-    MYSQL_ACCOUNT_WITH_WILDCARD,
-    MYSQL_ACCOUNT_WITHOUT_WILDCARD
-} mysql_account_kind_t;
-
-static mysql_account_kind_t mysql_to_pcre(char *pcre, const char *mysql, pcre_quote_approach_t approach);
-
 /*
  * API begin
  */
@@ -618,14 +603,16 @@ static CACHE_RULE *cache_rule_create_simple_user(cache_rule_attribute_t attribut
         }
         else
         {
-            mysql_to_pcre(pcre_user, user, PCRE_QUOTE_VERBATIM);
+            mxs_mysql_account_to_pcre(pcre_user, user, MXS_PCRE_QUOTE_VERBATIM);
         }
 
         if (mxs_mysql_trim_quotes(host))
         {
             char pcre_host[2 * len + 1]; // Surely enough
 
-            if (mysql_to_pcre(pcre_host, host, PCRE_QUOTE_QUERY) == MYSQL_ACCOUNT_WITH_WILDCARD)
+            mxs_mysql_account_kind_t rv = mxs_mysql_account_to_pcre(pcre_host, host, MXS_PCRE_QUOTE_QUERY);
+
+            if (rv == MXS_MYSQL_ACCOUNT_WITH_WILDCARD)
             {
                 op = (op == CACHE_OP_EQ ? CACHE_OP_LIKE : CACHE_OP_UNLIKE);
 
@@ -2043,62 +2030,4 @@ static bool cache_rules_parse_use_element(CACHE_RULES *self, json_t *object, siz
     }
 
     return rule != NULL;
-}
-
-/**
- * Convert MySQL/MariaDB account string to a pcre compatible one.
- *
- * @param pcre     The string to which the conversion should be copied.
- *                 To be on the safe size, the buffer should be twice the
- *                 size of 'mysql'.
- * @param mysql    The mysql account string.
- * @param approach Whether % should be converted or not.
- *
- * @return Whether or not the account contains a wildcard.
- */
-static mysql_account_kind_t mysql_to_pcre(char *pcre, const char *mysql, pcre_quote_approach_t approach)
-{
-    mysql_account_kind_t rv = MYSQL_ACCOUNT_WITHOUT_WILDCARD;
-
-    while (*mysql)
-    {
-        switch (*mysql)
-        {
-        case '%':
-            if (approach == PCRE_QUOTE_QUERY)
-            {
-                *pcre = '.';
-                pcre++;
-                *pcre = '*';
-            }
-            rv = MYSQL_ACCOUNT_WITH_WILDCARD;
-            break;
-
-        case '\'':
-        case '^':
-        case '.':
-        case '$':
-        case '|':
-        case '(':
-        case ')':
-        case '[':
-        case ']':
-        case '*':
-        case '+':
-        case '?':
-        case '{':
-        case '}':
-            *pcre++ = '\\';
-            // Flowthrough
-        default:
-            *pcre = *mysql;
-        }
-
-        ++pcre;
-        ++mysql;
-    }
-
-    *pcre = 0;
-
-    return rv;
 }

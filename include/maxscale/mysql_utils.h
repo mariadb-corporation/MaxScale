@@ -44,4 +44,36 @@ MYSQL *mxs_mysql_real_connect(MYSQL *mysql, SERVER *server, const char *user, co
  */
 bool mxs_mysql_trim_quotes(char *s);
 
+
+typedef enum mxs_pcre_quote_approach
+{
+    MXS_PCRE_QUOTE_VERBATIM, /*<! Quote all PCRE characters. */
+    MXS_PCRE_QUOTE_QUERY     /*<! Quote all PCRE characters, except % that is converted into .*. */
+} mxs_pcre_quote_approach_t;
+
+typedef enum mxs_mysql_account_kind
+{
+    MXS_MYSQL_ACCOUNT_WITH_WILDCARD,   /*<! The input string contains a %. */
+    MXS_MYSQL_ACCOUNT_WITHOUT_WILDCARD /*<! The input string does not contain a %. */
+} mxs_mysql_account_kind_t;
+
+/**
+ * Convert MySQL/MariaDB account string to a pcre compatible one.
+ *
+ * In principle:
+ *   - Quote all characters that have a special meaning in a PCRE context.
+ *   - Optionally convert "%" into ".*".
+ *
+ * @param pcre     The string to which the conversion should be copied.
+ *                 To be on the safe size, the buffer should be twice the
+ *                 size of 'mysql'.
+ * @param mysql    The mysql account string.
+ * @param approach Whether % should be converted or not.
+ *
+ * @return Whether or not the account contains a wildcard.
+ */
+mxs_mysql_account_kind_t mxs_mysql_account_to_pcre(char *pcre,
+                                                   const char *mysql,
+                                                   mxs_pcre_quote_approach_t approach);
+
 MXS_END_DECLS

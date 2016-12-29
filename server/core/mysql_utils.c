@@ -235,3 +235,53 @@ bool mxs_mysql_trim_quotes(char *s)
 
     return dequoted;
 }
+
+
+mxs_mysql_account_kind_t mxs_mysql_account_to_pcre(char *pcre,
+                                                   const char *mysql,
+                                                   mxs_pcre_quote_approach_t approach)
+{
+    mxs_mysql_account_kind_t rv = MXS_MYSQL_ACCOUNT_WITHOUT_WILDCARD;
+
+    while (*mysql)
+    {
+        switch (*mysql)
+        {
+        case '%':
+            if (approach == MXS_PCRE_QUOTE_QUERY)
+            {
+                *pcre = '.';
+                pcre++;
+                *pcre = '*';
+            }
+            rv = MXS_MYSQL_ACCOUNT_WITH_WILDCARD;
+            break;
+
+        case '\'':
+        case '^':
+        case '.':
+        case '$':
+        case '|':
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case '*':
+        case '+':
+        case '?':
+        case '{':
+        case '}':
+            *pcre++ = '\\';
+            // Flowthrough
+        default:
+            *pcre = *mysql;
+        }
+
+        ++pcre;
+        ++mysql;
+    }
+
+    *pcre = 0;
+
+    return rv;
+}
