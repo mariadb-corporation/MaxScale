@@ -13,8 +13,22 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <string>
 
 class MaskingFilterConfig
 {
-    // Placeholder
+public:
+    MaskingFilterConfig(const char* zName)
+        : m_name(zName)
+    {}
+    ~MaskingFilterConfig() {}
+
+    const std::string& name() const { return m_name; }
+    const std::string& rules_file() const { return m_rules_file; }
+
+    void set_rules_file(const std::string& s) { m_rules_file = s; }
+
+private:
+    std::string m_name;
+    std::string m_rules_file;
 };

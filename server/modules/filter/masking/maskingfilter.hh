@@ -13,9 +13,12 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <memory>
 #include <maxscale/filter.hh>
 #include "maskingfilterconfig.hh"
 #include "maskingfiltersession.hh"
+
+class MaskingRules;
 
 
 class MaskingFilter : public maxscale::Filter<MaskingFilter, MaskingFilterSession>
@@ -33,7 +36,7 @@ public:
     static uint64_t getCapabilities();
 
 private:
-    MaskingFilter();
+    MaskingFilter(const Config& config, std::auto_ptr<MaskingRules> sRules);
 
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator = (const MaskingFilter&);
@@ -41,5 +44,6 @@ private:
     static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config);
 
 private:
-    Config m_config;
+    Config                      m_config;
+    std::auto_ptr<MaskingRules> m_sRules;
 };
