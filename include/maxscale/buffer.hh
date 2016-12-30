@@ -47,6 +47,21 @@ public:
                                                pointer_type,              // The type of pointer to an elem
                                                reference_type>            // The reference type of an elem
     {
+    public:
+        /**
+         * Returns address of the internal pointer to a GWBUF.
+         *
+         * @attention This is provided as a backdoor for situations where it is
+         *            unavoidable to access the interal pointer directly. It should
+         *            carefully be assessed whether it actually can be avoided.
+         *
+         * @return Pointer to pointer to GWBUF.
+         */
+        pointer_type* address_of()
+        {
+            return &m_i;
+        }
+
     protected:
         iterator_base(buf_type pBuffer = NULL)
             : m_pBuffer(pBuffer)
