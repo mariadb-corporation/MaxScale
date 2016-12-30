@@ -295,12 +295,25 @@ extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router);
 extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema);
 extern void avro_table_free(AVRO_TABLE *table);
-extern void avro_flush_all_tables(AVRO_INSTANCE *router);
 extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);
 extern bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 extern bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 extern void table_map_remap(uint8_t *ptr, uint8_t hdr_len, TABLE_MAP *map);
+
+enum avrorouter_file_op
+{
+    AVROROUTER_SYNC,
+    AVROROUTER_FLUSH
+};
+
+/**
+ * @brief Flush or sync all tables
+ *
+ * @param router Router instance
+ * @param flush AVROROUTER_SYNC for sync only or AVROROUTER_FLUSH for full flush
+ */
+extern void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush);
 
 #define AVRO_CLIENT_UNREGISTERED 0x0000
 #define AVRO_CLIENT_REGISTERED   0x0001

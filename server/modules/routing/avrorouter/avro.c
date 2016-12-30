@@ -1076,7 +1076,7 @@ void converter_func(void* data)
     /** We reached end of file, flush unwritten records to disk */
     if (router->task_delay == 1)
     {
-        avro_flush_all_tables(router);
+        avro_flush_all_tables(router, true);
         avro_save_conversion_state(router);
     }
 

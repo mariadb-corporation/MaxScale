@@ -46,7 +46,6 @@ static const char *ddl_list_name = "table-ddl.list";
 void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr,
                         int *pending_transaction, uint8_t *ptr);
 bool is_create_table_statement(AVRO_INSTANCE *router, char* ptr, size_t len);
-void avro_flush_all_tables(AVRO_INSTANCE *router);
 void avro_notify_client(AVRO_CLIENT *client);
 void avro_update_index(AVRO_INSTANCE* router);
 void update_used_tables(AVRO_INSTANCE* router);
@@ -745,7 +744,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 router->trx_count >= router->trx_target)
             {
                 update_used_tables(router);
-                avro_flush_all_tables(router);
+                avro_flush_all_tables(router, false);
                 avro_save_conversion_state(router);
                 notify_all_clients(router);
                 total_rows += router->row_count;
@@ -859,7 +858,7 @@ void avro_load_metadata_from_schemas(AVRO_INSTANCE *router)
  * @brief Flush all Avro records to disk
  * @param router Avro router instance
  */
-void avro_flush_all_tables(AVRO_INSTANCE *router)
+void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
 {
     HASHITERATOR *iter = hashtable_iterator(router->open_tables);
 
@@ -872,7 +871,15 @@ void avro_flush_all_tables(AVRO_INSTANCE *router)
 
             if (table)
             {
-                avro_file_writer_flush(table->avro_file);
+                if (flush == AVROROUTER_FLUSH)
+                {
+                    avro_file_writer_flush(table->avro_file);
+                }
+                else
+                {
+                    ss_dassert(flush == AVROROUTER_SYNC);
+                    avro_file_writer_sync(table->avro_file);
+                }
             }
         }
         hashtable_iterator_free(iter);
