@@ -37,6 +37,8 @@ public:
 
     static uint64_t getCapabilities();
 
+    void reload(DCB* pOut);
+
     SMaskingRules rules() const;
 
 private:

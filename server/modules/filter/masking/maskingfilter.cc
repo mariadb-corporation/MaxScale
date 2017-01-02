@@ -14,10 +14,51 @@
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilter.hh"
 #include <maxscale/gwdirs.h>
+#include <maxscale/modulecmd.h>
 #include "maskingrules.hh"
 
 using std::auto_ptr;
 using std::string;
+
+namespace
+{
+
+char VERSION_STRING[] = "V1.0.0";
+
+/**
+ * Implement "call command masking reload ..."
+ *
+ * @param pArgs  The arguments of the command.
+ *
+ * @return True, if the command was handled.
+ */
+bool masking_command_reload(const MODULECMD_ARG* pArgs)
+{
+    ss_dassert(pArgs->argc == 2);
+    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_OUTPUT);
+    ss_dassert(MODULECMD_GET_TYPE(&pArgs->argv[1].type) == MODULECMD_ARG_FILTER);
+
+    DCB* pDcb = pArgs->argv[0].value.dcb;
+    ss_dassert(pDcb);
+
+    const FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    ss_dassert(pFilterDef);
+
+    if (strcmp(pFilterDef->module, "masking") == 0)
+    {
+        MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(pFilterDef->filter);
+
+        MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
+    }
+    else
+    {
+        dcb_printf(pDcb, "Filter %s exists, but it is not a masking filter.", pFilterDef->name);
+    }
+
+    return true;
+}
+
+}
 
 //
 // Global symbols of the Module
@@ -25,6 +66,15 @@ using std::string;
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    static modulecmd_arg_type_t reload_argv[] =
+    {
+        { MODULECMD_ARG_OUTPUT, "The output dcb" },
+        { MODULECMD_ARG_FILTER, "Masking name" }
+    };
+
+    modulecmd_register_command("masking", "reload", masking_command_reload,
+                               MXS_ARRAY_NELEMS(reload_argv), reload_argv);
+
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
 
     static MXS_MODULE info =
@@ -102,6 +152,23 @@ uint64_t MaskingFilter::getCapabilities()
 std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
 {
     return m_sRules;
+}
+
+void MaskingFilter::reload(DCB* pOut)
+{
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules_file().c_str());
+
+    if (sRules.get())
+    {
+        m_sRules = sRules;
+
+        dcb_printf(pOut, "Rules reloaded.\n");
+    }
+    else
+    {
+        dcb_printf(pOut, "Could not reload the rules. Check the log file for more "
+                   "detailed information.\n");
+    }
 }
 
 // static

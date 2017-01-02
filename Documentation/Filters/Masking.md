@@ -241,3 +241,19 @@ string should be a MariaDB account string, that is, `%` is a wildcard.
     ]
 }
 ```
+
+## Module commands
+
+Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.
+
+The masking filter supports the following module commands.
+
+### `reload`
+
+Reload the rules from the rules file. The new rules are taken into use
+only if the loading succeeds without any errors.
+```
+MaxScale> call command masking reload MyMaskingFilter
+```
+`MyMaskingFilter` refers to a particular filter section in the
+MariaDB MaxScale configuration file.
