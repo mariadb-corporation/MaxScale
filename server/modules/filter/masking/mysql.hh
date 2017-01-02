@@ -213,7 +213,16 @@ public:
      */
     LEncString(uint8_t* pData)
     {
-        m_pString = mxs_lestr_consume(&pData, &m_length);
+        // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
+        if (*pData != 0xfb)
+        {
+            m_pString = mxs_lestr_consume(&pData, &m_length);
+        }
+        else
+        {
+            m_pString = NULL;
+            m_length = 0;
+        }
     }
 
     /**
@@ -225,7 +234,17 @@ public:
      */
     LEncString(uint8_t** ppData)
     {
-        m_pString = mxs_lestr_consume(ppData, &m_length);
+        // NULL is sent as 0xfb. See https://dev.mysql.com/doc/internals/en/com-query-response.html
+        if (**ppData != 0xfb)
+        {
+            m_pString = mxs_lestr_consume(ppData, &m_length);
+        }
+        else
+        {
+            m_pString = NULL;
+            m_length = 0;
+            ++(*ppData);
+        }
     }
 
     /**
@@ -301,7 +320,14 @@ public:
      */
     std::string to_string() const
     {
-        return std::string(m_pString, m_length);
+        if (m_pString)
+        {
+            return std::string(m_pString, m_length);
+        }
+        else
+        {
+            return std::string("NULL");
+        }
     }
 
     /**
@@ -315,6 +341,16 @@ public:
     {
         o.write(m_pString, m_length);
         return o;
+    }
+
+    /**
+     * Is NULL
+     *
+     * @return True, if the string represents a NULL value.
+     */
+    bool is_null() const
+    {
+        return m_pString == NULL;
     }
 
 private:

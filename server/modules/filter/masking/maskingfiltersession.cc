@@ -191,12 +191,6 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
         m_state = EXPECTING_NOTHING;
         break;
 
-    case 0xfb: // NULL is sent as 0xfb
-        MXS_NOTICE("NULL");
-        // We must ask for the rule so as not to get out of sync.
-        m_res.get_rule();
-        break;
-
     default:
         {
             ComQueryResponse::Row row(response);
@@ -210,7 +204,10 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
                 {
                     LEncString s = *i;
 
-                    pRule->rewrite(s);
+                    if (!s.is_null())
+                    {
+                        pRule->rewrite(s);
+                    }
 
                     MXS_NOTICE("String: %s", (*i).to_string().c_str());
                 }
