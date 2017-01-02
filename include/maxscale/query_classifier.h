@@ -119,6 +119,15 @@ typedef struct qc_field_info
 } QC_FIELD_INFO;
 
 /**
+ * QC_FUNCTION_INFO contains information about a function used in a statement.
+ */
+typedef struct qc_function_info
+{
+    char* name;     /** Name of function. */
+    uint32_t usage; /** Bitfield denoting where the column appears. */
+} QC_FUNCTION_INFO;
+
+/**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
  * implement and return.
  *
@@ -150,6 +159,7 @@ typedef struct query_classifier
     char* (*qc_get_prepare_name)(GWBUF* stmt);
     qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
     void (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
+    void (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
 } QUERY_CLASSIFIER;
 
 /**
@@ -296,6 +306,21 @@ char* qc_field_usage_mask_to_string(uint32_t usage_mask);
  *       that, it must be copied.
  */
 void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
+
+/**
+ * Returns information about function usage.
+ *
+ * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param infos    Pointer to pointer that after the call will point to an
+ *                 array of QC_FUNCTION_INFO:s.
+ * @param n_infos  Pointer to size_t variable where the number of items
+ *                 in @c infos will be returned.
+ *
+ * @note The returned array belongs to the GWBUF and remains valid for as
+ *       long as the GWBUF is valid. If the data is needed for longer than
+ *       that, it must be copied.
+ */
+void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
 
 /**
  * Returns the statement, with literals replaced with question marks.

@@ -217,6 +217,14 @@ void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_info
     classifier->qc_get_field_info(query, infos, n_infos);
 }
 
+void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    classifier->qc_get_function_info(query, infos, n_infos);
+}
+
 char** qc_get_database_names(GWBUF* query, int* sizep)
 {
     QC_TRACE();

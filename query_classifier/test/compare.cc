@@ -1060,6 +1060,132 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 }
 
 
+class QcFunctionInfo
+{
+public:
+    QcFunctionInfo(const QC_FUNCTION_INFO& info)
+        : m_name(info.name)
+        , m_usage(info.usage)
+    {}
+
+    bool eq(const QcFunctionInfo& rhs) const
+    {
+        return
+            m_name == rhs.m_name &&
+            m_usage == rhs.m_usage;
+    }
+
+    bool lt(const QcFunctionInfo& rhs) const
+    {
+        bool rv = false;
+
+        if (m_name < rhs.m_name)
+        {
+            rv = true;
+        }
+        else if (m_name > rhs.m_name)
+        {
+            rv = false;
+        }
+        else
+        {
+            rv = (m_usage < rhs.m_usage);
+        }
+
+        return rv;
+    }
+
+    void print(ostream& out) const
+    {
+        out << m_name;
+
+        out << "(";
+        char* s = qc_field_usage_mask_to_string(m_usage);
+        out << s;
+        free(s);
+        out << ")";
+    }
+
+private:
+    std::string m_name;
+    uint32_t    m_usage;
+};
+
+ostream& operator << (ostream& out, const QcFunctionInfo& x)
+{
+    x.print(out);
+    return out;
+}
+
+ostream& operator << (ostream& out, std::set<QcFunctionInfo>& x)
+{
+    std::set<QcFunctionInfo>::iterator i = x.begin();
+    std::set<QcFunctionInfo>::iterator end = x.end();
+
+    while (i != end)
+    {
+        out << *i++;
+        if (i != end)
+        {
+            out << " ";
+        }
+    }
+
+    return out;
+}
+
+bool operator < (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+{
+    return lhs.lt(rhs);
+}
+
+bool operator == (const QcFunctionInfo& lhs, const QcFunctionInfo& rhs)
+{
+    return lhs.eq(rhs);
+}
+
+bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
+                               QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
+{
+    bool success = false;
+    const char HEADING[] = "qc_get_function_info     : ";
+
+    const QC_FUNCTION_INFO* infos1;
+    const QC_FUNCTION_INFO* infos2;
+    size_t n_infos1;
+    size_t n_infos2;
+
+    pClassifier1->qc_get_function_info(pCopy1, &infos1, &n_infos1);
+    pClassifier2->qc_get_function_info(pCopy2, &infos2, &n_infos2);
+
+    stringstream ss;
+    ss << HEADING;
+
+    int i;
+
+    std::set<QcFunctionInfo> f1;
+    f1.insert(infos1, infos1 + n_infos1);
+
+    std::set<QcFunctionInfo> f2;
+    f2.insert(infos2, infos2 + n_infos2);
+
+    if (f1 == f2)
+    {
+        ss << "Ok : ";
+        ss << f1;
+        success = true;
+    }
+    else
+    {
+        ss << "ERR: " << f1 << " != " << f2;
+    }
+
+    report(success, ss.str());
+
+    return success;
+}
+
+
 bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
 {
     GWBUF* pCopy1 = create_gwbuf(s);
@@ -1080,6 +1206,7 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
+    errors += !compare_get_function_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
 
     gwbuf_free(pCopy1);
     gwbuf_free(pCopy2);

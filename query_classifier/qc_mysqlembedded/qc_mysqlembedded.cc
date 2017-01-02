@@ -2432,6 +2432,19 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
     *n_infos = pi->field_infos_len;
 }
 
+void qc_get_function_info(GWBUF* buf, const QC_FUNCTION_INFO** infos, size_t* n_infos)
+{
+    *infos = NULL;
+    *n_infos = 0;
+
+    if (!ensure_query_is_parsed(buf))
+    {
+        return;
+    }
+
+    // TODO: Implement functionality.
+}
+
 namespace
 {
 
@@ -2584,6 +2597,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_get_prepare_name,
         qc_get_prepare_operation,
         qc_get_field_info,
+        qc_get_function_info
     };
 
     static MXS_MODULE info =

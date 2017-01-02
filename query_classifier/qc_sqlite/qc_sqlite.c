@@ -3181,6 +3181,36 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
     }
 }
 
+void qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
+{
+    QC_TRACE();
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    *infos = NULL;
+    *n_infos = 0;
+
+    QC_SQLITE_INFO* info = get_query_info(query);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            // TODO: Implement functionality.
+            *infos = NULL;
+            *n_infos = 0;
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(query, "cannot report field info");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+}
+
 /**
  * EXPORTS
  */
@@ -3207,6 +3237,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_prepare_name,
         qc_sqlite_get_prepare_operation,
         qc_sqlite_get_field_info,
+        qc_sqlite_get_function_info,
     };
 
     static MXS_MODULE info =
