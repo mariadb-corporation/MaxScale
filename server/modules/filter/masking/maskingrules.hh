@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <jansson.h>
+#include "mysql.hh"
 
 /**
  * @class MaskingRules
@@ -26,6 +27,8 @@
  */
 class MaskingRules
 {
+    friend class MaskingRulesTester;
+
 public:
     /**
      * @class Rule
@@ -103,6 +106,21 @@ public:
          */
         static std::auto_ptr<Rule> create_from(json_t* pRule);
 
+        /**
+         * Establish whether a rule matches a column definition and user/host.
+         *
+         * @param column_def  A column definition.
+         * @param zUser       The current user.
+         * @param zHost       The current host.
+         *
+         * @return True, if the rule matches.
+         */
+        bool matches(const ComQueryResponse::ColumnDef& column_def,
+                     const char* zUser,
+                     const char* zHost) const;
+
+        void rewrite(LEncString& s) const;
+
     private:
         Rule(const Rule&);
         Rule& operator = (const Rule&);
@@ -147,11 +165,24 @@ public:
      */
     static std::auto_ptr<MaskingRules> create_from(json_t* pRoot);
 
+    /**
+     * Return the rule object that matches a column definition and user/host.
+     *
+     * @param column_def  A column definition.
+     * @param zUser       The current user.
+     * @param zHost       The current host.
+     *
+     * @return A rule object that matches the column definition and user/host
+     *         or NULL if no such rule object exists.
+     *
+     * @attention The returned object remains value only as long as the
+     *            @c MaskingRules object remains valid.
+     */
+    const Rule* get_rule_for(const ComQueryResponse::ColumnDef& column_def,
+                             const char* zUser,
+                             const char* zHost) const;
+
     typedef std::tr1::shared_ptr<Rule> SRule;
-    const std::vector<SRule>& rules() const
-    {
-        return m_rules;
-    }
 
 private:
     MaskingRules(json_t* pRoot, const std::vector<SRule>& rules);

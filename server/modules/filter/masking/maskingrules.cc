@@ -12,7 +12,9 @@
  */
 
 #include "maskingrules.hh"
+#include <algorithm>
 #include <errno.h>
+#include <functional>
 #include <string.h>
 #include <maxscale/debug.h>
 #include <maxscale/jansson.hh>
@@ -612,6 +614,117 @@ auto_ptr<MaskingRules::Rule> MaskingRules::Rule::create_from(json_t* pRule)
     return sRule;
 }
 
+namespace
+{
+
+class AccountMatcher : std::unary_function<MaskingRules::Rule::SAccount, bool>
+{
+public:
+    AccountMatcher(const char* zUser, const char* zHost)
+        : m_zUser(zUser)
+        , m_zHost(zHost)
+    {}
+
+    bool operator()(const MaskingRules::Rule::SAccount& sAccount)
+    {
+        return sAccount->matches(m_zUser, m_zHost);
+    }
+
+private:
+    const char* m_zUser;
+    const char* m_zHost;
+};
+
+}
+
+bool MaskingRules::Rule::matches(const ComQueryResponse::ColumnDef& column_def,
+                                 const char* zUser,
+                                 const char* zHost) const
+{
+    bool match =
+        (m_column == column_def.org_name()) &&
+        (m_table.empty() || (m_table == column_def.org_table())) &&
+        (m_database.empty() || (m_database == column_def.schema()));
+
+    if (match)
+    {
+        // If the column matched, then we need to check whether the rule applies
+        // to the user and host.
+
+        AccountMatcher matcher(zUser, zHost);
+
+        if (m_applies_to.size() != 0)
+        {
+            match = false;
+
+            vector<SAccount>::const_iterator i = std::find_if(m_applies_to.begin(),
+                                                              m_applies_to.end(),
+                                                              matcher);
+
+            match = (i != m_applies_to.end());
+        }
+
+        if (match && (m_exempted.size() != 0))
+        {
+            // If it is still a match, we need to check whether the user/host is
+            // exempted.
+
+            vector<SAccount>::const_iterator i = std::find_if(m_exempted.begin(),
+                                                              m_exempted.end(),
+                                                              matcher);
+
+            match = (i == m_exempted.end());
+        }
+    }
+
+    return match;
+}
+
+void MaskingRules::Rule::rewrite(LEncString& s) const
+{
+    bool rewritten = false;
+
+    size_t total_len = s.length();
+
+    if (!m_value.empty())
+    {
+        if (m_value.length() == total_len)
+        {
+            std::copy(m_value.begin(), m_value.end(), s.begin());
+            rewritten = true;
+        }
+    }
+
+    if (!rewritten)
+    {
+        if (!m_fill.empty())
+        {
+            LEncString::iterator i = s.begin();
+            size_t len = m_fill.length();
+
+            while (total_len)
+            {
+                if (total_len < len)
+                {
+                    len = total_len;
+                }
+
+                std::copy(m_fill.data(), m_fill.data() + len, i);
+
+                i += len;
+                total_len -= len;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Length of returned value \"%s\" is %u, while length of "
+                      "replacement value \"%s\" is %u, and no 'fill' value specified.",
+                      s.to_string().c_str(), (unsigned)s.length(),
+                      m_value.c_str(), (unsigned)m_value.length());
+        }
+    }
+}
+
 //
 // MaskingRules
 //
@@ -701,4 +814,51 @@ std::auto_ptr<MaskingRules> MaskingRules::create_from(json_t* pRoot)
     }
 
     return sRules;
+}
+
+namespace
+{
+
+class RuleMatcher : std::unary_function<MaskingRules::SRule, bool>
+{
+public:
+    RuleMatcher(const ComQueryResponse::ColumnDef& column_def,
+                const char* zUser,
+                const char* zHost)
+        : m_column_def(column_def)
+        , m_zUser(zUser)
+        , m_zHost(zHost)
+    {
+    }
+
+    bool operator()(const MaskingRules::SRule& sRule)
+    {
+        return sRule->matches(m_column_def, m_zUser, m_zHost);
+    }
+
+private:
+    const ComQueryResponse::ColumnDef& m_column_def;
+    const char* m_zUser;
+    const char* m_zHost;
+};
+
+}
+
+const MaskingRules::Rule* MaskingRules::get_rule_for(const ComQueryResponse::ColumnDef& column_def,
+                                                     const char* zUser,
+                                                     const char* zHost) const
+{
+    const Rule* pRule = NULL;
+
+    RuleMatcher matcher(column_def, zUser, zHost);
+    vector<SRule>::const_iterator i = std::find_if(m_rules.begin(), m_rules.end(), matcher);
+
+    if (i != m_rules.end())
+    {
+        const SRule& sRule = *i;
+
+        pRule = sRule.get();
+    }
+
+    return pRule;
 }
