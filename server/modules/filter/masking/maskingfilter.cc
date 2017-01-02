@@ -84,7 +84,7 @@ MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG
 
 MaskingFilterSession* MaskingFilter::newSession(SESSION* pSession)
 {
-    return MaskingFilterSession::create(pSession);
+    return MaskingFilterSession::create(pSession, this);
 }
 
 // static
@@ -96,7 +96,12 @@ void MaskingFilter::diagnostics(DCB* pDcb)
 // static
 uint64_t MaskingFilter::getCapabilities()
 {
-    return 0;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+}
+
+std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
+{
+    return m_sRules;
 }
 
 // static

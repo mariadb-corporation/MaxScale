@@ -14,6 +14,7 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <tr1/memory>
 #include <maxscale/filter.hh>
 #include "maskingfilterconfig.hh"
 #include "maskingfiltersession.hh"
@@ -24,6 +25,7 @@ class MaskingRules;
 class MaskingFilter : public maxscale::Filter<MaskingFilter, MaskingFilterSession>
 {
 public:
+    typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
     typedef MaskingFilterConfig Config;
 
     ~MaskingFilter();
@@ -35,6 +37,8 @@ public:
 
     static uint64_t getCapabilities();
 
+    SMaskingRules rules() const;
+
 private:
     MaskingFilter(const Config& config, std::auto_ptr<MaskingRules> sRules);
 
@@ -44,6 +48,6 @@ private:
     static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config);
 
 private:
-    Config                      m_config;
-    std::auto_ptr<MaskingRules> m_sRules;
+    Config        m_config;
+    SMaskingRules m_sRules;
 };

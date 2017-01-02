@@ -13,18 +13,101 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <memory>
+#include <tr1/memory>
+#include <maxscale/buffer.hh>
 #include <maxscale/filter.hh>
+#include "maskingrules.hh"
+
+class MaskingFilter;
 
 class MaskingFilterSession : public maxscale::FilterSession
 {
 public:
     ~MaskingFilterSession();
 
-    static MaskingFilterSession* create(SESSION* pSession);
+    static MaskingFilterSession* create(SESSION* pSession, const MaskingFilter* pFilter);
+
+    int routeQuery(GWBUF* pPacket);
+
+    int clientReply(GWBUF* pPacket);
 
 private:
-    MaskingFilterSession(SESSION* pSession);
+    MaskingFilterSession(SESSION* pSession, const MaskingFilter* pFilter);
 
     MaskingFilterSession(const MaskingFilterSession&);
     MaskingFilterSession& operator = (const MaskingFilterSession&);
+
+    enum state_t
+    {
+        EXPECTING_NOTHING,
+        EXPECTING_RESPONSE,
+        EXPECTING_FIELD,
+        EXPECTING_FIELD_EOF,
+        EXPECTING_ROW,
+        EXPECTING_ROW_EOF,
+        IGNORING_RESPONSE
+    };
+
+    void handle_response(GWBUF* pPacket);
+    void handle_field(GWBUF* pPacket);
+    void handle_row(GWBUF* pPacket);
+    void handle_eof(GWBUF* pPacket);
+
+private:
+    typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
+
+    class ResponseState
+    {
+    public:
+        ResponseState()
+            : m_nTotal_fields(0)
+            , m_index(0)
+        {}
+
+        void reset(const SMaskingRules& sRules)
+        {
+            m_sRules = sRules;
+            m_nTotal_fields = 0;
+            m_rules.clear();
+            m_index = 0;
+        }
+
+        const SMaskingRules& rules() const
+        {
+            return m_sRules;
+        }
+
+        uint32_t total_fields() const { return m_nTotal_fields; }
+
+        void set_total_fields(uint32_t n) { m_nTotal_fields = n; }
+
+        bool append_rule(const MaskingRules::Rule* pRule)
+        {
+            m_rules.push_back(pRule);
+
+            return m_rules.size() == m_nTotal_fields;
+        }
+
+        const MaskingRules::Rule* get_rule()
+        {
+            ss_dassert(m_nTotal_fields == m_rules.size());
+            ss_dassert(m_index < m_rules.size());
+            const MaskingRules::Rule* pRule = m_rules[m_index++];
+            // The rules will be used repeatedly for each row. Hence, once we hit
+            // the end, we need to continue from the start.
+            m_index = m_index % m_rules.size();
+            return pRule;
+        }
+
+    private:
+        SMaskingRules                          m_sRules;        /*<! The rules that are used. */
+        uint32_t                               m_nTotal_fields; /*<! The total number of fields/columns. */
+        std::vector<const MaskingRules::Rule*> m_rules;         /*<! The rules applied for columns. */
+        size_t                                 m_index;         /*<! Index to the current rule.*/
+    };
+
+    const MaskingFilter& m_filter;
+    state_t              m_state;
+    ResponseState        m_res;
 };
