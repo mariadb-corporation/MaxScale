@@ -82,6 +82,9 @@ typedef struct qc_sqlite_info
     QC_FIELD_INFO *field_infos;      // Pointer to array of QC_FIELD_INFOs.
     size_t field_infos_len;          // The used entries in field_infos.
     size_t field_infos_capacity;     // The capacity of the field_infos array.
+    QC_FUNCTION_INFO *function_infos;// Pointer to array of QC_FUNCTION_INFOs.
+    size_t function_infos_len;       // The used entries in function_infos.
+    size_t function_infos_capacity;  // The capacity of the function_infos array.
     bool initializing;               // Whether we are initializing sqlite3.
 } QC_SQLITE_INFO;
 
@@ -169,6 +172,9 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
                                            const Select* pSelect,
                                            uint32_t usage,
                                            const ExprList* pExclude);
+static void update_function_info(QC_SQLITE_INFO* info,
+                                 const char* name,
+                                 uint32_t usage);
 static void update_database_names(QC_SQLITE_INFO* info, const char* name);
 static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable);
 static void update_names_from_srclist(QC_SQLITE_INFO* info, const SrcList* pSrc);
@@ -281,6 +287,19 @@ static void free_field_infos(QC_FIELD_INFO* infos, size_t n_infos)
     }
 }
 
+static void free_function_infos(QC_FUNCTION_INFO* infos, size_t n_infos)
+{
+    if (infos)
+    {
+        for (int i = 0; i < n_infos; ++i)
+        {
+            MXS_FREE(infos[i].name);
+        }
+
+        MXS_FREE(infos);
+    }
+}
+
 static void free_string_array(char** sa)
 {
     if (sa)
@@ -329,6 +348,7 @@ static void info_finish(QC_SQLITE_INFO* info)
     free(info->prepare_name);
     free(info->preparable_stmt);
     free_field_infos(info->field_infos, info->field_infos_len);
+    free_function_infos(info->function_infos, info->function_infos_len);
 }
 
 static void info_free(QC_SQLITE_INFO* info)
@@ -370,6 +390,9 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->field_infos = NULL;
     info->field_infos_len = 0;
     info->field_infos_capacity = 0;
+    info->function_infos = NULL;
+    info->function_infos_len = 0;
+    info->function_infos_capacity = 0;
     info->initializing = false;
 
     return info;
@@ -728,6 +751,63 @@ static void update_field_info(QC_SQLITE_INFO* info,
     }
 }
 
+static void update_function_info(QC_SQLITE_INFO* info,
+                                 const char* name,
+                                 uint32_t usage)
+{
+    ss_dassert(name);
+
+    QC_FUNCTION_INFO item = { (char*)name, usage };
+
+    int i;
+    for (i = 0; i < info->function_infos_len; ++i)
+    {
+        QC_FUNCTION_INFO* function_info = info->function_infos + i;
+
+        if (strcasecmp(item.name, function_info->name) == 0)
+        {
+            break;
+        }
+    }
+
+    QC_FUNCTION_INFO* function_infos = NULL;
+
+    if (i == info->function_infos_len) // If true, the function was not present already.
+    {
+        if (info->function_infos_len < info->function_infos_capacity)
+        {
+            function_infos = info->function_infos;
+        }
+        else
+        {
+            size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
+            function_infos = MXS_REALLOC(info->function_infos, capacity * sizeof(QC_FUNCTION_INFO));
+
+            if (function_infos)
+            {
+                info->function_infos = function_infos;
+                info->function_infos_capacity = capacity;
+            }
+        }
+    }
+    else
+    {
+        info->function_infos[i].usage |= usage;
+    }
+
+    // If function_infos is NULL, then the function was found and has already been noted.
+    if (function_infos)
+    {
+        ss_dassert(item.name);
+        item.name = MXS_STRDUP(item.name);
+
+        if (item.name)
+        {
+            function_infos[info->function_infos_len++] = item;
+        }
+    }
+}
+
 static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
                                          const struct Expr* pExpr,
                                          uint32_t usage,
@@ -883,6 +963,8 @@ static void update_field_infos(QC_SQLITE_INFO* info,
             {
                 info->types |= QUERY_TYPE_WRITE;
             }
+
+            update_function_info(info, zToken, usage);
         }
 
         if (pExpr->pLeft)
@@ -3196,9 +3278,8 @@ void qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, s
     {
         if (qc_info_is_valid(info->status))
         {
-            // TODO: Implement functionality.
-            *infos = NULL;
-            *n_infos = 0;
+            *infos = info->function_infos;
+            *n_infos = info->function_infos_len;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
