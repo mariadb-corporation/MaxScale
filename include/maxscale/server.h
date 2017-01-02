@@ -291,7 +291,7 @@ extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void serverAddMonUser(SERVER *, char *, char *);
 extern char *serverGetParameter(SERVER *, char *);
 extern void server_update_credentials(SERVER *, char *, char *);
-extern DCB  *server_get_persistent(SERVER *, char *, const char *, int);
+extern DCB  *server_get_persistent(SERVER *, const char *, const char *, int);
 extern void server_update_address(SERVER *, char *);
 extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();

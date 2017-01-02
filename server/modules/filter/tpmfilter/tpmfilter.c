@@ -343,7 +343,7 @@ newSession(FILTER *instance, SESSION *session)
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session;
     int     i;
-    char        *remote, *user;
+    const char *remote, *user;
 
     if ((my_session = MXS_CALLOC(1, sizeof(TPM_SESSION))) != NULL)
     {
@@ -366,7 +366,7 @@ newSession(FILTER *instance, SESSION *session)
         {
             my_session->clientHost = NULL;
         }
-        if ((user = session_getUser(session)) != NULL)
+        if ((user = session_get_user(session)) != NULL)
         {
             my_session->userName = MXS_STRDUP_A(user);
         }

@@ -326,7 +326,7 @@ bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
     bool should_use = false;
 
     CACHE_RULE *rule = self->use_rules;
-    const char *user = session_getUser((SESSION*)session);
+    const char *user = session_get_user((SESSION*)session);
     const char *host = session_get_remote((SESSION*)session);
 
     if (!user)

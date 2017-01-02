@@ -1126,7 +1126,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
-    char *ptr, t_buf[128], *combined, *canon_q, *sesshost, *sessusr;
+    char *ptr, t_buf[128], *combined, *canon_q;
+    const char *sesshost, *sessusr;
     bool success = false, src_ok = false, schema_ok = false, obj_ok = false;
     int length, i, j, dbcount = 0;
     char** sesstbls;
@@ -1171,7 +1172,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         {
             if (session_isvalid(my_session->session))
             {
-                sessusr = session_getUser(my_session->session);
+                sessusr = session_get_user(my_session->session);
                 sesshost = session_get_remote(my_session->session);
 
                 /**Username was configured*/

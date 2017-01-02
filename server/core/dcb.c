@@ -640,9 +640,9 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     GWPROTOCOL  *funcs;
     int         fd;
     int         rc;
-    char        *user;
+    const char  *user;
 
-    user = session_getUser(session);
+    user = session_get_user(session);
     if (user && strlen(user))
     {
         MXS_DEBUG("%lu [dcb_connect] Looking for persistent connection DCB "
@@ -1653,8 +1653,8 @@ dcb_close(DCB *dcb)
             && dcb->server && DCB_STATE_POLLING == dcb->state)
         {
             /* May be a candidate for persistence, so save user name */
-            char *user;
-            user = session_getUser(dcb->session);
+            const char *user;
+            user = session_get_user(dcb->session);
             if (user && strlen(user) && !dcb->user)
             {
                 dcb->user = MXS_STRDUP_A(user);

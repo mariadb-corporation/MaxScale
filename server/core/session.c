@@ -707,8 +707,8 @@ session_reply(void *instance, void *session, GWBUF *data)
  *
  * @param session       The session whose client address to return
  */
-char *
-session_get_remote(SESSION *session)
+const char *
+session_get_remote(const SESSION *session)
 {
     if (session && session->client_dcb)
     {
@@ -749,8 +749,8 @@ return_succp:
  * @param session               The session pointer.
  * @return      The user name or NULL if it can not be determined.
  */
-char *
-session_getUser(SESSION *session)
+const char *
+session_get_user(const SESSION *session)
 {
     return (session && session->client_dcb) ? session->client_dcb->user : NULL;
 }

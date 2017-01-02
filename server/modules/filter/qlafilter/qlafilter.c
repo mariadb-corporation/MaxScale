@@ -145,12 +145,12 @@ typedef struct
 {
     int active;
     DOWNSTREAM down;
-    char *filename; /* The session-specific log file name */
-    FILE *fp;       /* The session-specific log file */
-    char *remote;
-    char *service;  /* The service name this filter is attached to. Not owned. */
-    size_t ses_id;  /* The session this filter serves */
-    char *user;     /* The client */
+    char *filename;   /* The session-specific log file name */
+    FILE *fp;         /* The session-specific log file */
+    const char *remote;
+    char *service;    /* The service name this filter is attached to. Not owned. */
+    size_t ses_id;    /* The session this filter serves */
+    const char *user; /* The client */
 } QLA_SESSION;
 
 static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
@@ -413,7 +413,7 @@ newSession(FILTER *instance, SESSION *session)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session;
-    char *remote, *userName;
+    const char *remote, *userName;
 
     if ((my_session = MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
     {
@@ -425,7 +425,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->active = 1;
 
         remote = session_get_remote(session);
-        userName = session_getUser(session);
+        userName = session_get_user(session);
         ss_dassert(userName && remote);
 
         if ((my_instance->source && remote &&

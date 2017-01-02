@@ -491,7 +491,7 @@ newSession(FILTER *instance, SESSION *session)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session;
-    char *remote, *userName;
+    const char *remote, *userName;
 
     if (strcmp(my_instance->service->name, session->service->name) == 0)
     {
@@ -533,7 +533,7 @@ newSession(FILTER *instance, SESSION *session)
                 MXS_WARNING("Tee filter is not active.");
             }
         }
-        userName = session_getUser(session);
+        userName = session_get_user(session);
 
         if (my_instance->userName &&
             userName &&

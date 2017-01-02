@@ -262,7 +262,7 @@ newSession(FILTER *instance, SESSION *session)
 {
     REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE *) instance;
     REGEXHINT_SESSION *my_session;
-    char *remote, *user;
+    const char *remote, *user;
 
     if ((my_session = MXS_CALLOC(1, sizeof(REGEXHINT_SESSION))) != NULL)
     {
@@ -278,7 +278,7 @@ newSession(FILTER *instance, SESSION *session)
             }
         }
 
-        if (my_instance->user && (user = session_getUser(session))
+        if (my_instance->user && (user = session_get_user(session))
             && strcmp(user, my_instance->user))
         {
             my_session->active = 0;

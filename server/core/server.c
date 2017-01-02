@@ -206,7 +206,7 @@ server_free(SERVER *tofreeserver)
  * @param       protocol    The name of the protocol needed for the connection
  */
 DCB *
-server_get_persistent(SERVER *server, char *user, const char *protocol, int id)
+server_get_persistent(SERVER *server, const char *user, const char *protocol, int id)
 {
     DCB *dcb, *previous = NULL;
 
