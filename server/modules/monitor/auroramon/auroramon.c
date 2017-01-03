@@ -42,16 +42,6 @@ typedef struct aurora_monitor
 } AURORA_MONITOR;
 
 /**
- * The module initialisation routine, called when the module is first loaded.
- */
-/*lint -e14 */
-void
-ModuleInit()
-{
-}
-/*lint +e14 */
-
-/**
  * @brief Update the status of a server
  *
  * This function connects to the database and queries it for its status. The

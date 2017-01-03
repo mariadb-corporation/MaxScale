@@ -127,15 +127,6 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
 static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* n_backend);
 
 /**
- * The module initialization routine, called when the module
- * is first loaded.
- */
-void ModuleInit()
-{
-    MXS_NOTICE("Initializing statement-based read/write split router module.");
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must return the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -145,6 +136,7 @@ void ModuleInit()
  */
 ROUTER_OBJECT *GetModuleObject()
 {
+    MXS_NOTICE("Initializing statement-based read/write split router module.");
     return &MyObject;
 }
 

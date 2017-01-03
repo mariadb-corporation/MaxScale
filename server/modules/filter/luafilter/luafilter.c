@@ -181,18 +181,6 @@ typedef struct
 } LUA_SESSION;
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- * @see function load_module in load_utils.c for explanation of lint
- */
-/*lint -e14 */
-void
-ModuleInit()
-{
-}
-/*lint +e14 */
-
-/**
  * Create a new instance of the Lua filter.
  *
  * The global script will be loaded in this function and executed once on a global

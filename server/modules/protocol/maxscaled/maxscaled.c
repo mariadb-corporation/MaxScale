@@ -192,15 +192,6 @@ static GWPROTOCOL MyObject =
 };
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void ModuleInit()
-{
-    MXS_INFO("Initialise MaxScaled Protocol module.");;
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -210,6 +201,7 @@ void ModuleInit()
  */
 GWPROTOCOL* GetModuleObject()
 {
+    MXS_INFO("Initialise MaxScaled Protocol module.");
     return &MyObject;
 }
 /*lint +e14 */

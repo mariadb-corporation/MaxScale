@@ -98,10 +98,6 @@ void qc_thread_end(void)
 extern "C"
 {
 
-    void ModuleInit()
-    {
-    }
-
     /* @see function load_module in load_utils.c for explanation of the following
      * lint directives.
     */

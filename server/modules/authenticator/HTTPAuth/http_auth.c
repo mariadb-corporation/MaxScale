@@ -75,14 +75,6 @@ typedef struct http_auth
 }HTTP_AUTH;
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void ModuleInit()
-{
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of

@@ -69,14 +69,6 @@ MODULE_INFO info =
 };
 
 /**
- * The module initialization functions, called when the module has
- * been loaded.
- */
-void ModuleInit()
-{
-}
-
-/**
  * The module entry point function, called when the module is loaded.
  *
  * @return The module object.

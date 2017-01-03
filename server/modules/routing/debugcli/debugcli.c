@@ -79,18 +79,6 @@ static SPINLOCK     instlock;
 static CLI_INSTANCE *instances;
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialise debug CLI router module.");
-    spinlock_init(&instlock);
-    instances = NULL;
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -101,6 +89,9 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
+    MXS_NOTICE("Initialise debug CLI router module.");
+    spinlock_init(&instlock);
+    instances = NULL;
     return &MyObject;
 }
 

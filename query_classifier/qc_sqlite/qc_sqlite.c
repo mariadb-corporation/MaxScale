@@ -3203,10 +3203,6 @@ MODULE_INFO info =
     "V1.0.0"
 };
 
-void ModuleInit()
-{
-}
-
 QUERY_CLASSIFIER* GetModuleObject()
 {
     return &qc;

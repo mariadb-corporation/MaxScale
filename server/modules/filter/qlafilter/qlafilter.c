@@ -157,18 +157,6 @@ static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const c
                            const char*, size_t);
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- * @see function load_module in load_utils.c for explanation of lint
- */
-/*lint -e14 */
-void
-ModuleInit()
-{
-}
-/*lint +e14 */
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of

@@ -160,22 +160,6 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
 }
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void ModuleInit()
-{
-    modulecmd_arg_type_t args[] =
-    {
-        { MODULECMD_ARG_SERVICE, "Service where the user is added"},
-        { MODULECMD_ARG_STRING, "User to add"},
-        { MODULECMD_ARG_STRING, "Password of the user"}
-    };
-
-    modulecmd_register_command("cdc", "add_user", cdc_add_new_user, 3, args);
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -185,6 +169,14 @@ void ModuleInit()
  */
 GWAUTHENTICATOR* GetModuleObject()
 {
+    modulecmd_arg_type_t args[] =
+    {
+        { MODULECMD_ARG_SERVICE, "Service where the user is added"},
+        { MODULECMD_ARG_STRING, "User to add"},
+        { MODULECMD_ARG_STRING, "Password of the user"}
+    };
+
+    modulecmd_register_command("cdc", "add_user", cdc_add_new_user, 3, args);
     return &MyObject;
 }
 

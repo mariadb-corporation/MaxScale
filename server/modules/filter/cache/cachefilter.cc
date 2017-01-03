@@ -202,22 +202,18 @@ MODULE_INFO info =
     VERSION_STRING
 };
 
-extern "C" void ModuleInit()
+extern "C" FILTER_OBJECT *GetModuleObject()
 {
     static modulecmd_arg_type_t show_argv[] =
     {
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
         { MODULECMD_ARG_FILTER, "Cache name" }
     };
-
+    
     modulecmd_register_command("cache", "show", cache_command_show,
                                MXS_ARRAY_NELEMS(show_argv), show_argv);
-
+    
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
-}
-
-extern "C" FILTER_OBJECT *GetModuleObject()
-{
     return &CacheFilter::s_object;
 };
 

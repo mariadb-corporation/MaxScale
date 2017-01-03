@@ -142,18 +142,8 @@ void *load_module(const char *module, const char *type)
             return NULL;
         }
 
-        void *sym;
-
-        /*
-         * If the module has a ModuleInit function cal it now.
-         */
-        if ((sym = dlsym(dlhandle, "ModuleInit")) != NULL)
-        {
-            void (*ModuleInit)() = sym;
-            ModuleInit();
-        }
-
         MODULE_INFO *mod_info = NULL;
+        void *sym;
 
         if ((sym = dlsym(dlhandle, "info")) != NULL)
         {

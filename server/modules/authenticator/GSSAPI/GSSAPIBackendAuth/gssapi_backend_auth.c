@@ -285,13 +285,6 @@ MODULE_INFO info =
 };
 
 /**
- * Module initialization entry point
- */
-void ModuleInit()
-{
-}
-
-/**
  * Module handle entry point
  */
 GWAUTHENTICATOR* GetModuleObject()

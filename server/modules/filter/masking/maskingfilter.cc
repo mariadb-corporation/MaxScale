@@ -27,13 +27,9 @@ MODULE_INFO info =
     "V1.0.0"
 };
 
-extern "C" void ModuleInit()
-{
-    MXS_NOTICE("Initialized masking module.");
-}
-
 extern "C" FILTER_OBJECT *GetModuleObject()
 {
+    MXS_NOTICE("Initialized masking module.");
     return &MaskingFilter::s_object;
 }
 

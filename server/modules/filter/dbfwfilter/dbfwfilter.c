@@ -794,12 +794,14 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
 }
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- * @see function load_module in load_utils.c for explanation of lint
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
  */
-/*lint -e14 */
-void ModuleInit()
+FILTER_OBJECT * GetModuleObject()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
@@ -816,20 +818,6 @@ void ModuleInit()
     };
 
     modulecmd_register_command("dbfwfilter", "rules", dbfw_show_rules, 2, args_rules_show);
-}
-
-/*lint +e14 */
-
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-FILTER_OBJECT * GetModuleObject()
-{
     return &MyObject;
 }
 

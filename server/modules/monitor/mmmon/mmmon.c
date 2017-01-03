@@ -60,16 +60,6 @@ static MONITOR_OBJECT MyObject =
 };
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialise the Multi-Master Monitor module.");
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -80,6 +70,7 @@ ModuleInit()
 MONITOR_OBJECT *
 GetModuleObject()
 {
+    MXS_NOTICE("Initialise the Multi-Master Monitor module.");
     return &MyObject;
 }
 /*lint +e14 */
