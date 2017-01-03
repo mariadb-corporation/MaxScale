@@ -56,6 +56,10 @@ Multiple options can be defined as a comma-separated list of parameter-value pai
 ```
 router_options=<option>,<option>
 ```
+For example, to set **`slave_selection_criteria** and **`disable_sescmd_history`**, write
+```
+router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS,disable_sescmd_history=true
+```
 
 ### `slave_selection_criteria`
 
@@ -84,7 +88,7 @@ The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the connection
 
 ```
 # Set a limit on the session command history
-max_sescmd_history=1500
+router_options=max_sescmd_history=1500
 ```
 
 When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
@@ -95,7 +99,7 @@ When a limitation is set, it effectively creates a cap on the session's memory c
 
 ```
 # Disable the session command history
-disable_sescmd_history=true
+router_options=disable_sescmd_history=true
 ```
 
 ### `master_accept_reads`
@@ -106,7 +110,7 @@ By default, no reads are sent to the master.
 
 ```
 # Use the master for reads
-master_accept_reads=true
+router_options=master_accept_reads=true
 ```
 
 ### `strict_multi_stmt`
@@ -123,7 +127,7 @@ state will be made inside the multi-statement queries.
 
 ```
 # Disable strict multi-statement mode
-strict_multi_stmt=false
+router_options=strict_multi_stmt=false
 ```
 
 ### `master_failure_mode`
