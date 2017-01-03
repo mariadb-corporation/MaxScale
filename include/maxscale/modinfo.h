@@ -96,13 +96,13 @@ typedef struct
  *
  * @code{.cpp}
  *
- * MODULE* MXS_CREATE_MODULE()
+ * MXS_MODULE* MXS_CREATE_MODULE()
  * {
  *     // Module specific API implementation
  *    static FILTER_OBJECT my_object = { ... };
  *
- *     // An implementation of the MODULE structure
- *    static MODULE info = { ... };
+ *     // An implementation of the MXS_MODULE structure
+ *    static MXS_MODULE info = { ... };
  *
  *     // Any global initialization should be done here
  *
