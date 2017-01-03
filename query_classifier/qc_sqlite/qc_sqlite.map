@@ -1,9 +1,6 @@
 {
     global:
-        info;
-        version;
-        GetModuleObject;
-        ModuleInit;
+        mxs_get_module_object;
     local:
         *;
 };
