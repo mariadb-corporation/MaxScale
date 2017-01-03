@@ -616,18 +616,9 @@ MODULE_INFO info =
     MODULE_API_AUTHENTICATOR,
     MODULE_GA,
     GWAUTHENTICATOR_VERSION,
-    "GSSAPI authenticator"
+    "GSSAPI authenticator",
+    "V1.0.0"
 };
-
-static char version_str[] = "V1.0.0";
-
-/**
- * Version string entry point
- */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * Module initialization entry point

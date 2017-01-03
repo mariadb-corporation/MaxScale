@@ -42,11 +42,10 @@ MODULE_INFO info =
     MODULE_API_AUTHENTICATOR,
     MODULE_GA,
     GWAUTHENTICATOR_VERSION,
-    "The Null client authenticator implementation"
+    "The Null client authenticator implementation",
+    "V1.1.0"
 };
 /*lint +e14 */
-
-static char *version_str = "V1.1.0";
 
 static int null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool null_auth_is_client_ssl_capable(DCB *dcb);
@@ -67,20 +66,6 @@ static GWAUTHENTICATOR MyObject =
     NULL,                            /* No destroy entry point */
     users_default_loadusers          /* Load generic users */
 };
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

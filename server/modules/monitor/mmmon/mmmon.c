@@ -31,8 +31,6 @@
 
 static void monitorMain(void *);
 
-static char *version_str = "V1.1.1";
-
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
  */
@@ -42,7 +40,8 @@ MODULE_INFO info =
     MODULE_API_MONITOR,
     MODULE_BETA_RELEASE,
     MONITOR_VERSION,
-    "A Multi-Master Multi Master monitor"
+    "A Multi-Master Multi Master monitor",
+    "V1.1.1"
 };
 /*lint +e14 */
 
@@ -61,28 +60,13 @@ static MONITOR_OBJECT MyObject =
 };
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise the Multi-Master Monitor module %s.", version_str);
+    MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 }
 
 /**
@@ -304,7 +288,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
-                      " MySQL Version: %s", version_str);
+                      " MySQL Version: %s", server_string);
             return;
         }
 
@@ -340,7 +324,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                 mysql_free_result(result);
                 MXS_ERROR("\"SHOW ALL SLAVES STATUS\" returned less than the expected"
                           " amount of columns. Expected 42 columns MySQL Version: %s",
-                          version_str);
+                          server_string);
                 return;
             }
 
@@ -404,7 +388,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                         MXS_ERROR("\"SHOW SLAVE STATUS\" "
                                   " for versions less than 5.5 does not have master_server_id, "
                                   "replication tree cannot be resolved for server %s."
-                                  " MySQL Version: %s", database->server->unique_name, version_str);
+                                  " MySQL Version: %s", database->server->unique_name, server_string);
                         database->log_version_err = false;
                     }
                 }
@@ -412,7 +396,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                 {
                     MXS_ERROR("\"SHOW SLAVE STATUS\" "
                               "returned less than the expected amount of columns. "
-                              "Expected 40 columns. MySQL Version: %s", version_str);
+                              "Expected 40 columns. MySQL Version: %s", server_string);
                 }
                 return;
             }
@@ -456,7 +440,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW GLOBAL VARIABLES LIKE 'read_only'\". "
-                      "Expected 2 columns. MySQL Version: %s", version_str);
+                      "Expected 2 columns. MySQL Version: %s", server_string);
             return;
         }
 

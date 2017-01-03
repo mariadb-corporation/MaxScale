@@ -69,10 +69,10 @@ MODULE_INFO     info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "Transaction Performance Monitoring filter"
+    "Transaction Performance Monitoring filter",
+    "V1.0.1"
 };
 
-static char *version_str = "V1.0.1";
 static size_t buf_size = 10;
 static size_t sql_size_limit = 64 * 1024 *
                                1024; /* The maximum size for query statements in a transaction (64MB) */
@@ -157,17 +157,6 @@ typedef struct
     int sql_index;
     size_t      max_sql_size;
 } TPM_SESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

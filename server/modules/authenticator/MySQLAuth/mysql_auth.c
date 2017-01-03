@@ -52,11 +52,10 @@ MODULE_INFO info =
     MODULE_API_AUTHENTICATOR,
     MODULE_GA,
     GWAUTHENTICATOR_VERSION,
-    "The MySQL client to MaxScale authenticator implementation"
+    "The MySQL client to MaxScale authenticator implementation",
+    "V1.1.0"
 };
 /*lint +e14 */
-
-static char *version_str = "V1.1.0";
 
 static void* mysql_auth_init(char **options);
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
@@ -93,20 +92,6 @@ static int mysql_auth_set_client_data(
     MYSQL_session *client_data,
     MySQLProtocol *protocol,
     GWBUF         *buffer);
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

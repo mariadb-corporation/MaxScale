@@ -31,7 +31,8 @@
 MODULE_INFO info =
 {
     MODULE_API_ROUTER, MODULE_GA, ROUTER_VERSION,
-    "A Read/Write splitting router for enhancement read scalability"
+    "A Read/Write splitting router for enhancement read scalability",
+    "V1.1.0"
 };
 
 /**
@@ -67,8 +68,6 @@ MODULE_INFO info =
 
 /** Maximum number of slaves */
 #define MAX_SLAVE_COUNT 255
-
-static char *version_str = "V1.1.0";
 
 /*
  * The functions that implement the router module API
@@ -126,15 +125,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
 static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
                                 int router_nsrv, ROUTER_INSTANCE *router);
 static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* n_backend);
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *version()
-{
-    return version_str;
-}
 
 /**
  * The module initialization routine, called when the module

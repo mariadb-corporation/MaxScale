@@ -22,15 +22,14 @@
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
 
-static char *version_str = (char*)"V1.0.0";
-
 /*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_MONITOR,
     MODULE_BETA_RELEASE,
     MONITOR_VERSION,
-    "Aurora monitor"
+    "Aurora monitor",
+    "V1.0.0"
 };
 /*lint +e14 */
 
@@ -41,18 +40,6 @@ typedef struct aurora_monitor
     char*  script;              /**< Launchable script */
     bool   events[MAX_MONITOR_EVENT]; /**< Enabled monitor events */
 } AURORA_MONITOR;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-/*lint -e14 */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module is first loaded.

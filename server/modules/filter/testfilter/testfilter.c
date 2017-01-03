@@ -34,10 +34,9 @@ MODULE_INFO     info =
     MODULE_API_FILTER,
     MODULE_BETA_RELEASE,
     FILTER_VERSION,
-    "A simple query counting filter"
+    "A simple query counting filter",
+    "V2.0.0"
 };
-
-static char *version_str = "V2.0.0";
 
 static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static  void    *newSession(FILTER *instance, SESSION *session);
@@ -82,17 +81,6 @@ typedef struct
     DOWNSTREAM  down;
     int     count;
 } TEST_SESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

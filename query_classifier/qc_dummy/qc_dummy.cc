@@ -111,15 +111,9 @@ extern "C"
         MODULE_API_QUERY_CLASSIFIER,
         MODULE_IN_DEVELOPMENT,
         QUERY_CLASSIFIER_VERSION,
-        const_cast<char*>("Dummy Query Classifier"),
+        "Dummy Query Classifier",
+        "V1.0.0"
     };
-
-    static char version_string[] = "V1.0.0";
-
-    char* version()
-    {
-        return const_cast<char*>(version_string);
-    }
 
     static QUERY_CLASSIFIER qc =
     {

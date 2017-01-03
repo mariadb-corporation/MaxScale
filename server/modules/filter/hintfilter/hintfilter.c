@@ -28,10 +28,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_ALPHA_RELEASE,
     FILTER_VERSION,
-    "A hint parsing filter"
+    "A hint parsing filter",
+    "V1.0.0"
 };
-
-static char *version_str = "V1.0.0";
 
 static FILTER *createInstance(const char* name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
@@ -57,17 +56,6 @@ static FILTER_OBJECT MyObject =
     getCapabilities,
     NULL, // No destroyInstance
 };
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialization routine, called when the module

@@ -39,11 +39,10 @@ MODULE_INFO info =
     MODULE_API_PROTOCOL,
     MODULE_IN_DEVELOPMENT,
     GWPROTOCOL_VERSION,
-    "Test protocol"
+    "Test protocol",
+    "V1.1.0"
 };
 /*lint +e14 */
-
-static char *version_str = "V1.1.0";
 
 static int test_read(DCB* dcb){ return 1;}
 static int test_write(DCB *dcb, GWBUF* buf){ return 1;}
@@ -77,21 +76,6 @@ static GWPROTOCOL MyObject =
     test_default_auth, /**< Default authenticator         */
     test_connection_limit   /**< Connection limit        */
 };
-
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

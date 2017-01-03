@@ -83,10 +83,10 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_ALPHA_RELEASE,
     FILTER_VERSION,
-    "A RabbitMQ query logging filter"
+    "A RabbitMQ query logging filter",
+    "V1.0.2"
 };
 
-static char *version_str = "V1.0.2";
 static int uid_gen;
 static int hktask_id = 0;
 /*
@@ -261,17 +261,6 @@ typedef struct
 } MQ_SESSION;
 
 void sendMessage(void* data);
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

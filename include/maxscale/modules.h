@@ -41,15 +41,13 @@ MXS_BEGIN_DECLS
 
 typedef struct modules
 {
-    char    *module;    /**< The name of the module */
-    char    *type;      /**< The module type */
-    char    *version;   /**< Module version */
-    void    *handle;    /**< The handle returned by dlopen */
-    void    *modobj;    /**< The module "object" this is the set of entry points */
-    MODULE_INFO
-    *info;      /**< The module information */
-    struct  modules
-        *next;      /**< Next module in the linked list */
+    char    *module;       /**< The name of the module */
+    char    *type;         /**< The module type */
+    char    *version;      /**< Module version */
+    void    *handle;       /**< The handle returned by dlopen */
+    void    *modobj;       /**< The module "object" this is the set of entry points */
+    MODULE_INFO *info;     /**< The module information */
+    struct  modules *next; /**< Next module in the linked list */
 } MODULES;
 
 /**

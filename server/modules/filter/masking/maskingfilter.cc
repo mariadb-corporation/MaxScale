@@ -14,13 +14,6 @@
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilter.hh"
 
-namespace
-{
-
-char VERSION_STRING[] = "V1.0.0";
-
-}
-
 //
 // Global symbols of the Module
 //
@@ -30,23 +23,19 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_IN_DEVELOPMENT,
     FILTER_VERSION,
-    "A masking filter that is capable of masking/obfuscating returned column values."
+    "A masking filter that is capable of masking/obfuscating returned column values.",
+    "V1.0.0"
 };
-
-extern "C" char *version()
-{
-    return VERSION_STRING;
-}
 
 extern "C" void ModuleInit()
 {
-    MXS_NOTICE("Initialized masking module %s.\n", VERSION_STRING);
+    MXS_NOTICE("Initialized masking module.");
 }
 
 extern "C" FILTER_OBJECT *GetModuleObject()
 {
     return &MaskingFilter::s_object;
-};
+}
 
 //
 // MaskingFilter

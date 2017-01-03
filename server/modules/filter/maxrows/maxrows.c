@@ -46,8 +46,6 @@
 #include <maxscale/debug.h>
 #include "maxrows.h"
 
-static char VERSION_STRING[] = "V1.0.0";
-
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static void   *newSession(FILTER *instance, SESSION *session);
 static void    closeSession(FILTER *instance, void *sdata);
@@ -66,13 +64,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_IN_DEVELOPMENT,
     FILTER_VERSION,
-    "A filter that is capable of limiting the resultset number of rows."
+    "A filter that is capable of limiting the resultset number of rows.",
+    "V1.0.0"
 };
-
-char *version()
-{
-    return VERSION_STRING;
-}
 
 /**
  * The module initialization functions, called when the module has

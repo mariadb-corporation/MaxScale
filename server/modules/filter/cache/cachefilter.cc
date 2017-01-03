@@ -198,13 +198,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_IN_DEVELOPMENT,
     FILTER_VERSION,
-    "A caching filter that is capable of caching and returning cached data."
+    "A caching filter that is capable of caching and returning cached data.",
+    VERSION_STRING
 };
-
-extern "C" char *version()
-{
-    return VERSION_STRING;
-}
 
 extern "C" void ModuleInit()
 {

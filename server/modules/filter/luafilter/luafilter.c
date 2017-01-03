@@ -55,21 +55,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_EXPERIMENTAL,
     FILTER_VERSION,
-    "Lua Filter"
+    "Lua Filter",
+    "V1.0.0"
 };
-
-static const char *version_str = "V1.0.0";
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return (char*) version_str;
-}
 
 /*
  * The filter entry points

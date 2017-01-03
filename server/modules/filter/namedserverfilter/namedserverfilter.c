@@ -45,10 +45,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A routing hint filter that uses regular expressions to direct queries"
+    "A routing hint filter that uses regular expressions to direct queries",
+    "V1.1.0"
 };
-
-static char *version_str = "V1.1.0";
 
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
@@ -97,17 +96,6 @@ typedef struct
     int n_undiverted; /* No. of statements not diverted */
     int active; /* Is filter active */
 } REGEXHINT_SESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

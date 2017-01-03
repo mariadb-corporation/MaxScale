@@ -51,7 +51,6 @@ static MODULES *find_module(const char *module);
 static void register_module(const char *module,
                             const char  *type,
                             void        *dlhandle,
-                            char        *version,
                             void        *modobj,
                             MODULE_INFO *info);
 static void unregister_module(const char *module);
@@ -145,19 +144,6 @@ void *load_module(const char *module, const char *type)
 
         void *sym;
 
-        if ((sym = dlsym(dlhandle, "version")) == NULL)
-        {
-            MXS_ERROR("Version interface not supported by "
-                      "module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
-            dlclose(dlhandle);
-            return NULL;
-        }
-
-        char *(*ver)() = sym;
-        char *version = ver();
-
         /*
          * If the module has a ModuleInit function cal it now.
          */
@@ -230,8 +216,8 @@ void *load_module(const char *module, const char *type)
         void *(*entry_point)() = sym;
         modobj = entry_point();
 
-        MXS_NOTICE("Loaded module %s: %s from %s", module, version, fname);
-        register_module(module, type, dlhandle, version, modobj, mod_info);
+        MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
+        register_module(module, type, dlhandle, modobj, mod_info);
     }
     else
     {
@@ -310,13 +296,12 @@ static void
 register_module(const char *module,
                 const char *type,
                 void *dlhandle,
-                char *version,
                 void *modobj,
                 MODULE_INFO *mod_info)
 {
     module = MXS_STRDUP(module);
     type = MXS_STRDUP(type);
-    version = MXS_STRDUP(version);
+    char *version = MXS_STRDUP(mod_info->version);
 
     MODULES *mod = (MODULES *)MXS_MALLOC(sizeof(MODULES));
 

@@ -41,15 +41,14 @@
 #include <maxscale/log_manager.h>
 
 
-MODULE_INFO     info =
+MODULE_INFO info =
 {
     MODULE_API_ROUTER,
     MODULE_GA,
     ROUTER_VERSION,
-    "The admin user interface"
+    "The admin user interface",
+    "V1.0.0"
 };
-
-static char *version_str = "V1.0.0";
 
 /* The router entry points */
 static  ROUTER *createInstance(SERVICE *service, char **options);
@@ -81,24 +80,13 @@ static SPINLOCK     instlock;
 static CLI_INSTANCE *instances;
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise CLI router module %s.", version_str);
+    MXS_NOTICE("Initialise CLI router module");
     spinlock_init(&instlock);
     instances = NULL;
 }

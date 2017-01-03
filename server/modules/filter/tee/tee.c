@@ -99,10 +99,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A tee piece in the filter plumbing"
+    "A tee piece in the filter plumbing",
+    "V1.0.0"
 };
-
-static char *version_str = "V1.0.0";
 
 /*
  * The filter entry points
@@ -304,17 +303,6 @@ orphan_free(void* data)
 #ifdef SS_DEBUG
     MXS_DEBUG("tee.c: %d orphans freed.", o_freed);
 #endif
-}
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
 }
 
 /**

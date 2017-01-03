@@ -2557,8 +2557,6 @@ void qc_thread_end(void)
 extern "C"
 {
 
-static char version_string[] = "V1.0.0";
-
 static QUERY_CLASSIFIER qc =
 {
     qc_init,
@@ -2589,13 +2587,9 @@ MODULE_INFO info =
     MODULE_API_QUERY_CLASSIFIER,
     MODULE_IN_DEVELOPMENT,
     QUERY_CLASSIFIER_VERSION,
-    const_cast<char*>("Query classifier based upon MySQL Embedded"),
+    "Query classifier based upon MySQL Embedded",
+    "V1.0.0"
 };
-
-char* version()
-{
-    return const_cast<char*>(version_string);
-}
 
 void ModuleInit()
 {

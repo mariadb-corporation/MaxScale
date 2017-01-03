@@ -15,14 +15,13 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 
-static char *version_str = "V1.0.0";
-
 MODULE_INFO     info =
 {
     MODULE_API_ROUTER,
     MODULE_IN_DEVELOPMENT,
     ROUTER_VERSION,
-    "A test router - not for use in real systems"
+    "A test router - not for use in real systems",
+    "V1.0.0"
 };
 
 static  ROUTER *createInstance(SERVICE *service, char **options);
@@ -61,17 +60,6 @@ typedef struct
 typedef struct
 {
 } TESTSESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

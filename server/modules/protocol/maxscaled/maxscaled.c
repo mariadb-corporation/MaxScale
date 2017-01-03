@@ -46,7 +46,8 @@ MODULE_INFO info =
     MODULE_API_PROTOCOL,
     MODULE_GA,
     GWPROTOCOL_VERSION,
-    "A maxscale protocol for the administration interface"
+    "A maxscale protocol for the administration interface",
+    "V2.0.0"
 };
 /*lint +e14 */
 
@@ -63,8 +64,6 @@ MODULE_INFO info =
  *
  * @endverbatim
  */
-
-static char *version_str = "V2.0.0";
 
 #define GETPWUID_BUF_LEN 255
 
@@ -191,20 +190,6 @@ static GWPROTOCOL MyObject =
     mxsd_default_auth,              /**< Default authenticator         */
     NULL                            /**< Connection limit reached      */
 };
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char*  version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

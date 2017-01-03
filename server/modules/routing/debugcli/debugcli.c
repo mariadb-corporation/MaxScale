@@ -45,10 +45,9 @@ MODULE_INFO     info =
     MODULE_API_ROUTER,
     MODULE_GA,
     ROUTER_VERSION,
-    "The debug user interface"
+    "The debug user interface",
+    "V1.1.1"
 };
-
-static char *version_str = "V1.1.1";
 
 /* The router entry points */
 static  ROUTER *createInstance(SERVICE *service, char **options);
@@ -80,24 +79,13 @@ static SPINLOCK     instlock;
 static CLI_INSTANCE *instances;
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise debug CLI router module %s.", version_str);
+    MXS_NOTICE("Initialise debug CLI router module.");
     spinlock_init(&instlock);
     instances = NULL;
 }
@@ -181,8 +169,7 @@ newSession(ROUTER *instance, SESSION *session)
 
     session->state = SESSION_STATE_READY;
 
-    dcb_printf(session->client_dcb, "Welcome to the MariaDB Corporation MaxScale Debug Interface (%s).\n",
-               version_str);
+    dcb_printf(session->client_dcb, "Welcome to the MariaDB Corporation MaxScale Debug Interface.\n");
     dcb_printf(session->client_dcb, "Type help for a list of available commands.\n\n");
 
     return (void *)client;

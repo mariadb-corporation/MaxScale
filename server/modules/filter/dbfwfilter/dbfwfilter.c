@@ -96,10 +96,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "Firewall Filter"
+    "Firewall Filter",
+    "V1.2.0"
 };
-
-static char *version_str = "V1.2.0";
 
 /*
  * The filter entry points
@@ -792,15 +791,6 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
     }
 
     return true;
-}
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char * version()
-{
-    return version_str;
 }
 
 /**

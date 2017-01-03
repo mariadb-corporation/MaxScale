@@ -43,11 +43,10 @@ MODULE_INFO info =
     MODULE_API_AUTHENTICATOR,
     MODULE_GA,
     GWAUTHENTICATOR_VERSION,
-    "The MaxScale HTTP BA authenticator"
+    "The MaxScale HTTP BA authenticator",
+    "V1.1.0"
 };
 /*lint +e14 */
-
-static char *version_str = "V1.1.0";
 
 static int http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool http_auth_is_client_ssl_capable(DCB *dcb);
@@ -74,20 +73,6 @@ typedef struct http_auth
     char* user;
     char* pw;
 }HTTP_AUTH;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

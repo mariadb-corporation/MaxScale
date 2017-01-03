@@ -47,10 +47,9 @@ MODULE_INFO info =
     MODULE_API_AUTHENTICATOR,
     MODULE_GA,
     GWAUTHENTICATOR_VERSION,
-    "The CDC client to MaxScale authenticator implementation"
+    "The CDC client to MaxScale authenticator implementation",
+    "V1.1.0"
 };
-
-static char *version_str = "V1.1.0";
 
 static int  cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
@@ -89,16 +88,6 @@ static int cdc_auth_set_client_data(
     uint8_t *client_auth_packet,
     int client_auth_packet_size
 );
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char* version()
-{
-    return version_str;
-}
 
 /**
  * @brief Add a new CDC user

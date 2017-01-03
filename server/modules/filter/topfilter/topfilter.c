@@ -50,10 +50,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A top N query logging filter"
+    "A top N query logging filter",
+    "V1.0.1"
 };
-
-static char *version_str = "V1.0.1";
 
 /*
  * The filter entry points
@@ -140,17 +139,6 @@ typedef struct
     struct timeval connect;
     struct timeval disconnect;
 } TOPN_SESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

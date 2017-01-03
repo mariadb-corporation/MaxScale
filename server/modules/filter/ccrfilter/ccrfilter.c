@@ -51,10 +51,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A routing hint filter that send queries to the master after data modification"
+    "A routing hint filter that send queries to the master after data modification",
+    "V1.1.0"
 };
-
-static char *version_str = "V1.1.0";
 
 static  FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static  void   *newSession(FILTER *instance, SESSION *session);
@@ -116,17 +115,6 @@ typedef struct
     int        hints_left;        /*< Number of hints left to add to queries*/
     time_t     last_modification; /*< Time of the last data modifying operation */
 } CCR_SESSION;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialization routine, called when the module

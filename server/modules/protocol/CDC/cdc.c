@@ -43,12 +43,12 @@ MODULE_INFO info =
     MODULE_API_PROTOCOL,
     MODULE_IN_DEVELOPMENT,
     GWPROTOCOL_VERSION,
-    "A Change Data Capture Listener implementation for use in binlog events retrieval"
+    "A Change Data Capture Listener implementation for use in binlog events retrieval",
+    "V1.0.0"
 };
 
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
-static char *version_str = "V1.0.0";
 
 static int cdc_read_event(DCB* dcb);
 static int cdc_write_event(DCB *dcb);
@@ -87,17 +87,6 @@ static GWPROTOCOL MyObject =
     NULL, /* Session                       */
     cdc_default_auth /* default authentication */
 };
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

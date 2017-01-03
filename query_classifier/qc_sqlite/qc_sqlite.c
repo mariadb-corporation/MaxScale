@@ -3172,8 +3172,6 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
  * EXPORTS
  */
 
-static char version_string[] = "V1.0.0";
-
 static QUERY_CLASSIFIER qc =
 {
     qc_sqlite_init,
@@ -3202,12 +3200,8 @@ MODULE_INFO info =
     MODULE_BETA_RELEASE,
     QUERY_CLASSIFIER_VERSION,
     "Query classifier using sqlite.",
+    "V1.0.0"
 };
-
-char* version()
-{
-    return version_string;
-}
 
 void ModuleInit()
 {

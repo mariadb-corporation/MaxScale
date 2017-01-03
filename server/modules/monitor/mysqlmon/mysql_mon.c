@@ -72,8 +72,6 @@
 
 static void monitorMain(void *);
 
-static char *version_str = "V1.5.0";
-
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
  */
@@ -83,7 +81,8 @@ MODULE_INFO info =
     MODULE_API_MONITOR,
     MODULE_GA,
     MONITOR_VERSION,
-    "A MySQL Master/Slave replication monitor"
+    "A MySQL Master/Slave replication monitor",
+    "V1.5.0"
 };
 /*lint +e14 */
 
@@ -109,28 +108,13 @@ static MONITOR_OBJECT MyObject =
 };
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise the MySQL Monitor module %s.", version_str);
+    MXS_NOTICE("Initialise the MySQL Monitor module.");
 }
 
 /**
@@ -479,7 +463,7 @@ static inline void monitor_mysql_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO
         {
             mysql_free_result(result);
             MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
-                      "Expected %d columns. MySQL Version: %s", query, columns, version_str);
+                      "Expected %d columns.", query, columns);
             return;
         }
 
@@ -590,7 +574,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                     mysql_free_result(result);
                     MXS_ERROR("\"SHOW SLAVE HOSTS\" "
                               "returned less than the expected amount of columns. "
-                              "Expected 4 columns. MySQL Version: %s", version_str);
+                              "Expected 4 columns.");
                     return NULL;
                 }
 
@@ -755,7 +739,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for 'SELECT @@server_id, @@read_only'. Expected 2 columns."
-                      " MySQL Version: %s", version_str);
+                      " MySQL Version: %s", server_string);
             return;
         }
 

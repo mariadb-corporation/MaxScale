@@ -95,10 +95,9 @@ MODULE_INFO info =
     MODULE_API_ROUTER,
     MODULE_GA,
     ROUTER_VERSION,
-    "A connection based router to load balance based on connections"
+    "A connection based router to load balance based on connections",
+    "V1.1.0"
 };
-
-static char *version_str = "V1.1.0";
 
 /* The router entry points */
 static ROUTER *createInstance(SERVICE *service, char **options);
@@ -139,24 +138,13 @@ static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise readconnroute router module %s.", version_str);
+    MXS_NOTICE("Initialise readconnroute router module.");
     spinlock_init(&instlock);
     instances = NULL;
 }

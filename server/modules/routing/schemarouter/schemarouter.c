@@ -45,7 +45,8 @@ MODULE_INFO info =
     MODULE_API_ROUTER,
     MODULE_BETA_RELEASE,
     ROUTER_VERSION,
-    "A database sharding router for simple sharding"
+    "A database sharding router for simple sharding",
+    "V1.0.0"
 };
 
 
@@ -63,8 +64,6 @@ MODULE_INFO info =
  *
  * @endverbatim
  */
-
-static char *version_str = "V1.0.0";
 
 static ROUTER* createInstance(SERVICE *service, char **options);
 static void*   newSession(ROUTER *instance, SESSION *session);
@@ -606,16 +605,6 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
     }
 
     return false;
-}
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char* version()
-{
-    return version_str;
 }
 
 /**

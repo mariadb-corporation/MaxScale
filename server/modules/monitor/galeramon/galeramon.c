@@ -40,8 +40,6 @@
 
 static void monitorMain(void *);
 
-static char *version_str = "V2.0.0";
-
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
@@ -54,7 +52,8 @@ MODULE_INFO info =
     MODULE_API_MONITOR,
     MODULE_GA,
     MONITOR_VERSION,
-    "A Galera cluster monitor"
+    "A Galera cluster monitor",
+    "V2.0.0"
 };
 /*lint +e14 */
 
@@ -74,21 +73,6 @@ static MONITOR_OBJECT MyObject =
 };
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- *
- * @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  * @see function load_module in load_utils.c for explanation of lint
@@ -97,7 +81,7 @@ version()
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise the MySQL Galera Monitor module %s.", version_str);
+    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
 }
 /*lint +e14 */
 
@@ -336,7 +320,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". "
-                      "Expected 2 columns. MySQL Version: %s", version_str);
+                      "Expected 2 columns. MySQL Version: %s", server_string);
             return;
         }
 
@@ -359,7 +343,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
                         mysql_free_result(result2);
                         MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
                                   "'wsrep_sst_method'\". Expected 2 columns."
-                                  " MySQL Version: %s", version_str);
+                                  " MySQL Version: %s", server_string);
                         return;
                     }
                     while ((row = mysql_fetch_row(result2)))
@@ -386,7 +370,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             {
                 mysql_free_result(result);
                 MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". "
-                          "Expected 2 columns. MySQL Version: %s", version_str);
+                          "Expected 2 columns. MySQL Version: %s", server_string);
                 return;
             }
 

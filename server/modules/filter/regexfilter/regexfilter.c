@@ -45,10 +45,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A query rewrite filter that uses regular expressions to rewite queries"
+    "A query rewrite filter that uses regular expressions to rewrite queries",
+    "V1.1.0"
 };
-
-static char *version_str = "V1.1.0";
 
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
@@ -106,17 +105,6 @@ typedef struct
 
 void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new);
 void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module

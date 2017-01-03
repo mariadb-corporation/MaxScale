@@ -57,12 +57,11 @@ MODULE_INFO info =
     MODULE_API_ROUTER,
     MODULE_ALPHA_RELEASE,
     ROUTER_VERSION,
-    "The MaxScale Information Schema"
+    "The MaxScale Information Schema",
+    "V1.0.0"
 };
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
-
-static char *version_str = "V1.0.0";
 
 static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
@@ -104,24 +103,13 @@ static SPINLOCK     instlock;
 static INFO_INSTANCE    *instances;
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
 void
 ModuleInit()
 {
-    MXS_NOTICE("Initialise MaxInfo router module %s.", version_str);
+    MXS_NOTICE("Initialise MaxInfo router module.");
     spinlock_init(&instlock);
     instances = NULL;
 }

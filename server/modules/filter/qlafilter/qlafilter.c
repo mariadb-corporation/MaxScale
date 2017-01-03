@@ -55,10 +55,9 @@ MODULE_INFO info =
     MODULE_API_FILTER,
     MODULE_GA,
     FILTER_VERSION,
-    "A simple query logging filter"
+    "A simple query logging filter",
+    "V1.1.1"
 };
-
-static char *version_str = "V1.1.1";
 
 /** Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
@@ -156,17 +155,6 @@ typedef struct
 static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
 static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
                            const char*, size_t);
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 /**
  * The module initialisation routine, called when the module
