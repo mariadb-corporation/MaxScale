@@ -53,7 +53,7 @@ typedef struct http_auth
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

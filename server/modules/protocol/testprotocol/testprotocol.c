@@ -52,7 +52,7 @@ static int test_connection_limit(DCB *dcb, int limit){return 0;}
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {

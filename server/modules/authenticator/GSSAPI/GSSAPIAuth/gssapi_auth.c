@@ -599,7 +599,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 /**
  * Module handle entry point
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

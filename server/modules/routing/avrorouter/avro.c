@@ -126,7 +126,7 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     spinlock_init(&instlock);
     instances = NULL;

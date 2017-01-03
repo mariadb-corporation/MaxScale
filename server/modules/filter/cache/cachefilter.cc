@@ -193,7 +193,7 @@ bool config_get_uint64(const FILTER_PARAMETER& param, uint64_t* pValue)
 // Global symbols of the Module
 //
 
-extern "C" MODULE_INFO* GetModuleObject()
+extern "C" MODULE_INFO* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t show_argv[] =
     {

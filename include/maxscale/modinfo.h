@@ -81,12 +81,43 @@ typedef struct
  */
 typedef struct
 {
-    MODULE_API      modapi;
-    MODULE_STATUS   status;
-    MODULE_VERSION  api_version;
-    const char     *description;
-    const char     *version;
-    void           *module_object;
+    MODULE_API      modapi;        /**< Module API type */
+    MODULE_STATUS   status;        /**< Module development status */
+    MODULE_VERSION  api_version;   /**< Module API version */
+    const char     *description;   /**< Module description */
+    const char     *version;       /**< Module version */
+    void           *module_object; /**< Module type specific API implementation */
 } MODULE_INFO;
+
+/**
+ * Name of the module entry point
+ *
+ * All modules should declare the module entry point in the following style:
+ *
+ * @code{.cpp}
+ *
+ * MODULE_INFO* MXS_CREATE_MODULE()
+ * {
+ *     // Module specific API implementation
+ *    static FILTER_OBJECT my_object = { ... };
+ *
+ *     // An implementation of the MODULE_INFO structure
+ *    static MODULE_INFO info = { ... };
+ *
+ *     // Any global initialization should be done here
+ *
+ *     return &info;
+ * }
+ *
+ * @endcode
+ *
+ * The @c module_object field of the MODULE_INFO structure should point to
+ * the module type specific API implementation. In the above example, the @c info
+ * would declare a pointer to @c my_object as the last member of the struct.
+ */
+#define MXS_CREATE_MODULE mxs_get_module_object
+
+/** Name of the symbol that MaxScale will load */
+#define MXS_MODULE_SYMBOL_NAME "mxs_get_module_object"
 
 MXS_END_DECLS

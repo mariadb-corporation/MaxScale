@@ -263,7 +263,7 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
 /**
  * Module handle entry point
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

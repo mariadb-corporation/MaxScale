@@ -71,7 +71,7 @@ static int mysql_auth_set_client_data(
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

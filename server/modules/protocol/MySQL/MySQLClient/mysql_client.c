@@ -93,7 +93,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {

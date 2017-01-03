@@ -94,7 +94,7 @@ static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Monitor module.");
 

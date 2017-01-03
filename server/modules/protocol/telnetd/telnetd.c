@@ -81,7 +81,7 @@ static void telnetd_echo(DCB *dcb, int enable);
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise Telnetd Protocol module.");
 

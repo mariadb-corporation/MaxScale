@@ -85,7 +85,7 @@ static INFO_INSTANCE    *instances;
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise MaxInfo router module.");
     spinlock_init(&instlock);

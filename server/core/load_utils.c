@@ -194,7 +194,7 @@ void *load_module(const char *module, const char *type)
             return NULL;
         }
 
-        void *sym = dlsym(dlhandle, "GetModuleObject");
+        void *sym = dlsym(dlhandle, MXS_MODULE_SYMBOL_NAME);
 
         if (sym == NULL)
         {

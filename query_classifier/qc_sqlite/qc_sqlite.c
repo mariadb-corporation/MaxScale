@@ -3172,7 +3172,7 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
  * EXPORTS
  */
 
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
     {

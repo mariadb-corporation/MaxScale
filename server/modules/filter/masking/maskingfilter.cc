@@ -18,7 +18,7 @@
 // Global symbols of the Module
 //
 
-extern "C" MODULE_INFO* GetModuleObject()
+extern "C" MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialized masking module.");
 

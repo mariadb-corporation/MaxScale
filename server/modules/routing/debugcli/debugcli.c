@@ -61,7 +61,7 @@ static CLI_INSTANCE *instances;
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise debug CLI router module.");
     spinlock_init(&instlock);

@@ -47,7 +47,7 @@ static void max_admin_auth_free_client_data(DCB *dcb);
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

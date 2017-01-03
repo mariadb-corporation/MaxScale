@@ -156,7 +156,7 @@ static bool auth_backend_ssl(DCB *dcb)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {

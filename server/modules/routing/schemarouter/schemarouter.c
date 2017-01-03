@@ -591,7 +591,7 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initializing Schema Sharding Router.");
     spinlock_init(&instlock);

@@ -143,7 +143,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t args[] =
     {

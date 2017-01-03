@@ -164,7 +164,7 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
 

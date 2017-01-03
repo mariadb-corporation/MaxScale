@@ -90,7 +90,7 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static FILTER_OBJECT MyObject =
     {

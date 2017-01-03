@@ -777,7 +777,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {

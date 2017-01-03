@@ -85,7 +85,7 @@ static int gw_send_change_user_to_backend(char          *dbname,
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {

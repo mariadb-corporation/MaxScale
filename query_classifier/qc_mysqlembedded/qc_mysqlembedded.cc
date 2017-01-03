@@ -2557,7 +2557,7 @@ void qc_thread_end(void)
 extern "C"
 {
 
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
     {

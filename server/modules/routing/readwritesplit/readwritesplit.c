@@ -113,7 +113,7 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
  *
  * @return The module object
  */
-MODULE_INFO *GetModuleObject()
+MODULE_INFO *MXS_CREATE_MODULE()
 {
     static ROUTER_OBJECT MyObject =
     {

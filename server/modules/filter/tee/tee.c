@@ -289,7 +289,7 @@ orphan_free(void* data)
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     spinlock_init(&orphanLock);
 #ifdef SS_DEBUG

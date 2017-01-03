@@ -60,7 +60,7 @@ static bool isMySQLEvent(monitor_event_t event);
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 

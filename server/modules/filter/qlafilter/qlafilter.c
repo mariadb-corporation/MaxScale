@@ -139,7 +139,7 @@ static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const c
  *
  * @return The module object
  */
-MODULE_INFO* GetModuleObject()
+MODULE_INFO* MXS_CREATE_MODULE()
 {
     static FILTER_OBJECT MyObject =
     {
