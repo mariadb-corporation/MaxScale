@@ -289,7 +289,7 @@ orphan_free(void* data)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     spinlock_init(&orphanLock);
 #ifdef SS_DEBUG
@@ -311,10 +311,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL, // No destroyInstance
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_GA,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
         FILTER_VERSION,
         "A tee piece in the filter plumbing",
         "V1.0.0",

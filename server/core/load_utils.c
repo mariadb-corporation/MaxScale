@@ -45,15 +45,26 @@
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
 
-static MODULES *registered = NULL;
+typedef struct loaded_module
+{
+    char    *module;       /**< The name of the module */
+    char    *type;         /**< The module type */
+    char    *version;      /**< Module version */
+    void    *handle;       /**< The handle returned by dlopen */
+    void    *modobj;       /**< The module "object" this is the set of entry points */
+    MXS_MODULE *info;     /**< The module information */
+    struct  loaded_module *next; /**< Next module in the linked list */
+} LOADED_MODULE;
 
-static MODULES *find_module(const char *module);
-static MODULES* register_module(const char *module,
+static LOADED_MODULE *registered = NULL;
+
+static LOADED_MODULE *find_module(const char *module);
+static LOADED_MODULE* register_module(const char *module,
                                 const char *type,
                                 void *dlhandle,
-                                MODULE_INFO *mod_info);
+                                MXS_MODULE *mod_info);
 static void unregister_module(const char *module);
-int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
+int module_create_feedback_report(GWBUF **buffer, LOADED_MODULE *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
 
 struct MemoryStruct
@@ -93,42 +104,42 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
-static bool check_module(MODULE_INFO *mod_info, const char *type, const char *module)
+static bool check_module(const MXS_MODULE *mod_info, const char *type, const char *module)
 {
     bool success = true;
 
     if (strcmp(type, MODULE_PROTOCOL) == 0
-        && mod_info->modapi != MODULE_API_PROTOCOL)
+        && mod_info->modapi != MXS_MODULE_API_PROTOCOL)
     {
         MXS_ERROR("Module '%s' does not implement the protocol API.", module);
         success = false;
     }
     if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-        && mod_info->modapi != MODULE_API_AUTHENTICATOR)
+        && mod_info->modapi != MXS_MODULE_API_AUTHENTICATOR)
     {
         MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
         success = false;
     }
     if (strcmp(type, MODULE_ROUTER) == 0
-        && mod_info->modapi != MODULE_API_ROUTER)
+        && mod_info->modapi != MXS_MODULE_API_ROUTER)
     {
         MXS_ERROR("Module '%s' does not implement the router API.", module);
         success = false;
     }
     if (strcmp(type, MODULE_MONITOR) == 0
-        && mod_info->modapi != MODULE_API_MONITOR)
+        && mod_info->modapi != MXS_MODULE_API_MONITOR)
     {
         MXS_ERROR("Module '%s' does not implement the monitor API.", module);
         success = false;
     }
     if (strcmp(type, MODULE_FILTER) == 0
-        && mod_info->modapi != MODULE_API_FILTER)
+        && mod_info->modapi != MXS_MODULE_API_FILTER)
     {
         MXS_ERROR("Module '%s' does not implement the filter API.", module);
         success = false;
     }
     if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-        && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
+        && mod_info->modapi != MXS_MODULE_API_QUERY_CLASSIFIER)
     {
         MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
         success = false;
@@ -167,7 +178,7 @@ static bool check_module(MODULE_INFO *mod_info, const char *type, const char *mo
 void *load_module(const char *module, const char *type)
 {
     ss_dassert(module && type);
-    MODULES *mod;
+    LOADED_MODULE *mod;
 
     if ((mod = find_module(module)) == NULL)
     {
@@ -206,7 +217,7 @@ void *load_module(const char *module, const char *type)
         }
 
         void *(*entry_point)() = sym;
-        MODULE_INFO *mod_info = entry_point();
+        MXS_MODULE *mod_info = entry_point();
 
         if (!check_module(mod_info, type, module) ||
             (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
@@ -232,7 +243,7 @@ void *load_module(const char *module, const char *type)
 void
 unload_module(const char *module)
 {
-    MODULES *mod = find_module(module);
+    LOADED_MODULE *mod = find_module(module);
 
     if (mod)
     {
@@ -249,10 +260,10 @@ unload_module(const char *module)
  * @param module        The name of the module
  * @return              The module handle or NULL if it was not found
  */
-static MODULES *
+static LOADED_MODULE *
 find_module(const char *module)
 {
-    MODULES *mod = registered;
+    LOADED_MODULE *mod = registered;
 
     if (module)
     {
@@ -283,16 +294,16 @@ find_module(const char *module)
  * @param mod_info      The module information
  * @return The new registered module or NULL on memory allocation failure
  */
-static MODULES* register_module(const char *module,
+static LOADED_MODULE* register_module(const char *module,
                                 const char *type,
                                 void *dlhandle,
-                                MODULE_INFO *mod_info)
+                                MXS_MODULE *mod_info)
 {
     module = MXS_STRDUP(module);
     type = MXS_STRDUP(type);
     char *version = MXS_STRDUP(mod_info->version);
 
-    MODULES *mod = (MODULES *)MXS_MALLOC(sizeof(MODULES));
+    LOADED_MODULE *mod = (LOADED_MODULE *)MXS_MALLOC(sizeof(LOADED_MODULE));
 
     if (!module || !type || !version || !mod)
     {
@@ -322,8 +333,8 @@ static MODULES* register_module(const char *module,
 static void
 unregister_module(const char *module)
 {
-    MODULES *mod = find_module(module);
-    MODULES *ptr;
+    LOADED_MODULE *mod = find_module(module);
+    LOADED_MODULE *ptr;
 
     if (!mod)
     {
@@ -384,7 +395,7 @@ unload_all_modules()
 void
 printModules()
 {
-    MODULES *ptr = registered;
+    LOADED_MODULE *ptr = registered;
 
     printf("%-15s | %-11s | Version\n", "Module Name", "Module Type");
     printf("-----------------------------------------------------\n");
@@ -403,7 +414,7 @@ printModules()
 void
 dprintAllModules(DCB *dcb)
 {
-    MODULES *ptr = registered;
+    LOADED_MODULE *ptr = registered;
 
     dcb_printf(dcb, "Modules.\n");
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
@@ -417,15 +428,15 @@ dprintAllModules(DCB *dcb)
                        ptr->info->api_version.major,
                        ptr->info->api_version.minor,
                        ptr->info->api_version.patch,
-                       ptr->info->status == MODULE_IN_DEVELOPMENT
+                       ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                        ? "In Development"
-                       : (ptr->info->status == MODULE_ALPHA_RELEASE
+                       : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                           ? "Alpha"
-                          : (ptr->info->status == MODULE_BETA_RELEASE
+                          : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                              ? "Beta"
-                             : (ptr->info->status == MODULE_GA
+                             : (ptr->info->status == MXS_MODULE_GA
                                 ? "GA"
-                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                    ? "Experimental" : "Unknown")))));
         dcb_printf(dcb, "\n");
         ptr = ptr->next;
@@ -442,7 +453,7 @@ void
 moduleShowFeedbackReport(DCB *dcb)
 {
     GWBUF *buffer;
-    MODULES *modules_list = registered;
+    LOADED_MODULE *modules_list = registered;
     FEEDBACK_CONF *feedback_config = config_get_feedback_data();
 
     if (!module_create_feedback_report(&buffer, modules_list, feedback_config))
@@ -469,7 +480,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     int i = 0;;
     char *stat, buf[20];
     RESULT_ROW *row;
-    MODULES *ptr;
+    LOADED_MODULE *ptr;
 
     ptr = registered;
     while (i < *rowno && ptr)
@@ -492,15 +503,15 @@ moduleRowCallback(RESULTSET *set, void *data)
              ptr->info->api_version.patch);
     buf[19] = '\0';
     resultset_row_set(row, 3, buf);
-    resultset_row_set(row, 4, ptr->info->status == MODULE_IN_DEVELOPMENT
+    resultset_row_set(row, 4, ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                       ? "In Development"
-                      : (ptr->info->status == MODULE_ALPHA_RELEASE
+                      : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                          ? "Alpha"
-                         : (ptr->info->status == MODULE_BETA_RELEASE
+                         : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                             ? "Beta"
-                            : (ptr->info->status == MODULE_GA
+                            : (ptr->info->status == MXS_MODULE_GA
                                ? "GA"
-                               : (ptr->info->status == MODULE_EXPERIMENTAL
+                               : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                   ? "Experimental" : "Unknown")))));
     return row;
 }
@@ -543,7 +554,7 @@ moduleGetList()
 void
 module_feedback_send(void* data)
 {
-    MODULES *modules_list = registered;
+    LOADED_MODULE *modules_list = registered;
     CURL *curl = NULL;
     CURLcode res;
     struct curl_httppost *formpost = NULL;
@@ -661,9 +672,9 @@ module_feedback_send(void* data)
  */
 
 int
-module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg)
+module_create_feedback_report(GWBUF **buffer, LOADED_MODULE *modules, FEEDBACK_CONF *cfg)
 {
-    MODULES *ptr = modules;
+    LOADED_MODULE *ptr = modules;
     int n_mod = 0;
     char *data_ptr = NULL;
     char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1] = "";
@@ -741,15 +752,15 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
             data_ptr += strlen(data_ptr);
             snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_releasestatus\t%s\n",
                      ptr->module,
-                     ptr->info->status == MODULE_IN_DEVELOPMENT
+                     ptr->info->status == MXS_MODULE_IN_DEVELOPMENT
                      ? "In Development"
-                     : (ptr->info->status == MODULE_ALPHA_RELEASE
+                     : (ptr->info->status == MXS_MODULE_ALPHA_RELEASE
                         ? "Alpha"
-                        : (ptr->info->status == MODULE_BETA_RELEASE
+                        : (ptr->info->status == MXS_MODULE_BETA_RELEASE
                            ? "Beta"
-                           : (ptr->info->status == MODULE_GA
+                           : (ptr->info->status == MXS_MODULE_GA
                               ? "GA"
-                              : (ptr->info->status == MODULE_EXPERIMENTAL
+                              : (ptr->info->status == MXS_MODULE_EXPERIMENTAL
                                  ? "Experimental" : "Unknown")))));
             data_ptr += strlen(data_ptr);
         }

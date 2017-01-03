@@ -263,7 +263,7 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
 /**
  * Module handle entry point
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {
@@ -277,10 +277,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL                                /* Load users from backend databases */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_AUTHENTICATOR,
-        MODULE_GA,
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
         GWAUTHENTICATOR_VERSION,
         "GSSAPI backend authenticator",
         "V1.0.0",

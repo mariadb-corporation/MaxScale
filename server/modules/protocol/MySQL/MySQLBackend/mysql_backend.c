@@ -85,7 +85,7 @@ static int gw_send_change_user_to_backend(char          *dbname,
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {
@@ -104,10 +104,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL                        /* Connection limit reached      */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_GA,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
         GWPROTOCOL_VERSION,
         "The MySQL to backend server protocol",
         "V2.0.0",

@@ -126,7 +126,7 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     spinlock_init(&instlock);
     instances = NULL;
@@ -152,10 +152,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_ROUTER,
-        MODULE_GA,
+        MXS_MODULE_API_ROUTER,
+        MXS_MODULE_GA,
         ROUTER_VERSION,
         "Binlogrouter",
         "V1.0.0",

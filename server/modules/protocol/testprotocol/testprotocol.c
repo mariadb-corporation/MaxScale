@@ -52,7 +52,7 @@ static int test_connection_limit(DCB *dcb, int limit){return 0;}
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {
@@ -71,10 +71,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         test_connection_limit   /**< Connection limit        */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_IN_DEVELOPMENT,
         GWPROTOCOL_VERSION,
         "Test protocol",
         "V1.1.0",

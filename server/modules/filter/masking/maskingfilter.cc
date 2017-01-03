@@ -18,14 +18,14 @@
 // Global symbols of the Module
 //
 
-extern "C" MODULE_INFO* MXS_CREATE_MODULE()
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialized masking module.");
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_IN_DEVELOPMENT,
         FILTER_VERSION,
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",

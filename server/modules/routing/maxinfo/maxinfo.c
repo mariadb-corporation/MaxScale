@@ -85,7 +85,7 @@ static INFO_INSTANCE    *instances;
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise MaxInfo router module.");
     spinlock_init(&instlock);
@@ -105,10 +105,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_ROUTER,
-        MODULE_ALPHA_RELEASE,
+        MXS_MODULE_API_ROUTER,
+        MXS_MODULE_ALPHA_RELEASE,
         ROUTER_VERSION,
         "The MaxScale Information Schema",
         "V1.0.0",

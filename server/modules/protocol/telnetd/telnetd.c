@@ -81,7 +81,7 @@ static void telnetd_echo(DCB *dcb, int enable);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise Telnetd Protocol module.");
 
@@ -102,10 +102,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL                            /**< Connection limit reached      */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_GA,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
         GWPROTOCOL_VERSION,
         "A telnet deamon protocol for simple administration interface",
         "V1.1.1",

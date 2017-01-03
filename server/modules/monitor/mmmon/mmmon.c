@@ -35,10 +35,10 @@ static void monitorMain(void *);
  * lint directives.
  */
 /*lint -e14 */
-MODULE_INFO info =
+MXS_MODULE info =
 {
-    MODULE_API_MONITOR,
-    MODULE_BETA_RELEASE,
+    MXS_MODULE_API_MONITOR,
+    MXS_MODULE_BETA_RELEASE,
     MONITOR_VERSION,
     "A Multi-Master Multi Master monitor",
     "V1.1.1"
@@ -60,7 +60,7 @@ static bool isMySQLEvent(monitor_event_t event);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 
@@ -71,10 +71,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         diagnostics
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_MONITOR,
-        MODULE_BETA_RELEASE,
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_BETA_RELEASE,
         MONITOR_VERSION,
         "A Multi-Master Multi Master monitor",
         "V1.1.1",

@@ -599,7 +599,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 /**
  * Module handle entry point
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {
@@ -613,10 +613,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         gssapi_auth_load_users           /* Load database users */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_AUTHENTICATOR,
-        MODULE_GA,
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
         GWAUTHENTICATOR_VERSION,
         "GSSAPI authenticator",
         "V1.0.0",

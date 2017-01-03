@@ -193,7 +193,7 @@ protected:
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
  * @code
- * extern "C" MODULE_INFO* MXS_CREATE_MODULE()
+ * extern "C" MODULE* MXS_CREATE_MODULE()
  * {
  *     return &MyFilter::s_object;
  * };

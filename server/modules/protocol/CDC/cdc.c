@@ -68,7 +68,7 @@ static char* cdc_default_auth()
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {
@@ -86,10 +86,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         cdc_default_auth /* default authentication */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_IN_DEVELOPMENT,
         GWPROTOCOL_VERSION,
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0"

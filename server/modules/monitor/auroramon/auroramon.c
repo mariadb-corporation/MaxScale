@@ -344,7 +344,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static MONITOR_OBJECT MyObject =
     {
@@ -353,10 +353,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         diagnostics
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_MONITOR,
-        MODULE_BETA_RELEASE,
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_BETA_RELEASE,
         MONITOR_VERSION,
         "Aurora monitor",
         "V1.0.0",

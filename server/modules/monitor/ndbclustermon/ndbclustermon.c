@@ -53,7 +53,7 @@ bool isNdbEvent(monitor_event_t event);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
 
@@ -64,10 +64,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         diagnostics
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_MONITOR,
-        MODULE_BETA_RELEASE,
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_BETA_RELEASE,
         MONITOR_VERSION,
         "A MySQL cluster SQL node monitor",
         "V2.1.0",

@@ -245,7 +245,7 @@ void sendMessage(void* data);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static FILTER_OBJECT MyObject =
     {
@@ -262,10 +262,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL, // No destroyInstance
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_ALPHA_RELEASE,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_ALPHA_RELEASE,
         FILTER_VERSION,
         "A RabbitMQ query logging filter",
         "V1.0.2",

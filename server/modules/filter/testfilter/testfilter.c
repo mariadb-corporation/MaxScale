@@ -69,7 +69,7 @@ typedef struct
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static FILTER_OBJECT MyObject =
     {
@@ -86,10 +86,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         destroyInstance,
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_BETA_RELEASE,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_BETA_RELEASE,
         FILTER_VERSION,
         "A simple query counting filter",
         "V2.0.0",

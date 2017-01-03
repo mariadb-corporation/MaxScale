@@ -63,7 +63,7 @@ static char *httpd_default_auth();
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {
@@ -82,10 +82,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL                /**< Connection limit reached      */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_IN_DEVELOPMENT,
         GWPROTOCOL_VERSION,
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",

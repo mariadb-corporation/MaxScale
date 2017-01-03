@@ -591,7 +591,7 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initializing Schema Sharding Router.");
     spinlock_init(&instlock);
@@ -611,10 +611,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_ROUTER,
-        MODULE_BETA_RELEASE,
+        MXS_MODULE_API_ROUTER,
+        MXS_MODULE_BETA_RELEASE,
         ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",

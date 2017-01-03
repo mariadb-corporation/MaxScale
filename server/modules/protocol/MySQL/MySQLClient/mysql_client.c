@@ -93,7 +93,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWPROTOCOL MyObject =
     {
@@ -112,10 +112,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         gw_connection_limit                     /* Send error connection limit   */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_GA,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
         GWPROTOCOL_VERSION,
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",

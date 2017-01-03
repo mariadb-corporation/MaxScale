@@ -46,7 +46,7 @@ static void null_auth_free_client_data(DCB *dcb);
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static GWAUTHENTICATOR MyObject =
     {
@@ -60,10 +60,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         users_default_loadusers          /* Load generic users */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_AUTHENTICATOR,
-        MODULE_GA,
+        MXS_MODULE_API_AUTHENTICATOR,
+        MXS_MODULE_GA,
         GWAUTHENTICATOR_VERSION,
         "The Null client authenticator implementation",
         "V1.1.0",

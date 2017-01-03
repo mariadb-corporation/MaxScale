@@ -134,7 +134,7 @@ static ROUTER_INSTANCE *instances;
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise binlog router module.");
     spinlock_init(&instlock);
@@ -154,10 +154,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         destroyInstance
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_ROUTER,
-        MODULE_GA,
+        MXS_MODULE_API_ROUTER,
+        MXS_MODULE_GA,
         ROUTER_VERSION,
         "Binlogrouter",
         "V2.1.0",

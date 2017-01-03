@@ -2557,7 +2557,7 @@ void qc_thread_end(void)
 extern "C"
 {
 
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
     {
@@ -2580,10 +2580,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         qc_get_field_info,
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_QUERY_CLASSIFIER,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_QUERY_CLASSIFIER,
+        MXS_MODULE_IN_DEVELOPMENT,
         QUERY_CLASSIFIER_VERSION,
         "Query classifier based upon MySQL Embedded",
         "V1.0.0",

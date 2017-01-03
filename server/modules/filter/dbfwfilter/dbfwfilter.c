@@ -777,7 +777,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
@@ -810,10 +810,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL, // No destroyInstance
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_GA,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
         FILTER_VERSION,
         "Firewall Filter",
         "V1.2.0",

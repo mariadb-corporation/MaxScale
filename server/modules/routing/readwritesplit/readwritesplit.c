@@ -113,7 +113,7 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
  *
  * @return The module object
  */
-MODULE_INFO *MXS_CREATE_MODULE()
+MXS_MODULE *MXS_CREATE_MODULE()
 {
     static ROUTER_OBJECT MyObject =
     {
@@ -129,9 +129,9 @@ MODULE_INFO *MXS_CREATE_MODULE()
         NULL
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_ROUTER, MODULE_GA, ROUTER_VERSION,
+        MXS_MODULE_API_ROUTER, MXS_MODULE_GA, ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
         &MyObject

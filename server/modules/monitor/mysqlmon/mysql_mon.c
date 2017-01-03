@@ -94,7 +94,7 @@ static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Monitor module.");
 
@@ -105,10 +105,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         diagnostics
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_MONITOR,
-        MODULE_GA,
+        MXS_MODULE_API_MONITOR,
+        MXS_MODULE_GA,
         MONITOR_VERSION,
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",

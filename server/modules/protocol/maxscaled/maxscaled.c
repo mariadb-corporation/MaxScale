@@ -164,7 +164,7 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
  *
  * @return The module object
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
 
@@ -185,10 +185,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL                            /**< Connection limit reached      */
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_PROTOCOL,
-        MODULE_GA,
+        MXS_MODULE_API_PROTOCOL,
+        MXS_MODULE_GA,
         GWPROTOCOL_VERSION,
         "A maxscale protocol for the administration interface",
         "V2.0.0",

@@ -64,7 +64,7 @@ static uint64_t getCapabilities(void);
  *
  * @return The module object.
  */
-MODULE_INFO* MXS_CREATE_MODULE()
+MXS_MODULE* MXS_CREATE_MODULE()
 {
     static FILTER_OBJECT object =
     {
@@ -81,10 +81,10 @@ MODULE_INFO* MXS_CREATE_MODULE()
         NULL, // No destroyInstance
     };
 
-    static MODULE_INFO info =
+    static MXS_MODULE info =
     {
-        MODULE_API_FILTER,
-        MODULE_IN_DEVELOPMENT,
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_IN_DEVELOPMENT,
         FILTER_VERSION,
         "A filter that is capable of limiting the resultset number of rows.",
         "V1.0.0",

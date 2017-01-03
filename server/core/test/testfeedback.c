@@ -45,6 +45,7 @@
 #include <regex.h>
 #include <maxscale/modules.h>
 #include <maxscale/maxscale_test.h>
+#include "../load_utils.c"
 
 static char* server_options[] =
 {
@@ -72,7 +73,6 @@ static char* server_groups[] =
 
 int config_load(char *);
 void config_enable_feedback_task(void);
-int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
 
 int main(int argc, char** argv)

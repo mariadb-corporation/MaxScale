@@ -34,25 +34,25 @@ MXS_BEGIN_DECLS
  */
 typedef enum
 {
-    MODULE_IN_DEVELOPMENT = 0,
-    MODULE_ALPHA_RELEASE,
-    MODULE_BETA_RELEASE,
-    MODULE_GA,
-    MODULE_EXPERIMENTAL
-} MODULE_STATUS;
+    MXS_MODULE_IN_DEVELOPMENT = 0,
+    MXS_MODULE_ALPHA_RELEASE,
+    MXS_MODULE_BETA_RELEASE,
+    MXS_MODULE_GA,
+    MXS_MODULE_EXPERIMENTAL
+} MXS_MODULE_STATUS;
 
 /**
  * The API implemented by the module
  */
 typedef enum
 {
-    MODULE_API_PROTOCOL = 0,
-    MODULE_API_ROUTER,
-    MODULE_API_MONITOR,
-    MODULE_API_FILTER,
-    MODULE_API_AUTHENTICATOR,
-    MODULE_API_QUERY_CLASSIFIER,
-} MODULE_API;
+    MXS_MODULE_API_PROTOCOL = 0,
+    MXS_MODULE_API_ROUTER,
+    MXS_MODULE_API_MONITOR,
+    MXS_MODULE_API_FILTER,
+    MXS_MODULE_API_AUTHENTICATOR,
+    MXS_MODULE_API_QUERY_CLASSIFIER,
+} MXS_MODULE_API;
 
 /**
  * The module version structure.
@@ -74,20 +74,20 @@ typedef struct
     int     major;
     int     minor;
     int     patch;
-} MODULE_VERSION;
+} MXS_MODULE_VERSION;
 
 /**
  * The module information structure
  */
 typedef struct
 {
-    MODULE_API      modapi;        /**< Module API type */
-    MODULE_STATUS   status;        /**< Module development status */
-    MODULE_VERSION  api_version;   /**< Module API version */
+    MXS_MODULE_API      modapi;        /**< Module API type */
+    MXS_MODULE_STATUS   status;        /**< Module development status */
+    MXS_MODULE_VERSION  api_version;   /**< Module API version */
     const char     *description;   /**< Module description */
     const char     *version;       /**< Module version */
     void           *module_object; /**< Module type specific API implementation */
-} MODULE_INFO;
+} MXS_MODULE;
 
 /**
  * Name of the module entry point
@@ -96,13 +96,13 @@ typedef struct
  *
  * @code{.cpp}
  *
- * MODULE_INFO* MXS_CREATE_MODULE()
+ * MODULE* MXS_CREATE_MODULE()
  * {
  *     // Module specific API implementation
  *    static FILTER_OBJECT my_object = { ... };
  *
- *     // An implementation of the MODULE_INFO structure
- *    static MODULE_INFO info = { ... };
+ *     // An implementation of the MODULE structure
+ *    static MODULE info = { ... };
  *
  *     // Any global initialization should be done here
  *
@@ -111,7 +111,7 @@ typedef struct
  *
  * @endcode
  *
- * The @c module_object field of the MODULE_INFO structure should point to
+ * The @c module_object field of the MODULE structure should point to
  * the module type specific API implementation. In the above example, the @c info
  * would declare a pointer to @c my_object as the last member of the struct.
  */
