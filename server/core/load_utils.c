@@ -111,30 +111,16 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
  * @param type          Type of module, used purely for registration
  * @return              The module specific entry point structure or NULL
  */
-void *
-load_module(const char *module, const char *type)
+void *load_module(const char *module, const char *type)
 {
-    char *home, *version;
-    char fname[MAXPATHLEN + 1];
-    void *dlhandle, *sym;
-    char *(*ver)();
-    void *(*ep)(), *modobj;
+    ss_dassert(module && type);
+    void *modobj;
     MODULES *mod;
-    MODULE_INFO *mod_info = NULL;
-
-    if (NULL == module || NULL == type)
-    {
-        return NULL;
-    }
 
     if ((mod = find_module(module)) == NULL)
     {
-        /*<
-         * The module is not already loaded
-         *
-         * Search of the shared object.
-         */
-
+        /** The module is not already loaded, search for the shared object */
+        char fname[MAXPATHLEN + 1];
         snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), module);
 
         if (access(fname, F_OK) == -1)
@@ -144,6 +130,8 @@ load_module(const char *module, const char *type)
                       module, get_libdir());
             return NULL;
         }
+
+        void *dlhandle;
 
         if ((dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL)) == NULL)
         {
@@ -155,6 +143,8 @@ load_module(const char *module, const char *type)
             return NULL;
         }
 
+        void *sym;
+
         if ((sym = dlsym(dlhandle, "version")) == NULL)
         {
             MXS_ERROR("Version interface not supported by "
@@ -164,8 +154,9 @@ load_module(const char *module, const char *type)
             dlclose(dlhandle);
             return NULL;
         }
-        ver = sym;
-        version = ver();
+
+        char *(*ver)() = sym;
+        char *version = ver();
 
         /*
          * If the module has a ModuleInit function cal it now.
@@ -176,45 +167,48 @@ load_module(const char *module, const char *type)
             ModuleInit();
         }
 
+        MODULE_INFO *mod_info = NULL;
+
         if ((sym = dlsym(dlhandle, "info")) != NULL)
         {
-            int fatal = 0;
             mod_info = sym;
+            bool fatal = false;
+
             if (strcmp(type, MODULE_PROTOCOL) == 0
                 && mod_info->modapi != MODULE_API_PROTOCOL)
             {
                 MXS_ERROR("Module '%s' does not implement the protocol API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (strcmp(type, MODULE_AUTHENTICATOR) == 0
                 && mod_info->modapi != MODULE_API_AUTHENTICATOR)
             {
                 MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (strcmp(type, MODULE_ROUTER) == 0
                 && mod_info->modapi != MODULE_API_ROUTER)
             {
                 MXS_ERROR("Module '%s' does not implement the router API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (strcmp(type, MODULE_MONITOR) == 0
                 && mod_info->modapi != MODULE_API_MONITOR)
             {
                 MXS_ERROR("Module '%s' does not implement the monitor API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (strcmp(type, MODULE_FILTER) == 0
                 && mod_info->modapi != MODULE_API_FILTER)
             {
                 MXS_ERROR("Module '%s' does not implement the filter API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
                 && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
             {
                 MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
-                fatal = 1;
+                fatal = true;
             }
             if (fatal)
             {
@@ -232,13 +226,11 @@ load_module(const char *module, const char *type)
             dlclose(dlhandle);
             return NULL;
         }
-        ep = sym;
-        modobj = ep();
 
-        MXS_NOTICE("Loaded module %s: %s from %s",
-                   module,
-                   version,
-                   fname);
+        void *(*entry_point)() = sym;
+        modobj = entry_point();
+
+        MXS_NOTICE("Loaded module %s: %s from %s", module, version, fname);
         register_module(module, type, dlhandle, version, modobj, mod_info);
     }
     else
@@ -265,15 +257,13 @@ void
 unload_module(const char *module)
 {
     MODULES *mod = find_module(module);
-    void *handle;
 
-    if (!mod)
+    if (mod)
     {
-        return;
+        void *handle = mod->handle;
+        unregister_module(module);
+        dlclose(handle);
     }
-    handle = mod->handle;
-    unregister_module(module);
-    dlclose(handle);
 }
 
 /**
