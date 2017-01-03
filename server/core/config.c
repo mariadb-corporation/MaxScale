@@ -106,7 +106,7 @@ static const char    *config_file = NULL;
 static GATEWAY_CONF  gateway;
 static FEEDBACK_CONF feedback;
 char                 *version_string = NULL;
-
+static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
 static char *service_params[] =
 {
@@ -330,6 +330,7 @@ CONFIG_CONTEXT* config_context_create(const char *section)
     if (ctx)
     {
         ctx->object = MXS_STRDUP_A(section);
+        ctx->was_persisted = is_persisted_config;
         ctx->parameters = NULL;
         ctx->next = NULL;
         ctx->element = NULL;
@@ -649,6 +650,15 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
             if (is_directory(persist_cnf) && contains_cnf_files(persist_cnf))
             {
+                /**
+                 * Set the global flag that we are processing a persisted configuration.
+                 * This will tell the modules whether it is OK to completely overwrite
+                 * the persisted configuration when changes are made.
+                 *
+                 * TODO: Figure out a cleaner way to do this
+                 */
+                is_persisted_config = true;
+
                 MXS_NOTICE("Loading generated configuration files from '%s'", persist_cnf);
                 DUPLICATE_CONTEXT p_dcontext;
                 /**
@@ -667,6 +677,7 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
                 {
                     rval = false;
                 }
+                is_persisted_config = false;
             }
 
             if (rval)
@@ -2965,6 +2976,13 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         {
             MXS_ERROR("Failed to create monitor '%s'.", obj->object);
             error_count++;
+        }
+
+        if (obj->was_persisted)
+        {
+            /** Not the cleanest way of figuring out whether the configuration
+             * was stored but it should be OK for now */
+            ((MONITOR*)obj->element)->created_online = true;
         }
     }
     else
