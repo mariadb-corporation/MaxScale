@@ -94,15 +94,6 @@ static unsigned char required_packets[] =
     0
 };
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "A tee piece in the filter plumbing",
-    "V1.0.0"
-};
-
 /*
  * The filter entry points
  */
@@ -116,21 +107,6 @@ static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    setUpstream,
-    routeQuery,
-    clientReply,
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  * The instance structure for the TEE filter - this holds the configuration
@@ -313,14 +289,39 @@ orphan_free(void* data)
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     spinlock_init(&orphanLock);
 #ifdef SS_DEBUG
     spinlock_init(&debug_lock);
 #endif
-    return &MyObject;
+
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "A tee piece in the filter plumbing",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

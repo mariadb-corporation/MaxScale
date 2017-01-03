@@ -50,15 +50,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/service.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "A simple query logging filter",
-    "V1.1.1"
-};
-
 /** Date string buffer size */
 #define QLA_DATE_BUFFER_SIZE 20
 
@@ -87,22 +78,6 @@ static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstre
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL, // No Upstream requirement
-    routeQuery,
-    NULL, // No client reply
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  * A instance structure, the assumption is that the option passed
@@ -164,10 +139,34 @@ static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const c
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL, // No Upstream requirement
+        routeQuery,
+        NULL, // No client reply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "A simple query logging filter",
+        "V1.1.1",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

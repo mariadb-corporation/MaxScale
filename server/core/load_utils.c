@@ -48,11 +48,10 @@
 static MODULES *registered = NULL;
 
 static MODULES *find_module(const char *module);
-static void register_module(const char *module,
-                            const char  *type,
-                            void        *dlhandle,
-                            void        *modobj,
-                            MODULE_INFO *info);
+static MODULES* register_module(const char *module,
+                                const char *type,
+                                void *dlhandle,
+                                MODULE_INFO *mod_info);
 static void unregister_module(const char *module);
 int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
@@ -94,6 +93,61 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
+static bool check_module(MODULE_INFO *mod_info, const char *type, const char *module)
+{
+    bool success = true;
+
+    if (strcmp(type, MODULE_PROTOCOL) == 0
+        && mod_info->modapi != MODULE_API_PROTOCOL)
+    {
+        MXS_ERROR("Module '%s' does not implement the protocol API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_AUTHENTICATOR) == 0
+        && mod_info->modapi != MODULE_API_AUTHENTICATOR)
+    {
+        MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_ROUTER) == 0
+        && mod_info->modapi != MODULE_API_ROUTER)
+    {
+        MXS_ERROR("Module '%s' does not implement the router API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_MONITOR) == 0
+        && mod_info->modapi != MODULE_API_MONITOR)
+    {
+        MXS_ERROR("Module '%s' does not implement the monitor API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_FILTER) == 0
+        && mod_info->modapi != MODULE_API_FILTER)
+    {
+        MXS_ERROR("Module '%s' does not implement the filter API.", module);
+        success = false;
+    }
+    if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
+        && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
+    {
+        MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+        success = false;
+    }
+    if (mod_info->version == NULL)
+    {
+        MXS_ERROR("Module '%s' does not define a version string", module);
+        success = false;
+    }
+
+    if (mod_info->module_object == NULL)
+    {
+        MXS_ERROR("Module '%s' does not define a module object", module);
+        success = false;
+    }
+
+    return success;
+}
+
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory,
@@ -113,7 +167,6 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 void *load_module(const char *module, const char *type)
 {
     ss_dassert(module && type);
-    void *modobj;
     MODULES *mod;
 
     if ((mod = find_module(module)) == NULL)
@@ -130,95 +183,42 @@ void *load_module(const char *module, const char *type)
             return NULL;
         }
 
-        void *dlhandle;
+        void *dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL);
 
-        if ((dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL)) == NULL)
+        if (dlhandle == NULL)
         {
             MXS_ERROR("Unable to load library for module: "
                       "%s\n\n\t\t      %s."
                       "\n\n",
-                      module,
-                      dlerror());
+                      module, dlerror());
             return NULL;
         }
 
-        MODULE_INFO *mod_info = NULL;
-        void *sym;
+        void *sym = dlsym(dlhandle, "GetModuleObject");
 
-        if ((sym = dlsym(dlhandle, "info")) != NULL)
-        {
-            mod_info = sym;
-            bool fatal = false;
-
-            if (strcmp(type, MODULE_PROTOCOL) == 0
-                && mod_info->modapi != MODULE_API_PROTOCOL)
-            {
-                MXS_ERROR("Module '%s' does not implement the protocol API.", module);
-                fatal = true;
-            }
-            if (strcmp(type, MODULE_AUTHENTICATOR) == 0
-                && mod_info->modapi != MODULE_API_AUTHENTICATOR)
-            {
-                MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
-                fatal = true;
-            }
-            if (strcmp(type, MODULE_ROUTER) == 0
-                && mod_info->modapi != MODULE_API_ROUTER)
-            {
-                MXS_ERROR("Module '%s' does not implement the router API.", module);
-                fatal = true;
-            }
-            if (strcmp(type, MODULE_MONITOR) == 0
-                && mod_info->modapi != MODULE_API_MONITOR)
-            {
-                MXS_ERROR("Module '%s' does not implement the monitor API.", module);
-                fatal = true;
-            }
-            if (strcmp(type, MODULE_FILTER) == 0
-                && mod_info->modapi != MODULE_API_FILTER)
-            {
-                MXS_ERROR("Module '%s' does not implement the filter API.", module);
-                fatal = true;
-            }
-            if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
-                && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
-            {
-                MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
-                fatal = true;
-            }
-            if (fatal)
-            {
-                dlclose(dlhandle);
-                return NULL;
-            }
-        }
-
-        if ((sym = dlsym(dlhandle, "GetModuleObject")) == NULL)
+        if (sym == NULL)
         {
             MXS_ERROR("Expected entry point interface missing "
                       "from module: %s\n\t\t\t      %s.",
-                      module,
-                      dlerror());
+                      module, dlerror());
             dlclose(dlhandle);
             return NULL;
         }
 
         void *(*entry_point)() = sym;
-        modobj = entry_point();
+        MODULE_INFO *mod_info = entry_point();
+
+        if (!check_module(mod_info, type, module) ||
+            (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
+        {
+            dlclose(dlhandle);
+            return NULL;
+        }
 
         MXS_NOTICE("Loaded module %s: %s from %s", module, mod_info->version, fname);
-        register_module(module, type, dlhandle, modobj, mod_info);
-    }
-    else
-    {
-        /*
-         * The module is already loaded, get the entry points again and
-         * return a reference to the already loaded module.
-         */
-        modobj = mod->modobj;
     }
 
-    return modobj;
+    return mod->modobj;
 }
 
 /**
@@ -281,13 +281,12 @@ find_module(const char *module)
  * @param version       The version string returned by the module
  * @param modobj        The module object
  * @param mod_info      The module information
+ * @return The new registered module or NULL on memory allocation failure
  */
-static void
-register_module(const char *module,
-                const char *type,
-                void *dlhandle,
-                void *modobj,
-                MODULE_INFO *mod_info)
+static MODULES* register_module(const char *module,
+                                const char *type,
+                                void *dlhandle,
+                                MODULE_INFO *mod_info)
 {
     module = MXS_STRDUP(module);
     type = MXS_STRDUP(type);
@@ -301,17 +300,18 @@ register_module(const char *module,
         MXS_FREE((void*)type);
         MXS_FREE(version);
         MXS_FREE(mod);
-        return;
+        return NULL;
     }
 
     mod->module = (char*)module;
     mod->type = (char*)type;
     mod->handle = dlhandle;
     mod->version = version;
-    mod->modobj = modobj;
+    mod->modobj = mod_info->module_object;
     mod->next = registered;
     mod->info = mod_info;
     registered = mod;
+    return mod;
 }
 
 /**

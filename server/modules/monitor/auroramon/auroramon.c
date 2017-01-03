@@ -22,17 +22,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
 
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_MONITOR,
-    MODULE_BETA_RELEASE,
-    MONITOR_VERSION,
-    "Aurora monitor",
-    "V1.0.0"
-};
-/*lint +e14 */
-
 typedef struct aurora_monitor
 {
     bool   shutdown;            /**< True if the monitor is stopped */
@@ -348,13 +337,6 @@ diagnostics(DCB *dcb, const MONITOR *mon)
 {
 }
 
-static MONITOR_OBJECT MyObject =
-{
-    startMonitor,
-    stopMonitor,
-    diagnostics
-};
-
 /**
  * The module entry point routine. It is this routine that must populate the
  * structure that is referred to as the "module object", this is a structure
@@ -362,9 +344,24 @@ static MONITOR_OBJECT MyObject =
  *
  * @return The module object
  */
-MONITOR_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_MONITOR,
+        MODULE_BETA_RELEASE,
+        MONITOR_VERSION,
+        "Aurora monitor",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
-/*lint +e14 */

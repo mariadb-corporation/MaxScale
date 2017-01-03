@@ -85,8 +85,6 @@
 #include <uuid/uuid.h>
 #include <maxscale/alloc.h>
 
-static char *version_str = "V2.1.0";
-
 /* The router entry points */
 static  ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
@@ -119,21 +117,6 @@ bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
 
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostics,
-    clientReply,
-    errorReply,
-    getCapabilities,
-    destroyInstance
-};
-
 static void stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
@@ -144,29 +127,6 @@ static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
 /**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
-
-/**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialise binlog router module %s.\n", version_str);
-    spinlock_init(&instlock);
-    instances = NULL;
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -174,10 +134,37 @@ ModuleInit()
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    MXS_NOTICE("Initialise binlog router module.");
+    spinlock_init(&instlock);
+    instances = NULL;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostics,
+        clientReply,
+        errorReply,
+        getCapabilities,
+        destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_GA,
+        ROUTER_VERSION,
+        "Binlogrouter",
+        "V2.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

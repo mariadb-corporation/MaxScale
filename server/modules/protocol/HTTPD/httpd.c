@@ -40,20 +40,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_IN_DEVELOPMENT,
-    GWPROTOCOL_VERSION,
-    "An experimental HTTPD implementation for use in administration",
-    "V1.2.0"
-};
-/*lint +e14 */
-
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 
@@ -70,26 +56,6 @@ static void httpd_send_headers(DCB *dcb, int final, bool auth_ok);
 static char *httpd_default_auth();
 
 /**
- * The "module object" for the httpd protocol module.
- */
-static GWPROTOCOL MyObject =
-{
-    httpd_read_event,   /**< Read - EPOLLIN handler        */
-    httpd_write,        /**< Write - data from gateway     */
-    httpd_write_event,  /**< WriteReady - EPOLLOUT handler */
-    httpd_error,        /**< Error - EPOLLERR handler      */
-    httpd_hangup,       /**< HangUp - EPOLLHUP handler     */
-    httpd_accept,       /**< Accept                        */
-    NULL,               /**< Connect                       */
-    httpd_close,        /**< Close                         */
-    httpd_listen,       /**< Create a listener             */
-    NULL,               /**< Authentication                */
-    NULL,               /**< Session                       */
-    httpd_default_auth, /**< Default authenticator         */
-    NULL                /**< Connection limit reached      */
-};
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -97,9 +63,36 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWPROTOCOL MyObject =
+    {
+        httpd_read_event,   /**< Read - EPOLLIN handler        */
+        httpd_write,        /**< Write - data from gateway     */
+        httpd_write_event,  /**< WriteReady - EPOLLOUT handler */
+        httpd_error,        /**< Error - EPOLLERR handler      */
+        httpd_hangup,       /**< HangUp - EPOLLHUP handler     */
+        httpd_accept,       /**< Accept                        */
+        NULL,               /**< Connect                       */
+        httpd_close,        /**< Close                         */
+        httpd_listen,       /**< Create a listener             */
+        NULL,               /**< Authentication                */
+        NULL,               /**< Session                       */
+        httpd_default_auth, /**< Default authenticator         */
+        NULL                /**< Connection limit reached      */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_IN_DEVELOPMENT,
+        GWPROTOCOL_VERSION,
+        "An experimental HTTPD implementation for use in administration",
+        "V1.2.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 
@@ -358,7 +351,7 @@ static int httpd_accept(DCB *listener)
     int n_connect = 0;
     DCB *client_dcb;
 
-    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         HTTPD_session *client_data = NULL;
 

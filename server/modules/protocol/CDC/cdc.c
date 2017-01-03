@@ -38,15 +38,6 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/poll.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_IN_DEVELOPMENT,
-    GWPROTOCOL_VERSION,
-    "A Change Data Capture Listener implementation for use in binlog events retrieval",
-    "V1.0.0"
-};
-
 #define ISspace(x) isspace((int)(x))
 #define CDC_SERVER_STRING "MaxScale(c) v.1.0.0"
 
@@ -70,25 +61,6 @@ static char* cdc_default_auth()
 }
 
 /**
- * The "module object" for the CDC protocol module.
- */
-static GWPROTOCOL MyObject =
-{
-    cdc_read_event, /* Read - EPOLLIN handler        */
-    cdc_write, /* Write - data from gateway     */
-    cdc_write_event, /* WriteReady - EPOLLOUT handler */
-    cdc_error, /* Error - EPOLLERR handler      */
-    cdc_hangup, /* HangUp - EPOLLHUP handler     */
-    cdc_accept, /* Accept                        */
-    NULL, /* Connect                       */
-    cdc_close, /* Close                         */
-    cdc_listen, /* Create a listener             */
-    NULL, /* Authentication                */
-    NULL, /* Session                       */
-    cdc_default_auth /* default authentication */
-};
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -96,10 +68,34 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWPROTOCOL MyObject =
+    {
+        cdc_read_event, /* Read - EPOLLIN handler        */
+        cdc_write, /* Write - data from gateway     */
+        cdc_write_event, /* WriteReady - EPOLLOUT handler */
+        cdc_error, /* Error - EPOLLERR handler      */
+        cdc_hangup, /* HangUp - EPOLLHUP handler     */
+        cdc_accept, /* Accept                        */
+        NULL, /* Connect                       */
+        cdc_close, /* Close                         */
+        cdc_listen, /* Create a listener             */
+        NULL, /* Authentication                */
+        NULL, /* Session                       */
+        cdc_default_auth /* default authentication */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_IN_DEVELOPMENT,
+        GWPROTOCOL_VERSION,
+        "A Change Data Capture Listener implementation for use in binlog events retrieval",
+        "V1.0.0"
+    };
+
+    return &info;
 }
 
 /**
@@ -274,7 +270,7 @@ cdc_accept(DCB *listener)
     int n_connect = 0;
     DCB *client_dcb;
 
-    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         CDC_session *client_data = NULL;
         CDC_protocol *protocol = NULL;

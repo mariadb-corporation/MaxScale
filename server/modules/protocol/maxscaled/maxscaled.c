@@ -37,20 +37,6 @@
 #include <maxscale/maxadmin.h>
 #include <maxscale/alloc.h>
 
- /* @see function load_module in load_utils.c for explanation of the following
-  * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_GA,
-    GWPROTOCOL_VERSION,
-    "A maxscale protocol for the administration interface",
-    "V2.0.0"
-};
-/*lint +e14 */
-
 /**
  * @file maxscaled.c - MaxScale administration protocol
  *
@@ -170,27 +156,6 @@ static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
     return authenticated;
 }
 
-
-/**
- * The "module object" for the maxscaled protocol module.
- */
-static GWPROTOCOL MyObject =
-{
-    maxscaled_read_event,           /**< Read - EPOLLIN handler        */
-    maxscaled_write,                /**< Write - data from gateway     */
-    maxscaled_write_event,          /**< WriteReady - EPOLLOUT handler */
-    maxscaled_error,                /**< Error - EPOLLERR handler      */
-    maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
-    maxscaled_accept,               /**< Accept                        */
-    NULL,                           /**< Connect                       */
-    maxscaled_close,                /**< Close                         */
-    maxscaled_listen,               /**< Create a listener             */
-    NULL,                           /**< Authentication                */
-    NULL,                           /**< Session                       */
-    mxsd_default_auth,              /**< Default authenticator         */
-    NULL                            /**< Connection limit reached      */
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -199,10 +164,38 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
-    return &MyObject;
+
+    static GWPROTOCOL MyObject =
+    {
+        maxscaled_read_event,           /**< Read - EPOLLIN handler        */
+        maxscaled_write,                /**< Write - data from gateway     */
+        maxscaled_write_event,          /**< WriteReady - EPOLLOUT handler */
+        maxscaled_error,                /**< Error - EPOLLERR handler      */
+        maxscaled_hangup,               /**< HangUp - EPOLLHUP handler     */
+        maxscaled_accept,               /**< Accept                        */
+        NULL,                           /**< Connect                       */
+        maxscaled_close,                /**< Close                         */
+        maxscaled_listen,               /**< Create a listener             */
+        NULL,                           /**< Authentication                */
+        NULL,                           /**< Session                       */
+        mxsd_default_auth,              /**< Default authenticator         */
+        NULL                            /**< Connection limit reached      */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_GA,
+        GWPROTOCOL_VERSION,
+        "A maxscale protocol for the administration interface",
+        "V2.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 
@@ -343,7 +336,7 @@ static int maxscaled_accept(DCB *listener)
     socklen_t len = sizeof(struct ucred);
     struct ucred ucred;
 
-    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         MAXSCALED *maxscaled_protocol = (MAXSCALED *)calloc(1, sizeof(MAXSCALED));
 

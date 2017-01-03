@@ -59,38 +59,39 @@ static uint64_t getCapabilities(void);
 
 /* Global symbols of the Module */
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_IN_DEVELOPMENT,
-    FILTER_VERSION,
-    "A filter that is capable of limiting the resultset number of rows.",
-    "V1.0.0"
-};
-
 /**
  * The module entry point function, called when the module is loaded.
  *
  * @return The module object.
  */
-FILTER_OBJECT *GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     static FILTER_OBJECT object =
-        {
-            createInstance,
-            newSession,
-            closeSession,
-            freeSession,
-            setDownstream,
-            setUpstream,
-            routeQuery,
-            clientReply,
-            diagnostics,
-            getCapabilities,
-            NULL, // No destroyInstance
-        };
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostics,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
 
-    return &object;
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_IN_DEVELOPMENT,
+        FILTER_VERSION,
+        "A filter that is capable of limiting the resultset number of rows.",
+        "V1.0.0",
+        &object
+    };
+
+    return &info;
 };
 
 /* Implementation */

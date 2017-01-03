@@ -43,20 +43,6 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_MONITOR,
-    MODULE_GA,
-    MONITOR_VERSION,
-    "A Galera cluster monitor",
-    "V2.0.0"
-};
-/*lint +e14 */
-
 static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
 static void stopMonitor(MONITOR *);
 static void diagnostics(DCB *, const MONITOR *);
@@ -64,26 +50,6 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR*);
 static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
-
-static MONITOR_OBJECT MyObject =
-{
-    startMonitor,
-    stopMonitor,
-    diagnostics
-};
-
-/**
- * The module initialisation routine, called when the module
- * is first loaded.
- * @see function load_module in load_utils.c for explanation of lint
- */
-/*lint -e14 */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
-}
-/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -93,12 +59,29 @@ ModuleInit()
  *
  * @return The module object
  */
-MONITOR_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
+
+    static MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_MONITOR,
+        MODULE_GA,
+        MONITOR_VERSION,
+        "A Galera cluster monitor",
+        "V2.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
-/*lint +e14 */
 
 /**
  * Start the instance of the monitor, returning a handle on the monitor.

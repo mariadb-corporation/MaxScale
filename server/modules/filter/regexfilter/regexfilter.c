@@ -40,15 +40,6 @@
  * @endverbatim
  */
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "A query rewrite filter that uses regular expressions to rewrite queries",
-    "V1.1.0"
-};
-
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
@@ -60,21 +51,6 @@ static uint64_t getCapabilities(void);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
                            const char *replace);
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL, // No Upstream requirement
-    routeQuery,
-    NULL, // No clientReply
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  * Instance structure
@@ -114,10 +90,34 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL, // No Upstream requirement
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "A query rewrite filter that uses regular expressions to rewrite queries",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

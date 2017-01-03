@@ -40,16 +40,6 @@
 /** Hashtable size for the per user shard maps */
 #define SCHEMAROUTER_USERHASH_SIZE 10
 
-MODULE_INFO info =
-{
-    MODULE_API_ROUTER,
-    MODULE_BETA_RELEASE,
-    ROUTER_VERSION,
-    "A database sharding router for simple sharding",
-    "V1.0.0"
-};
-
-
 /**
  * @file schemarouter.c The entry points for the simple sharding
  * router module.
@@ -99,20 +89,6 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
 static bool get_shard_dcb(DCB**              dcb,
                           ROUTER_CLIENT_SES* rses,
                           char*              name);
-
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostic,
-    clientReply,
-    handleError,
-    getCapabilities,
-    NULL
-};
 
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
@@ -615,12 +591,37 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
  *
  * @return The module object
  */
-ROUTER_OBJECT* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initializing Schema Sharding Router.");
     spinlock_init(&instlock);
     instances = NULL;
-    return &MyObject;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostic,
+        clientReply,
+        handleError,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_BETA_RELEASE,
+        ROUTER_VERSION,
+        "A database sharding router for simple sharding",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

@@ -34,39 +34,10 @@
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The MaxScale HTTP BA authenticator",
-    "V1.1.0"
-};
-/*lint +e14 */
-
 static int http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool http_auth_is_client_ssl_capable(DCB *dcb);
 static int http_auth_authenticate(DCB *dcb);
 static void http_auth_free_client_data(DCB *dcb);
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                            /* No initialize entry point */
-    NULL,                            /* No create entry point */
-    http_auth_set_protocol_data,     /* Extract data into structure   */
-    http_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-    http_auth_authenticate,          /* Authenticate user credentials */
-    http_auth_free_client_data,      /* Free the client data held in DCB */
-    NULL,                            /* No destroy entry point */
-    users_default_loadusers          /* Load generic users */
-};
 
 typedef struct http_auth
 {
@@ -82,9 +53,31 @@ typedef struct http_auth
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                            /* No initialize entry point */
+        NULL,                            /* No create entry point */
+        http_auth_set_protocol_data,     /* Extract data into structure   */
+        http_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+        http_auth_authenticate,          /* Authenticate user credentials */
+        http_auth_free_client_data,      /* Free the client data held in DCB */
+        NULL,                            /* No destroy entry point */
+        users_default_loadusers          /* Load generic users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The MaxScale HTTP BA authenticator",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 

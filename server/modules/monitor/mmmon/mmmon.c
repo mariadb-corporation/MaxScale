@@ -52,13 +52,6 @@ static void detectStaleMaster(void *, int);
 static MONITOR_SERVERS *get_current_master(MONITOR *);
 static bool isMySQLEvent(monitor_event_t event);
 
-static MONITOR_OBJECT MyObject =
-{
-    startMonitor,
-    stopMonitor,
-    diagnostics
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -67,11 +60,28 @@ static MONITOR_OBJECT MyObject =
  *
  * @return The module object
  */
-MONITOR_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
-    return &MyObject;
+
+    static MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_MONITOR,
+        MODULE_BETA_RELEASE,
+        MONITOR_VERSION,
+        "A Multi-Master Multi Master monitor",
+        "V1.1.1",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 

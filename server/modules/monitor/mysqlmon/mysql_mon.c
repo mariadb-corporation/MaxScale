@@ -72,20 +72,6 @@
 
 static void monitorMain(void *);
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_MONITOR,
-    MODULE_GA,
-    MONITOR_VERSION,
-    "A MySQL Master/Slave replication monitor",
-    "V1.5.0"
-};
-/*lint +e14 */
-
 static void *startMonitor(MONITOR *, const CONFIG_PARAMETER*);
 static void stopMonitor(MONITOR *);
 static void diagnostics(DCB *, const MONITOR *);
@@ -100,13 +86,6 @@ void check_maxscale_schema_replication(MONITOR *monitor);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
-static MONITOR_OBJECT MyObject =
-{
-    startMonitor,
-    stopMonitor,
-    diagnostics
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -115,11 +94,28 @@ static MONITOR_OBJECT MyObject =
  *
  * @return The module object
  */
-MONITOR_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise the MySQL Monitor module.");
-    return &MyObject;
+
+    static MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_MONITOR,
+        MODULE_GA,
+        MONITOR_VERSION,
+        "A MySQL Master/Slave replication monitor",
+        "V1.5.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

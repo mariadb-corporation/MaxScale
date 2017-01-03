@@ -64,15 +64,6 @@
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 
-MODULE_INFO     info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "Transaction Performance Monitoring filter",
-    "V1.0.1"
-};
-
 static size_t buf_size = 10;
 static size_t sql_size_limit = 64 * 1024 *
                                1024; /* The maximum size for query statements in a transaction (64MB) */
@@ -96,21 +87,6 @@ static  int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 static  void checkNamedPipe(void *args);
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    setUpstream,
-    routeQuery,
-    clientReply,
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  * A instance structure, every instance will write to a same file.
@@ -166,10 +142,34 @@ typedef struct
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "Transaction Performance Monitoring filter",
+        "V1.0.1",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

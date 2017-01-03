@@ -90,15 +90,6 @@
 
 #include <maxscale/modutil.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_ROUTER,
-    MODULE_GA,
-    ROUTER_VERSION,
-    "A connection based router to load balance based on connections",
-    "V1.1.0"
-};
-
 /* The router entry points */
 static ROUTER *createInstance(SERVICE *service, char **options);
 static void *newSession(ROUTER *instance, SESSION *session);
@@ -111,29 +102,11 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
 static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, error_action_t action, bool *succp);
 static uint64_t getCapabilities(void);
-
-
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostics,
-    clientReply,
-    handleError,
-    getCapabilities,
-    NULL
-};
-
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
-
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
-
 static SERVER_REF *get_root_master(SERVER_REF *servers);
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
+
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -145,13 +118,37 @@ static ROUTER_INSTANCE *instances;
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise readconnroute router module.");
     spinlock_init(&instlock);
     instances = NULL;
-    return &MyObject;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostics,
+        clientReply,
+        handleError,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_GA,
+        ROUTER_VERSION,
+        "A connection based router to load balance based on connections",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 static inline void free_readconn_instance(ROUTER_INSTANCE *router)

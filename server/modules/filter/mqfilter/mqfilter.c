@@ -78,15 +78,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_ALPHA_RELEASE,
-    FILTER_VERSION,
-    "A RabbitMQ query logging filter",
-    "V1.0.2"
-};
-
 static int uid_gen;
 static int hktask_id = 0;
 /*
@@ -102,22 +93,6 @@ static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    setUpstream,
-    routeQuery,
-    clientReply,
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  *Structure used to store messages and their properties.
@@ -270,10 +245,34 @@ void sendMessage(void* data);
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_ALPHA_RELEASE,
+        FILTER_VERSION,
+        "A RabbitMQ query logging filter",
+        "V1.0.2",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

@@ -50,15 +50,6 @@
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_EXPERIMENTAL,
-    FILTER_VERSION,
-    "Lua Filter",
-    "V1.0.0"
-};
-
 /*
  * The filter entry points
  */
@@ -73,22 +64,6 @@ static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    setUpstream,
-    routeQuery,
-    clientReply,
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -97,10 +72,34 @@ static FILTER_OBJECT MyObject =
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        setUpstream,
+        routeQuery,
+        clientReply,
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_EXPERIMENTAL,
+        FILTER_VERSION,
+        "Lua Filter",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 static int id_pool = 0;

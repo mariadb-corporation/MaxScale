@@ -34,39 +34,10 @@
 #include <maxscale/adminusers.h>
 #include <maxscale/users.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The MaxScale Admin client authenticator implementation",
-    "V2.1.0"
-};
-/*lint +e14 */
-
 static int max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool max_admin_auth_is_client_ssl_capable(DCB *dcb);
 static int max_admin_auth_authenticate(DCB *dcb);
 static void max_admin_auth_free_client_data(DCB *dcb);
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                                 /* No initialize entry point */
-    NULL,                                 /* No create entry point */
-    max_admin_auth_set_protocol_data,     /* Extract data into structure   */
-    max_admin_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-    max_admin_auth_authenticate,          /* Authenticate user credentials */
-    max_admin_auth_free_client_data,      /* Free the client data held in DCB */
-    NULL,                                 /* No destroy entry point */
-    users_default_loadusers               /* Load generic users */
-};
 
 /**
  * The module entry point routine. It is this routine that
@@ -76,9 +47,31 @@ static GWAUTHENTICATOR MyObject =
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                                 /* No initialize entry point */
+        NULL,                                 /* No create entry point */
+        max_admin_auth_set_protocol_data,     /* Extract data into structure   */
+        max_admin_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+        max_admin_auth_authenticate,          /* Authenticate user credentials */
+        max_admin_auth_free_client_data,      /* Free the client data held in DCB */
+        NULL,                                 /* No destroy entry point */
+        users_default_loadusers               /* Load generic users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The MaxScale Admin client authenticator implementation",
+        "V2.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 

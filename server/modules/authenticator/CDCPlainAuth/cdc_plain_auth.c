@@ -42,15 +42,6 @@
 
 const char CDC_USERS_FILENAME[] = "cdcusers";
 
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The CDC client to MaxScale authenticator implementation",
-    "V1.1.0"
-};
-
 static int  cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
 static int  cdc_auth_authenticate(DCB *dcb);
@@ -58,21 +49,6 @@ static void cdc_auth_free_client_data(DCB *dcb);
 
 static int cdc_set_service_user(SERV_LISTENER *listener);
 static int cdc_replace_users(SERV_LISTENER *listener);
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                           /* No initialize entry point */
-    NULL,                           /* No create entry point */
-    cdc_auth_set_protocol_data,     /* Extract data into structure   */
-    cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-    cdc_auth_authenticate,          /* Authenticate user credentials */
-    cdc_auth_free_client_data,      /* Free the client data held in DCB */
-    NULL,                           /* No destroy entry point */
-    cdc_replace_users               /* Load CDC users */
-};
 
 static int cdc_auth_check(
     DCB           *dcb,
@@ -167,9 +143,9 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    modulecmd_arg_type_t args[] =
+    static modulecmd_arg_type_t args[] =
     {
         { MODULECMD_ARG_SERVICE, "Service where the user is added"},
         { MODULECMD_ARG_STRING, "User to add"},
@@ -177,7 +153,30 @@ GWAUTHENTICATOR* GetModuleObject()
     };
 
     modulecmd_register_command("cdc", "add_user", cdc_add_new_user, 3, args);
-    return &MyObject;
+
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                           /* No initialize entry point */
+        NULL,                           /* No create entry point */
+        cdc_auth_set_protocol_data,     /* Extract data into structure   */
+        cdc_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+        cdc_auth_authenticate,          /* Authenticate user credentials */
+        cdc_auth_free_client_data,      /* Free the client data held in DCB */
+        NULL,                           /* No destroy entry point */
+        cdc_replace_users               /* Load CDC users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The CDC client to MaxScale authenticator implementation",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

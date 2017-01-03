@@ -97,44 +97,39 @@ void qc_thread_end(void)
 
 extern "C"
 {
-
-    /* @see function load_module in load_utils.c for explanation of the following
-     * lint directives.
-    */
-    /*lint -e14 */
-    MODULE_INFO info =
+    MODULE_INFO* GetModuleObject()
     {
-        MODULE_API_QUERY_CLASSIFIER,
-        MODULE_IN_DEVELOPMENT,
-        QUERY_CLASSIFIER_VERSION,
-        "Dummy Query Classifier",
-        "V1.0.0"
-    };
+        static QUERY_CLASSIFIER qc =
+        {
+            qc_init,
+            qc_end,
+            qc_thread_init,
+            qc_thread_end,
+            qc_parse,
+            qc_get_type,
+            qc_get_operation,
+            qc_get_created_table_name,
+            qc_is_drop_table_query,
+            qc_is_real_query,
+            qc_get_table_names,
+            NULL,
+            qc_query_has_clause,
+            qc_get_database_names,
+            qc_get_prepare_name,
+            qc_get_prepare_operation,
+            qc_get_field_info,
+        };
 
-    static QUERY_CLASSIFIER qc =
-    {
-        qc_init,
-        qc_end,
-        qc_thread_init,
-        qc_thread_end,
-        qc_parse,
-        qc_get_type,
-        qc_get_operation,
-        qc_get_created_table_name,
-        qc_is_drop_table_query,
-        qc_is_real_query,
-        qc_get_table_names,
-        NULL,
-        qc_query_has_clause,
-        qc_get_database_names,
-        qc_get_prepare_name,
-        qc_get_prepare_operation,
-        qc_get_field_info,
-    };
+        static MODULE_INFO info =
+        {
+            MODULE_API_QUERY_CLASSIFIER,
+            MODULE_IN_DEVELOPMENT,
+            QUERY_CLASSIFIER_VERSION,
+            "Dummy Query Classifier",
+            "V1.0.0",
+            &qc
+        };
 
-    QUERY_CLASSIFIER* GetModuleObject()
-    {
-        return &qc;
+        return &info;
     }
-    /*lint +e14 */
 }

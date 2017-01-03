@@ -60,20 +60,6 @@
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/session.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_GA,
-    GWPROTOCOL_VERSION,
-    "The client to MaxScale MySQL protocol implementation",
-    "V1.1.0"
-};
-/*lint +e14*/
-
 static int gw_MySQLAccept(DCB *listener);
 static int gw_MySQLListener(DCB *listener, char *config_bind);
 static int gw_read_client_event(DCB* dcb);
@@ -97,22 +83,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
 /*
  * The "module object" for the mysqld client protocol module.
  */
-static GWPROTOCOL MyObject =
-{
-    gw_read_client_event,                   /* Read - EPOLLIN handler        */
-    gw_MySQLWrite_client,                   /* Write - data from gateway     */
-    gw_write_client_event,                  /* WriteReady - EPOLLOUT handler */
-    gw_error_client_event,                  /* Error - EPOLLERR handler      */
-    gw_client_hangup_event,                 /* HangUp - EPOLLHUP handler     */
-    gw_MySQLAccept,                         /* Accept                        */
-    NULL,                                   /* Connect                       */
-    gw_client_close,                        /* Close                         */
-    gw_MySQLListener,                       /* Listen                        */
-    NULL,                                   /* Authentication                */
-    NULL,                                   /* Session                       */
-    gw_default_auth,                        /* Default authenticator         */
-    gw_connection_limit                     /* Send error connection limit   */
-};
+
 
 /**
  * The module entry point routine. It is this routine that
@@ -122,9 +93,36 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWPROTOCOL MyObject =
+    {
+        gw_read_client_event,                   /* Read - EPOLLIN handler        */
+        gw_MySQLWrite_client,                   /* Write - data from gateway     */
+        gw_write_client_event,                  /* WriteReady - EPOLLOUT handler */
+        gw_error_client_event,                  /* Error - EPOLLERR handler      */
+        gw_client_hangup_event,                 /* HangUp - EPOLLHUP handler     */
+        gw_MySQLAccept,                         /* Accept                        */
+        NULL,                                   /* Connect                       */
+        gw_client_close,                        /* Close                         */
+        gw_MySQLListener,                       /* Listen                        */
+        NULL,                                   /* Authentication                */
+        NULL,                                   /* Session                       */
+        gw_default_auth,                        /* Default authenticator         */
+        gw_connection_limit                     /* Send error connection limit   */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_GA,
+        GWPROTOCOL_VERSION,
+        "The client to MaxScale MySQL protocol implementation",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 
@@ -1142,7 +1140,7 @@ int gw_MySQLAccept(DCB *listener)
     }
     else
     {
-        while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+        while ((client_dcb = dcb_accept(listener)) != NULL)
         {
             gw_process_one_new_client(client_dcb);
         } /**< while client_dcb != NULL */

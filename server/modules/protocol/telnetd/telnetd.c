@@ -33,20 +33,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_GA,
-    GWPROTOCOL_VERSION,
-    "A telnet deamon protocol for simple administration interface",
-    "V1.1.1"
-};
-/*lint +e14 */
-
 /**
  * @file telnetd.c - telnet daemon protocol module
  *
@@ -82,22 +68,7 @@ static char *telnetd_default_auth();
 /**
  * The "module object" for the telnetd protocol module.
  */
-static GWPROTOCOL MyObject =
-{
-    telnetd_read_event,             /**< Read - EPOLLIN handler        */
-    telnetd_write,                  /**< Write - data from gateway     */
-    telnetd_write_event,            /**< WriteReady - EPOLLOUT handler */
-    telnetd_error,                  /**< Error - EPOLLERR handler      */
-    telnetd_hangup,                 /**< HangUp - EPOLLHUP handler     */
-    telnetd_accept,                 /**< Accept                        */
-    NULL,                           /**< Connect                       */
-    telnetd_close,                  /**< Close                         */
-    telnetd_listen,                 /**< Create a listener             */
-    NULL,                           /**< Authentication                */
-    NULL,                           /**< Session                       */
-    telnetd_default_auth,           /**< Default authenticator         */
-    NULL                            /**< Connection limit reached      */
-};
+
 
 static void telnetd_command(DCB *, unsigned char *cmd);
 static void telnetd_echo(DCB *dcb, int enable);
@@ -110,10 +81,37 @@ static void telnetd_echo(DCB *dcb, int enable);
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_INFO("Initialise Telnetd Protocol module.");
-    return &MyObject;
+
+    static GWPROTOCOL MyObject =
+    {
+        telnetd_read_event,             /**< Read - EPOLLIN handler        */
+        telnetd_write,                  /**< Write - data from gateway     */
+        telnetd_write_event,            /**< WriteReady - EPOLLOUT handler */
+        telnetd_error,                  /**< Error - EPOLLERR handler      */
+        telnetd_hangup,                 /**< HangUp - EPOLLHUP handler     */
+        telnetd_accept,                 /**< Accept                        */
+        NULL,                           /**< Connect                       */
+        telnetd_close,                  /**< Close                         */
+        telnetd_listen,                 /**< Create a listener             */
+        NULL,                           /**< Authentication                */
+        NULL,                           /**< Session                       */
+        telnetd_default_auth,           /**< Default authenticator         */
+        NULL                            /**< Connection limit reached      */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_GA,
+        GWPROTOCOL_VERSION,
+        "A telnet deamon protocol for simple administration interface",
+        "V1.1.1",
+        &MyObject
+    };
+    return &info;
 }
 /*lint +e14 */
 
@@ -268,7 +266,7 @@ static int telnetd_accept(DCB *listener)
     int n_connect = 0;
     DCB *client_dcb;
 
-    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+    while ((client_dcb = dcb_accept(listener)) != NULL)
     {
         TELNETD* telnetd_protocol = NULL;
 

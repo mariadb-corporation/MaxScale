@@ -15,15 +15,6 @@
 #include <maxscale/router.h>
 #include <maxscale/modinfo.h>
 
-MODULE_INFO     info =
-{
-    MODULE_API_ROUTER,
-    MODULE_IN_DEVELOPMENT,
-    ROUTER_VERSION,
-    "A test router - not for use in real systems",
-    "V1.0.0"
-};
-
 static  ROUTER *createInstance(SERVICE *service, char **options);
 static  void   *newSession(ROUTER *instance, SESSION *session);
 static  void   closeSession(ROUTER *instance, void *session);
@@ -38,20 +29,6 @@ static void    handleError(ROUTER           *instance,
                            DCB              *backend_dcb,
                            error_action_t   action,
                            bool             *succp);
-
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostic,
-    clientReply,
-    handleError,
-    getCapabilities,
-    NULL
-};
 
 typedef struct
 {
@@ -69,10 +46,33 @@ typedef struct
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostic,
+        clientReply,
+        handleError,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_IN_DEVELOPMENT,
+        ROUTER_VERSION,
+        "A test router - not for use in real systems",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

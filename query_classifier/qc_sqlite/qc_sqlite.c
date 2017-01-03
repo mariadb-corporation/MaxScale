@@ -3172,38 +3172,38 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
  * EXPORTS
  */
 
-static QUERY_CLASSIFIER qc =
+MODULE_INFO* GetModuleObject()
 {
-    qc_sqlite_init,
-    qc_sqlite_end,
-    qc_sqlite_thread_init,
-    qc_sqlite_thread_end,
-    qc_sqlite_parse,
-    qc_sqlite_get_type,
-    qc_sqlite_get_operation,
-    qc_sqlite_get_created_table_name,
-    qc_sqlite_is_drop_table_query,
-    qc_sqlite_is_real_query,
-    qc_sqlite_get_table_names,
-    NULL,
-    qc_sqlite_query_has_clause,
-    qc_sqlite_get_database_names,
-    qc_sqlite_get_prepare_name,
-    qc_sqlite_get_prepare_operation,
-    qc_sqlite_get_field_info,
-};
+    static QUERY_CLASSIFIER qc =
+    {
+        qc_sqlite_init,
+        qc_sqlite_end,
+        qc_sqlite_thread_init,
+        qc_sqlite_thread_end,
+        qc_sqlite_parse,
+        qc_sqlite_get_type,
+        qc_sqlite_get_operation,
+        qc_sqlite_get_created_table_name,
+        qc_sqlite_is_drop_table_query,
+        qc_sqlite_is_real_query,
+        qc_sqlite_get_table_names,
+        NULL,
+        qc_sqlite_query_has_clause,
+        qc_sqlite_get_database_names,
+        qc_sqlite_get_prepare_name,
+        qc_sqlite_get_prepare_operation,
+        qc_sqlite_get_field_info,
+    };
 
+    static MODULE_INFO info =
+    {
+        MODULE_API_QUERY_CLASSIFIER,
+        MODULE_BETA_RELEASE,
+        QUERY_CLASSIFIER_VERSION,
+        "Query classifier using sqlite.",
+        "V1.0.0",
+        &qc
+    };
 
-MODULE_INFO info =
-{
-    MODULE_API_QUERY_CLASSIFIER,
-    MODULE_BETA_RELEASE,
-    QUERY_CLASSIFIER_VERSION,
-    "Query classifier using sqlite.",
-    "V1.0.0"
-};
-
-QUERY_CLASSIFIER* GetModuleObject()
-{
-    return &qc;
+    return &info;
 }

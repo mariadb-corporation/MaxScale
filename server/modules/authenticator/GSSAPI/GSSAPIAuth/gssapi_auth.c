@@ -597,33 +597,31 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
 }
 
 /**
- * Implementation of the authenticator module interface
- */
-static GWAUTHENTICATOR MyObject =
-{
-    gssapi_auth_init,                /* Initialize authenticator */
-    gssapi_auth_alloc,               /* Allocate authenticator data */
-    gssapi_auth_extract,             /* Extract data into structure   */
-    gssapi_auth_connectssl,          /* Check if client supports SSL  */
-    gssapi_auth_authenticate,        /* Authenticate user credentials */
-    gssapi_auth_free_data,           /* Free the client data held in DCB */
-    gssapi_auth_free,                /* Free authenticator data */
-    gssapi_auth_load_users           /* Load database users */
-};
-
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "GSSAPI authenticator",
-    "V1.0.0"
-};
-
-/**
  * Module handle entry point
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        gssapi_auth_init,                /* Initialize authenticator */
+        gssapi_auth_alloc,               /* Allocate authenticator data */
+        gssapi_auth_extract,             /* Extract data into structure   */
+        gssapi_auth_connectssl,          /* Check if client supports SSL  */
+        gssapi_auth_authenticate,        /* Authenticate user credentials */
+        gssapi_auth_free_data,           /* Free the client data held in DCB */
+        gssapi_auth_free,                /* Free authenticator data */
+        gssapi_auth_load_users           /* Load database users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "GSSAPI authenticator",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }

@@ -29,14 +29,6 @@
  * @endverbatim
  */
 
-MODULE_INFO     info =
-{
-    MODULE_API_FILTER,
-    MODULE_BETA_RELEASE,
-    FILTER_VERSION,
-    "A simple query counting filter",
-    "V2.0.0"
-};
 
 static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static  void    *newSession(FILTER *instance, SESSION *session);
@@ -49,20 +41,7 @@ static uint64_t getCapabilities(void);
 static void destroyInstance(FILTER *instance);
 
 
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL,  // No upstream requirement
-    routeQuery,
-    NULL, // No clientReply
-    diagnostic,
-    getCapabilities,
-    destroyInstance,
-};
+
 
 /**
  * A dummy instance structure
@@ -90,10 +69,34 @@ typedef struct
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL,  // No upstream requirement
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        destroyInstance,
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_BETA_RELEASE,
+        FILTER_VERSION,
+        "A simple query counting filter",
+        "V2.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

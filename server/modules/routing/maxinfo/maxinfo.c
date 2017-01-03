@@ -51,16 +51,6 @@
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 
-
-MODULE_INFO info =
-{
-    MODULE_API_ROUTER,
-    MODULE_ALPHA_RELEASE,
-    ROUTER_VERSION,
-    "The MaxScale Information Schema",
-    "V1.0.0"
-};
-
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 
 static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
@@ -84,21 +74,6 @@ static  void    handleError(ROUTER         *instance,
                             error_action_t action,
                             bool           *succp);
 
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    execute,
-    diagnostics,
-    NULL,
-    handleError,
-    getCapabilities,
-    NULL
-};
-
 static SPINLOCK     instlock;
 static INFO_INSTANCE    *instances;
 
@@ -110,13 +85,37 @@ static INFO_INSTANCE    *instances;
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise MaxInfo router module.");
     spinlock_init(&instlock);
     instances = NULL;
-    return &MyObject;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        execute,
+        diagnostics,
+        NULL,
+        handleError,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_ALPHA_RELEASE,
+        ROUTER_VERSION,
+        "The MaxScale Information Schema",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

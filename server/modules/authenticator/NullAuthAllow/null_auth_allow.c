@@ -36,39 +36,10 @@
 /** MXS-1026: Without MySQL protocol data structures, the NullAuth authenticator will crash. */
 #include <maxscale/protocol/mysql.h>
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The Null client authenticator implementation",
-    "V1.1.0"
-};
-/*lint +e14 */
-
 static int null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool null_auth_is_client_ssl_capable(DCB *dcb);
 static int null_auth_authenticate(DCB *dcb);
 static void null_auth_free_client_data(DCB *dcb);
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                            /* No initialize entry point */
-    NULL,                            /* No create entry point */
-    null_auth_set_protocol_data,     /* Extract data into structure   */
-    null_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-    null_auth_authenticate,          /* Authenticate user credentials */
-    null_auth_free_client_data,      /* Free the client data held in DCB */
-    NULL,                            /* No destroy entry point */
-    users_default_loadusers          /* Load generic users */
-};
 
 /**
  * The module entry point routine. It is this routine that
@@ -78,9 +49,31 @@ static GWAUTHENTICATOR MyObject =
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                            /* No initialize entry point */
+        NULL,                            /* No create entry point */
+        null_auth_set_protocol_data,     /* Extract data into structure   */
+        null_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+        null_auth_authenticate,          /* Authenticate user credentials */
+        null_auth_free_client_data,      /* Free the client data held in DCB */
+        NULL,                            /* No destroy entry point */
+        users_default_loadusers          /* Load generic users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The Null client authenticator implementation",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 

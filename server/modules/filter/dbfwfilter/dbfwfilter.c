@@ -91,15 +91,6 @@
 int dbfw_yyparse(void*);
 #endif
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "Firewall Filter",
-    "V1.2.0"
-};
-
 /*
  * The filter entry points
  */
@@ -111,21 +102,6 @@ static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstre
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL, // No setUpStream
-    routeQuery,
-    NULL, // No clientReply
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 /**
  * Rule types
@@ -801,7 +777,7 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
  *
  * @return The module object
  */
-FILTER_OBJECT * GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
@@ -818,7 +794,33 @@ FILTER_OBJECT * GetModuleObject()
     };
 
     modulecmd_register_command("dbfwfilter", "rules", dbfw_show_rules, 2, args_rules_show);
-    return &MyObject;
+
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL, // No setUpStream
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "Firewall Filter",
+        "V1.2.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

@@ -18,19 +18,21 @@
 // Global symbols of the Module
 //
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_IN_DEVELOPMENT,
-    FILTER_VERSION,
-    "A masking filter that is capable of masking/obfuscating returned column values.",
-    "V1.0.0"
-};
-
-extern "C" FILTER_OBJECT *GetModuleObject()
+extern "C" MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialized masking module.");
-    return &MaskingFilter::s_object;
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_IN_DEVELOPMENT,
+        FILTER_VERSION,
+        "A masking filter that is capable of masking/obfuscating returned column values.",
+        "V1.0.0",
+        &MaskingFilter::s_object
+    };
+
+    return &info;
 }
 
 //

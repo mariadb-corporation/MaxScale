@@ -23,15 +23,6 @@
  *
  */
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_ALPHA_RELEASE,
-    FILTER_VERSION,
-    "A hint parsing filter",
-    "V1.0.0"
-};
-
 static FILTER *createInstance(const char* name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
@@ -41,22 +32,6 @@ static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL, // No upstream requirement
-    routeQuery,
-    NULL, // No clientReply
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -65,10 +40,34 @@ static FILTER_OBJECT MyObject =
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL, // No upstream requirement
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_ALPHA_RELEASE,
+        FILTER_VERSION,
+        "A hint parsing filter",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

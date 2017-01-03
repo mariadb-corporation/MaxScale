@@ -30,20 +30,6 @@
 #include <maxscale/buffer.h>
 #include <maxscale/gw_protocol.h>
 
- /* @see function load_module in load_utils.c for explanation of the following
-  * lint directives.
- */
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_IN_DEVELOPMENT,
-    GWPROTOCOL_VERSION,
-    "Test protocol",
-    "V1.1.0"
-};
-/*lint +e14 */
-
 static int test_read(DCB* dcb){ return 1;}
 static int test_write(DCB *dcb, GWBUF* buf){ return 1;}
 static int test_write_ready(DCB *dcb){ return 1;}
@@ -57,25 +43,6 @@ static int test_auth(DCB* dcb, struct server *srv, struct session *ses, GWBUF *b
 static int test_session(DCB *dcb, void* data){ return 1;}
 static char *test_default_auth(){return "NullAuthAllow";}
 static int test_connection_limit(DCB *dcb, int limit){return 0;}
-/**
- * The "module object" for the httpd protocol module.
- */
-static GWPROTOCOL MyObject =
-{
-    test_read,        /**< Read - EPOLLIN handler        */
-    test_write,       /**< Write - data from gateway     */
-    test_write_ready, /**< WriteReady - EPOLLOUT handler */
-    test_error,       /**< Error - EPOLLERR handler      */
-    test_hangup,      /**< HangUp - EPOLLHUP handler     */
-    test_accept,      /**< Accept                        */
-    test_connect,     /**< Connect                       */
-    test_close,       /**< Close                         */
-    test_listen,      /**< Create a listener             */
-    test_auth,        /**< Authentication                */
-    test_session,     /**< Session                       */
-    test_default_auth, /**< Default authenticator         */
-    test_connection_limit   /**< Connection limit        */
-};
 
 /**
  * The module entry point routine. It is this routine that
@@ -85,8 +52,34 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWPROTOCOL MyObject =
+    {
+        test_read,        /**< Read - EPOLLIN handler        */
+        test_write,       /**< Write - data from gateway     */
+        test_write_ready, /**< WriteReady - EPOLLOUT handler */
+        test_error,       /**< Error - EPOLLERR handler      */
+        test_hangup,      /**< HangUp - EPOLLHUP handler     */
+        test_accept,      /**< Accept                        */
+        test_connect,     /**< Connect                       */
+        test_close,       /**< Close                         */
+        test_listen,      /**< Create a listener             */
+        test_auth,        /**< Authentication                */
+        test_session,     /**< Session                       */
+        test_default_auth, /**< Default authenticator         */
+        test_connection_limit   /**< Connection limit        */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_IN_DEVELOPMENT,
+        GWPROTOCOL_VERSION,
+        "Test protocol",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
-/*lint +e14 */

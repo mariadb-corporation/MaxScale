@@ -35,14 +35,7 @@ static void monitorMain(void *);
  * lint directives.
  */
 /*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_MONITOR,
-    MODULE_BETA_RELEASE,
-    MONITOR_VERSION,
-    "A MySQL cluster SQL node monitor",
-    "V2.1.0"
-};
+
 /*lint +e14 */
 
 static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
@@ -50,12 +43,7 @@ static void stopMonitor(MONITOR *);
 static void diagnostics(DCB *, const MONITOR *);
 bool isNdbEvent(monitor_event_t event);
 
-static MONITOR_OBJECT MyObject =
-{
-    startMonitor,
-    stopMonitor,
-    diagnostics
-};
+
 
 /**
  * The module entry point routine. It is this routine that
@@ -65,11 +53,28 @@ static MONITOR_OBJECT MyObject =
  *
  * @return The module object
  */
-MONITOR_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
-    return &MyObject;
+
+    static MONITOR_OBJECT MyObject =
+    {
+        startMonitor,
+        stopMonitor,
+        diagnostics
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_MONITOR,
+        MODULE_BETA_RELEASE,
+        MONITOR_VERSION,
+        "A MySQL cluster SQL node monitor",
+        "V2.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */
 

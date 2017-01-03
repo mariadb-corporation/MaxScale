@@ -46,15 +46,6 @@
  * @endverbatim
  */
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_GA,
-    FILTER_VERSION,
-    "A routing hint filter that send queries to the master after data modification",
-    "V1.1.0"
-};
-
 static  FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static  void   *newSession(FILTER *instance, SESSION *session);
 static  void   closeSession(FILTER *instance, void *session);
@@ -63,22 +54,6 @@ static  void   setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downs
 static  int    routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  void   diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-
-
-static FILTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    setDownstream,
-    NULL,               // No Upstream requirement
-    routeQuery,
-    NULL, // No clientReply
-    diagnostic,
-    getCapabilities,
-    NULL, // No destroyInstance
-};
 
 #define CCR_DEFAULT_TIME 60
 
@@ -124,10 +99,34 @@ typedef struct
  *
  * @return The module object
  */
-FILTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL,               // No Upstream requirement
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_GA,
+        FILTER_VERSION,
+        "A routing hint filter that send queries to the master after data modification",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

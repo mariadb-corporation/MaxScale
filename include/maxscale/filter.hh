@@ -193,7 +193,7 @@ protected:
  * The plugin function @c GetModuleObject is then implemented as follows:
  *
  * @code
- * extern "C" FILTER_OBJECT *GetModuleObject()
+ * extern "C" MODULE_INFO* GetModuleObject()
  * {
  *     return &MyFilter::s_object;
  * };

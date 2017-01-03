@@ -261,33 +261,31 @@ static int gssapi_backend_auth_authenticate(DCB *dcb)
 }
 
 /**
- * Implementation of the authenticator module interface
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                               /* No initialize entry point */
-    gssapi_backend_auth_alloc,                  /* Allocate authenticator data */
-    gssapi_backend_auth_extract,        /* Extract data into structure   */
-    gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
-    gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
-    NULL,                               /* Client plugin will free shared data */
-    gssapi_backend_auth_free,                   /* Free authenticator data */
-    NULL                                /* Load users from backend databases */
-};
-
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "GSSAPI backend authenticator",
-    "V1.0.0"
-};
-
-/**
  * Module handle entry point
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                               /* No initialize entry point */
+        gssapi_backend_auth_alloc,          /* Allocate authenticator data */
+        gssapi_backend_auth_extract,        /* Extract data into structure   */
+        gssapi_backend_auth_connectssl,     /* Check if client supports SSL  */
+        gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
+        NULL,                               /* Client plugin will free shared data */
+        gssapi_backend_auth_free,           /* Free authenticator data */
+        NULL                                /* Load users from backend databases */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "GSSAPI backend authenticator",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }

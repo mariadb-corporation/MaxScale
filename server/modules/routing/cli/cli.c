@@ -40,16 +40,6 @@
 #include <debugcli.h>
 #include <maxscale/log_manager.h>
 
-
-MODULE_INFO info =
-{
-    MODULE_API_ROUTER,
-    MODULE_GA,
-    ROUTER_VERSION,
-    "The admin user interface",
-    "V1.0.0"
-};
-
 /* The router entry points */
 static  ROUTER *createInstance(SERVICE *service, char **options);
 static  void   *newSession(ROUTER *instance, SESSION *session);
@@ -59,37 +49,10 @@ static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static  void   diagnostics(ROUTER *instance, DCB *dcb);
 static  uint64_t getCapabilities(void);
 
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    execute,
-    diagnostics,
-    NULL,
-    NULL,
-    getCapabilities,
-    NULL
-};
-
 extern int execute_cmd(CLI_SESSION *cli);
 
 static SPINLOCK     instlock;
 static CLI_INSTANCE *instances;
-
-/**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialise CLI router module");
-    spinlock_init(&instlock);
-    instances = NULL;
-}
 
 /**
  * The module entry point routine. It is this routine that
@@ -99,10 +62,37 @@ ModuleInit()
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    MXS_NOTICE("Initialise CLI router module");
+    spinlock_init(&instlock);
+    instances = NULL;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        execute,
+        diagnostics,
+        NULL,
+        NULL,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_GA,
+        ROUTER_VERSION,
+        "The admin user interface",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

@@ -42,42 +42,12 @@ typedef struct mysql_auth
     bool skip_auth;           /**< Authentication will always be successful */
 } MYSQL_AUTH;
 
-
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The MySQL client to MaxScale authenticator implementation",
-    "V1.1.0"
-};
-/*lint +e14 */
-
 static void* mysql_auth_init(char **options);
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
 static void mysql_auth_free_client_data(DCB *dcb);
 static int mysql_auth_load_users(SERV_LISTENER *port);
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    mysql_auth_init,                  /* Initialize the authenticator */
-    NULL,                             /* No create entry point */
-    mysql_auth_set_protocol_data,     /* Extract data into structure   */
-    mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
-    mysql_auth_authenticate,          /* Authenticate user credentials */
-    mysql_auth_free_client_data,      /* Free the client data held in DCB */
-    NULL,                             /* No destroy entry point */
-    mysql_auth_load_users             /* Load users from backend databases */
-};
 
 static int combined_auth_check(
     DCB             *dcb,
@@ -101,11 +71,32 @@ static int mysql_auth_set_client_data(
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        mysql_auth_init,                  /* Initialize the authenticator */
+        NULL,                             /* No create entry point */
+        mysql_auth_set_protocol_data,     /* Extract data into structure   */
+        mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
+        mysql_auth_authenticate,          /* Authenticate user credentials */
+        mysql_auth_free_client_data,      /* Free the client data held in DCB */
+        NULL,                             /* No destroy entry point */
+        mysql_auth_load_users             /* Load users from backend databases */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The MySQL client to MaxScale authenticator implementation",
+        "V1.1.0",
+        &MyObject
+    };
+
+    return &info;
 }
-/*lint +e14 */
 
 /**
  * @brief Initialize the authenticator instance

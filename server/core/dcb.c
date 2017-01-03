@@ -2912,9 +2912,10 @@ int dcb_connect_SSL(DCB* dcb)
  * @return DCB - The new client DCB for the new connection, or NULL if failed
  */
 DCB *
-dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
+dcb_accept(DCB *listener)
 {
     DCB *client_dcb = NULL;
+    GWPROTOCOL *protocol_funcs = &listener->func;
     int c_sock;
     int sendbuf;
     struct sockaddr_storage client_conn;

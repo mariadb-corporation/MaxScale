@@ -17,6 +17,10 @@
 #include <maxscale/utils.h>
 #include <netinet/tcp.h>
 #include <mysqld_error.h>
+#include <maxscale/alloc.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/gw_protocol.h>
+#include <mysql_auth.h>
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -46,24 +50,6 @@
  * 23/05/2016   Martin Brampton         Provide for backend SSL
  *
  */
-#include <maxscale/alloc.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/gw_protocol.h>
-#include <mysql_auth.h>
-
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_PROTOCOL,
-    MODULE_GA,
-    GWPROTOCOL_VERSION,
-    "The MySQL to backend server protocol",
-    "V2.0.0"
-};
-/*lint +e14 */
 
 static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
@@ -91,27 +77,6 @@ static int gw_send_change_user_to_backend(char          *dbname,
                                           uint8_t       *passwd,
                                           MySQLProtocol *conn);
 
-#if defined(NOT_USED)
-static int gw_session(DCB *backend_dcb, void *data);
-#endif
-
-static GWPROTOCOL MyObject =
-{
-    gw_read_backend_event,      /* Read - EPOLLIN handler        */
-    gw_MySQLWrite_backend,      /* Write - data from gateway     */
-    gw_write_backend_event,     /* WriteReady - EPOLLOUT handler */
-    gw_error_backend_event,     /* Error - EPOLLERR handler      */
-    gw_backend_hangup,          /* HangUp - EPOLLHUP handler     */
-    NULL,                       /* Accept                        */
-    gw_create_backend_connection, /* Connect                     */
-    gw_backend_close,           /* Close                         */
-    NULL,                       /* Listen                        */
-    gw_change_user,             /* Authentication                */
-    NULL,                       /* Session                       */
-    gw_backend_default_auth,    /* Default authenticator         */
-    NULL                        /* Connection limit reached      */
-};
-
 /*
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -120,9 +85,36 @@ static GWPROTOCOL MyObject =
  *
  * @return The module object
  */
-GWPROTOCOL* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWPROTOCOL MyObject =
+    {
+        gw_read_backend_event,      /* Read - EPOLLIN handler        */
+        gw_MySQLWrite_backend,      /* Write - data from gateway     */
+        gw_write_backend_event,     /* WriteReady - EPOLLOUT handler */
+        gw_error_backend_event,     /* Error - EPOLLERR handler      */
+        gw_backend_hangup,          /* HangUp - EPOLLHUP handler     */
+        NULL,                       /* Accept                        */
+        gw_create_backend_connection, /* Connect                     */
+        gw_backend_close,           /* Close                         */
+        NULL,                       /* Listen                        */
+        gw_change_user,             /* Authentication                */
+        NULL,                       /* Session                       */
+        gw_backend_default_auth,    /* Default authenticator         */
+        NULL                        /* Connection limit reached      */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_PROTOCOL,
+        MODULE_GA,
+        GWPROTOCOL_VERSION,
+        "The MySQL to backend server protocol",
+        "V2.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

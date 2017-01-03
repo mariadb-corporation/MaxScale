@@ -58,7 +58,6 @@
 
 #define AVRO_TASK_DELAY_MAX 15
 
-static char *version_str = "V1.0.0";
 static const char* avro_task_name = "binlog_to_avro";
 static const char* index_task_name = "avro_indexing";
 static const char* avro_index_name = "avro.index";
@@ -96,34 +95,8 @@ void avro_index_file(AVRO_INSTANCE *router, const char* path);
 void avro_update_index(AVRO_INSTANCE* router);
 static bool conversion_task_ctl(AVRO_INSTANCE *inst, bool start);
 
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostics,
-    clientReply,
-    errorReply,
-    getCapabilities,
-    NULL
-};
-
 static SPINLOCK instlock;
 static AVRO_INSTANCE *instances;
-
-/**
- * Implementation of the mandatory version entry point
- *
- * @return version string of the module
- */
-char *
-version()
-{
-    return version_str;
-}
 
 bool avro_handle_convert(const MODULECMD_ARG *args)
 {
@@ -146,25 +119,6 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
 }
 
 /**
- * The module initialisation routine, called when the module
- * is first loaded.
- */
-void
-ModuleInit()
-{
-    MXS_NOTICE("Initialized avrorouter module %s.\n", version_str);
-    spinlock_init(&instlock);
-    instances = NULL;
-
-    modulecmd_arg_type_t args[] =
-    {
-        { MODULECMD_ARG_SERVICE, "The avrorouter service" },
-        { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
-    };
-    modulecmd_register_command("avrorouter", "convert", avro_handle_convert, 2, args);
-}
-
-/**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
  * "module object", this is a structure with the set of
@@ -172,10 +126,43 @@ ModuleInit()
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    spinlock_init(&instlock);
+    instances = NULL;
+
+    static modulecmd_arg_type_t args[] =
+    {
+        { MODULECMD_ARG_SERVICE, "The avrorouter service" },
+        { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
+    };
+    modulecmd_register_command("avrorouter", "convert", avro_handle_convert, 2, args);
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostics,
+        clientReply,
+        errorReply,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_GA,
+        ROUTER_VERSION,
+        "Binlogrouter",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

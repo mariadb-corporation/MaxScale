@@ -193,16 +193,7 @@ bool config_get_uint64(const FILTER_PARAMETER& param, uint64_t* pValue)
 // Global symbols of the Module
 //
 
-MODULE_INFO info =
-{
-    MODULE_API_FILTER,
-    MODULE_IN_DEVELOPMENT,
-    FILTER_VERSION,
-    "A caching filter that is capable of caching and returning cached data.",
-    VERSION_STRING
-};
-
-extern "C" FILTER_OBJECT *GetModuleObject()
+extern "C" MODULE_INFO* GetModuleObject()
 {
     static modulecmd_arg_type_t show_argv[] =
     {
@@ -214,7 +205,18 @@ extern "C" FILTER_OBJECT *GetModuleObject()
                                MXS_ARRAY_NELEMS(show_argv), show_argv);
     
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
-    return &CacheFilter::s_object;
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_FILTER,
+        MODULE_IN_DEVELOPMENT,
+        FILTER_VERSION,
+        "A caching filter that is capable of caching and returning cached data.",
+        VERSION_STRING,
+        &CacheFilter::s_object
+    };
+
+    return &info;
 };
 
 //

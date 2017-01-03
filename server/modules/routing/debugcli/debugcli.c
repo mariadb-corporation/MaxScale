@@ -39,16 +39,6 @@
 #include <debugcli.h>
 #include <maxscale/log_manager.h>
 
-
-MODULE_INFO     info =
-{
-    MODULE_API_ROUTER,
-    MODULE_GA,
-    ROUTER_VERSION,
-    "The debug user interface",
-    "V1.1.1"
-};
-
 /* The router entry points */
 static  ROUTER *createInstance(SERVICE *service, char **options);
 static  void   *newSession(ROUTER *instance, SESSION *session);
@@ -57,21 +47,6 @@ static  void   freeSession(ROUTER *instance, void *router_session);
 static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static  void   diagnostics(ROUTER *instance, DCB *dcb);
 static  uint64_t getCapabilities ();
-
-/** The module object definition */
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    execute,
-    diagnostics,
-    NULL,
-    NULL,
-    getCapabilities,
-    NULL
-};
 
 extern int execute_cmd(CLI_SESSION *cli);
 
@@ -86,13 +61,37 @@ static CLI_INSTANCE *instances;
  *
  * @return The module object
  */
-ROUTER_OBJECT *
-GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
     MXS_NOTICE("Initialise debug CLI router module.");
     spinlock_init(&instlock);
     instances = NULL;
-    return &MyObject;
+
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        execute,
+        diagnostics,
+        NULL,
+        NULL,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER,
+        MODULE_GA,
+        ROUTER_VERSION,
+        "The debug user interface",
+        "V1.1.1",
+        &MyObject
+    };
+
+    return &info;
 }
 
 /**

@@ -148,35 +148,6 @@ static bool auth_backend_ssl(DCB *dcb)
     return dcb->server->server_ssl != NULL;
 }
 
-/* @see function load_module in load_utils.c for explanation of the following
- * lint directives.
-*/
-/*lint -e14 */
-MODULE_INFO info =
-{
-    MODULE_API_AUTHENTICATOR,
-    MODULE_GA,
-    GWAUTHENTICATOR_VERSION,
-    "The MySQL MaxScale to backend server authenticator",
-    "V1.0.0"
-};
-/*lint +e14 */
-
-/*
- * The "module object" for mysql client authenticator module.
- */
-static GWAUTHENTICATOR MyObject =
-{
-    NULL,                      /* No initialize entry point */
-    auth_backend_create,       /* Create authenticator */
-    auth_backend_extract,      /* Extract data into structure   */
-    auth_backend_ssl,          /* Check if client supports SSL  */
-    auth_backend_authenticate, /* Authenticate user credentials */
-    NULL,                      /* The shared data is freed by the client DCB */
-    auth_backend_destroy,      /* Destroy authenticator */
-    NULL                       /* We don't need to load users */
-};
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -185,8 +156,30 @@ static GWAUTHENTICATOR MyObject =
  *
  * @return The module object
  */
-GWAUTHENTICATOR* GetModuleObject()
+MODULE_INFO* GetModuleObject()
 {
-    return &MyObject;
+    static GWAUTHENTICATOR MyObject =
+    {
+        NULL,                      /* No initialize entry point */
+        auth_backend_create,       /* Create authenticator */
+        auth_backend_extract,      /* Extract data into structure   */
+        auth_backend_ssl,          /* Check if client supports SSL  */
+        auth_backend_authenticate, /* Authenticate user credentials */
+        NULL,                      /* The shared data is freed by the client DCB */
+        auth_backend_destroy,      /* Destroy authenticator */
+        NULL                       /* We don't need to load users */
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_AUTHENTICATOR,
+        MODULE_GA,
+        GWAUTHENTICATOR_VERSION,
+        "The MySQL MaxScale to backend server authenticator",
+        "V1.0.0",
+        &MyObject
+    };
+
+    return &info;
 }
 /*lint +e14 */

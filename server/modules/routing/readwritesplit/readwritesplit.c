@@ -28,13 +28,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 
-MODULE_INFO info =
-{
-    MODULE_API_ROUTER, MODULE_GA, ROUTER_VERSION,
-    "A Read/Write splitting router for enhancement read scalability",
-    "V1.1.0"
-};
-
 /**
  * @file readwritesplit.c   The entry points for the read/write query splitting
  * router module.
@@ -93,20 +86,6 @@ static uint64_t getCapabilities(void);
  * make it easier to track the connection between calls and functions.
  */
 
-static ROUTER_OBJECT MyObject =
-{
-    createInstance,
-    newSession,
-    closeSession,
-    freeSession,
-    routeQuery,
-    diagnostics,
-    clientReply,
-    handleError,
-    getCapabilities,
-    NULL
-};
-
 /*
  * Declaration of functions that are used only within this module, and are
  * not part of the API.
@@ -134,10 +113,32 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
  *
  * @return The module object
  */
-ROUTER_OBJECT *GetModuleObject()
+MODULE_INFO *GetModuleObject()
 {
+    static ROUTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        routeQuery,
+        diagnostics,
+        clientReply,
+        handleError,
+        getCapabilities,
+        NULL
+    };
+
+    static MODULE_INFO info =
+    {
+        MODULE_API_ROUTER, MODULE_GA, ROUTER_VERSION,
+        "A Read/Write splitting router for enhancement read scalability",
+        "V1.1.0",
+        &MyObject
+    };
+
     MXS_NOTICE("Initializing statement-based read/write split router module.");
-    return &MyObject;
+    return &info;
 }
 
 /*

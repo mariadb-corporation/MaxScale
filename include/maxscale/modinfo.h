@@ -86,6 +86,7 @@ typedef struct
     MODULE_VERSION  api_version;
     const char     *description;
     const char     *version;
+    void           *module_object;
 } MODULE_INFO;
 
 MXS_END_DECLS
