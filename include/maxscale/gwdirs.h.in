@@ -11,9 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE 1
-#endif
 
 #include <maxscale/cdefs.h>
 #include <stdlib.h>

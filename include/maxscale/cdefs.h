@@ -33,8 +33,11 @@
 # define MXS_END_DECLS
 #endif
 
-#define _XOPEN_SOURCE 700
-#define OPENSSL_THREAD_DEFINES
+#undef _GNU_SOURCE
+#define _GNU_SOURCE 1
+
+#undef OPENSSL_THREAD_DEFINES
+#define OPENSSL_THREAD_DEFINES 1
 
 /**
  * Define intended for use with strerror.
