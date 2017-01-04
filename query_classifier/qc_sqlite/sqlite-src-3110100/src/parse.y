@@ -66,6 +66,15 @@ enum
   QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
 };
 
+typedef enum qc_field_usage
+{
+    QC_USED_IN_SELECT    = 0x01, /*< SELECT fld FROM... */
+    QC_USED_IN_SUBSELECT = 0x02, /*< SELECT 1 FROM ... SELECT fld ... */
+    QC_USED_IN_WHERE     = 0x04, /*< SELECT ... FROM ... WHERE fld = ... */
+    QC_USED_IN_SET       = 0x08, /*< UPDATE ... SET fld = ... */
+    QC_USED_IN_GROUP_BY  = 0x10, /*< ... GROUP BY fld */
+} qc_field_usage_t;
+
 // MaxScale naming convention:
 //
 // - A function that "overloads" a sqlite3 function has the same name
@@ -115,6 +124,8 @@ extern void maxscaleSet(Parse*, int scope, mxs_set_t kind, ExprList*);
 extern void maxscaleShow(Parse*, MxsShow* pShow);
 extern void maxscaleTruncate(Parse*, Token* pDatabase, Token* pName);
 extern void maxscaleUse(Parse*, Token*);
+
+extern void maxscale_update_function_info(const char* name, unsigned usage);
 
 // Exposed utility functions
 void exposed_sqlite3ExprDelete(sqlite3 *db, Expr *pExpr)
@@ -1141,6 +1152,8 @@ selcollist(A) ::= sclp(P) DEFAULT LP nm RP as. {
   A = P;
 }
 selcollist(A) ::= sclp(P) MATCH LP id(X) RP AGAINST LP expr(Y) RP. {
+  // Could be a subselect as well, but we just don't know it at this point.
+  maxscale_update_function_info("match", QC_USED_IN_SELECT);
   sqlite3ExprDelete(pParse->db, Y.pExpr);
   Expr *p = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
   A = sqlite3ExprListAppend(pParse, P, p);

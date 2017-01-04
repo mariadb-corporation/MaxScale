@@ -1066,7 +1066,10 @@ public:
     QcFunctionInfo(const QC_FUNCTION_INFO& info)
         : m_name(info.name)
         , m_usage(info.usage)
-    {}
+    {
+        // We want case-insensitive comparisons.
+        std::transform(m_name.begin(), m_name.end(), m_name.begin(), tolower);
+    }
 
     bool eq(const QcFunctionInfo& rhs) const
     {

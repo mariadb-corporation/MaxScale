@@ -211,6 +211,8 @@ extern void exposed_sqlite3StartTable(Parse *pParse,   /* Parser context */
                                       int noErr);      /* Do nothing if table already exists */
 extern void maxscaleCollectInfoFromSelect(Parse*, Select*, int);
 
+extern void maxscale_update_function_info(const char* name, uint32_t usage);
+
 /**
  * Used for freeing a QC_SQLITE_INFO object added to a GWBUF.
  *
@@ -808,6 +810,13 @@ static void update_function_info(QC_SQLITE_INFO* info,
     }
 }
 
+extern void maxscale_update_function_info(const char* name, uint32_t usage)
+{
+    QC_SQLITE_INFO* info = this_thread.info;
+
+    update_function_info(info, name, usage);
+}
+
 static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
                                          const struct Expr* pExpr,
                                          uint32_t usage,
@@ -878,6 +887,73 @@ static void update_field_infos_from_expr(QC_SQLITE_INFO* info,
     }
 }
 
+static const char* get_token_symbol(int token)
+{
+    switch (token)
+    {
+    case TK_EQ:
+        return "=";
+
+    case TK_GE:
+        return ">=";
+
+    case TK_GT:
+        return ">";
+
+    case TK_LE:
+        return "<=";
+
+    case TK_LT:
+        return "<";
+
+    case TK_NE:
+        return "<>";
+
+
+    case TK_BETWEEN:
+        return "between";
+
+    case TK_BITAND:
+        return "&";
+
+    case TK_BITOR:
+        return "|";
+
+    case TK_CASE:
+        return "case";
+
+    case TK_IN:
+        return "in";
+
+    case TK_ISNULL:
+        return "isnull";
+
+    case TK_MINUS:
+        return "-";
+
+    case TK_NOTNULL:
+        return "isnotnull";
+
+    case TK_PLUS:
+        return "+";
+
+    case TK_REM:
+        return "%";
+
+    case TK_SLASH:
+        return "/";
+
+    case TK_STAR:
+        return "*";
+
+    case TK_UMINUS:
+        return "-";
+
+    default:
+        ss_dassert(!true);
+        return "";
+    }
+}
 
 static void update_field_infos(QC_SQLITE_INFO* info,
                                int prev_token,
@@ -953,18 +1029,64 @@ static void update_field_infos(QC_SQLITE_INFO* info,
     case TK_FUNCTION:
     case TK_IN:
     case TK_SELECT:
-        if ((pExpr->op == TK_FUNCTION) && zToken)
+        switch (pExpr->op)
         {
-            if (strcasecmp(zToken, "last_insert_id") == 0)
+        case TK_EQ:
+            // We don't report "=" if it's not used in a specific context (SELECT, WHERE)
+            // and if it is used in SET. We also exclude it it in a context where a
+            // variable is set.
+            if (((usage != 0) && (usage != QC_USED_IN_SET)) &&
+                (!pExpr->pLeft || (pExpr->pLeft->op != TK_VARIABLE)))
             {
-                info->types |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
+                update_function_info(info, get_token_symbol(pExpr->op), usage);
             }
-            else if (!is_builtin_readonly_function(zToken))
-            {
-                info->types |= QUERY_TYPE_WRITE;
-            }
+            break;
 
-            update_function_info(info, zToken, usage);
+        case TK_GE:
+        case TK_GT:
+        case TK_LE:
+        case TK_LT:
+        case TK_NE:
+
+        case TK_BETWEEN:
+        case TK_BITAND:
+        case TK_BITOR:
+        case TK_CASE:
+        case TK_IN:
+        case TK_ISNULL:
+        case TK_MINUS:
+        case TK_NOTNULL:
+        case TK_PLUS:
+        case TK_REM:
+        case TK_SLASH:
+        case TK_STAR:
+        case TK_UMINUS:
+            update_function_info(info, get_token_symbol(pExpr->op), usage);
+            break;
+
+        case TK_FUNCTION:
+            if (zToken)
+            {
+                if (strcasecmp(zToken, "last_insert_id") == 0)
+                {
+                    info->types |= (QUERY_TYPE_READ | QUERY_TYPE_MASTER_READ);
+                }
+                else if (!is_builtin_readonly_function(zToken))
+                {
+                    info->types |= QUERY_TYPE_WRITE;
+                }
+
+                // We exclude "row", because we cannot detect all rows the same
+                // way qc_mysqlembedded does.
+                if (strcasecmp(zToken, "row") != 0)
+                {
+                    update_function_info(info, zToken, usage);
+                }
+            }
+            break;
+
+        default:
+            break;
         }
 
         if (pExpr->pLeft)

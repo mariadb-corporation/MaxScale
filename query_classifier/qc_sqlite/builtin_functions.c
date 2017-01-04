@@ -206,6 +206,7 @@ static const char* BUILTIN_FUNCTIONS[] =
     "ST_AsText",
     "ST_ASWKT",
     "ST_GeomCollFromText",
+    "ST_GeometryFromText",
     "ST_LineFromText",
     "ST_PointFromText",
     "ST_PolyFromText",

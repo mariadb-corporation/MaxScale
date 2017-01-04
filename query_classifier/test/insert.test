@@ -187,7 +187,7 @@ create table t1 (a int, b int);
 insert into t1 (a,b) values (a,b);
 insert into t1 SET a=1, b=a+1;
 insert into t1 (a,b) select 1,2;
-INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
+# MXS INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
 prepare stmt1 from ' replace into t1 (a,a) select 100, ''hundred'' ';
 --error 1110
 execute stmt1;

@@ -65,6 +65,7 @@
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/gwdirs.h>
+#include <maxscale/utils.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,6 +85,9 @@ typedef struct parsing_info_st
     QC_FIELD_INFO* field_infos;
     size_t field_infos_len;
     size_t field_infos_capacity;
+    QC_FUNCTION_INFO* function_infos;
+    size_t function_infos_len;
+    size_t function_infos_capacity;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -1581,6 +1585,12 @@ static void parsing_info_done(void* ptr)
         }
         free(pi->field_infos);
 
+        for (size_t i = 0; i < pi->function_infos_len; ++i)
+        {
+            free(pi->function_infos[i].name);
+        }
+        free(pi->function_infos);
+
         free(pi);
     }
 }
@@ -2003,6 +2013,63 @@ static void add_field_info(parsing_info_t* info,
     }
 }
 
+static void add_function_info(parsing_info_t* info,
+                              const char* name,
+                              uint32_t usage)
+{
+    ss_dassert(name);
+
+    QC_FUNCTION_INFO item = { (char*)name, usage };
+
+    size_t i;
+    for (i = 0; i < info->function_infos_len; ++i)
+    {
+        QC_FUNCTION_INFO* function_info = info->function_infos + i;
+
+        if (strcasecmp(item.name, function_info->name) == 0)
+        {
+            break;
+        }
+    }
+
+    QC_FUNCTION_INFO* function_infos = NULL;
+
+    if (i == info->function_infos_len) // If true, the function was not present already.
+    {
+        if (info->function_infos_len < info->function_infos_capacity)
+        {
+            function_infos = info->function_infos;
+        }
+        else
+        {
+            size_t capacity = info->function_infos_capacity ? 2 * info->function_infos_capacity : 8;
+            function_infos = (QC_FUNCTION_INFO*)realloc(info->function_infos,
+                                                        capacity * sizeof(QC_FUNCTION_INFO));
+
+            if (function_infos)
+            {
+                info->function_infos = function_infos;
+                info->function_infos_capacity = capacity;
+            }
+        }
+    }
+    else
+    {
+        info->function_infos[i].usage |= usage;
+    }
+
+    // If function_infos is NULL, then the function was found and has already been noted.
+    if (function_infos)
+    {
+        item.name = strdup(item.name);
+
+        if (item.name)
+        {
+            function_infos[info->function_infos_len++] = item;
+        }
+    }
+}
+
 static void add_field_info(parsing_info_t* pi, Item_field* item, uint32_t usage, List<Item>* excludep)
 {
     const char* database = item->db_name;
@@ -2115,6 +2182,23 @@ static void update_field_infos(parsing_info_t* pi,
                                uint32_t usage,
                                List<Item>* excludep);
 
+static void remove_surrounding_back_ticks(char* s)
+{
+    size_t len = strlen(s);
+
+    if (*s == '`')
+    {
+        --len;
+        memmove(s, s + 1, len);
+        s[len] = 0;
+    }
+
+    if (s[len - 1] == '`')
+    {
+        s[len - 1] = 0;
+    }
+}
+
 static void update_field_infos(parsing_info_t* pi,
                                collect_source_t source,
                                Item* item,
@@ -2181,6 +2265,104 @@ static void update_field_infos(parsing_info_t* pi,
             Item** items = func_item->arguments();
             size_t n_items = func_item->argument_count();
 
+            // From comment in Item_func_or_sum(server/sql/item.h) abount the
+            // func_name() member function:
+            /*
+              This method is used for debug purposes to print the name of an
+              item to the debug log. The second use of this method is as
+              a helper function of print() and error messages, where it is
+              applicable. To suit both goals it should return a meaningful,
+              distinguishable and sintactically correct string. This method
+              should not be used for runtime type identification, use enum
+              {Sum}Functype and Item_func::functype()/Item_sum::sum_func()
+              instead.
+              Added here, to the parent class of both Item_func and Item_sum.
+
+              NOTE: for Items inherited from Item_sum, func_name() return part of
+              function name till first argument (including '(') to make difference in
+              names for functions with 'distinct' clause and without 'distinct' and
+              also to make printing of items inherited from Item_sum uniform.
+            */
+            // However, we have no option but to use it.
+
+            const char* f = func_item->func_name();
+
+            char func_name[strlen(f) + 3 + 1]; // strlen(substring) - strlen(substr) from below.
+            strcpy(func_name, f);
+            trim(func_name); // Sometimes the embedded parser leaves leading and trailing whitespace.
+
+            // Non native functions are surrounded by back-ticks, let's remove them.
+            remove_surrounding_back_ticks(func_name);
+
+            char* dot = strchr(func_name, '.');
+
+            if (dot)
+            {
+                // If there is a dot in the name we assume we have something like
+                // db.fn(). We remove the scope, can't return that in qc_sqlite
+                ++dot;
+                memmove(func_name, dot, strlen(func_name) - (dot - func_name) + 1);
+                remove_surrounding_back_ticks(func_name);
+            }
+
+            char* parenthesis = strchr(func_name, '(');
+
+            if (parenthesis)
+            {
+                // The func_name of count in "SELECT count(distinct ...)" is
+                // "count(distinct", so we need to strip that away.
+                *parenthesis = 0;
+            }
+
+            // We want to ignore functions that do not really appear as such in an
+            // actual SQL statement. E.g. "SELECT @a" appears as a function "get_user_var".
+            if ((strcasecmp(func_name, "decimal_typecast") != 0) &&
+                (strcasecmp(func_name, "cast_as_char") != 0) &&
+                (strcasecmp(func_name, "cast_as_date") != 0) &&
+                (strcasecmp(func_name, "cast_as_datetime") != 0) &&
+                (strcasecmp(func_name, "cast_as_time") != 0) &&
+                (strcasecmp(func_name, "cast_as_signed") != 0) &&
+                (strcasecmp(func_name, "cast_as_unsigned") != 0) &&
+                (strcasecmp(func_name, "get_user_var") != 0) &&
+                (strcasecmp(func_name, "get_system_var") != 0) &&
+                (strcasecmp(func_name, "set_user_var") != 0) &&
+                (strcasecmp(func_name, "set_system_var") != 0))
+            {
+                if (strcmp(func_name, "%") == 0)
+                {
+                    // Embedded library silently changes "mod" into "%". We need to check
+                    // what it originally was, so that the result agrees with that of
+                    // qc_sqlite.
+                    if (func_item->name && (strncasecmp(func_item->name, "mod", 3) == 0))
+                    {
+                        strcpy(func_name, "mod");
+                    }
+                }
+                else if (strcmp(func_name, "<=>") == 0)
+                {
+                    // qc_sqlite does not distinguish between "<=>" and "=", so we
+                    // change "<=>" into "=".
+                    strcpy(func_name, "=");
+                }
+                else if (strcasecmp(func_name, "substr") == 0)
+                {
+                    // Embedded library silently changes "substring" into "substr". We need
+                    // to check what it originally was, so that the result agrees with
+                    // that of qc_sqlite. We reserved space for this above.
+                    if (func_item->name && (strncasecmp(func_item->name, "substring", 9) == 0))
+                    {
+                        strcpy(func_name, "substring");
+                    }
+                }
+                else if (strcasecmp(func_name, "add_time") == 0)
+                {
+                    // For whatever reason the name of "addtime" is returned as "add_time".
+                    strcpy(func_name, "addtime");
+                }
+
+                add_function_info(pi, func_name, usage);
+            }
+
             for (size_t i = 0; i < n_items; ++i)
             {
                 update_field_infos(pi, source, items[i], usage, excludep);
@@ -2195,6 +2377,7 @@ static void update_field_infos(parsing_info_t* pi,
             switch (subselect_item->substype())
             {
             case Item_subselect::IN_SUBS:
+                add_function_info(pi, "in", usage);
             case Item_subselect::ALL_SUBS:
             case Item_subselect::ANY_SUBS:
                 {
@@ -2432,17 +2615,22 @@ void qc_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, size_t* n_infos)
     *n_infos = pi->field_infos_len;
 }
 
-void qc_get_function_info(GWBUF* buf, const QC_FUNCTION_INFO** infos, size_t* n_infos)
+void qc_get_function_info(GWBUF* buf, const QC_FUNCTION_INFO** function_infos, size_t* n_function_infos)
 {
-    *infos = NULL;
-    *n_infos = 0;
+    *function_infos = NULL;
+    *n_function_infos = 0;
 
-    if (!ensure_query_is_parsed(buf))
-    {
-        return;
-    }
+    const QC_FIELD_INFO* field_infos;
+    size_t n_field_infos;
 
-    // TODO: Implement functionality.
+    // We ensure the information has been collected by querying the fields first.
+    qc_get_field_info(buf, &field_infos, &n_field_infos);
+
+    parsing_info_t* pi = get_pinfo(buf);
+    ss_dassert(pi);
+
+    *function_infos = pi->function_infos;
+    *n_function_infos = pi->function_infos_len;
 }
 
 namespace
