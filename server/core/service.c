@@ -1658,6 +1658,17 @@ int service_refresh_users(SERVICE *service)
     return ret;
 }
 
+void service_add_parameters(SERVICE *service, const CONFIG_PARAMETER *param)
+{
+    while (param)
+    {
+        CONFIG_PARAMETER *new_param = config_clone_param(param);
+        new_param->next = service->svc_config_param;
+        service->svc_config_param = new_param;
+        param = param->next;
+    }
+}
+
 bool service_set_param_value(SERVICE*            service,
                              CONFIG_PARAMETER*   param,
                              char*               valstr,

@@ -2600,6 +2600,33 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
 }
 
 /**
+ * @brief Add default parameters for a module to the configuration context
+ *
+ * Only parameters that aren't defined are added to the configuration context.
+ * This allows users to override the default values.
+ *
+ * @param ctx Configuration context where the default parameters are added
+ * @param module Name of the module
+ */
+static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module)
+{
+    const MXS_MODULE *mod = get_module(module);
+
+    if (mod)
+    {
+        for (int i = 0; mod->parameters[i].name; i++)
+        {
+            ss_dassert(config_param_is_valid(module, mod->parameters[i].name,
+                                             mod->parameters[i].default_value));
+
+            bool rv = config_add_param(ctx, mod->parameters[i].name,
+                                       mod->parameters[i].default_value);
+            MXS_ABORT_IF_FALSE(rv);
+        }
+    }
+}
+
+/**
  * Create a new router for a service
  * @param obj Service configuration context
  * @return True if configuration was successful, false if an error occurred.
@@ -2795,6 +2822,11 @@ int create_new_service(CONFIG_CONTEXT *obj)
             }
         }
     }
+
+    /** Store the configuration parameters for the service */
+    config_add_defaults(obj, router);
+    service_add_parameters(obj->element, obj->parameters);
+
     return error_count;
 }
 
@@ -3023,6 +3055,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
     if (error_count == 0)
     {
+        config_add_defaults(obj, module);
         monitorAddParameters(obj->element, obj->parameters);
 
         char *interval_str = config_get_value(obj->parameters, "monitor_interval");
@@ -3235,7 +3268,9 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 }
             }
 
+            config_add_defaults(obj, module);
             CONFIG_PARAMETER *params = obj->parameters;
+
             while (params)
             {
                 if (strcmp(params->name, "module") && strcmp(params->name, "options"))

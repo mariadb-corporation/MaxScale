@@ -122,6 +122,16 @@ bool  service_set_param_value(SERVICE* service, CONFIG_PARAMETER* param, char* v
                               count_spec_t count_spec, config_param_type_t type);
 
 /**
+ * @brief Add parameters to a service
+ *
+ * A copy of @c param is added to @c service.
+ *
+ * @param service Service where the parameters are added
+ * @param param Parameters to add
+ */
+void service_add_parameters(SERVICE *service, const CONFIG_PARAMETER *param);
+
+/**
  * Internal debugging diagnostics
  */
 void       printService(SERVICE *service);
