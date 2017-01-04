@@ -32,15 +32,10 @@
 #include <maxscale/pcre2.h>
 #include <maxavro.h>
 #include <binlog_common.h>
-#include <sqlite3.h>
+#include <maxscale/sqlite3.h>
 #include <maxscale/protocol/mysql.h>
 
 MXS_BEGIN_DECLS
-
-/** SQLite3 version 3.7.14 introduced the new v2 close interface */
-#if SQLITE_VERSION_NUMBER < 3007014
-#define sqlite3_close_v2 sqlite3_close
-#endif
 
 /**
  * How often to call the router status function (seconds)

@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <gssapi.h>
-#include <sqlite3.h>
+#include <maxscale/sqlite3.h>
 
 MXS_BEGIN_DECLS
 
