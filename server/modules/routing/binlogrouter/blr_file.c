@@ -77,6 +77,8 @@
  * @param klen    The AES Key len
  * @return        The EVP_AES_CTR routine for key len
  */
+
+#if OPENSSL_VERSION_NUMBER > 0x10000000L
 static inline const EVP_CIPHER *aes_ctr(unsigned int klen)
 {
     switch (klen)
@@ -87,6 +89,7 @@ static inline const EVP_CIPHER *aes_ctr(unsigned int klen)
         default: return 0;
     }
 }
+#endif
 
 /**
  * AES_CBC handling
@@ -128,12 +131,21 @@ static inline const EVP_CIPHER *aes_ecb(uint klen)
 const EVP_CIPHER *(*ciphers[])(unsigned int) =
 {
     aes_cbc,
+#if OPENSSL_VERSION_NUMBER > 0x10000000L
     aes_ctr,
+#else
+    NULL,
+#endif
     aes_ecb
 };
 
+#if OPENSSL_VERSION_NUMBER > 0x10000000L
 static const char *blr_encryption_algorithm_names[BINLOG_MAX_CRYPTO_SCHEME] = {"aes_cbc", "aes_ctr"};
 static const char blr_encryption_algorithm_list_names[] = "aes_cbc, aes_ctr";
+#else
+static const char *blr_encryption_algorithm_names[BINLOG_MAX_CRYPTO_SCHEME] = {"aes_cbc"};
+static const char blr_encryption_algorithm_list_names[] = "aes_cbc";
+#endif
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
@@ -2989,11 +3001,12 @@ int blr_check_encryption_algorithm(char *name)
         {
             return BLR_AES_CBC;
         }
-
+#if OPENSSL_VERSION_NUMBER > 0x10000000L
         if (strcasecmp(name, "aes_ctr") == 0)
         {
             return BLR_AES_CTR;
         }
+#endif
     }
 
     return -1;
