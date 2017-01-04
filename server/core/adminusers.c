@@ -10,13 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <maxscale/cdefs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#ifndef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 700
-#endif
 #include <unistd.h>
 #include <crypt.h>
 #include <maxscale/users.h>

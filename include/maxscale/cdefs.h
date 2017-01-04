@@ -20,7 +20,7 @@
  * - Its purpose is the same as that of x86_64-linux-gnu/sys/cdefs.h, that is,
  *   it defines things that are dependent upon the compilation environment.
  * - Since this *must* be included as the very first header by all other MaxScale
- *   headers, it allows you to redfine things globally, should that be necessary,
+ *   headers, it allows you to redefine things globally, should that be necessary,
  *   for instance, when debugging something.
  * - Global constants applicable across the line can be defined here.
  */
