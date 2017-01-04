@@ -159,22 +159,6 @@ static bool check_module(const MXS_MODULE *mod_info, const char *type, const cha
     return success;
 }
 
-/**
- * Load the dynamic library related to a gateway module. The routine
- * will look for library files in the current directory,
- * the configured folder and /usr/lib64/maxscale.
- *
- * Note that a number of entry points are standard for any module, as is
- * the data structure named "info".  They are only accessed by explicit
- * reference to the module, and so the fact that they are duplicated in
- * every module is not a problem.  The declarations are protected from
- * lint by suppressing error 14, since the duplication is a feature and
- * not an error.
- *
- * @param module        Name of the module to load
- * @param type          Type of module, used purely for registration
- * @return              The module specific entry point structure or NULL
- */
 void *load_module(const char *module, const char *type)
 {
     ss_dassert(module && type);
@@ -232,16 +216,7 @@ void *load_module(const char *module, const char *type)
     return mod->modobj;
 }
 
-/**
- * Unload a module.
- *
- * No errors are returned since it is not clear that much can be done
- * to fix issues relating to unloading modules.
- *
- * @param module        The name of the module
- */
-void
-unload_module(const char *module)
+void unload_module(const char *module)
 {
     LOADED_MODULE *mod = find_module(module);
 
@@ -372,14 +347,7 @@ unregister_module(const char *module)
     MXS_FREE(mod);
 }
 
-/**
- * Unload all modules
- *
- * Remove all the modules from the system, called during shutdown
- * to allow termination hooks to be called.
- */
-void
-unload_all_modules()
+void unload_all_modules()
 {
     while (registered)
     {
@@ -387,13 +355,7 @@ unload_all_modules()
     }
 }
 
-/**
- * Print Modules
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-printModules()
+void printModules()
 {
     LOADED_MODULE *ptr = registered;
 
@@ -406,13 +368,7 @@ printModules()
     }
 }
 
-/**
- * Print Modules to a DCB
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-dprintAllModules(DCB *dcb)
+void dprintAllModules(DCB *dcb)
 {
     LOADED_MODULE *ptr = registered;
 
@@ -444,13 +400,7 @@ dprintAllModules(DCB *dcb)
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
 }
 
-/**
- * Print Modules to a DCB
- *
- * Diagnostic routine to display all the loaded modules
- */
-void
-moduleShowFeedbackReport(DCB *dcb)
+void moduleShowFeedbackReport(DCB *dcb)
 {
     GWBUF *buffer;
     LOADED_MODULE *modules_list = registered;
@@ -516,13 +466,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     return row;
 }
 
-/**
- * Return a resultset that has the current set of modules in it
- *
- * @return A Result set
- */
-RESULTSET *
-moduleGetList()
+RESULTSET *moduleGetList()
 {
     RESULTSET       *set;
     int             *data;
@@ -546,13 +490,7 @@ moduleGetList()
     return set;
 }
 
-/**
- * Send loaded modules info to notification service
- *
- *  @param data The configuration details of notification service
- */
-void
-module_feedback_send(void* data)
+void module_feedback_send(void* data)
 {
     LOADED_MODULE *modules_list = registered;
     CURL *curl = NULL;
@@ -900,3 +838,8 @@ cleanup:
     return ret_code;
 }
 
+const MXS_MODULE *get_module(const char *name)
+{
+    LOADED_MODULE *mod = find_module(name);
+    return mod ? mod->info : NULL;
+}

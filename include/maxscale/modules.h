@@ -50,13 +50,74 @@ MXS_BEGIN_DECLS
 #define MODULE_QUERY_CLASSIFIER "QueryClassifier" /**< A query classifier module type */
 
 
-extern  void    *load_module(const char *module, const char *type);
-extern  void    unload_module(const char *module);
-extern  void    unload_all_modules();
-extern  void    printModules();
-extern  void    dprintAllModules(DCB *);
-extern  RESULTSET   *moduleGetList();
-extern void module_feedback_send(void*);
-extern void moduleShowFeedbackReport(DCB *dcb);
+/**
+ *@brief Load a module
+ *
+ * @param module Name of the module to load
+ * @param type   Type of module, used purely for registration
+ * @return       The module specific entry point structure or NULL
+ */
+void *load_module(const char *module, const char *type);
+
+/**
+ * @brief Get a module
+ *
+ * @param name Name of the module
+ * @return The loaded module or NULL if the module is not loaded
+ */
+const MXS_MODULE *get_module(const char *name);
+
+/**
+ * @brief Unload a module.
+ *
+ * No errors are returned since it is not clear that much can be done
+ * to fix issues relating to unloading modules.
+ *
+ * @param module The name of the module
+ */
+void unload_module(const char *module);
+
+/**
+ * @brief Unload all modules
+ *
+ * Remove all the modules from the system, called during shutdown
+ * to allow termination hooks to be called.
+ */
+void unload_all_modules();
+
+/**
+ * @brief Print Modules
+ *
+ * Diagnostic routine to display all the loaded modules
+ */
+void printModules();
+
+/**
+ * @brief Print Modules to a DCB
+ *
+ * Diagnostic routine to display all the loaded modules
+ */
+void dprintAllModules(DCB *);
+
+/**
+ * @brief Return a resultset that has the current set of modules in it
+ *
+ * @return A Result set
+ */
+RESULTSET *moduleGetList();
+
+/**
+ * @brief Send loaded modules info to notification service
+ *
+ *  @param data The configuration details of notification service
+ */
+void module_feedback_send(void*);
+
+/**
+ * @brief Show feedback report
+ *
+ * Prints the feedback report to a DCB
+ */
+void moduleShowFeedbackReport(DCB *dcb);
 
 MXS_END_DECLS
