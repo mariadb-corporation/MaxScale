@@ -148,6 +148,7 @@ static int uh_hfun(const void* key);
 static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key);
 static void uh_keyfree(MYSQL_USER_HOST* key);
 static int wildcard_db_grant(char* str);
+static void merge_netmask(char *host);
 
 /**
  * Get the user data query with databases
@@ -2039,6 +2040,10 @@ static int normalize_hostname(const char *input_host, char *output_host)
     {
         return -1;
     }
+    /* Handle hosts with netmasks (e.g. "123.321.123.0/255.255.255.0") by
+     * replacing the zeros with '%'.
+     */
+    merge_netmask(tmp);
 
     p = strtok_r(tmp, ".", &lasts);
     while (p != NULL)
@@ -2683,4 +2688,66 @@ bool check_service_permissions(SERVICE* service)
     free(dpasswd);
 
     return rval;
+}
+/**
+ * If the hostname is of form a.b.c.d/e.f.g.h where e-h is 255 or 0, replace
+ * the zeros in the first part with '%' and remove the second part. This does
+ * not yet support netmasks completely, but should be sufficient for most
+ * situations. In case of error, the hostname may end in an invalid state, which
+ * will cause an error later on.
+ *
+ * @param host  The hostname, which is modified in-place. If merging is unsuccessful,
+ *              it may end up garbled.
+ */
+static void merge_netmask(char *host)
+{
+    char *delimiter_loc = strchr(host, '/');
+    if (delimiter_loc == NULL)
+    {
+        return; // Nothing to do
+    }
+    /* If anything goes wrong, we put the '/' back in to ensure the hostname
+     * cannot be used.
+     */
+    *delimiter_loc = '\0';
+
+    char *ip_token_loc = host;
+    char *mask_token_loc = delimiter_loc + 1; // This is at minimum a \0
+
+    while (ip_token_loc && mask_token_loc)
+    {
+        if (strncmp(mask_token_loc, "255", 3) == 0)
+        {
+            // Skip
+        }
+        else if (*mask_token_loc == '0' && *ip_token_loc == '0')
+        {
+            *ip_token_loc = '%';
+        }
+        else
+        {
+            /* Any other combination is considered invalid. This may leave the
+             * hostname in a partially modified state.
+             * TODO: handle more cases
+             */
+            *delimiter_loc = '/';
+            MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
+                    "Merge incomplete: %s", host);
+            return;
+        }
+
+        ip_token_loc = strchr(ip_token_loc, '.');
+        mask_token_loc = strchr(mask_token_loc, '.');
+        if (ip_token_loc && mask_token_loc)
+        {
+            ip_token_loc++;
+            mask_token_loc++;
+        }
+    }
+    if (ip_token_loc || mask_token_loc)
+    {
+        *delimiter_loc = '/';
+        MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
+                "Merge incomplete: %s", host);
+    }
 }
