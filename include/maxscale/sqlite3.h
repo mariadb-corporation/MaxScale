@@ -12,6 +12,7 @@
  * Public License.
  */
 
+#include <maxscale/cdefs.h>
 #include <sqlite3.h>
 
 /**

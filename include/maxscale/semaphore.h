@@ -19,4 +19,5 @@
 // As a minimal preparation for other environments than Linux, components
 // include <maxscale/semaphore.h>,  instead of including <semaphore.h>
 // directly.
+#include <maxscale/cdefs.h>
 #include <semaphore.h>
