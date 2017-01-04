@@ -838,8 +838,14 @@ cleanup:
     return ret_code;
 }
 
-const MXS_MODULE *get_module(const char *name)
+const MXS_MODULE *get_module(const char *name, const char *type)
 {
     LOADED_MODULE *mod = find_module(name);
+
+    if (mod == NULL && load_module(name, type))
+    {
+        mod = find_module(name);
+    }
+
     return mod ? mod->info : NULL;
 }

@@ -220,12 +220,13 @@ SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *er
  * does preliminary type checking for various basic values as well as enumerations.
  *
  * @param module Module name
+ * @param type Module type
  * @param key Parameter key
  * @param value Parameter value
  *
  * @return True if the configuration parameter is valid
  */
-bool config_param_is_valid(const char *module, const char *key, const char *value);
+bool config_param_is_valid(const char *module, const char *type, const char *key, const char *value);
 
 /**
  * @brief Get a boolean value

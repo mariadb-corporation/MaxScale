@@ -63,9 +63,10 @@ void *load_module(const char *module, const char *type);
  * @brief Get a module
  *
  * @param name Name of the module
+ * @param type The module type
  * @return The loaded module or NULL if the module is not loaded
  */
-const MXS_MODULE *get_module(const char *name);
+const MXS_MODULE *get_module(const char *name, const char *type);
 
 /**
  * @brief Unload a module.

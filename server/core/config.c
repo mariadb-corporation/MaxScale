@@ -108,7 +108,7 @@ static FEEDBACK_CONF feedback;
 char                 *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
-static char *service_params[] =
+static const char *service_params[] =
 {
     "type",
     "router",
@@ -140,7 +140,7 @@ static char *service_params[] =
     NULL
 };
 
-static char *listener_params[] =
+static const char *listener_params[] =
 {
     "authenticator_options",
     "type",
@@ -159,7 +159,7 @@ static char *listener_params[] =
     NULL
 };
 
-static char *monitor_params[] =
+static const char *monitor_params[] =
 {
     "type",
     "module",
@@ -169,25 +169,21 @@ static char *monitor_params[] =
     "password",
     "script",
     "events",
-    "mysql51_replication",
     "monitor_interval",
-    "detect_replication_lag",
-    "detect_stale_master",
-    "disable_master_failback",
     "backend_connect_timeout",
     "backend_read_timeout",
     "backend_write_timeout",
-    "available_when_donor",
-    "disable_master_role_setting",
-    "root_node_as_master",
-    "use_priority",
-    "multimaster",
-    "failover",
-    "failcount",
     NULL
 };
 
-static char *server_params[] =
+static const char *filter_params[] =
+{
+     "type",
+     "module",
+     NULL
+};
+
+static const char *server_params[] =
 {
     "type",
     "protocol",
@@ -1926,20 +1922,23 @@ process_config_update(CONFIG_CONTEXT *context)
 static bool
 check_config_objects(CONFIG_CONTEXT *context)
 {
-    CONFIG_CONTEXT   *obj;
-    CONFIG_PARAMETER *params;
-    char             *type, **param_set;
-    bool              rval = true;
+    bool rval = true;
+    CONFIG_CONTEXT *obj = context;
 
-    obj = context;
     while (obj)
     {
-        param_set = NULL;
+        const char **param_set = NULL;
+        const char *module = NULL;
+        const char *type;
+        const char *module_type = NULL;
+
         if (obj->parameters && (type = config_get_value(obj->parameters, "type")))
         {
             if (!strcmp(type, "service"))
             {
                 param_set = service_params;
+                module = config_get_value(obj->parameters, "router");
+                module_type = MODULE_ROUTER;
             }
             else if (!strcmp(type, "listener"))
             {
@@ -1947,13 +1946,23 @@ check_config_objects(CONFIG_CONTEXT *context)
             }
             else if (!strcmp(type, "monitor"))
             {
-                param_set = monitor_params;
+                // TODO: Declare monitor parameters
+                //param_set = monitor_params;
+                //module = config_get_value(obj->parameters, "module");
+                //module_type = MODULE_MONITOR;
+            }
+            else if (!strcmp(type, "filter"))
+            {
+                // TODO: Declare filter parameters
+                //param_set = filter_params;
+                //module = config_get_value(obj->parameters, "module");
+                //module_type = MODULE_FILTER;
             }
         }
 
         if (param_set != NULL)
         {
-            params = obj->parameters;
+            CONFIG_PARAMETER *params = obj->parameters;
             while (params)
             {
                 int found = 0;
@@ -1967,9 +1976,13 @@ check_config_objects(CONFIG_CONTEXT *context)
 
                 if (found == 0)
                 {
-                    MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
-                              params->name, obj->object, type);
-                    rval = false;
+                    if (module == NULL ||
+                        !config_param_is_valid(module, module_type, params->name, params->value))
+                    {
+                        MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
+                                  params->name, obj->object, type);
+                        rval = false;
+                    }
                 }
                 params = params->next;
             }
@@ -2608,15 +2621,15 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
  * @param ctx Configuration context where the default parameters are added
  * @param module Name of the module
  */
-static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module)
+static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type)
 {
-    const MXS_MODULE *mod = get_module(module);
+    const MXS_MODULE *mod = get_module(module, type);
 
     if (mod)
     {
         for (int i = 0; mod->parameters[i].name; i++)
         {
-            ss_dassert(config_param_is_valid(module, mod->parameters[i].name,
+            ss_dassert(config_param_is_valid(module, type, mod->parameters[i].name,
                                              mod->parameters[i].default_value));
 
             bool rv = config_add_param(ctx, mod->parameters[i].name,
@@ -2824,7 +2837,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     }
 
     /** Store the configuration parameters for the service */
-    config_add_defaults(obj, router);
+    config_add_defaults(obj, router, MODULE_ROUTER);
     service_add_parameters(obj->element, obj->parameters);
 
     return error_count;
@@ -3055,7 +3068,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
     if (error_count == 0)
     {
-        config_add_defaults(obj, module);
+        config_add_defaults(obj, module, MODULE_MONITOR);
         monitorAddParameters(obj->element, obj->parameters);
 
         char *interval_str = config_get_value(obj->parameters, "monitor_interval");
@@ -3268,7 +3281,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 }
             }
 
-            config_add_defaults(obj, module);
+            config_add_defaults(obj, module, MODULE_FILTER);
             CONFIG_PARAMETER *params = obj->parameters;
 
             while (params)
@@ -3331,10 +3344,10 @@ bool config_is_ssl_parameter(const char *key)
     return false;
 }
 
-bool config_param_is_valid(const char *module, const char *key, const char *value)
+bool config_param_is_valid(const char *module, const char *type, const char *key, const char *value)
 {
     bool valid = false;
-    const MXS_MODULE *mod = get_module(module);
+    const MXS_MODULE *mod = get_module(module, type);
 
     if (mod)
     {
