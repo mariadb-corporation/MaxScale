@@ -33,6 +33,7 @@
 #include <sys/utsname.h>
 #include <openssl/sha.h>
 #include <maxscale/gw_ssl.h>
+#include <maxscale/modinfo.h>
 
 MXS_BEGIN_DECLS
 
@@ -210,6 +211,64 @@ bool config_is_ssl_parameter(const char *key);
  * @return New SSL_LISTENER structure or NULL on error
  */
 SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
+
+/**
+ * @brief Check if a configuration parameter is valid
+ *
+ * If a module has declared parameters and parameters were given to the module,
+ * the given parameters are compared to the expected ones. This function also
+ * does preliminary type checking for various basic values as well as enumerations.
+ *
+ * @param module Module name
+ * @param key Parameter key
+ * @param value Parameter value
+ *
+ * @return True if the configuration parameter is valid
+ */
+bool config_param_is_valid(const char *module, const char *key, const char *value);
+
+/**
+ * @brief Get a boolean value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return The value as a boolean
+ */
+bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
+
+/**
+ * @brief Get an integer value
+ *
+ * This is used for both MXS_MODULE_PARAM_INT and MXS_MODULE_PARAM_COUNT.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return The integer value of the parameter
+ */
+int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
+
+/**
+ * @brief Get a string value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return The raw string value */
+const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
+
+/**
+ * @brief Get a enumeration value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return The raw string value
+ *
+ * TODO: Allow multiple enumeration values
+ */
+const char* config_get_enum(const CONFIG_PARAMETER *params, const char *key);
 
 char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);

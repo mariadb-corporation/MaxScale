@@ -83,7 +83,7 @@ static bool process_config_context(CONFIG_CONTEXT *);
 static bool process_config_update(CONFIG_CONTEXT *);
 static char *config_get_value(CONFIG_PARAMETER *, const char *);
 static char *config_get_password(CONFIG_PARAMETER *);
-static const char *config_get_value_string(CONFIG_PARAMETER *, const char *);
+static const char* config_get_value_string(const CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
 static int handle_feedback_item(const char *, const char *);
 static void global_defaults();
@@ -916,8 +916,7 @@ config_get_password(CONFIG_PARAMETER *params)
  * @param name          The parameter to return
  * @return the parameter value or null string if not found
  */
-static const char *
-config_get_value_string(CONFIG_PARAMETER *params, const char *name)
+static const char* config_get_value_string(const CONFIG_PARAMETER *params, const char *name)
 {
     while (params)
     {
@@ -1053,6 +1052,34 @@ bool config_get_valtarget(
 
 return_succp:
     return succp;
+}
+
+bool config_get_bool(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    ss_dassert(*value);
+    return config_truth_value(value);
+}
+
+int config_get_integer(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    ss_dassert(*value);
+    return strtol(value, NULL, 10);
+}
+
+const char* config_get_string(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    ss_dassert(*value);
+    return value;
+}
+
+const char* config_get_enum(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    ss_dassert(*value);
+    return value;
 }
 
 CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
@@ -3267,4 +3294,74 @@ bool config_is_ssl_parameter(const char *key)
     }
 
     return false;
+}
+
+bool config_param_is_valid(const char *module, const char *key, const char *value)
+{
+    bool valid = false;
+    const MXS_MODULE *mod = get_module(module);
+
+    if (mod)
+    {
+        for (int i = 0; mod->parameters[i].name && !valid; i++)
+        {
+            if (strcmp(mod->parameters[i].name, key) == 0)
+            {
+                char *endptr;
+
+                switch (mod->parameters[i].type)
+                {
+                    case MXS_MODULE_PARAM_COUNT:
+                        if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
+                        {
+                            valid = true;
+                        }
+                        break;
+
+                    case MXS_MODULE_PARAM_INT:
+                        strtol(value, &endptr, 10);
+                        if (endptr != value && *endptr == '\0')
+                        {
+                            valid = true;
+                        }
+                        break;
+
+                    case MXS_MODULE_PARAM_BOOL:
+                        if (config_truth_value(value) != -1)
+                        {
+                            valid = true;
+                        }
+                        break;
+
+                    case MXS_MODULE_PARAM_STRING:
+                        if (*value)
+                        {
+                            valid = true;
+                        }
+                        break;
+
+                    case MXS_MODULE_PARAM_ENUM:
+                        if (mod->parameters[i].accepted_values)
+                        {
+                            for (int j = 0; mod->parameters[i].accepted_values[j]; j++)
+                            {
+                                if (strcmp(mod->parameters[i].accepted_values[j], value) == 0)
+                                {
+                                    valid = true;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+
+                    default:
+                        MXS_ERROR("Unexpected module parameter type: %d", mod->parameters[i].type);
+                        ss_dassert(false);
+                        break;
+                }
+            }
+        }
+    }
+
+    return valid;
 }

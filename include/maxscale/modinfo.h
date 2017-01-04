@@ -76,6 +76,24 @@ typedef struct
     int     patch;
 } MXS_MODULE_VERSION;
 
+enum mxs_module_param_type
+{
+    MXS_MODULE_PARAM_COUNT, /**< Non-negative number */
+    MXS_MODULE_PARAM_INT, /**< Integer number */
+    MXS_MODULE_PARAM_BOOL, /**< Boolean value */
+    MXS_MODULE_PARAM_STRING, /**< String value */
+    MXS_MODULE_PARAM_ENUM /**< Enumeration of string values */
+};
+
+/** Module parameter declaration */
+typedef struct mxs_module_param
+{
+    const char *name; /**< Name of the parameter */
+    enum mxs_module_param_type type; /**< Type of the parameter */
+    const char *default_value;
+    const char **accepted_values; /**< Only for enum values */
+} MXS_MODULE_PARAM;
+
 /**
  * The module information structure
  */
@@ -87,7 +105,14 @@ typedef struct
     const char     *description;   /**< Module description */
     const char     *version;       /**< Module version */
     void           *module_object; /**< Module type specific API implementation */
+    MXS_MODULE_PARAM parameters[]; /**< Declared parameters */
 } MXS_MODULE;
+
+/**
+ * This should be the last value given to @c parameters. If the module has no
+ * parameters, it should be the only value.
+ */
+#define MXS_END_MODULE_PARAMS .name = NULL
 
 /**
  * Name of the module entry point
