@@ -71,7 +71,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MONITOR_VERSION,
         "A MySQL cluster SQL node monitor",
         "V2.1.0",
-        &MyObject
+        &MyObject,
+        {
+            {MXS_END_MODULE_PARAMS} // No parameters
+        }
     };
 
     return &info;

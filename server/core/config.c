@@ -1946,10 +1946,9 @@ check_config_objects(CONFIG_CONTEXT *context)
             }
             else if (!strcmp(type, "monitor"))
             {
-                // TODO: Declare monitor parameters
-                //param_set = monitor_params;
-                //module = config_get_value(obj->parameters, "module");
-                //module_type = MODULE_MONITOR;
+                param_set = monitor_params;
+                module = config_get_value(obj->parameters, "module");
+                module_type = MODULE_MONITOR;
             }
             else if (!strcmp(type, "filter"))
             {

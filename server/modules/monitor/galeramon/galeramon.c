@@ -77,7 +77,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MONITOR_VERSION,
         "A Galera cluster monitor",
         "V2.0.0",
-        &MyObject
+        &MyObject,
+        {
+            {"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
+            {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},
+            {"disable_master_role_setting", MXS_MODULE_PARAM_BOOL, "false"},
+            {"root_node_as_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {"use_priority", MXS_MODULE_PARAM_BOOL, "false"},
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;
@@ -107,41 +115,21 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         }
         handle->shutdown = 0;
         handle->id = MONITOR_DEFAULT_ID;
-        handle->disableMasterFailback = 0;
-        handle->availableWhenDonor = 0;
-        handle->disableMasterRoleSetting = false;
         handle->master = NULL;
         handle->script = NULL;
-        handle->root_node_as_master = true;
-        handle->use_priority = false;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
 
+    handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
+    handle->availableWhenDonor = config_get_bool(params, "available_when_donor");
+    handle->disableMasterRoleSetting = config_get_bool(params, "disable_master_role_setting");
+    handle->root_node_as_master = config_get_bool(params, "root_node_as_master");
+    handle->use_priority = config_get_bool(params, "use_priority");
 
     while (params)
     {
-        if (!strcmp(params->name, "disable_master_failback"))
-        {
-            handle->disableMasterFailback = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "available_when_donor"))
-        {
-            handle->availableWhenDonor = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "disable_master_role_setting"))
-        {
-            handle->disableMasterRoleSetting = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "root_node_as_master"))
-        {
-            handle->root_node_as_master = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "use_priority"))
-        {
-            handle->use_priority = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "script"))
+        if (!strcmp(params->name, "script"))
         {
             if (externcmd_can_execute(params->value))
             {
@@ -450,8 +438,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-                (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-                MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
+             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;

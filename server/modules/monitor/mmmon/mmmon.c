@@ -78,7 +78,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MONITOR_VERSION,
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
-        &MyObject
+        &MyObject,
+        {
+            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;
@@ -113,18 +117,15 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         handle->id = MONITOR_DEFAULT_ID;
         handle->master = NULL;
         handle->script = NULL;
-        handle->detectStaleMaster = false;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
 
+    handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
+
     while (params)
     {
-        if (!strcmp(params->name, "detect_stale_master"))
-        {
-            handle->detectStaleMaster = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "script"))
+        if (!strcmp(params->name, "script"))
         {
             if (externcmd_can_execute(params->value))
             {
@@ -536,7 +537,7 @@ monitorMain(void *arg)
          */
         if (nrounds != 0 &&
             (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-            MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;

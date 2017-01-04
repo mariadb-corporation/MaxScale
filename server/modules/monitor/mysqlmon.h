@@ -53,8 +53,6 @@
 
 MXS_BEGIN_DECLS
 
-#define MYSQLMON_DEFAULT_FAILCOUNT 5
-
 /**
  * The handle for an instance of a MySQL Monitor module
  */

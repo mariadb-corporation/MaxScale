@@ -112,7 +112,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MONITOR_VERSION,
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",
-        &MyObject
+        &MyObject,
+        {
+            {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
+            {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
+            {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
+            {"failover", MXS_MODULE_PARAM_BOOL, "false"},
+            {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;
@@ -238,14 +248,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_gateway_id();
-        handle->replicationHeartbeat = 0;
-        handle->detectStaleMaster = true;
-        handle->detectStaleSlave = true;
         handle->script = NULL;
-        handle->multimaster = false;
-        handle->mysql51_replication = false;
-        handle->failover = false;
-        handle->failcount = MYSQLMON_DEFAULT_FAILCOUNT;
         handle->warn_failover = true;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
@@ -254,38 +257,17 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     /** This should always be reset to NULL */
     handle->master = NULL;
 
+    handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
+    handle->detectStaleSlave = config_get_bool(params, "detect_stale_slave");
+    handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
+    handle->multimaster = config_get_bool(params, "multimaster");
+    handle->failover = config_get_bool(params, "failover");
+    handle->failcount = config_get_integer(params, "failcount");
+    handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
+
     while (params)
     {
-        if (!strcmp(params->name, "detect_stale_master"))
-        {
-            handle->detectStaleMaster = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "detect_stale_slave"))
-        {
-            handle->detectStaleSlave = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "detect_replication_lag"))
-        {
-            handle->replicationHeartbeat = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "multimaster"))
-        {
-            handle->multimaster = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "failover"))
-        {
-            handle->failover = config_truth_value(params->value);
-        }
-        else if (!strcmp(params->name, "failcount"))
-        {
-            handle->failcount = atoi(params->value);
-            if (handle->failcount <= 0)
-            {
-                MXS_ERROR("[%s] Invalid value for 'failcount': %s", monitor->name, params->value);
-                error = true;
-            }
-        }
-        else if (!strcmp(params->name, "script"))
+        if (!strcmp(params->name, "script"))
         {
             if (externcmd_can_execute(params->value))
             {
@@ -307,10 +289,6 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
             {
                 have_events = true;
             }
-        }
-        else if (!strcmp(params->name, "mysql51_replication"))
-        {
-            handle->mysql51_replication = config_truth_value(params->value);
         }
         params = params->next;
     }
@@ -1123,7 +1101,7 @@ monitorMain(void *arg)
          */
         if (nrounds != 0 &&
             (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-            MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
