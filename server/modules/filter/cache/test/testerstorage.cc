@@ -171,7 +171,8 @@ int TesterStorage::run(size_t n_threads,
 
     while ((rv == EXIT_SUCCESS) && (i < n_items))
     {
-        size_t size = n_min_size + ((static_cast<double>(random()) / RAND_MAX) * (n_max_size - n_min_size));
+        size_t size = n_min_size + static_cast<size_t>((static_cast<double>(random()) / RAND_MAX) *
+                                                       (n_max_size - n_min_size));
         ss_dassert(size >= n_min_size);
         ss_dassert(size <= n_max_size);
 

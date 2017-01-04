@@ -19,7 +19,7 @@ class StorageFactory;
 class TestStorage
 {
 public:
-    ~TestStorage();
+    virtual ~TestStorage();
 
     enum
     {
