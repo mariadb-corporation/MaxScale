@@ -120,13 +120,13 @@ typedef struct mxs_module
      *
      * @return 0 on success, non-zero on failure.
      */
-    int (*init)();
+    int (*process_init)();
 
     /**
      * If non-NULL, this function is called once at process shutdown, provided
      * the call to @c init succeeded.
      */
-    void (*finish)();
+    void (*process_finish)();
 
     /**
      * If non-NULL, this function is called once at the startup of every new thread.

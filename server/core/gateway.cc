@@ -185,6 +185,10 @@ static bool change_cwd();
 static void log_exit_status();
 static bool daemonize();
 static bool sniff_configuration(const char* filepath);
+static bool modules_process_init();
+static void modules_process_finish();
+static bool modules_thread_init();
+static void modules_thread_finish();
 
 /** SSL multi-threading functions and structures */
 
@@ -970,26 +974,35 @@ static void usage(void)
  */
 void worker_thread_main(void* arg)
 {
-    if (qc_thread_init())
+    if (modules_thread_init())
     {
-        /** Init mysql thread context for use with a mysql handle and a parser */
-        if (mysql_thread_init() == 0)
+        if (qc_thread_init())
         {
-            poll_waitevents(arg);
+            /** Init mysql thread context for use with a mysql handle and a parser */
+            if (mysql_thread_init() == 0)
+            {
+                poll_waitevents(arg);
 
-            /** Release mysql thread context */
-            mysql_thread_end();
+                /** Release mysql thread context */
+                mysql_thread_end();
+            }
+            else
+            {
+                MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+            }
+
+            qc_thread_end();
         }
         else
         {
-            MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+            MXS_ERROR("Could not perform thread initialization for query classifier. Exiting thread.");
         }
 
-        qc_thread_end();
+        modules_thread_finish();
     }
     else
     {
-        MXS_ERROR("Could not perform thread initialization for query classifier. Exiting thread.");
+        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
     }
 }
 
@@ -1945,6 +1958,15 @@ int main(int argc, char **argv)
     poll_init();
 
     dcb_global_init();
+
+    /* Init MaxScale modules */
+    if (!modules_process_init())
+    {
+        MXS_ERROR("Failed to initialize all modules at startup. Exiting.");
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
+    }
+
     /**
      * Init mysql thread context for main thread as well. Needed when users
      * are queried from backends.
@@ -2057,6 +2079,9 @@ int main(int argc, char **argv)
 
     /*< Stop all the monitors */
     monitorStopAll();
+
+    /*< Call finish on all modules. */
+    modules_process_finish();
 
     log_exit_status();
     MXS_NOTICE("MaxScale is shutting down.");
@@ -2806,4 +2831,136 @@ static bool sniff_configuration(const char* filepath)
     }
 
     return rv == 0;
+}
+
+/**
+ * Calls init on all loaded modules.
+ *
+ * @return True, if all modules were successfully initialized.
+ */
+static bool modules_process_init()
+{
+    bool initialized = false;
+
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->process_init)
+        {
+            int rc = (module->process_init)();
+
+            if (rc != 0)
+            {
+                break;
+            }
+        }
+    }
+
+    if (module)
+    {
+        // If module is non-NULL it means that the initialization failed for
+        // that module. We now need to call finish on all modules that were
+        // successfully initialized.
+        MXS_MODULE* failed_module = module;
+        i = mxs_module_iterator_get(NULL);
+
+        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
+        {
+            if (module->process_finish)
+            {
+                (module->process_finish)();
+            }
+        }
+    }
+    else
+    {
+        initialized = true;
+    }
+
+    return initialized;
+}
+
+/**
+ * Calls process_finish on all loaded modules.
+ */
+static void modules_process_finish()
+{
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->process_finish)
+        {
+            (module->process_finish)();
+        }
+    }
+}
+
+/**
+ * Calls thread_init on all loaded modules.
+ *
+ * @return True, if all modules were successfully initialized.
+ */
+static bool modules_thread_init()
+{
+    bool initialized = false;
+
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->thread_init)
+        {
+            int rc = (module->thread_init)();
+
+            if (rc != 0)
+            {
+                break;
+            }
+        }
+    }
+
+    if (module)
+    {
+        // If module is non-NULL it means that the initialization failed for
+        // that module. We now need to call finish on all modules that were
+        // successfully initialized.
+        MXS_MODULE* failed_module = module;
+        i = mxs_module_iterator_get(NULL);
+
+        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
+        {
+            if (module->thread_finish)
+            {
+                (module->thread_finish)();
+            }
+        }
+    }
+    else
+    {
+        initialized = true;
+    }
+
+    return initialized;
+}
+
+/**
+ * Calls thread_finish on all loaded modules.
+ */
+static void modules_thread_finish()
+{
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->thread_finish)
+        {
+            (module->thread_finish)();
+        }
+    }
 }
