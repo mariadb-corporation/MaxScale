@@ -175,14 +175,14 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     router->available_slaves = true;
 
     /** Enable strict multistatement handling by default */
-    router->rwsplit_config.rw_strict_multi_stmt = true;
+    router->rwsplit_config.strict_multi_stmt = true;
 
     /** By default, the client connection is closed immediately when a master
      * failure is detected */
-    router->rwsplit_config.rw_master_failure_mode = RW_FAIL_INSTANTLY;
+    router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
 
     /** Try to retry failed reads */
-    router->rwsplit_config.rw_retry_failed_reads = true;
+    router->rwsplit_config.retry_failed_reads = true;
 
     /** Call this before refreshInstance */
     if (options && !rwsplit_process_router_options(router, options))
@@ -192,10 +192,10 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     }
 
     /** These options cancel each other out */
-    if (router->rwsplit_config.rw_disable_sescmd_hist &&
-        router->rwsplit_config.rw_max_sescmd_history_size > 0)
+    if (router->rwsplit_config.disable_sescmd_history &&
+        router->rwsplit_config.max_sescmd_history > 0)
     {
-        router->rwsplit_config.rw_max_sescmd_history_size = 0;
+        router->rwsplit_config.max_sescmd_history = 0;
     }
 
     /**
@@ -203,11 +203,11 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      * LEAST_CURRENT_OPERATIONS allows us to balance evenly across all the
      * configured slaves.
      */
-    router->rwsplit_config.rw_max_slave_conn_count = MAX_SLAVE_COUNT;
+    router->rwsplit_config.max_slave_connections = MAX_SLAVE_COUNT;
 
-    if (router->rwsplit_config.rw_slave_select_criteria == UNDEFINED_CRITERIA)
+    if (router->rwsplit_config.slave_selection_criteria == UNDEFINED_CRITERIA)
     {
-        router->rwsplit_config.rw_slave_select_criteria = DEFAULT_CRITERIA;
+        router->rwsplit_config.slave_selection_criteria = DEFAULT_CRITERIA;
     }
     /**
      * Copy all config parameters from service to router instance.
@@ -223,7 +223,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      * Read default value for slave replication lag upper limit and then
      * configured value if it exists.
      */
-    router->rwsplit_config.rw_max_slave_replication_lag = CONFIG_MAX_SLAVE_RLAG;
+    router->rwsplit_config.max_slave_replication_lag = CONFIG_MAX_SLAVE_RLAG;
     param = config_get_param(service->svc_config_param, "max_slave_replication_lag");
 
     if (param != NULL)
@@ -232,7 +232,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     }
     router->rwsplit_version = service->svc_config_version;
     /** Set default values */
-    router->rwsplit_config.rw_use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
+    router->rwsplit_config.use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
     param = config_get_param(service->svc_config_param, "use_sql_variables_in");
 
     if (param != NULL)
@@ -310,7 +310,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     backend_ref_t *master_ref = NULL; /*< pointer to selected master */
     if (!select_connect_backend_servers(&master_ref, backend_ref, router_nservers,
                                         max_nslaves, max_slave_rlag,
-                                        client_rses->rses_config.rw_slave_select_criteria,
+                                        client_rses->rses_config.slave_selection_criteria,
                                         session, router, false))
     {
         /**
@@ -331,7 +331,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
         int n_conn = 0;
         double pct = (double)client_rses->rses_config.rw_max_slave_conn_percent / 100.0;
         n_conn = MXS_MAX(floor((double)client_rses->rses_nbackends * pct), 1);
-        client_rses->rses_config.rw_max_slave_conn_count = n_conn;
+        client_rses->rses_config.max_slave_connections = n_conn;
     }
 
     router->stats.n_sessions += 1;
@@ -676,14 +676,14 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
             bool rconn = false;
             writebuf = sescmd_cursor_process_replies(writebuf, bref, &rconn);
 
-            if (rconn && !router_inst->rwsplit_config.rw_disable_sescmd_hist)
+            if (rconn && !router_inst->rwsplit_config.disable_sescmd_history)
             {
                 select_connect_backend_servers(
                     &router_cli_ses->rses_master_ref, router_cli_ses->rses_backend_ref,
                     router_cli_ses->rses_nbackends,
-                    router_cli_ses->rses_config.rw_max_slave_conn_count,
-                    router_cli_ses->rses_config.rw_max_slave_replication_lag,
-                    router_cli_ses->rses_config.rw_slave_select_criteria,
+                    router_cli_ses->rses_config.max_slave_connections,
+                    router_cli_ses->rses_config.max_slave_replication_lag,
+                    router_cli_ses->rses_config.slave_selection_criteria,
                     router_cli_ses->rses_master_ref->bref_dcb->session,
                     router_cli_ses->router,
                     true);
@@ -1010,9 +1010,9 @@ int rses_get_max_slavecount(ROUTER_CLIENT_SES *rses,
 
     CHK_CLIENT_RSES(rses);
 
-    if (rses->rses_config.rw_max_slave_conn_count > 0)
+    if (rses->rses_config.max_slave_connections > 0)
     {
-        conf_max_nslaves = rses->rses_config.rw_max_slave_conn_count;
+        conf_max_nslaves = rses->rses_config.max_slave_connections;
     }
     else
     {
@@ -1036,9 +1036,9 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
     CHK_CLIENT_RSES(rses);
 
     /** if there is no configured value, then longest possible int is used */
-    if (rses->rses_config.rw_max_slave_replication_lag > 0)
+    if (rses->rses_config.max_slave_replication_lag > 0)
     {
-        conf_max_rlag = rses->rses_config.rw_max_slave_replication_lag;
+        conf_max_rlag = rses->rses_config.max_slave_replication_lag;
     }
     else
     {
@@ -1197,47 +1197,47 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
                               "Allowed values are LEAST_GLOBAL_CONNECTIONS, "
                               "LEAST_ROUTER_CONNECTIONS, LEAST_BEHIND_MASTER,"
                               "and LEAST_CURRENT_OPERATIONS.",
-                              STRCRITERIA(router->rwsplit_config.rw_slave_select_criteria));
+                              STRCRITERIA(router->rwsplit_config.slave_selection_criteria));
                     success = false;
                 }
                 else
                 {
-                    router->rwsplit_config.rw_slave_select_criteria = c;
+                    router->rwsplit_config.slave_selection_criteria = c;
                 }
             }
             else if (strcmp(options[i], "max_sescmd_history") == 0)
             {
-                router->rwsplit_config.rw_max_sescmd_history_size = atoi(value);
+                router->rwsplit_config.max_sescmd_history = atoi(value);
             }
             else if (strcmp(options[i], "disable_sescmd_history") == 0)
             {
-                router->rwsplit_config.rw_disable_sescmd_hist = config_truth_value(value);
+                router->rwsplit_config.disable_sescmd_history = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_accept_reads") == 0)
             {
-                router->rwsplit_config.rw_master_reads = config_truth_value(value);
+                router->rwsplit_config.master_accept_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "strict_multi_stmt") == 0)
             {
-                router->rwsplit_config.rw_strict_multi_stmt = config_truth_value(value);
+                router->rwsplit_config.strict_multi_stmt = config_truth_value(value);
             }
             else if (strcmp(options[i], "retry_failed_reads") == 0)
             {
-                router->rwsplit_config.rw_retry_failed_reads = config_truth_value(value);
+                router->rwsplit_config.retry_failed_reads = config_truth_value(value);
             }
             else if (strcmp(options[i], "master_failure_mode") == 0)
             {
                 if (strcasecmp(value, "fail_instantly") == 0)
                 {
-                    router->rwsplit_config.rw_master_failure_mode = RW_FAIL_INSTANTLY;
+                    router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
                 }
                 else if (strcasecmp(value, "fail_on_write") == 0)
                 {
-                    router->rwsplit_config.rw_master_failure_mode = RW_FAIL_ON_WRITE;
+                    router->rwsplit_config.master_failure_mode = RW_FAIL_ON_WRITE;
                 }
                 else if (strcasecmp(value, "error_on_write") == 0)
                 {
-                    router->rwsplit_config.rw_master_failure_mode = RW_ERROR_ON_WRITE;
+                    router->rwsplit_config.master_failure_mode = RW_ERROR_ON_WRITE;
                 }
                 else
                 {
@@ -1342,7 +1342,7 @@ static void handleError(ROUTER *instance, void *router_session,
                     SERVER *srv = rses->rses_master_ref->ref->server;
                     bool can_continue = false;
 
-                    if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY &&
+                    if (rses->rses_config.master_failure_mode != RW_FAIL_INSTANTLY &&
                         (bref == NULL || !BREF_IS_WAITING_RESULT(bref)))
                     {
                         /** The failure of a master is not considered a critical
@@ -1597,7 +1597,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
      * Try to get replacement slave or at least the minimum
      * number of slave connections for router session.
      */
-    if (inst->rwsplit_config.rw_disable_sescmd_hist)
+    if (inst->rwsplit_config.disable_sescmd_history)
     {
         succp = have_enough_servers(myrses, 1, myrses->rses_nbackends, inst) ? true : false;
     }
@@ -1607,7 +1607,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                                myrses->rses_backend_ref,
                                                myrses->rses_nbackends,
                                                max_nslaves, max_slave_rlag,
-                                               myrses->rses_config.rw_slave_select_criteria,
+                                               myrses->rses_config.slave_selection_criteria,
                                                ses, inst, true);
     }
 
@@ -1631,7 +1631,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
 
     /** With too few servers session is not created */
     if (router_nsrv < min_nsrv ||
-        MXS_MAX((rses)->rses_config.rw_max_slave_conn_count,
+        MXS_MAX((rses)->rses_config.max_slave_connections,
                 (router_nsrv * (rses)->rses_config.rw_max_slave_conn_percent) /
                 100) < min_nsrv)
     {
@@ -1647,13 +1647,13 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
             int pct = (rses)->rses_config.rw_max_slave_conn_percent / 100;
             int nservers = router_nsrv * pct;
 
-            if ((rses)->rses_config.rw_max_slave_conn_count < min_nsrv)
+            if ((rses)->rses_config.max_slave_connections < min_nsrv)
             {
                 MXS_ERROR("Unable to start %s service. There are "
                           "too few backend servers configured in "
                           "MaxScale.cnf. Found %d when %d is required.",
                           router->service->name,
-                          (rses)->rses_config.rw_max_slave_conn_count, min_nsrv);
+                          (rses)->rses_config.max_slave_connections, min_nsrv);
             }
             if (nservers < min_nsrv)
             {
@@ -1723,7 +1723,7 @@ static void refreshInstance(ROUTER_INSTANCE *router,
 
                 if (succp)
                 {
-                    router->rwsplit_config.rw_max_slave_conn_count = val;
+                    router->rwsplit_config.max_slave_connections = val;
                 }
             }
             else if (strncmp(param->name, "max_slave_replication_lag",
@@ -1736,7 +1736,7 @@ static void refreshInstance(ROUTER_INSTANCE *router,
 
                 if (succp)
                 {
-                    router->rwsplit_config.rw_max_slave_replication_lag = val;
+                    router->rwsplit_config.max_slave_replication_lag = val;
                 }
             }
         }
@@ -1747,7 +1747,7 @@ static void refreshInstance(ROUTER_INSTANCE *router,
                 int val;
                 bool succp;
 
-                router->rwsplit_config.rw_max_slave_conn_count = 0;
+                router->rwsplit_config.max_slave_connections = 0;
 
                 succp = config_get_valint(&val, param, NULL, paramtype);
 
@@ -1768,7 +1768,7 @@ static void refreshInstance(ROUTER_INSTANCE *router,
 
                 if (succp)
                 {
-                    router->rwsplit_config.rw_use_sql_variables_in = valtarget;
+                    router->rwsplit_config.use_sql_variables_in = valtarget;
                 }
             }
         }

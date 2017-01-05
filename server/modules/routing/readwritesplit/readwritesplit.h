@@ -217,19 +217,19 @@ typedef struct rwsplit_config_st
 {
     int               rw_max_slave_conn_percent; /**< Maximum percentage of slaves
                                                   * to use for each connection*/
-    int               rw_max_slave_conn_count; /**< Maximum number of slaves for each connection*/
-    select_criteria_t rw_slave_select_criteria; /**< The slave selection criteria */
-    int               rw_max_slave_replication_lag; /**< Maximum replication lag */
-    target_t          rw_use_sql_variables_in; /**< Whether to send user variables
+    int               max_slave_connections; /**< Maximum number of slaves for each connection*/
+    select_criteria_t slave_selection_criteria; /**< The slave selection criteria */
+    int               max_slave_replication_lag; /**< Maximum replication lag */
+    target_t          use_sql_variables_in; /**< Whether to send user variables
                                                 * to master or all nodes */
-    int               rw_max_sescmd_history_size; /**< Maximum amount of session commands to store */
-    bool              rw_disable_sescmd_hist; /**< Disable session command history */
-    bool              rw_master_reads; /**< Use master for reads */
-    bool              rw_strict_multi_stmt; /**< Force non-multistatement queries to be routed
+    int               max_sescmd_history; /**< Maximum amount of session commands to store */
+    bool              disable_sescmd_history; /**< Disable session command history */
+    bool              master_accept_reads; /**< Use master for reads */
+    bool              strict_multi_stmt; /**< Force non-multistatement queries to be routed
                                              * to the master after a multistatement query. */
-    enum failure_mode rw_master_failure_mode; /**< Master server failure handling mode.
+    enum failure_mode master_failure_mode; /**< Master server failure handling mode.
                                                * @see enum failure_mode */
-    bool              rw_retry_failed_reads; /**< Retry failed reads on other servers */
+    bool              retry_failed_reads; /**< Retry failed reads on other servers */
 } rwsplit_config_t;
 
 #if defined(PREP_STMT_CACHING)

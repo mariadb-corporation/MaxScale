@@ -131,7 +131,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         else if (TARGET_IS_SLAVE(route_target))
         {
             succp = handle_slave_is_target(inst, rses, &target_dcb);
-            store_stmt = rses->rses_config.rw_retry_failed_reads;
+            store_stmt = rses->rses_config.retry_failed_reads;
         }
         else if (TARGET_IS_MASTER(route_target))
         {
@@ -251,19 +251,19 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
         goto return_succp;
     }
 
-    if (router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
+    if (router_cli_ses->rses_config.max_sescmd_history > 0 &&
         router_cli_ses->rses_nsescmd >=
-        router_cli_ses->rses_config.rw_max_sescmd_history_size)
+        router_cli_ses->rses_config.max_sescmd_history)
     {
         MXS_WARNING("Router session exceeded session command history limit. "
                     "Slave recovery is disabled and only slave servers with "
                     "consistent session state are used "
                     "for the duration of the session.");
-        router_cli_ses->rses_config.rw_disable_sescmd_hist = true;
-        router_cli_ses->rses_config.rw_max_sescmd_history_size = 0;
+        router_cli_ses->rses_config.disable_sescmd_history = true;
+        router_cli_ses->rses_config.max_sescmd_history = 0;
     }
 
-    if (router_cli_ses->rses_config.rw_disable_sescmd_hist)
+    if (router_cli_ses->rses_config.disable_sescmd_history)
     {
         rses_property_t *prop, *tmp;
         backend_ref_t *bref;
@@ -589,7 +589,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                      (max_rlag == MAX_RLAG_UNDEFINED ||
                       (b->server->rlag != MAX_RLAG_NOT_AVAILABLE &&
                        b->server->rlag <= max_rlag)) &&
-                     !rses->rses_config.rw_master_reads)
+                     !rses->rses_config.master_accept_reads)
             {
                 /** found slave */
                 candidate_bref = &backend_ref[i];
@@ -608,7 +608,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                      b->server->rlag <= max_rlag))
                 {
                     candidate_bref = check_candidate_bref(candidate_bref, &backend_ref[i],
-                                                          rses->rses_config.rw_slave_select_criteria);
+                                                          rses->rses_config.slave_selection_criteria);
                     candidate.status = candidate_bref->ref->server->status;
                 }
                 else
@@ -688,10 +688,10 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->rses_load_active;
-    target_t use_sql_variables_in = rses->rses_config.rw_use_sql_variables_in;
+    target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
     route_target_t target = TARGET_UNDEFINED;
 
-    if (rses->rses_config.rw_strict_multi_stmt && rses->forced_node &&
+    if (rses->rses_config.strict_multi_stmt && rses->forced_node &&
         rses->forced_node == rses->rses_master_ref)
     {
         target = TARGET_MASTER;
@@ -1121,7 +1121,7 @@ static void log_master_routing_failure(ROUTER_CLIENT_SES *rses, bool found,
     else
     {
         /** We never had a master connection, the session must be in read-only mode */
-        if (rses->rses_config.rw_master_failure_mode != RW_FAIL_INSTANTLY)
+        if (rses->rses_config.master_failure_mode != RW_FAIL_INSTANTLY)
         {
             sprintf(errmsg, "Session is in read-only mode because it was created "
                     "when no master was available");
@@ -1172,7 +1172,7 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         else
         {
             /** The original master is not available, we can't route the write */
-            if (rses->rses_config.rw_master_failure_mode == RW_ERROR_ON_WRITE)
+            if (rses->rses_config.master_failure_mode == RW_ERROR_ON_WRITE)
             {
                 succp = send_readonly_error(rses->client_dcb);
 
@@ -1409,7 +1409,7 @@ static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses)
         }
     }
 
-    if (candidate_bref == NULL && rses->rses_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
+    if (candidate_bref == NULL && rses->rses_config.master_failure_mode == RW_FAIL_INSTANTLY &&
         rses->rses_master_ref && BREF_IS_IN_USE(rses->rses_master_ref))
     {
         MXS_ERROR("Could not find master among the backend servers. "

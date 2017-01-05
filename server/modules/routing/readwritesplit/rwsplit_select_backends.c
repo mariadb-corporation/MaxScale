@@ -166,7 +166,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
     SERVER_REF *master_backend = get_root_master(backend_ref, router_nservers);
     SERVER  *master_host = master_backend ? master_backend->server : NULL;
 
-    if (router->rwsplit_config.rw_master_failure_mode == RW_FAIL_INSTANTLY &&
+    if (router->rwsplit_config.master_failure_mode == RW_FAIL_INSTANTLY &&
         (master_host == NULL || SERVER_IS_DOWN(master_host)))
     {
         MXS_ERROR("Couldn't find suitable Master from %d candidates.", router_nservers);
