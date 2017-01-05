@@ -849,3 +849,45 @@ const MXS_MODULE *get_module(const char *name, const char *type)
 
     return mod ? mod->info : NULL;
 }
+
+MXS_MODULE_ITERATOR mxs_module_iterator_get(const char* type)
+{
+    LOADED_MODULE* module = registered;
+
+    while (module && type && (strcmp(module->type, type) != 0))
+    {
+        module = module->next;
+    }
+
+    MXS_MODULE_ITERATOR iterator;
+    iterator.type = type;
+    iterator.position = module;
+
+    return iterator;
+}
+
+bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator)
+{
+    return iterator->position != NULL;
+}
+
+MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator)
+{
+    MXS_MODULE* module = NULL;
+    LOADED_MODULE* loaded_module = (LOADED_MODULE*)iterator->position;
+
+    if (loaded_module)
+    {
+        module = loaded_module->info;
+
+        do
+        {
+            loaded_module = loaded_module->next;
+        }
+        while (loaded_module && iterator->type && (strcmp(loaded_module->type, iterator->type) != 0));
+
+        iterator->position = loaded_module;
+    }
+
+    return module;
+}
