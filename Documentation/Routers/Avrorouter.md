@@ -57,6 +57,25 @@ router=avrorouter
 source=replication-router
 ```
 
+**Note:** Since the 2.1 version of MaxScale, all of the router options can also
+be defined as parameters.
+
+```
+[replication-router]
+type=service
+router=binlogrouter
+router_options=server-id=4000,binlogdir=/var/lib/mysql,filestem=binlog
+user=maxuser
+passwd=maxpwd
+
+[avro-router]
+type=service
+router=avrorouter
+binlogdir=/var/lib/mysql
+filestem=binlog
+avrodir=/var/lib/maxscale
+```
+
 ## Router Options
 
 The avrorouter is configured with a comma-separated list of key-value pairs.
@@ -87,9 +106,10 @@ will be used to store the Avro files, plain-text Avro schemas and other files
 needed by the avrorouter. The user running MariaDB MaxScale will need both read and
 write access to this directory.
 
-The avrorouter will also use the _avrodir_ to store various internal files. These
-files are named _avro.index_ and _avro-conversion.ini_. By default, the same directory
-where the binlog files are stored is used.
+The avrorouter will also use the _avrodir_ to store various internal
+files. These files are named _avro.index_ and _avro-conversion.ini_. By default,
+the default data directory, _/var/lib/maxscale/_, is used. Before version 2.1 of
+MaxScale, the value of _binlogdir_ was used as the default value for _avrodir_.
 
 #### `filestem`
 

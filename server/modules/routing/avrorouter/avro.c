@@ -51,6 +51,7 @@
 #include <avro/errors.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modulecmd.h>
+#include <maxscale/gwdirs.h>
 
 #ifndef BINLOG_NAMEFMT
 #define BINLOG_NAMEFMT      "%s.%06d"
@@ -159,7 +160,27 @@ MXS_MODULE* MXS_CREATE_MODULE()
         ROUTER_VERSION,
         "Binlogrouter",
         "V1.0.0",
-        &MyObject
+        &MyObject,
+        {
+            {
+                "binlogdir",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK
+            },
+            {
+                "avrodir",
+                MXS_MODULE_PARAM_PATH,
+                MXS_DEFAULT_DATADIR,
+                MXS_MODULE_OPT_PATH_W_OK
+            },
+            {"source", MXS_MODULE_PARAM_SERVICE},
+            {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
+            {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
+            {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;
@@ -361,8 +382,6 @@ createInstance(SERVICE *service, char **options)
     spinlock_init(&inst->fileslock);
     inst->service = service;
     inst->binlog_fd = -1;
-    inst->binlogdir = NULL;
-    inst->avrodir = NULL;
     inst->current_pos = 4;
     inst->binlog_position = 4;
     inst->clients = NULL;
@@ -372,15 +391,24 @@ createInstance(SERVICE *service, char **options)
     inst->task_delay = 1;
     inst->row_count = 0;
     inst->trx_count = 0;
-    inst->row_target = AVRO_DEFAULT_BLOCK_ROW_COUNT;
-    inst->trx_target = AVRO_DEFAULT_BLOCK_TRX_COUNT;
-    int first_file = 1;
+    inst->binlogdir = NULL;
+
+    CONFIG_PARAMETER *params = service->svc_config_param;
+
+    inst->avrodir = MXS_STRDUP_A(config_get_string(params, "avrodir"));
+    inst->fileroot = MXS_STRDUP_A(config_get_string(params, "filestem"));
+    inst->row_target = config_get_integer(params, "group_rows");
+    inst->trx_target = config_get_integer(params, "group_trx");
+    int first_file = config_get_integer(params, "start_index");
+
+    CONFIG_PARAMETER *param = config_get_param(params, "source");
     bool err = false;
 
-    CONFIG_PARAMETER *param = config_get_param(service->svc_config_param, "source");
     if (param)
     {
         SERVICE *source = service_find(param->value);
+        ss_dassert(source);
+
         if (source)
         {
             if (strcmp(source->routerModule, "binlogrouter") == 0)
@@ -397,16 +425,19 @@ createInstance(SERVICE *service, char **options)
                 err = true;
             }
         }
-        else
-        {
-            MXS_ERROR("[%s] No service '%s' found in configuration.",
-                      service->name, param->value);
-            err = true;
-        }
+    }
+
+    param = config_get_param(params, "binlogdir");
+
+    if (param)
+    {
+        inst->binlogdir = MXS_STRDUP_A(param->value);
     }
 
     if (options)
     {
+        MXS_WARNING("Router options for Avrorouter are deprecated. Please convert them to parameters.");
+
         for (i = 0; options[i]; i++)
         {
             char *value;
@@ -420,12 +451,11 @@ createInstance(SERVICE *service, char **options)
                 {
                     MXS_FREE(inst->binlogdir);
                     inst->binlogdir = MXS_STRDUP_A(value);
-                    MXS_INFO("Reading MySQL binlog files from %s", inst->binlogdir);
                 }
                 else if (strcmp(options[i], "avrodir") == 0)
                 {
+                    MXS_FREE(inst->avrodir);
                     inst->avrodir = MXS_STRDUP_A(value);
-                    MXS_INFO("AVRO files stored in %s", inst->avrodir);
                 }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
@@ -460,42 +490,18 @@ createInstance(SERVICE *service, char **options)
 
     if (inst->binlogdir == NULL)
     {
-        MXS_ERROR("No 'binlogdir' option found in source service or in router_options.");
-        err = true;
-    }
-    else if (!ensure_dir_ok(inst->binlogdir, R_OK))
-    {
-        MXS_ERROR("Access to binary log directory is not possible.");
+        MXS_ERROR("No 'binlogdir' option found in source service, in parameters or in router_options.");
         err = true;
     }
     else
     {
-        if (inst->fileroot == NULL)
-        {
-            MXS_NOTICE("[%s] No 'filestem' option specified, using default binlog name '%s'.",
-                       service->name, BINLOG_NAME_ROOT);
-            inst->fileroot = MXS_STRDUP_A(BINLOG_NAME_ROOT);
-        }
+        snprintf(inst->binlog_name, sizeof(inst->binlog_name), BINLOG_NAMEFMT, inst->fileroot, first_file);
+        inst->prevbinlog[0] = '\0';
 
-        /** Use the binlogdir as the default if no avrodir is specified. */
-        if (inst->avrodir == NULL && inst->binlogdir)
-        {
-            inst->avrodir = MXS_STRDUP_A(inst->binlogdir);
-        }
-
-        if (ensure_dir_ok(inst->avrodir, W_OK))
-        {
-            MXS_NOTICE("[%s] Avro files stored at: %s", service->name, inst->avrodir);
-        }
-        else
-        {
-            MXS_ERROR("Access to Avro file directory is not possible.");
-            err = true;
-        }
+        MXS_NOTICE("[%s] Reading MySQL binlog files from %s", service->name, inst->binlogdir);
+        MXS_NOTICE("[%s] Avro files stored at: %s", service->name, inst->avrodir);
+        MXS_NOTICE("[%s] First binlog is: %s", service->name, inst->binlog_name);
     }
-
-    snprintf(inst->binlog_name, sizeof(inst->binlog_name), BINLOG_NAMEFMT, inst->fileroot, first_file);
-    inst->prevbinlog[0] = '\0';
 
     if ((inst->table_maps = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
         (inst->open_tables = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
