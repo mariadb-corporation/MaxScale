@@ -85,12 +85,22 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_ENUM /**< Enumeration of string values */
 };
 
+enum mxs_module_param_options
+{
+    MXS_MODULE_OPT_NONE      = 0,
+    MXS_MODULE_OPT_REQUIRED  = (1 << 0), /**< A required parameter */
+    MXS_MODULE_OPT_PATH_X_OK = (1 << 1), /**< PATH: Execute permission to path required */
+    MXS_MODULE_OPT_PATH_R_OK = (1 << 2), /**< PATH: Read permission to path required */
+    MXS_MODULE_OPT_PATH_W_OK = (1 << 3)  /**< PATH: Write permission to path required */
+};
+
 /** Module parameter declaration */
 typedef struct mxs_module_param
 {
     const char *name; /**< Name of the parameter */
     enum mxs_module_param_type type; /**< Type of the parameter */
-    const char *default_value;
+    const char *default_value; /**< Default value for the parameter, NULL for no default value */
+    uint64_t options; /**< Parameter options */
     const char **accepted_values; /**< Only for enum values */
 } MXS_MODULE_PARAM;
 

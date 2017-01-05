@@ -1914,6 +1914,38 @@ process_config_update(CONFIG_CONTEXT *context)
 }
 
 /**
+ * @brief Check if required parameters are missing
+ *
+ * @param name Module name
+ * @param type Module type
+ * @param params List of parameters for the object
+ * @return True if at least one of the required parameters is missing
+ */
+static bool missing_required_parameters(const char *name, const char *type,
+                                        CONFIG_PARAMETER *params)
+{
+    bool rval = false;
+
+    const MXS_MODULE *mod = get_module(name, type);
+
+    if (mod)
+    {
+        for (int i = 0; mod->parameters[i].name; i++)
+        {
+            if ((mod->parameters[i].options & MXS_MODULE_OPT_REQUIRED) &&
+                config_get_param(params, mod->parameters[i].name) == NULL)
+            {
+                MXS_ERROR("Mandatory parameter '%s' for module '%s' of type %s is not defined.",
+                          mod->parameters[i].name, name, type);
+                rval = true;
+            }
+        }
+    }
+
+    return rval;
+}
+
+/**
  * @brief Check that the configuration objects have valid parameters
  *
  * @param context Configuration context
@@ -1986,6 +2018,13 @@ check_config_objects(CONFIG_CONTEXT *context)
                 params = params->next;
             }
         }
+
+        if (module && module_type &&
+            missing_required_parameters(module, module_type, obj->parameters))
+        {
+            rval = false;
+        }
+
         obj = obj->next;
     }
 
@@ -2628,12 +2667,15 @@ static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const c
     {
         for (int i = 0; mod->parameters[i].name; i++)
         {
-            ss_dassert(config_param_is_valid(module, type, mod->parameters[i].name,
-                                             mod->parameters[i].default_value));
+            if (mod->parameters[i].default_value)
+            {
+                ss_dassert(config_param_is_valid(module, type, mod->parameters[i].name,
+                                                 mod->parameters[i].default_value, ctx));
 
-            bool rv = config_add_param(ctx, mod->parameters[i].name,
-                                       mod->parameters[i].default_value);
-            MXS_ABORT_IF_FALSE(rv);
+                bool rv = config_add_param(ctx, mod->parameters[i].name,
+                                           mod->parameters[i].default_value);
+                MXS_ABORT_IF_FALSE(rv);
+            }
         }
     }
 }
