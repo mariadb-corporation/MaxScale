@@ -817,7 +817,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         FILTER_VERSION,
         "Firewall Filter",
         "V1.2.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

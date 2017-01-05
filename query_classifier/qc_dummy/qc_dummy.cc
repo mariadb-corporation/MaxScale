@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "qc_sqlite"
 #include <maxscale/modules.h>
 #include <maxscale/query_classifier.h>
 
@@ -127,7 +128,14 @@ extern "C"
             QUERY_CLASSIFIER_VERSION,
             "Dummy Query Classifier",
             "V1.0.0",
-            &qc
+            &qc,
+            NULL, /* Process init. */
+            NULL, /* Process finish. */
+            NULL, /* Thread init. */
+            NULL, /* Thread finish. */
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
         };
 
         return &info;

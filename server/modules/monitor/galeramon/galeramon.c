@@ -78,6 +78,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Galera cluster monitor",
         "V2.0.0",
         &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {"disable_master_failback", MXS_MODULE_PARAM_BOOL, "false"},
             {"available_when_donor", MXS_MODULE_PARAM_BOOL, "false"},

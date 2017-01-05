@@ -2587,7 +2587,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         QUERY_CLASSIFIER_VERSION,
         "Query classifier based upon MySQL Embedded",
         "V1.0.0",
-        &qc
+        &qc,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

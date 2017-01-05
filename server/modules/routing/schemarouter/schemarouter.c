@@ -618,7 +618,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

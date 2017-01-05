@@ -123,7 +123,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         FILTER_VERSION,
         "A routing hint filter that send queries to the master after data modification",
         "V1.1.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

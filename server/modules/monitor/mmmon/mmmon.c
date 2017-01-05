@@ -79,6 +79,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
         &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}

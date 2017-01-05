@@ -112,7 +112,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         ROUTER_VERSION,
         "The MaxScale Information Schema",
         "V1.0.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

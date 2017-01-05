@@ -88,7 +88,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         FILTER_VERSION,
         "A filter that is capable of limiting the resultset number of rows.",
         "V1.0.0",
-        &object
+        &object,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

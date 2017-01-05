@@ -92,7 +92,15 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MODULE_IN_DEVELOPMENT,
         MXS_PROTOCOL_VERSION,
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
-        "V1.0.0"
+        "V1.0.0",
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

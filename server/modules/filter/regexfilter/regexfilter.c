@@ -114,7 +114,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
         FILTER_VERSION,
         "A query rewrite filter that uses regular expressions to rewrite queries",
         "V1.1.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

@@ -161,6 +161,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Binlogrouter",
         "V1.0.0",
         &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {
                 "binlogdir",

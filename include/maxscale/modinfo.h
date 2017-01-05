@@ -14,14 +14,6 @@
 
 /**
  * @file modinfo.h The module information interface
- *
- * @verbatim
- * Revision History
- *
- * Date     Who             Description
- * 02/06/14 Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
@@ -114,15 +106,53 @@ typedef struct mxs_module_param
 /**
  * The module information structure
  */
-typedef struct
+typedef struct mxs_module
 {
     MXS_MODULE_API      modapi;        /**< Module API type */
     MXS_MODULE_STATUS   status;        /**< Module development status */
     MXS_MODULE_VERSION  api_version;   /**< Module API version */
-    const char     *description;   /**< Module description */
-    const char     *version;       /**< Module version */
-    void           *module_object; /**< Module type specific API implementation */
-    MXS_MODULE_PARAM parameters[]; /**< Declared parameters */
+    const char         *description;   /**< Module description */
+    const char         *version;       /**< Module version */
+    void               *module_object; /**< Module type specific API implementation */
+    /**
+     * If non-NULL, this function is called once at process startup. If the
+     * function fails, MariaDB MaxScale will not start.
+     *
+     * @return 0 on success, non-zero on failure.
+     */
+    int (*init)();
+
+    /**
+     * If non-NULL, this function is called once at process shutdown, provided
+     * the call to @c init succeeded.
+     */
+    void (*finish)();
+
+    /**
+     * If non-NULL, this function is called once at the startup of every new thread.
+     * If the function fails, then the thread will terminate.
+     *
+     * @attention This function is *not* called for the thread where @c init is called.
+     *
+     * @return 0 on success, non-zero on failure.
+     */
+    int (*thread_init)();
+
+    /**
+     * If non-NULL, this function is called when a thread terminates, provided the
+     * call to @c thread_init succeeded.
+     *
+     * @attention This function is *not* called for the thread where @c init is called.
+     */
+    void (*thread_finish)();
+
+#ifdef __cplusplus
+    // TODO: C++ does not have flexible arrays, so for the time being C++ modules
+    // TODO: are restricted to 10 parameters.
+    MXS_MODULE_PARAM parameters[11];  /**< Declared parameters */
+#else
+    MXS_MODULE_PARAM parameters[];  /**< Declared parameters */
+#endif
 } MXS_MODULE;
 
 /**

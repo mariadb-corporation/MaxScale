@@ -72,6 +72,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A MySQL cluster SQL node monitor",
         "V2.1.0",
         &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {MXS_END_MODULE_PARAMS} // No parameters
         }

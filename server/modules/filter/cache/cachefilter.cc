@@ -200,10 +200,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
         { MODULECMD_ARG_FILTER, "Cache name" }
     };
-    
+
     modulecmd_register_command("cache", "show", cache_command_show,
                                MXS_ARRAY_NELEMS(show_argv), show_argv);
-    
+
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);
 
     static MXS_MODULE info =
@@ -213,7 +213,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
-        &CacheFilter::s_object
+        &CacheFilter::s_object,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {MXS_END_MODULE_PARAMS}
+        }
     };
 
     return &info;

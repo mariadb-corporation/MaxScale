@@ -68,7 +68,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
         GWAUTHENTICATOR_VERSION,
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
-        &MyObject
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        { { MXS_END_MODULE_PARAMS} }
     };
 
     return &info;

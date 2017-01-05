@@ -113,6 +113,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",
         &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
         {
             {"detect_replication_lag", MXS_MODULE_PARAM_BOOL, "false"},
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "true"},
