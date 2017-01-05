@@ -60,7 +60,7 @@
  */
 
 /** Maximum number of slaves */
-#define MAX_SLAVE_COUNT 255
+#define MAX_SLAVE_COUNT "255"
 
 /*
  * The functions that implement the router module API
@@ -91,8 +91,6 @@ static uint64_t getCapabilities(void);
  * not part of the API.
  */
 
-static void refreshInstance(ROUTER_INSTANCE *router,
-                            CONFIG_PARAMETER *singleparam);
 static void free_rwsplit_instance(ROUTER_INSTANCE *router);
 static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
                                            char **options);
@@ -104,6 +102,33 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
 static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
                                 int router_nsrv, ROUTER_INSTANCE *router);
 static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* n_backend);
+
+/**
+ * Enum values for router parameters
+ */
+static const MXS_ENUM_VALUE use_sql_variables_in_values[] =
+{
+    {"all",    TYPE_ALL},
+    {"master", TYPE_MASTER},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE slave_selection_criteria_values[] =
+{
+    {"LEAST_GLOBAL_CONNECTIONS", LEAST_GLOBAL_CONNECTIONS},
+    {"LEAST_ROUTER_CONNECTIONS", LEAST_ROUTER_CONNECTIONS},
+    {"LEAST_BEHIND_MASTER",      LEAST_BEHIND_MASTER},
+    {"LEAST_CURRENT_OPERATIONS", LEAST_CURRENT_OPERATIONS},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE master_failure_mode_values[] =
+{
+    {"fail_instantly", RW_FAIL_INSTANTLY},
+    {"fail_on_write",  RW_FAIL_ON_WRITE},
+    {"error_on_write", RW_ERROR_ON_WRITE},
+    {NULL}
+};
 
 /**
  * The module entry point routine. It is this routine that
@@ -140,6 +165,34 @@ MXS_MODULE *MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "use_sql_variables_in",
+                MXS_MODULE_PARAM_ENUM,
+                "all",
+                MXS_MODULE_OPT_NONE,
+                use_sql_variables_in_values
+            },
+            {
+                "slave_selection_criteria",
+                MXS_MODULE_PARAM_ENUM,
+                "LEAST_CURRENT_OPERATIONS",
+                MXS_MODULE_OPT_NONE,
+                slave_selection_criteria_values
+            },
+            {
+                "master_failure_mode",
+                MXS_MODULE_PARAM_ENUM,
+                "fail_instantly",
+                MXS_MODULE_OPT_NONE,
+                master_failure_mode_values
+            },
+            {"max_slave_replication_lag", MXS_MODULE_PARAM_INT, "-1"},
+            {"max_slave_connections", MXS_MODULE_PARAM_STRING, MAX_SLAVE_COUNT},
+            {"retry_failed_reads", MXS_MODULE_PARAM_BOOL, "true"},
+            {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "false"},
+            {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
+            {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "true"},
+            {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -148,9 +201,31 @@ MXS_MODULE *MXS_CREATE_MODULE()
     return &info;
 }
 
-/*
- * Now we implement the API functions
- */
+// TODO: Don't process parameters in readwritesplit
+static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
+{
+    bool rval = true;
+    char *endptr;
+    int val = strtol(str, &endptr, 10);
+
+    if (*endptr == '%' && *(endptr + 1) == '\0')
+    {
+        router->rwsplit_config.rw_max_slave_conn_percent = val;
+        router->rwsplit_config.max_slave_connections = 0;
+    }
+    else if (*endptr == '\0')
+    {
+        router->rwsplit_config.max_slave_connections = val;
+        router->rwsplit_config.rw_max_slave_conn_percent = 0;
+    }
+    else
+    {
+        MXS_ERROR("Invalid value for 'max_slave_connections': %s", str);
+        rval = false;
+    }
+
+    return rval;
+}
 
 /**
  * @brief Create an instance of the read/write router (API).
@@ -167,7 +242,6 @@ MXS_MODULE *MXS_CREATE_MODULE()
 static ROUTER *createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *router;
-    CONFIG_PARAMETER *param;
 
     if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
@@ -181,18 +255,30 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      */
     router->available_slaves = true;
 
-    /** Enable strict multistatement handling by default */
-    router->rwsplit_config.strict_multi_stmt = true;
-
     /** By default, the client connection is closed immediately when a master
      * failure is detected */
     router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
 
-    /** Try to retry failed reads */
-    router->rwsplit_config.retry_failed_reads = true;
+    CONFIG_PARAMETER *params = service->svc_config_param;
 
-    /** Call this before refreshInstance */
-    if (options && !rwsplit_process_router_options(router, options))
+    router->rwsplit_config.use_sql_variables_in = config_get_enum(params, "use_sql_variables_in",
+                                                          use_sql_variables_in_values);
+
+    router->rwsplit_config.slave_selection_criteria = config_get_enum(params, "slave_selection_criteria",
+                                                              slave_selection_criteria_values);
+
+    router->rwsplit_config.master_failure_mode = config_get_enum(params, "master_failure_mode",
+                                                         master_failure_mode_values);
+
+    router->rwsplit_config.max_slave_replication_lag = config_get_integer(params, "max_slave_replication_lag");
+    router->rwsplit_config.retry_failed_reads = config_get_bool(params, "retry_failed_reads");
+    router->rwsplit_config.strict_multi_stmt = config_get_bool(params, "strict_multi_stmt");
+    router->rwsplit_config.disable_sescmd_history = config_get_bool(params, "disable_sescmd_history");
+    router->rwsplit_config.max_sescmd_history = config_get_integer(params, "max_sescmd_history");
+    router->rwsplit_config.master_accept_reads = config_get_bool(params, "master_accept_reads");
+
+    if (!handle_max_slaves(router, config_get_string(params, "max_slave_connections")) ||
+        (options && !rwsplit_process_router_options(router, options)))
     {
         free_rwsplit_instance(router);
         return NULL;
@@ -203,48 +289,6 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         router->rwsplit_config.max_sescmd_history > 0)
     {
         router->rwsplit_config.max_sescmd_history = 0;
-    }
-
-    /**
-     * Set default value for max_slave_connections as 100%. This way
-     * LEAST_CURRENT_OPERATIONS allows us to balance evenly across all the
-     * configured slaves.
-     */
-    router->rwsplit_config.max_slave_connections = MAX_SLAVE_COUNT;
-
-    if (router->rwsplit_config.slave_selection_criteria == UNDEFINED_CRITERIA)
-    {
-        router->rwsplit_config.slave_selection_criteria = DEFAULT_CRITERIA;
-    }
-    /**
-     * Copy all config parameters from service to router instance.
-     * Finally, copy version number to indicate that configs match.
-     */
-    param = config_get_param(service->svc_config_param, "max_slave_connections");
-
-    if (param != NULL)
-    {
-        refreshInstance(router, param);
-    }
-    /**
-     * Read default value for slave replication lag upper limit and then
-     * configured value if it exists.
-     */
-    router->rwsplit_config.max_slave_replication_lag = CONFIG_MAX_SLAVE_RLAG;
-    param = config_get_param(service->svc_config_param, "max_slave_replication_lag");
-
-    if (param != NULL)
-    {
-        refreshInstance(router, param);
-    }
-    router->rwsplit_version = service->svc_config_version;
-    /** Set default values */
-    router->rwsplit_config.use_sql_variables_in = CONFIG_SQL_VARIABLES_IN;
-    param = config_get_param(service->svc_config_param, "use_sql_variables_in");
-
-    if (param != NULL)
-    {
-        refreshInstance(router, param);
     }
 
     return (ROUTER *)router;
@@ -1178,6 +1222,8 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
         return true;
     }
 
+    MXS_WARNING("Router options for readwritesplit are deprecated.");
+
     bool success = true;
 
     for (i = 0; options[i]; i++)
@@ -1680,112 +1726,6 @@ static bool have_enough_servers(ROUTER_CLIENT_SES *rses, const int min_nsrv,
         succp = true;
     }
     return succp;
-}
-
-/**
- * @brief Refresh the instance by the given parameter value.
- *
- * Used by createInstance and newSession
- *
- * @param router    Router instance
- * @param singleparam   Parameter fo be reloaded
- *
- * Note: this part is not done. Needs refactoring.
- */
-static void refreshInstance(ROUTER_INSTANCE *router,
-                            CONFIG_PARAMETER *singleparam)
-{
-    CONFIG_PARAMETER *param;
-    bool refresh_single;
-    config_param_type_t paramtype;
-
-    if (singleparam != NULL)
-    {
-        param = singleparam;
-        refresh_single = true;
-    }
-    else
-    {
-        param = router->service->svc_config_param;
-        refresh_single = false;
-    }
-    paramtype = config_get_paramtype(param);
-
-    while (param != NULL)
-    {
-        /** Catch unused parameter types */
-        ss_dassert(paramtype == COUNT_TYPE || paramtype == PERCENT_TYPE ||
-                   paramtype == SQLVAR_TARGET_TYPE);
-
-        if (paramtype == COUNT_TYPE)
-        {
-            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                router->rwsplit_config.rw_max_slave_conn_percent = 0;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.max_slave_connections = val;
-                }
-            }
-            else if (strncmp(param->name, "max_slave_replication_lag",
-                             MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.max_slave_replication_lag = val;
-                }
-            }
-        }
-        else if (paramtype == PERCENT_TYPE)
-        {
-            if (strncmp(param->name, "max_slave_connections", MAX_PARAM_LEN) == 0)
-            {
-                int val;
-                bool succp;
-
-                router->rwsplit_config.max_slave_connections = 0;
-
-                succp = config_get_valint(&val, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.rw_max_slave_conn_percent = val;
-                }
-            }
-        }
-        else if (paramtype == SQLVAR_TARGET_TYPE)
-        {
-            if (strncmp(param->name, "use_sql_variables_in", MAX_PARAM_LEN) == 0)
-            {
-                target_t valtarget;
-                bool succp;
-
-                succp = config_get_valtarget(&valtarget, param, NULL, paramtype);
-
-                if (succp)
-                {
-                    router->rwsplit_config.use_sql_variables_in = valtarget;
-                }
-            }
-        }
-
-        if (refresh_single)
-        {
-            break;
-        }
-        param = param->next;
-    }
 }
 
 /*

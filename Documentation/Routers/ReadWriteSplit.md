@@ -47,6 +47,21 @@ When value all is used, queries reading session variables can be routed to any a
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
 
+**Note:** As of version 2.1 of MaxScale, all of the router options can also be
+defined as parameters. The values defined in _router_options_ will have priority
+over the parameters.
+
+```
+[Splitter Service]
+type=service
+router=readwritesplit
+servers=dbserv1, dbserv2, dbserv3
+user=maxscale
+passwd=96F99AA1315BDC3604B006F427DD9484
+disable_sescmd_history=true
+master_failure_mode=fail_on_write
+```
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options. All the options are parameter-value pairs. All parameters listed in this section must be configured as a value in `router_options`.
