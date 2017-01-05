@@ -1071,11 +1071,22 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key)
     return value;
 }
 
-const char* config_get_enum(const CONFIG_PARAMETER *params, const char *key)
+int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *enum_values)
 {
     const char *value = config_get_value_string(params, key);
+
     ss_dassert(*value);
-    return value;
+
+    for (int i = 0; enum_values[i].name; i++)
+    {
+        if (strcmp(enum_values[i].name, key) == 0)
+        {
+            return enum_values[i].enum_value;
+        }
+    }
+
+    ss_dassert(false);
+    return -1;
 }
 
 CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
@@ -3449,9 +3460,9 @@ bool config_param_is_valid(const char *module, const char *type, const char *key
                     case MXS_MODULE_PARAM_ENUM:
                         if (mod->parameters[i].accepted_values)
                         {
-                            for (int j = 0; mod->parameters[i].accepted_values[j]; j++)
+                            for (int j = 0; mod->parameters[i].accepted_values[j].name; j++)
                             {
-                                if (strcmp(mod->parameters[i].accepted_values[j], value) == 0)
+                                if (strcmp(mod->parameters[i].accepted_values[j].name, value) == 0)
                                 {
                                     valid = true;
                                     break;

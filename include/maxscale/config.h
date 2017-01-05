@@ -267,12 +267,13 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
  *
  * @param params List of configuration parameters
  * @param key Parameter name
+ * @param values All possible enumeration values
  *
- * @return The raw string value
+ * @return The enumeration value converted to an int
  *
  * TODO: Allow multiple enumeration values
  */
-const char* config_get_enum(const CONFIG_PARAMETER *params, const char *key);
+int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
 
 char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);

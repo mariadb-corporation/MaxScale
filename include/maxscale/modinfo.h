@@ -93,6 +93,13 @@ enum mxs_module_param_options
     MXS_MODULE_OPT_PATH_F_OK   = (1 << 4)  /**< PATH: Path must exist */
 };
 
+/** String to enum value mappings */
+typedef struct mxs_enum_value
+{
+    const char *name; /**< Name of the enum value */
+    int         enum_value; /**< The integer value of the enum */
+}MXS_ENUM_VALUE;
+
 /** Module parameter declaration */
 typedef struct mxs_module_param
 {
@@ -100,7 +107,7 @@ typedef struct mxs_module_param
     enum mxs_module_param_type type; /**< Type of the parameter */
     const char *default_value; /**< Default value for the parameter, NULL for no default value */
     uint64_t options; /**< Parameter options */
-    const char **accepted_values; /**< Only for enum values */
+    const MXS_ENUM_VALUE *accepted_values; /**< Only for enum values */
 } MXS_MODULE_PARAM;
 
 /**
