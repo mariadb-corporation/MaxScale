@@ -2678,7 +2678,8 @@ static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const c
     {
         for (int i = 0; mod->parameters[i].name; i++)
         {
-            if (mod->parameters[i].default_value)
+            if (mod->parameters[i].default_value &&
+                config_get_param(ctx->parameters, mod->parameters[i].name) == NULL)
             {
                 ss_dassert(config_param_is_valid(module, type, mod->parameters[i].name,
                                                  mod->parameters[i].default_value, ctx));
