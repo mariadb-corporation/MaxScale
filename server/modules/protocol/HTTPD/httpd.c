@@ -65,7 +65,7 @@ static char *httpd_default_auth();
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWPROTOCOL MyObject =
+    static MXS_PROTOCOL MyObject =
     {
         httpd_read_event,   /**< Read - EPOLLIN handler        */
         httpd_write,        /**< Write - data from gateway     */
@@ -86,7 +86,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_IN_DEVELOPMENT,
-        GWPROTOCOL_VERSION,
+        MXS_PROTOCOL_VERSION,
         "An experimental HTTPD implementation for use in administration",
         "V1.2.0",
         &MyObject

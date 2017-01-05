@@ -87,7 +87,7 @@ static int gw_send_change_user_to_backend(char          *dbname,
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWPROTOCOL MyObject =
+    static MXS_PROTOCOL MyObject =
     {
         gw_read_backend_event,      /* Read - EPOLLIN handler        */
         gw_MySQLWrite_backend,      /* Write - data from gateway     */
@@ -108,7 +108,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_GA,
-        GWPROTOCOL_VERSION,
+        MXS_PROTOCOL_VERSION,
         "The MySQL to backend server protocol",
         "V2.0.0",
         &MyObject

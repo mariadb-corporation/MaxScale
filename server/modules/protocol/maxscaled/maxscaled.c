@@ -168,7 +168,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_INFO("Initialise MaxScaled Protocol module.");
 
-    static GWPROTOCOL MyObject =
+    static MXS_PROTOCOL MyObject =
     {
         maxscaled_read_event,           /**< Read - EPOLLIN handler        */
         maxscaled_write,                /**< Write - data from gateway     */
@@ -189,7 +189,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_GA,
-        GWPROTOCOL_VERSION,
+        MXS_PROTOCOL_VERSION,
         "A maxscale protocol for the administration interface",
         "V2.0.0",
         &MyObject

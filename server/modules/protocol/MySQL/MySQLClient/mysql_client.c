@@ -95,7 +95,7 @@ static void gw_process_one_new_client(DCB *client_dcb);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWPROTOCOL MyObject =
+    static MXS_PROTOCOL MyObject =
     {
         gw_read_client_event,                   /* Read - EPOLLIN handler        */
         gw_MySQLWrite_client,                   /* Write - data from gateway     */
@@ -116,7 +116,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_GA,
-        GWPROTOCOL_VERSION,
+        MXS_PROTOCOL_VERSION,
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
         &MyObject

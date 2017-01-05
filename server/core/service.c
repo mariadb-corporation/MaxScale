@@ -237,7 +237,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     size_t config_bind_len =
         (port->address ? strlen(port->address) : ANY_IPV4_ADDRESS_LEN) + 1 + UINTLEN(port->port);
     char config_bind[config_bind_len + 1]; // +1 for NULL
-    GWPROTOCOL *funcs;
+    MXS_PROTOCOL *funcs;
 
     if (service == NULL || service->router == NULL || service->router_instance == NULL)
     {
@@ -264,7 +264,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         listener_init_SSL(port->ssl);
     }
 
-    if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+    if ((funcs = (MXS_PROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
         MXS_ERROR("Unable to load protocol module %s. Listener for service %s not started.",
                   port->protocol, service->name);
@@ -272,7 +272,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         return 0;
     }
 
-    memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
+    memcpy(&(port->listener->func), funcs, sizeof(MXS_PROTOCOL));
 
     const char *authenticator_name = "NullAuthDeny";
 

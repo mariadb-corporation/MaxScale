@@ -15,16 +15,7 @@
 /**
  * @file protocol.h
  *
- * The listener definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 22/01/16     Martin Brampton         Initial implementation
- * 31/05/16     Martin Brampton         Add API entry for connection limit
- *
- * @endverbatim
+ * The protocol module interface definition.
  */
 
 #include <maxscale/cdefs.h>
@@ -59,7 +50,7 @@ struct session;
  *
  * @see load_module
  */
-typedef struct gw_protocol
+typedef struct mxs_protocol
 {
     int (*read)(struct dcb *);
     int (*write)(struct dcb *, GWBUF *);
@@ -74,13 +65,13 @@ typedef struct gw_protocol
     int (*session)(struct dcb *, void *);
     char *(*auth_default)();
     int (*connlimit)(struct dcb *, int limit);
-} GWPROTOCOL;
+} MXS_PROTOCOL;
 
 /**
- * The GWPROTOCOL version data. The following should be updated whenever
- * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
+ * The MXS_PROTOCOL version data. The following should be updated whenever
+ * the MXS_PROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define GWPROTOCOL_VERSION      {1, 1, 0}
+#define MXS_PROTOCOL_VERSION      {1, 1, 0}
 
 MXS_END_DECLS

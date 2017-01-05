@@ -236,7 +236,7 @@ typedef struct dcb
     size_t           protocol_bytes_processed; /**< How many bytes of a packet have been read */
     struct session  *session;       /**< The owning session */
     struct servlistener *listener;  /**< For a client DCB, the listener data */
-    GWPROTOCOL      func;           /**< The protocol functions for this descriptor */
+    MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
     GWAUTHENTICATOR authfunc;       /**< The authenticator functions for this descriptor */
 
     int             writeqlen;      /**< Current number of byes in the write queue */

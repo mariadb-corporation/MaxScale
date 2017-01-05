@@ -70,7 +70,7 @@ static char* cdc_default_auth()
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWPROTOCOL MyObject =
+    static MXS_PROTOCOL MyObject =
     {
         cdc_read_event, /* Read - EPOLLIN handler        */
         cdc_write, /* Write - data from gateway     */
@@ -90,7 +90,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_PROTOCOL,
         MXS_MODULE_IN_DEVELOPMENT,
-        GWPROTOCOL_VERSION,
+        MXS_PROTOCOL_VERSION,
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0"
     };

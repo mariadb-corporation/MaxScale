@@ -637,7 +637,7 @@ DCB *
 dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
     DCB         *dcb;
-    GWPROTOCOL  *funcs;
+    MXS_PROTOCOL  *funcs;
     int         fd;
     int         rc;
     const char  *user;
@@ -679,7 +679,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
         return NULL;
     }
 
-    if ((funcs = (GWPROTOCOL *)load_module(protocol,
+    if ((funcs = (MXS_PROTOCOL *)load_module(protocol,
                                            MODULE_PROTOCOL)) == NULL)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
@@ -689,7 +689,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
                   dcb);
         return NULL;
     }
-    memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
+    memcpy(&(dcb->func), funcs, sizeof(MXS_PROTOCOL));
     dcb->protoname = MXS_STRDUP_A(protocol);
 
     const char *authenticator = server->authenticator ?
@@ -2915,7 +2915,7 @@ DCB *
 dcb_accept(DCB *listener)
 {
     DCB *client_dcb = NULL;
-    GWPROTOCOL *protocol_funcs = &listener->func;
+    MXS_PROTOCOL *protocol_funcs = &listener->func;
     int c_sock;
     int sendbuf;
     struct sockaddr_storage client_conn;
@@ -2987,7 +2987,7 @@ dcb_accept(DCB *listener)
                               INET_ADDRSTRLEN);
                 }
             }
-            memcpy(&client_dcb->func, protocol_funcs, sizeof(GWPROTOCOL));
+            memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
             if (listener->listener->authenticator)
             {
                 authenticator_name = listener->listener->authenticator;

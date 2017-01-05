@@ -92,7 +92,7 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
 const char* get_default_authenticator(const char *protocol)
 {
     char *rval = NULL;
-    GWPROTOCOL *protofuncs = (GWPROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
+    MXS_PROTOCOL *protofuncs = (MXS_PROTOCOL*)load_module(protocol, MODULE_PROTOCOL);
 
     if (protofuncs && protofuncs->auth_default)
     {
