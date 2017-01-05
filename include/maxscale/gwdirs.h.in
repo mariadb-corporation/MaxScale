@@ -32,20 +32,30 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_CONFIG_PERSIST_SUBPATH "@DEFAULT_CONFIG_PERSIST_SUBPATH@"
 
 /** Default file locations, configured by CMake */
+#define MXS_DEFAULT_CONFIGDIR         "@DEFAULT_CONFIGDIR@"
+#define MXS_DEFAULT_PIDDIR            "@DEFAULT_PIDDIR@"
+#define MXS_DEFAULT_LOGDIR            "@DEFAULT_LOGDIR@"
+#define MXS_DEFAULT_DATADIR           "@DEFAULT_DATADIR@"
+#define MXS_DEFAULT_LIBDIR            "@DEFAULT_LIBDIR@"
+#define MXS_DEFAULT_CACHEDIR          "@DEFAULT_CACHEDIR@"
+#define MXS_DEFAULT_LANGDIR           "@DEFAULT_LANGDIR@"
+#define MXS_DEFAULT_EXECDIR           "@DEFAULT_EXECDIR@"
+#define MXS_DEFAULT_CONFIG_PERSISTDIR "@DEFAULT_CONFIG_PERSISTDIR@"
+
 static const char* default_cnf_fname = "maxscale.cnf";
-static const char* default_configdir = "@DEFAULT_CONFIGDIR@";
+static const char* default_configdir = MXS_DEFAULT_CONFIGDIR;
 
 /*< This should be changed to just /run eventually,
  * the /var/run folder is an old standard and the newer FSH 3.0
  * uses /run for PID files.*/
-static const char* default_piddir   = "@DEFAULT_PIDDIR@";
-static const char* default_logdir   = "@DEFAULT_LOGDIR@";
-static const char* default_datadir  = "@DEFAULT_DATADIR@";
-static const char* default_libdir   = "@DEFAULT_LIBDIR@";
-static const char* default_cachedir = "@DEFAULT_CACHEDIR@";
-static const char* default_langdir  = "@DEFAULT_LANGDIR@";
-static const char* default_execdir  = "@DEFAULT_EXECDIR@";
-static const char* default_config_persistdir = "@DEFAULT_CONFIG_PERSISTDIR@";
+static const char* default_piddir   = MXS_DEFAULT_PIDDIR;
+static const char* default_logdir   = MXS_DEFAULT_LOGDIR;
+static const char* default_datadir  = MXS_DEFAULT_DATADIR;
+static const char* default_libdir   = MXS_DEFAULT_LIBDIR;
+static const char* default_cachedir = MXS_DEFAULT_CACHEDIR;
+static const char* default_langdir  = MXS_DEFAULT_LANGDIR;
+static const char* default_execdir  = MXS_DEFAULT_EXECDIR;
+static const char* default_config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
 
 static char* configdir = NULL; /*< Where the config file is found e.g. /etc/ */
 static char* config_persistdir = NULL;/*< Persisted configs e.g. /var/lib/maxscale.cnf.d/ */
