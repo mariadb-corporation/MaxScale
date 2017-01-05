@@ -21,7 +21,6 @@ router=schemarouter
 servers=server1,server2
 user=myuser
 passwd=mypwd
-auth_all_servers=1
 ```
 
 The module generates the list of databases based on the servers parameter using the connecting client's credentials. The user and passwd parameters define the credentials that are used to fetch the authentication data from the database servers. The credentials used only require the same grants as mentioned in the configuration documentation.
@@ -42,11 +41,7 @@ GRANT SELECT,USAGE ON shard.* TO 'john'@'%';
 
 This would in effect allow the user 'john' to only see the database 'shard' on this server. Take notice that these grants are matched against MariaDB MaxScale's hostname instead of the client's hostname. Only user authentication uses the client's hostname and all other grants use MariaDB MaxScale's hostname.
 
-## Router options
-
-The following options are options for the `router_options` parameter of the
-service. Multiple router options are given as a comma separated list of key
-value pairs.
+## Router Parameters
 
 ### `ignore_databases`
 
@@ -56,7 +51,26 @@ List of databases to ignore when checking for duplicate databases.
 
 Regular expression that is matched against database names when checking for duplicate databases.
 
-## Router options
+**Note:** As of version 2.1 of MaxScale, all of the router options can also be
+defined as parameters. The values defined in _router_options_ will have priority
+over the parameters.
+
+```
+[Shard Router]
+type=service
+router=schemarouter
+servers=server1,server2
+user=myuser
+passwd=mypwd
+refresh_databases=true
+refresh_interval=60
+```
+
+## Router Options
+
+The following options are options for the `router_options` parameter of the
+service. Multiple router options are given as a comma separated list of key
+value pairs.
 
 ### `max_sescmd_history`
 

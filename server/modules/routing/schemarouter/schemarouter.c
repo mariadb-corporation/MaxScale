@@ -32,7 +32,7 @@
 #include <maxscale/poll.h>
 #include <pcre.h>
 
-#define DEFAULT_REFRESH_INTERVAL 30.0
+#define DEFAULT_REFRESH_INTERVAL "300"
 
 /** Size of the hashtable used to store ignored databases */
 #define SCHEMAROUTER_HASHSIZE 100
@@ -624,6 +624,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"ignore_databases", MXS_MODULE_PARAM_STRING},
+            {"ignore_databases_regex", MXS_MODULE_PARAM_STRING},
+            {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
+            {"disable_sescmd_history", MXS_MODULE_PARAM_BOOL, "false"},
+            {"refresh_databases", MXS_MODULE_PARAM_BOOL, "true"},
+            {"refresh_interval", MXS_MODULE_PARAM_COUNT, DEFAULT_REFRESH_INTERVAL},
+            {"debug", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -677,8 +684,6 @@ static ROUTER* createInstance(SERVICE *service, char **options)
     router->service = service;
     router->schemarouter_config.max_sescmd_hist = 0;
     router->schemarouter_config.last_refresh = time(NULL);
-    router->schemarouter_config.refresh_databases = false;
-    router->schemarouter_config.refresh_min_interval = DEFAULT_REFRESH_INTERVAL;
     router->stats.longest_sescmd = 0;
     router->stats.n_hist_exceeded = 0;
     router->stats.n_queries = 0;
@@ -688,6 +693,13 @@ static ROUTER* createInstance(SERVICE *service, char **options)
     spinlock_init(&router->lock);
 
     conf = service->svc_config_param;
+
+    router->schemarouter_config.refresh_databases = config_get_bool(conf, "refresh_databases");
+    router->schemarouter_config.refresh_min_interval = config_get_integer(conf, "refresh_interval");
+    router->schemarouter_config.max_sescmd_hist = config_get_integer(conf, "max_sescmd_history");
+    router->schemarouter_config.disable_sescmd_hist = config_get_bool(conf, "disable_sescmd_history");
+    router->schemarouter_config.debug = config_get_bool(conf, "debug");
+
     if ((config_get_param(conf, "auth_all_servers")) == NULL)
     {
         MXS_NOTICE("Schemarouter: Authentication data is fetched from all servers. To disable this "
