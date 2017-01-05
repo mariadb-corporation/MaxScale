@@ -163,7 +163,7 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, const char* zArgs)
 
     if (pClassifier)
     {
-        if (!pClassifier->qc_setup(zArgs) || !pClassifier->qc_init())
+        if (!pClassifier->qc_setup(zArgs) || (pClassifier->qc_process_init() != 0))
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
             qc_unload(pClassifier);
@@ -178,7 +178,7 @@ void put_classifier(QUERY_CLASSIFIER* pClassifier)
 {
     if (pClassifier)
     {
-        pClassifier->qc_end();
+        pClassifier->qc_process_end();
         qc_unload(pClassifier);
     }
 }

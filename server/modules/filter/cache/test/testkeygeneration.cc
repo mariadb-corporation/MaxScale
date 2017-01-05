@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_init(NULL, NULL))
+            if (qc_setup(NULL, NULL) && qc_process_init())
             {
                 const char* zModule = argv[1];
 
@@ -157,6 +157,8 @@ int main(int argc, char* argv[])
                 {
                     cerr << "error: Could not initialize factory." << endl;
                 }
+
+                qc_process_end();
             }
             else
             {

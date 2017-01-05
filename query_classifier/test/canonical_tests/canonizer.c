@@ -46,8 +46,8 @@ int main(int argc, char** argv)
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));
 
-    qc_init("qc_sqlite", NULL);
-    qc_thread_init();
+    qc_setup("qc_sqlite", NULL);
+    qc_process_init();
 
     infile = fopen(argv[1],"rb");
     outfile = fopen(argv[2],"wb");
@@ -83,7 +83,6 @@ int main(int argc, char** argv)
     }
     fclose(infile);
     fclose(outfile);
-    qc_thread_end();
-    qc_end();
+    qc_process_end();
     return 0;
 }

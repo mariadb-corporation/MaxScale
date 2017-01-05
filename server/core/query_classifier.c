@@ -38,7 +38,7 @@ static const char default_qc_name[] = "qc_sqlite";
 static QUERY_CLASSIFIER* classifier;
 
 
-bool qc_init(const char* plugin_name, const char* plugin_args)
+bool qc_setup(const char* plugin_name, const char* plugin_args)
 {
     QC_TRACE();
     ss_dassert(!classifier);
@@ -56,21 +56,30 @@ bool qc_init(const char* plugin_name, const char* plugin_args)
     {
         success = classifier->qc_setup(plugin_args);
 
-        if (success)
+        if (!success)
         {
-            success = classifier->qc_init();
+            qc_unload(classifier);
+            classifier = NULL;
         }
     }
 
     return success;
 }
 
-void qc_end(void)
+bool qc_process_init(void)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_end();
+    return classifier->qc_process_init() == 0;
+}
+
+void qc_process_end(void)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    classifier->qc_process_end();
     classifier = NULL;
 }
 
@@ -101,7 +110,7 @@ bool qc_thread_init(void)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_thread_init();
+    return classifier->qc_thread_init() == 0;
 }
 
 void qc_thread_end(void)

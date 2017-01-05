@@ -2477,7 +2477,7 @@ void configure_options(const char* datadir, const char* langdir)
     server_options[IDX_DATADIR] = datadir_arg;
 
     rv = sprintf(language_arg, "--language=%s", langdir);
-    ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_init().
+    ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_process_init().
     server_options[IDX_LANGUAGE] = language_arg;
 
     // To prevent warning of unused variable when built in release mode,
@@ -2498,7 +2498,7 @@ bool qc_setup(const char* args)
     return true;
 }
 
-bool qc_init(void)
+int qc_mysql_process_init(void)
 {
     bool inited = false;
 
@@ -2530,15 +2530,15 @@ bool qc_init(void)
         }
     }
 
-    return inited;
+    return inited ? 0 : -1;
 }
 
-void qc_end(void)
+void qc_mysql_process_end(void)
 {
     mysql_library_end();
 }
 
-bool qc_thread_init(void)
+int qc_mysql_thread_init(void)
 {
     bool inited = (mysql_thread_init() == 0);
 
@@ -2547,10 +2547,10 @@ bool qc_thread_init(void)
         MXS_ERROR("mysql_thread_init() failed.");
     }
 
-    return inited;
+    return inited ? 0 : -1;
 }
 
-void qc_thread_end(void)
+void qc_mysql_thread_end(void)
 {
     mysql_thread_end();
 }
@@ -2567,10 +2567,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static QUERY_CLASSIFIER qc =
     {
         qc_setup,
-        qc_init,
-        qc_end,
-        qc_thread_init,
-        qc_thread_end,
+        qc_mysql_process_init,
+        qc_mysql_process_end,
+        qc_mysql_thread_init,
+        qc_mysql_thread_end,
         qc_parse,
         qc_get_type,
         qc_get_operation,
@@ -2594,10 +2594,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Query classifier based upon MySQL Embedded",
         "V1.0.0",
         &qc,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        qc_mysql_process_init,
+        qc_mysql_process_end,
+        qc_mysql_thread_init,
+        qc_mysql_thread_end,
         {
             {MXS_END_MODULE_PARAMS}
         }

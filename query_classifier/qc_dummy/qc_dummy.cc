@@ -83,21 +83,21 @@ bool qc_setup(const char* args)
     return true;
 }
 
-bool qc_init(void)
+int qc_dummy_process_init(void)
 {
-    return true;
+    return 0;
 }
 
-void qc_end(void)
+void qc_dummy_process_end(void)
 {
 }
 
-bool qc_thread_init(void)
+int qc_dummy_thread_init(void)
 {
-    return true;
+    return 0;
 }
 
-void qc_thread_end(void)
+void qc_dummy_thread_end(void)
 {
 }
 
@@ -108,10 +108,10 @@ extern "C"
         static QUERY_CLASSIFIER qc =
         {
             qc_setup,
-            qc_init,
-            qc_end,
-            qc_thread_init,
-            qc_thread_end,
+            qc_dummy_process_init,
+            qc_dummy_process_end,
+            qc_dummy_thread_init,
+            qc_dummy_thread_end,
             qc_parse,
             qc_get_type,
             qc_get_operation,
@@ -135,10 +135,10 @@ extern "C"
             "Dummy Query Classifier",
             "V1.0.0",
             &qc,
-            NULL, /* Process init. */
-            NULL, /* Process finish. */
-            NULL, /* Thread init. */
-            NULL, /* Thread finish. */
+            qc_dummy_process_init,
+            qc_dummy_process_end,
+            qc_dummy_thread_init,
+            qc_dummy_thread_end,
             {
                 {MXS_END_MODULE_PARAMS}
             }

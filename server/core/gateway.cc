@@ -976,26 +976,17 @@ void worker_thread_main(void* arg)
 {
     if (modules_thread_init())
     {
-        if (qc_thread_init())
+        /** Init mysql thread context for use with a mysql handle and a parser */
+        if (mysql_thread_init() == 0)
         {
-            /** Init mysql thread context for use with a mysql handle and a parser */
-            if (mysql_thread_init() == 0)
-            {
-                poll_waitevents(arg);
+            poll_waitevents(arg);
 
-                /** Release mysql thread context */
-                mysql_thread_end();
-            }
-            else
-            {
-                MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
-            }
-
-            qc_thread_end();
+            /** Release mysql thread context */
+            mysql_thread_end();
         }
         else
         {
-            MXS_ERROR("Could not perform thread initialization for query classifier. Exiting thread.");
+            MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
         }
 
         modules_thread_finish();
@@ -1875,7 +1866,7 @@ int main(int argc, char **argv)
     cnf = config_get_global_options();
     ss_dassert(cnf);
 
-    if (!qc_init(cnf->qc_name, cnf->qc_args))
+    if (!qc_setup(cnf->qc_name, cnf->qc_args))
     {
         const char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);
@@ -2087,8 +2078,6 @@ int main(int argc, char **argv)
     MXS_NOTICE("MaxScale is shutting down.");
     /** Release mysql thread context*/
     mysql_thread_end();
-
-    qc_end();
 
     utils_end();
     cleanup_process_datadir();

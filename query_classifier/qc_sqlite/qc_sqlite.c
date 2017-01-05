@@ -2598,9 +2598,9 @@ void maxscaleUse(Parse* pParse, Token* pToken)
  * API
  */
 static bool qc_sqlite_setup(const char* args);
-static bool qc_sqlite_init(void);
-static void qc_sqlite_end(void);
-static bool qc_sqlite_thread_init(void);
+static int qc_sqlite_process_init(void);
+static void qc_sqlite_process_end(void);
+static int qc_sqlite_thread_init(void);
 static void qc_sqlite_thread_end(void);
 static qc_parse_result_t qc_sqlite_parse(GWBUF* query);
 static uint32_t qc_sqlite_get_type(GWBUF* query);
@@ -2680,7 +2680,7 @@ static bool qc_sqlite_setup(const char* args)
     return this_unit.setup;
 }
 
-static bool qc_sqlite_init(void)
+static int qc_sqlite_process_init(void)
 {
     QC_TRACE();
     assert(this_unit.setup);
@@ -2692,7 +2692,7 @@ static bool qc_sqlite_init(void)
 
         this_unit.initialized = true;
 
-        if (qc_sqlite_thread_init())
+        if (qc_sqlite_thread_init() == 0)
         {
             if (this_unit.log_level != QC_LOG_NOTHING)
             {
@@ -2731,10 +2731,10 @@ static bool qc_sqlite_init(void)
         MXS_ERROR("Failed to initialize sqlite3.");
     }
 
-    return this_unit.initialized;
+    return this_unit.initialized ? 0 : -1;
 }
 
-static void qc_sqlite_end(void)
+static void qc_sqlite_process_end(void)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
@@ -2747,7 +2747,7 @@ static void qc_sqlite_end(void)
     this_unit.initialized = false;
 }
 
-static bool qc_sqlite_thread_init(void)
+static int qc_sqlite_thread_init(void)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
@@ -2798,7 +2798,7 @@ static bool qc_sqlite_thread_init(void)
                   (unsigned long) pthread_self(), rc, sqlite3_errstr(rc));
     }
 
-    return this_thread.initialized;
+    return this_thread.initialized ? 0 : -1;
 }
 
 static void qc_sqlite_thread_end(void)
@@ -3190,8 +3190,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static QUERY_CLASSIFIER qc =
     {
         qc_sqlite_setup,
-        qc_sqlite_init,
-        qc_sqlite_end,
+        qc_sqlite_process_init,
+        qc_sqlite_process_end,
         qc_sqlite_thread_init,
         qc_sqlite_thread_end,
         qc_sqlite_parse,
@@ -3217,10 +3217,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Query classifier using sqlite.",
         "V1.0.0",
         &qc,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        qc_sqlite_process_init,
+        qc_sqlite_process_end,
+        qc_sqlite_thread_init,
+        qc_sqlite_thread_end,
         {
             {MXS_END_MODULE_PARAMS}
         }

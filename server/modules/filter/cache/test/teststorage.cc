@@ -50,7 +50,7 @@ int TestStorage::run(int argc, char** argv)
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_init(NULL, NULL))
+            if (qc_setup(NULL, NULL) && qc_process_init())
             {
                 const char* zModule = NULL;
                 size_t threads = m_threads;

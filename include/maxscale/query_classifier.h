@@ -128,10 +128,11 @@ typedef struct qc_field_info
 typedef struct query_classifier
 {
     bool (*qc_setup)(const char* args);
-    bool (*qc_init)(void);
-    void (*qc_end)(void);
 
-    bool (*qc_thread_init)(void);
+    int (*qc_process_init)(void);
+    void (*qc_process_end)(void);
+
+    int (*qc_thread_init)(void);
     void (*qc_thread_end)(void);
 
     qc_parse_result_t (*qc_parse)(GWBUF* stmt);
@@ -152,10 +153,12 @@ typedef struct query_classifier
 } QUERY_CLASSIFIER;
 
 /**
- * Loads and initializes the default query classifier.
+ * Loads and sets up the default query classifier.
  *
  * This must be called once during the execution of a process. The query
- * classifier functions can only be used if this function returns true.
+ * classifier functions can only be used if this function first and thereafter
+ * the @c qc_process_init return true.
+ *
  * MaxScale calls this function, so plugins should not do that.
  *
  * @param plugin_name  The name of the plugin from which the query classifier
@@ -167,18 +170,32 @@ typedef struct query_classifier
  *
  * @see qc_end qc_thread_init
  */
-bool qc_init(const char* plugin_name, const char* plugin_args);
+bool qc_setup(const char* plugin_name, const char* plugin_args);
 
 /**
- * Finalizes and unloads the query classifier.
+ * Intializes the query classifier.
+ *
+ * This function should be called once, provided @c qc_setup returned true,
+ * before the query classifier functionality is used.
+ *
+ * MaxScale calls this functions, so plugins should not do that.
+ *
+ * @return True, if the process wide initialization could be performed.
+ *
+ * @see qc_process_end qc_thread_init
+ */
+bool qc_process_init(void);
+
+/**
+ * Finalizes the query classifier.
  *
  * A successful call of qc_init() should before program exit be followed
  * by a call to this function. MaxScale calls this function, so plugins
  * should not do that.
  *
- * @see qc_init qc_thread_end
+ * @see qc_process_init qc_thread_end
  */
-void qc_end(void);
+void qc_process_end(void);
 
 /**
  * Loads a particular query classifier.
@@ -206,10 +223,11 @@ QUERY_CLASSIFIER* qc_load(const char* plugin_name);
 void qc_unload(QUERY_CLASSIFIER* classifier);
 
 /**
- * Performs thread initialization needed by the query classifier.
- * Should be called in every thread, except the one where qc_init()
- * was called. MaxScale calls this function, so plugins should not
- * do that.
+ * Performs thread initialization needed by the query classifier. Should
+ * be called in every thread, except the one where qc_process_init()
+ * was called.
+ *
+ * MaxScale calls this function, so plugins should not do that.
  *
  * @return True if the initialization succeeded, false otherwise.
  *
@@ -220,8 +238,9 @@ bool qc_thread_init(void);
 /**
  * Performs thread finalization needed by the query classifier.
  * A successful call to qc_thread_init() should at some point be followed
- * by a call to this function. MaxScale calls this function, so plugins
- * should not do that.
+ * by a call to this function.
+ *
+ * MaxScale calls this function, so plugins should not do that.
  *
  * @see qc_thread_init
  */
