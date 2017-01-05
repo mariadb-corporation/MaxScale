@@ -51,7 +51,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <openssl/opensslconf.h>
-#include <mysql.h>
 #include <ini.h>
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
@@ -104,11 +103,6 @@ static int pidfd = PIDFD_CLOSED;
 static bool do_exit = FALSE;
 
 /**
- * Flag to indicate whether MySQL is successfully initialized.
- */
-static bool libmysql_initialized = FALSE;
-
-/**
  * If MaxScale is started to run in daemon process the value is true.
  */
 static bool     daemon_mode = true;
@@ -152,7 +146,6 @@ static void log_flush_cb(void* arg);
 static int write_pid_file(); /* write MaxScale pidfile */
 static void unlink_pidfile(void); /* remove pidfile */
 static void unlock_pidfile();
-static void libmysqld_done(void);
 static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
@@ -556,15 +549,6 @@ void cleanup_process_datadir()
         nftw(proc_datadir, ntfw_cb, depth, flags);
     }
 }
-
-static void libmysqld_done(void)
-{
-    if (libmysql_initialized)
-    {
-        mysql_library_end();
-    }
-}
-
 
 static void write_footer(void)
 {
@@ -976,18 +960,7 @@ void worker_thread_main(void* arg)
 {
     if (modules_thread_init())
     {
-        /** Init mysql thread context for use with a mysql handle and a parser */
-        if (mysql_thread_init() == 0)
-        {
-            poll_waitevents(arg);
-
-            /** Release mysql thread context */
-            mysql_thread_end();
-        }
-        else
-        {
-            MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
-        }
+        poll_waitevents(arg);
 
         modules_thread_finish();
     }
@@ -1292,7 +1265,6 @@ int main(int argc, char **argv)
     bool     parent_process;
     int      child_status;
     THREAD*   threads = NULL;   /*< thread list */
-    char     mysql_home[PATH_MAX + 1];
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
     THREAD    log_flush_thr;
@@ -1324,8 +1296,7 @@ int main(int argc, char **argv)
     datadir[PATH_MAX] = '\0';
     file_write_header(stderr);
     /*<
-     * Register functions which are called at exit except libmysqld-related,
-     * which must be registered later to avoid ordering issues.
+     * Register functions which are called at exit.
      */
     for (i = 0; exitfunp[i] != NULL; i++)
     {
@@ -1713,22 +1684,6 @@ int main(int argc, char **argv)
     CRYPTO_set_id_callback(pthread_self);
 #endif
 
-    /* register exit function for embedded MySQL library */
-    l = atexit(libmysqld_done);
-
-    if (l != 0)
-    {
-        const char* fprerr =
-            "Failed to register exit function for\n* "
-            "embedded MySQL library.\n* Exiting.";
-        const char* logerr =
-            "Failed to register exit function libmysql_done "
-            "for MaxScale. Exiting.";
-        print_log_n_stderr(true, true, logerr, fprerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
-    }
-
     /**
      * Resolve the full pathname for configuration file and check for
      * read accessibility.
@@ -1752,12 +1707,6 @@ int main(int argc, char **argv)
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
-    /** Use the cache dir for the mysql folder of the embedded library */
-    snprintf(mysql_home, PATH_MAX, "%s/mysql", get_cachedir());
-    mysql_home[PATH_MAX] = '\0';
-    setenv("MYSQL_HOME", mysql_home, 1);
-
 
     /**
      * Init Log Manager for MaxScale.
@@ -1808,9 +1757,8 @@ int main(int argc, char **argv)
     MXS_NOTICE("MariaDB MaxScale %s started", MAXSCALE_VERSION);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
     /*
-     * Set the data directory for the mysqld library. We use
-     * a unique directory name to avoid conflicts if multiple
-     * instances of MaxScale are being run on the same machine.
+     * Set the data directory. We use a unique directory name to avoid conflicts
+     * if multiple instances of MaxScale are being run on the same machine.
      */
     if (create_datadir(get_datadir(), datadir))
     {
@@ -1876,52 +1824,6 @@ int main(int argc, char **argv)
 
     cnf->config_check = config_check;
 
-    if (mysql_library_init(0, NULL, NULL))
-    {
-        if (!daemon_mode)
-        {
-            const char* fprerr = "Failed to initialise the MySQL library. Exiting.";
-            print_log_n_stderr(false, true, fprerr, fprerr, 0);
-
-            if (mysql_errno(NULL) == 2000)
-            {
-                if (strncmp(mysql_error(NULL),
-                            "Unknown MySQL error",
-                            strlen("Unknown MySQL error")) != 0)
-                {
-                    fprintf(stderr,
-                            "*\n* Error : MySQL Error should "
-                            "be \"Unknown MySQL error\" "
-                            "instead of\n* %s\n* Hint "
-                            ":\n* Ensure that you have "
-                            "MySQL error messages file, errmsg.sys in "
-                            "\n* %s/mysql\n* Ensure that Embedded "
-                            "Server Library version matches "
-                            "exactly with that of the errmsg.sys "
-                            "file.\n*\n",
-                            mysql_error(NULL),
-                            get_langdir());
-                }
-                else
-                {
-                    fprintf(stderr,
-                            "*\n* Error : MySQL Error %d, %s"
-                            "\n*\n",
-                            mysql_errno(NULL),
-                            mysql_error(NULL));
-                }
-            }
-        }
-        MXS_ERROR("mysql_library_init failed. It is a "
-                  "mandatory component, required by router services and "
-                  "the MaxScale core. Error %d, %s. Exiting.",
-                  mysql_errno(NULL),
-                  mysql_error(NULL));
-        rc = MAXSCALE_NOLIBRARY;
-        goto return_main;
-    }
-    libmysql_initialized = TRUE;
-
     if (!config_check)
     {
         /** Check if a MaxScale process is already running */
@@ -1957,12 +1859,6 @@ int main(int argc, char **argv)
         rc = MAXSCALE_BADCONFIG;
         goto return_main;
     }
-
-    /**
-     * Init mysql thread context for main thread as well. Needed when users
-     * are queried from backends.
-     */
-    mysql_thread_init();
 
     /** Start all monitors */
     monitorStartAll();
@@ -2076,8 +1972,6 @@ int main(int argc, char **argv)
 
     log_exit_status();
     MXS_NOTICE("MaxScale is shutting down.");
-    /** Release mysql thread context*/
-    mysql_thread_end();
 
     utils_end();
     cleanup_process_datadir();

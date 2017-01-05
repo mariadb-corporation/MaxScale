@@ -60,6 +60,11 @@
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/session.h>
 
+static int process_init(void);
+static void process_finish(void);
+static int thread_init(void);
+static void thread_finish(void);
+
 static int gw_MySQLAccept(DCB *listener);
 static int gw_MySQLListener(DCB *listener, char *config_bind);
 static int gw_read_client_event(DCB* dcb);
@@ -120,10 +125,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
         &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
+        process_init,
+        process_finish,
+        thread_init,
+        thread_finish,
         {
             {MXS_END_MODULE_PARAMS}
         }
@@ -132,6 +137,57 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 /*lint +e14 */
+
+/**
+ * Performs process wide initialization.
+ *
+ * @return 0 if successful, non-zero otherwise.
+ */
+static int process_init(void)
+{
+    int rv = mysql_library_init(0, NULL, NULL);
+
+    if (rv != 0)
+    {
+        MXS_ERROR("MySQL initialization failed, MariaDB MaxScale will exit. "
+                  "MySQL Error: %d, %s.", mysql_errno(NULL), mysql_error(NULL));
+    }
+
+    return rv;
+}
+
+/**
+ * Performs process wide finalization.
+ */
+static void process_finish(void)
+{
+    mysql_library_end();
+}
+
+/**
+ * Performs thread-specific initialization.
+ *
+ * @return 0 if successful, non-zero otherwise.
+ */
+static int thread_init(void)
+{
+    int rv = mysql_thread_init();
+
+    if (rv != 0)
+    {
+        MXS_ERROR("MySQL thread initialization failed, the thread will exit.");
+    }
+
+    return rv;
+}
+
+/**
+ * Performs thread specific finalization.
+ */
+static void thread_finish(void)
+{
+    mysql_thread_end();
+}
 
 /**
  * The default authenticator name for this protocol
