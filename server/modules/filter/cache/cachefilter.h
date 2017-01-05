@@ -39,21 +39,21 @@
 #endif
 
 // Count
-#define CACHE_DEFAULT_MAX_RESULTSET_ROWS 0
+#define CACHE_DEFAULT_MAX_RESULTSET_ROWS "0"
 // Bytes
-#define CACHE_DEFAULT_MAX_RESULTSET_SIZE 0
+#define CACHE_DEFAULT_MAX_RESULTSET_SIZE "0"
 // Seconds
-#define CACHE_DEFAULT_HARD_TTL           0
+#define CACHE_DEFAULT_HARD_TTL           "0"
 // Seconds
-#define CACHE_DEFAULT_SOFT_TTL           0
+#define CACHE_DEFAULT_SOFT_TTL           "0"
 // Integer value
-#define CACHE_DEFAULT_DEBUG              0
+#define CACHE_DEFAULT_DEBUG              "0"
 // Positive integer
-#define CACHE_DEFAULT_MAX_COUNT          0
+#define CACHE_DEFAULT_MAX_COUNT          "0"
 // Positive integer
-#define CACHE_DEFAULT_MAX_SIZE           0
+#define CACHE_DEFAULT_MAX_SIZE           "0"
 // Thread model
-#define CACHE_DEFAULT_THREAD_MODEL       CACHE_THREAD_MODEL_MT
+#define CACHE_DEFAULT_THREAD_MODEL       "shared"
 
 typedef struct cache_config
 {

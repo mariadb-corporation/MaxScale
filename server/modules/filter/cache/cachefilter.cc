@@ -27,23 +27,6 @@ namespace
 
 static char VERSION_STRING[] = "V1.0.0";
 
-static const CACHE_CONFIG DEFAULT_CONFIG =
-{
-    CACHE_DEFAULT_MAX_RESULTSET_ROWS,
-    CACHE_DEFAULT_MAX_RESULTSET_SIZE,
-    NULL,                              // rules
-    NULL,                              // storage
-    NULL,                              // storage_options
-    NULL,                              // storage_argv
-    0,                                 // storage_argc
-    CACHE_DEFAULT_HARD_TTL,
-    CACHE_DEFAULT_SOFT_TTL,
-    CACHE_DEFAULT_MAX_COUNT,
-    CACHE_DEFAULT_MAX_SIZE,
-    CACHE_DEFAULT_DEBUG,
-    CACHE_DEFAULT_THREAD_MODEL,
-};
-
 /**
  * Frees all data of a config object, but not the object itself
  *
@@ -125,73 +108,19 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     return true;
 }
 
-/**
- * Get a 32-bit unsigned value.
- *
- * Note that the value itself is converted a signed integer to detect
- * configuration errors.
- *
- * @param param   The parameter entry.
- * @param pValue  Pointer to variable where result is stored.
- *
- * @return True if the parameter was an unsigned integer.
- */
-bool config_get_uint32(const CONFIG_PARAMETER& param, uint32_t* pValue)
-{
-    bool rv = false;
-    char* end;
-    int32_t value = strtol(param.value, &end, 0);
-
-    if ((*end == 0) && (value >= 0))
-    {
-        *pValue = value;
-        rv = true;
-    }
-    else
-    {
-        MXS_ERROR("The value of the configuration entry '%s' must "
-                  "be an integer larger than or equal to 0.", param.name);
-    }
-
-    return rv;
-}
-
-/**
- * Get a 64-bit unsigned value.
- *
- * Note that the value itself is converted a signed integer to detect
- * configuration errors.
- *
- * @param param   The parameter entry.
- * @param pValue  Pointer to variable where result is stored.
- *
- * @return True if the parameter was an unsigned integer.
- */
-bool config_get_uint64(const CONFIG_PARAMETER& param, uint64_t* pValue)
-{
-    bool rv = false;
-    char* end;
-    int64_t value = strtoll(param.value, &end, 0);
-
-    if ((*end == 0) && (value >= 0))
-    {
-        *pValue = value;
-        rv = true;
-    }
-    else
-    {
-        MXS_ERROR("The value of the configuration entry '%s' must "
-                  "be an integer larger than or equal to 0.", param.name);
-    }
-
-    return rv;
-}
-
 }
 
 //
 // Global symbols of the Module
 //
+
+// Enumeration values for `cached_data`
+static const MXS_ENUM_VALUE cached_data_values[] =
+{
+    {"shared",          CACHE_THREAD_MODEL_MT},
+    {"thread_specific", CACHE_THREAD_MODEL_ST},
+    {NULL}
+};
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
@@ -219,6 +148,62 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "storage",
+                 MXS_MODULE_PARAM_STRING,
+                 NULL,
+                 MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                "storage_options",
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                "hard_ttl",
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_RESULTSET_SIZE
+            },
+            {
+                "soft_ttl",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_SOFT_TTL
+            },
+            {
+                "max_resultset_rows",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_MAX_RESULTSET_ROWS
+            },
+            {
+                "max_resultset_size",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_MAX_RESULTSET_SIZE
+            },
+            {
+                "max_count",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_MAX_COUNT
+            },
+            {
+                "max_size",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_THREAD_MODEL
+            },
+            {
+                "rules",
+                 MXS_MODULE_PARAM_PATH
+            },
+            {
+                "debug",
+                 MXS_MODULE_PARAM_COUNT,
+                 CACHE_DEFAULT_DEBUG
+            },
+            {
+                "cached_data",
+                 MXS_MODULE_PARAM_ENUM,
+                 CACHE_DEFAULT_THREAD_MODEL,
+                 MXS_MODULE_OPT_NONE,
+                 cached_data_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -231,8 +216,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 //
 
 CacheFilter::CacheFilter()
-    : m_config(DEFAULT_CONFIG)
 {
+    cache_config_reset(m_config);
 }
 
 CacheFilter::~CacheFilter()
@@ -305,173 +290,101 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
 {
     bool error = false;
 
-    for (const CONFIG_PARAMETER *pParam = ppParams; pParam; pParam = pParam->next)
+    config.debug = config_get_integer(ppParams, "debug");
+    config.hard_ttl = config_get_integer(ppParams, "hard_ttl");
+    config.soft_ttl = config_get_integer(ppParams, "soft_ttl");
+    config.max_size = config_get_integer(ppParams, "max_size");
+    config.max_count = config_get_integer(ppParams, "max_count");
+    config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
+    config.max_resultset_rows = config_get_integer(ppParams, "max_resultset_rows");
+    config.max_resultset_size = config_get_integer(ppParams, "max_resultset_size");
+    config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
+                                                                            "cached_data",
+                                                                            cached_data_values));
+
+    if (!config.storage)
     {
-        if (strcmp(pParam->name, "max_resultset_rows") == 0)
+        error = true;
+    }
+
+    if ((config.debug < CACHE_DEBUG_MIN) || (config.debug > CACHE_DEBUG_MAX))
+    {
+        MXS_ERROR("The value of the configuration entry 'debug' must "
+                  "be between %d and %d, inclusive.",
+                  CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
+        error = true;
+    }
+
+    const CONFIG_PARAMETER *pParam = config_get_param(ppParams, "rules");
+
+    if (pParam)
+    {
+        if (*pParam->value == '/')
         {
-            if (!config_get_uint64(*pParam, &config.max_resultset_rows))
+            config.rules = MXS_STRDUP(pParam->value);
+        }
+        else
+        {
+            const char* datadir = get_datadir();
+            size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
+
+            char *rules = (char*)MXS_MALLOC(len);
+
+            if (rules)
             {
-                error = true;
+                sprintf(rules, "%s/%s", datadir, pParam->value);
+                config.rules = rules;
             }
         }
-        else if (strcmp(pParam->name, "max_resultset_size") == 0)
+
+        if (!config.rules)
         {
-            if (config_get_uint64(*pParam, &config.max_resultset_size))
-            {
-                config.max_resultset_size *= 1024;
-            }
-            else
-            {
-                error = true;
-            }
+            error = true;
         }
-        else if (strcmp(pParam->name, "rules") == 0)
+    }
+
+    if ((pParam = config_get_param(ppParams, "storage_options")))
+    {
+        config.storage_options = MXS_STRDUP(pParam->value);
+
+        if (config.storage_options)
         {
-            if (*pParam->value == '/')
-            {
-                config.rules = MXS_STRDUP(pParam->value);
-            }
-            else
-            {
-                const char* datadir = get_datadir();
-                size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
+            int argc = 1;
+            char *arg = config.storage_options;
 
-                char *rules = (char*)MXS_MALLOC(len);
-
-                if (rules)
-                {
-                    sprintf(rules, "%s/%s", datadir, pParam->value);
-                    config.rules = rules;
-                }
+            while ((arg = strchr(arg, ',')))
+            {
+                arg = arg + 1;
+                ++argc;
             }
 
-            if (!config.rules)
+            config.storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
+
+            if (config.storage_argv)
             {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "storage_options") == 0)
-        {
-            config.storage_options = MXS_STRDUP(pParam->value);
+                config.storage_argc = argc;
 
-            if (config.storage_options)
-            {
-                int argc = 1;
-                char *arg = config.storage_options;
+                int i = 0;
+                arg = config.storage_options;
+                config.storage_argv[i++] = arg;
 
-                while ((arg = strchr(arg, ',')))
+                while ((arg = strchr(config.storage_options, ',')))
                 {
-                    arg = arg + 1;
-                    ++argc;
-                }
-
-                config.storage_argv = (char**) MXS_MALLOC((argc + 1) * sizeof(char*));
-
-                if (config.storage_argv)
-                {
-                    config.storage_argc = argc;
-
-                    int i = 0;
-                    arg = config.storage_options;
+                    *arg = 0;
+                    ++arg;
                     config.storage_argv[i++] = arg;
-
-                    while ((arg = strchr(config.storage_options, ',')))
-                    {
-                        *arg = 0;
-                        ++arg;
-                        config.storage_argv[i++] = arg;
-                    }
-
-                    config.storage_argv[i] = NULL;
                 }
-                else
-                {
-                    MXS_FREE(config.storage_options);
-                    config.storage_options = NULL;
-                }
-            }
-            else
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "storage") == 0)
-        {
-            config.storage = MXS_STRDUP(pParam->value);
 
-            if (!config.storage)
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "hard_ttl") == 0)
-        {
-            if (!config_get_uint32(*pParam, &config.hard_ttl))
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "soft_ttl") == 0)
-        {
-            if (!config_get_uint32(*pParam, &config.soft_ttl))
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "max_count") == 0)
-        {
-            if (!config_get_uint64(*pParam, &config.max_count))
-            {
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "max_size") == 0)
-        {
-            if (config_get_uint64(*pParam, &config.max_size))
-            {
-                config.max_size = config.max_size * 1024;
+                config.storage_argv[i] = NULL;
             }
             else
             {
-                error = true;
+                MXS_FREE(config.storage_options);
+                config.storage_options = NULL;
             }
         }
-        else if (strcmp(pParam->name, "debug") == 0)
+        else
         {
-            int v = atoi(pParam->value);
-
-            if ((v >= CACHE_DEBUG_MIN) && (v <= CACHE_DEBUG_MAX))
-            {
-                config.debug = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be between %d and %d, inclusive.",
-                          pParam->name, CACHE_DEBUG_MIN, CACHE_DEBUG_MAX);
-                error = true;
-            }
-        }
-        else if (strcmp(pParam->name, "cached_data") == 0)
-        {
-            if (strcmp(pParam->value, "shared") == 0)
-            {
-                config.thread_model = CACHE_THREAD_MODEL_MT;
-            }
-            else if (strcmp(pParam->value, "thread_specific") == 0)
-            {
-                config.thread_model = CACHE_THREAD_MODEL_ST;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be either 'shared' or 'thread_specific'.", pParam->name);
-                error = true;
-            }
-        }
-        else if (!filter_standard_parameter(pParam->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
             error = true;
         }
     }
