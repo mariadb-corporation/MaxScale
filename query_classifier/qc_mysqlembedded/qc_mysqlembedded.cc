@@ -2487,15 +2487,20 @@ void configure_options(const char* datadir, const char* langdir)
 
 }
 
-bool qc_init(const char* args)
+bool qc_setup(const char* args)
 {
-    bool inited = false;
-
     if (args)
     {
         MXS_WARNING("qc_mysqlembedded: '%s' provided as arguments, "
                     "even though no arguments are supported.", args);
     }
+
+    return true;
+}
+
+bool qc_init(void)
+{
+    bool inited = false;
 
     if (strlen(get_langdir()) >= PATH_MAX)
     {
@@ -2561,6 +2566,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
     {
+        qc_setup,
         qc_init,
         qc_end,
         qc_thread_init,

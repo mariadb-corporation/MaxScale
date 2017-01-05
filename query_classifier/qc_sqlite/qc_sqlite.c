@@ -100,6 +100,7 @@ typedef enum qc_log_level
 static struct
 {
     bool initialized;
+    bool setup;
     qc_log_level_t log_level;
 } this_unit;
 
@@ -2596,7 +2597,8 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static bool qc_sqlite_init(const char* args);
+static bool qc_sqlite_setup(const char* args);
+static bool qc_sqlite_init(void);
 static void qc_sqlite_end(void);
 static bool qc_sqlite_thread_init(void);
 static void qc_sqlite_thread_end(void);
@@ -2628,10 +2630,10 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 
 static char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
 
-static bool qc_sqlite_init(const char* args)
+static bool qc_sqlite_setup(const char* args)
 {
     QC_TRACE();
-    assert(!this_unit.initialized);
+    assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
 
@@ -2672,20 +2674,31 @@ static bool qc_sqlite_init(const char* args)
         }
     }
 
+    this_unit.setup = true;
+    this_unit.log_level = log_level;
+
+    return this_unit.setup;
+}
+
+static bool qc_sqlite_init(void)
+{
+    QC_TRACE();
+    assert(this_unit.setup);
+    assert(!this_unit.initialized);
+
     if (sqlite3_initialize() == 0)
     {
         init_builtin_functions();
 
         this_unit.initialized = true;
-        this_unit.log_level = log_level;
 
         if (qc_sqlite_thread_init())
         {
-            if (log_level != QC_LOG_NOTHING)
+            if (this_unit.log_level != QC_LOG_NOTHING)
             {
                 const char* message;
 
-                switch (log_level)
+                switch (this_unit.log_level)
                 {
                 case QC_LOG_NON_PARSED:
                     message = "Statements that cannot be parsed completely are logged.";
@@ -3176,6 +3189,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     static QUERY_CLASSIFIER qc =
     {
+        qc_sqlite_setup,
         qc_sqlite_init,
         qc_sqlite_end,
         qc_sqlite_thread_init,

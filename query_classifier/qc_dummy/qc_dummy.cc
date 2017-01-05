@@ -78,7 +78,12 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
     *n_infos = 0;
 }
 
-bool qc_init(const char* args)
+bool qc_setup(const char* args)
+{
+    return true;
+}
+
+bool qc_init(void)
 {
     return true;
 }
@@ -102,6 +107,7 @@ extern "C"
     {
         static QUERY_CLASSIFIER qc =
         {
+            qc_setup,
             qc_init,
             qc_end,
             qc_thread_init,

@@ -127,7 +127,8 @@ typedef struct qc_field_info
  */
 typedef struct query_classifier
 {
-    bool (*qc_init)(const char* args);
+    bool (*qc_setup)(const char* args);
+    bool (*qc_init)(void);
     void (*qc_end)(void);
 
     bool (*qc_thread_init)(void);

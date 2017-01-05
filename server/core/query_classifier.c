@@ -54,7 +54,12 @@ bool qc_init(const char* plugin_name, const char* plugin_args)
 
     if (classifier)
     {
-        success = classifier->qc_init(plugin_args);
+        success = classifier->qc_setup(plugin_args);
+
+        if (success)
+        {
+            success = classifier->qc_init();
+        }
     }
 
     return success;
