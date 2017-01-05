@@ -223,10 +223,12 @@ SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *er
  * @param type Module type
  * @param key Parameter key
  * @param value Parameter value
+ * @param context Configuration context or NULL for no context (uses runtime checks)
  *
  * @return True if the configuration parameter is valid
  */
-bool config_param_is_valid(const char *module, const char *type, const char *key, const char *value);
+bool config_param_is_valid(const char *module, const char *type, const char *key,
+                           const char *value, const CONFIG_CONTEXT *context);
 
 /**
  * @brief Get a boolean value
@@ -256,7 +258,8 @@ int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
  * @param params List of configuration parameters
  * @param key Parameter name
  *
- * @return The raw string value */
+ * @return The raw string value
+ */
 const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
 
 /**

@@ -82,16 +82,23 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_INT, /**< Integer number */
     MXS_MODULE_PARAM_BOOL, /**< Boolean value */
     MXS_MODULE_PARAM_STRING, /**< String value */
-    MXS_MODULE_PARAM_ENUM /**< Enumeration of string values */
+    MXS_MODULE_PARAM_ENUM, /**< Enumeration of string values */
+    MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
+    MXS_MODULE_PARAM_SERVICE, /**< Service name */
 };
 
+/** Parameter options
+ *
+ * If no type is specified, the option can be used with all parameter types
+ */
 enum mxs_module_param_options
 {
-    MXS_MODULE_OPT_NONE      = 0,
-    MXS_MODULE_OPT_REQUIRED  = (1 << 0), /**< A required parameter */
-    MXS_MODULE_OPT_PATH_X_OK = (1 << 1), /**< PATH: Execute permission to path required */
-    MXS_MODULE_OPT_PATH_R_OK = (1 << 2), /**< PATH: Read permission to path required */
-    MXS_MODULE_OPT_PATH_W_OK = (1 << 3)  /**< PATH: Write permission to path required */
+    MXS_MODULE_OPT_NONE        = 0,
+    MXS_MODULE_OPT_REQUIRED    = (1 << 0), /**< A required parameter */
+    MXS_MODULE_OPT_PATH_X_OK   = (1 << 1), /**< PATH: Execute permission to path required */
+    MXS_MODULE_OPT_PATH_R_OK   = (1 << 2), /**< PATH: Read permission to path required */
+    MXS_MODULE_OPT_PATH_W_OK   = (1 << 3), /**< PATH: Write permission to path required */
+    MXS_MODULE_OPT_PATH_F_OK   = (1 << 4)  /**< PATH: Path must exist */
 };
 
 /** Module parameter declaration */
