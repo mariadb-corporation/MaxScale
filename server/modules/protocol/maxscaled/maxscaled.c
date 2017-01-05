@@ -16,7 +16,7 @@
 #include <string.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <sys/ioctl.h>

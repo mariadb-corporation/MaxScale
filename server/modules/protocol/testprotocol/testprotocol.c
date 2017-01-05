@@ -28,7 +28,7 @@
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 
 static int test_read(DCB* dcb){ return 1;}
 static int test_write(DCB *dcb, GWBUF* buf){ return 1;}

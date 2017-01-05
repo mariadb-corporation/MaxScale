@@ -27,7 +27,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>

@@ -48,7 +48,7 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/modinfo.h>

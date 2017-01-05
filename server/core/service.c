@@ -48,7 +48,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <maxscale/session.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/listener.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>

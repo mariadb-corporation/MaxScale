@@ -45,7 +45,7 @@
  * 07/02/2016   Martin Brampton         Split off authentication and SSL.
  * 31/05/2016   Martin Brampton         Implement connection throttling
  */
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>

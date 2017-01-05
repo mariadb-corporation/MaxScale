@@ -40,7 +40,7 @@
 
 #include <maxscale/cdefs.h>
 #include <time.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/server.h>

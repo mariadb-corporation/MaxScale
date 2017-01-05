@@ -19,7 +19,7 @@
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <mysql_auth.h>
 
 /*

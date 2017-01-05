@@ -27,7 +27,7 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/gw_ssl.h>
 #include <maxscale/hashtable.h>
 

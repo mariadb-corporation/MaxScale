@@ -19,7 +19,7 @@
 #include <maxscale/buffer.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>

@@ -34,7 +34,7 @@
 #include <maxscale/listener.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/gw_ssl.h>
-#include <maxscale/gw_protocol.h>
+#include <maxscale/protocol.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
