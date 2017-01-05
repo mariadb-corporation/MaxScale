@@ -22,7 +22,7 @@ class CacheFilter : public maxscale::Filter<CacheFilter, CacheFilterSession>
 public:
     ~CacheFilter();
 
-    static CacheFilter* create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
+    static CacheFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
 
     Cache& cache() { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
     const Cache& cache() const { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
@@ -39,7 +39,7 @@ private:
     CacheFilter(const CacheFilter&);
     CacheFilter& operator = (const CacheFilter&);
 
-    static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config);
+    static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config);
 
 private:
     CACHE_CONFIG         m_config;

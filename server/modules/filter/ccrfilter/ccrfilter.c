@@ -46,7 +46,7 @@
  * @endverbatim
  */
 
-static  FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
+static  FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
 static  void   *newSession(FILTER *instance, SESSION *session);
 static  void   closeSession(FILTER *instance, void *session);
 static  void   freeSession(FILTER *instance, void *session);
@@ -147,7 +147,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     CCR_INSTANCE *my_instance;
     int i;
@@ -163,27 +163,27 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->match = NULL;
         my_instance->nomatch = NULL;
 
-        for (i = 0; params && params[i]; i++)
+        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
         {
-            if (!strcmp(params[i]->name, "count"))
+            if (!strcmp(p->name, "count"))
             {
-                my_instance->count = atoi(params[i]->value);
+                my_instance->count = atoi(p->value);
             }
-            else if (!strcmp(params[i]->name, "time"))
+            else if (!strcmp(p->name, "time"))
             {
-                my_instance->time = atoi(params[i]->value);
+                my_instance->time = atoi(p->value);
             }
-            else if (!strcmp(params[i]->name, "match"))
+            else if (!strcmp(p->name, "match"))
             {
-                my_instance->match = MXS_STRDUP_A(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "ignore"))
+            else if (!strcmp(p->name, "ignore"))
             {
-                my_instance->nomatch = MXS_STRDUP_A(params[i]->value);
+                my_instance->nomatch = MXS_STRDUP_A(p->value);
             }
-            else if (!filter_standard_parameter(params[i]->name))
+            else if (!filter_standard_parameter(p->name))
             {
-                MXS_ERROR("ccrfilter: Unexpected parameter '%s'.\n", params[i]->name);
+                MXS_ERROR("ccrfilter: Unexpected parameter '%s'.\n", p->name);
             }
         }
 

@@ -83,7 +83,7 @@ static int hktask_id = 0;
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -490,11 +490,11 @@ char** parse_optstr(char* str, char* tok, int* szstore)
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     MQ_INSTANCE *my_instance;
     int paramcount = 0, parammax = 64, i = 0, x = 0, arrsize = 0;
-    FILTER_PARAMETER** paramlist;
+    CONFIG_PARAMETER** paramlist;
     char** arr = NULL;
     char taskname[512];
 
@@ -503,7 +503,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         spinlock_init(&my_instance->rconn_lock);
         spinlock_init(&my_instance->msg_lock);
         uid_gen = 0;
-        paramlist = MXS_MALLOC(sizeof(FILTER_PARAMETER*) * 64);
+        paramlist = MXS_MALLOC(sizeof(CONFIG_PARAMETER*) * 64);
         MXS_ABORT_IF_NULL(paramlist);
 
         if ((my_instance->conn = amqp_new_connection()) == NULL)
@@ -521,63 +521,63 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->log_all = false;
         my_instance->strict_logging = true;
 
-        for (i = 0; params[i]; i++)
+        for (const CONFIG_PARAMETER *p = p; p; p = p->next)
         {
-            if (!strcmp(params[i]->name, "hostname"))
+            if (!strcmp(p->name, "hostname"))
             {
-                my_instance->hostname = MXS_STRDUP_A(params[i]->value);
+                my_instance->hostname = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "username"))
+            else if (!strcmp(p->name, "username"))
             {
-                my_instance->username = MXS_STRDUP_A(params[i]->value);
+                my_instance->username = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "password"))
+            else if (!strcmp(p->name, "password"))
             {
-                my_instance->password = MXS_STRDUP_A(params[i]->value);
+                my_instance->password = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "vhost"))
+            else if (!strcmp(p->name, "vhost"))
             {
-                my_instance->vhost = MXS_STRDUP_A(params[i]->value);
+                my_instance->vhost = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "port"))
+            else if (!strcmp(p->name, "port"))
             {
-                my_instance->port = atoi(params[i]->value);
+                my_instance->port = atoi(p->value);
             }
-            else if (!strcmp(params[i]->name, "exchange"))
+            else if (!strcmp(p->name, "exchange"))
             {
-                my_instance->exchange = MXS_STRDUP_A(params[i]->value);
+                my_instance->exchange = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "key"))
+            else if (!strcmp(p->name, "key"))
             {
-                my_instance->key = MXS_STRDUP_A(params[i]->value);
+                my_instance->key = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "queue"))
+            else if (!strcmp(p->name, "queue"))
             {
-                my_instance->queue = MXS_STRDUP_A(params[i]->value);
+                my_instance->queue = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "ssl_client_certificate"))
+            else if (!strcmp(p->name, "ssl_client_certificate"))
             {
-                my_instance->ssl_client_cert = MXS_STRDUP_A(params[i]->value);
+                my_instance->ssl_client_cert = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "ssl_client_key"))
+            else if (!strcmp(p->name, "ssl_client_key"))
             {
 
-                my_instance->ssl_client_key = MXS_STRDUP_A(params[i]->value);
+                my_instance->ssl_client_key = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "ssl_CA_cert"))
+            else if (!strcmp(p->name, "ssl_CA_cert"))
             {
 
-                my_instance->ssl_CA_cert = MXS_STRDUP_A(params[i]->value);
+                my_instance->ssl_CA_cert = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "exchange_type"))
+            else if (!strcmp(p->name, "exchange_type"))
             {
 
-                my_instance->exchange_type = MXS_STRDUP_A(params[i]->value);
+                my_instance->exchange_type = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "logging_trigger"))
+            else if (!strcmp(p->name, "logging_trigger"))
             {
 
-                arr = parse_optstr(params[i]->value, ",", &arrsize);
+                arr = parse_optstr(p->value, ",", &arrsize);
 
                 for (x = 0; x < arrsize; x++)
                 {
@@ -617,15 +617,15 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 
 
             }
-            else if (strstr(params[i]->name, "logging_"))
+            else if (strstr(p->name, "logging_"))
             {
 
                 if (paramcount < parammax)
                 {
-                    paramlist[paramcount] = MXS_MALLOC(sizeof(FILTER_PARAMETER));
+                    paramlist[paramcount] = MXS_MALLOC(sizeof(CONFIG_PARAMETER));
                     MXS_ABORT_IF_NULL(paramlist[paramcount]);
-                    paramlist[paramcount]->name = MXS_STRDUP_A(params[i]->name);
-                    paramlist[paramcount]->value = MXS_STRDUP_A(params[i]->value);
+                    paramlist[paramcount]->name = MXS_STRDUP_A(p->name);
+                    paramlist[paramcount]->value = MXS_STRDUP_A(p->value);
                     paramcount++;
                 }
             }

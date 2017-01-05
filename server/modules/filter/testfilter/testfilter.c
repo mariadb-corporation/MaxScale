@@ -30,7 +30,7 @@
  */
 
 
-static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
+static  FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
 static  void    *newSession(FILTER *instance, SESSION *session);
 static  void    closeSession(FILTER *instance, void *session);
 static  void    freeSession(FILTER *instance, void *session);
@@ -117,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static  FILTER  *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     TEST_INSTANCE   *my_instance;
 

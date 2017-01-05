@@ -55,7 +55,7 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
+MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
 {
     MaskingFilter* pFilter = new MaskingFilter;
 
@@ -87,7 +87,7 @@ uint64_t MaskingFilter::getCapabilities()
 }
 
 // static
-bool MaskingFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, Config& config)
+bool MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config)
 {
     return true;
 }

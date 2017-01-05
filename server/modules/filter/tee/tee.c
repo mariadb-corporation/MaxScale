@@ -97,7 +97,7 @@ static unsigned char required_packets[] =
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char* name, char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char* name, char **options, CONFIG_PARAMETER *);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -342,7 +342,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     TEE_INSTANCE *my_instance;
     int i;
@@ -361,36 +361,35 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->nomatch = NULL;
         if (params)
         {
-            for (i = 0; params[i]; i++)
+            for (const CONFIG_PARAMETER *p = params; p; p = p->next)
             {
-                if (!strcmp(params[i]->name, "service"))
+                if (!strcmp(p->name, "service"))
                 {
-                    if ((my_instance->service = service_find(params[i]->value)) == NULL)
+                    if ((my_instance->service = service_find(p->value)) == NULL)
                     {
                         MXS_ERROR("tee: service '%s' not found.\n",
-                                  params[i]->value);
+                                  p->value);
                     }
                 }
-                else if (!strcmp(params[i]->name, "match"))
+                else if (!strcmp(p->name, "match"))
                 {
-                    my_instance->match = MXS_STRDUP_A(params[i]->value);
+                    my_instance->match = MXS_STRDUP_A(p->value);
                 }
-                else if (!strcmp(params[i]->name, "exclude"))
+                else if (!strcmp(p->name, "exclude"))
                 {
-                    my_instance->nomatch = MXS_STRDUP_A(params[i]->value);
+                    my_instance->nomatch = MXS_STRDUP_A(p->value);
                 }
-                else if (!strcmp(params[i]->name, "source"))
+                else if (!strcmp(p->name, "source"))
                 {
-                    my_instance->source = MXS_STRDUP_A(params[i]->value);
+                    my_instance->source = MXS_STRDUP_A(p->value);
                 }
-                else if (!strcmp(params[i]->name, "user"))
+                else if (!strcmp(p->name, "user"))
                 {
-                    my_instance->userName = MXS_STRDUP_A(params[i]->value);
+                    my_instance->userName = MXS_STRDUP_A(p->value);
                 }
-                else if (!filter_standard_parameter(params[i]->name))
+                else if (!filter_standard_parameter(p->name))
                 {
-                    MXS_ERROR("tee: Unexpected parameter '%s'.",
-                              params[i]->name);
+                    MXS_ERROR("tee: Unexpected parameter '%s'.", p->name);
                 }
             }
         }

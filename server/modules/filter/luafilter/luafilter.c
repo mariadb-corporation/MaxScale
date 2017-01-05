@@ -53,7 +53,7 @@
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -97,7 +97,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         "Lua Filter",
         "V1.0.0",
         &MyObject,
-        NULL, /* Parameters */
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
@@ -197,7 +196,7 @@ typedef struct
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     LUA_INSTANCE *my_instance;
     bool error = false;
@@ -209,19 +208,19 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 
     spinlock_init(&my_instance->lock);
 
-    for (int i = 0; params[i] && !error; i++)
+    for (CONFIG_PARAMETER *p = p; p && !error; p = p->next)
     {
-        if (strcmp(params[i]->name, "global_script") == 0)
+        if (strcmp(p->name, "global_script") == 0)
         {
-            error = (my_instance->global_script = MXS_STRDUP(params[i]->value)) == NULL;
+            error = (my_instance->global_script = MXS_STRDUP(p->value)) == NULL;
         }
-        else if (strcmp(params[i]->name, "session_script") == 0)
+        else if (strcmp(p->name, "session_script") == 0)
         {
-            error = (my_instance->session_script = MXS_STRDUP(params[i]->value)) == NULL;
+            error = (my_instance->session_script = MXS_STRDUP(p->value)) == NULL;
         }
-        else if (!filter_standard_parameter(params[i]->name))
+        else if (!filter_standard_parameter(p->name))
         {
-            MXS_ERROR("Unexpected parameter '%s'", params[i]->name);
+            MXS_ERROR("Unexpected parameter '%s'", p->name);
             error = true;
         }
     }

@@ -136,7 +136,7 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
  *
  * @return True if the parameter was an unsigned integer.
  */
-bool config_get_uint32(const FILTER_PARAMETER& param, uint32_t* pValue)
+bool config_get_uint32(const CONFIG_PARAMETER& param, uint32_t* pValue)
 {
     bool rv = false;
     char* end;
@@ -167,7 +167,7 @@ bool config_get_uint32(const FILTER_PARAMETER& param, uint32_t* pValue)
  *
  * @return True if the parameter was an unsigned integer.
  */
-bool config_get_uint64(const FILTER_PARAMETER& param, uint64_t* pValue)
+bool config_get_uint64(const CONFIG_PARAMETER& param, uint64_t* pValue)
 {
     bool rv = false;
     char* end;
@@ -241,7 +241,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
+CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
 {
     CacheFilter* pFilter = new CacheFilter;
 
@@ -301,14 +301,12 @@ uint64_t CacheFilter::getCapabilities()
 }
 
 // static
-bool CacheFilter::process_params(char **pzOptions, FILTER_PARAMETER **ppParams, CACHE_CONFIG& config)
+bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
 {
     bool error = false;
 
-    for (int i = 0; ppParams[i]; ++i)
+    for (const CONFIG_PARAMETER *pParam = ppParams; pParam; pParam = pParam->next)
     {
-        const FILTER_PARAMETER *pParam = ppParams[i];
-
         if (strcmp(pParam->name, "max_resultset_rows") == 0)
         {
             if (!config_get_uint64(*pParam, &config.max_resultset_rows))

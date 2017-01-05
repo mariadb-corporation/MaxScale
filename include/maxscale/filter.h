@@ -23,6 +23,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <maxscale/config.h>
 #include <maxscale/routing.h>
 #include <maxscale/dcb.h>
 #include <maxscale/session.h>
@@ -36,15 +37,6 @@ MXS_BEGIN_DECLS
  * is to make it a void * externally.
  */
 typedef void *FILTER;
-
-/**
- * The structure used to pass name, value pairs to the filter instances
- */
-typedef struct
-{
-    char    *name;          /**< Name of the parameter */
-    char    *value;         /**< Value of the parameter */
-} FILTER_PARAMETER;
 
 /**
  * @verbatim
@@ -73,7 +65,7 @@ typedef struct filter_object
 {
     FILTER *(*createInstance)(const char *name,
                               char **options,
-                              FILTER_PARAMETER **params);
+                              CONFIG_PARAMETER *params);
     void   *(*newSession)(FILTER *instance, SESSION *session);
     void   (*closeSession)(FILTER *instance, void *fsession);
     void   (*freeSession)(FILTER *instance, void *fsession);
@@ -102,7 +94,7 @@ typedef struct filter_def
     char *name;                    /**< The Filter name */
     char *module;                  /**< The module to load */
     char **options;                /**< The options set for this filter */
-    FILTER_PARAMETER **parameters; /**< The filter parameters */
+    CONFIG_PARAMETER *parameters; /**< The filter parameters */
     FILTER filter;                 /**< The runtime filter */
     FILTER_OBJECT *obj;            /**< The "MODULE_OBJECT" for the filter */
     SPINLOCK spin;                 /**< Spinlock to protect the filter definition */

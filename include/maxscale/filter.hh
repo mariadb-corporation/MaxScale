@@ -203,7 +203,7 @@ template<class FilterType, class FilterSessionType>
 class Filter
 {
 public:
-    static FILTER* createInstance(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams)
+    static FILTER* createInstance(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 

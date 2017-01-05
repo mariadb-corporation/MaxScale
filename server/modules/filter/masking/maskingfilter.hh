@@ -24,7 +24,7 @@ public:
     typedef MaskingFilterConfig Config;
 
     ~MaskingFilter();
-    static MaskingFilter* create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
+    static MaskingFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
 
     MaskingFilterSession* newSession(SESSION* pSession);
 
@@ -38,7 +38,7 @@ private:
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator = (const MaskingFilter&);
 
-    static bool process_params(char **pzOptions, FILTER_PARAMETER **ppParams, Config& config);
+    static bool process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config);
 
 private:
     Config m_config;

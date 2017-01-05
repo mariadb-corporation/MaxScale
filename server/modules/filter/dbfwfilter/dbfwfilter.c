@@ -94,7 +94,7 @@ int dbfw_yyparse(void*);
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -1484,7 +1484,7 @@ bool replace_rules(FW_INSTANCE* instance)
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     FW_INSTANCE *my_instance;
     int i;
@@ -1501,46 +1501,46 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
     my_instance->action = FW_ACTION_BLOCK;
     my_instance->log_match = FW_LOG_NONE;
 
-    for (i = 0; params[i]; i++)
+    for (const CONFIG_PARAMETER *p = params; p; p = p->next)
     {
-        if (strcmp(params[i]->name, "rules") == 0)
+        if (strcmp(p->name, "rules") == 0)
         {
-            filename = params[i]->value;
+            filename = p->value;
         }
-        else if (strcmp(params[i]->name, "log_match") == 0 &&
-                 config_truth_value(params[i]->value))
+        else if (strcmp(p->name, "log_match") == 0 &&
+                 config_truth_value(p->value))
         {
             my_instance->log_match |= FW_LOG_MATCH;
         }
-        else if (strcmp(params[i]->name, "log_no_match") == 0 &&
-                 config_truth_value(params[i]->value))
+        else if (strcmp(p->name, "log_no_match") == 0 &&
+                 config_truth_value(p->value))
         {
             my_instance->log_match |= FW_LOG_NO_MATCH;
         }
-        else if (strcmp(params[i]->name, "action") == 0)
+        else if (strcmp(p->name, "action") == 0)
         {
-            if (strcmp(params[i]->value, "allow") == 0)
+            if (strcmp(p->value, "allow") == 0)
             {
                 my_instance->action = FW_ACTION_ALLOW;
             }
-            else if (strcmp(params[i]->value, "block") == 0)
+            else if (strcmp(p->value, "block") == 0)
             {
                 my_instance->action = FW_ACTION_BLOCK;
             }
-            else if (strcmp(params[i]->value, "ignore") == 0)
+            else if (strcmp(p->value, "ignore") == 0)
             {
                 my_instance->action = FW_ACTION_IGNORE;
             }
             else
             {
                 MXS_ERROR("Unknown value for %s: %s. Expected one of 'allow', "
-                          "'block' or 'ignore'.", params[i]->name, params[i]->value);
+                          "'block' or 'ignore'.", p->name, p->value);
                 err = true;
             }
         }
-        else if (!filter_standard_parameter(params[i]->name))
+        else if (!filter_standard_parameter(p->name))
         {
-            MXS_ERROR("Unknown parameter '%s' for dbfwfilter.", params[i]->name);
+            MXS_ERROR("Unknown parameter '%s' for dbfwfilter.", p->name);
             err = true;
         }
     }

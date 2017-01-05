@@ -40,7 +40,7 @@
  * @endverbatim
  */
 
-static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
+static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -164,7 +164,7 @@ void free_instance(REGEX_INSTANCE *instance)
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     REGEX_INSTANCE *my_instance;
     int i, errnumber, cflags = PCRE2_CASELESS;
@@ -177,40 +177,39 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->match = NULL;
         my_instance->replace = NULL;
 
-        for (i = 0; params && params[i]; i++)
+        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
         {
-            if (!strcmp(params[i]->name, "match"))
+            if (!strcmp(p->name, "match"))
             {
-                my_instance->match = MXS_STRDUP_A(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "replace"))
+            else if (!strcmp(p->name, "replace"))
             {
-                my_instance->replace = MXS_STRDUP_A(params[i]->value);
+                my_instance->replace = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "source"))
+            else if (!strcmp(p->name, "source"))
             {
-                my_instance->source = MXS_STRDUP_A(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "user"))
+            else if (!strcmp(p->name, "user"))
             {
-                my_instance->user = MXS_STRDUP_A(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "log_trace"))
+            else if (!strcmp(p->name, "log_trace"))
             {
-                my_instance->log_trace = config_truth_value(params[i]->value);
+                my_instance->log_trace = config_truth_value(p->value);
             }
-            else if (!strcmp(params[i]->name, "log_file"))
+            else if (!strcmp(p->name, "log_file"))
             {
                 if (logfile)
                 {
                     MXS_FREE(logfile);
                 }
-                logfile = MXS_STRDUP_A(params[i]->value);
+                logfile = MXS_STRDUP_A(p->value);
             }
-            else if (!filter_standard_parameter(params[i]->name))
+            else if (!filter_standard_parameter(p->name))
             {
-                MXS_ERROR("regexfilter: Unexpected parameter '%s'.",
-                          params[i]->name);
+                MXS_ERROR("regexfilter: Unexpected parameter '%s'.", p->name);
             }
         }
 

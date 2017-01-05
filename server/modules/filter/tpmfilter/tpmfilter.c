@@ -76,7 +76,7 @@ static const char* default_named_pipe = "/tmp/tpmfilter";
 /*
  * The filter entry points
  */
-static  FILTER  *createInstance(const char *name, char **options, FILTER_PARAMETER **);
+static  FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
 static  void    *newSession(FILTER *instance, SESSION *session);
 static  void    closeSession(FILTER *instance, void *session);
 static  void    freeSession(FILTER *instance, void *session);
@@ -189,7 +189,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static  FILTER  *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     int     i, ret;
     TPM_INSTANCE    *my_instance;
@@ -210,35 +210,35 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         /* set default named pipe */
         my_instance->named_pipe = MXS_STRDUP_A(default_named_pipe);
 
-        for (i = 0; params && params[i]; i++)
+        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
         {
-            if (!strcmp(params[i]->name, "filename"))
+            if (!strcmp(p->name, "filename"))
             {
                 MXS_FREE(my_instance->filename);
-                my_instance->filename = MXS_STRDUP_A(params[i]->value);
+                my_instance->filename = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "source"))
+            else if (!strcmp(p->name, "source"))
             {
-                my_instance->source = MXS_STRDUP_A(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "user"))
+            else if (!strcmp(p->name, "user"))
             {
-                my_instance->user = MXS_STRDUP_A(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "delimiter"))
+            else if (!strcmp(p->name, "delimiter"))
             {
                 MXS_FREE(my_instance->delimiter);
-                my_instance->delimiter = MXS_STRDUP_A(params[i]->value);
+                my_instance->delimiter = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "query_delimiter"))
+            else if (!strcmp(p->name, "query_delimiter"))
             {
                 MXS_FREE(my_instance->query_delimiter);
-                my_instance->query_delimiter = MXS_STRDUP_A(params[i]->value);
+                my_instance->query_delimiter = MXS_STRDUP_A(p->value);
                 my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
             }
-            else if (!strcmp(params[i]->name, "named_pipe"))
+            else if (!strcmp(p->name, "named_pipe"))
             {
-                if (params[i]->value == NULL)
+                if (p->value == NULL)
                 {
                     MXS_ERROR("You need to specify 'named_pipe' for tpmfilter.");
                     MXS_FREE(my_instance);
@@ -246,7 +246,7 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
                 }
                 else
                 {
-                    my_instance->named_pipe = MXS_STRDUP_A(params[i]->value);
+                    my_instance->named_pipe = MXS_STRDUP_A(p->value);
                     // check if the file exists first.
                     if (access(my_instance->named_pipe, F_OK) == 0)
                     {

@@ -40,7 +40,7 @@
  * @endverbatim
  */
 
-static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
+static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -128,7 +128,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(const char *name, char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_MALLOC(sizeof(REGEXHINT_INSTANCE));
 
@@ -140,28 +140,27 @@ createInstance(const char *name, char **options, FILTER_PARAMETER **params)
         my_instance->user = NULL;
         bool error = false;
 
-        for (int i = 0; params && params[i]; i++)
+        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
         {
-            if (!strcmp(params[i]->name, "match"))
+            if (!strcmp(p->name, "match"))
             {
-                my_instance->match = MXS_STRDUP_A(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "server"))
+            else if (!strcmp(p->name, "server"))
             {
-                my_instance->server = MXS_STRDUP_A(params[i]->value);
+                my_instance->server = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "source"))
+            else if (!strcmp(p->name, "source"))
             {
-                my_instance->source = MXS_STRDUP_A(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(p->value);
             }
-            else if (!strcmp(params[i]->name, "user"))
+            else if (!strcmp(p->name, "user"))
             {
-                my_instance->user = MXS_STRDUP_A(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(p->value);
             }
-            else if (!filter_standard_parameter(params[i]->name))
+            else if (!filter_standard_parameter(p->name))
             {
-                MXS_ERROR("namedserverfilter: Unexpected parameter '%s'.",
-                          params[i]->name);
+                MXS_ERROR("namedserverfilter: Unexpected parameter '%s'.", p->name);
                 error = true;
             }
         }

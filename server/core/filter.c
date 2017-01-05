@@ -325,36 +325,11 @@ filter_add_option(FILTER_DEF *filter, const char *option)
 void
 filter_add_parameter(FILTER_DEF *filter, const char *name, const char *value)
 {
-    int i;
+    CONFIG_CONTEXT ctx = {.object = ""};
 
-    spinlock_acquire(&filter->spin);
-    FILTER_PARAMETER **parameters;
-    if (filter->parameters == NULL)
-    {
-        parameters = (FILTER_PARAMETER **)MXS_CALLOC(2, sizeof(FILTER_PARAMETER *));
-        i = 0;
-    }
-    else
-    {
-        for (i = 0; filter->parameters[i]; i++)
-        {
-            ;
-        }
-        parameters = (FILTER_PARAMETER **)MXS_REALLOC(filter->parameters,
-                                                      (i + 2) * sizeof(FILTER_PARAMETER *));
-    }
-    FILTER_PARAMETER *parameter = MXS_CALLOC(1, sizeof(FILTER_PARAMETER));
-    char* my_name = MXS_STRDUP(name);
-    char* my_value = MXS_STRDUP(value);
-
-    MXS_ABORT_IF_TRUE(!parameters || !parameter || !my_name || !my_value);
-
-    parameter->name = my_name;
-    parameter->value = my_value;
-    parameters[i] = parameter;
-    parameters[i + 1] = NULL;
-    filter->parameters = parameters;
-    spinlock_release(&filter->spin);
+    config_add_param(&ctx, name, value);
+    ctx.parameters->next = filter->parameters;
+    filter->parameters = ctx.parameters;
 }
 
 /**
@@ -363,15 +338,7 @@ filter_add_parameter(FILTER_DEF *filter, const char *name, const char *value)
  */
 static void filter_free_parameters(FILTER_DEF *filter)
 {
-    if (filter->parameters)
-    {
-        for (int i = 0; filter->parameters[i]; i++)
-        {
-            MXS_FREE(filter->parameters[i]->name);
-            MXS_FREE(filter->parameters[i]->value);
-        }
-        MXS_FREE(filter->parameters);
-    }
+    config_parameter_free(filter->parameters);
 }
 
 /**
