@@ -153,13 +153,7 @@ typedef struct mxs_module
      */
     void (*thread_finish)();
 
-#ifdef __cplusplus
-    // TODO: C++ does not have flexible arrays, so for the time being C++ modules
-    // TODO: are restricted to 10 parameters.
-    MXS_MODULE_PARAM parameters[11];  /**< Declared parameters */
-#else
-    MXS_MODULE_PARAM parameters[];  /**< Declared parameters */
-#endif
+    MXS_MODULE_PARAM parameters[65];  /**< Declared parameters, currently limited to 64 parameters */
 } MXS_MODULE;
 
 /**
