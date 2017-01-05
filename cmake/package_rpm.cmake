@@ -35,4 +35,4 @@ endif()
 
 message(STATUS "Generating RPM packages")
 # Installing this prevents RPM from deleting the /var/lib/maxscale folder
-install(DIRECTORY DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
+install(DIRECTORY DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale COMPONENT core)
