@@ -81,16 +81,6 @@ typedef struct config_parameter
 {
     char                    *name;          /**< The name of the parameter */
     char                    *value;         /**< The value of the parameter */
-    union
-    {
-        /*< qualified parameter value by type */
-        char*    valstr;     /*< terminated char* array */
-        int      valcount;   /*< int */
-        int      valpercent; /*< int */
-        bool     valbool;    /*< bool */
-        target_t valtarget;  /*< sql variable route target */
-    } qfd;
-    config_param_type_t     qfd_param_type;
     struct config_parameter *next;          /**< Next pointer in the linked list */
 } CONFIG_PARAMETER;
 
@@ -281,27 +271,10 @@ void                config_enable_feedback_task(void);
 void                config_disable_feedback_task(void);
 unsigned long       config_get_gateway_id(void);
 GATEWAY_CONF*       config_get_global_options();
-config_param_type_t config_get_paramtype(const CONFIG_PARAMETER* param);
-bool                config_get_valint(int* val,
-                                      const CONFIG_PARAMETER* param,
-                                      const char* name, /*< if NULL examine current param only */
-                                      config_param_type_t ptype);
-bool                config_get_valbool(bool* val,
-                                       const CONFIG_PARAMETER* param,
-                                       const char* name, /*< if NULL examine current param only */
-                                       config_param_type_t ptype);
-bool                config_get_valtarget(target_t* val,
-                                         const CONFIG_PARAMETER* param,
-                                         const char* name, /*< if NULL examine current param only */
-                                         config_param_type_t ptype);
 bool                config_load(const char *);
 unsigned int        config_nbpolls();
-double              config_percentage_value(const char *str);
 unsigned int        config_pollsleep();
 bool                config_reload();
-bool                config_set_qualified_param(CONFIG_PARAMETER* param,
-                                               void* val,
-                                               config_param_type_t type);
 int                 config_threadcount();
 int                 config_truth_value(const char *);
 void                config_parameter_free(CONFIG_PARAMETER* p1);

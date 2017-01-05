@@ -940,116 +940,6 @@ CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name)
     return NULL;
 }
 
-config_param_type_t config_get_paramtype(
-    const CONFIG_PARAMETER* param)
-{
-    return param->qfd_param_type;
-}
-
-bool config_get_valint(
-    int*                    val,
-    const CONFIG_PARAMETER* param,
-    const char*             name, /*< if NULL examine current param only */
-    config_param_type_t     ptype)
-{
-    bool succp = false;;
-
-    ss_dassert((ptype == COUNT_TYPE || ptype == PERCENT_TYPE) && param != NULL);
-
-    while (param)
-    {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
-        {
-            switch (ptype)
-            {
-                case COUNT_TYPE:
-                    *val = param->qfd.valcount;
-                    succp = true;
-                    goto return_succp;
-
-                case PERCENT_TYPE:
-                    *val = param->qfd.valpercent;
-                    succp  = true;
-                    goto return_succp;
-
-                default:
-                    goto return_succp;
-            }
-        }
-        param = param->next;
-    }
-return_succp:
-    return succp;
-}
-
-
-bool config_get_valbool(
-    bool*                   val,
-    const CONFIG_PARAMETER* param,
-    const char*             name,
-    config_param_type_t     ptype)
-{
-    bool succp;
-
-    ss_dassert(ptype == BOOL_TYPE);
-    ss_dassert(param != NULL);
-
-    if (ptype != BOOL_TYPE || param == NULL)
-    {
-        succp = false;
-        goto return_succp;
-    }
-
-    while (param)
-    {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
-        {
-            *val = param->qfd.valbool;
-            succp = true;
-            goto return_succp;
-        }
-        param = param->next;
-    }
-    succp = false;
-
-return_succp:
-    return succp;
-}
-
-
-bool config_get_valtarget(
-    target_t*               val,
-    const CONFIG_PARAMETER* param,
-    const char*             name,
-    config_param_type_t     ptype)
-{
-    bool succp;
-
-    ss_dassert(ptype == SQLVAR_TARGET_TYPE);
-    ss_dassert(param != NULL);
-
-    if (ptype != SQLVAR_TARGET_TYPE || param == NULL)
-    {
-        succp = false;
-        goto return_succp;
-    }
-
-    while (param)
-    {
-        if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
-        {
-            *val = param->qfd.valtarget;
-            succp = true;
-            goto return_succp;
-        }
-        param = param->next;
-    }
-    succp = false;
-
-return_succp:
-    return succp;
-}
-
 bool config_get_bool(const CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
@@ -1079,7 +969,7 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
 
     for (int i = 0; enum_values[i].name; i++)
     {
-        if (strcmp(enum_values[i].name, key) == 0)
+        if (strcmp(enum_values[i].name, value) == 0)
         {
             return enum_values[i].enum_value;
         }
@@ -1091,24 +981,15 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
 
 CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
 {
-    CONFIG_PARAMETER* p2;
+    CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(CONFIG_PARAMETER));
 
-    p2 = (CONFIG_PARAMETER*) MXS_MALLOC(sizeof(CONFIG_PARAMETER));
-
-    if (p2 == NULL)
+    if (p2)
     {
-        goto return_p2;
-    }
-    memcpy(p2, param, sizeof(CONFIG_PARAMETER));
-    p2->name = MXS_STRNDUP_A(param->name, MAX_PARAM_LEN);
-    p2->value = MXS_STRNDUP_A(param->value, MAX_PARAM_LEN);
-
-    if (param->qfd_param_type == STRING_TYPE)
-    {
-        p2->qfd.valstr = MXS_STRNDUP_A(param->qfd.valstr, MAX_PARAM_LEN);
+        p2->name = MXS_STRNDUP_A(param->name, MAX_PARAM_LEN);
+        p2->value = MXS_STRNDUP_A(param->value, MAX_PARAM_LEN);
+        p2->next = NULL;
     }
 
-return_p2:
     return p2;
 }
 
@@ -1744,18 +1625,6 @@ process_config_update(CONFIG_CONTEXT *context)
                         service->log_auth_warnings = (bool)truthval;
                     }
 
-                    CONFIG_PARAMETER* param;
-
-                    if ((param = config_get_param(obj->parameters, "ignore_databases")))
-                    {
-                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
-                    }
-
-                    if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
-                    {
-                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
-                    }
-
                     if (version_string)
                     {
                         if (service->version_string)
@@ -1789,9 +1658,6 @@ process_config_update(CONFIG_CONTEXT *context)
                         if (auth_all_servers)
                         {
                             serviceAuthAllServers(service, config_truth_value(auth_all_servers));
-                            service_set_param_value(service,
-                                                    config_get_param(obj->parameters, "auth_all_servers"),
-                                                    auth_all_servers, 0, BOOL_TYPE);
                         }
 
                         if (strip_db_esc)
@@ -1800,98 +1666,15 @@ process_config_update(CONFIG_CONTEXT *context)
                         }
 
                         if (allow_localhost_match_wildcard_host)
+                        {
                             serviceEnableLocalhostMatchWildcardHost(
                                 service,
                                 config_truth_value(allow_localhost_match_wildcard_host));
-
-                        /** Read, validate and set max_slave_connections */
-                        max_slave_conn_str =
-                            config_get_value(obj->parameters, "max_slave_connections");
-
-                        if (max_slave_conn_str != NULL)
-                        {
-                            CONFIG_PARAMETER* param;
-                            bool              succp;
-
-                            param = config_get_param(obj->parameters,
-                                                     "max_slave_connections");
-
-                            if (param == NULL)
-                            {
-                                succp = false;
-                            }
-                            else
-                            {
-                                succp = service_set_param_value(service, param,
-                                                                max_slave_conn_str,
-                                                                COUNT_ATMOST,
-                                                                (PERCENT_TYPE | COUNT_TYPE));
-                            }
-
-                            if (!succp && param != NULL)
-                            {
-                                MXS_WARNING("Invalid value type "
-                                            "for parameter \'%s.%s = %s\'\n\tExpected "
-                                            "type is either <int> for slave connection "
-                                            "count or\n\t<int>%% for specifying the "
-                                            "maximum percentage of available the "
-                                            "slaves that will be connected.",
-                                            service->name,
-                                            param->name,
-                                            param->value);
-                            }
                         }
-                        /** Read, validate and set max_slave_replication_lag */
-                        max_slave_rlag_str =
-                            config_get_value(obj->parameters, "max_slave_replication_lag");
 
-                        if (max_slave_rlag_str != NULL)
-                        {
-                            CONFIG_PARAMETER* param;
-                            bool              succp;
-
-                            param = config_get_param(obj->parameters,
-                                                     "max_slave_replication_lag");
-
-                            if (param == NULL)
-                            {
-                                succp = false;
-                            }
-                            else
-                            {
-                                succp = service_set_param_value(service,
-                                                                param,
-                                                                max_slave_rlag_str,
-                                                                COUNT_ATMOST,
-                                                                COUNT_TYPE);
-                            }
-
-                            if (!succp)
-                            {
-                                if (param)
-                                {
-                                    MXS_WARNING("Invalid value type "
-                                                "for parameter \'%s.%s = %s\'\n\tExpected "
-                                                "type is <int> for maximum "
-                                                "slave replication lag.",
-                                                service->name,
-                                                param->name,
-                                                param->value);
-                                }
-                                else
-                                {
-                                    MXS_ERROR("Parameter was NULL");
-                                }
-                            }
-                        }
                     }
 
                     obj->element = service;
-                }
-                else
-                {
-                    MXS_NOTICE("New services can't be started while MaxScale is running."
-                               " Please restart MaxScale to start the new services.");
                 }
             }
             else
@@ -2043,53 +1826,6 @@ check_config_objects(CONFIG_CONTEXT *context)
 }
 
 /**
- * Set qualified parameter value to CONFIG_PARAMETER struct.
- */
-bool config_set_qualified_param(CONFIG_PARAMETER* param,
-                                void* val,
-                                config_param_type_t type)
-{
-    bool succp;
-
-    switch (type)
-    {
-        case STRING_TYPE:
-            param->qfd.valstr = MXS_STRNDUP_A((const char *)val, MAX_PARAM_LEN);
-            succp = true;
-            break;
-
-        case COUNT_TYPE:
-            param->qfd.valcount = *(int *)val;
-            succp = true;
-            break;
-
-        case PERCENT_TYPE:
-            param->qfd.valpercent = *(int *)val;
-            succp = true;
-            break;
-
-        case BOOL_TYPE:
-            param->qfd.valbool = *(bool *)val;
-            succp = true;
-            break;
-
-        case SQLVAR_TARGET_TYPE:
-            param->qfd.valtarget = *(target_t *)val;
-            succp = true;
-            break;
-        default:
-            succp = false;
-            break;
-    }
-
-    if (succp)
-    {
-        param->qfd_param_type = type;
-    }
-    return succp;
-}
-
-/**
  * Used for boolean settings where values may be 1, yes or true
  * to enable a setting or -, no, false to disable a setting.
  *
@@ -2111,27 +1847,6 @@ config_truth_value(const char *str)
     }
 
     return -1;
-}
-
-
-/**
- * Converts a string into a floating point representation of a percentage value.
- * For example 75% is converted to 0.75 and -10% is converted to -0.1.
- * @param       str     String to convert
- * @return      String converted to a floating point percentage
- */
-double
-config_percentage_value(const char *str)
-{
-    double value = 0;
-
-    value = strtod(str, NULL);
-    if (value != 0)
-    {
-        value /= 100.0;
-    }
-
-    return value;
 }
 
 static char *InternalRouters[] =
@@ -2434,7 +2149,6 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
     {
         param->name = my_key;
         param->value = my_value;
-        param->qfd_param_type = UNDEFINED_TYPE;
         param->next = obj->parameters;
         obj->parameters = param;
         rval = true;
@@ -2747,9 +2461,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (auth_all_servers)
     {
         serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
-        service_set_param_value(service,
-                                config_get_param(obj->parameters, "auth_all_servers"),
-                                auth_all_servers, 0, BOOL_TYPE);
     }
 
     char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
@@ -2787,18 +2498,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
                   auth ? "" : "the 'password' or 'passwd' parameter");
     }
 
-    char *subservices = config_get_value(obj->parameters, "subservices");
-    if (subservices)
-    {
-        service_set_param_value(obj->element, obj->parameters, subservices, 1, STRING_TYPE);
-    }
-
-    CONFIG_PARAMETER *src = config_get_param(obj->parameters, "source");
-    if (src)
-    {
-        service_set_param_value(obj->element, src, src->value, 1, STRING_TYPE);
-    }
-
     char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
     if (log_auth_warnings)
     {
@@ -2812,17 +2511,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
             MXS_ERROR("Invalid value for 'log_auth_warnings': %s", log_auth_warnings);
         }
     }
-
-    if ((param = config_get_param(obj->parameters, "ignore_databases")))
-    {
-        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-    }
-
-    if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
-    {
-        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-    }
-
 
     char *version_string = config_get_value(obj->parameters, "version_string");
     if (version_string)
@@ -2851,43 +2539,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
-    /** Parameters for rwsplit router only */
-    if (strcmp(router, "readwritesplit") == 0)
-    {
-        if ((param = config_get_param(obj->parameters, "max_slave_connections")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_ATMOST, (COUNT_TYPE | PERCENT_TYPE)))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is either <int> for slave connection count or\n\t<int>%% for specifying the "
-                            "maximum percentage of available the slaves that will be connected.",
-                            service->name, param->name, param->value);
-            }
-        }
-
-        if ((param = config_get_param(obj->parameters, "max_slave_replication_lag")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_ATMOST, COUNT_TYPE))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is <int> for maximum slave replication lag.",
-                            service->name, param->name, param->value);
-            }
-        }
-
-        if ((param = config_get_param(obj->parameters, "use_sql_variables_in")))
-        {
-            if (!service_set_param_value(obj->element, param, param->value,
-                                         COUNT_NONE, SQLVAR_TARGET_TYPE))
-            {
-                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                            "type is [master|all] for use sql variables in.",
-                            service->name, param->name, param->value);
-            }
-        }
-    }
 
     /** Store the configuration parameters for the service */
     config_add_defaults(obj, router, MODULE_ROUTER);
