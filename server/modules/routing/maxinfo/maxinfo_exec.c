@@ -661,7 +661,7 @@ void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
         MONITOR* monitor = monitor_find(tree->value);
         if (monitor)
         {
-            monitorStart(monitor, NULL);
+            monitorStart(monitor, monitor->parameters);
             maxinfo_send_ok(dcb);
         }
         else

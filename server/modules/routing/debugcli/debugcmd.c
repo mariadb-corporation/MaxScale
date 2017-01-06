@@ -2078,45 +2078,7 @@ shutdown_monitor(DCB *dcb, MONITOR *monitor)
 static void
 restart_monitor(DCB *dcb, MONITOR *monitor)
 {
-    monitorStart(monitor, NULL);
-}
-
-/**
- * Enable replication heartbeat for a monitor
- *
- * @param dcb           Connection to user interface
- * @param monitor       The monitor
- */
-static void
-enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
-{
-    CONFIG_PARAMETER param;
-    const char* name = "detect_replication_lag";
-    const char* value = "1";
-    param.name = (char*)name;
-    param.value = (char*)value;
-    param.next = NULL;
-    monitorStop(monitor);
-    monitorStart(monitor, &param);
-}
-
-/**
- * Disable replication heartbeat for a monitor
- *
- * @param dcb           Connection to user interface
- * @param monitor       The monitor
- */
-static void
-disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
-{
-    CONFIG_PARAMETER param;
-    const char* name = "detect_replication_lag";
-    const char* value = "0";
-    param.name = (char*)name;
-    param.value = (char*)value;
-    param.next = NULL;
-    monitorStop(monitor);
-    monitorStart(monitor, &param);
+    monitorStart(monitor, monitor->parameters);
 }
 
 /**
