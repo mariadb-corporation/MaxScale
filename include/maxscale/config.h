@@ -265,6 +265,19 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
  */
 int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
 
+/**
+ * @brief Generate default module parameters
+ *
+ * Adds any default parameters to @c ctx that aren't already in it.
+ *
+ * @param ctx    Configuration context where the parameters are added
+ * @param module Module name
+ * @param type   Module type
+ *
+ * TODO: Move this to a header internal to the MaxScale core
+ */
+void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type);
+
 char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
 void                config_enable_feedback_task(void);

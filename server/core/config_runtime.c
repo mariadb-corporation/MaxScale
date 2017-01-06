@@ -16,6 +16,7 @@
 #include <maxscale/config_runtime.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/modules.h>
 
 #include "maxscale/service.h"
 
@@ -336,6 +337,21 @@ static long get_positive_int(const char *value)
     return 0;
 }
 
+/**
+ * @brief Add default parameters to a monitor
+ *
+ * @param monitor Monitor to modify
+ */
+static void add_monitor_defaults(MONITOR *monitor)
+{
+    /** Inject the default module parameters in case we only deleted
+     * a parameter */
+    CONFIG_CONTEXT ctx = {.object = ""};
+    config_add_defaults(&ctx, monitor->module_name, MODULE_MONITOR);
+    monitorAddParameters(monitor, ctx.parameters);
+    config_parameter_free(ctx.parameters);
+}
+
 bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
 {
     spinlock_acquire(&crt_lock);
@@ -402,6 +418,8 @@ bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
                 CONFIG_PARAMETER p = {.name = key, .value = value};
                 monitorAddParameters(monitor, &p);
             }
+
+            add_monitor_defaults(monitor);
         }
 
         monitorStart(monitor, monitor->parameters);
@@ -560,6 +578,7 @@ bool runtime_create_monitor(const char *name, const char *module)
         {
             /** Mark that this monitor was created after MaxScale was started */
             monitor->created_online = true;
+            add_monitor_defaults(monitor);
 
             if (monitor_serialize(monitor))
             {

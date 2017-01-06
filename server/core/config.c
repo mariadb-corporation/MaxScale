@@ -2384,7 +2384,7 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
  * @param ctx Configuration context where the default parameters are added
  * @param module Name of the module
  */
-static void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type)
+void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type)
 {
     const MXS_MODULE *mod = get_module(module, type);
 
