@@ -985,6 +985,20 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
     return found ? rv : -1;
 }
 
+char* config_copy_string(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+
+    char *rval = NULL;
+
+    if (*value)
+    {
+        rval = MXS_STRDUP_A(value);
+    }
+
+    return rval;
+}
+
 CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
 {
     CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(CONFIG_PARAMETER));

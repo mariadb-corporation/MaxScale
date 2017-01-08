@@ -271,6 +271,22 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
 int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
 
 /**
+ * @brief Get copy of parameter value if it is defined
+ *
+ * If a parameter with the name of @c key is defined in @c params, a copy of the
+ * value of that parameter is returned. The caller must free the returned string.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return Pointer to copy of value or NULL if the parameter was not found
+ *
+ * @note The use of this function should be avoided after startup as the function
+ * will abort the process if memory allocation fails.
+ */
+char* config_copy_string(const CONFIG_PARAMETER *params, const char *key);
+
+/**
  * @brief Generate default module parameters
  *
  * Adds any default parameters to @c ctx that aren't already in it.
