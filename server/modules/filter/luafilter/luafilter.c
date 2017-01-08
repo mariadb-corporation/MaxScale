@@ -102,6 +102,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"global_script", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"session_script", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -208,24 +210,11 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     spinlock_init(&my_instance->lock);
 
-    for (CONFIG_PARAMETER *p = p; p && !error; p = p->next)
-    {
-        if (strcmp(p->name, "global_script") == 0)
-        {
-            error = (my_instance->global_script = MXS_STRDUP(p->value)) == NULL;
-        }
-        else if (strcmp(p->name, "session_script") == 0)
-        {
-            error = (my_instance->session_script = MXS_STRDUP(p->value)) == NULL;
-        }
-        else if (!filter_standard_parameter(p->name))
-        {
-            MXS_ERROR("Unexpected parameter '%s'", p->name);
-            error = true;
-        }
-    }
+    const char *global_script = config_get_string(params, "global_script");
+    const char *session_script = config_get_string(params, "session_script");
 
-    if (error)
+    if ((*global_script && (my_instance->global_script = MXS_STRDUP(global_script)) == NULL) ||
+        (*session_script && (my_instance->session_script = MXS_STRDUP(session_script)) == NULL))
     {
         MXS_FREE(my_instance->global_script);
         MXS_FREE(my_instance->session_script);

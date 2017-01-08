@@ -55,7 +55,7 @@ static  int    routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static  void   diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
-#define CCR_DEFAULT_TIME 60
+#define CCR_DEFAULT_TIME "60"
 
 typedef struct lagstats
 {
@@ -129,6 +129,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"count", MXS_MODULE_PARAM_COUNT, "0"},
+            {"time", MXS_MODULE_PARAM_COUNT, CCR_DEFAULT_TIME},
+            {"match", MXS_MODULE_PARAM_STRING},
+            {"ignore", MXS_MODULE_PARAM_STRING},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -155,37 +159,13 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     if ((my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE))) != NULL)
     {
-        my_instance->count = 0;
-        my_instance->time = CCR_DEFAULT_TIME;
+        my_instance->count = config_get_integer(params, "count");
+        my_instance->time = config_get_integer(params, "count");
         my_instance->stats.n_add_count = 0;
         my_instance->stats.n_add_time = 0;
         my_instance->stats.n_modified = 0;
         my_instance->match = NULL;
         my_instance->nomatch = NULL;
-
-        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-        {
-            if (!strcmp(p->name, "count"))
-            {
-                my_instance->count = atoi(p->value);
-            }
-            else if (!strcmp(p->name, "time"))
-            {
-                my_instance->time = atoi(p->value);
-            }
-            else if (!strcmp(p->name, "match"))
-            {
-                my_instance->match = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "ignore"))
-            {
-                my_instance->nomatch = MXS_STRDUP_A(p->value);
-            }
-            else if (!filter_standard_parameter(p->name))
-            {
-                MXS_ERROR("ccrfilter: Unexpected parameter '%s'.\n", p->name);
-            }
-        }
 
         if (options)
         {
@@ -210,7 +190,9 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             }
         }
 
-        if (my_instance->match)
+        const char *match = config_get_string(params, "match");
+
+        if (*match && (my_instance->match = MXS_STRDUP(match)))
         {
             if (regcomp(&my_instance->re, my_instance->match, cflags))
             {
@@ -218,7 +200,9 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             }
         }
 
-        if (my_instance->nomatch)
+        const char *ignore = config_get_string(params, "ignore");
+
+        if (*ignore && (my_instance->nomatch = MXS_STRDUP(ignore)))
         {
             if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
             {
