@@ -271,6 +271,26 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
 int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
 
 /**
+ * @brief Get a service value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return Pointer to configured service
+ */
+struct service* config_get_service(const CONFIG_PARAMETER *params, const char *key);
+
+/**
+ * @brief Get a server value
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return Pointer to configured server
+ */
+struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key);
+
+/**
  * @brief Get copy of parameter value if it is defined
  *
  * If a parameter with the name of @c key is defined in @c params, a copy of the

@@ -40,6 +40,9 @@ To use multiple filter options, list them in a comma-separated list.
 options=case,extended
 ```
 
+**Note:** The _ignorecase_ and _case_ options are mutually exclusive and only
+one of them should be used.
+
 ## Filter Parameters
 
 The named server filter requires two mandatory parameters to be defined.

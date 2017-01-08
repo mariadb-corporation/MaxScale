@@ -985,6 +985,18 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
     return found ? rv : -1;
 }
 
+SERVICE* config_get_service(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    return service_find(value);
+}
+
+SERVER* config_get_server(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    return server_find_by_unique_name(value);
+}
+
 char* config_copy_string(const CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
@@ -3166,6 +3178,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 case MXS_MODULE_PARAM_SERVICE:
                     if ((context && config_contains_type(context, value, "service")) ||
                         service_find(value))
+                    {
+                        valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_SERVER:
+                    if ((context && config_contains_type(context, value, "server")) ||
+                        server_find_by_unique_name(value))
                     {
                         valid = true;
                     }

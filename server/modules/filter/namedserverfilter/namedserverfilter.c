@@ -72,6 +72,14 @@ typedef struct
     int active; /* Is filter active */
 } REGEXHINT_SESSION;
 
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE},
+    {"case", 0},
+    {"extended", REG_EXTENDED},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -110,6 +118,17 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"match", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"server", MXS_MODULE_PARAM_SERVER, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -134,80 +153,17 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     if (my_instance)
     {
-        my_instance->match = NULL;
-        my_instance->server = NULL;
-        my_instance->source = NULL;
-        my_instance->user = NULL;
+        my_instance->match = MXS_STRDUP_A(config_get_string(params, "match"));
+        my_instance->server = MXS_STRDUP_A(config_get_string(params, "server"));
+        my_instance->source = config_copy_string(params, "source");
+        my_instance->user = config_copy_string(params, "user");
         bool error = false;
 
-        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-        {
-            if (!strcmp(p->name, "match"))
-            {
-                my_instance->match = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "server"))
-            {
-                my_instance->server = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "source"))
-            {
-                my_instance->source = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "user"))
-            {
-                my_instance->user = MXS_STRDUP_A(p->value);
-            }
-            else if (!filter_standard_parameter(p->name))
-            {
-                MXS_ERROR("namedserverfilter: Unexpected parameter '%s'.", p->name);
-                error = true;
-            }
-        }
+        int cflags = config_get_enum(params, "options", option_values);
 
-        int cflags = REG_ICASE;
-
-        if (options)
+        if (regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            for (int i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "extended"))
-                {
-                    cflags |= REG_EXTENDED;
-                }
-                else
-                {
-                    MXS_ERROR("namedserverfilter: Unsupported option '%s'.",
-                              options[i]);
-                    error = true;
-                }
-            }
-        }
-
-        if (my_instance->match == NULL)
-        {
-            MXS_ERROR("namedserverfilter: Missing required parameters 'match'.");
-            error = true;
-        }
-
-        if (my_instance->server == NULL)
-        {
-            MXS_ERROR("namedserverfilter: Missing required parameters 'server'.");
-            error = true;
-        }
-        if (my_instance->server && my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, cflags))
-        {
-            MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.\n",
-                      my_instance->match);
+            MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.", my_instance->match);
             MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
@@ -226,8 +182,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             MXS_FREE(my_instance);
             my_instance = NULL;
         }
-
     }
+
     return (FILTER *) my_instance;
 }
 
