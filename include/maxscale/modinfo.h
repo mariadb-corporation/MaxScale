@@ -79,6 +79,12 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
 };
 
+/** Maximum and minimum values for integer types */
+#define MXS_MODULE_PARAM_COUNT_MAX "2147483647"
+#define MXS_MODULE_PARAM_COUNT_MIN "0"
+#define MXS_MODULE_PARAM_INT_MAX "2147483647"
+#define MXS_MODULE_PARAM_INT_MIN "-2147483647"
+
 /** Parameter options
  *
  * If no type is specified, the option can be used with all parameter types
