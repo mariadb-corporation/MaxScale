@@ -94,6 +94,21 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "max_resultset_rows",
+                 MXS_MODULE_PARAM_COUNT,
+                 MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
+            },
+            {
+                "max_resultset_size",
+                 MXS_MODULE_PARAM_COUNT,
+                 MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
+            },
+            {
+                "debug",
+                 MXS_MODULE_PARAM_COUNT,
+                 MAXROWS_DEFAULT_DEBUG
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -109,13 +124,6 @@ typedef struct maxrows_config
     uint32_t    max_resultset_size;
     uint32_t    debug;
 } MAXROWS_CONFIG;
-
-static const MAXROWS_CONFIG DEFAULT_CONFIG =
-{
-    MAXROWS_DEFAULT_MAX_RESULTSET_ROWS,
-    MAXROWS_DEFAULT_MAX_RESULTSET_SIZE,
-    MAXROWS_DEFAULT_DEBUG
-};
 
 typedef struct maxrows_instance
 {
@@ -182,17 +190,14 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
  */
 static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    MAXROWS_INSTANCE *cinstance = NULL;
-    MAXROWS_CONFIG config = DEFAULT_CONFIG;
+    MAXROWS_INSTANCE *cinstance = MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE));
 
-    if (process_params(options, params, &config))
+    if (cinstance)
     {
-        cinstance = MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE));
-        if (cinstance)
-        {
-            cinstance->name = name;
-            cinstance->config = config;
-        }
+        cinstance->name = name;
+        cinstance->config.max_resultset_rows = config_get_integer(params, "max_resultset_rows");
+        cinstance->config.max_resultset_size = config_get_integer(params, "max_resultset_size");
+        cinstance->config.debug = config_get_integer(params, "debug");
     }
 
     return (FILTER*)cinstance;
@@ -871,80 +876,6 @@ static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata)
     ss_dassert(csdata->res.data);
 
     return send_upstream(csdata);
-}
-
-/**
- * Processes the maxrows params
- *
- * @param options Options as passed to the filter.
- * @param params  Parameters as passed to the filter.
- * @param config  Pointer to config instance where params will be stored.
- *
- * @return True if all parameters could be processed, false otherwise.
- */
-static bool process_params(char **options, CONFIG_PARAMETER *params, MAXROWS_CONFIG* config)
-{
-    bool error = false;
-
-    for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-    {
-        /* We could add a new parameter, max_resultset_columns:
-         * This way if result has more than max_resultset_columns
-         * we return 0 result
-         */ 
-
-        if (strcmp(p->name, "max_resultset_rows") == 0)
-        {
-            int v = atoi(p->value);
-
-            if (v > 0)
-            {
-                config->max_resultset_rows = v;
-            }
-            else
-            {
-                config->max_resultset_rows = MAXROWS_DEFAULT_MAX_RESULTSET_ROWS;
-            }
-        }
-        else if (strcmp(p->name, "max_resultset_size") == 0)
-        {
-            int v = atoi(p->value);
-
-            if (v > 0)
-            {
-                config->max_resultset_size = v * 1024;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be an integer larger than 0.", p->name);
-                error = true;
-            }
-        }
-        else if (strcmp(p->name, "debug") == 0)
-        {
-            int v = atoi(p->value);
-
-            if ((v >= MAXROWS_DEBUG_MIN) && (v <= MAXROWS_DEBUG_MAX))
-            {
-                config->debug = v;
-            }
-            else
-            {
-                MXS_ERROR("The value of the configuration entry '%s' must "
-                          "be between %d and %d, inclusive.",
-                          p->name, MAXROWS_DEBUG_MIN, MAXROWS_DEBUG_MAX);
-                error = true;
-            }
-        }
-        else if (!filter_standard_parameter(p->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", p->name);
-            error = true;
-        }
-    }
-
-    return !error;
 }
 
 /**
