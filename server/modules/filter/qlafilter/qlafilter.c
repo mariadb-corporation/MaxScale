@@ -57,15 +57,18 @@
 #define CONFIG_FILE_SESSION (1 << 0) // Default value, session specific files
 #define CONFIG_FILE_UNIFIED (1 << 1) // One file shared by all sessions
 
-/* Flags for controlling extra log entry contents. The default items are
- * always on, for now.
- */
-#define LOG_DATA_SERVICE    (1 << 0)
-#define LOG_DATA_SESSION    (1 << 1)
-#define LOG_DATA_DATE       (1 << 2)
-#define LOG_DATA_USER       (1 << 3)
-#define LOG_DATA_QUERY      (1 << 4)
-#define LOG_DATA_DEFAULT (LOG_DATA_DATE | LOG_DATA_USER | LOG_DATA_QUERY)
+/* Flags for controlling extra log entry contents */
+enum log_options
+{
+    LOG_DATA_SERVICE    = (1 << 0),
+    LOG_DATA_SESSION    = (1 << 1),
+    LOG_DATA_DATE       = (1 << 2),
+    LOG_DATA_USER       = (1 << 3),
+    LOG_DATA_QUERY      = (1 << 4),
+};
+
+/** Default values for logged data */
+#define LOG_DATA_DEFAULT "date,user,query"
 
 /*
  * The filter entry points
@@ -131,6 +134,31 @@ static FILE* open_log_file(uint32_t, QLA_INSTANCE *, const char *);
 static int write_log_entry(uint32_t, FILE*, QLA_INSTANCE*, QLA_SESSION*, const char*,
                            const char*, size_t);
 
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE},
+    {"case",       0},
+    {"extended",   REG_EXTENDED},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE log_type_values[] =
+{
+    {"session", CONFIG_FILE_SESSION},
+    {"unified", CONFIG_FILE_UNIFIED},
+    {NULL}
+};
+
+static const MXS_ENUM_VALUE log_data_values[] =
+{
+    {"service", LOG_DATA_SERVICE},
+    {"session", LOG_DATA_SESSION},
+    {"date",    LOG_DATA_DATE},
+    {"user",    LOG_DATA_USER},
+    {"query",   LOG_DATA_QUERY},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -169,6 +197,59 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "match",
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                "exclude",
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                "user",
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                "source",
+                MXS_MODULE_PARAM_STRING
+            },
+            {
+                "filebase",
+                MXS_MODULE_PARAM_STRING,
+                NULL,
+                MXS_MODULE_OPT_REQUIRED
+            },
+            {
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
+            },
+            {
+                "log_type",
+                MXS_MODULE_PARAM_ENUM,
+                "session",
+                MXS_MODULE_OPT_NONE,
+                log_type_values
+            },
+            {
+                "log_data",
+                MXS_MODULE_PARAM_ENUM,
+                LOG_DATA_DEFAULT,
+                MXS_MODULE_OPT_NONE,
+                log_data_values
+            },
+            {
+                "flush",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
+            {
+                "append",
+                MXS_MODULE_PARAM_BOOL,
+                "false"
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -193,137 +274,43 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     if (my_instance)
     {
-        my_instance->append = false;
-        my_instance->filebase = NULL;
-        my_instance->flush_writes = false;
-        my_instance->log_file_data_flags = LOG_DATA_DEFAULT;
-        my_instance->log_mode_flags = 0;
-        my_instance->match = NULL;
-        my_instance->name = MXS_STRDUP(name);
-        my_instance->nomatch = NULL;
-        my_instance->source = NULL;
+        my_instance->sessions = 0;
         my_instance->unified_fp = NULL;
-        my_instance->user_name = NULL;
         my_instance->write_warning_given = false;
+        my_instance->name = MXS_STRDUP_A(name);
+        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
+        my_instance->flush_writes = config_get_bool(params, "flush");
+        my_instance->append = config_get_bool(params, "append");
+        my_instance->match = config_copy_string(params, "match");
+        my_instance->nomatch = config_copy_string(params, "exclude");
+        my_instance->source = config_copy_string(params, "source");
+        my_instance->user_name = config_copy_string(params, "user");
+        my_instance->log_file_data_flags = config_get_enum(params, "log_data", log_data_values);
+        my_instance->log_mode_flags = config_get_enum(params, "log_type", log_type_values);
         bool error = false;
 
-        if (params)
-        {
-            for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-            {
-                if (!strcmp(p->name, "match"))
-                {
-                    my_instance->match = MXS_STRDUP_A(p->value);
-                }
-                else if (!strcmp(p->name, "exclude"))
-                {
-                    my_instance->nomatch = MXS_STRDUP_A(p->value);
-                }
-                else if (!strcmp(p->name, "source"))
-                {
-                    my_instance->source = MXS_STRDUP_A(p->value);
-                }
-                else if (!strcmp(p->name, "user"))
-                {
-                    my_instance->user_name = MXS_STRDUP_A(p->value);
-                }
-                else if (!strcmp(p->name, "filebase"))
-                {
-                    my_instance->filebase = MXS_STRDUP_A(p->value);
-                }
-                else if (!filter_standard_parameter(p->name))
-                {
-                    MXS_ERROR("qlafilter: Unexpected parameter '%s'.", p->name);
-                    error = true;
-                }
-            }
-        }
+        int cflags = config_get_enum(params, "options", option_values);
 
-        int cflags = REG_ICASE;
-
-        if (options)
+        if (my_instance->match && regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            for (int i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "extended"))
-                {
-                    cflags |= REG_EXTENDED;
-                }
-                else if (!strcasecmp(options[i], "session_file"))
-                {
-                    my_instance->log_mode_flags |= CONFIG_FILE_SESSION;
-                }
-                else if (!strcasecmp(options[i], "unified_file"))
-                {
-                    my_instance->log_mode_flags |= CONFIG_FILE_UNIFIED;
-                }
-                else if (!strcasecmp(options[i], "flush_writes"))
-                {
-                    my_instance->flush_writes = true;
-                }
-                else if (!strcasecmp(options[i], "append"))
-                {
-                    my_instance->append = true;
-                }
-                else if (!strcasecmp(options[i], "print_service"))
-                {
-                    my_instance->log_file_data_flags |= LOG_DATA_SERVICE;
-                }
-                else if (!strcasecmp(options[i], "print_session"))
-                {
-                    my_instance->log_file_data_flags |= LOG_DATA_SESSION;
-                }
-                else
-                {
-                    MXS_ERROR("qlafilter: Unsupported option '%s'.",
-                              options[i]);
-                    error = true;
-                }
-            }
-        }
-        if (my_instance->log_mode_flags == 0)
-        {
-            // If nothing has been set, set a default value
-            my_instance->log_mode_flags = CONFIG_FILE_SESSION;
-        }
-        if (my_instance->filebase == NULL)
-        {
-            MXS_ERROR("qlafilter: No 'filebase' parameter defined.");
-            error = true;
-        }
-
-        my_instance->sessions = 0;
-        if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, cflags))
-        {
-            MXS_ERROR("qlafilter: Invalid regular expression '%s'"
-                      " for the 'match' parameter.\n",
-                      my_instance->match);
+            MXS_ERROR("qlafilter: Invalid regular expression '%s' for the 'match' "
+                      "parameter.", my_instance->match);
             MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
         }
-        if (my_instance->nomatch &&
-            regcomp(&my_instance->nore, my_instance->nomatch, cflags))
+
+        if (my_instance->nomatch && regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
-            MXS_ERROR("qlafilter: Invalid regular expression '%s'"
-                      " for the 'nomatch' parameter.",
-                      my_instance->nomatch);
+            MXS_ERROR("qlafilter: Invalid regular expression '%s' for the 'nomatch'"
+                      " parameter.", my_instance->nomatch);
             MXS_FREE(my_instance->nomatch);
             my_instance->nomatch = NULL;
             error = true;
         }
+
         // Try to open the unified log file
-        if (!error && (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED) &&
-            (my_instance->filebase != NULL))
+        if (!error && (my_instance->log_mode_flags & CONFIG_FILE_UNIFIED))
         {
             // First calculate filename length
             const char UNIFIED[] = ".unified";
