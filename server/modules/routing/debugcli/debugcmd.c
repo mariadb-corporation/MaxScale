@@ -635,8 +635,6 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
 static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
 static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
 static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
-static void enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
-static void disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void enable_service_root(DCB *dcb, SERVICE *service);
 static void disable_service_root(DCB *dcb, SERVICE *service);
 static void enable_feedback_action();
@@ -653,14 +651,6 @@ static void disable_account(DCB *, char *user);
  *   */
 struct subcommand enableoptions[] =
 {
-    {
-        "heartbeat",
-        1, 1,
-        enable_monitor_replication_heartbeat,
-        "Enable monitor replication heartbeat",
-        "Enable the monitor replication heartbeat, the parameter is the monitor name",
-        {ARG_TYPE_MONITOR, 0, 0}
-    },
     {
         "log",
         1, 1,
@@ -750,14 +740,6 @@ struct subcommand enableoptions[] =
  *   */
 struct subcommand disableoptions[] =
 {
-    {
-        "heartbeat",
-        1, 1,
-        disable_monitor_replication_heartbeat,
-        "Disable replication heartbeat",
-        "Disable the monitor replication heartbeat",
-        {ARG_TYPE_MONITOR, 0, 0}
-    },
     {
         "log",
         1, 1,

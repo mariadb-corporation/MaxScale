@@ -209,24 +209,27 @@ SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *er
  * the given parameters are compared to the expected ones. This function also
  * does preliminary type checking for various basic values as well as enumerations.
  *
- * @param module Module name
- * @param type Module type
+ * @param params Module parameters
  * @param key Parameter key
  * @param value Parameter value
  * @param context Configuration context or NULL for no context (uses runtime checks)
  *
  * @return True if the configuration parameter is valid
  */
-bool config_param_is_valid(const char *module, const char *type, const char *key,
+bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                            const char *value, const CONFIG_CONTEXT *context);
 
 /**
  * @brief Get a boolean value
  *
+ * The existence of the parameter should be checked with config_get_param() before
+ * calling this function to determine whether the return value represents an existing
+ * value or a missing value.
+ *
  * @param params List of configuration parameters
  * @param key Parameter name
  *
- * @return The value as a boolean
+ * @return The value as a boolean or false if none was found
  */
 bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
 
@@ -238,7 +241,7 @@ bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
  * @param params List of configuration parameters
  * @param key Parameter name
  *
- * @return The integer value of the parameter
+ * @return The integer value of the parameter or 0 if no parameter was found
  */
 int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
 
@@ -248,7 +251,7 @@ int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
  * @param params List of configuration parameters
  * @param key Parameter name
  *
- * @return The raw string value
+ * @return The raw string value or an empty string if no parameter was found
  */
 const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
 
@@ -259,9 +262,11 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
  * @param key Parameter name
  * @param values All possible enumeration values
  *
- * @return The enumeration value converted to an int
+ * @return The enumeration value converted to an int or -1 if the parameter was not found
  *
- * TODO: Allow multiple enumeration values
+ * @note The enumeration values should not use -1 so that an undefined parameter is
+ * detected. If -1 is used, config_get_param() should be used to detect whether
+ * the parameter exists
  */
 int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
 
@@ -271,12 +276,11 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
  * Adds any default parameters to @c ctx that aren't already in it.
  *
  * @param ctx    Configuration context where the parameters are added
- * @param module Module name
- * @param type   Module type
+ * @param params Module parameters
  *
  * TODO: Move this to a header internal to the MaxScale core
  */
-void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type);
+void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params);
 
 char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);

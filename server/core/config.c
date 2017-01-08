@@ -943,40 +943,46 @@ CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name)
 bool config_get_bool(const CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
-    ss_dassert(*value);
-    return config_truth_value(value);
+    return *value ? config_truth_value(value) : false;
 }
 
 int config_get_integer(const CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
-    ss_dassert(*value);
-    return strtol(value, NULL, 10);
+    return *value ? strtol(value, NULL, 10) : 0;
 }
 
 const char* config_get_string(const CONFIG_PARAMETER *params, const char *key)
 {
-    const char *value = config_get_value_string(params, key);
-    ss_dassert(*value);
-    return value;
+    return config_get_value_string(params, key);
 }
 
 int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *enum_values)
 {
     const char *value = config_get_value_string(params, key);
+    char tmp_val[strlen(value) + 1];
+    strcpy(tmp_val, value);
 
-    ss_dassert(*value);
+    int rv = 0;
+    bool found = false;
+    char *endptr;
+    const char *delim = ", \t";
+    char *tok = strtok_r(tmp_val, delim, &endptr);
 
-    for (int i = 0; enum_values[i].name; i++)
+    while (tok)
     {
-        if (strcmp(enum_values[i].name, value) == 0)
+        for (int i = 0; enum_values[i].name; i++)
         {
-            return enum_values[i].enum_value;
+            if (strcmp(enum_values[i].name, tok) == 0)
+            {
+                found = true;
+                rv |= enum_values[i].enum_value;
+            }
         }
+        tok = strtok_r(NULL, delim, &endptr);
     }
 
-    ss_dassert(false);
-    return -1;
+    return found ? rv : -1;
 }
 
 CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
@@ -1715,22 +1721,19 @@ process_config_update(CONFIG_CONTEXT *context)
  * @param params List of parameters for the object
  * @return True if at least one of the required parameters is missing
  */
-static bool missing_required_parameters(const char *name, const char *type,
+static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
                                         CONFIG_PARAMETER *params)
 {
     bool rval = false;
 
-    const MXS_MODULE *mod = get_module(name, type);
-
-    if (mod)
+    if (mod_params)
     {
-        for (int i = 0; mod->parameters[i].name; i++)
+        for (int i = 0; mod_params[i].name; i++)
         {
-            if ((mod->parameters[i].options & MXS_MODULE_OPT_REQUIRED) &&
-                config_get_param(params, mod->parameters[i].name) == NULL)
+            if ((mod_params[i].options & MXS_MODULE_OPT_REQUIRED) &&
+                config_get_param(params, mod_params[i].name) == NULL)
             {
-                MXS_ERROR("Mandatory parameter '%s' for module '%s' of type %s is not defined.",
-                          mod->parameters[i].name, name, type);
+                MXS_ERROR("Mandatory parameter '%s' is not defined.", mod_params[i].name);
                 rval = true;
             }
         }
@@ -1785,6 +1788,8 @@ check_config_objects(CONFIG_CONTEXT *context)
             }
         }
 
+        const MXS_MODULE *mod = module ? get_module(module, module_type) : NULL;
+
         if (param_set != NULL)
         {
             CONFIG_PARAMETER *params = obj->parameters;
@@ -1801,8 +1806,8 @@ check_config_objects(CONFIG_CONTEXT *context)
 
                 if (found == 0)
                 {
-                    if (module == NULL ||
-                        !config_param_is_valid(module, module_type, params->name, params->value, context))
+                    if (mod == NULL ||
+                        !config_param_is_valid(mod->parameters, params->name, params->value, context))
                     {
                         MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
                                   params->name, obj->object, type);
@@ -1813,8 +1818,7 @@ check_config_objects(CONFIG_CONTEXT *context)
             }
         }
 
-        if (module && module_type &&
-            missing_required_parameters(module, module_type, obj->parameters))
+        if (mod && missing_required_parameters(mod->parameters, obj->parameters))
         {
             rval = false;
         }
@@ -2384,22 +2388,19 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
  * @param ctx Configuration context where the default parameters are added
  * @param module Name of the module
  */
-void config_add_defaults(CONFIG_CONTEXT *ctx, const char *module, const char *type)
+void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
 {
-    const MXS_MODULE *mod = get_module(module, type);
-
-    if (mod)
+    if (params)
     {
-        for (int i = 0; mod->parameters[i].name; i++)
+        for (int i = 0; params[i].name; i++)
         {
-            if (mod->parameters[i].default_value &&
-                config_get_param(ctx->parameters, mod->parameters[i].name) == NULL)
+            if (params[i].default_value &&
+                config_get_param(ctx->parameters, params[i].name) == NULL)
             {
-                ss_dassert(config_param_is_valid(module, type, mod->parameters[i].name,
-                                                 mod->parameters[i].default_value, ctx));
+                ss_dassert(config_param_is_valid(params, params[i].name,
+                                                 params[i].default_value, ctx));
 
-                bool rv = config_add_param(ctx, mod->parameters[i].name,
-                                           mod->parameters[i].default_value);
+                bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
                 MXS_ABORT_IF_FALSE(rv);
             }
         }
@@ -2541,8 +2542,17 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
 
     /** Store the configuration parameters for the service */
-    config_add_defaults(obj, router, MODULE_ROUTER);
-    service_add_parameters(obj->element, obj->parameters);
+    const MXS_MODULE *mod = get_module(router, MODULE_ROUTER);
+
+    if (mod)
+    {
+        config_add_defaults(obj, mod->parameters);
+        service_add_parameters(obj->element, obj->parameters);
+    }
+    else
+    {
+        error_count++;
+    }
 
     return error_count;
 }
@@ -2772,8 +2782,17 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
     if (error_count == 0)
     {
-        config_add_defaults(obj, module, MODULE_MONITOR);
-        monitorAddParameters(obj->element, obj->parameters);
+        const MXS_MODULE *mod = get_module(module, MODULE_MONITOR);
+
+        if (mod)
+        {
+            config_add_defaults(obj, mod->parameters);
+            monitorAddParameters(obj->element, obj->parameters);
+        }
+        else
+        {
+            error_count++;
+        }
 
         char *interval_str = config_get_value(obj->parameters, "monitor_interval");
         if (interval_str)
@@ -2985,7 +3004,17 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 }
             }
 
-            config_add_defaults(obj, module, MODULE_FILTER);
+            const MXS_MODULE *mod = get_module(module, MODULE_FILTER);
+
+            if (mod)
+            {
+                config_add_defaults(obj, mod->parameters);
+            }
+            else
+            {
+                error_count++;
+            }
+
             CONFIG_PARAMETER *params = obj->parameters;
 
             while (params)
@@ -3064,116 +3093,112 @@ static bool config_contains_type(const CONFIG_CONTEXT *ctx, const char *name, co
     return false;
 }
 
-bool config_param_is_valid(const char *module, const char *type, const char *key,
+bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                            const char *value, const CONFIG_CONTEXT *context)
 {
     bool valid = false;
-    const MXS_MODULE *mod = get_module(module, type);
 
-    if (mod)
+    for (int i = 0; params[i].name && !valid; i++)
     {
-        for (int i = 0; mod->parameters[i].name && !valid; i++)
+        if (strcmp(params[i].name, key) == 0)
         {
-            if (strcmp(mod->parameters[i].name, key) == 0)
+            char *endptr;
+
+            switch (params[i].type)
             {
-                char *endptr;
+                case MXS_MODULE_PARAM_COUNT:
+                    if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
+                    {
+                        valid = true;
+                    }
+                    break;
 
-                switch (mod->parameters[i].type)
-                {
-                    case MXS_MODULE_PARAM_COUNT:
-                        if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
+                case MXS_MODULE_PARAM_INT:
+                    strtol(value, &endptr, 10);
+                    if (endptr != value && *endptr == '\0')
+                    {
+                        valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_BOOL:
+                    if (config_truth_value(value) != -1)
+                    {
+                        valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_STRING:
+                    if (*value)
+                    {
+                        valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_ENUM:
+                    if (params[i].accepted_values)
+                    {
+                        for (int j = 0; params[i].accepted_values[j].name; j++)
                         {
-                            valid = true;
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_INT:
-                        strtol(value, &endptr, 10);
-                        if (endptr != value && *endptr == '\0')
-                        {
-                            valid = true;
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_BOOL:
-                        if (config_truth_value(value) != -1)
-                        {
-                            valid = true;
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_STRING:
-                        if (*value)
-                        {
-                            valid = true;
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_ENUM:
-                        if (mod->parameters[i].accepted_values)
-                        {
-                            for (int j = 0; mod->parameters[i].accepted_values[j].name; j++)
-                            {
-                                if (strcmp(mod->parameters[i].accepted_values[j].name, value) == 0)
-                                {
-                                    valid = true;
-                                    break;
-                                }
-                            }
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_SERVICE:
-                        if ((context && config_contains_type(context, "service", value)) ||
-                            service_find(value))
-                        {
-                            valid = true;
-                        }
-                        break;
-
-                    case MXS_MODULE_PARAM_PATH:
-                        if (mod->parameters[i].options & (MXS_MODULE_OPT_PATH_W_OK |
-                                                          MXS_MODULE_OPT_PATH_R_OK |
-                                                          MXS_MODULE_OPT_PATH_X_OK |
-                                                          MXS_MODULE_OPT_PATH_F_OK))
-                        {
-                            int mode = F_OK;
-                            if (mod->parameters[i].options & MXS_MODULE_OPT_PATH_W_OK)
-                            {
-                                mode |= W_OK;
-                            }
-                            if (mod->parameters[i].options & MXS_MODULE_OPT_PATH_R_OK)
-                            {
-                                mode |= R_OK;
-                            }
-                            if (mod->parameters[i].options & MXS_MODULE_OPT_PATH_X_OK)
-                            {
-                                mode |= X_OK;
-                            }
-
-                            if (access(value, mode) == 0)
+                            if (strcmp(params[i].accepted_values[j].name, value) == 0)
                             {
                                 valid = true;
+                                break;
                             }
-                            else
-                            {
-                                char err[MXS_STRERROR_BUFLEN];
-                                MXS_ERROR("Bad path parameter '%s': %d, %s", value,
-                                          errno, strerror_r(errno, err, sizeof(err)));
-                            }
+                        }
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_SERVICE:
+                    if ((context && config_contains_type(context, value, "service")) ||
+                        service_find(value))
+                    {
+                        valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_PATH:
+                    if (params[i].options & (MXS_MODULE_OPT_PATH_W_OK |
+                                             MXS_MODULE_OPT_PATH_R_OK |
+                                             MXS_MODULE_OPT_PATH_X_OK |
+                                             MXS_MODULE_OPT_PATH_F_OK))
+                    {
+                        int mode = F_OK;
+                        if (params[i].options & MXS_MODULE_OPT_PATH_W_OK)
+                        {
+                            mode |= W_OK;
+                        }
+                        if (params[i].options & MXS_MODULE_OPT_PATH_R_OK)
+                        {
+                            mode |= R_OK;
+                        }
+                        if (params[i].options & MXS_MODULE_OPT_PATH_X_OK)
+                        {
+                            mode |= X_OK;
+                        }
+
+                        if (access(value, mode) == 0)
+                        {
+                            valid = true;
                         }
                         else
                         {
-                            /** No checks for the path are required */
-                            valid = true;
+                            char err[MXS_STRERROR_BUFLEN];
+                            MXS_ERROR("Bad path parameter '%s': %d, %s", value,
+                                      errno, strerror_r(errno, err, sizeof(err)));
                         }
-                        break;
+                    }
+                    else
+                    {
+                        /** No checks for the path are required */
+                        valid = true;
+                    }
+                    break;
 
-                    default:
-                        MXS_ERROR("Unexpected module parameter type: %d", mod->parameters[i].type);
-                        ss_dassert(false);
-                        break;
-                }
+                default:
+                    MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
+                    ss_dassert(false);
+                    break;
             }
         }
     }

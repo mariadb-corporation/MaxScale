@@ -347,9 +347,19 @@ static void add_monitor_defaults(MONITOR *monitor)
     /** Inject the default module parameters in case we only deleted
      * a parameter */
     CONFIG_CONTEXT ctx = {.object = ""};
-    config_add_defaults(&ctx, monitor->module_name, MODULE_MONITOR);
-    monitorAddParameters(monitor, ctx.parameters);
-    config_parameter_free(ctx.parameters);
+    const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
+
+    if (mod)
+    {
+        config_add_defaults(&ctx, mod->parameters);
+        monitorAddParameters(monitor, ctx.parameters);
+        config_parameter_free(ctx.parameters);
+    }
+    else
+    {
+        MXS_ERROR("Failed to load module '%s'. See previous error messages for more details.",
+                  monitor->module_name);
+    }
 }
 
 bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
