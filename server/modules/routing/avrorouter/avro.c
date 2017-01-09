@@ -497,7 +497,7 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("No 'binlogdir' option found in source service, in parameters or in router_options.");
         err = true;
     }
-    else
+    else if (ensure_dir_ok(inst->binlogdir, R_OK) && ensure_dir_ok(inst->avrodir, W_OK))
     {
         snprintf(inst->binlog_name, sizeof(inst->binlog_name), BINLOG_NAMEFMT, inst->fileroot, first_file);
         inst->prevbinlog[0] = '\0';
