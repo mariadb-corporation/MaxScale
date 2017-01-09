@@ -3164,13 +3164,25 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 case MXS_MODULE_PARAM_ENUM:
                     if (params[i].accepted_values)
                     {
-                        for (int j = 0; params[i].accepted_values[j].name; j++)
+                        char *endptr;
+                        const char *delim = ", \t";
+                        char buf[strlen(value) + 1];
+                        strcpy(buf, value);
+                        char *tok = strtok_r(buf, delim, &endptr);
+
+                        while (tok)
                         {
-                            if (strcmp(params[i].accepted_values[j].name, value) == 0)
+                            valid = false;
+
+                            for (int j = 0; params[i].accepted_values[j].name; j++)
                             {
-                                valid = true;
-                                break;
+                                if (strcmp(params[i].accepted_values[j].name, tok) == 0)
+                                {
+                                    valid = true;
+                                    break;
+                                }
                             }
+                            tok = strtok_r(NULL, delim, &endptr);
                         }
                     }
                     break;
