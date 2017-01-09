@@ -82,6 +82,13 @@ typedef struct
 void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new);
 void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
 
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", PCRE2_CASELESS},
+    {"case",       0},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -120,6 +127,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"match", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"replace", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {"log_trace", MXS_MODULE_PARAM_BOOL, "false"},
+            {"log_file", MXS_MODULE_PARAM_STRING},
+            {"option", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -166,93 +180,34 @@ void free_instance(REGEX_INSTANCE *instance)
 static FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    REGEX_INSTANCE *my_instance;
-    int i, errnumber, cflags = PCRE2_CASELESS;
-    PCRE2_SIZE erroffset;
-    char *logfile = NULL;
-    const char *errmsg;
+    REGEX_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(REGEX_INSTANCE));
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(REGEX_INSTANCE))) != NULL)
+    if (my_instance)
     {
-        my_instance->match = NULL;
-        my_instance->replace = NULL;
+        my_instance->match = MXS_STRDUP_A(config_get_string(params, "match"));
+        my_instance->replace = MXS_STRDUP_A(config_get_string(params, "replace"));
+        my_instance->source = config_copy_string(params, "source");
+        my_instance->user = config_copy_string(params, "user");
+        my_instance->log_trace = config_get_bool(params, "log_trace");
 
-        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-        {
-            if (!strcmp(p->name, "match"))
-            {
-                my_instance->match = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "replace"))
-            {
-                my_instance->replace = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "source"))
-            {
-                my_instance->source = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "user"))
-            {
-                my_instance->user = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "log_trace"))
-            {
-                my_instance->log_trace = config_truth_value(p->value);
-            }
-            else if (!strcmp(p->name, "log_file"))
-            {
-                if (logfile)
-                {
-                    MXS_FREE(logfile);
-                }
-                logfile = MXS_STRDUP_A(p->value);
-            }
-            else if (!filter_standard_parameter(p->name))
-            {
-                MXS_ERROR("regexfilter: Unexpected parameter '%s'.", p->name);
-            }
-        }
+        const char *logfile = config_get_string(params, "log_file");
 
-        if (options)
-        {
-            for (i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= PCRE2_CASELESS;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~PCRE2_CASELESS;
-                }
-                else
-                {
-                    MXS_ERROR("regexfilter: unsupported option '%s'.",
-                              options[i]);
-                }
-            }
-        }
-
-        if (logfile != NULL)
+        if (*logfile)
         {
             if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
             {
                 MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
                 free_instance(my_instance);
-                MXS_FREE(logfile);
                 return NULL;
             }
 
             fprintf(my_instance->logfile, "\nOpened regex filter log\n");
             fflush(my_instance->logfile);
         }
-        MXS_FREE(logfile);
 
-        if (my_instance->match == NULL || my_instance->replace == NULL)
-        {
-            free_instance(my_instance);
-            return NULL;
-        }
+        int errnumber;
+        PCRE2_SIZE erroffset;
+        int cflags = config_get_enum(params, "options", option_values);
 
         if ((my_instance->re = pcre2_compile((PCRE2_SPTR) my_instance->match,
                                              PCRE2_ZERO_TERMINATED,
@@ -278,6 +233,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             return NULL;
         }
     }
+
     return (FILTER *) my_instance;
 }
 
