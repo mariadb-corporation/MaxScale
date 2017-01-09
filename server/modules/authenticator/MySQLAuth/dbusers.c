@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <mysql.h>
+#include <netdb.h>
 
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
@@ -52,6 +53,7 @@
 #include <regex.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
+#include <maxscale/modutil.h>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
@@ -151,6 +153,7 @@ static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key);
 static void uh_keyfree(MYSQL_USER_HOST* key);
 static int wildcard_db_grant(char* str);
 static void merge_netmask(char *host);
+static bool wildcard_domain_match(const char* host1, const char* host2);
 
 /**
  * Get the user data query with databases
@@ -424,9 +427,12 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
         strcpy(ret_ip, "0.0.0.0");
         key.netmask = 0;
     }
-    else if (strnlen(host, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN &&
-             is_ipaddress(host) &&
-             host_has_singlechar_wildcard(host))
+    else if ((strnlen(host, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN) &&
+            /** The host is an ip-address and has a '_'-wildcard but not '%'
+             * (combination of both is invalid). */
+            ((is_ipaddress(host) && host_has_singlechar_wildcard(host)) ||
+            /** The host is not an ip-address and has a '%'- or '_'-wildcard (or both). */
+              (!is_ipaddress(host) && strpbrk(host, "%_"))))
     {
         strcpy(key.hostname, host);
         strcpy(ret_ip, "0.0.0.0");
@@ -1756,10 +1762,13 @@ static int uh_cmpfun(const void* v1, const void* v2)
 
     if ((strcmp(hu1->user, hu2->user) == 0) &&
         /** Check for wildcard hostnames */
-        ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
+       ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
          /** If no wildcard hostname is stored, check for network address. */
-         (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) &&
-          (hu1->netmask >= hu2->netmask))))
+        (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) &&
+          (hu1->netmask >= hu2->netmask)) ||
+         /** Finally, one of the hostnames may be a domain name with wildcards
+             while the other is an IP-address. This requires a DNS-lookup. */
+        (wildcard_host && wildcard_domain_match(hu1->hostname, hu2->hostname))))
     {
         /* if no database name was passed, auth is ok */
         if (hu1->resource == NULL || (hu1->resource && !strlen(hu1->resource)))
@@ -2691,6 +2700,7 @@ bool check_service_permissions(SERVICE* service)
 
     return rval;
 }
+
 /**
  * If the hostname is of form a.b.c.d/e.f.g.h where e-h is 255 or 0, replace
  * the zeros in the first part with '%' and remove the second part. This does
@@ -2752,4 +2762,96 @@ static void merge_netmask(char *host)
         MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
                 "Merge incomplete: %s", host);
     }
+}
+
+/**
+ * @brief Check if an ip matches a wildcard hostname.
+ *
+ * One of the parameters should be an IP-address without wildcards, the other a
+ * hostname with wildcards. The hostname corresponding to the ip-address will be
+ * looked up and compared to the hostname with wildcard(s). Any error in the
+ * parameters or looking up the hostname will result in a false match.
+ *
+ * @param ip-address or a hostname with wildcard(s)
+ * @param ip-address or a hostname with wildcard(s)
+ * @return True if the host represented by the IP matches the wildcard string
+ */
+static bool wildcard_domain_match(const char *host1, const char *host2)
+{
+    ss_dassert(host1 && host2);
+
+    /* One of the parameters must be a valid IP, the other should be a domain name,
+     * with wildcard characters '%' and/or '_'.
+     */
+    const char *ip_address;
+    const char *wc_domain;
+
+    if (is_ipaddress(host1) && !strpbrk(host1, "%_") && !is_ipaddress(host2) &&
+            strpbrk(host2, "%_"))
+    {
+        ip_address = host1;
+        wc_domain = host2;
+    }
+    else if(is_ipaddress(host2) && !strpbrk(host2, "%_") && !is_ipaddress(host1) &&
+            strpbrk(host1, "%_"))
+    {
+        ip_address = host2;
+        wc_domain = host1;
+    }
+    else
+    {
+        /* TODO: When/if this function is refactored out from hashmap, enable
+         * this error message.
+         * MXS_ERROR("Invalid parameters: one must be an IP-address and the other a "
+         *       "hostname with wildcards. P1: '%s', P2: '%s'.", host1, host2);
+         * */
+        return false;
+    }
+
+    /* Looks like the parameters are valid. First, convert the client IP string
+     * to binary form. This is somewhat silly, since just a while ago we had the
+     * binary address but had to zero it. dbusers.c should be refactored to fix this.
+     */
+    struct sockaddr_in bin_address;
+    bin_address.sin_family = AF_INET;
+    if (inet_pton(bin_address.sin_family, ip_address, &(bin_address.sin_addr)) != 1)
+    {
+        MXS_ERROR("Could not convert to binary ip-address: '%s'.", ip_address);
+        return false;
+    }
+
+    /* Try to lookup the domain name of the given IP-address. This is a slow
+     * i/o-operation, which will stall the entire thread. TODO: cache results
+     * if this feature is used often.
+     */
+    MXS_DEBUG("Resolving '%s'", ip_address);
+    char client_hostname[MYSQL_HOST_MAXLEN];
+    int lookup_result = getnameinfo(
+            (struct sockaddr*)&bin_address, sizeof(struct sockaddr_in),
+            client_hostname, sizeof(client_hostname),
+            NULL, 0, // No need for the port
+            NI_NAMEREQD); // Text address only
+
+    if (lookup_result != 0)
+    {
+        MXS_ERROR("Client hostname lookup failed, getnameinfo() returned: '%s'.",
+                gai_strerror(lookup_result));
+    }
+    else
+    {
+        MXS_DEBUG("IP-lookup success, hostname is: '%s'", client_hostname);
+        /* We have a host name, try to match regular expression.
+         * modutil_mysql_wildcard_match() translates sql-wildcards to pcre2-format. */
+        mxs_pcre2_result_t regex_result = modutil_mysql_wildcard_match(wc_domain,
+                client_hostname);
+        if (regex_result == MXS_PCRE2_MATCH)
+        {
+            return true;
+        }
+        else if(regex_result == MXS_PCRE2_ERROR)
+        {
+            MXS_ERROR("Malformed host name for regex matching: '%s'.", wc_domain);
+        }
+    }
+    return false;
 }
