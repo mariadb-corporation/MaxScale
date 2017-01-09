@@ -115,6 +115,14 @@ typedef struct
     struct timeval disconnect;
 } TOPN_SESSION;
 
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE},
+    {"case",       0},
+    {"extended",   REG_EXTENDED},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -153,6 +161,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"count", MXS_MODULE_PARAM_COUNT, "10"},
+            {"filebase", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"match", MXS_MODULE_PARAM_STRING},
+            {"exclude", MXS_MODULE_PARAM_STRING},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {
+                "options",
+                 MXS_MODULE_PARAM_ENUM,
+                 "ignorecase",
+                 MXS_MODULE_OPT_NONE,
+                 option_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -176,81 +197,17 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     if (my_instance)
     {
-        my_instance->topN = 10;
-        my_instance->match = NULL;
-        my_instance->exclude = NULL;
-        my_instance->source = NULL;
-        my_instance->user = NULL;
-        my_instance->filebase = NULL;
+        my_instance->sessions = 0;
+        my_instance->topN = config_get_integer(params, "count");
+        my_instance->match = config_copy_string(params, "match");
+        my_instance->exclude = config_copy_string(params, "exclude");
+        my_instance->source = config_copy_string(params, "source");
+        my_instance->user = config_copy_string(params, "user");
+        my_instance->filebase = MXS_STRDUP_A(config_get_string(params, "filebase"));
+
+        int cflags = config_get_enum(params, "options", option_values);
         bool error = false;
 
-        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-        {
-            if (!strcmp(p->name, "count"))
-            {
-                my_instance->topN = atoi(p->value);
-            }
-            else if (!strcmp(p->name, "filebase"))
-            {
-                my_instance->filebase = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "match"))
-            {
-                my_instance->match = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "exclude"))
-            {
-                my_instance->exclude = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "source"))
-            {
-                my_instance->source = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "user"))
-            {
-                my_instance->user = MXS_STRDUP_A(p->value);
-            }
-            else if (!filter_standard_parameter(p->name))
-            {
-                MXS_ERROR("topfilter: Unexpected parameter '%s'.", p->name);
-                error = true;
-            }
-        }
-
-        int cflags = REG_ICASE;
-
-        if (options)
-        {
-            for (int i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "extended"))
-                {
-                    cflags |= REG_EXTENDED;
-                }
-                else
-                {
-                    MXS_ERROR("topfilter: Unsupported option '%s'.",
-                              options[i]);
-                    error = true;
-                }
-            }
-        }
-
-        if (my_instance->filebase == NULL)
-        {
-            MXS_ERROR("topfilter: No 'filebase' parameter defined.");
-            error = true;
-        }
-
-        my_instance->sessions = 0;
         if (my_instance->match &&
             regcomp(&my_instance->re, my_instance->match, cflags))
         {
@@ -293,6 +250,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             my_instance = NULL;
         }
     }
+
     return (FILTER *) my_instance;
 }
 

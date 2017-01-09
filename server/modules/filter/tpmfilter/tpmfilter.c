@@ -40,6 +40,8 @@
  * @endverbatim
  */
 
+#include <maxscale/cdefs.h>
+
 #include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -60,18 +62,15 @@
 #include <maxscale/atomic.h>
 #include <maxscale/query_classifier.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
+/* The maximum size for query statements in a transaction (64MB) */
+static size_t sql_size_limit = 64 * 1024 * 1024;
 
-static size_t buf_size = 10;
-static size_t sql_size_limit = 64 * 1024 *
-                               1024; /* The maximum size for query statements in a transaction (64MB) */
 static const int default_sql_size = 4 * 1024;
-static const char* default_query_delimiter = "@@@";
-static const char* default_log_delimiter = ":::";
-static const char* default_file_name = "tpm.log";
-static const char* default_named_pipe = "/tmp/tpmfilter";
+
+#define DEFAULT_QUERY_DELIMITER "@@@"
+#define DEFAULT_LOG_DELIMITER   ":::"
+#define DEFAULT_FILE_NAME       "tpm.log"
+#define DEFAULT_NAMED_PIPE       "/tmp/tpmfilter"
 
 /*
  * The filter entry points
@@ -172,6 +171,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"named_pipe", MXS_MODULE_PARAM_STRING, DEFAULT_NAMED_PIPE},
+            {"filename", MXS_MODULE_PARAM_STRING, DEFAULT_FILE_NAME},
+            {"delimiter", MXS_MODULE_PARAM_STRING, DEFAULT_LOG_DELIMITER},
+            {"query_delimiter", MXS_MODULE_PARAM_STRING, DEFAULT_QUERY_DELIMITER},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -188,131 +193,95 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  FILTER  *
+static FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    int     i, ret;
-    TPM_INSTANCE    *my_instance;
+    TPM_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TPM_INSTANCE));
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(TPM_INSTANCE))) != NULL)
+    if (my_instance)
     {
-        my_instance->source = NULL;
-        my_instance->user = NULL;
-        my_instance->log_enabled = false;
-
-        /* set default log filename */
-        my_instance->filename = MXS_STRDUP_A(default_file_name);
-        /* set default delimiter */
-        my_instance->delimiter = MXS_STRDUP_A(default_log_delimiter);
-        /* set default query delimiter */
-        my_instance->query_delimiter = MXS_STRDUP_A(default_query_delimiter);
-        my_instance->query_delimiter_size = 3;
-        /* set default named pipe */
-        my_instance->named_pipe = MXS_STRDUP_A(default_named_pipe);
-
-        for (const CONFIG_PARAMETER *p = params; p; p = p->next)
-        {
-            if (!strcmp(p->name, "filename"))
-            {
-                MXS_FREE(my_instance->filename);
-                my_instance->filename = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "source"))
-            {
-                my_instance->source = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "user"))
-            {
-                my_instance->user = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "delimiter"))
-            {
-                MXS_FREE(my_instance->delimiter);
-                my_instance->delimiter = MXS_STRDUP_A(p->value);
-            }
-            else if (!strcmp(p->name, "query_delimiter"))
-            {
-                MXS_FREE(my_instance->query_delimiter);
-                my_instance->query_delimiter = MXS_STRDUP_A(p->value);
-                my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
-            }
-            else if (!strcmp(p->name, "named_pipe"))
-            {
-                if (p->value == NULL)
-                {
-                    MXS_ERROR("You need to specify 'named_pipe' for tpmfilter.");
-                    MXS_FREE(my_instance);
-                    return NULL;
-                }
-                else
-                {
-                    my_instance->named_pipe = MXS_STRDUP_A(p->value);
-                    // check if the file exists first.
-                    if (access(my_instance->named_pipe, F_OK) == 0)
-                    {
-                        // if exists, check if it is a named pipe.
-                        struct stat st;
-                        ret = stat(my_instance->named_pipe, &st);
-
-                        // check whether the file is named pipe.
-                        if (ret == -1 && errno != ENOENT)
-                        {
-                            MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
-                            MXS_FREE(my_instance);
-                            return NULL;
-                        }
-                        if (ret == 0 && S_ISFIFO(st.st_mode))
-                        {
-                            // if it is a named pipe, we delete it and recreate it.
-                            unlink(my_instance->named_pipe);
-                        }
-                        else
-                        {
-                            MXS_ERROR("The file '%s' already exists and it is not a named pipe.", my_instance->named_pipe);
-                            MXS_FREE(my_instance);
-                            return NULL;
-                        }
-                    }
-
-                    // now create the named pipe.
-                    ret = mkfifo(my_instance->named_pipe, 0660);
-                    if (ret == -1)
-                    {
-                        MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
-                        MXS_FREE(my_instance);
-                        return NULL;
-                    }
-                }
-            }
-        }
-        if (my_instance->named_pipe == NULL)
-        {
-            MXS_ERROR("You need to specify 'named_pipe' for tpmfilter.");
-            MXS_FREE(my_instance);
-            return NULL;
-        }
         my_instance->sessions = 0;
+        my_instance->log_enabled = false;
+        my_instance->filename = MXS_STRDUP_A(config_get_string(params, "filename"));
+        my_instance->delimiter = MXS_STRDUP_A(config_get_string(params, "delimiter"));
+        my_instance->query_delimiter = MXS_STRDUP_A(config_get_string(params, "query_delimiter"));
+        my_instance->query_delimiter_size = strlen(my_instance->query_delimiter);
+        my_instance->named_pipe = MXS_STRDUP_A(config_get_string(params, "named_pipe"));
+        my_instance->source = config_copy_string(params, "source");
+        my_instance->user = config_copy_string(params, "user");
+
+        bool error = false;
+
+        // check if the file exists first.
+        if (access(my_instance->named_pipe, F_OK) == 0)
+        {
+            // if exists, check if it is a named pipe.
+            struct stat st;
+            int ret = stat(my_instance->named_pipe, &st);
+
+            // check whether the file is named pipe.
+            if (ret == -1 && errno != ENOENT)
+            {
+                MXS_ERROR("stat() failed on named pipe: %s", strerror(errno));
+                error = true;
+            }
+            else if (ret == 0 && S_ISFIFO(st.st_mode))
+            {
+                // if it is a named pipe, we delete it and recreate it.
+                unlink(my_instance->named_pipe);
+            }
+            else
+            {
+                MXS_ERROR("The file '%s' already exists and it is not "
+                          "a named pipe.", my_instance->named_pipe);
+                error = true;
+            }
+        }
+
+        // now create the named pipe.
+        if (mkfifo(my_instance->named_pipe, 0660) == -1)
+        {
+            MXS_ERROR("mkfifo() failed on named pipe: %s", strerror(errno));
+            error = true;
+        }
+
+
         my_instance->fp = fopen(my_instance->filename, "w");
+
         if (my_instance->fp == NULL)
         {
-            MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s", my_instance->filename, errno,
-                      strerror(errno));
-            return NULL;
+            MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s",
+                      my_instance->filename, errno, strerror(errno));
+            error = true;
+        }
+
+        /*
+         * Launch a thread that checks the named pipe.
+         */
+        THREAD thread;
+        if (!error && thread_start(&thread, checkNamedPipe, (void*)my_instance) == NULL)
+        {
+            MXS_ERROR("Couldn't create a thread to check the named pipe: %s", strerror(errno));
+            error = true;
+        }
+
+        if (error)
+        {
+            MXS_FREE(my_instance->delimiter);
+            MXS_FREE(my_instance->filename);
+            MXS_FREE(my_instance->named_pipe);
+            MXS_FREE(my_instance->query_delimiter);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance->user);
+            if (my_instance->fp)
+            {
+                fclose(my_instance->fp);
+            }
+            MXS_FREE(my_instance);
         }
     }
 
-    /*
-     * Launch a thread that checks the named pipe.
-     */
-    THREAD thread;
-    if (thread_start(&thread, checkNamedPipe, (void*) my_instance) == NULL)
-    {
-        MXS_ERROR("Couldn't create a thread to check the named pipe: %s", strerror(errno));
-        MXS_FREE(my_instance);
-        return NULL;
-    }
-
-    return (FILTER *)my_instance;
+    return(FILTER *)my_instance;
 }
 
 /**
@@ -339,7 +308,6 @@ newSession(FILTER *instance, SESSION *session)
         my_session->max_sql_size = default_sql_size; // default max query size of 4k.
         my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
         memset(my_session->sql, 0x00, my_session->max_sql_size);
-        my_session->buf = (char*)MXS_CALLOC(buf_size, sizeof(char));
         my_session->sql_index = 0;
         my_session->n_statements = 0;
         my_session->total.tv_sec = 0;
@@ -411,7 +379,6 @@ freeSession(FILTER *instance, void *session)
     MXS_FREE(my_session->clientHost);
     MXS_FREE(my_session->userName);
     MXS_FREE(my_session->sql);
-    MXS_FREE(my_session->buf);
     MXS_FREE(session);
     return;
 }
