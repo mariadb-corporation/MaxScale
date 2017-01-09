@@ -286,13 +286,13 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
     }
     else
     {
-        if (!serverRemoveParameter(server, key) && !value[0])
+        if (!server_remove_parameter(server, key) && !value[0])
         {
             valid = false;
         }
         else if (value[0])
         {
-            serverAddParameter(server, key, value);
+            server_add_parameter(server, key, value);
 
             /**
              * It's likely that this parameter is used as a weighting parameter.

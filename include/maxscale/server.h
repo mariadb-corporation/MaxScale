@@ -13,32 +13,9 @@
  */
 
 /**
- * @file service.h
+ * @file server.h
  *
  * The server level definitions within the gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 14/06/13     Mark Riddoch            Initial implementation
- * 21/06/13     Mark Riddoch            Addition of server status flags
- * 22/07/13     Mark Riddoch            Addition of JOINED status for Galera
- * 18/05/14     Mark Riddoch            Addition of unique_name field
- * 20/05/14     Massimiliano Pinto      Addition of server_string field
- * 20/05/14     Massimiliano Pinto      Addition of node_id field
- * 23/05/14     Massimiliano Pinto      Addition of rlag and node_ts fields
- * 03/06/14     Mark Riddoch            Addition of maintainance mode
- * 20/06/14     Massimiliano Pinto      Addition of master_id, depth, slaves fields
- * 26/06/14     Mark Riddoch            Adidtion of server parameters
- * 30/07/14     Massimiliano Pinto      Addition of NDB status for MySQL Cluster
- * 30/08/14     Massimiliano Pinto      Addition of SERVER_STALE_STATUS
- * 27/10/14     Massimiliano Pinto      Addition of SERVER_MASTER_STICKINESS
- * 19/02/15     Mark Riddoch            Addition of serverGetList
- * 01/06/15     Massimiliano Pinto      Addition of server_update_address/port
- * 19/06/15     Martin Brampton         Extra fields for persistent connections, CHK_SERVER
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
@@ -54,7 +31,6 @@ MXS_BEGIN_DECLS
 
 /**
  * The server parameters used for weighting routing decissions
- *
  */
 typedef struct server_params
 {
@@ -66,7 +42,6 @@ typedef struct server_params
 
 /**
  * The server statistics structure
- *
  */
 typedef struct
 {
@@ -262,7 +237,7 @@ bool server_serialize(const SERVER *server);
  * @param name Parameter name
  * @param value Parameter value
  */
-void serverAddParameter(SERVER *server, const char *name, const char *value);
+void server_add_parameter(SERVER *server, const char *name, const char *value);
 
 /**
  * @brief Remove a server parameter
@@ -271,34 +246,34 @@ void serverAddParameter(SERVER *server, const char *name, const char *value);
  * @param name The name of the parameter to remove
  * @return True if a parameter was removed
  */
-bool serverRemoveParameter(SERVER *server, const char *name);
+bool server_remove_parameter(SERVER *server, const char *name);
 
-extern int server_free(SERVER *);
+extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
-extern SERVER *server_find(char *, unsigned short);
-extern void printServer(SERVER *);
+extern SERVER *server_find(const char *servname, unsigned short port);
+extern char *server_status(const SERVER *);
+extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
+extern void server_set_status_nolock(SERVER *server, int bit);
+extern void server_clear_status_nolock(SERVER *server, int bit);
+extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
+extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
+extern const char *server_get_parameter(const SERVER *server, char *name);
+extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
+extern DCB  *server_get_persistent(SERVER *server, const char *user, const char *protocol, int id);
+extern void server_update_address(SERVER *server, const char *address);
+extern void server_update_port(SERVER *server,  unsigned short port);
+extern unsigned int server_map_status(const char *str);
+extern bool server_set_version_string(SERVER* server, const char* string);
+extern void server_set_status(SERVER *server, int bit);
+extern void server_clear_status(SERVER *server, int bit);
+
+extern void printServer(const SERVER *);
 extern void printAllServers();
 extern void dprintAllServers(DCB *);
 extern void dprintAllServersJson(DCB *);
-extern void dprintServer(DCB *, SERVER *);
-extern void dprintPersistentDCBs(DCB *, SERVER *);
+extern void dprintServer(DCB *, const SERVER *);
+extern void dprintPersistentDCBs(DCB *, const SERVER *);
 extern void dListServers(DCB *);
-extern char *server_status(SERVER *);
-extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
-extern void server_set_status_nolock(SERVER *, int);
-extern void server_clear_status_nolock(SERVER *, int);
-extern void server_transfer_status(SERVER *dest_server, SERVER *source_server);
-extern void serverAddMonUser(SERVER *, char *, char *);
-extern char *serverGetParameter(SERVER *, char *);
-extern void server_update_credentials(SERVER *, char *, char *);
-extern DCB  *server_get_persistent(SERVER *, const char *, const char *, int);
-extern void server_update_address(SERVER *, char *);
-extern void server_update_port(SERVER *,  unsigned short);
 extern RESULTSET *serverGetList();
-extern unsigned int server_map_status(char *str);
-extern bool server_set_version_string(SERVER* server, const char* string);
-
-extern void server_set_status(SERVER *, int);
-extern void server_clear_status(SERVER *, int);
 
 MXS_END_DECLS

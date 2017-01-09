@@ -595,7 +595,7 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
     long min_id = -1;
     int minval = INT_MAX;
     int currval;
-    char* value;
+    const char* value;
     /* set min_id to the lowest value of moitor_servers->server->node_id */
     while (moitor_servers)
     {
@@ -604,7 +604,7 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
 
             moitor_servers->server->depth = 0;
 
-            if (handle->use_priority && (value = serverGetParameter(moitor_servers->server, "priority")) != NULL)
+            if (handle->use_priority && (value = server_get_parameter(moitor_servers->server, "priority")) != NULL)
             {
                 /** The server has a priority  */
                 if ((currval = atoi(value)) > 0)
@@ -620,7 +620,7 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
             else if (moitor_servers->server->node_id >= 0 &&
                      (!handle->use_priority || /** Server priority disabled*/
                       candidate_master == NULL || /** No candidate chosen */
-                      serverGetParameter(candidate_master->server, "priority") == NULL)) /** Candidate has no priority */
+                      server_get_parameter(candidate_master->server, "priority") == NULL)) /** Candidate has no priority */
             {
                 if (min_id < 0 || moitor_servers->server->node_id < min_id)
                 {

@@ -303,7 +303,7 @@ SERVER * server_find_by_unique_name(const char *name)
  * @return      The server or NULL if not found
  */
 SERVER *
-server_find(char *servname, unsigned short port)
+server_find(const char *servname, unsigned short port)
 {
     spinlock_acquire(&server_spin);
     SERVER *server = next_active_server(allServers);
@@ -328,7 +328,7 @@ server_find(char *servname, unsigned short port)
  * @param server        Server to print
  */
 void
-printServer(SERVER *server)
+printServer(const SERVER *server)
 {
     printf("Server %p\n", server);
     printf("\tServer:                       %s\n", server->name);
@@ -487,7 +487,7 @@ dprintAllServersJson(DCB *dcb)
  * to display all active servers within the gateway
  */
 void
-dprintServer(DCB *dcb, SERVER *server)
+dprintServer(DCB *dcb, const SERVER *server)
 {
     if (!SERVER_IS_ACTIVE(server))
     {
@@ -559,7 +559,7 @@ dprintServer(DCB *dcb, SERVER *server)
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
-        poll_send_message(POLL_MSG_CLEAN_PERSISTENT, server);
+        poll_send_message(POLL_MSG_CLEAN_PERSISTENT, (void*)server);
         dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
@@ -602,7 +602,7 @@ spin_reporter(void *dcb, char *desc, int value)
  * @param       server  SERVER for which DCBs are to be printed
  */
 void
-dprintPersistentDCBs(DCB *pdcb, SERVER *server)
+dprintPersistentDCBs(DCB *pdcb, const SERVER *server)
 {
     DCB *dcb;
     int nthr = config_threadcount();
@@ -669,7 +669,7 @@ dListServers(DCB *dcb)
  * @return A string representation of the status flags
  */
 char *
-server_status(SERVER *server)
+server_status(const SERVER *server)
 {
     char    *status = NULL;
 
@@ -794,7 +794,7 @@ server_clear_status_nolock(SERVER *server, int bit)
  * @param source_server         The server to provide the new bit string
  */
 void
-server_transfer_status(SERVER *dest_server, SERVER *source_server)
+server_transfer_status(SERVER *dest_server, const SERVER *source_server)
 {
     dest_server->status = source_server->status;
 }
@@ -808,7 +808,7 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
  * @param passwd        The password of the user
  */
 void
-serverAddMonUser(SERVER *server, char *user, char *passwd)
+server_add_mon_user(SERVER *server, const char *user, const char *passwd)
 {
     if (user != server->monuser &&
         snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
@@ -839,11 +839,11 @@ serverAddMonUser(SERVER *server, char *user, char *passwd)
  * @param passwd        The password to use for the monitor user
  */
 void
-server_update_credentials(SERVER *server, char *user, char *passwd)
+server_update_credentials(SERVER *server, const char *user, const char *passwd)
 {
     if (user != NULL && passwd != NULL)
     {
-        serverAddMonUser(server, user, passwd);
+        server_add_mon_user(server, user, passwd);
     }
 }
 
@@ -858,7 +858,7 @@ server_update_credentials(SERVER *server, char *user, char *passwd)
  * @param       name    The parameter name
  * @param       value   The parameter value
  */
-void serverAddParameter(SERVER *server, const char *name, const char *value)
+void server_add_parameter(SERVER *server, const char *name, const char *value)
 {
     char *my_name = MXS_STRDUP(name);
     char *my_value = MXS_STRDUP(value);
@@ -883,7 +883,7 @@ void serverAddParameter(SERVER *server, const char *name, const char *value)
     spinlock_release(&server->lock);
 }
 
-bool serverRemoveParameter(SERVER *server, const char *name)
+bool server_remove_parameter(SERVER *server, const char *name)
 {
     bool rval = false;
     spinlock_acquire(&server->lock);
@@ -927,8 +927,8 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  * @param name          The name of the parameter we require
  * @return      The parameter value or NULL if not found
  */
-char *
-serverGetParameter(SERVER *server, char *name)
+const char *
+server_get_parameter(const SERVER *server, char *name)
 {
     SERVER_PARAM *param = server->parameters;
 
@@ -1028,7 +1028,7 @@ serverGetList()
  *
  */
 void
-server_update_address(SERVER *server, char *address)
+server_update_address(SERVER *server, const char *address)
 {
     spinlock_acquire(&server_spin);
     if (server && address)
@@ -1080,7 +1080,7 @@ static struct
  * @return bit value or 0 on error
  */
 unsigned int
-server_map_status(char *str)
+server_map_status(const char *str)
 {
     int i;
 

@@ -64,10 +64,10 @@ test1()
     //ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
 
     ss_dfprintf(stderr, "\t..done\nTest Parameter for Server.");
-    ss_info_dassert(NULL == serverGetParameter(server, "name"), "Parameter should be null when not set");
-    serverAddParameter(server, "name", "value");
+    ss_info_dassert(NULL == server_get_parameter(server, "name"), "Parameter should be null when not set");
+    server_add_parameter(server, "name", "value");
     mxs_log_flush_sync();
-    ss_info_dassert(0 == strcmp("value", serverGetParameter(server, "name")),
+    ss_info_dassert(0 == strcmp("value", server_get_parameter(server, "name")),
                     "Parameter should be returned correctly");
     ss_dfprintf(stderr, "\t..done\nTesting Unique Name for Server.");
     ss_info_dassert(NULL == server_find_by_unique_name("non-existent"),

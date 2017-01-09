@@ -2602,7 +2602,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
 
         if (monuser && monpw)
         {
-            serverAddMonUser(server, monuser, monpw);
+            server_add_mon_user(server, monuser, monpw);
         }
         else if (monuser && monpw == NULL)
         {
@@ -2656,7 +2656,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
         {
             if (!is_normal_server_parameter(params->name))
             {
-                serverAddParameter(obj->element, params->name, params->value);
+                server_add_parameter(obj->element, params->name, params->value);
             }
             params = params->next;
         }
