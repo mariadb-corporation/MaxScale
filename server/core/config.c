@@ -125,17 +125,10 @@ static const char *service_params[] =
     "auth_all_servers",
     "strip_db_esc",
     "localhost_match_wildcard_host",
-    "max_slave_connections",
-    "max_slave_replication_lag",
-    "use_sql_variables_in",         /*< rwsplit only */
-    "subservices",
     "version_string",
     "filters",
     "weightby",
-    "ignore_databases",
-    "ignore_databases_regex",
     "log_auth_warnings",
-    "source", /**< Avrorouter only */
     "retry_on_failure",
     NULL
 };
@@ -1870,10 +1863,9 @@ check_config_objects(CONFIG_CONTEXT *context)
             }
             else if (!strcmp(type, "filter"))
             {
-                // TODO: Declare filter parameters
-                //param_set = filter_params;
-                //module = config_get_value(obj->parameters, "module");
-                //module_type = MODULE_FILTER;
+                param_set = filter_params;
+                module = config_get_value(obj->parameters, "module");
+                module_type = MODULE_FILTER;
             }
         }
 
