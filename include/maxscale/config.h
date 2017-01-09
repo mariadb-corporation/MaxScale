@@ -246,6 +246,22 @@ bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
 int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
 
 /**
+ * @brief Get a size in bytes
+ *
+ * The value can have either one of the IEC binary prefixes or SI prefixes as
+ * a suffix. For example, the value 1Ki will be converted to 1024 bytes whereas
+ * 1k will be converted to 1000 bytes. Supported SI suffix values are k, m, g and t
+ * in both lower and upper case. Supported IEC binary suffix values are
+ * Ki, Mi, Gi and Ti both in upper and lower case.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return Number of bytes or 0 if no parameter was found
+ */
+uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key);
+
+/**
  * @brief Get a string value
  *
  * @param params List of configuration parameters

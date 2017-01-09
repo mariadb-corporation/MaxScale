@@ -952,6 +952,69 @@ int config_get_integer(const CONFIG_PARAMETER *params, const char *key)
     return *value ? strtol(value, NULL, 10) : 0;
 }
 
+uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    char *end;
+    uint64_t size = strtoll(value, &end, 10);
+
+    switch (*end)
+    {
+        case 'T':
+        case 't':
+            if (*(end + 1) == 'i')
+            {
+                size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+            }
+            else
+            {
+                size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+            }
+            break;
+
+        case 'G':
+        case 'g':
+            if (*(end + 1) == 'i')
+            {
+                size *= 1024ULL * 1024ULL * 1024ULL;
+            }
+            else
+            {
+                size *= 1000ULL * 1000ULL * 1000ULL;
+            }
+            break;
+
+        case 'M':
+        case 'm':
+            if (*(end + 1) == 'i')
+            {
+                size *= 1024ULL * 1024ULL;
+            }
+            else
+            {
+                size *= 1000ULL * 1000ULL;
+            }
+            break;
+
+        case 'K':
+        case 'k':
+            if (*(end + 1) == 'i')
+            {
+                size *= 1024ULL;
+            }
+            else
+            {
+                size *= 1000ULL;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    return size;
+}
+
 const char* config_get_string(const CONFIG_PARAMETER *params, const char *key)
 {
     return config_get_value_string(params, key);
@@ -3138,6 +3201,37 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                     if (endptr != value && *endptr == '\0')
                     {
                         valid = true;
+                    }
+                    break;
+
+                case MXS_MODULE_PARAM_SIZE:
+                    strtoll(value, &endptr, 10);
+                    if (endptr != value)
+                    {
+                        switch (*endptr)
+                        {
+                            case 'T':
+                            case 't':
+                            case 'G':
+                            case 'g':
+                            case 'M':
+                            case 'm':
+                            case 'K':
+                            case 'k':
+                                if (*endptr == '\0' ||
+                                    (*endptr == 'i' && *(endptr + 1) == '\0'))
+                                {
+                                    valid = true;
+                                }
+                                break;
+
+                            case '\0':
+                                valid = true;
+                                break;
+
+                            default:
+                                break;
+                        }
                     }
                     break;
 

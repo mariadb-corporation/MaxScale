@@ -72,6 +72,7 @@ enum mxs_module_param_type
 {
     MXS_MODULE_PARAM_COUNT, /**< Non-negative number */
     MXS_MODULE_PARAM_INT, /**< Integer number */
+    MXS_MODULE_PARAM_SIZE, /**< Size in bytes */
     MXS_MODULE_PARAM_BOOL, /**< Boolean value */
     MXS_MODULE_PARAM_STRING, /**< String value */
     MXS_MODULE_PARAM_ENUM, /**< Enumeration of string values */
