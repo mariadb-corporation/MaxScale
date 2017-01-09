@@ -110,18 +110,19 @@ public:
 
     class const_iterator;
 
+    // Buffer type, type of pointer to element and type of reference to element.
+    typedef iterator_base<GWBUF*, uint8_t*, uint8_t&> iterator_base_typedef;
+
     /**
      * A forward iterator to Buffer.
      */
-    class iterator : public iterator_base<GWBUF*,    // Buffer type
-                                          uint8_t*,  // Type of pointer to element
-                                          uint8_t&>  // Type of reference to element
+    class iterator : public iterator_base_typedef
     {
         friend class const_iterator;
 
     public:
         explicit iterator(GWBUF* pBuffer = NULL)
-            : iterator_base(pBuffer)
+            : iterator_base_typedef(pBuffer)
         {}
 
         iterator& operator++()
@@ -154,20 +155,21 @@ public:
         }
     };
 
+    // Buffer type, type of pointer to element and type of reference to element.
+    typedef iterator_base<const GWBUF*, const uint8_t*, const uint8_t&> const_iterator_base_typedef;
+
     /**
      * A const forward iterator to Buffer.
      */
-    class const_iterator : public iterator_base<const GWBUF*,    // Buffer type
-                                                const uint8_t*,  // Type of pointer to element
-                                                const uint8_t&>  // Type of referece to element
+    class const_iterator : public const_iterator_base_typedef
     {
     public:
         explicit const_iterator(const GWBUF* pBuffer = NULL)
-            : iterator_base(pBuffer)
+            : const_iterator_base_typedef(pBuffer)
         {}
 
         const_iterator(const Buffer::iterator& rhs)
-            : iterator_base(rhs.m_pBuffer)
+            : const_iterator_base_typedef(rhs.m_pBuffer)
         {}
 
         const_iterator& operator++()
