@@ -160,7 +160,7 @@ typedef struct mxs_module
  * This should be the last value given to @c parameters. If the module has no
  * parameters, it should be the only value.
  */
-#define MXS_END_MODULE_PARAMS .name = NULL
+#define MXS_END_MODULE_PARAMS 0
 
 /**
  * Name of the module entry point
