@@ -172,14 +172,12 @@ void MaskingFilter::reload(DCB* pOut)
 }
 
 // static
-bool MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config)
+bool MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
 {
     bool error = false;
 
-    for (int i = 0; ppParams[i]; ++i)
+    for (const CONFIG_PARAMETER* pParam = pParams; pParam; pParam = pParam->next)
     {
-        const FILTER_PARAMETER *pParam = ppParams[i];
-
         if (strcmp(pParam->name, "rules_file") == 0)
         {
             string rules_file;

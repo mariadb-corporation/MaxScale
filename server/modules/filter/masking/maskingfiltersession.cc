@@ -123,7 +123,7 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
 
     ComQueryResponse::ColumnDef column_def(pPacket);
 
-    const char *zUser = session_getUser(m_pSession);
+    const char *zUser = session_get_user(m_pSession);
     const char *zHost = session_get_remote(m_pSession);
 
     if (!zUser)
