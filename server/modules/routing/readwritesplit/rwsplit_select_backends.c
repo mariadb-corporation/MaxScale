@@ -401,8 +401,8 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
         return -1;
     }
 
-    return ((1000 * b1->server->stats.n_current_ops) - b1->weight) -
-           ((1000 * b2->server->stats.n_current_ops) - b2->weight);
+    return ((1000 + 1000 * b1->server->stats.n_current_ops) / b1->weight) -
+           ((1000 + 1000 * b2->server->stats.n_current_ops) / b2->weight);
 }
 
 /**
