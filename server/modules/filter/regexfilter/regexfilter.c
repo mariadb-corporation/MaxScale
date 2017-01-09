@@ -133,7 +133,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"user", MXS_MODULE_PARAM_STRING},
             {"log_trace", MXS_MODULE_PARAM_BOOL, "false"},
             {"log_file", MXS_MODULE_PARAM_STRING},
-            {"option", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
+            {"options", MXS_MODULE_PARAM_ENUM, "ignorecase", MXS_MODULE_OPT_NONE, option_values},
             {MXS_END_MODULE_PARAMS}
         }
     };

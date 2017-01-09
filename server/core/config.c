@@ -3041,15 +3041,9 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 error_count++;
             }
 
-            CONFIG_PARAMETER *params = obj->parameters;
-
-            while (params)
+            for (CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
             {
-                if (strcmp(params->name, "module") && strcmp(params->name, "options"))
-                {
-                    filter_add_parameter(obj->element, params->name, params->value);
-                }
-                params = params->next;
+                filter_add_parameter(obj->element, p->name, p->value);
             }
         }
         else
