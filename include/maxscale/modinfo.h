@@ -117,6 +117,9 @@ typedef struct mxs_module_param
     const MXS_ENUM_VALUE *accepted_values; /**< Only for enum values */
 } MXS_MODULE_PARAM;
 
+/** Maximum number of parameters that modules can declare */
+#define MXS_MODULE_PARAM_MAX 64
+
 /**
  * The module information structure
  */
@@ -160,7 +163,7 @@ typedef struct mxs_module
      */
     void (*thread_finish)();
 
-    MXS_MODULE_PARAM parameters[65];  /**< Declared parameters, currently limited to 64 parameters */
+    MXS_MODULE_PARAM parameters[MXS_MODULE_PARAM_MAX + 1];  /**< Declared parameters */
 } MXS_MODULE;
 
 /**
