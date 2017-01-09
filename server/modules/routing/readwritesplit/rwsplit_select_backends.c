@@ -390,8 +390,7 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
 
     if (b1->weight == 0 && b2->weight == 0)
     {
-        // TODO: Fix this so that operations are used instead of connections
-        return b1->server->stats.n_current - b2->server->stats.n_current;
+        return b1->server->stats.n_current_ops - b2->server->stats.n_current_ops;
     }
     else if (b1->weight == 0)
     {
