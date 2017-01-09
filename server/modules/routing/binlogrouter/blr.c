@@ -126,6 +126,15 @@ GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
+static const MXS_ENUM_VALUE enc_algo_values[] =
+{
+    {"aes_cbc", BLR_AES_CBC},
+#if OPENSSL_VERSION_NUMBER > 0x10000000L
+    {"aes_ctr",BLR_AES_CTR},
+#endif
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -167,6 +176,29 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"uuid", MXS_MODULE_PARAM_STRING},
+            {"server_id", MXS_MODULE_PARAM_COUNT},
+            {"master_id", MXS_MODULE_PARAM_COUNT, "0"},
+            {"master_uuid", MXS_MODULE_PARAM_STRING},
+            {"master_version", MXS_MODULE_PARAM_STRING},
+            {"master_hostname", MXS_MODULE_PARAM_STRING},
+            {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
+            {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
+            {"file", MXS_MODULE_PARAM_COUNT, "1"},
+            {"transaction_safety", MXS_MODULE_PARAM_BOOL, "false"},
+            {"semisync", MXS_MODULE_PARAM_BOOL, "false"},
+            {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
+            {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
+            {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"lowwater", MXS_MODULE_PARAM_COUNT, DEF_LOW_WATER},
+            {"highwater", MXS_MODULE_PARAM_COUNT, DEF_HIGH_WATER},
+            {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
+            {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
+            {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
+            {"heartbeat", MXS_MODULE_PARAM_COUNT, BLR_HEARTBEAT_DEFAULT_INTERVAL},
+            {"send_slave_heartbeat", MXS_MODULE_PARAM_BOOL, "false"},
+            {"binlogdir", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_W_OK},
+            {"ssl_cert_verification_depth", MXS_MODULE_PARAM_COUNT, "9"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -246,41 +278,20 @@ createInstance(SERVICE *service, char **options)
 
     inst->binlog_fd = -1;
     inst->master_chksum = true;
-    inst->master_uuid = NULL;
 
     inst->master_state = BLRM_UNCONFIGURED;
     inst->master = NULL;
     inst->client = NULL;
 
-    inst->low_water = DEF_LOW_WATER;
-    inst->high_water = DEF_HIGH_WATER;
-    inst->initbinlog = 0;
-    inst->short_burst = DEF_SHORT_BURST;
-    inst->long_burst = DEF_LONG_BURST;
-    inst->burst_size = DEF_BURST_SIZE;
-    inst->retry_backoff = 1;
-    inst->binlogdir = NULL;
-    inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
-    inst->mariadb10_compat = false;
-
     inst->user = MXS_STRDUP_A(service->credentials.name);
     inst->password = MXS_STRDUP_A(service->credentials.authdata);
-
+    inst->retry_backoff = 1;
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
-    inst->trx_safe = 0;
     inst->pending_transaction = 0;
     inst->last_safe_pos = 0;
     inst->last_event_pos = 0;
-
-    inst->set_master_version = NULL;
-    inst->set_master_hostname = NULL;
-    inst->set_master_uuid = NULL;
-    inst->set_master_server_id = NULL;
-    inst->send_slave_heartbeat = 0;
-
-    inst->serverid = 0;
 
     /* SSL replication is disabled by default */
     inst->ssl_enabled = 0;
@@ -290,33 +301,83 @@ createInstance(SERVICE *service, char **options)
     inst->ssl_key = NULL;
     inst->ssl_version = NULL;
 
+    inst->active_logs = 0;
+    inst->reconnect_pending = 0;
+    inst->handling_threads = 0;
+    inst->rotating = 0;
+    inst->slaves = NULL;
+    inst->next = NULL;
+    inst->lastEventTimestamp = 0;
+    inst->binlog_position = 0;
+    inst->current_pos = 0;
+    inst->current_safe_event = 0;
+    inst->master_event_state = BLR_EVENT_DONE;
+
+    strcpy(inst->binlog_name, "");
+    strcpy(inst->prevbinlog, "");
+
+    CONFIG_PARAMETER *params = service->svc_config_param;
+
+    inst->low_water = config_get_integer(params, "lowwater");
+    inst->high_water = config_get_integer(params, "highwater");
+    inst->initbinlog = config_get_integer(params, "file");
+
+    inst->short_burst = config_get_integer(params, "shortburst");
+    inst->long_burst = config_get_integer(params, "longburst");
+    inst->burst_size = config_get_size(params, "burstsize");
+    inst->binlogdir = config_copy_string(params, "binlogdir");
+    inst->heartbeat = config_get_integer(params, "heartbeat");
+    inst->ssl_cert_verification_depth = config_get_integer(params, "ssl_cert_verification_depth");
+    inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
+    inst->trx_safe = config_get_bool(params, "transaction_safety");
+    inst->set_master_version = config_copy_string(params, "master_version");
+    inst->set_master_hostname = config_copy_string(params, "master_hostname");
+    inst->fileroot = config_copy_string(params, "filestem");
+
+    inst->serverid = config_get_integer(params, "server_id");
+    inst->set_master_server_id = inst->serverid != 0;
+
+    inst->masterid = config_get_integer(params, "master_id");
+
+    inst->master_uuid = config_copy_string(params, "master_uuid");
+    inst->set_master_uuid = inst->master_uuid != NULL;
+
+    inst->set_master_version = NULL;
+    inst->set_master_hostname = NULL;
+    inst->send_slave_heartbeat = config_get_bool(params, "send_slave_heartbeat");
+
     /* Semi-Sync support */
-    inst->request_semi_sync = false;
+    inst->request_semi_sync = config_get_bool(params, "semisync");
     inst->master_semi_sync = 0;
 
     /* Binlog encryption */
-    inst->encryption.enabled = 0;
-    inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
-    inst->encryption.key_management_filename = NULL;
+    inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
+    inst->encryption.encryption_algorithm = config_get_enum(params, "encryption_algorithm", enc_algo_values);
+    inst->encryption.key_management_filename = config_copy_string(params, "encryption_key_file");
 
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
 
-    /* Generate UUID for the router instance */
-    uuid_generate_time(defuuid);
+    inst->uuid = config_copy_string(params, "uuid");
 
-    if ((inst->uuid = (char *)MXS_CALLOC(38, 1)) != NULL)
+    if (inst->uuid == NULL)
     {
-        sprintf(inst->uuid,
-                "%02hhx%02hhx%02hhx%02hhx-"
-                "%02hhx%02hhx-"
-                "%02hhx%02hhx-"
-                "%02hhx%02hhx-"
-                "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-                defuuid[0], defuuid[1], defuuid[2], defuuid[3],
-                defuuid[4], defuuid[5], defuuid[6], defuuid[7],
-                defuuid[8], defuuid[9], defuuid[10], defuuid[11],
-                defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+        /* Generate UUID for the router instance */
+        uuid_generate_time(defuuid);
+
+        if ((inst->uuid = (char *)MXS_CALLOC(38, 1)) != NULL)
+        {
+            sprintf(inst->uuid,
+                    "%02hhx%02hhx%02hhx%02hhx-"
+                    "%02hhx%02hhx-"
+                    "%02hhx%02hhx-"
+                    "%02hhx%02hhx-"
+                    "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+                    defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+                    defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+                    defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+                    defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+        }
     }
 
     /*
@@ -393,7 +454,7 @@ createInstance(SERVICE *service, char **options)
                     if (master_id > 0)
                     {
                         inst->masterid = master_id;
-                        inst->set_master_server_id = MXS_STRDUP_A(value);
+                        inst->set_master_server_id = true;
                     }
                     if (strcmp(options[i], "master-id") == 0)
                     {
@@ -405,15 +466,18 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "master_uuid") == 0)
                 {
-                    inst->set_master_uuid = MXS_STRDUP_A(value);
-                    inst->master_uuid = inst->set_master_uuid;
+                    inst->set_master_uuid = true;
+                    MXS_FREE(inst->master_uuid);
+                    inst->master_uuid = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "master_version") == 0)
                 {
+                    MXS_FREE(inst->set_master_version);
                     inst->set_master_version = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "master_hostname") == 0)
                 {
+                    MXS_FREE(inst->set_master_hostname);
                     inst->set_master_hostname = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "mariadb10-compatibility") == 0)
@@ -422,6 +486,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
+                    MXS_FREE(inst->fileroot);
                     inst->fileroot = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "file") == 0)
@@ -459,6 +524,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "encryption_key_file") == 0)
                 {
+                    MXS_FREE(inst->encryption.key_management_filename);
                     inst->encryption.key_management_filename = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "lowwater") == 0)
@@ -524,6 +590,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "binlogdir") == 0)
                 {
+                    MXS_FREE(inst->binlogdir);
                     inst->binlogdir = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "ssl_cert_verification_depth") == 0)
@@ -542,8 +609,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else
                 {
-                    MXS_WARNING("Unsupported router "
-                                "option %s for binlog router.",
+                    MXS_WARNING("Unsupported router option %s for binlog router.",
                                 options[i]);
                 }
             }
@@ -551,34 +617,17 @@ createInstance(SERVICE *service, char **options)
     }
     else
     {
-        MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
-                  service->name);
+        MXS_ERROR("%s: Error: No router options supplied for binlogrouter", service->name);
     }
 
-    if (inst->fileroot == NULL)
+    if (inst->masterid)
     {
-        inst->fileroot = MXS_STRDUP_A(BINLOG_NAME_ROOT);
+        inst->set_master_server_id = true;
     }
-    inst->active_logs = 0;
-    inst->reconnect_pending = 0;
-    inst->handling_threads = 0;
-    inst->rotating = 0;
-    inst->slaves = NULL;
-    inst->next = NULL;
-    inst->lastEventTimestamp = 0;
-
-    inst->binlog_position = 0;
-    inst->current_pos = 0;
-    inst->current_safe_event = 0;
-    inst->master_event_state = BLR_EVENT_DONE;
-
-    strcpy(inst->binlog_name, "");
-    strcpy(inst->prevbinlog, "");
 
     if ((inst->binlogdir == NULL) || (inst->binlogdir != NULL && !strlen(inst->binlogdir)))
     {
-        MXS_ERROR("Service %s, binlog directory is not specified",
-                  service->name);
+        MXS_ERROR("Service %s, binlog directory is not specified", service->name);
         free_instance(inst);
         return NULL;
     }
@@ -885,8 +934,6 @@ free_instance(ROUTER_INSTANCE *instance)
     MXS_FREE(instance->uuid);
     MXS_FREE(instance->user);
     MXS_FREE(instance->password);
-    MXS_FREE(instance->set_master_server_id);
-    MXS_FREE(instance->set_master_uuid);
     MXS_FREE(instance->set_master_version);
     MXS_FREE(instance->set_master_hostname);
     MXS_FREE(instance->fileroot);

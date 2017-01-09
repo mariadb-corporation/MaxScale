@@ -332,16 +332,9 @@ blr_file_init(ROUTER_INSTANCE *router)
 
     if (n == 0)     // No binlog files found
     {
-        if (router->initbinlog)
-        {
-            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot,
-                     router->initbinlog);
-        }
-        else
-        {
-            snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, 1);
-        }
-        if (! blr_file_create(router, filename))
+        snprintf(filename, PATH_MAX, BINLOG_NAMEFMT, router->fileroot, router->initbinlog);
+
+        if (!blr_file_create(router, filename))
         {
             return 0;
         }

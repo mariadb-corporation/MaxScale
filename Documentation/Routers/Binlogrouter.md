@@ -10,6 +10,10 @@ The binlogrouter requires the `server`, `user` and `passwd` parameters. These sh
 
 In addition to these two parameters, `router_options` needs to be defined. This is the main way the binlogrouter is configured and it will be covered in detail in the next section.
 
+**Note:** As of version 2.1 of MaxScale, all of the router options can also be
+defined as parameters. The values defined in _router_options_ will have priority
+over the parameters.
+
 ## Router Options
 
 Binlogrouter is configured with a comma-separated list of key-value pairs. The following options should be given as a value to the `router_options` parameter.

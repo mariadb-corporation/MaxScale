@@ -583,14 +583,10 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             }
 
             /* set the master_uuid from master if not set by the option */
-            if (router->set_master_uuid == NULL)
+            if (!router->set_master_uuid)
             {
                 MXS_FREE(router->master_uuid);
                 router->master_uuid = val;
-            }
-            else
-            {
-                router->master_uuid = router->set_master_uuid;
             }
 
             // Response to the SERVER_UUID, should be stored

@@ -184,15 +184,15 @@ enum blr_aes_mode
  * High and Low water marks for the slave dcb. These values can be overriden
  * by the router options highwater and lowwater.
  */
-#define DEF_LOW_WATER           1000
-#define DEF_HIGH_WATER          10000
+#define DEF_LOW_WATER           "1000"
+#define DEF_HIGH_WATER          "10000"
 
 /**
  * Default burst sizes for slave catchup
  */
-#define DEF_SHORT_BURST         15
-#define DEF_LONG_BURST          500
-#define DEF_BURST_SIZE          1024000 /* 1 Mb */
+#define DEF_SHORT_BURST         "15"
+#define DEF_LONG_BURST          "500"
+#define DEF_BURST_SIZE          "1024000" /* 1 Mb */
 
 /**
  * master reconnect backoff constants
@@ -209,7 +209,7 @@ enum blr_aes_mode
 #define BLR_NET_LATENCY_WAIT_TIME       1
 
 /* default heartbeat interval in seconds */
-#define BLR_HEARTBEAT_DEFAULT_INTERVAL  300
+#define BLR_HEARTBEAT_DEFAULT_INTERVAL  "300"
 
 /* strings and numbers in SQL replies */
 #define BLR_TYPE_STRING                 0xf
@@ -573,8 +573,8 @@ typedef struct router_instance
     char              *m_errmsg;    /*< master response mysql error message */
     char              *set_master_version; /*< Send custom Version to slaves */
     char              *set_master_hostname; /*< Send custom Hostname to slaves */
-    char              *set_master_uuid; /*< Send custom Master UUID to slaves */
-    char              *set_master_server_id; /*< Send custom Master server_id to slaves */
+    bool              set_master_uuid; /*< Send custom Master UUID to slaves */
+    bool              set_master_server_id; /*< Send custom Master server_id to slaves */
     int               send_slave_heartbeat; /*< Enable sending heartbeat to slaves */
     bool              ssl_enabled;          /*< Use SSL connection to master */
     int               ssl_cert_verification_depth; /*< The maximum length of the certificate
