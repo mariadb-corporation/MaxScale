@@ -364,7 +364,22 @@ static int bref_cmp_behind_master(const void *bref1, const void *bref2)
     SERVER_REF *b1 = ((backend_ref_t *)bref1)->ref;
     SERVER_REF *b2 = ((backend_ref_t *)bref2)->ref;
 
-    return b1->server->rlag - b2->server->rlag;
+    if (b1->weight == 0 && b2->weight == 0)
+    {
+        return b1->server->rlag -
+               b2->server->rlag;
+    }
+    else if (b1->weight == 0)
+    {
+        return 1;
+    }
+    else if (b2->weight == 0)
+    {
+        return -1;
+    }
+
+    return ((1000 + 1000 * b1->server->rlag) / b1->weight) -
+           ((1000 + 1000 * b2->server->rlag) / b2->weight);
 }
 
 /** Compare number of current operations in backend servers */
