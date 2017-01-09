@@ -198,6 +198,7 @@ public:
     {
         int rc = EXIT_SUCCESS;
 
+        using std::tr1::shared_ptr;
         auto_ptr<MaskingRules> sRules = MaskingRules::parse(valid_users);
         ss_dassert(sRules.get());
 
