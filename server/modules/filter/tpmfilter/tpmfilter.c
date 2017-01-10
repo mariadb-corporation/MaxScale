@@ -66,7 +66,8 @@
 
 /* The maximum size for query statements in a transaction (64MB) */
 static size_t sql_size_limit = 64 * 1024 * 1024;
-
+/* The size of the buffer for recording latency of individual statements */
+static size_t latency_buf_size = 64 * 1024;
 static const int default_sql_size = 4 * 1024;
 
 #define DEFAULT_QUERY_DELIMITER "@@@"
@@ -125,14 +126,17 @@ typedef struct
     char        *clientHost;
     char        *userName;
     char* sql;
+    char* latency;
     struct timeval  start;
     char        *current;
     int     n_statements;
     struct timeval  total;
     struct timeval  current_start;
+    struct timeval  last_statement_start;
     bool query_end;
     char    *buf;
     int sql_index;
+    int latency_index;
     size_t      max_sql_size;
 } TPM_SESSION;
 
@@ -310,10 +314,12 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     {
         atomic_add(&my_instance->sessions, 1);
 
+        my_session->latency = (char*)MXS_CALLOC(latency_buf_size, sizeof(char));
         my_session->max_sql_size = default_sql_size; // default max query size of 4k.
         my_session->sql = (char*)MXS_CALLOC(my_session->max_sql_size, sizeof(char));
         memset(my_session->sql, 0x00, my_session->max_sql_size);
         my_session->sql_index = 0;
+        my_session->latency_index = 0;
         my_session->n_statements = 0;
         my_session->total.tv_sec = 0;
         my_session->total.tv_usec = 0;
@@ -384,6 +390,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
     MXS_FREE(my_session->clientHost);
     MXS_FREE(my_session->userName);
     MXS_FREE(my_session->sql);
+    MXS_FREE(my_session->latency);
     MXS_FREE(session);
     return;
 }
@@ -508,6 +515,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     /* set new pointer for the buffer */
                     my_session->sql_index += (my_instance->query_delimiter_size + strlen(ptr));
                 }
+                gettimeofday(&my_session->last_statement_start, NULL);
             }
         }
     }
@@ -528,6 +536,28 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
     struct      timeval     tv, diff;
     int     i, inserted;
 
+    /* records latency of the SQL statement. */
+    if (my_session->sql_index > 0)
+    {
+        gettimeofday(&tv, NULL);
+        timersub(&tv, &(my_session->last_statement_start), &diff);
+
+        /* get latency */
+        double millis = (diff.tv_sec * 1000 + diff.tv_usec / 1000.0);
+
+        int written = sprintf(my_session->latency + my_session->latency_index, "%.3f", millis);
+        my_session->latency_index += written;
+        if (!my_session->query_end)
+        {
+            written = sprintf(my_session->latency + my_session->latency_index, "%s", my_instance->query_delimiter);
+            my_session->latency_index += written;
+        }
+        if (my_session->latency_index > latency_buf_size)
+        {
+            MXS_ERROR("Latency buffer overflow.");
+        }
+    }
+
     /* found 'commit' and sql statements exist. */
     if (my_session->query_end && my_session->sql_index > 0)
     {
@@ -544,8 +574,8 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
         /* print to log. */
         if (my_instance->log_enabled)
         {
-            /* this prints "timestamp | server_name | user_name | latency | sql_statements" */
-            fprintf(my_instance->fp, "%ld%s%s%s%s%s%ld%s%s\n",
+            /* this prints "timestamp | server_name | user_name | latency of entire transaction | latencies of individual statements | sql_statements" */
+            fprintf(my_instance->fp, "%ld%s%s%s%s%s%ld%s%s%s%s\n",
                     timestamp,
                     my_instance->delimiter,
                     reply->server->unique_name,
@@ -554,10 +584,13 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
                     my_instance->delimiter,
                     millis,
                     my_instance->delimiter,
+                    my_session->latency,
+                    my_instance->delimiter,
                     my_session->sql);
         }
 
         my_session->sql_index = 0;
+        my_session->latency_index = 0;
     }
 
     /* Pass the result upstream */
