@@ -1808,7 +1808,7 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
     return msg;
 }
 
-bool handle_throttle_rule(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
+bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
 {
     bool matches = false;
     QUERYSPEED* rule_qs = (QUERYSPEED*)rulebook->rule->data;
@@ -1876,6 +1876,104 @@ bool handle_throttle_rule(FW_SESSION* my_session, RULE_BOOK *rulebook, char **ms
     return matches;
 }
 
+void match_regex(RULE_BOOK *rulebook, const char *query, bool *matches, char **msg)
+{
+
+    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(rulebook->rule->data, NULL);
+
+    if (mdata)
+    {
+        if (pcre2_match((pcre2_code*)rulebook->rule->data,
+                        (PCRE2_SPTR)query, PCRE2_ZERO_TERMINATED,
+                        0, 0, mdata, NULL) > 0)
+        {
+            MXS_NOTICE("dbfwfilter: rule '%s': regex matched on query", rulebook->rule->name);
+            *matches = true;
+            *msg = MXS_STRDUP_A("Permission denied, query matched regular expression.");
+        }
+
+        pcre2_match_data_free(mdata);
+    }
+    else
+    {
+        MXS_ERROR("Allocation of matching data for PCRE2 failed."
+                  " This is most likely caused by a lack of memory");
+    }
+}
+
+void match_column(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
+{
+    const QC_FIELD_INFO* infos;
+    size_t n_infos;
+    qc_get_field_info(queue, &infos, &n_infos);
+
+    for (size_t i = 0; i < n_infos; ++i)
+    {
+        const char* tok = infos[i].column;
+
+        STRLINK* strln = (STRLINK*)rulebook->rule->data;
+        while (strln)
+        {
+            if (strcasecmp(tok, strln->value) == 0)
+            {
+                char emsg[strlen(strln->value) + 100];
+                sprintf(emsg, "Permission denied to column '%s'.", strln->value);
+                MXS_NOTICE("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                           rulebook->rule->name, strln->value);
+                *msg = MXS_STRDUP_A(emsg);
+                *matches = true;
+                break;
+            }
+            strln = strln->next;
+        }
+    }
+}
+
+void match_function(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
+{
+    const QC_FUNCTION_INFO* infos;
+    size_t n_infos;
+    qc_get_function_info(queue, &infos, &n_infos);
+
+    for (size_t i = 0; i < n_infos; ++i)
+    {
+        const char* tok = infos[i].name;
+
+        STRLINK* strln = (STRLINK*)rulebook->rule->data;
+        while (strln)
+        {
+            if (strcasecmp(tok, strln->value) == 0)
+            {
+                char emsg[strlen(strln->value) + 100];
+                sprintf(emsg, "Permission denied to function '%s'.", strln->value);
+                MXS_NOTICE("dbfwfilter: rule '%s': query uses forbidden function: %s",
+                           rulebook->rule->name, strln->value);
+                *msg = MXS_STRDUP_A(emsg);
+                *matches = true;
+                break;
+            }
+            strln = strln->next;
+        }
+    }
+}
+
+void match_wildcard(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
+{
+    const QC_FIELD_INFO* infos;
+    size_t n_infos;
+    qc_get_field_info(queue, &infos, &n_infos);
+
+    for (size_t i = 0; i < n_infos; ++i)
+    {
+        if (strcmp(infos[i].column, "*") == 0)
+        {
+            MXS_NOTICE("dbfwfilter: rule '%s': query contains a wildcard.", rulebook->rule->name);
+            *matches = true;
+            *msg = MXS_STRDUP_A("Usage of wildcard denied.");
+        }
+    }
+}
+
 /**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
@@ -1893,14 +1991,10 @@ bool rule_matches(FW_INSTANCE* my_instance,
                   char* query)
 {
     char *msg = NULL;
-    char emsg[512];
     qc_query_op_t optype = QUERY_OP_UNDEFINED;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
     bool is_real = false;
-
-    matches = false;
-    is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
 
     if (is_sql)
     {
@@ -1955,134 +2049,47 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_REGEX:
-                if (query)
-                {
-                    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(
-                                                  rulebook->rule->data, NULL);
-
-                    if (mdata)
-                    {
-                        if (pcre2_match((pcre2_code*) rulebook->rule->data,
-                                        (PCRE2_SPTR) query, PCRE2_ZERO_TERMINATED,
-                                        0, 0, mdata, NULL) > 0)
-                        {
-                            matches = true;
-                        }
-                        pcre2_match_data_free(mdata);
-                        if (matches)
-                        {
-                            msg = MXS_STRDUP_A("Permission denied, query matched regular expression.");
-                            MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulebook->rule->name);
-                        }
-                    }
-                    else
-                    {
-                        MXS_ERROR("Allocation of matching data for PCRE2 failed."
-                                  " This is most likely caused by a lack of memory");
-                    }
-                }
+                match_regex(rulebook, query, &matches, &msg);
                 break;
 
             case RT_PERMISSION:
-                    matches = true;
-                    msg = MXS_STRDUP_A("Permission denied at this time.");
-                    MXS_INFO("dbfwfilter: rule '%s': query denied at this time.", rulebook->rule->name);
+                matches = true;
+                msg = MXS_STRDUP_A("Permission denied at this time.");
+                MXS_NOTICE("dbfwfilter: rule '%s': query denied at this time.", rulebook->rule->name);
                 break;
 
             case RT_COLUMN:
                 if (is_sql && is_real)
                 {
-                    const QC_FIELD_INFO* infos;
-                    size_t n_infos;
-                    qc_get_field_info(queue, &infos, &n_infos);
-
-                    for (size_t i = 0; i < n_infos; ++i)
-                    {
-                        const char* tok = infos[i].column;
-
-                        STRLINK* strln = (STRLINK*) rulebook->rule->data;
-                        while (strln)
-                        {
-                            if (strcasecmp(tok, strln->value) == 0)
-                            {
-                                matches = true;
-
-                                sprintf(emsg, "Permission denied to column '%s'.", strln->value);
-                                MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
-                                         rulebook->rule->name, strln->value);
-                                msg = MXS_STRDUP_A(emsg);
-                                break;
-                            }
-                            strln = strln->next;
-                        }
-                    }
+                    match_column(rulebook, queue, &matches, &msg);
                 }
                 break;
 
             case RT_FUNCTION:
                 if (is_sql && is_real)
                 {
-                    const QC_FUNCTION_INFO* infos;
-                    size_t n_infos;
-                    qc_get_function_info(queue, &infos, &n_infos);
-
-                    for (size_t i = 0; i < n_infos; ++i)
-                    {
-                        const char* tok = infos[i].name;
-
-                        STRLINK* strln = (STRLINK*) rulebook->rule->data;
-                        while (strln)
-                        {
-                            if (strcasecmp(tok, strln->value) == 0)
-                            {
-                                matches = true;
-
-                                sprintf(emsg, "Permission denied to function '%s'.", strln->value);
-                                MXS_INFO("dbfwfilter: rule '%s': query uses forbidden function: %s",
-                                         rulebook->rule->name, strln->value);
-                                msg = MXS_STRDUP_A(emsg);
-                                break;
-                            }
-                            strln = strln->next;
-                        }
-                    }
+                    match_function(rulebook, queue, &matches, &msg);
                 }
                 break;
 
             case RT_WILDCARD:
                 if (is_sql && is_real)
                 {
-                    const QC_FIELD_INFO* infos;
-                    size_t n_infos;
-                    qc_get_field_info(queue, &infos, &n_infos);
-
-                    for (size_t i = 0; i < n_infos; ++i)
-                    {
-                        const char* column = infos[i].column;
-
-                        if (strcmp(column, "*") == 0)
-                        {
-                            matches = true;
-                            msg = MXS_STRDUP_A("Usage of wildcard denied.");
-                            MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
-                                     rulebook->rule->name);
-                        }
-                    }
+                    match_wildcard(rulebook, queue, &matches, &msg);
                 }
                 break;
 
             case RT_THROTTLE:
-                matches = handle_throttle_rule(my_session, rulebook, &msg);
+                matches = match_throttle(my_session, rulebook, &msg);
                 break;
 
             case RT_CLAUSE:
-                if (is_sql && is_real &&
-                    !qc_query_has_clause(queue))
+                if (is_sql && is_real && !qc_query_has_clause(queue))
                 {
                     matches = true;
                     msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
-                    MXS_INFO("dbfwfilter: rule '%s': query has no where/having "
-                             "clause, query is denied.", rulebook->rule->name);
+                    MXS_NOTICE("dbfwfilter: rule '%s': query has no where/having "
+                               "clause, query is denied.", rulebook->rule->name);
                 }
                 break;
 
@@ -2130,23 +2137,27 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
          MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(queue))))
     {
         char *fullquery = modutil_get_SQL(queue);
-        while (rulebook)
-        {
-            if (!rule_is_active(rulebook->rule))
-            {
-                rulebook = rulebook->next;
-                continue;
-            }
-            if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
-            {
-                *rulename = MXS_STRDUP_A(rulebook->rule->name);
-                rval = true;
-                break;
-            }
-            rulebook = rulebook->next;
-        }
 
-        MXS_FREE(fullquery);
+        if (fullquery)
+        {
+            while (rulebook)
+            {
+                if (!rule_is_active(rulebook->rule))
+                {
+                    rulebook = rulebook->next;
+                    continue;
+                }
+                if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
+                {
+                    *rulename = MXS_STRDUP_A(rulebook->rule->name);
+                    rval = true;
+                    break;
+                }
+                rulebook = rulebook->next;
+            }
+
+            MXS_FREE(fullquery);
+        }
     }
     return rval;
 }
@@ -2206,39 +2217,43 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
     if (rulebook && (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
     {
         char *fullquery = modutil_get_SQL(queue);
-        rval = true;
-        while (rulebook)
+
+        if (fullquery)
         {
-            if (!rule_is_active(rulebook->rule))
+            rval = true;
+            while (rulebook)
             {
-                rulebook = rulebook->next;
-                continue;
-            }
-
-            have_active_rule = true;
-
-            if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
-            {
-                append_string(&matched_rules, &size, rulebook->rule->name);
-            }
-            else
-            {
-                rval = false;
-                if (strict_all)
+                if (!rule_is_active(rulebook->rule))
                 {
-                    break;
+                    rulebook = rulebook->next;
+                    continue;
                 }
+
+                have_active_rule = true;
+
+                if (rule_matches(my_instance, my_session, queue, user, rulebook, fullquery))
+                {
+                    append_string(&matched_rules, &size, rulebook->rule->name);
+                }
+                else
+                {
+                    rval = false;
+                    if (strict_all)
+                    {
+                        break;
+                    }
+                }
+
+                rulebook = rulebook->next;
             }
 
-            rulebook = rulebook->next;
+            if (!have_active_rule)
+            {
+                /** No active rules */
+                rval = false;
+            }
+            MXS_FREE(fullquery);
         }
-
-        if (!have_active_rule)
-        {
-            /** No active rules */
-            rval = false;
-        }
-        MXS_FREE(fullquery);
     }
 
     /** Set the list of matched rule names */
