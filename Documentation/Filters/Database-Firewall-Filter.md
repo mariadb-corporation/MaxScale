@@ -117,7 +117,9 @@ This rule expects a list of values after the `columns` keyword. These values are
 
 This rule expects a list of values after the `function` keyword. These values
 are interpreted as function names and if a query uses any of these, it is
-blocked.
+blocked. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
+considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
+not considered functions.
 
 #### `regex`
 

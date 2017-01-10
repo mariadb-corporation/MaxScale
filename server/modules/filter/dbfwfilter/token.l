@@ -33,6 +33,7 @@ USER        [^[:space:]]*[@]
 IP          [0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}
 BTSTR       `[^`]*`
 USTR        [%-_[:alnum:][:punct:]]+
+CMP         [=<>!]+
 
 %%
 "\n"+           return '\n';
@@ -53,6 +54,7 @@ match           return FWTOK_MATCH;
 any             return FWTOK_ANY;
 all             return FWTOK_ALL;
 strict_all      return FWTOK_STRICT_ALL;
+{CMP}           yylval->strval = yytext;return FWTOK_CMP;
 {USTR}@{USTR}   yylval->strval = yytext;return FWTOK_USER;
 {BTSTR}@{BTSTR} yylval->strval = yytext;return FWTOK_USER;
 {QSTR}@{QSTR}   yylval->strval = yytext;return FWTOK_USER;
