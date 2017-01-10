@@ -302,13 +302,14 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
     switch ((int)MYSQL_GET_COMMAND(data))
     {
     case MYSQL_COM_QUERY:
+    case MYSQL_COM_STMT_EXECUTE:
         {
             csdata->state = MAXROWS_EXPECTING_RESPONSE;
             break;
-
-        default:
-            break;
         }
+
+    default:
+        break;
     }
 
     if (csdata->instance->config.debug & MAXROWS_DEBUG_DECISIONS)
