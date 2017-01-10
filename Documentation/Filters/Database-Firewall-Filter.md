@@ -113,6 +113,12 @@ This rule blocks all queries that use the wildcard character *.
 
 This rule expects a list of values after the `columns` keyword. These values are interpreted as column names and if a query targets any of these, it is blocked.
 
+#### `function`
+
+This rule expects a list of values after the `function` keyword. These values
+are interpreted as function names and if a query uses any of these, it is
+blocked.
+
 #### `regex`
 
 This rule blocks all queries matching a regex enclosed in single or double quotes.

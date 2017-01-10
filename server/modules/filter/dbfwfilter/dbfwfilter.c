@@ -110,6 +110,7 @@ typedef enum
 {
     RT_UNDEFINED = 0x00, /*< Undefined rule */
     RT_COLUMN, /*<  Column name rule*/
+    RT_FUNCTION, /*<  Function name rule*/
     RT_THROTTLE, /*< Query speed rule */
     RT_PERMISSION, /*< Simple denying rule */
     RT_WILDCARD, /*< Wildcard denial rule */
@@ -1014,6 +1015,7 @@ static void rule_free_all(RULE* rule)
         switch (rule->type)
         {
             case RT_COLUMN:
+            case RT_FUNCTION:
                 strlink_free((STRLINK*) rule->data);
                 break;
 
@@ -1215,6 +1217,26 @@ bool define_columns_rule(void* scanner, char* columns)
     if ((list = strlink_push(rstack->rule->data, strip_backticks(columns))))
     {
         rstack->rule->type = RT_COLUMN;
+        rstack->rule->data = list;
+    }
+
+    return list != NULL;
+}
+
+/**
+ * Define the current rule as a function rule
+ * @param scanner Current scanner
+ * @param columns List of function names
+ */
+bool define_function_rule(void* scanner, char* columns)
+{
+    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
+    ss_dassert(rstack);
+    STRLINK* list = NULL;
+
+    if ((list = strlink_push(rstack->rule->data, strip_backticks(columns))))
+    {
+        rstack->rule->type = RT_FUNCTION;
         rstack->rule->data = list;
     }
 
@@ -1897,6 +1919,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             if (parse_result != QC_QUERY_PARSED)
             {
                 if ((rulebook->rule->type == RT_COLUMN) ||
+                    (rulebook->rule->type == RT_FUNCTION) ||
                     (rulebook->rule->type == RT_WILDCARD) ||
                     (rulebook->rule->type == RT_CLAUSE))
                 {
@@ -1986,6 +2009,36 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
                                 sprintf(emsg, "Permission denied to column '%s'.", strln->value);
                                 MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                                         rulebook->rule->name, strln->value);
+                                msg = MXS_STRDUP_A(emsg);
+                                break;
+                            }
+                            strln = strln->next;
+                        }
+                    }
+                }
+                break;
+
+            case RT_FUNCTION:
+                if (is_sql && is_real)
+                {
+                    const QC_FUNCTION_INFO* infos;
+                    size_t n_infos;
+                    qc_get_function_info(queue, &infos, &n_infos);
+
+                    for (size_t i = 0; i < n_infos; ++i)
+                    {
+                        const char* tok = infos[i].name;
+
+                        STRLINK* strln = (STRLINK*) rulebook->rule->data;
+                        while (strln)
+                        {
+                            if (strcasecmp(tok, strln->value) == 0)
+                            {
+                                matches = true;
+
+                                sprintf(emsg, "Permission denied to function '%s'.", strln->value);
+                                MXS_INFO("dbfwfilter: rule '%s': query uses forbidden function: %s",
                                          rulebook->rule->name, strln->value);
                                 msg = MXS_STRDUP_A(emsg);
                                 break;

@@ -37,7 +37,7 @@
 %token FWTOK_RULE <strval>FWTOK_RULENAME FWTOK_USERS <strval>FWTOK_USER FWTOK_RULES FWTOK_MATCH FWTOK_ANY FWTOK_ALL FWTOK_STRICT_ALL FWTOK_DENY
 %token FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
 %token <strval>FWTOK_SQLOP FWTOK_COMMENT <intval>FWTOK_INT <floatval>FWTOK_FLOAT FWTOK_PIPE <strval>FWTOK_TIME
-%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR
+%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR FWTOK_FUNCTION
 
 /** Non-terminal symbols */
 %type <strval>rulename
@@ -113,6 +113,7 @@ mandatory:
         {if (!define_limit_queries_rule(scanner, $2, $3, $4)){YYERROR;}}
     | FWTOK_REGEX FWTOK_QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
     | FWTOK_COLUMNS columnlist
+    | FWTOK_FUNCTION functionlist
     ;
 
 columnlist:
@@ -120,6 +121,13 @@ columnlist:
     | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
     | columnlist FWTOK_BTSTR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
     | columnlist FWTOK_STR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
+    ;
+
+functionlist:
+    FWTOK_BTSTR {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    | FWTOK_STR {if (!define_function_rule(scanner, $1)){YYERROR;}}
+    | functionlist FWTOK_BTSTR {if (!define_function_rule(scanner, $2)){YYERROR;}}
+    | functionlist FWTOK_STR {if (!define_function_rule(scanner, $2)){YYERROR;}}
     ;
 
 optional:
