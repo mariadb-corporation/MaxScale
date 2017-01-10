@@ -769,6 +769,14 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
     return true;
 }
 
+static const MXS_ENUM_VALUE action_values[] =
+{
+    {"allow",  FW_ACTION_ALLOW},
+    {"block",  FW_ACTION_BLOCK},
+    {"ignore", FW_ACTION_IGNORE},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -823,6 +831,29 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {
+                "rules",
+                 MXS_MODULE_PARAM_PATH,
+                 NULL,
+                 MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_PATH_R_OK
+            },
+            {
+                "log_match",
+                 MXS_MODULE_PARAM_BOOL,
+                 "false"
+            },
+            {
+                "log_no_match",
+                 MXS_MODULE_PARAM_BOOL,
+                 "false"
+            },
+            {
+                "action",
+                 MXS_MODULE_PARAM_ENUM,
+                 "block",
+                 MXS_MODULE_OPT_ENUM_UNIQUE,
+                 action_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -1486,77 +1517,33 @@ bool replace_rules(FW_INSTANCE* instance)
 static FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    FW_INSTANCE *my_instance;
-    int i;
-    char *filename = NULL;
-    bool err = false;
+    FW_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(FW_INSTANCE));
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(FW_INSTANCE))) == NULL)
+    if (my_instance == NULL)
     {
         MXS_FREE(my_instance);
         return NULL;
     }
 
     spinlock_init(&my_instance->lock);
-    my_instance->action = FW_ACTION_BLOCK;
+    my_instance->action = config_get_enum(params, "action", action_values);
     my_instance->log_match = FW_LOG_NONE;
 
-    for (const CONFIG_PARAMETER *p = params; p; p = p->next)
+    if (config_get_bool(params, "log_match"))
     {
-        if (strcmp(p->name, "rules") == 0)
-        {
-            filename = p->value;
-        }
-        else if (strcmp(p->name, "log_match") == 0 &&
-                 config_truth_value(p->value))
-        {
-            my_instance->log_match |= FW_LOG_MATCH;
-        }
-        else if (strcmp(p->name, "log_no_match") == 0 &&
-                 config_truth_value(p->value))
-        {
-            my_instance->log_match |= FW_LOG_NO_MATCH;
-        }
-        else if (strcmp(p->name, "action") == 0)
-        {
-            if (strcmp(p->value, "allow") == 0)
-            {
-                my_instance->action = FW_ACTION_ALLOW;
-            }
-            else if (strcmp(p->value, "block") == 0)
-            {
-                my_instance->action = FW_ACTION_BLOCK;
-            }
-            else if (strcmp(p->value, "ignore") == 0)
-            {
-                my_instance->action = FW_ACTION_IGNORE;
-            }
-            else
-            {
-                MXS_ERROR("Unknown value for %s: %s. Expected one of 'allow', "
-                          "'block' or 'ignore'.", p->name, p->value);
-                err = true;
-            }
-        }
-        else if (!filter_standard_parameter(p->name))
-        {
-            MXS_ERROR("Unknown parameter '%s' for dbfwfilter.", p->name);
-            err = true;
-        }
+        my_instance->log_match |= FW_LOG_MATCH;
     }
 
-    if (filename == NULL)
+    if (config_get_bool(params, "log_no_match"))
     {
-        MXS_ERROR("Unable to find rule file for firewall filter. Please provide the path with"
-                  " rules=<path to file>");
-        err = true;
+        my_instance->log_match |= FW_LOG_NO_MATCH;
     }
 
     RULE *rules = NULL;
     HASHTABLE *users = NULL;
-    my_instance->rulefile = MXS_STRDUP(filename);
+    my_instance->rulefile = MXS_STRDUP(config_get_string(params, "rules"));
 
-    if (err || !my_instance->rulefile || !process_rule_file(filename, &rules, &users))
+    if (!my_instance->rulefile || !process_rule_file(my_instance->rulefile, &rules, &users))
     {
         MXS_FREE(my_instance);
         my_instance = NULL;
