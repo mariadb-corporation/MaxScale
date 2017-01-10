@@ -722,6 +722,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv)
         if (process_rule_file(filename, &rules, &users))
         {
             atomic_add(&inst->rule_version, 1);
+            MXS_NOTICE("Reloaded rules from: %s", filename);
         }
         else
         {
