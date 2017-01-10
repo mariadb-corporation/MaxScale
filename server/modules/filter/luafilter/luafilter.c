@@ -201,7 +201,6 @@ static FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     LUA_INSTANCE *my_instance;
-    bool error = false;
 
     if ((my_instance = (LUA_INSTANCE*) MXS_CALLOC(1, sizeof(LUA_INSTANCE))) == NULL)
     {
@@ -210,17 +209,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
     spinlock_init(&my_instance->lock);
 
-    const char *global_script = config_get_string(params, "global_script");
-    const char *session_script = config_get_string(params, "session_script");
-
-    if ((*global_script && (my_instance->global_script = MXS_STRDUP(global_script)) == NULL) ||
-        (*session_script && (my_instance->session_script = MXS_STRDUP(session_script)) == NULL))
-    {
-        MXS_FREE(my_instance->global_script);
-        MXS_FREE(my_instance->session_script);
-        MXS_FREE(my_instance);
-        return NULL;
-    }
+    my_instance->global_script = config_copy_string(params, "global_script");
+    my_instance->session_script = config_copy_string(params, "session_script");
 
     if (my_instance->global_script)
     {
