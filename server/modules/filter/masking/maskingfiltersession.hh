@@ -61,16 +61,24 @@ private:
     {
     public:
         ResponseState()
-            : m_nTotal_fields(0)
+            : m_command(0)
+            , m_nTotal_fields(0)
             , m_index(0)
         {}
 
-        void reset(const SMaskingRules& sRules)
+        void reset(uint8_t command, const SMaskingRules& sRules)
         {
+            m_command = command;
             m_sRules = sRules;
             m_nTotal_fields = 0;
+            m_types.clear();
             m_rules.clear();
             m_index = 0;
+        }
+
+        uint8_t command() const
+        {
+            return m_command;
         }
 
         const SMaskingRules& rules() const
@@ -82,11 +90,17 @@ private:
 
         void set_total_fields(uint32_t n) { m_nTotal_fields = n; }
 
-        bool append_rule(const MaskingRules::Rule* pRule)
+        bool append_type_and_rule(enum_field_types type, const MaskingRules::Rule* pRule)
         {
+            m_types.push_back(type);
             m_rules.push_back(pRule);
 
             return m_rules.size() == m_nTotal_fields;
+        }
+
+        const std::vector<enum_field_types>& types() const
+        {
+            return m_types;
         }
 
         const MaskingRules::Rule* get_rule()
@@ -101,8 +115,10 @@ private:
         }
 
     private:
+        uint8_t                                m_command;       /*<! What command. */
         SMaskingRules                          m_sRules;        /*<! The rules that are used. */
         uint32_t                               m_nTotal_fields; /*<! The total number of fields/columns. */
+        std::vector<enum_field_types>          m_types;         /*<! The column types. */
         std::vector<const MaskingRules::Rule*> m_rules;         /*<! The rules applied for columns. */
         size_t                                 m_index;         /*<! Index to the current rule.*/
     };
