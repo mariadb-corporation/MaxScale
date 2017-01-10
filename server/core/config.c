@@ -3262,7 +3262,16 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                                     break;
                                 }
                             }
+
                             tok = strtok_r(NULL, delim, &endptr);
+
+                            if ((params[i].options & MXS_MODULE_OPT_ENUM_UNIQUE) && (tok || !valid))
+                            {
+                                /** Either the only defined enum value is not valid
+                                 * or multiple values were defined */
+                                valid = false;
+                                break;
+                            }
                         }
                     }
                     break;

@@ -39,6 +39,7 @@ int test_validity()
         {"p5", MXS_MODULE_PARAM_ENUM, "a", MXS_MODULE_OPT_NONE, enum_values},
         {"p6", MXS_MODULE_PARAM_PATH, "/tmp", MXS_MODULE_OPT_PATH_F_OK},
         {"p7", MXS_MODULE_PARAM_SERVICE, "my-service"},
+        {"p8", MXS_MODULE_PARAM_ENUM, "a", MXS_MODULE_OPT_ENUM_UNIQUE, enum_values},
         {MXS_END_MODULE_PARAMS}
     };
 
@@ -76,7 +77,13 @@ int test_validity()
     TEST(config_param_is_valid(params, "p5", "a", &ctx));
     TEST(config_param_is_valid(params, "p5", "b", &ctx));
     TEST(config_param_is_valid(params, "p5", "c", &ctx));
+    TEST(config_param_is_valid(params, "p5", "a,b", &ctx));
+    TEST(config_param_is_valid(params, "p5", "b,a", &ctx));
+    TEST(config_param_is_valid(params, "p5", "a, b, c", &ctx));
+    TEST(config_param_is_valid(params, "p5", "c,a,b", &ctx));
     TEST(!config_param_is_valid(params, "p5", "d", &ctx));
+    TEST(!config_param_is_valid(params, "p5", "a,d", &ctx));
+    TEST(!config_param_is_valid(params, "p5", "a,b,c,d", &ctx));
 
     /** Path parameter */
     TEST(config_param_is_valid(params, "p6", "/tmp", &ctx));
@@ -89,6 +96,18 @@ int test_validity()
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
     TEST(!config_param_is_valid(params, "p7", "test-service", NULL));
     TEST(!config_param_is_valid(params, "p7", "no-such-service", &ctx));
+
+    /** Unique enum parameter */
+    TEST(config_param_is_valid(params, "p8", "a", &ctx));
+    TEST(config_param_is_valid(params, "p8", "b", &ctx));
+    TEST(config_param_is_valid(params, "p8", "c", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "a,b", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "b,a", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "a, b, c", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "c,a,b", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "d", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "a,d", &ctx));
+    TEST(!config_param_is_valid(params, "p8", "a,b,c,d", &ctx));
 
     return 0;
 }
