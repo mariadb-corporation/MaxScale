@@ -228,11 +228,11 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                     }
                 }
             }
-            break;
-
-        default:
-            break;
         }
+        break;
+
+    default:
+        break;
     }
 
     if (fetch_from_server)
