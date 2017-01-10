@@ -2310,10 +2310,23 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         thr_rule_version = rule_version;
     }
 
+    uint32_t type = qc_get_type(queue);
+
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
         GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
                                      "multi-statements.");
+        gwbuf_free(queue);
+        MXS_FREE(my_session->errmsg);
+        my_session->errmsg = NULL;
+        rval = dcb->func.write(dcb, err);
+    }
+    else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT) ||
+             qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+             modutil_is_SQL_prepare(queue))
+    {
+        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
+                                     "prepared statements.");
         gwbuf_free(queue);
         MXS_FREE(my_session->errmsg);
         my_session->errmsg = NULL;
