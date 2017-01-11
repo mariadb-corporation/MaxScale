@@ -169,6 +169,7 @@ int main(int argc, char **argv)
         MXS_FREE(inst);
         mxs_log_flush_sync();
         mxs_log_finish();
+        exit(EXIT_FAILURE);
     }
 
     inst->binlog_fd = fd;
