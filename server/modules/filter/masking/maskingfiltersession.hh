@@ -20,10 +20,13 @@
 #include "maskingrules.hh"
 
 class MaskingFilter;
+class MaskingFilterConfig;
 
 class MaskingFilterSession : public maxscale::FilterSession
 {
 public:
+    typedef MaskingFilterConfig Config;
+
     ~MaskingFilterSession();
 
     static MaskingFilterSession* create(SESSION* pSession, const MaskingFilter* pFilter);

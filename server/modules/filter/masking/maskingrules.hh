@@ -88,6 +88,8 @@ public:
              const std::vector<SAccount>& exempted);
         ~Rule();
 
+        std::string match() const;
+
         const std::string& column() const { return m_column; }
         const std::string& table() const { return m_table; }
         const std::string& database() const { return m_database; }

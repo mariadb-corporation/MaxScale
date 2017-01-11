@@ -1,6 +1,7 @@
 if (JANSSON_FOUND)
   add_library(masking SHARED
     maskingfilter.cc
+    maskingfilterconfig.cc
     maskingfiltersession.cc
     maskingrules.cc
     )

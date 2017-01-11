@@ -77,6 +77,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);
 
+    typedef MaskingFilter::Config Config;
+
     static MXS_MODULE info =
     {
         MXS_MODULE_API_FILTER,
@@ -90,8 +92,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
-            {"rules_file", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
-            {MXS_END_MODULE_PARAMS}
+            { Config::rules_file_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
+            { Config::warn_type_mismatch_name,
+              MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
+              MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
+            { MXS_END_MODULE_PARAMS }
         }
     };
 
@@ -114,12 +119,15 @@ MaskingFilter::~MaskingFilter()
 }
 
 // static
-MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* pParams)
 {
     MaskingFilter* pFilter = NULL;
 
     MaskingFilter::Config config(zName);
-    process_params(pzOptions, ppParams, config);
+
+    config.set_warn_type_mismatch(Config::get_warn_type_mismatch(pParams));
+    process_params(pzOptions, pParams, config);
+
     auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
 
     if (sRules.get())

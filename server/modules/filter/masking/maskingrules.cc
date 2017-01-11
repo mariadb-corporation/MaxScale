@@ -614,6 +614,19 @@ auto_ptr<MaskingRules::Rule> MaskingRules::Rule::create_from(json_t* pRule)
     return sRule;
 }
 
+string MaskingRules::Rule::match() const
+{
+    string s;
+
+    s += m_database.empty() ? "*" : m_database;
+    s += ".";
+    s += m_table.empty() ? "*" : m_table;
+    s += ".";
+    s += m_column;
+
+    return s;
+}
+
 namespace
 {
 

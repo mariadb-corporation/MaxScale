@@ -39,6 +39,7 @@ public:
 
     void reload(DCB* pOut);
 
+    const Config& config() const { return m_config; }
     SMaskingRules rules() const;
 
 private:

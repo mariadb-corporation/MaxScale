@@ -76,7 +76,7 @@ type=service
 filters=Mask-SSN
 ```
 
-# Filter Parameter
+## Filter Parameters
 
 The masking filter has one mandatory parameter - `rules_file`.
 
@@ -88,6 +88,18 @@ MariaDB MaxScale.
 
 ```
 rules_file=/path/to/rules-file
+```
+
+#### `warn_type_mismatch`
+
+With this optional parameter the masking filter can be instructed to log
+a warning if a masking rule matches a column that is not of one of the
+allowed types.
+
+The values that can be used are `never` and `always`, with `never` being
+the default.
+```
+warn_type_mismatch=always
 ```
 
 # Rules

@@ -178,6 +178,17 @@ void MaskingFilterSession::handle_eof(GWBUF* pPacket)
     }
 }
 
+namespace
+{
+
+void warn_of_type_mismatch(const MaskingRules::Rule& rule)
+{
+    MXS_WARNING("The rule targeting \"%s\" matches a column "
+                "that is not of string type.", rule.match().c_str());
+}
+
+}
+
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
     MXS_NOTICE("handle_row");
@@ -213,7 +224,10 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
                             LEncString s = value.as_string();
                             pRule->rewrite(s);
                         }
-
+                        else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                        {
+                            warn_of_type_mismatch(*pRule);
+                        }
                     }
                     ++i;
                 }
@@ -237,6 +251,10 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
                         {
                             LEncString s = value.as_string();
                             pRule->rewrite(s);
+                        }
+                        else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                        {
+                            warn_of_type_mismatch(*pRule);
                         }
                     }
                     ++i;
