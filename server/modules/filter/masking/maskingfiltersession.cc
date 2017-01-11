@@ -197,23 +197,23 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
         {
         case MYSQL_COM_QUERY:
             {
-                ComQueryResponse::Row row(response);
+                ComQueryResponse::TextResultsetRow row(response, m_res.types());
 
-                ComQueryResponse::Row::iterator i = row.begin();
+                ComQueryResponse::TextResultsetRow::iterator i = row.begin();
                 while (i != row.end())
                 {
                     const MaskingRules::Rule* pRule = m_res.get_rule();
 
                     if (pRule)
                     {
-                        LEncString s = *i;
+                        ComQueryResponse::TextResultsetRow::Value value = *i;
 
-                        if (!s.is_null())
+                        if (value.is_string())
                         {
+                            LEncString s = value.as_string();
                             pRule->rewrite(s);
                         }
 
-                        MXS_NOTICE("String: %s", (*i).to_string().c_str());
                     }
                     ++i;
                 }
@@ -222,16 +222,16 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
 
         case MYSQL_COM_STMT_EXECUTE:
             {
-                ComQueryResponse::BinaryRow row(response, m_res.types());
+                ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
 
-                ComQueryResponse::BinaryRow::iterator i = row.begin();
+                ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
                 while (i != row.end())
                 {
                     const MaskingRules::Rule* pRule = m_res.get_rule();
 
                     if (pRule)
                     {
-                        ComQueryResponse::BinaryRow::Value value = *i;
+                        ComQueryResponse::BinaryResultsetRow::Value value = *i;
 
                         if (value.is_string())
                         {
