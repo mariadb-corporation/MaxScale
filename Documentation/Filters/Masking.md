@@ -50,6 +50,15 @@ For a secure solution, the masking filter *must* be combined with the
 firewall filter to prevent the use of functions and the use of particular
 columns in where-clauses.
 
+## Limitations
+
+The masking filter can _only_ be used for masking columns of the following
+types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, 'BLOB', TINYBLOB`,
+`MEDIUMBLOB`, `LONGBLOB`, `TEXT`, `TINYTEXT`, `MEDIUMTEXT`, `LONGTEXT`,
+`ENUM` and `SET`.
+
+If the type of the column is something else, then no masking will be performed.
+
 ## Configuration
 
 The masking filter is taken into use with the following kind of
