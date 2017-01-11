@@ -85,6 +85,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             {"detect_stale_master", MXS_MODULE_PARAM_BOOL, "false"},
+            {
+                "script",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
+            },
+            {
+                "events",
+                MXS_MODULE_PARAM_ENUM,
+                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                monitor_event_enum_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -105,11 +118,11 @@ static void *
 startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
 {
     MM_MONITOR *handle = mon->handle;
-    bool have_events = false, script_error = false;
 
     if (handle)
     {
         handle->shutdown = 0;
+        MXS_FREE(handle->script);
     }
     else
     {
@@ -120,41 +133,12 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         handle->shutdown = 0;
         handle->id = MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        handle->script = NULL;
-        memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
     }
 
     handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
-
-    while (params)
-    {
-        if (!strcmp(params->name, "script"))
-        {
-            if (externcmd_can_execute(params->value))
-            {
-                MXS_FREE(handle->script);
-                handle->script = MXS_STRDUP_A(params->value);
-            }
-            else
-            {
-                script_error = true;
-            }
-        }
-        else if (!strcmp(params->name, "events"))
-        {
-            if (mon_parse_event_string((bool *)handle->events,
-                                       sizeof(handle->events), params->value) != 0)
-            {
-                script_error = true;
-            }
-            else
-            {
-                have_events = true;
-            }
-        }
-        params = params->next;
-    }
+    handle->script = config_copy_string(params, "script");
+    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
 
     if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
     {
@@ -162,19 +146,6 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
         MXS_FREE(handle->script);
         MXS_FREE(handle);
         return NULL;
-    }
-
-    if (script_error)
-    {
-        MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.", mon->name);
-        MXS_FREE(handle->script);
-        handle->script = NULL;
-    }
-    /** If no specific events are given, enable them all */
-    if (!have_events)
-    {
-        memset(handle->events, true, sizeof(handle->events));
     }
 
     if (thread_start(&handle->thread, monitorMain, mon) == NULL)
@@ -615,24 +586,11 @@ monitorMain(void *arg)
             ptr = ptr->next;
         }
 
-        ptr = mon->databases;
-        monitor_event_t evtype;
-        while (ptr)
-        {
-            if (mon_status_changed(ptr))
-            {
-                evtype = mon_get_event_type(ptr);
-                if (isMySQLEvent(evtype))
-                {
-                    mon_log_state_change(ptr);
-                    if (handle->script && handle->events[evtype])
-                    {
-                        monitor_launch_script(mon, ptr, handle->script);
-                    }
-                }
-            }
-            ptr = ptr->next;
-        }
+        /**
+         * After updating the status of all servers, check if monitor events
+         * need to be launched.
+         */
+        mon_process_state_changes(mon, handle->script, handle->events);
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
@@ -716,38 +674,4 @@ static MONITOR_SERVERS *get_current_master(MONITOR *mon)
     {
         return NULL;
     }
-}
-
-
-static monitor_event_t mysql_events[] =
-{
-    MASTER_DOWN_EVENT,
-    MASTER_UP_EVENT,
-    SLAVE_DOWN_EVENT,
-    SLAVE_UP_EVENT,
-    SERVER_DOWN_EVENT,
-    SERVER_UP_EVENT,
-    LOST_MASTER_EVENT,
-    LOST_SLAVE_EVENT,
-    NEW_MASTER_EVENT,
-    NEW_SLAVE_EVENT,
-    MAX_MONITOR_EVENT
-};
-
-/**
- * Check if the MM monitor is monitoring this event type.
- * @param event Event to check
- * @return True if the event is monitored, false if it is not
- * */
-bool isMySQLEvent(monitor_event_t event)
-{
-    int i;
-    for (i = 0; mysql_events[i] != MAX_MONITOR_EVENT; i++)
-    {
-        if (event == mysql_events[i])
-        {
-            return true;
-        }
-    }
-    return false;
 }

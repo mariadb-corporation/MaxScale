@@ -43,6 +43,7 @@
 #include <maxscale/config.h>
 #include <maxscale/externcmd.h>
 #include <maxscale/secrets.h>
+#include <maxscale/modinfo.h>
 
 MXS_BEGIN_DECLS
 
@@ -62,14 +63,6 @@ MXS_BEGIN_DECLS
  *
  * stopMonitor is responsible for shuting down and destroying a monitor, it is called
  * with the void * handle that was returned by startMonitor.
- *
- * registerServer is called to register a server that must be monitored with a running
- * monitor. this will be called with the handle returned from the startMonitor call and
- * the SERVER structure that the monitor must update and monitor. The SERVER structure
- * contains the information required to connect to the monitored server.
- *
- * unregisterServer is called to remove a server from the set of servers that need to be
- * monitored.
  */
 
 struct monitor;
@@ -140,25 +133,66 @@ typedef enum
 #define MAX_MONITOR_USER_LEN     512
 #define MAX_MONITOR_PASSWORD_LEN 512
 
-/*
- * Create declarations of the enum for monitor events and also the array of
- * structs containing the matching names. The data is taken from def_monitor_event.h
- */
-#undef  ADDITEM
-#define ADDITEM( _event_type, _event_name )      _event_type
+/** Monitor events */
 typedef enum
 {
-#include "def_monitor_event.h"
-    MAX_MONITOR_EVENT
+    UNDEFINED_EVENT   = 0,
+    MASTER_DOWN_EVENT = (1 << 0),  /**< master_down */
+    MASTER_UP_EVENT   = (1 << 1),  /**< master_up */
+    SLAVE_DOWN_EVENT  = (1 << 2),  /**< slave_down */
+    SLAVE_UP_EVENT    = (1 << 3),  /**< slave_up */
+    SERVER_DOWN_EVENT = (1 << 4),  /**< server_down */
+    SERVER_UP_EVENT   = (1 << 5),  /**< server_up */
+    SYNCED_DOWN_EVENT = (1 << 6),  /**< synced_down */
+    SYNCED_UP_EVENT   = (1 << 7),  /**< synced_up */
+    DONOR_DOWN_EVENT  = (1 << 8),  /**< donor_down */
+    DONOR_UP_EVENT    = (1 << 9),  /**< donor_up */
+    NDB_DOWN_EVENT    = (1 << 10), /**< ndb_down */
+    NDB_UP_EVENT      = (1 << 11), /**< ndb_up */
+    LOST_MASTER_EVENT = (1 << 12), /**< lost_master */
+    LOST_SLAVE_EVENT  = (1 << 13), /**< lost_slave */
+    LOST_SYNCED_EVENT = (1 << 14), /**< lost_synced */
+    LOST_DONOR_EVENT  = (1 << 15), /**< lost_donor */
+    LOST_NDB_EVENT    = (1 << 16), /**< lost_ndb */
+    NEW_MASTER_EVENT  = (1 << 17), /**< new_master */
+    NEW_SLAVE_EVENT   = (1 << 18), /**< new_slave */
+    NEW_SYNCED_EVENT  = (1 << 19), /**< new_synced */
+    NEW_DONOR_EVENT   = (1 << 20), /**< new_donor */
+    NEW_NDB_EVENT     = (1 << 21), /**< new_ndb */
 } monitor_event_t;
-#undef  ADDITEM
 
-typedef struct monitor_def_s
+static const MXS_ENUM_VALUE monitor_event_enum_values[] =
 {
-    char name[30];
-} monitor_def_t;
+    {"master_down", MASTER_DOWN_EVENT},
+    {"master_up ", MASTER_UP_EVENT},
+    {"slave_down ", SLAVE_DOWN_EVENT},
+    {"slave_up ", SLAVE_UP_EVENT},
+    {"server_down ", SERVER_DOWN_EVENT},
+    {"server_up ", SERVER_UP_EVENT},
+    {"synced_down ", SYNCED_DOWN_EVENT},
+    {"synced_up ", SYNCED_UP_EVENT},
+    {"donor_down ", DONOR_DOWN_EVENT},
+    {"donor_up ", DONOR_UP_EVENT},
+    {"ndb_down ", NDB_DOWN_EVENT},
+    {"ndb_up ", NDB_UP_EVENT},
+    {"lost_master ", LOST_MASTER_EVENT},
+    {"lost_slave ", LOST_SLAVE_EVENT},
+    {"lost_synced ", LOST_SYNCED_EVENT},
+    {"lost_donor ", LOST_DONOR_EVENT},
+    {"lost_ndb ", LOST_NDB_EVENT},
+    {"new_master ", NEW_MASTER_EVENT},
+    {"new_slave ", NEW_SLAVE_EVENT},
+    {"new_synced ", NEW_SYNCED_EVENT},
+    {"new_donor ", NEW_DONOR_EVENT},
+    {"new_ndb ", NEW_NDB_EVENT},
+    {NULL}
+};
 
-extern const monitor_def_t monitor_event_definitions[];
+/** Default value for the `events` parameter */
+static const char MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,slave_down,"
+    "slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,"
+    "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
+    "new_master,new_slave,new_synced,new_donor,new_ndb";
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
@@ -226,15 +260,12 @@ extern bool monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 extern bool check_monitor_permissions(MONITOR* monitor, const char* query);
 
-monitor_event_t mon_name_to_event(const char* tok);
 monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
 const char* mon_get_event_name(MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
 void monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit);
 bool mon_status_changed(MONITOR_SERVERS* mon_srv);
 bool mon_print_fail_status(MONITOR_SERVERS* mon_srv);
-void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script);
-int mon_parse_event_string(bool* events, size_t count, char* string);
 connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 void mon_log_state_change(MONITOR_SERVERS *ptr);
@@ -242,6 +273,19 @@ void lock_monitor_servers(MONITOR *monitor);
 void release_monitor_servers(MONITOR *monitor);
 void servers_status_pending_to_current(MONITOR *monitor);
 void servers_status_current_to_pending(MONITOR *monitor);
+
+/**
+ * @brief Handle state change events
+ *
+ * This function should be called by all monitors at the end of each monitoring
+ * cycle. This will log state changes and execute any scripts that should be executed.
+ *
+ * @param monitor Monitor object
+ * @param script Script to execute or NULL for no script
+ * @param events Enabled events
+ */
+void mon_process_state_changes(MONITOR *monitor, const char *script, uint64_t events);
+
 /**
  * @brief Hangup connections to failed servers
  *

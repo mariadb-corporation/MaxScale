@@ -42,20 +42,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
 
-/*
- *  Create declarations of the enum for monitor events and also the array of
- *  structs containing the matching names. The data is taken from def_monitor_event.h
- *
- */
-
-#undef ADDITEM
-#define ADDITEM( _event_type, _event_name ) { #_event_name }
-const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
-{
-#include <maxscale/def_monitor_event.h>
-};
-#undef ADDITEM
-
 static MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
@@ -837,7 +823,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
     if (prev == present)
     {
         /* No change in the bits we're interested in */
-        return UNDEFINED_MONITOR_EVENT;
+        return UNDEFINED_EVENT;
     }
 
     if ((prev & SERVER_RUNNING) == 0)
@@ -904,7 +890,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
                    (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
                    NEW_NDB_EVENT;
         default:
-            return UNDEFINED_MONITOR_EVENT;
+            return UNDEFINED_EVENT;
     }
 }
 
@@ -916,28 +902,17 @@ mon_get_event_type(MONITOR_SERVERS* node)
 const char*
 mon_get_event_name(MONITOR_SERVERS* node)
 {
-    return monitor_event_definitions[mon_get_event_type(node)].name;
-}
+    monitor_event_t event = mon_get_event_type(node);
 
-/*
- * Given the text version of a monitor event, determine the event (enum)
- *
- * @param   event_name          String containing the event name
- * @result  monitor_event_t     Monitor event corresponding to name
- */
-monitor_event_t
-mon_name_to_event(const char *event_name)
-{
-    monitor_event_t event;
-
-    for (event = 0; event < MAX_MONITOR_EVENT; event++)
+    for (int i = 0; monitor_event_enum_values[i].name; i++)
     {
-        if (0 == strcasecmp(monitor_event_definitions[event].name, event_name))
+        if (monitor_event_enum_values[i].enum_value & event)
         {
-            return event;
+            return monitor_event_enum_values[i].name;
         }
     }
-    return UNDEFINED_MONITOR_EVENT;
+
+    return "undefined_event";
 }
 
 /**
@@ -1001,9 +976,12 @@ mon_print_fail_status(MONITOR_SERVERS* mon_srv)
  * @param script Script to execute
  */
 void
-monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
+monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, const char* script)
 {
-    EXTERNCMD* cmd = externcmd_allocate(script);
+    char arg[strlen(script) + 1];
+    strcpy(arg, script);
+
+    EXTERNCMD* cmd = externcmd_allocate(arg);
 
     if (cmd == NULL)
     {
@@ -1108,49 +1086,6 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
     }
 
     externcmd_free(cmd);
-}
-
-/**
- * Parse a string of event names to an array with enabled events.
- * @param events Pointer to an array of boolean values
- * @param count Size of the array
- * @param string String to parse
- * @return 0 on success. 1 when an error has occurred or an unexpected event was
- * found.
- */
-int
-mon_parse_event_string(bool* events, size_t count, char* given_string)
-{
-    char *tok, *saved, *string = MXS_STRDUP(given_string);
-    MXS_ABORT_IF_NULL(string);
-    monitor_event_t event;
-
-    tok = strtok_r(string, ",| ", &saved);
-
-    if (tok == NULL)
-    {
-        MXS_FREE(string);
-        return -1;
-    }
-
-    while (tok)
-    {
-        event = mon_name_to_event(tok);
-        if (event == UNDEFINED_MONITOR_EVENT)
-        {
-            MXS_ERROR("Invalid event name %s", tok);
-            MXS_FREE(string);
-            return -1;
-        }
-        if (event < count)
-        {
-            events[event] = true;
-            tok = strtok_r(NULL, ",| ", &saved);
-        }
-    }
-
-    MXS_FREE(string);
-    return 0;
 }
 
 /**
@@ -1496,5 +1431,21 @@ void servers_status_current_to_pending(MONITOR *monitor)
     {
         ptr->server->status_pending = ptr->server->status;
         ptr = ptr->next;
+    }
+}
+
+void mon_process_state_changes(MONITOR *monitor, const char *script, uint64_t events)
+{
+    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    {
+        if (mon_status_changed(ptr))
+        {
+            mon_log_state_change(ptr);
+
+            if (script && (events & mon_get_event_type(ptr)))
+            {
+                monitor_launch_script(monitor, ptr, script);
+            }
+        }
     }
 }

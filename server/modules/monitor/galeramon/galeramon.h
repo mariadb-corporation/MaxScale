@@ -61,7 +61,7 @@ typedef struct
     bool root_node_as_master; /**< Whether we require that the Master should
                                     * have a wsrep_local_index of 0 */
     bool use_priority; /*< Use server priorities */
-    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    uint64_t events; /*< enabled events */
 } GALERA_MONITOR;
 
 MXS_END_DECLS

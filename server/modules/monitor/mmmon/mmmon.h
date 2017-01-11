@@ -49,7 +49,7 @@ typedef struct
     int detectStaleMaster; /**< Monitor flag for Stale Master detection */
     MONITOR_SERVERS *master; /**< Master server for Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
-    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    uint64_t events; /*< enabled events */
 } MM_MONITOR;
 
 MXS_END_DECLS

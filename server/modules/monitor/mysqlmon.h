@@ -73,7 +73,7 @@ typedef struct
     bool mysql51_replication; /**< Use MySQL 5.1 replication */
     MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
-    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    uint64_t events; /*< enabled events */
     HASHTABLE *server_info; /**< Contains server specific information */
     bool failover; /**< If simple failover is enabled */
     int failcount; /**< How many monitoring cycles servers must be
