@@ -90,6 +90,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
+            {"rules_file", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -118,14 +119,12 @@ MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG
     MaskingFilter* pFilter = NULL;
 
     MaskingFilter::Config config(zName);
-    if (process_params(pzOptions, ppParams, config))
-    {
-        auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
+    process_params(pzOptions, ppParams, config);
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
 
-        if (sRules.get())
-        {
-            pFilter = new MaskingFilter(config, sRules);
-        }
+    if (sRules.get())
+    {
+        pFilter = new MaskingFilter(config, sRules);
     }
 
     return pFilter;
@@ -172,45 +171,18 @@ void MaskingFilter::reload(DCB* pOut)
 }
 
 // static
-bool MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
+void MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
 {
-    bool error = false;
+    const char *value = config_get_string(pParams, "rules_file");
+    string rules_file;
 
-    for (const CONFIG_PARAMETER* pParam = pParams; pParam; pParam = pParam->next)
+    if (*value != '/')
     {
-        if (strcmp(pParam->name, "rules_file") == 0)
-        {
-            string rules_file;
-
-            if (*pParam->value != '/')
-            {
-                // A relative path is interpreted relative to the data directory.
-                rules_file += get_datadir();
-                rules_file += "/";
-            }
-
-            rules_file += pParam->value;
-
-            config.set_rules_file(rules_file);
-        }
-        else if (!filter_standard_parameter(pParam->name))
-        {
-            MXS_ERROR("Unknown configuration entry '%s'.", pParam->name);
-            error = true;
-        }
+        // A relative path is interpreted relative to the data directory.
+        rules_file += get_datadir();
+        rules_file += "/";
     }
 
-    if (!error)
-    {
-        if (config.rules_file().empty())
-        {
-            MXS_ERROR("In order to use the masking filter, the location of the rules file "
-                      "must be specified. Add a configuration entry 'rules_file=...' in "
-                      "the section [%s], in the MariaDB MaxScale configuration file.",
-                      config.name().c_str());
-            error = true;
-        }
-    }
-
-    return !error;
+    rules_file += value;
+    config.set_rules_file(rules_file);
 }
