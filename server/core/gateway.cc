@@ -123,6 +123,7 @@ static struct option long_options[] =
     {"datadir",          required_argument, 0, 'D'},
     {"execdir",          required_argument, 0, 'E'},
     {"persistdir",       required_argument, 0, 'F'},
+    {"module_configdir", required_argument, 0, 'M'},
     {"language",         required_argument, 0, 'N'},
     {"piddir",           required_argument, 0, 'P'},
     {"basedir",          required_argument, 0, 'R'},
@@ -912,6 +913,7 @@ static void usage(void)
             "                              stores internal MaxScale data\n"
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
             "  -F, --persistdir=PATH       path to persisted configuration directory\n"
+            "  -M, --module_configdir=PATH path to module configuration directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -926,16 +928,17 @@ static void usage(void)
             "  -?, --help                  show this help\n"
             "\n"
             "Defaults paths:\n"
-            "  config file: %s/%s\n"
-            "  configdir  : %s\n"
-            "  logdir     : %s\n"
-            "  cachedir   : %s\n"
-            "  libdir     : %s\n"
-            "  datadir    : %s\n"
-            "  execdir    : %s\n"
-            "  language   : %s\n"
-            "  piddir     : %s\n"
-            "  persistdir : %s\n"
+            "  config file      : %s/%s\n"
+            "  configdir        : %s\n"
+            "  logdir           : %s\n"
+            "  cachedir         : %s\n"
+            "  libdir           : %s\n"
+            "  datadir          : %s\n"
+            "  execdir          : %s\n"
+            "  language         : %s\n"
+            "  piddir           : %s\n"
+            "  persistdir       : %s\n"
+            "  module configdir : %s\n"
             "\n"
             "If '--basedir' is provided then all other paths, including the default\n"
             "configuration file path, are defined relative to that. As an example,\n"
@@ -947,7 +950,7 @@ static void usage(void)
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
             get_datadir(), get_execdir(), get_langdir(), get_piddir(),
-            get_config_persistdir());
+            get_config_persistdir(), get_module_configdir());
 }
 
 
@@ -1196,6 +1199,11 @@ bool set_dirs(const char *basedir)
         set_configdir(path);
     }
 
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_MODULE_CONFIG_SUBPATH, true, false)))
+    {
+        set_module_configdir(path);
+    }
+
     if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH, true, false)))
     {
         set_datadir(path);
@@ -1311,7 +1319,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:",
+    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1473,6 +1481,18 @@ int main(int argc, char **argv)
                     succp = false;
                 }
                 break;
+
+            case 'M':
+                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+                {
+                    set_module_configdir(tmp_path);
+                }
+                else
+                {
+                    succp = false;
+                }
+                break;
+
             case 'R':
                 if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
                 {
@@ -2478,6 +2498,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_config_persistdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "module_configdir") == 0)
+        {
+            if (strcmp(get_module_configdir(), default_module_configdir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_module_configdir(tmp);
                 }
                 else
                 {

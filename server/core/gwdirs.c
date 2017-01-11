@@ -27,6 +27,17 @@ void set_configdir(char* str)
 }
 
 /**
+ * Set the module configuration file directory
+ * @param str Path to directory
+ */
+void set_module_configdir(char* str)
+{
+    MXS_FREE(module_configdir);
+    clean_up_pathname(str);
+    module_configdir = str;
+}
+
+/**
  * Set the configuration parts file directory
  * @param str Path to directory
  */
@@ -169,6 +180,15 @@ char* get_process_datadir()
 char* get_configdir()
 {
     return configdir ? configdir : (char*) default_configdir;
+}
+
+/**
+ * Get the module configuration file directory
+ * @return The path to the module configuration file directory
+ */
+char* get_module_configdir()
+{
+    return module_configdir ? module_configdir : (char*) default_module_configdir;
 }
 
 /**

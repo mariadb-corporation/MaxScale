@@ -388,6 +388,16 @@ or modify the contents of this directory, use _/etc/maxscale.cnf.d/_ instead.
 persistdir=/var/lib/maxscale/maxscale.cnf.d/
 ```
 
+#### `module_configdir`
+
+Configure the directory where module configurations are stored. Path arguments
+are resolved relative to this directory. This directory should be used to store
+module specific configurations e.g. dbfwfilter rule files.
+
+```
+module_configdir=/var/lib/maxscale/
+```
+
 #### `language`
 
 Set the folder where the errmsg.sys file is located in. MariaDB MaxScale will look for the errmsg.sys file installed with MariaDB MaxScale from this folder.
