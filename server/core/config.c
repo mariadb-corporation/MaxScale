@@ -1824,6 +1824,41 @@ static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
     return rval;
 }
 
+static bool is_path_parameter(const MXS_MODULE_PARAM *params, const char *name)
+{
+    bool rval = false;
+
+    if (params)
+    {
+        for (int i = 0; params[i].name; i++)
+        {
+            if (strcmp(params[i].name, name) == 0 && params[i].type == MXS_MODULE_PARAM_PATH)
+            {
+                rval = true;
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+static void process_path_parameter(CONFIG_PARAMETER *param)
+{
+    if (*param->value != '/')
+    {
+        const char *mod_dir = get_module_configdir();
+        size_t size = strlen(param->value) + strlen(mod_dir) + 3;
+        char *value = MXS_MALLOC(size);
+        MXS_ABORT_IF_NULL(value);
+
+        sprintf(value, "/%s/%s", mod_dir, param->value);
+        clean_up_pathname(value);
+        MXS_FREE(param->value);
+        param->value = value;
+    }
+}
+
 /**
  * @brief Check that the configuration objects have valid parameters
  *
@@ -1893,6 +1928,10 @@ check_config_objects(CONFIG_CONTEXT *context)
                         MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
                                   params->name, obj->object, type);
                         rval = false;
+                    }
+                    else if (is_path_parameter(mod->parameters, params->name))
+                    {
+                        process_path_parameter(params);
                     }
                 }
                 params = params->next;
@@ -3152,6 +3191,62 @@ bool config_is_ssl_parameter(const char *key)
     return false;
 }
 
+static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *value)
+{
+    bool valid = false;
+
+    if (params->options & (MXS_MODULE_OPT_PATH_W_OK |
+                           MXS_MODULE_OPT_PATH_R_OK |
+                           MXS_MODULE_OPT_PATH_X_OK |
+                           MXS_MODULE_OPT_PATH_F_OK))
+    {
+        char buf[strlen(get_module_configdir()) + strlen(value) + 3];
+
+        if (*value != '/')
+        {
+            sprintf(buf, "/%s/%s", get_module_configdir(), value);
+            clean_up_pathname(buf);
+        }
+        else
+        {
+            strcpy(buf, value);
+        }
+
+        int mode = F_OK;
+
+        if (params->options & MXS_MODULE_OPT_PATH_W_OK)
+        {
+            mode |= W_OK;
+        }
+        if (params->options & MXS_MODULE_OPT_PATH_R_OK)
+        {
+            mode |= R_OK;
+        }
+        if (params->options & MXS_MODULE_OPT_PATH_X_OK)
+        {
+            mode |= X_OK;
+        }
+
+        if (access(buf, mode) == 0)
+        {
+            valid = true;
+        }
+        else
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s", value,
+                      buf, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+    else
+    {
+        /** No checks for the path are required */
+        valid = true;
+    }
+
+    return valid;
+}
+
 static bool config_contains_type(const CONFIG_CONTEXT *ctx, const char *name, const char *type)
 {
     while (ctx)
@@ -3293,41 +3388,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                     break;
 
                 case MXS_MODULE_PARAM_PATH:
-                    if (params[i].options & (MXS_MODULE_OPT_PATH_W_OK |
-                                             MXS_MODULE_OPT_PATH_R_OK |
-                                             MXS_MODULE_OPT_PATH_X_OK |
-                                             MXS_MODULE_OPT_PATH_F_OK))
-                    {
-                        int mode = F_OK;
-                        if (params[i].options & MXS_MODULE_OPT_PATH_W_OK)
-                        {
-                            mode |= W_OK;
-                        }
-                        if (params[i].options & MXS_MODULE_OPT_PATH_R_OK)
-                        {
-                            mode |= R_OK;
-                        }
-                        if (params[i].options & MXS_MODULE_OPT_PATH_X_OK)
-                        {
-                            mode |= X_OK;
-                        }
-
-                        if (access(value, mode) == 0)
-                        {
-                            valid = true;
-                        }
-                        else
-                        {
-                            char err[MXS_STRERROR_BUFLEN];
-                            MXS_ERROR("Bad path parameter '%s': %d, %s", value,
-                                      errno, strerror_r(errno, err, sizeof(err)));
-                        }
-                    }
-                    else
-                    {
-                        /** No checks for the path are required */
-                        valid = true;
-                    }
+                    valid = check_path_parameter(&params[i], value);
                     break;
 
                 default:
