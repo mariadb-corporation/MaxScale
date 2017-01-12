@@ -315,35 +315,11 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
         error = true;
     }
 
-    const CONFIG_PARAMETER *pParam = config_get_param(ppParams, "rules");
+    config.rules = config_copy_string(ppParams, "rules");
+
+    const CONFIG_PARAMETER *pParam = config_get_param(ppParams, "storage_options");
 
     if (pParam)
-    {
-        if (*pParam->value == '/')
-        {
-            config.rules = MXS_STRDUP(pParam->value);
-        }
-        else
-        {
-            const char* datadir = get_datadir();
-            size_t len = strlen(datadir) + 1 + strlen(pParam->value) + 1;
-
-            char *rules = (char*)MXS_MALLOC(len);
-
-            if (rules)
-            {
-                sprintf(rules, "%s/%s", datadir, pParam->value);
-                config.rules = rules;
-            }
-        }
-
-        if (!config.rules)
-        {
-            error = true;
-        }
-    }
-
-    if ((pParam = config_get_param(ppParams, "storage_options")))
     {
         config.storage_options = MXS_STRDUP(pParam->value);
 

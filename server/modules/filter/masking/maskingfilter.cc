@@ -181,16 +181,6 @@ void MaskingFilter::reload(DCB* pOut)
 // static
 void MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
 {
-    const char *value = config_get_string(pParams, "rules_file");
-    string rules_file;
-
-    if (*value != '/')
-    {
-        // A relative path is interpreted relative to the data directory.
-        rules_file += get_datadir();
-        rules_file += "/";
-    }
-
-    rules_file += value;
+    string rules_file = config_get_string(pParams, "rules_file");
     config.set_rules_file(rules_file);
 }
