@@ -64,32 +64,41 @@ int MaskingFilterSession::routeQuery(GWBUF* pPacket)
 
 int MaskingFilterSession::clientReply(GWBUF* pPacket)
 {
-    MXS_NOTICE("clientReply");
     ss_dassert(GWBUF_IS_CONTIGUOUS(pPacket));
 
-    switch (m_state)
+    ComResponse response(pPacket);
+
+    if (response.is_err())
     {
-    case EXPECTING_NOTHING:
-        MXS_WARNING("Received data, although expected nothing.");
-    case IGNORING_RESPONSE:
-        break;
+        // If we get an error response, we just abort what we were doing.
+        m_state = EXPECTING_NOTHING;
+    }
+    else
+    {
+        switch (m_state)
+        {
+        case EXPECTING_NOTHING:
+            MXS_WARNING("Received data, although expected nothing.");
+        case IGNORING_RESPONSE:
+            break;
 
-    case EXPECTING_RESPONSE:
-        handle_response(pPacket);
-        break;
+        case EXPECTING_RESPONSE:
+            handle_response(pPacket);
+            break;
 
-    case EXPECTING_FIELD:
-        handle_field(pPacket);
-        break;
+        case EXPECTING_FIELD:
+            handle_field(pPacket);
+            break;
 
-    case EXPECTING_ROW:
-        handle_row(pPacket);
-        break;
+        case EXPECTING_ROW:
+            handle_row(pPacket);
+            break;
 
-    case EXPECTING_FIELD_EOF:
-    case EXPECTING_ROW_EOF:
-        handle_eof(pPacket);
-        break;
+        case EXPECTING_FIELD_EOF:
+        case EXPECTING_ROW_EOF:
+            handle_eof(pPacket);
+            break;
+        }
     }
 
     return FilterSession::clientReply(pPacket);
@@ -97,14 +106,12 @@ int MaskingFilterSession::clientReply(GWBUF* pPacket)
 
 void MaskingFilterSession::handle_response(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_response");
     ComResponse response(pPacket);
 
     switch (response.type())
     {
-    case 0x00: // OK
+    case ComPacket::OK_PACKET: // OK
         // We'll end up here also in the case of a multi-result.
-    case 0xff: // ERR
     case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
@@ -121,8 +128,6 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
 
 void MaskingFilterSession::handle_field(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_field");
-
     ComQueryResponse::ColumnDef column_def(pPacket);
 
     const char *zUser = session_get_user(m_pSession);
@@ -149,8 +154,6 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
 
 void MaskingFilterSession::handle_eof(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_eof");
-
     ComResponse response(pPacket);
 
     if (response.is_eof())
@@ -190,8 +193,6 @@ void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
-    MXS_NOTICE("handle_row");
-
     ComResponse response(pPacket);
 
     switch (response.type())
