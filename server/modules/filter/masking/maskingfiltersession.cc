@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "masking"
 #include "maskingfiltersession.hh"
 #include <sstream>
 #include <maxscale/buffer.hh>
@@ -98,10 +99,25 @@ int MaskingFilterSession::clientReply(GWBUF* pPacket)
         case EXPECTING_ROW_EOF:
             handle_eof(pPacket);
             break;
+
+        case SUPPRESSING_RESPONSE:
+            break;
         }
     }
 
-    return FilterSession::clientReply(pPacket);
+    // The state may change by the code above, so need to check it again.
+    int rv;
+    if (m_state != SUPPRESSING_RESPONSE)
+    {
+        rv = FilterSession::clientReply(pPacket);
+    }
+    else
+    {
+        // TODO: The return value should mean something.
+        rv = 0;
+    }
+
+    return rv;
 }
 
 void MaskingFilterSession::handle_response(GWBUF* pPacket)
@@ -130,25 +146,32 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
 {
     ComQueryResponse::ColumnDef column_def(pPacket);
 
-    const char *zUser = session_get_user(m_pSession);
-    const char *zHost = session_get_remote(m_pSession);
-
-    if (!zUser)
+    if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN) // Not particularly likely...
     {
-        zUser = "";
+        handle_large_payload();
     }
-
-    if (!zHost)
+    else
     {
-        zHost = "";
-    }
+        const char *zUser = session_get_user(m_pSession);
+        const char *zHost = session_get_remote(m_pSession);
 
-    const MaskingRules::Rule* pRule = m_res.rules()->get_rule_for(column_def, zUser, zHost);
+        if (!zUser)
+        {
+            zUser = "";
+        }
 
-    if (m_res.append_type_and_rule(column_def.type(), pRule))
-    {
-        // All fields have been read.
-        m_state = EXPECTING_FIELD_EOF;
+        if (!zHost)
+        {
+            zHost = "";
+        }
+
+        const MaskingRules::Rule* pRule = m_res.rules()->get_rule_for(column_def, zUser, zHost);
+
+        if (m_res.append_type_and_rule(column_def.type(), pRule))
+        {
+            // All fields have been read.
+            m_state = EXPECTING_FIELD_EOF;
+        }
     }
 }
 
@@ -215,67 +238,97 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
         break;
 
     default:
-        switch (m_res.command())
+        if (m_res.some_rule_matches())
         {
-        case MYSQL_COM_QUERY:
+            if (response.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)
             {
-                ComQueryResponse::TextResultsetRow row(response, m_res.types());
-
-                ComQueryResponse::TextResultsetRow::iterator i = row.begin();
-                while (i != row.end())
-                {
-                    const MaskingRules::Rule* pRule = m_res.get_rule();
-
-                    if (pRule)
-                    {
-                        ComQueryResponse::TextResultsetRow::Value value = *i;
-
-                        if (value.is_string())
-                        {
-                            LEncString s = value.as_string();
-                            pRule->rewrite(s);
-                        }
-                        else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
-                        {
-                            warn_of_type_mismatch(*pRule);
-                        }
-                    }
-                    ++i;
-                }
+                handle_large_payload();
             }
-            break;
-
-        case MYSQL_COM_STMT_EXECUTE:
+            else
             {
-                ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
-
-                ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
-                while (i != row.end())
-                {
-                    const MaskingRules::Rule* pRule = m_res.get_rule();
-
-                    if (pRule)
-                    {
-                        ComQueryResponse::BinaryResultsetRow::Value value = *i;
-
-                        if (value.is_string())
-                        {
-                            LEncString s = value.as_string();
-                            pRule->rewrite(s);
-                        }
-                        else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
-                        {
-                            warn_of_type_mismatch(*pRule);
-                        }
-                    }
-                    ++i;
-                }
+                mask_values(response);
             }
-            break;
-
-        default:
-            MXS_ERROR("Unexpected request: %d", m_res.command());
-            ss_dassert(!true);
         }
+    }
+}
+
+void MaskingFilterSession::handle_large_payload()
+{
+    if (m_filter.config().large_payload() == Config::LARGE_ABORT)
+    {
+        MXS_WARNING("Payload > 16MB, closing the connection.");
+        poll_fake_hangup_event(m_pSession->client_dcb);
+        m_state = SUPPRESSING_RESPONSE;
+    }
+    else
+    {
+        MXS_WARNING("Payload > 16MB, no masking is performed.");
+        m_state = IGNORING_RESPONSE;
+    }
+}
+
+void MaskingFilterSession::mask_values(ComResponse& response)
+{
+    switch (m_res.command())
+    {
+    case MYSQL_COM_QUERY:
+        {
+            ComQueryResponse::TextResultsetRow row(response, m_res.types());
+
+            ComQueryResponse::TextResultsetRow::iterator i = row.begin();
+            while (i != row.end())
+            {
+                const MaskingRules::Rule* pRule = m_res.get_rule();
+
+                if (pRule)
+                {
+                    ComQueryResponse::TextResultsetRow::Value value = *i;
+
+                    if (value.is_string())
+                    {
+                        LEncString s = value.as_string();
+                        pRule->rewrite(s);
+                    }
+                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    {
+                        warn_of_type_mismatch(*pRule);
+                    }
+                }
+                ++i;
+            }
+        }
+        break;
+
+    case MYSQL_COM_STMT_EXECUTE:
+        {
+            ComQueryResponse::BinaryResultsetRow row(response, m_res.types());
+
+            ComQueryResponse::BinaryResultsetRow::iterator i = row.begin();
+            while (i != row.end())
+            {
+                const MaskingRules::Rule* pRule = m_res.get_rule();
+
+                if (pRule)
+                {
+                    ComQueryResponse::BinaryResultsetRow::Value value = *i;
+
+                    if (value.is_string())
+                    {
+                        LEncString s = value.as_string();
+                        pRule->rewrite(s);
+                    }
+                    else if (m_filter.config().warn_type_mismatch() == Config::WARN_ALWAYS)
+                    {
+                        warn_of_type_mismatch(*pRule);
+                    }
+                }
+                ++i;
+            }
+        }
+        break;
+
+    default:
+        MXS_ERROR("Unexpected request: %d", m_res.command());
+        ss_dassert(!true);
     }
 }

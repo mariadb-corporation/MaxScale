@@ -11,6 +11,7 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "masking"
 #include "maskingrules.hh"
 #include <algorithm>
 #include <errno.h>

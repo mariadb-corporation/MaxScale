@@ -488,9 +488,14 @@ public:
         ERR_PACKET = 0xff,
     };
 
-    uint32_t packet_len() const
+    enum
     {
-        return m_packet_len;
+        MAX_PAYLOAD_LEN = 0xffffff
+    };
+
+    uint32_t payload_len() const
+    {
+        return m_payload_len;
     }
     uint8_t packet_no() const
     {
@@ -501,7 +506,7 @@ protected:
     ComPacket(GWBUF* pPacket)
         : m_pPacket(pPacket)
         , m_pData(GWBUF_DATA(pPacket))
-        , m_packet_len(MYSQL_GET_PAYLOAD_LEN(m_pData))
+        , m_payload_len(MYSQL_GET_PAYLOAD_LEN(m_pData))
         , m_packet_no(MYSQL_GET_PACKET_NO(m_pData))
     {
         m_pData += MYSQL_HEADER_LEN;
@@ -510,7 +515,7 @@ protected:
     ComPacket(const ComPacket& packet)
         : m_pPacket(packet.m_pPacket)
         , m_pData(GWBUF_DATA(m_pPacket))
-        , m_packet_len(packet.m_packet_len)
+        , m_payload_len(packet.m_payload_len)
         , m_packet_no(packet.m_packet_no)
     {
         m_pData += MYSQL_HEADER_LEN;
@@ -520,7 +525,7 @@ protected:
     uint8_t* m_pData;
 
 private:
-    uint32_t m_packet_len;
+    uint32_t m_payload_len;
     uint8_t  m_packet_no;
 };
 

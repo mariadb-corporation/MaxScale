@@ -49,13 +49,17 @@ private:
         EXPECTING_FIELD_EOF,
         EXPECTING_ROW,
         EXPECTING_ROW_EOF,
-        IGNORING_RESPONSE
+        IGNORING_RESPONSE,
+        SUPPRESSING_RESPONSE
     };
 
     void handle_response(GWBUF* pPacket);
     void handle_field(GWBUF* pPacket);
     void handle_row(GWBUF* pPacket);
     void handle_eof(GWBUF* pPacket);
+    void handle_large_payload();
+
+    void mask_values(ComResponse& response);
 
 private:
     typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
@@ -68,14 +72,17 @@ private:
             , m_nTotal_fields(0)
             , m_index(0)
             , m_multi_result(false)
+            , m_some_rule_matches(false)
         {}
 
         void reset(uint8_t command, const SMaskingRules& sRules)
         {
+            reset_multi();
+
             m_command = command;
             m_sRules = sRules;
-
-            reset_multi();
+            m_multi_result = false;
+            m_some_rule_matches = false;
         }
 
         void reset_multi()
@@ -95,6 +102,11 @@ private:
         const SMaskingRules& rules() const
         {
             return m_sRules;
+        }
+
+        bool some_rule_matches() const
+        {
+            return m_some_rule_matches;
         }
 
         bool is_multi_result() const
@@ -117,6 +129,11 @@ private:
             m_types.push_back(type);
             m_rules.push_back(pRule);
 
+            if (pRule)
+            {
+                m_some_rule_matches = true;
+            }
+
             return m_rules.size() == m_nTotal_fields;
         }
 
@@ -137,13 +154,14 @@ private:
         }
 
     private:
-        uint8_t                                m_command;       /*<! What command. */
-        SMaskingRules                          m_sRules;        /*<! The rules that are used. */
-        uint32_t                               m_nTotal_fields; /*<! The total number of fields/columns. */
-        std::vector<enum_field_types>          m_types;         /*<! The column types. */
-        std::vector<const MaskingRules::Rule*> m_rules;         /*<! The rules applied for columns. */
-        size_t                                 m_index;         /*<! Index to the current rule.*/
-        bool                                   m_multi_result;  /*<! Are we processing multi-results. */
+        uint8_t                                m_command;           /*<! What command. */
+        SMaskingRules                          m_sRules;            /*<! The rules that are used. */
+        uint32_t                               m_nTotal_fields;     /*<! The total number of fields. */
+        std::vector<enum_field_types>          m_types;             /*<! The column types. */
+        std::vector<const MaskingRules::Rule*> m_rules;             /*<! The rules applied for columns. */
+        size_t                                 m_index;             /*<! Index to the current rule.*/
+        bool                                   m_multi_result;      /*<! Are we processing multi-results. */
+        bool                                   m_some_rule_matches; /*<! At least one rule matches. */
     };
 
     const MaskingFilter& m_filter;
