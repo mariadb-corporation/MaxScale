@@ -558,7 +558,7 @@ GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf)
     }
     totalbuflen = gwbuf_length(readbuf);
     data = (uint8_t *)GWBUF_DATA((readbuf));
-    packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+    packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
 
     /** packet is incomplete */
     if (packetlen > totalbuflen)

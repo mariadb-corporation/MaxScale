@@ -292,7 +292,7 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packet)
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     ss_dassert(GWBUF_IS_CONTIGUOUS(packet));
     ss_dassert(GWBUF_LENGTH(packet) >= MYSQL_HEADER_LEN + 1);
-    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == GWBUF_LENGTH(packet));
 
     maxrows_response_state_reset(&csdata->res);
     csdata->state = MAXROWS_IGNORING_RESPONSE;
@@ -500,7 +500,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
         uint8_t header[MYSQL_HEADER_LEN + 1];
         gwbuf_copy_data(csdata->res.data, csdata->res.offset, MYSQL_HEADER_LEN + 1, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (csdata->res.offset + packetlen <= buflen)
         {
@@ -682,7 +682,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
         uint8_t header[MAXROWS_EOF_PACKET_LEN];
         gwbuf_copy_data(csdata->res.data, csdata->res.offset, MAXROWS_EOF_PACKET_LEN, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (csdata->res.offset + packetlen <= buflen)
         {

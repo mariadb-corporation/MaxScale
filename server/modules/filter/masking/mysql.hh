@@ -490,7 +490,7 @@ protected:
     ComPacket(GWBUF* pPacket)
         : m_pPacket(pPacket)
         , m_pI(GWBUF_DATA(pPacket))
-        , m_packet_len(MYSQL_GET_PACKET_LEN(m_pI))
+        , m_packet_len(MYSQL_GET_PAYLOAD_LEN(m_pI))
         , m_packet_no(MYSQL_GET_PACKET_NO(m_pI))
     {
         m_pI += MYSQL_HEADER_LEN;

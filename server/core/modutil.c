@@ -190,7 +190,7 @@ int modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing)
         len = 0;
         goto retblock;
     }
-    len = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf));
+    len = MYSQL_GET_PAYLOAD_LEN((uint8_t *)GWBUF_DATA(buf));
     *nbytes_missing = len - 1;
     buflen = gwbuf_length(buf);
 
@@ -344,7 +344,7 @@ modutil_get_query(GWBUF *buf)
         break;
 
     case MYSQL_COM_QUERY:
-        len = MYSQL_GET_PACKET_LEN(packet) - 1; /*< distract 1 for packet type byte */
+        len = MYSQL_GET_PAYLOAD_LEN(packet) - 1; /*< distract 1 for packet type byte */
         if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
             if (len >= 1 && len <= ~(size_t)0 - 1)
@@ -519,14 +519,14 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
             if (GWBUF_LENGTH(readbuf) >= 3) // The length is in the 3 first bytes.
             {
                 uint8_t *data = (uint8_t *)GWBUF_DATA((readbuf));
-                packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+                packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
             }
             else
             {
                 // The header is split between two GWBUFs.
                 uint8_t data[3];
                 gwbuf_copy_data(readbuf, 0, 3, data);
-                packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+                packetlen = MYSQL_GET_PAYLOAD_LEN(data) + 4;
             }
 
             if (packetlen <= totalbuflen)
@@ -655,7 +655,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
     bool moreresults = false;
     while (ptr < end)
     {
-        pktlen = MYSQL_GET_PACKET_LEN(ptr) + 4;
+        pktlen = MYSQL_GET_PAYLOAD_LEN(ptr) + 4;
 
         if ((iserr = PTR_IS_ERR(ptr)) || (iseof = PTR_IS_EOF(ptr)))
         {

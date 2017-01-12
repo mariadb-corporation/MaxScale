@@ -511,7 +511,7 @@ static bool parse_query(GWBUF* query)
         uint8_t* data = (uint8_t*) GWBUF_DATA(query);
 
         if ((GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1) &&
-            (GWBUF_LENGTH(query) == MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(data)))
+            (GWBUF_LENGTH(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
         {
             if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
             {
@@ -521,7 +521,7 @@ static bool parse_query(GWBUF* query)
                 {
                     this_thread.info = info;
 
-                    size_t len = MYSQL_GET_PACKET_LEN(data) - 1; // Subtract 1 for packet type byte.
+                    size_t len = MYSQL_GET_PAYLOAD_LEN(data) - 1; // Subtract 1 for packet type byte.
 
                     const char* s = (const char*) &data[MYSQL_HEADER_LEN + 1];
 
@@ -576,7 +576,7 @@ static bool parse_query(GWBUF* query)
         else
         {
             MXS_ERROR("Packet size %ld, provided buffer is %ld.",
-                      MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(data),
+                      MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data),
                       GWBUF_LENGTH(query));
         }
     }

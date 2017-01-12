@@ -1792,7 +1792,7 @@ static int routeQuery(ROUTER* instance,
         uint8_t* packet = GWBUF_DATA(querybuf);
         unsigned char ptype = packet[4];
         size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
-                         MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
+                         MYSQL_GET_PAYLOAD_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);
         char* qtypestr = qc_typemask_to_string(qtype);
@@ -2403,8 +2403,8 @@ static void clientReply(ROUTER* instance,
         {
             uint8_t* buf = (uint8_t *) GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
             uint8_t* replybuf = (uint8_t *) GWBUF_DATA(writebuf);
-            size_t len = MYSQL_GET_PACKET_LEN(buf);
-            size_t replylen = MYSQL_GET_PACKET_LEN(replybuf);
+            size_t len = MYSQL_GET_PAYLOAD_LEN(buf);
+            size_t replylen = MYSQL_GET_PAYLOAD_LEN(replybuf);
             char* cmdstr = strndup(&((char *) buf)[5], len - 4);
             char* err = strndup(&((char *) replybuf)[8], 5);
             char* replystr = strndup(&((char *) replybuf)[13],

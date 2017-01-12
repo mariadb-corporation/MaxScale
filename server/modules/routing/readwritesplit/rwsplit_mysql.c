@@ -163,7 +163,7 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
          uint8_t *packet = GWBUF_DATA(querybuf);
          unsigned char ptype = packet[4];
          size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
-                MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
+                MYSQL_GET_PAYLOAD_LEN((unsigned char *)querybuf->start) - 1);
          char *data = (char *)&packet[5];
          char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
          char *qtypestr = qc_typemask_to_string(qtype);
@@ -386,8 +386,8 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
         {
             uint8_t *buf = (uint8_t *)GWBUF_DATA((scur->scmd_cur_cmd->my_sescmd_buf));
             uint8_t *replybuf = (uint8_t *)GWBUF_DATA(writebuf);
-            size_t len = MYSQL_GET_PACKET_LEN(buf);
-            size_t replylen = MYSQL_GET_PACKET_LEN(replybuf);
+            size_t len = MYSQL_GET_PAYLOAD_LEN(buf);
+            size_t replylen = MYSQL_GET_PAYLOAD_LEN(replybuf);
             char *err = strndup(&((char *)replybuf)[8], 5);
             char *replystr = strndup(&((char *)replybuf)[13], replylen - 4 - 5);
 
@@ -481,7 +481,7 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
             data = dcb->session->client_dcb->data;
             *data->db = 0;
             tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-            qlen = MYSQL_GET_PACKET_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
+            qlen = MYSQL_GET_PAYLOAD_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
             if (qlen)
             {
                 --qlen; // The COM_INIT_DB byte

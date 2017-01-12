@@ -226,7 +226,7 @@ static bool parse_query(GWBUF* querybuf)
 
     /** Extract query and copy it to different buffer */
     data = (uint8_t*) GWBUF_DATA(querybuf);
-    len = MYSQL_GET_PACKET_LEN(data) - 1; /*< distract 1 for packet type byte */
+    len = MYSQL_GET_PAYLOAD_LEN(data) - 1; /*< distract 1 for packet type byte */
 
 
     if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char *) malloc(len + 1)) == NULL)

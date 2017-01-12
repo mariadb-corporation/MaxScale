@@ -93,7 +93,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     // All of these should be guaranteed by RCAP_TYPE_TRANSACTION_TRACKING
     ss_dassert(GWBUF_IS_CONTIGUOUS(pPacket));
     ss_dassert(GWBUF_LENGTH(pPacket) >= MYSQL_HEADER_LEN + 1);
-    ss_dassert(MYSQL_GET_PACKET_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == GWBUF_LENGTH(pPacket));
 
     bool fetch_from_server = true;
 
@@ -107,7 +107,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
     case MYSQL_COM_INIT_DB:
         {
             ss_dassert(!m_zUseDb);
-            size_t len = MYSQL_GET_PACKET_LEN(pData) - 1; // Remove the command byte.
+            size_t len = MYSQL_GET_PAYLOAD_LEN(pData) - 1; // Remove the command byte.
             m_zUseDb = (char*)MXS_MALLOC(len + 1);
 
             if (m_zUseDb)
@@ -337,7 +337,7 @@ int CacheFilterSession::handle_expecting_fields()
         uint8_t header[MYSQL_HEADER_LEN + 1];
         gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (m_res.offset + packetlen <= buflen)
         {
@@ -473,7 +473,7 @@ int CacheFilterSession::handle_expecting_rows()
         uint8_t header[MYSQL_HEADER_LEN + 1];
         gwbuf_copy_data(m_res.pData, m_res.offset, MYSQL_HEADER_LEN + 1, header);
 
-        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PACKET_LEN(header);
+        size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
         if (m_res.offset + packetlen <= buflen)
         {

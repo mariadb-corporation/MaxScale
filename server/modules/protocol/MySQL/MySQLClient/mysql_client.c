@@ -474,7 +474,7 @@ int gw_read_client_event(DCB* dcb)
     case MXS_AUTH_STATE_MESSAGE_READ:
         /* After this call read_buffer will point to freed data */
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
-            (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
+            (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
             (0 != max_bytes && nbytes_read < max_bytes))
         {
 
@@ -523,7 +523,7 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
     MYSQL_session *ses = (MYSQL_session*)dcb->data;
 
     gwbuf_copy_data(buffer, 0, len, data);
-    ss_dassert(MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN == len ||
+    ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len ||
         len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
@@ -568,7 +568,7 @@ static void check_packet(DCB *dcb, GWBUF *buf, int bytes)
     ss_dassert(gwbuf_copy_data(buf, 0, MYSQL_HEADER_LEN, hdr) == MYSQL_HEADER_LEN);
 
     int buflen = gwbuf_length(buf);
-    int pktlen = MYSQL_GET_PACKET_LEN(hdr) + MYSQL_HEADER_LEN;
+    int pktlen = MYSQL_GET_PAYLOAD_LEN(hdr) + MYSQL_HEADER_LEN;
 
     if (bytes == MYSQL_AUTH_PACKET_BASE_SIZE)
     {
@@ -897,7 +897,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         int packet_size;
 
         if (nbytes_read < 3 || nbytes_read <
-            (MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
+            (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
         {
 
             dcb->dcb_readqueue = read_buffer;
@@ -1555,7 +1555,7 @@ static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_rea
     {
         dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
         nbytes_read = gwbuf_length(dcb->dcb_readqueue);
-        int plen = MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(dcb->dcb_readqueue));
+        int plen = MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(dcb->dcb_readqueue));
 
         if (nbytes_read < 3 || nbytes_read < plen + 4)
         {
@@ -1575,7 +1575,7 @@ static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_rea
     {
         uint8_t* data = (uint8_t *) GWBUF_DATA(*read_buffer);
 
-        if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
+        if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PAYLOAD_LEN(data) + 4)
         {
             dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
             return false;

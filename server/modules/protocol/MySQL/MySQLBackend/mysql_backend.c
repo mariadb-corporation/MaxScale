@@ -406,7 +406,7 @@ bool is_error_response(GWBUF *buffer)
 void log_error_response(DCB *dcb, GWBUF *buffer)
 {
     uint8_t *data = (uint8_t*)GWBUF_DATA(buffer);
-    size_t len = MYSQL_GET_PACKET_LEN(data);
+    size_t len = MYSQL_GET_PAYLOAD_LEN(data);
     uint16_t errcode = MYSQL_GET_ERRCODE(data);
     char bufstr[len];
     memcpy(bufstr, data + 7, len - 3);
