@@ -85,11 +85,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             { Config::rules_file_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
-            {
-                Config::warn_type_mismatch_name,
-                MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
-                MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values
-            },
+            { Config::warn_type_mismatch_name,
+              MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
+              MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
+            { Config::large_payload_name,
+              MXS_MODULE_PARAM_ENUM, Config::large_payload_default,
+              MXS_MODULE_OPT_NONE, Config::large_payload_values },
             { MXS_END_MODULE_PARAMS }
         }
     };
@@ -117,10 +118,7 @@ MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG
 {
     MaskingFilter* pFilter = NULL;
 
-    MaskingFilter::Config config(zName);
-
-    config.set_warn_type_mismatch(Config::get_warn_type_mismatch(pParams));
-    process_params(pzOptions, pParams, config);
+    Config config(zName, pParams);
 
     auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
 
@@ -170,11 +168,4 @@ void MaskingFilter::reload(DCB* pOut)
         dcb_printf(pOut, "Could not reload the rules. Check the log file for more "
                    "detailed information.\n");
     }
-}
-
-// static
-void MaskingFilter::process_params(char **pzOptions, CONFIG_PARAMETER *pParams, Config& config)
-{
-    string rules_file = config_get_string(pParams, "rules_file");
-    config.set_rules_file(rules_file);
 }

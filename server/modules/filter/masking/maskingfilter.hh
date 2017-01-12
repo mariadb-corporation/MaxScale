@@ -51,8 +51,6 @@ private:
     MaskingFilter(const MaskingFilter&);
     MaskingFilter& operator = (const MaskingFilter&);
 
-    static void process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, Config& config);
-
 private:
     Config        m_config;
     SMaskingRules m_sRules;

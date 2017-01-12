@@ -55,9 +55,12 @@ columns in where-clauses.
 The masking filter can _only_ be used for masking columns of the following
 types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, 'BLOB', TINYBLOB`,
 `MEDIUMBLOB`, `LONGBLOB`, `TEXT`, `TINYTEXT`, `MEDIUMTEXT`, `LONGTEXT`,
-`ENUM` and `SET`.
+`ENUM` and `SET`. If the type of the column is something else, then no
+masking will be performed.
 
-If the type of the column is something else, then no masking will be performed.
+The masking filter can only work on payloads less than 16MB. If the masking
+filter encounters payloads larger than that, the value of the parameter
+`large_payloads` specifies how such payloads should be treated.
 
 ## Configuration
 
@@ -83,8 +86,9 @@ The masking filter has one mandatory parameter - `rules_file`.
 #### `rules_file`
 
 Specifies the path of the file where the masking rules are stored.
-A relative path is interpreted relative to the _data directory_ of
-MariaDB MaxScale.
+A relative path is interpreted relative to the _module configuration directory_
+of MariaDB MaxScale. The default module configuration directory is
+_/etc/maxscale.modules.d_.
 
 ```
 rules_file=/path/to/rules-file
@@ -100,6 +104,23 @@ The values that can be used are `never` and `always`, with `never` being
 the default.
 ```
 warn_type_mismatch=always
+```
+
+#### `large_payload`
+
+This optional parameter specifies how the masking filter should treat
+payloads larger than `16MB`.
+
+The values that can be used are `ignore`, which means that values in
+such payloads are not masked, and `abort`, which means that if such
+payloads are encountered then the connection is closed. The default
+is `abort`.
+
+Note that the aborting behaviour is applied only to resultsets that
+contain columns that should be masked. There are *no* limitations on
+resultsets that do not contain such columns.
+```
+large_payload=ignore
 ```
 
 # Rules
