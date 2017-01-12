@@ -394,6 +394,14 @@ Configure the directory where module configurations are stored. Path arguments
 are resolved relative to this directory. This directory should be used to store
 module specific configurations e.g. dbfwfilter rule files.
 
+Any configuration parameter that is not an absolute path will be interpreted as
+a relative path. The relative paths use the module configuration directory as
+the working directory.
+
+For example, the configuration parameter `file=my_file.txt` would be interpreted
+as `/etc/maxscale.cnf.d/my_file.txt` whereas `file=/home/user/my_file.txt` would
+be interpreted as `/home/user/my_file.txt`.
+
 ```
 module_configdir=/var/lib/maxscale/
 ```

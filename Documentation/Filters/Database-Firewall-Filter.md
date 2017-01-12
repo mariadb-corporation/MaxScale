@@ -28,7 +28,10 @@ The database firewall filter has one mandatory parameter, `rules`.
 
 #### `rules`
 
-Absolute path to a file with the rule definitions in it. The file should be readable by the user MariaDB MaxScale is run with.
+A path to a file with the rule definitions in it. The file should be readable by
+the user MariaDB MaxScale is run with. If a relative path is given, the path is
+interpreted relative to the module configuration directory. The default module
+configuration directory is _/etc/maxscale.modules.d_.
 
 #### `action`
 

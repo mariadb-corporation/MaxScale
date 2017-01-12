@@ -22,6 +22,23 @@ Please see the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md#configuration)
 for details.
 
+### Module configurations
+
+MaxScale 2.1 introduces a new directory for module configurations. This new
+directory can be used to store module specific configuration files.
+
+Any configuration parameter that accepts a path will also support relative
+paths. If a relative path is given, the path is interpreted relative to
+the module configuration directory. The default value is
+_/etc/maxscale.modules.d_.
+
+For example, the `dbfwfilter` rule files could be stored in
+_/etc/maxscale.modules.d/my_rules.txt_ and referred to with
+`rules=my_rules.txt`.
+
+For more details, refer to the documentation of _module_configdir_ in the
+[Configuration Guide](../Getting-Started/Configuration-Guide.md)
+
 ### Logging
 
 Before version 2.1.0, MaxScale created in the log directory a log file
