@@ -565,6 +565,50 @@ protected:
     uint8_t m_type;
 };
 
+class ComEOF : public ComResponse
+{
+public:
+    ComEOF(GWBUF* pPacket)
+        : ComResponse(pPacket)
+    {
+        ss_dassert(m_type == EOF_PACKET);
+
+        extract_payload();
+    }
+
+    ComEOF(const ComResponse& response)
+        : ComResponse(response)
+    {
+        ss_dassert(m_type == EOF_PACKET);
+
+        extract_payload();
+    }
+
+    uint16_t warnings() const
+    {
+        return m_warnings;
+    }
+
+    uint16_t status() const
+    {
+        return m_status;
+    }
+
+private:
+    void extract_payload()
+    {
+        m_warnings = *m_pData++;
+        m_warnings += (*m_pData++ << 8);
+
+        m_status = *m_pData++;
+        m_status += (*m_pData++ << 8);
+    }
+
+private:
+    uint16_t m_warnings;
+    uint16_t m_status;
+};
+
 /**
  * @class ComRequest
  *

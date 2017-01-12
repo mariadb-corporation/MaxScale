@@ -153,7 +153,7 @@ void MaskingFilter::diagnostics(DCB* pDcb)
 // static
 uint64_t MaskingFilter::getCapabilities()
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
 }
 
 std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const

@@ -103,6 +103,7 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
     switch (response.type())
     {
     case 0x00: // OK
+        // We'll end up here also in the case of a multi-result.
     case 0xff: // ERR
     case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
@@ -144,8 +145,6 @@ void MaskingFilterSession::handle_field(GWBUF* pPacket)
         // All fields have been read.
         m_state = EXPECTING_FIELD_EOF;
     }
-
-    MXS_NOTICE("Stats: %s", column_def.to_string().c_str());
 }
 
 void MaskingFilterSession::handle_eof(GWBUF* pPacket)
@@ -199,8 +198,19 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
     {
     case ComPacket::EOF_PACKET:
         // EOF after last row.
-        MXS_NOTICE("EOF after last row received.");
-        m_state = EXPECTING_NOTHING;
+        {
+            ComEOF eof(response);
+
+            if (eof.status() & SERVER_MORE_RESULTS_EXIST)
+            {
+                m_res.reset_multi();
+                m_state = EXPECTING_RESPONSE;
+            }
+            else
+            {
+                m_state = EXPECTING_NOTHING;
+            }
+        }
         break;
 
     default:

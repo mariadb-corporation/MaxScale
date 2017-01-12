@@ -67,16 +67,24 @@ private:
             : m_command(0)
             , m_nTotal_fields(0)
             , m_index(0)
+            , m_multi_result(false)
         {}
 
         void reset(uint8_t command, const SMaskingRules& sRules)
         {
             m_command = command;
             m_sRules = sRules;
+
+            reset_multi();
+        }
+
+        void reset_multi()
+        {
             m_nTotal_fields = 0;
             m_types.clear();
             m_rules.clear();
             m_index = 0;
+            m_multi_result = true;
         }
 
         uint8_t command() const
@@ -88,6 +96,8 @@ private:
         {
             return m_sRules;
         }
+
+        bool is_multi_result() const { return m_multi_result; }
 
         uint32_t total_fields() const { return m_nTotal_fields; }
 
@@ -124,6 +134,7 @@ private:
         std::vector<enum_field_types>          m_types;         /*<! The column types. */
         std::vector<const MaskingRules::Rule*> m_rules;         /*<! The rules applied for columns. */
         size_t                                 m_index;         /*<! Index to the current rule.*/
+        bool                                   m_multi_result;  /*<! Are we processing multi-results. */
     };
 
     const MaskingFilter& m_filter;
