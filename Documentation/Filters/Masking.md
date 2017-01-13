@@ -58,9 +58,11 @@ types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, 'BLOB', TINYBLOB`,
 `ENUM` and `SET`. If the type of the column is something else, then no
 masking will be performed.
 
-The masking filter can only work on payloads less than 16MB. If the masking
-filter encounters payloads larger than that, the value of the parameter
-`large_payloads` specifies how such payloads should be treated.
+Currently, the masking filter can only work on packets whose payload is less
+than 16MB. If the masking filter encounters a packet whose payload is exactly
+that, thus indicating a situation where the payload is delivered in multiple
+packets, the value of the parameter `large_payloads` specifies how the masking
+filter should handle the situation.
 
 ## Configuration
 
@@ -109,11 +111,12 @@ warn_type_mismatch=always
 #### `large_payload`
 
 This optional parameter specifies how the masking filter should treat
-payloads larger than `16MB`.
+payloads larger than `16MB`, that is, payloads that are delivered in
+multiple MySQL protocol packets.
 
-The values that can be used are `ignore`, which means that values in
+The values that can be used are `ignore`, which means that columns in
 such payloads are not masked, and `abort`, which means that if such
-payloads are encountered then the connection is closed. The default
+payloads are encountered, the client connection is closed. The default
 is `abort`.
 
 Note that the aborting behaviour is applied only to resultsets that
