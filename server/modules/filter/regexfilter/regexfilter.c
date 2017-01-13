@@ -118,7 +118,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A query rewrite filter that uses regular expressions to rewrite queries",
         "V1.1.0",
         &MyObject,

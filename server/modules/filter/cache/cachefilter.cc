@@ -139,7 +139,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
         &CacheFilter::s_object,

@@ -188,7 +188,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A simple query logging filter",
         "V1.1.1",
         &MyObject,

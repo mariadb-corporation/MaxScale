@@ -61,7 +61,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_ALPHA_RELEASE,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A hint parsing filter",
         "V1.0.0",
         &MyObject,

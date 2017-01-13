@@ -162,7 +162,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "Transaction Performance Monitoring filter",
         "V1.0.1",
         &MyObject,

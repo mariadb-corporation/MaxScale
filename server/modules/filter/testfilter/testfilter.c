@@ -90,7 +90,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_BETA_RELEASE,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A simple query counting filter",
         "V2.0.0",
         &MyObject,

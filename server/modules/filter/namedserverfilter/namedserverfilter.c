@@ -109,7 +109,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A routing hint filter that uses regular expressions to direct queries",
         "V1.1.0",
         &MyObject,

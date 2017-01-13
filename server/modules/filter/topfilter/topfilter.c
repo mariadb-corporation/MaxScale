@@ -152,7 +152,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_GA,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A top N query logging filter",
         "V1.0.1",
         &MyObject,

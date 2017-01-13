@@ -83,7 +83,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",
         &MaskingFilter::s_object,

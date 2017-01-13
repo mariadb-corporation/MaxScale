@@ -93,7 +93,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_EXPERIMENTAL,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "Lua Filter",
         "V1.0.0",
         &MyObject,

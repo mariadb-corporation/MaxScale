@@ -85,7 +85,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_FILTER,
         MXS_MODULE_IN_DEVELOPMENT,
-        FILTER_VERSION,
+        MXS_FILTER_VERSION,
         "A filter that is capable of limiting the resultset number of rows.",
         "V1.0.0",
         &object,
