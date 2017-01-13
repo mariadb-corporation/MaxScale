@@ -63,19 +63,19 @@ typedef void *FILTER;
  */
 typedef struct filter_object
 {
-    FILTER *(*createInstance)(const char *name,
+    FILTER  *(*createInstance)(const char *name,
                               char **options,
                               CONFIG_PARAMETER *params);
-    void   *(*newSession)(FILTER *instance, SESSION *session);
-    void   (*closeSession)(FILTER *instance, void *fsession);
-    void   (*freeSession)(FILTER *instance, void *fsession);
-    void   (*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-    void   (*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
-    int    (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
-    int    (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
-    void   (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
+    void    *(*newSession)(FILTER *instance, SESSION *session);
+    void     (*closeSession)(FILTER *instance, void *fsession);
+    void     (*freeSession)(FILTER *instance, void *fsession);
+    void     (*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+    void     (*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
+    int32_t  (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
+    int32_t  (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
+    void     (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
     uint64_t (*getCapabilities)(void);
-    void   (*destroyInstance)(FILTER *instance);
+    void     (*destroyInstance)(FILTER *instance);
 } FILTER_OBJECT;
 
 /**

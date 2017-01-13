@@ -52,19 +52,19 @@ struct session;
  */
 typedef struct mxs_protocol
 {
-    int (*read)(struct dcb *);
-    int (*write)(struct dcb *, GWBUF *);
-    int (*write_ready)(struct dcb *);
-    int (*error)(struct dcb *);
-    int (*hangup)(struct dcb *);
-    int (*accept)(struct dcb *);
-    int (*connect)(struct dcb *, struct server *, struct session *);
-    int (*close)(struct dcb *);
-    int (*listen)(struct dcb *, char *);
-    int (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
-    int (*session)(struct dcb *, void *);
-    char *(*auth_default)();
-    int (*connlimit)(struct dcb *, int limit);
+    int32_t (*read)(struct dcb *);
+    int32_t (*write)(struct dcb *, GWBUF *);
+    int32_t (*write_ready)(struct dcb *);
+    int32_t (*error)(struct dcb *);
+    int32_t (*hangup)(struct dcb *);
+    int32_t (*accept)(struct dcb *);
+    int32_t (*connect)(struct dcb *, struct server *, struct session *);
+    int32_t (*close)(struct dcb *);
+    int32_t (*listen)(struct dcb *, char *);
+    int32_t (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
+    int32_t (*session)(struct dcb *, void *);
+    char   *(*auth_default)();
+    int32_t (*connlimit)(struct dcb *, int limit);
 } MXS_PROTOCOL;
 
 /**

@@ -69,21 +69,21 @@ typedef enum error_action
  */
 typedef struct router_object
 {
-    ROUTER *(*createInstance)(SERVICE *service, char **options);
-    void   *(*newSession)(ROUTER *instance, SESSION *session);
-    void    (*closeSession)(ROUTER *instance, void *router_session);
-    void    (*freeSession)(ROUTER *instance, void *router_session);
-    int     (*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
-    void    (*diagnostics)(ROUTER *instance, DCB *dcb);
-    void    (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
-    void    (*handleError)(ROUTER*        instance,
+    ROUTER  *(*createInstance)(SERVICE *service, char **options);
+    void    *(*newSession)(ROUTER *instance, SESSION *session);
+    void     (*closeSession)(ROUTER *instance, void *router_session);
+    void     (*freeSession)(ROUTER *instance, void *router_session);
+    int32_t  (*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
+    void     (*diagnostics)(ROUTER *instance, DCB *dcb);
+    void     (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
+    void     (*handleError)(ROUTER*        instance,
                            void*          router_session,
                            GWBUF*         errmsgbuf,
                            DCB*           backend_dcb,
                            error_action_t action,
                            bool*          succp);
     uint64_t (*getCapabilities)(void);
-    void    (*destroyInstance)(ROUTER *instance);
+    void     (*destroyInstance)(ROUTER *instance);
 } ROUTER_OBJECT;
 
 /**
