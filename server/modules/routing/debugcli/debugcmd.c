@@ -1524,7 +1524,7 @@ convert_arg(char *arg, int arg_type)
             break;
 
         case ARG_TYPE_FILTER:
-            rval = (unsigned long)filter_find(arg);
+            rval = (unsigned long)filter_def_find(arg);
             break;
 
         case ARG_TYPE_NUMERIC:

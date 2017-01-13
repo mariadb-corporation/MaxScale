@@ -303,7 +303,7 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
                 break;
 
             case MODULECMD_ARG_FILTER:
-                if ((arg->value.filter = filter_find((char*)value)))
+                if ((arg->value.filter = filter_def_find((char*)value)))
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;

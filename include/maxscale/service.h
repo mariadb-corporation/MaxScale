@@ -163,7 +163,7 @@ typedef struct service
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
-    FILTER_DEF **filters;              /**< Ordered list of filters */
+    MXS_FILTER_DEF **filters;          /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
     long conn_idle_timeout;            /**< Session timeout in seconds */
     char *weightby;                    /**< Service weighting parameter name */

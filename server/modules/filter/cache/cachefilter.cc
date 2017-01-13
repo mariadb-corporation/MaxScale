@@ -91,7 +91,7 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     DCB* pDcb = pArgs->argv[0].value.dcb;
     ss_dassert(pDcb);
 
-    const FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
 
     if (strcmp(pFilterDef->module, "cache") == 0)

@@ -683,7 +683,7 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 bool dbfw_reload_rules(const MODULECMD_ARG *argv)
 {
     bool rval = true;
-    FILTER_DEF *filter = argv->argv[0].value.filter;
+    MXS_FILTER_DEF *filter = argv->argv[0].value.filter;
     FW_INSTANCE *inst = (FW_INSTANCE*)filter->filter;
 
     if (modulecmd_arg_is_present(argv, 1))
@@ -748,7 +748,7 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv)
 bool dbfw_show_rules(const MODULECMD_ARG *argv)
 {
     DCB *dcb = argv->argv[0].value.dcb;
-    FILTER_DEF *filter = argv->argv[1].value.filter;
+    MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
     FW_INSTANCE *inst = (FW_INSTANCE*)filter->filter;
 
     dcb_printf(dcb, "Rule, Type, Times Matched\n");

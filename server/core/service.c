@@ -1205,13 +1205,13 @@ void serviceSetRetryOnFailure(SERVICE *service, char* value)
 bool
 serviceSetFilters(SERVICE *service, char *filters)
 {
-    FILTER_DEF **flist;
+    MXS_FILTER_DEF **flist;
     char *ptr, *brkt;
     int n = 0;
     bool rval = true;
     uint64_t capabilities = 0;
 
-    if ((flist = (FILTER_DEF **) MXS_MALLOC(sizeof(FILTER_DEF *))) == NULL)
+    if ((flist = (MXS_FILTER_DEF **) MXS_MALLOC(sizeof(MXS_FILTER_DEF *))) == NULL)
     {
         return false;
     }
@@ -1219,9 +1219,9 @@ serviceSetFilters(SERVICE *service, char *filters)
     while (ptr)
     {
         n++;
-        FILTER_DEF **tmp;
-        if ((tmp = (FILTER_DEF **) MXS_REALLOC(flist,
-                                               (n + 1) * sizeof(FILTER_DEF *))) == NULL)
+        MXS_FILTER_DEF **tmp;
+        if ((tmp = (MXS_FILTER_DEF **) MXS_REALLOC(flist,
+                                               (n + 1) * sizeof(MXS_FILTER_DEF *))) == NULL)
         {
             rval = false;
             break;
@@ -1230,7 +1230,7 @@ serviceSetFilters(SERVICE *service, char *filters)
         flist = tmp;
         char *filter_name = trim(ptr);
 
-        if ((flist[n - 1] = filter_find(filter_name)))
+        if ((flist[n - 1] = filter_def_find(filter_name)))
         {
             if (filter_load(flist[n - 1]))
             {
@@ -1852,7 +1852,7 @@ void service_destroy_instances(void)
         }
         if (svc->n_filters)
         {
-            FILTER_DEF **filters = svc->filters;
+            MXS_FILTER_DEF **filters = svc->filters;
             for (int i = 0; i < svc->n_filters; i++)
             {
                 if (filters[i]->obj->destroyInstance && filters[i]->filter)

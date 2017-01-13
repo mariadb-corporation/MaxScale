@@ -34,9 +34,9 @@
 #include <maxscale/alloc.h>
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
-static FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
+static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
 
-static void filter_free_parameters(FILTER_DEF *filter);
+static void filter_free_parameters(MXS_FILTER_DEF *filter);
 
 /**
  * Allocate a new filter within MaxScale
@@ -47,13 +47,13 @@ static void filter_free_parameters(FILTER_DEF *filter);
  *
  * @return              The newly created filter or NULL if an error occured
  */
-FILTER_DEF *
+MXS_FILTER_DEF *
 filter_alloc(const char *name, const char *module)
 {
     char* my_name = MXS_STRDUP(name);
     char* my_module = MXS_STRDUP(module);
 
-    FILTER_DEF *filter = (FILTER_DEF *)MXS_MALLOC(sizeof(FILTER_DEF));
+    MXS_FILTER_DEF *filter = (MXS_FILTER_DEF *)MXS_MALLOC(sizeof(MXS_FILTER_DEF));
 
     if (!my_name || !my_module || !filter)
     {
@@ -87,9 +87,9 @@ filter_alloc(const char *name, const char *module)
  * @return      Returns true if the server was freed
  */
 void
-filter_free(FILTER_DEF *filter)
+filter_free(MXS_FILTER_DEF *filter)
 {
-    FILTER_DEF *ptr;
+    MXS_FILTER_DEF *ptr;
 
     if (filter)
     {
@@ -132,17 +132,10 @@ filter_free(FILTER_DEF *filter)
     }
 }
 
-/**
- * Find an existing filter using the unique section name in
- * configuration file
- *
- * @param       name            The filter name
- * @return      The server or NULL if not found
- */
-FILTER_DEF *
-filter_find(const char *name)
+MXS_FILTER_DEF *
+filter_def_find(const char *name)
 {
-    FILTER_DEF *filter;
+    MXS_FILTER_DEF *filter;
 
     spinlock_acquire(&filter_spin);
     filter = allFilters;
@@ -156,6 +149,16 @@ filter_find(const char *name)
     }
     spinlock_release(&filter_spin);
     return filter;
+}
+
+const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->module;
+}
+
+MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->filter;
 }
 
 /**
@@ -182,7 +185,7 @@ filter_standard_parameter(const char *name)
 void
 dprintAllFilters(DCB *dcb)
 {
-    FILTER_DEF *ptr;
+    MXS_FILTER_DEF *ptr;
     int        i;
 
     spinlock_acquire(&filter_spin);
@@ -220,7 +223,7 @@ dprintAllFilters(DCB *dcb)
  * to display all active filters in MaxScale
  */
 void
-dprintFilter(DCB *dcb, const FILTER_DEF *filter)
+dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
 {
     int i;
 
@@ -248,7 +251,7 @@ dprintFilter(DCB *dcb, const FILTER_DEF *filter)
 void
 dListFilters(DCB *dcb)
 {
-    FILTER_DEF      *ptr;
+    MXS_FILTER_DEF      *ptr;
     int     i;
 
     spinlock_acquire(&filter_spin);
@@ -287,7 +290,7 @@ dListFilters(DCB *dcb)
  * @param option        The option string
  */
 void
-filter_add_option(FILTER_DEF *filter, const char *option)
+filter_add_option(MXS_FILTER_DEF *filter, const char *option)
 {
     int i;
 
@@ -323,7 +326,7 @@ filter_add_option(FILTER_DEF *filter, const char *option)
  * @param value         The parameter value
  */
 void
-filter_add_parameter(FILTER_DEF *filter, const char *name, const char *value)
+filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value)
 {
     CONFIG_CONTEXT ctx = {.object = ""};
 
@@ -336,7 +339,7 @@ filter_add_parameter(FILTER_DEF *filter, const char *name, const char *value)
  * Free filter parameters
  * @param filter Filter whose parameters are to be freed
  */
-static void filter_free_parameters(FILTER_DEF *filter)
+static void filter_free_parameters(MXS_FILTER_DEF *filter)
 {
     config_parameter_free(filter->parameters);
 }
@@ -346,7 +349,7 @@ static void filter_free_parameters(FILTER_DEF *filter)
  * @param filter Filter definition
  * @return True if module was successfully loaded, false if an error occurred
  */
-bool filter_load(FILTER_DEF* filter)
+bool filter_load(MXS_FILTER_DEF* filter)
 {
     bool rval = false;
     if (filter)
@@ -400,7 +403,7 @@ bool filter_load(FILTER_DEF* filter)
  *                      if the filter could not be created
  */
 MXS_DOWNSTREAM *
-filter_apply(FILTER_DEF *filter, SESSION *session, MXS_DOWNSTREAM *downstream)
+filter_apply(MXS_FILTER_DEF *filter, SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     MXS_DOWNSTREAM *me;
 
@@ -435,7 +438,7 @@ filter_apply(FILTER_DEF *filter, SESSION *session, MXS_DOWNSTREAM *downstream)
  * @return              The upstream component for the next filter
  */
 MXS_UPSTREAM *
-filter_upstream(FILTER_DEF *filter, void *fsession, MXS_UPSTREAM *upstream)
+filter_upstream(MXS_FILTER_DEF *filter, void *fsession, MXS_UPSTREAM *upstream)
 {
     MXS_UPSTREAM *me = NULL;
 

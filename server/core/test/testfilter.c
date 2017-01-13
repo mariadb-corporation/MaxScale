@@ -43,22 +43,22 @@
 static int
 test1()
 {
-    FILTER_DEF  *f1, *f2;
+    MXS_FILTER_DEF  *f1, *f2;
 
     if ((f1 = filter_alloc("test1", "module")) == NULL)
     {
         fprintf(stderr, "filter_alloc: test 1 failed.\n");
         return 1;
     }
-    if ((f2 = filter_find("test1")) == NULL)
+    if ((f2 = filter_def_find("test1")) == NULL)
     {
-        fprintf(stderr, "filter_find: test 2 failed.\n");
+        fprintf(stderr, "filter_def_find: test 2 failed.\n");
         return 1;
     }
     filter_free(f1);
-    if ((f2 = filter_find("test1")) != NULL)
+    if ((f2 = filter_def_find("test1")) != NULL)
     {
-        fprintf(stderr, "filter_find: test 3 failed delete.\n");
+        fprintf(stderr, "filter_def_find: test 3 failed delete.\n");
         return 1;
     }
 
@@ -76,7 +76,7 @@ test1()
 static int
 test2()
 {
-    FILTER_DEF  *f1;
+    MXS_FILTER_DEF  *f1;
 
     if ((f1 = filter_alloc("test1", "module")) == NULL)
     {
@@ -100,7 +100,7 @@ test2()
 static int
 test3()
 {
-    FILTER_DEF  *f1;
+    MXS_FILTER_DEF  *f1;
     char        name[40];
     int     i, n_filters = 1000;
 
@@ -117,25 +117,25 @@ test3()
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if ((f1 = filter_def_find(name)) == NULL)
         {
-            fprintf(stderr, "filter_find: test 3 failed.\n");
+            fprintf(stderr, "filter_def_find: test 3 failed.\n");
             return 1;
         }
     }
     for (i = 0; i < n_filters; i++)
     {
         sprintf(name, "filter%d", i);
-        if ((f1 = filter_find(name)) == NULL)
+        if ((f1 = filter_def_find(name)) == NULL)
         {
-            fprintf(stderr, "filter_find: test 3 failed.\n");
+            fprintf(stderr, "filter_def_find: test 3 failed.\n");
             return 1;
         }
         filter_free(f1);
-        if ((f1 = filter_find(name)) != NULL)
+        if ((f1 = filter_def_find(name)) != NULL)
         {
             fprintf(stderr,
-                    "filter_find: test 3 failed - found deleted filter.\n");
+                    "filter_def_find: test 3 failed - found deleted filter.\n");
             return 1;
         }
     }

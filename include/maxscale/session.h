@@ -45,7 +45,7 @@ MXS_BEGIN_DECLS
 
 struct dcb;
 struct service;
-struct filter_def;
+struct mxs_filter_def;
 struct server;
 
 /**
@@ -132,7 +132,7 @@ typedef struct mxs_upstream
  */
 typedef struct
 {
-    struct filter_def *filter;
+    struct mxs_filter_def *filter;
     void *instance;
     void *session;
 } SESSION_FILTER;

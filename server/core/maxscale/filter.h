@@ -20,13 +20,13 @@
 
 MXS_BEGIN_DECLS
 
-void filter_add_option(FILTER_DEF *filter_def, const char *option);
-void filter_add_parameter(FILTER_DEF *filter_def, const char *name, const char *value);
-FILTER_DEF *filter_alloc(const char *name, const char *module_name);
-MXS_DOWNSTREAM *filter_apply(FILTER_DEF *filter_def, SESSION *session, MXS_DOWNSTREAM *downstream);
-void filter_free(FILTER_DEF *filter_def);
-bool filter_load(FILTER_DEF *filter_def);
+void filter_add_option(MXS_FILTER_DEF *filter_def, const char *option);
+void filter_add_parameter(MXS_FILTER_DEF *filter_def, const char *name, const char *value);
+MXS_FILTER_DEF *filter_alloc(const char *name, const char *module_name);
+MXS_DOWNSTREAM *filter_apply(MXS_FILTER_DEF *filter_def, SESSION *session, MXS_DOWNSTREAM *downstream);
+void filter_free(MXS_FILTER_DEF *filter_def);
+bool filter_load(MXS_FILTER_DEF *filter_def);
 int filter_standard_parameter(const char *name);
-MXS_UPSTREAM *filter_upstream(FILTER_DEF *filter_def, void *fsession, MXS_UPSTREAM *upstream);
+MXS_UPSTREAM *filter_upstream(MXS_FILTER_DEF *filter_def, void *fsession, MXS_UPSTREAM *upstream);
 
 MXS_END_DECLS

@@ -92,7 +92,7 @@ typedef struct mxs_filter_object
  * This is basically the link between a plugin to load and the
  * optons to pass to that plugin.
  */
-typedef struct filter_def
+typedef struct mxs_filter_def
 {
     char *name;                   /**< The Filter name */
     char *module;                 /**< The module to load */
@@ -101,13 +101,37 @@ typedef struct filter_def
     MXS_FILTER* filter;           /**< The runtime filter */
     MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
     SPINLOCK spin;                /**< Spinlock to protect the filter definition */
-    struct filter_def *next;      /**< Next filter in the chain of all filters */
-} FILTER_DEF;
+    struct mxs_filter_def *next;  /**< Next filter in the chain of all filters */
+} MXS_FILTER_DEF;
 
-FILTER_DEF *filter_find(const char *);
+/**
+ * Lookup a filter definition using the unique section name in
+ * the configuration file.
+ *
+ * @param name The name of a filter.
+ *
+ * @return A filter definition or NULL if not found.
+ */
+MXS_FILTER_DEF *filter_def_find(const char *name);
+
+/**
+ * Get module name of a filter definition.
+ *
+ * @param filter_def  A filter definition.
+ *
+ * @return The module name.
+ */
+const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * Get the filter instance of a particular filter definition.
+ *
+ * @return A filter instance.
+ */
+MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
 
 void dprintAllFilters(DCB *);
-void dprintFilter(DCB *, const FILTER_DEF *);
+void dprintFilter(DCB *, const MXS_FILTER_DEF *);
 void dListFilters(DCB *);
 
 /**
