@@ -807,14 +807,15 @@ int detect_loops(TEE_INSTANCE *instance, HASHTABLE* ht, SERVICE* service)
 
     for (i = 0; i < svc->n_filters; i++)
     {
-        if (strcmp(svc->filters[i]->module, "tee") == 0)
+        const char* module = filter_def_get_module_name(svc->filters[i]);
+        if (strcmp(module, "tee") == 0)
         {
             /*
              * Found a Tee filter, recurse down its path
              * if the service name isn't already in the hashtable.
              */
 
-            TEE_INSTANCE* ninst = (TEE_INSTANCE*) svc->filters[i]->filter;
+            TEE_INSTANCE* ninst = (TEE_INSTANCE*)filter_def_get_instance(svc->filters[i]);
             if (ninst == NULL)
             {
                 /**
@@ -825,7 +826,7 @@ int detect_loops(TEE_INSTANCE *instance, HASHTABLE* ht, SERVICE* service)
             }
             SERVICE* tgt = ninst->service;
 
-            if (detect_loops((TEE_INSTANCE*) svc->filters[i]->filter, ht, tgt))
+            if (detect_loops(ninst, ht, tgt))
             {
                 return true;
             }

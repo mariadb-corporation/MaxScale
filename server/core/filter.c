@@ -22,16 +22,17 @@
  *
  * @endverbatim
  */
+#include <maxscale/filter.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <maxscale/filter.h>
-#include <maxscale/session.h>
-#include <maxscale/modules.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+#include "maxscale/filter.h"
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
@@ -149,6 +150,11 @@ filter_def_find(const char *name)
     }
     spinlock_release(&filter_spin);
     return filter;
+}
+
+const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def)
+{
+    return filter_def->name;
 }
 
 const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def)

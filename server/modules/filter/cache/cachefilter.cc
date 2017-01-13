@@ -93,11 +93,9 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
-    ss_dassert(strcmp(pFilterDef->module, MXS_MODULE_NAME) == 0);
+    CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
-    CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(pFilterDef->filter);
-
-    pFilter->cache().show(pDcb);
+    MXS_EXCEPTION_GUARD(pFilter->cache().show(pDcb));
 
     return true;
 }

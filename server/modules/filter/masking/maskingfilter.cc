@@ -43,9 +43,7 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs)
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
-    ss_dassert(strcmp(pFilterDef->module, MXS_MODULE_NAME) == 0);
-
-    MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(pFilterDef->filter);
+    MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(filter_def_get_instance(pFilterDef));
 
     MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
 

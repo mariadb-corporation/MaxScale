@@ -20,6 +20,23 @@
 
 MXS_BEGIN_DECLS
 
+/**
+ * The definition of a filter from the configuration file.
+ * This is basically the link between a plugin to load and the
+ * options to pass to that plugin.
+ */
+typedef struct mxs_filter_def
+{
+    char *name;                   /**< The Filter name */
+    char *module;                 /**< The module to load */
+    char **options;               /**< The options set for this filter */
+    CONFIG_PARAMETER *parameters; /**< The filter parameters */
+    MXS_FILTER* filter;           /**< The runtime filter */
+    MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
+    SPINLOCK spin;                /**< Spinlock to protect the filter definition */
+    struct mxs_filter_def *next;  /**< Next filter in the chain of all filters */
+} MXS_FILTER_DEF;
+
 void filter_add_option(MXS_FILTER_DEF *filter_def, const char *option);
 void filter_add_parameter(MXS_FILTER_DEF *filter_def, const char *name, const char *value);
 MXS_FILTER_DEF *filter_alloc(const char *name, const char *module_name);

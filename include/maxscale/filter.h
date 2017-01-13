@@ -87,22 +87,13 @@ typedef struct mxs_filter_object
  * file modinfo.h.
  */
 #define MXS_FILTER_VERSION  {2, 2, 0}
+
 /**
- * The definition of a filter from the configuration file.
- * This is basically the link between a plugin to load and the
- * optons to pass to that plugin.
+ * MXS_FILTER_DEF represents a filter definition from the configuration file.
+ * Its exact definition is private to MaxScale.
  */
-typedef struct mxs_filter_def
-{
-    char *name;                   /**< The Filter name */
-    char *module;                 /**< The module to load */
-    char **options;               /**< The options set for this filter */
-    CONFIG_PARAMETER *parameters; /**< The filter parameters */
-    MXS_FILTER* filter;           /**< The runtime filter */
-    MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
-    SPINLOCK spin;                /**< Spinlock to protect the filter definition */
-    struct mxs_filter_def *next;  /**< Next filter in the chain of all filters */
-} MXS_FILTER_DEF;
+struct mxs_filter_def;
+typedef struct mxs_filter_def MXS_FILTER_DEF;
 
 /**
  * Lookup a filter definition using the unique section name in
@@ -113,6 +104,16 @@ typedef struct mxs_filter_def
  * @return A filter definition or NULL if not found.
  */
 MXS_FILTER_DEF *filter_def_find(const char *name);
+
+/**
+ * Get the name of a filter definition. This corresponds to
+ * to a filter section in the configuration file.
+ *
+ * @param filter_def  A filter definition.
+ *
+ * @return The filter name.
+ */
+const char* filter_def_get_name(const MXS_FILTER_DEF* filter_def);
 
 /**
  * Get module name of a filter definition.
