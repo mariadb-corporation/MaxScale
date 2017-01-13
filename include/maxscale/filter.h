@@ -13,22 +13,16 @@
  */
 
 /**
- * @file filter.h -  The filter interface mechanisms
- *
- * Revision History
- *
- * Date         Who                     Description
- * 27/05/2014   Mark Riddoch            Initial implementation
- *
+ * @file include/maxscale/filter.h - The public filter interface
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/config.h>
-#include <maxscale/routing.h>
-#include <maxscale/dcb.h>
-#include <maxscale/session.h>
-#include <maxscale/buffer.h>
 #include <stdint.h>
+#include <maxscale/buffer.h>
+#include <maxscale/config.h>
+#include <maxscale/dcb.h>
+#include <maxscale/routing.h>
+#include <maxscale/session.h>
 
 MXS_BEGIN_DECLS
 
@@ -56,19 +50,17 @@ typedef void *MXS_FILTER_SESSION;
  * The "module object" structure for a query router module
  *
  * The entry points are:
- *      createInstance          Called by the service to create a new
- *                              instance of the filter
- *      newSession              Called to create a new user session
- *                              within the filter
- *      closeSession            Called when a session is closed
- *      freeSession             Called when a session is freed
- *      setDownstream           Sets the downstream component of the
- *                              filter pipline
- *      routeQuery              Called on each query that requires
- *                              routing
- *      clientReply             Called for each reply packet
- *      diagnostics             Called to force the filter to print
- *                              diagnostic output
+ *      createInstance   Called by the service to create a new instance of the filter
+ *      newSession       Called to create a new user session within the filter
+ *      closeSession     Called when a session is closed
+ *      freeSession      Called when a session is freed
+ *      setDownstream    Sets the downstream component of the filter pipline
+ *      setUpstream      Sets the upstream component of the filter pipline
+ *      routeQuery       Called on each query that requires routing
+ *      clientReply      Called for each reply packet
+ *      diagnostics      Called for diagnostic output
+ *      getCapabilities  Called to obtain the capabilities of the filter
+ *      destroyInstance  Called for destroying a filter instance
  *
  * @endverbatim
  *
@@ -112,15 +104,8 @@ typedef struct filter_def
     struct filter_def *next;      /**< Next filter in the chain of all filters */
 } FILTER_DEF;
 
-FILTER_DEF *filter_alloc(const char *, const char *);
-void filter_free(FILTER_DEF *);
-bool filter_load(FILTER_DEF* filter);
 FILTER_DEF *filter_find(const char *);
-void filter_add_option(FILTER_DEF *, const char *);
-void filter_add_parameter(FILTER_DEF *, const char *, const char *);
-DOWNSTREAM *filter_apply(FILTER_DEF *, SESSION *, DOWNSTREAM *);
-UPSTREAM *filter_upstream(FILTER_DEF *, void *, UPSTREAM *);
-int filter_standard_parameter(const char *);
+
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, const FILTER_DEF *);
 void dListFilters(DCB *);

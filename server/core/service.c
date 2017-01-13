@@ -38,6 +38,7 @@
  *
  * @endverbatim
  */
+#include <maxscale/service.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,26 +48,25 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
-#include <maxscale/session.h>
-#include <maxscale/protocol.h>
-#include <maxscale/listener.h>
-#include <maxscale/server.h>
-#include <maxscale/router.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/modules.h>
-#include <maxscale/dcb.h>
-#include <maxscale/users.h>
-#include <maxscale/filter.h>
-#include <maxscale/poll.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/resultset.h>
-#include <maxscale/gwdirs.h>
-#include <maxscale/version.h>
-#include <maxscale/queuemanager.h>
 #include <maxscale/alloc.h>
+#include <maxscale/dcb.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/listener.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/poll.h>
+#include <maxscale/protocol.h>
+#include <maxscale/queuemanager.h>
+#include <maxscale/resultset.h>
+#include <maxscale/router.h>
+#include <maxscale/server.h>
+#include <maxscale/session.h>
+#include <maxscale/spinlock.h>
+#include <maxscale/users.h>
 #include <maxscale/utils.h>
-
+#include <maxscale/version.h>
+#include "maxscale/filter.h"
 #include "maxscale/service.h"
 
 /** Base value for server weights */

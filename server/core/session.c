@@ -27,21 +27,22 @@
  *
  * @endverbatim
  */
+#include <maxscale/session.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <maxscale/alloc.h>
-#include <maxscale/session.h>
-#include <maxscale/service.h>
-#include <maxscale/router.h>
-#include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/atomic.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/poll.h>
+#include <maxscale/router.h>
+#include <maxscale/service.h>
+#include <maxscale/spinlock.h>
+#include "maxscale/filter.h"
 
 /* A session with null values, used for initialization */
 static SESSION session_initialized = SESSION_INIT;
