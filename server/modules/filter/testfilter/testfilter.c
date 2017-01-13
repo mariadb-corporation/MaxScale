@@ -30,15 +30,15 @@
  */
 
 
-static  FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
-static  void    *newSession(FILTER *instance, SESSION *session);
-static  void    closeSession(FILTER *instance, void *session);
-static  void    freeSession(FILTER *instance, void *session);
-static  void    setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static  int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static  void    diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static  MXS_FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
+static  void    *newSession(MXS_FILTER *instance, SESSION *session);
+static  void    closeSession(MXS_FILTER *instance, void *session);
+static  void    freeSession(MXS_FILTER *instance, void *session);
+static  void    setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+static  int routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
+static  void    diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
-static void destroyInstance(FILTER *instance);
+static void destroyInstance(MXS_FILTER *instance);
 
 
 
@@ -116,7 +116,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  FILTER  *
+static  MXS_FILTER  *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     TEST_INSTANCE   *my_instance;
@@ -126,7 +126,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         my_instance->sessions = 0;
         my_instance->name = name;
     }
-    return (FILTER *)my_instance;
+    return (MXS_FILTER *)my_instance;
 }
 
 /**
@@ -137,7 +137,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @return Session specific data for this session
  */
 static  void    *
-newSession(FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, SESSION *session)
 {
     TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
     TEST_SESSION    *my_session;
@@ -159,7 +159,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static  void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, void *session)
 {
 }
 
@@ -170,7 +170,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The session being closed
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, void *session)
 {
     MXS_FREE(session);
     return;
@@ -184,7 +184,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
     TEST_SESSION    *my_session = (TEST_SESSION *)session;
 
@@ -202,7 +202,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static  int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
 {
     TEST_SESSION    *my_session = (TEST_SESSION *)session;
 
@@ -226,7 +226,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param   dcb     The DCB for diagnostic output
  */
 static  void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
 {
     TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
     TEST_SESSION    *my_session = (TEST_SESSION *)fsession;
@@ -254,7 +254,7 @@ static uint64_t getCapabilities(void)
  *
  * @param The filter instance.
  */
-static void destroyInstance(FILTER *instance)
+static void destroyInstance(MXS_FILTER *instance)
 {
     TEST_INSTANCE *cinstance = (TEST_INSTANCE *)instance;
 

@@ -36,7 +36,7 @@ MXS_BEGIN_DECLS
  * The FILTER handle points to module specific data, so the best we can do
  * is to make it a void * externally.
  */
-typedef void *FILTER;
+typedef void *MXS_FILTER;
 
 /**
  * @verbatim
@@ -63,19 +63,19 @@ typedef void *FILTER;
  */
 typedef struct mxs_filter_object
 {
-    FILTER  *(*createInstance)(const char *name,
-                              char **options,
-                              CONFIG_PARAMETER *params);
-    void    *(*newSession)(FILTER *instance, SESSION *session);
-    void     (*closeSession)(FILTER *instance, void *fsession);
-    void     (*freeSession)(FILTER *instance, void *fsession);
-    void     (*setDownstream)(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-    void     (*setUpstream)(FILTER *instance, void *fsession, UPSTREAM *downstream);
-    int32_t  (*routeQuery)(FILTER *instance, void *fsession, GWBUF *queue);
-    int32_t  (*clientReply)(FILTER *instance, void *fsession, GWBUF *queue);
-    void     (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
+    MXS_FILTER *(*createInstance)(const char *name,
+                                  char **options,
+                                  CONFIG_PARAMETER *params);
+    void    *(*newSession)(MXS_FILTER *instance, SESSION *session);
+    void     (*closeSession)(MXS_FILTER *instance, void *fsession);
+    void     (*freeSession)(MXS_FILTER *instance, void *fsession);
+    void     (*setDownstream)(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+    void     (*setUpstream)(MXS_FILTER *instance, void *fsession, UPSTREAM *downstream);
+    int32_t  (*routeQuery)(MXS_FILTER *instance, void *fsession, GWBUF *queue);
+    int32_t  (*clientReply)(MXS_FILTER *instance, void *fsession, GWBUF *queue);
+    void     (*diagnostics)(MXS_FILTER *instance, void *fsession, DCB *dcb);
     uint64_t (*getCapabilities)(void);
-    void     (*destroyInstance)(FILTER *instance);
+    void     (*destroyInstance)(MXS_FILTER *instance);
 } MXS_FILTER_OBJECT;
 
 /**
@@ -91,14 +91,14 @@ typedef struct mxs_filter_object
  */
 typedef struct filter_def
 {
-    char *name;                    /**< The Filter name */
-    char *module;                  /**< The module to load */
-    char **options;                /**< The options set for this filter */
+    char *name;                   /**< The Filter name */
+    char *module;                 /**< The module to load */
+    char **options;               /**< The options set for this filter */
     CONFIG_PARAMETER *parameters; /**< The filter parameters */
-    FILTER filter;                 /**< The runtime filter */
-    MXS_FILTER_OBJECT *obj;            /**< The "MODULE_OBJECT" for the filter */
-    SPINLOCK spin;                 /**< Spinlock to protect the filter definition */
-    struct filter_def *next;       /**< Next filter in the chain of all filters */
+    MXS_FILTER* filter;           /**< The runtime filter */
+    MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
+    SPINLOCK spin;                /**< Spinlock to protect the filter definition */
+    struct filter_def *next;      /**< Next filter in the chain of all filters */
 } FILTER_DEF;
 
 FILTER_DEF *filter_alloc(const char *, const char *);

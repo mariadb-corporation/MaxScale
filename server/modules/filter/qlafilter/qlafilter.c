@@ -73,13 +73,13 @@ enum log_options
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
+static void *newSession(MXS_FILTER *instance, SESSION *session);
+static void closeSession(MXS_FILTER *instance, void *session);
+static void freeSession(MXS_FILTER *instance, void *session);
+static void setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
+static int routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 /**
@@ -267,7 +267,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static FILTER *
+static MXS_FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE*) MXS_MALLOC(sizeof(QLA_INSTANCE));
@@ -364,7 +364,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             my_instance = NULL;
         }
     }
-    return (FILTER *) my_instance;
+    return (MXS_FILTER *) my_instance;
 }
 
 /**
@@ -377,7 +377,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @return Session specific data for this session
  */
 static void *
-newSession(FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, SESSION *session)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session;
@@ -448,7 +448,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static void
-closeSession(FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, void *session)
 {
     QLA_SESSION *my_session = (QLA_SESSION *) session;
 
@@ -465,7 +465,7 @@ closeSession(FILTER *instance, void *session)
  * @param session   The filter session
  */
 static void
-freeSession(FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, void *session)
 {
     QLA_SESSION *my_session = (QLA_SESSION *) session;
 
@@ -483,7 +483,7 @@ freeSession(FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
     QLA_SESSION *my_session = (QLA_SESSION *) session;
 
@@ -501,7 +501,7 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session = (QLA_SESSION *) session;
@@ -580,7 +580,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param   dcb     The DCB for diagnostic output
  */
 static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
     QLA_SESSION *my_session = (QLA_SESSION *) fsession;

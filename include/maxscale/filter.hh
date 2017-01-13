@@ -203,16 +203,16 @@ template<class FilterType, class FilterSessionType>
 class Filter
 {
 public:
-    static FILTER* createInstance(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* createInstance(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 
         MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, pzOptions, ppParams));
 
-        return reinterpret_cast<FILTER*>(pFilter);
+        return reinterpret_cast<MXS_FILTER*>(pFilter);
     }
 
-    static void* newSession(FILTER* pInstance, SESSION* pSession)
+    static void* newSession(MXS_FILTER* pInstance, SESSION* pSession)
     {
         FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
         void* pFilterSession;
@@ -222,21 +222,21 @@ public:
         return pFilterSession;
     }
 
-    static void closeSession(FILTER*, void* pData)
+    static void closeSession(MXS_FILTER*, void* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pFilterSession->close());
     }
 
-    static void freeSession(FILTER*, void* pData)
+    static void freeSession(MXS_FILTER*, void* pData)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
-    static void setDownstream(FILTER*, void* pData, DOWNSTREAM* pDownstream)
+    static void setDownstream(MXS_FILTER*, void* pData, DOWNSTREAM* pDownstream)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -245,7 +245,7 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession->setDownstream(down));
     }
 
-    static void setUpstream(FILTER* pInstance, void* pData, UPSTREAM* pUpstream)
+    static void setUpstream(MXS_FILTER* pInstance, void* pData, UPSTREAM* pUpstream)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -254,7 +254,7 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession->setUpstream(up));
     }
 
-    static int routeQuery(FILTER* pInstance, void* pData, GWBUF* pPacket)
+    static int routeQuery(MXS_FILTER* pInstance, void* pData, GWBUF* pPacket)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -264,7 +264,7 @@ public:
         return rv;
     }
 
-    static int clientReply(FILTER* pInstance, void* pData, GWBUF* pPacket)
+    static int clientReply(MXS_FILTER* pInstance, void* pData, GWBUF* pPacket)
     {
         FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
@@ -274,7 +274,7 @@ public:
         return rv;
     }
 
-    static void diagnostics(FILTER* pInstance, void* pData, DCB* pDcb)
+    static void diagnostics(MXS_FILTER* pInstance, void* pData, DCB* pDcb)
     {
         if (pData)
         {
@@ -299,7 +299,7 @@ public:
         return rv;
     }
 
-    static void destroyInstance(FILTER* pInstance)
+    static void destroyInstance(MXS_FILTER* pInstance)
     {
         FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
 
