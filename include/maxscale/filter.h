@@ -33,10 +33,23 @@
 MXS_BEGIN_DECLS
 
 /**
- * The FILTER handle points to module specific data, so the best we can do
- * is to make it a void * externally.
+ * MXS_FILTER is an opaque type representing a particular filter instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c createInstance function of a filter module and subsequently
+ * passing it back to the API functions of the filter.
  */
 typedef void *MXS_FILTER;
+
+/**
+ * MXS_FILTER_SESSION is an opaque type representing the session related
+ * data of a particular filter instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c newSession function of a filter module and subsequently
+ * passing it back to the API functions of the filter.
+ */
+typedef void *MXS_FILTER_SESSION;
 
 /**
  * @verbatim
@@ -63,17 +76,15 @@ typedef void *MXS_FILTER;
  */
 typedef struct mxs_filter_object
 {
-    MXS_FILTER *(*createInstance)(const char *name,
-                                  char **options,
-                                  CONFIG_PARAMETER *params);
-    void    *(*newSession)(MXS_FILTER *instance, SESSION *session);
-    void     (*closeSession)(MXS_FILTER *instance, void *fsession);
-    void     (*freeSession)(MXS_FILTER *instance, void *fsession);
-    void     (*setDownstream)(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-    void     (*setUpstream)(MXS_FILTER *instance, void *fsession, UPSTREAM *downstream);
-    int32_t  (*routeQuery)(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-    int32_t  (*clientReply)(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-    void     (*diagnostics)(MXS_FILTER *instance, void *fsession, DCB *dcb);
+    MXS_FILTER *(*createInstance)(const char *name, char **options, CONFIG_PARAMETER *params);
+    MXS_FILTER_SESSION *(*newSession)(MXS_FILTER *instance, SESSION *session);
+    void     (*closeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+    void     (*freeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+    void     (*setDownstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+    void     (*setUpstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *downstream);
+    int32_t  (*routeQuery)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+    int32_t  (*clientReply)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+    void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
     uint64_t (*getCapabilities)(void);
     void     (*destroyInstance)(MXS_FILTER *instance);
 } MXS_FILTER_OBJECT;

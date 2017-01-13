@@ -76,14 +76,14 @@ static const int default_sql_size = 4 * 1024;
  * The filter entry points
  */
 static  MXS_FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static  void    *newSession(MXS_FILTER *instance, SESSION *session);
-static  void    closeSession(MXS_FILTER *instance, void *session);
-static  void    freeSession(MXS_FILTER *instance, void *session);
-static  void    setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static  void    setUpstream(MXS_FILTER *instance, void *fsession, UPSTREAM *upstream);
-static  int routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static  int clientReply(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static  void    diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
+static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *upstream);
+static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 static  void checkNamedPipe(void *args);
 
@@ -293,7 +293,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static  void    *
+static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, SESSION *session)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
@@ -342,7 +342,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
         }
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -353,7 +353,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static  void
-closeSession(MXS_FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
@@ -372,7 +372,7 @@ closeSession(MXS_FILTER *instance, void *session)
  * @param session   The filter session
  */
 static void
-freeSession(MXS_FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -392,7 +392,7 @@ freeSession(MXS_FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -408,7 +408,7 @@ setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param upstream  The upstream filter or session.
  */
 static void
-setUpstream(MXS_FILTER *instance, void *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, UPSTREAM *upstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -426,7 +426,7 @@ setUpstream(MXS_FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue     The query data
  */
 static  int
-routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)session;
@@ -516,7 +516,7 @@ retblock:
 }
 
 static int
-clientReply(MXS_FILTER *instance, void *session, GWBUF *reply)
+clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)session;
@@ -572,7 +572,7 @@ clientReply(MXS_FILTER *instance, void *session, GWBUF *reply)
  * @param   dcb     The DCB for diagnostic output
  */
 static  void
-diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     TPM_INSTANCE    *my_instance = (TPM_INSTANCE *)instance;
     TPM_SESSION *my_session = (TPM_SESSION *)fsession;

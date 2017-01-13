@@ -47,14 +47,14 @@
 #include "maxrows.h"
 
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static void   *newSession(MXS_FILTER *instance, SESSION *session);
-static void    closeSession(MXS_FILTER *instance, void *sdata);
-static void    freeSession(MXS_FILTER *instance, void *sdata);
-static void    setDownstream(MXS_FILTER *instance, void *sdata, DOWNSTREAM *downstream);
-static void    setUpstream(MXS_FILTER *instance, void *sdata, UPSTREAM *upstream);
-static int     routeQuery(MXS_FILTER *instance, void *sdata, GWBUF *queue);
-static int     clientReply(MXS_FILTER *instance, void *sdata, GWBUF *queue);
-static void    diagnostics(MXS_FILTER *instance, void *sdata, DCB *dcb);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
+static void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
+static void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DOWNSTREAM *downstream);
+static void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, UPSTREAM *upstream);
+static int     routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *queue);
+static int     clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *queue);
+static void    diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 /* Global symbols of the Module */
@@ -211,12 +211,12 @@ static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAM
  *
  * @return Session specific data for this session
  */
-static void *newSession(MXS_FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = maxrows_session_data_create(cinstance, session);
 
-    return csdata;
+    return (MXS_FILTER_SESSION*)csdata;
 }
 
 /**
@@ -225,7 +225,7 @@ static void *newSession(MXS_FILTER *instance, SESSION *session)
  * @param instance  The maxrows instance data
  * @param sdata     The session data of the session being closed
  */
-static void closeSession(MXS_FILTER *instance, void *sdata)
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -237,7 +237,7 @@ static void closeSession(MXS_FILTER *instance, void *sdata)
  * @param instance  The maxrows instance data
  * @param sdata     The session data of the session being closed
  */
-static void freeSession(MXS_FILTER *instance, void *sdata)
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -252,7 +252,7 @@ static void freeSession(MXS_FILTER *instance, void *sdata)
  * @param sdata       The session data of the session
  * @param down        The downstream filter or router
  */
-static void setDownstream(MXS_FILTER *instance, void *sdata, DOWNSTREAM *down)
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DOWNSTREAM *down)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -267,7 +267,7 @@ static void setDownstream(MXS_FILTER *instance, void *sdata, DOWNSTREAM *down)
  * @param sdata       The session data of the session
  * @param up          The upstream filter or router
  */
-static void setUpstream(MXS_FILTER *instance, void *sdata, UPSTREAM *up)
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, UPSTREAM *up)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -282,7 +282,7 @@ static void setUpstream(MXS_FILTER *instance, void *sdata, UPSTREAM *up)
  * @param sdata     The filter session data
  * @param buffer    Buffer containing an MySQL protocol packet.
  */
-static int routeQuery(MXS_FILTER *instance, void *sdata, GWBUF *packet)
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *packet)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -327,7 +327,7 @@ static int routeQuery(MXS_FILTER *instance, void *sdata, GWBUF *packet)
  * @param sdata     The filter session data
  * @param queue     The query data
  */
-static int clientReply(MXS_FILTER *instance, void *sdata, GWBUF *data)
+static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *data)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -405,7 +405,7 @@ static int clientReply(MXS_FILTER *instance, void *sdata, GWBUF *data)
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static void diagnostics(MXS_FILTER *instance, void *sdata, DCB *dcb)
+static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
@@ -448,7 +448,7 @@ static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
  * @return Session data or NULL if creation fails.
  */
 static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance,
-                                                     SESSION* session)
+                                                         SESSION* session)
 {
     MAXROWS_SESSION_DATA *data = (MAXROWS_SESSION_DATA*)MXS_CALLOC(1, sizeof(MAXROWS_SESSION_DATA));
 

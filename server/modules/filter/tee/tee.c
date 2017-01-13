@@ -98,14 +98,14 @@ static unsigned char required_packets[] =
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char* name, char **options, CONFIG_PARAMETER *);
-static void *newSession(MXS_FILTER *instance, SESSION *session);
-static void closeSession(MXS_FILTER *instance, void *session);
-static void freeSession(MXS_FILTER *instance, void *session);
-static void setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static void setUpstream(MXS_FILTER *instance, void *fsession, UPSTREAM *upstream);
-static int routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static int clientReply(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *upstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 /**
@@ -417,7 +417,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
+static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, SESSION *session)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
@@ -481,7 +481,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
             SESSION* ses;
             if ((dcb = dcb_clone(session->client_dcb)) == NULL)
             {
-                freeSession(instance, (void *) my_session);
+                freeSession(instance, (MXS_FILTER_SESSION *) my_session);
                 my_session = NULL;
 
                 MXS_ERROR("Creating client DCB for Tee "
@@ -493,7 +493,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
             if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
             {
                 dcb_close(dcb);
-                freeSession(instance, (void *) my_session);
+                freeSession(instance, (MXS_FILTER_SESSION *) my_session);
                 my_session = NULL;
                 MXS_ERROR("Creating client session for Tee "
                           "filter failed. Terminating session.");
@@ -508,7 +508,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
         }
     }
 retblock:
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -521,7 +521,7 @@ retblock:
  * @param session   The session being closed
  */
 static void
-closeSession(MXS_FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     ROUTER_OBJECT *router;
@@ -579,7 +579,7 @@ closeSession(MXS_FILTER *instance, void *session)
  * @param session   The filter session
  */
 static void
-freeSession(MXS_FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     SESSION* ses = my_session->branch_session;
@@ -636,7 +636,7 @@ freeSession(MXS_FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->down = *downstream;
@@ -651,7 +651,7 @@ setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param downstream    The downstream filter or router.
  */
 static void
-setUpstream(MXS_FILTER *instance, void *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, UPSTREAM *upstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->up = *upstream;
@@ -676,7 +676,7 @@ setUpstream(MXS_FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue     The query data
  */
 static int
-routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session = (TEE_SESSION *) session;
@@ -696,11 +696,11 @@ routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
  * @param reply     The response data
  */
 static int
-clientReply(MXS_FILTER* instance, void *session, GWBUF *reply)
+clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
     int rc = 1, branch, eof;
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    
+
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session,
                                       reply);
@@ -718,7 +718,7 @@ clientReply(MXS_FILTER* instance, void *session, GWBUF *reply)
  * @param   dcb     The DCB for diagnostic output
  */
 static void
-diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session = (TEE_SESSION *) fsession;

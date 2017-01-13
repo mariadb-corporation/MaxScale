@@ -47,12 +47,12 @@
  */
 
 static  MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
-static  void   *newSession(MXS_FILTER *instance, SESSION *session);
-static  void   closeSession(MXS_FILTER *instance, void *session);
-static  void   freeSession(MXS_FILTER *instance, void *session);
-static  void   setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static  int    routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static  void   diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
+static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static  void   closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void   freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static  int    routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static  void   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 #define CCR_DEFAULT_TIME "60"
@@ -222,7 +222,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  *
  * @return Session specific data for this session
  */
-static void *
+static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, SESSION *session)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
@@ -234,7 +234,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
         my_session->last_modification = 0;
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -245,7 +245,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
  * @param session   The session being closed
  */
 static  void
-closeSession(MXS_FILTER *instance, void *session)
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
 }
 
@@ -256,7 +256,7 @@ closeSession(MXS_FILTER *instance, void *session)
  * @param session   The session being closed
  */
 static void
-freeSession(MXS_FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MXS_FREE(session);
 }
@@ -269,7 +269,7 @@ freeSession(MXS_FILTER *instance, void *session)
  * @param downstream  The downstream filter or router
  */
 static void
-setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
 {
     CCR_SESSION *my_session = (CCR_SESSION *)session;
 
@@ -291,7 +291,7 @@ setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
  * @param queue     The query data
  */
 static int
-routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = (CCR_SESSION *)session;
@@ -353,7 +353,7 @@ routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
  * @param dcb       The DCB for diagnostic output
  */
 static void
-diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = (CCR_SESSION *)fsession;

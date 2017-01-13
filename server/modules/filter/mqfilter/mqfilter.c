@@ -84,14 +84,14 @@ static int hktask_id = 0;
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static void *newSession(MXS_FILTER *instance, SESSION *session);
-static void closeSession(MXS_FILTER *instance, void *session);
-static void freeSession(MXS_FILTER *instance, void *session);
-static void setDownstream(MXS_FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static void setUpstream(MXS_FILTER *instance, void *fsession, UPSTREAM *upstream);
-static int routeQuery(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static int clientReply(MXS_FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *upstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 /**
@@ -799,7 +799,7 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static void *
+static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, SESSION *session)
 {
     MYSQL_session *sessauth = session->client_dcb->data;
@@ -834,7 +834,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
         MXS_FREE(db);
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -846,7 +846,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
  * @param session       The session being closed
  */
 static void
-closeSession(MXS_FILTER *instance, void *session) { }
+closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session) { }
 
 /**
  * Free the memory associated with the session
@@ -855,7 +855,7 @@ closeSession(MXS_FILTER *instance, void *session) { }
  * @param session       The filter session
  */
 static void
-freeSession(MXS_FILTER *instance, void *session)
+freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     MXS_FREE(my_session->uid);
@@ -873,13 +873,13 @@ freeSession(MXS_FILTER *instance, void *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(MXS_FILTER *instance, void *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     my_session->down = *downstream;
 }
 
-static void setUpstream(MXS_FILTER *instance, void *session, UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, UPSTREAM *upstream)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     my_session->up = *upstream;
@@ -931,7 +931,7 @@ unsigned int pktlen(void* c)
  * @param queue         The query data
  */
 static int
-routeQuery(MXS_FILTER *instance, void *session, GWBUF *queue)
+routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
@@ -1346,7 +1346,7 @@ unsigned int is_eof(void* p)
  * @param session       The filter session
  * @param reply         The response data
  */
-static int clientReply(MXS_FILTER* instance, void *session, GWBUF *reply)
+static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
     MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
@@ -1491,7 +1491,7 @@ static int clientReply(MXS_FILTER* instance, void *session, GWBUF *reply)
  * @param       dcb             The DCB for diagnostic output
  */
 static void
-diagnostic(MXS_FILTER *instance, void *fsession, DCB *dcb)
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
 
