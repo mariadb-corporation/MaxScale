@@ -126,7 +126,7 @@ enabled.
 |query   | Log the actual query                              |
 
 ```
-log_type=date, user, query
+log_data=date, user, query
 ```
 
 ### `flush`
