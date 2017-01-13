@@ -135,7 +135,6 @@ typedef struct
 {
     DOWNSTREAM down; /* The downstream filter */
     UPSTREAM up; /* The upstream filter */
-    FILTER_DEF* dummy_filterdef;
     int active; /* filter is active? */
     bool use_ok;
     int client_multistatement;
@@ -611,10 +610,6 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
         {
             create_orphan(ses);
         }
-    }
-    if (my_session->dummy_filterdef)
-    {
-        filter_free(my_session->dummy_filterdef);
     }
     if (my_session->tee_replybuf)
     {
