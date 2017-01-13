@@ -205,7 +205,7 @@ static bool domain_has_command(MODULECMD_DOMAIN *dm, const char *id)
     return false;
 }
 
-static bool process_argument(modulecmd_arg_type_t *type, const void* value,
+static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, const void* value,
                              struct arg_node *arg, const char **err)
 {
     bool rval = false;
@@ -255,8 +255,16 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
             case MODULECMD_ARG_SERVICE:
                 if ((arg->value.service = service_find((char*)value)))
                 {
-                    arg->type.type = MODULECMD_ARG_SERVICE;
-                    rval = true;
+                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                        strcmp(cmd->domain, arg->value.service->routerModule) == 0)
+                    {
+                        arg->type.type = MODULECMD_ARG_SERVICE;
+                        rval = true;
+                    }
+                    else
+                    {
+                        *err = "router and domain names don't match";
+                    }
                 }
                 else
                 {
@@ -267,8 +275,16 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
             case MODULECMD_ARG_SERVER:
                 if ((arg->value.server = server_find_by_unique_name((char*)value)))
                 {
-                    arg->type.type = MODULECMD_ARG_SERVER;
-                    rval = true;
+                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                        strcmp(cmd->domain, arg->value.server->protocol) == 0)
+                    {
+                        arg->type.type = MODULECMD_ARG_SERVER;
+                        rval = true;
+                    }
+                    else
+                    {
+                        *err = "server and domain names don't match";
+                    }
                 }
                 else
                 {
@@ -293,8 +309,16 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
             case MODULECMD_ARG_MONITOR:
                 if ((arg->value.monitor = monitor_find((char*)value)))
                 {
-                    arg->type.type = MODULECMD_ARG_MONITOR;
-                    rval = true;
+                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                        strcmp(cmd->domain, arg->value.monitor->module_name) == 0)
+                    {
+                        arg->type.type = MODULECMD_ARG_MONITOR;
+                        rval = true;
+                    }
+                    else
+                    {
+                        *err = "monitor and domain names don't match";
+                    }
                 }
                 else
                 {
@@ -305,8 +329,16 @@ static bool process_argument(modulecmd_arg_type_t *type, const void* value,
             case MODULECMD_ARG_FILTER:
                 if ((arg->value.filter = filter_def_find((char*)value)))
                 {
-                    arg->type.type = MODULECMD_ARG_FILTER;
-                    rval = true;
+                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                        strcmp(cmd->domain, arg->value.filter->module) == 0)
+                    {
+                        arg->type.type = MODULECMD_ARG_FILTER;
+                        rval = true;
+                    }
+                    else
+                    {
+                        *err = "filter and domain names don't match";
+                    }
                 }
                 else
                 {
@@ -459,7 +491,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD *cmd, int argc, const void **
             {
                 const char *err = "";
 
-                if (!process_argument(&cmd->arg_types[i], argv[i], &arg->argv[i], &err))
+                if (!process_argument(cmd, &cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
                     modulecmd_set_error("Argument %d, %s: %s", i + 1, err, argv[i] ? argv[i] : "No argument given");

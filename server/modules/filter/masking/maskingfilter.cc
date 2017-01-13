@@ -43,17 +43,11 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs)
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
+    ss_dassert(strcmp(pFilterDef->module, MXS_MODULE_NAME) == 0);
 
-    if (strcmp(pFilterDef->module, "masking") == 0)
-    {
-        MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(pFilterDef->filter);
+    MaskingFilter* pFilter = reinterpret_cast<MaskingFilter*>(pFilterDef->filter);
 
-        MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
-    }
-    else
-    {
-        dcb_printf(pDcb, "Filter %s exists, but it is not a masking filter.", pFilterDef->name);
-    }
+    MXS_EXCEPTION_GUARD(pFilter->reload(pDcb));
 
     return true;
 }
@@ -69,10 +63,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t reload_argv[] =
     {
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
-        { MODULECMD_ARG_FILTER, "Masking name" }
+        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name" }
     };
 
-    modulecmd_register_command("masking", "reload", masking_command_reload,
+    modulecmd_register_command(MXS_MODULE_NAME, "reload", masking_command_reload,
                                MXS_ARRAY_NELEMS(reload_argv), reload_argv);
 
     MXS_NOTICE("Masking module %s initialized.", VERSION_STRING);

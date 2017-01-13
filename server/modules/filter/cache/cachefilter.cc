@@ -93,17 +93,11 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[1].value.filter;
     ss_dassert(pFilterDef);
+    ss_dassert(strcmp(pFilterDef->module, MXS_MODULE_NAME) == 0);
 
-    if (strcmp(pFilterDef->module, "cache") == 0)
-    {
-        CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(pFilterDef->filter);
+    CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(pFilterDef->filter);
 
-        pFilter->cache().show(pDcb);
-    }
-    else
-    {
-        dcb_printf(pDcb, "Filter %s exists, but it is not a cache.", pFilterDef->name);
-    }
+    pFilter->cache().show(pDcb);
 
     return true;
 }
@@ -127,10 +121,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static modulecmd_arg_type_t show_argv[] =
     {
         { MODULECMD_ARG_OUTPUT, "The output dcb" },
-        { MODULECMD_ARG_FILTER, "Cache name" }
+        { MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name" }
     };
 
-    modulecmd_register_command("cache", "show", cache_command_show,
+    modulecmd_register_command(MXS_MODULE_NAME, "show", cache_command_show,
                                MXS_ARRAY_NELEMS(show_argv), show_argv);
 
     MXS_NOTICE("Initialized cache module %s.\n", VERSION_STRING);

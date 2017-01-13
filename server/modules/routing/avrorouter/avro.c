@@ -24,6 +24,9 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "avrorouter"
+#include <maxscale/cdefs.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,10 +137,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     static modulecmd_arg_type_t args[] =
     {
-        { MODULECMD_ARG_SERVICE, "The avrorouter service" },
+        { MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The avrorouter service" },
         { MODULECMD_ARG_STRING, "Action, whether to 'start' or 'stop' the conversion process" }
     };
-    modulecmd_register_command("avrorouter", "convert", avro_handle_convert, 2, args);
+    modulecmd_register_command(MXS_MODULE_NAME, "convert", avro_handle_convert, 2, args);
 
     static ROUTER_OBJECT MyObject =
     {

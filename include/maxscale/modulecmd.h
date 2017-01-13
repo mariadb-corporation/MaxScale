@@ -43,7 +43,7 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    uint64_t    type;  /**< The argument type */
+    uint64_t    type;        /**< The argument type and options */
     const char *description; /**< The argument description */
 } modulecmd_arg_type_t;
 
@@ -68,13 +68,15 @@ typedef struct
 /**
  * Options for arguments, bits 9 through 32
  */
-#define MODULECMD_ARG_OPTIONAL (1 << 8) /**< The argument is optional */
+#define MODULECMD_ARG_OPTIONAL            (1 << 8) /**< The argument is optional */
+#define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9) /**< Argument module name must match domain name */
 
 /**
  * Helper macros
  */
 #define MODULECMD_GET_TYPE(t) ((t)->type & 0xff)
 #define MODULECMD_ARG_IS_REQUIRED(t) (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
+#define MODULECMD_ALLOW_NAME_MISMATCH(t) (((t)->type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0)
 #define MODULECMD_ARG_PRESENT(t) (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
 
 /** Argument list node */

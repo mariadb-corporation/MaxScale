@@ -60,6 +60,7 @@
  *@endcode
  */
 
+#define MXS_MODULE_NAME "dbfwfilter"
 #include <maxscale/cdefs.h>
 
 #include <stdio.h>
@@ -791,19 +792,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     modulecmd_arg_type_t args_rules_reload[] =
     {
-        {MODULECMD_ARG_FILTER, "Filter to reload"},
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to reload"},
         {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Path to rule file"}
     };
 
-    modulecmd_register_command("dbfwfilter", "rules/reload", dbfw_reload_rules, 2, args_rules_reload);
+    modulecmd_register_command(MXS_MODULE_NAME, "rules/reload", dbfw_reload_rules, 2, args_rules_reload);
 
     modulecmd_arg_type_t args_rules_show[] =
     {
         {MODULECMD_ARG_OUTPUT, "DCB where result is written"},
-        {MODULECMD_ARG_FILTER, "Filter to inspect"}
+        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Filter to inspect"}
     };
 
-    modulecmd_register_command("dbfwfilter", "rules", dbfw_show_rules, 2, args_rules_show);
+    modulecmd_register_command(MXS_MODULE_NAME, "rules", dbfw_show_rules, 2, args_rules_show);
 
     static MXS_FILTER_OBJECT MyObject =
     {
