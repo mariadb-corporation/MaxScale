@@ -46,7 +46,7 @@ public:
             m_data.routeQuery = NULL;
         }
 
-        Downstream(const DOWNSTREAM& down)
+        Downstream(const MXS_DOWNSTREAM& down)
             : m_data(down)
         {}
 
@@ -63,7 +63,7 @@ public:
             return m_data.routeQuery(m_data.instance, m_data.session, pPacket);
         }
 
-        DOWNSTREAM m_data;
+        MXS_DOWNSTREAM m_data;
     };
 
     class Upstream
@@ -81,7 +81,7 @@ public:
             m_data.clientReply = NULL;
         }
 
-        Upstream(const UPSTREAM& up)
+        Upstream(const MXS_UPSTREAM& up)
             : m_data(up)
         {}
 
@@ -98,7 +98,7 @@ public:
             return m_data.clientReply(m_data.instance, m_data.session, pPacket);
         }
 
-        UPSTREAM m_data;
+        MXS_UPSTREAM m_data;
     };
 
     /**
@@ -236,7 +236,7 @@ public:
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
-    static void setDownstream(MXS_FILTER*, MXS_FILTER_SESSION* pData, DOWNSTREAM* pDownstream)
+    static void setDownstream(MXS_FILTER*, MXS_FILTER_SESSION* pData, MXS_DOWNSTREAM* pDownstream)
     {
         FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
 
@@ -245,7 +245,7 @@ public:
         MXS_EXCEPTION_GUARD(pFilterSession->setDownstream(down));
     }
 
-    static void setUpstream(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, UPSTREAM* pUpstream)
+    static void setUpstream(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, MXS_UPSTREAM* pUpstream)
     {
         FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
 

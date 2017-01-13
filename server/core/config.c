@@ -66,6 +66,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/gwdirs.h>
 
+#include "maxscale/filter.h"
 #include "maxscale/service.h"
 
 typedef struct duplicate_context

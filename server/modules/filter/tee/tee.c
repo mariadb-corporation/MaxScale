@@ -101,8 +101,8 @@ static MXS_FILTER *createInstance(const char* name, char **options, CONFIG_PARAM
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
-static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *upstream);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
@@ -133,8 +133,8 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down; /* The downstream filter */
-    UPSTREAM up; /* The upstream filter */
+    MXS_DOWNSTREAM down; /* The downstream filter */
+    MXS_UPSTREAM up; /* The upstream filter */
     int active; /* filter is active? */
     bool use_ok;
     int client_multistatement;
@@ -631,7 +631,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->down = *downstream;
@@ -646,7 +646,7 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *dow
  * @param downstream    The downstream filter or router.
  */
 static void
-setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     my_session->up = *upstream;

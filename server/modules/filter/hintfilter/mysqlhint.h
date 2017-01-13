@@ -90,11 +90,11 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM  down;
-    GWBUF       *request;
-    int     query_len;
-    HINTSTACK   *stack;
-    NAMEDHINTS  *named_hints;   /* The named hints defined in this session */
+    MXS_DOWNSTREAM  down;
+    GWBUF          *request;
+    int             query_len;
+    HINTSTACK      *stack;
+    NAMEDHINTS     *named_hints;   /* The named hints defined in this session */
 } HINT_SESSION;
 
 /* Some useful macros */

@@ -103,28 +103,28 @@ const char* session_trx_state_to_string(session_trx_state_t state);
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
-typedef struct
+typedef struct mxs_downstream
 {
     void *instance;
     void *session;
-    int (*routeQuery)(void *instance, void *session, GWBUF *request);
-} DOWNSTREAM;
+    int32_t (*routeQuery)(void *instance, void *session, GWBUF *request);
+} MXS_DOWNSTREAM;
 
-#define DOWNSTREAM_INIT {0}
+#define MXS_DOWNSTREAM_INIT {0}
 
 /**
  * The upstream element in the filter chain. This may refer to
  * another filter or to the protocol implementation.
  */
-typedef struct
+typedef struct mxs_upstream
 {
     void *instance;
     void *session;
-    int (*clientReply)(void *instance, void *session, GWBUF *response);
-    int (*error)(void *instance, void *session, void *);
-} UPSTREAM;
+    int32_t (*clientReply)(void *instance, void *session, GWBUF *response);
+    int32_t (*error)(void *instance, void *session, void *);
+} MXS_UPSTREAM;
 
-#define UPSTREAM_INIT {0}
+#define MXS_UPSTREAM_INIT {0}
 
 /**
  * Structure used to track the filter instances and sessions of the filters
@@ -171,8 +171,8 @@ typedef struct session
     struct service  *service;         /*< The service this session is using */
     int             n_filters;        /*< Number of filter sessions */
     SESSION_FILTER  *filters;         /*< The filters in use within this session */
-    DOWNSTREAM      head;             /*< Head of the filter chain */
-    UPSTREAM        tail;             /*< The tail of the filter chain */
+    MXS_DOWNSTREAM  head;             /*< Head of the filter chain */
+    MXS_UPSTREAM    tail;             /*< The tail of the filter chain */
     int             refcount;         /*< Reference count on the session */
     bool            ses_is_child;     /*< this is a child session */
     session_trx_state_t trx_state;    /*< The current transaction state. */
@@ -186,7 +186,7 @@ typedef struct session
 } SESSION;
 
 #define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, .ses_lock = SPINLOCK_INIT, \
-    .stats = SESSION_STATS_INIT, .head = DOWNSTREAM_INIT, .tail = UPSTREAM_INIT, \
+    .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
     .state = SESSION_STATE_ALLOC, .ses_chk_tail = CHK_NUM_SESSION}
 
 #define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client_dcb, type)

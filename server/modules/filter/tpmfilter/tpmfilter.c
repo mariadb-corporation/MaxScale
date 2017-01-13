@@ -79,8 +79,8 @@ static  MXS_FILTER  *createInstance(const char *name, char **options, CONFIG_PAR
 static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
 static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
-static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *upstream);
+static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
@@ -116,8 +116,8 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM  down;
-    UPSTREAM    up;
+    MXS_DOWNSTREAM  down;
+    MXS_UPSTREAM    up;
     int     active;
     char        *clientHost;
     char        *userName;
@@ -392,7 +392,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param downstream    The downstream filter or router.
  */
 static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 
@@ -408,7 +408,7 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *dow
  * @param upstream  The upstream filter or session.
  */
 static void
-setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, UPSTREAM *upstream)
+setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream)
 {
     TPM_SESSION *my_session = (TPM_SESSION *)session;
 

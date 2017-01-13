@@ -50,7 +50,7 @@ static  MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARA
 static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
 static  void   closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void   freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static  int    routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  void   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
@@ -86,9 +86,9 @@ typedef struct
  */
 typedef struct
 {
-    DOWNSTREAM down;              /*< The downstream filter */
-    int        hints_left;        /*< Number of hints left to add to queries*/
-    time_t     last_modification; /*< Time of the last data modifying operation */
+    MXS_DOWNSTREAM down;              /*< The downstream filter */
+    int            hints_left;        /*< Number of hints left to add to queries*/
+    time_t         last_modification; /*< Time of the last data modifying operation */
 } CCR_SESSION;
 
 /**
@@ -269,7 +269,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param downstream  The downstream filter or router
  */
 static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     CCR_SESSION *my_session = (CCR_SESSION *)session;
 

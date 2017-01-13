@@ -72,8 +72,8 @@ typedef struct mxs_filter_object
     MXS_FILTER_SESSION *(*newSession)(MXS_FILTER *instance, SESSION *session);
     void     (*closeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
     void     (*freeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
-    void     (*setDownstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
-    void     (*setUpstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, UPSTREAM *downstream);
+    void     (*setDownstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+    void     (*setUpstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *downstream);
     int32_t  (*routeQuery)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
     int32_t  (*clientReply)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
     void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);

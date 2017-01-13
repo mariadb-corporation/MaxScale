@@ -399,12 +399,12 @@ bool filter_load(FILTER_DEF* filter)
  * @return              The downstream component for the next filter or NULL
  *                      if the filter could not be created
  */
-DOWNSTREAM *
-filter_apply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
+MXS_DOWNSTREAM *
+filter_apply(FILTER_DEF *filter, SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    DOWNSTREAM *me;
+    MXS_DOWNSTREAM *me;
 
-    if ((me = (DOWNSTREAM *)MXS_CALLOC(1, sizeof(DOWNSTREAM))) == NULL)
+    if ((me = (MXS_DOWNSTREAM *)MXS_CALLOC(1, sizeof(MXS_DOWNSTREAM))) == NULL)
     {
         return NULL;
     }
@@ -434,10 +434,10 @@ filter_apply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
  * @param upstream      The filter that should be upstream of this filter
  * @return              The upstream component for the next filter
  */
-UPSTREAM *
-filter_upstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
+MXS_UPSTREAM *
+filter_upstream(FILTER_DEF *filter, void *fsession, MXS_UPSTREAM *upstream)
 {
-    UPSTREAM *me = NULL;
+    MXS_UPSTREAM *me = NULL;
 
     /*
      * The the filter has no setUpstream entry point then is does
@@ -450,7 +450,7 @@ filter_upstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 
     if (filter->obj->clientReply != NULL)
     {
-        if ((me = (UPSTREAM *)MXS_CALLOC(1, sizeof(UPSTREAM))) == NULL)
+        if ((me = (MXS_UPSTREAM *)MXS_CALLOC(1, sizeof(MXS_UPSTREAM))) == NULL)
         {
             return NULL;
         }

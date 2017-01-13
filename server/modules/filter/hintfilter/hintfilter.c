@@ -27,7 +27,7 @@ static MXS_FILTER *createInstance(const char* name, char **options, CONFIG_PARAM
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DOWNSTREAM *downstream);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
@@ -176,7 +176,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
  * @param downstream    The downstream filter or router
  */
 static void
-setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, DOWNSTREAM *downstream)
+setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     HINT_SESSION *my_session = (HINT_SESSION *)session;
 

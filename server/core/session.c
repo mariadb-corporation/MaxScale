@@ -627,8 +627,8 @@ static int
 session_setup_filters(SESSION *session)
 {
     SERVICE *service = session->service;
-    DOWNSTREAM *head;
-    UPSTREAM *tail;
+    MXS_DOWNSTREAM *head;
+    MXS_UPSTREAM *tail;
     int i;
 
     if ((session->filters = MXS_CALLOC(service->n_filters,
