@@ -1996,7 +1996,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
     qc_query_op_t optype = QUERY_OP_UNDEFINED;
     bool matches = false;
     bool is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
-    bool is_real = false;
 
     if (is_sql)
     {
@@ -2010,7 +2009,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
         else
         {
             optype = qc_get_operation(queue);
-            is_real = qc_is_real_query(queue);
 
             if (parse_result != QC_QUERY_PARSED)
             {
@@ -2061,21 +2059,21 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_COLUMN:
-                if (is_sql && is_real)
+                if (is_sql)
                 {
                     match_column(rulebook, queue, &matches, &msg);
                 }
                 break;
 
             case RT_FUNCTION:
-                if (is_sql && is_real)
+                if (is_sql)
                 {
                     match_function(rulebook, queue, &matches, &msg);
                 }
                 break;
 
             case RT_WILDCARD:
-                if (is_sql && is_real)
+                if (is_sql)
                 {
                     match_wildcard(rulebook, queue, &matches, &msg);
                 }
@@ -2086,7 +2084,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_CLAUSE:
-                if (is_sql && is_real && !qc_query_has_clause(queue))
+                if (is_sql && !qc_query_has_clause(queue))
                 {
                     matches = true;
                     msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
