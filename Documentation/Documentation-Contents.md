@@ -87,6 +87,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
  - [Luafilter](Filters/Luafilter.md)
+ - [Insert Stream Filter](Filters/Insert-Stream-Filter.md)
 
 ## Monitors
 
