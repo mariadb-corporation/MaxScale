@@ -53,15 +53,15 @@
 /*
  * The filter entry points
  */
-static FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static void *newSession(FILTER *instance, SESSION *session);
-static void closeSession(FILTER *instance, void *session);
-static void freeSession(FILTER *instance, void *session);
-static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstream);
-static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
-static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
-static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_DOWNSTREAM *downstream);
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_UPSTREAM *upstream);
+static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
 /**
@@ -184,8 +184,8 @@ typedef struct
     lua_State* lua_state;
     GWBUF* current_query;
     SPINLOCK lock;
-    DOWNSTREAM down;
-    UPSTREAM up;
+     MXS_DOWNSTREAM down;
+     MXS_UPSTREAM up;
 } LUA_SESSION;
 
 /**
@@ -197,7 +197,7 @@ typedef struct
  * @param params  Filter parameters
  * @return The instance data for this new instance
  */
-static FILTER *
+static MXS_FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
     LUA_INSTANCE *my_instance;
@@ -258,7 +258,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         }
     }
 
-    return (FILTER *) my_instance;
+    return (MXS_FILTER *) my_instance;
 }
 
 /**
@@ -277,7 +277,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session The session itself
  * @return Session specific data for this session
  */
-static void * newSession(FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session)
 {
     LUA_SESSION *my_session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -353,7 +353,7 @@ static void * newSession(FILTER *instance, SESSION *session)
         spinlock_release(&my_instance->lock);
     }
 
-    return my_session;
+    return (MXS_FILTER_SESSION*)my_session;
 }
 
 /**
@@ -364,7 +364,7 @@ static void * newSession(FILTER *instance, SESSION *session)
  * @param instance The filter instance data
  * @param session The session being closed
  */
-static void closeSession(FILTER *instance, void *session)
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -409,7 +409,7 @@ static void closeSession(FILTER *instance, void *session)
  * @param instance The filter instance
  * @param session The filter session
  */
-static void freeSession(FILTER *instance, void *session)
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
 
@@ -429,7 +429,7 @@ static void freeSession(FILTER *instance, void *session)
  * @param session The filter session
  * @param downstream The downstream filter or router.
  */
-static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session,  MXS_DOWNSTREAM *downstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->down = *downstream;
@@ -441,7 +441,7 @@ static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstrea
  * @param session Filter session
  * @param upstream Upstream filter
  */
-static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session,  MXS_UPSTREAM *upstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->up = *upstream;
@@ -456,7 +456,7 @@ static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue Server response
  * @return 1 on success
  */
-static int clientReply(FILTER *instance, void *session, GWBUF *queue)
+static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -514,7 +514,7 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
  * @param session The filter session
  * @param queue  The query data
  */
-static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
+static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -621,7 +621,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param fsession Filter session, may be NULL
  * @param dcb  The DCB for diagnostic output
  */
-static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
 
