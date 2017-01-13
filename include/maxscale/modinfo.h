@@ -184,7 +184,7 @@ typedef struct mxs_module
  * MXS_MODULE* MXS_CREATE_MODULE()
  * {
  *     // Module specific API implementation
- *    static FILTER_OBJECT my_object = { ... };
+ *    static MXS_FILTER_OBJECT my_object = { ... };
  *
  *     // An implementation of the MXS_MODULE structure
  *    static MXS_MODULE info = { ... };

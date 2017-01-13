@@ -74,7 +74,7 @@ static uint64_t getCapabilities(void);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,

@@ -805,7 +805,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command("dbfwfilter", "rules", dbfw_show_rules, 2, args_rules_show);
 
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,

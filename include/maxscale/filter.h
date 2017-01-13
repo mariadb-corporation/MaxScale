@@ -61,7 +61,7 @@ typedef void *FILTER;
  *
  * @see load_module
  */
-typedef struct filter_object
+typedef struct mxs_filter_object
 {
     FILTER  *(*createInstance)(const char *name,
                               char **options,
@@ -76,10 +76,10 @@ typedef struct filter_object
     void     (*diagnostics)(FILTER *instance, void *fsession, DCB *dcb);
     uint64_t (*getCapabilities)(void);
     void     (*destroyInstance)(FILTER *instance);
-} FILTER_OBJECT;
+} MXS_FILTER_OBJECT;
 
 /**
- * The filter API version. If the FILTER_OBJECT structure or the filter API
+ * The filter API version. If the MXS_FILTER_OBJECT structure or the filter API
  * is changed these values must be updated in line with the rules in the
  * file modinfo.h.
  */
@@ -96,7 +96,7 @@ typedef struct filter_def
     char **options;                /**< The options set for this filter */
     CONFIG_PARAMETER *parameters; /**< The filter parameters */
     FILTER filter;                 /**< The runtime filter */
-    FILTER_OBJECT *obj;            /**< The "MODULE_OBJECT" for the filter */
+    MXS_FILTER_OBJECT *obj;            /**< The "MODULE_OBJECT" for the filter */
     SPINLOCK spin;                 /**< Spinlock to protect the filter definition */
     struct filter_def *next;       /**< Next filter in the chain of all filters */
 } FILTER_DEF;

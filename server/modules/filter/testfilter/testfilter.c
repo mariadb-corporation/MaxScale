@@ -71,7 +71,7 @@ typedef struct
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,

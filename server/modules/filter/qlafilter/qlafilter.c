@@ -169,7 +169,7 @@ static const MXS_ENUM_VALUE log_data_values[] =
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static FILTER_OBJECT MyObject =
+    static MXS_FILTER_OBJECT MyObject =
     {
         createInstance,
         newSession,

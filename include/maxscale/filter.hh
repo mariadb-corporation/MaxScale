@@ -306,12 +306,12 @@ public:
         MXS_EXCEPTION_GUARD(delete pFilter);
     }
 
-    static FILTER_OBJECT s_object;
+    static MXS_FILTER_OBJECT s_object;
 };
 
 
 template<class FilterType, class FilterSessionType>
-FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
+MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
 {
     &Filter<FilterType, FilterSessionType>::createInstance,
     &Filter<FilterType, FilterSessionType>::newSession,
