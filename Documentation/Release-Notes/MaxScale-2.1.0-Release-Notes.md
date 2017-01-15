@@ -125,6 +125,13 @@ For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.
 MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate
 with VIM-mode start MaxAdmin with option -i.
 
+### Support for text wildcards in hostnames
+
+Wildcards in text-form hostnames in the mysql.user-table of the backend
+database are now supported. For matching, the client IP-address must be
+converted to text-form, which requires a reverse DNS lookup. Please see
+[Limitations](../About/Limitations.md) for more information.
+
 ## New Features
 
 ### Dynamic server configuration

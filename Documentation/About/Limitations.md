@@ -251,9 +251,19 @@ need to be truncated to valid block lengths before starting the avrorouter.
 
 ## MySQL Authentication Related Limitations (MySQLAuth)
 
-* MariaDB MaxScale can not manage authentication that uses wildcard matching in hostnames
-  in the mysql.user table of the backend database. The only wildcards that can be
-  used are in IP address entries.
+* MariaDB MaxScale supports authentication that uses wildcard matching in
+  hostnames in the mysql.user-table of the backend database. For IP-address
+  entries either '%' or '_'-wildcards are accepted, they should not be mixed
+  in the same entry. For text addresses both wildcards can be mixed.
+
+* When wildcards are used with text-form hostnames, MariaDB MaxScale uses
+  the `getnameinfo()`-function (from glibc) to perform the reverse DNS lookup.
+  This is a slow operation, which will stall the calling thread for an
+  unspecified time. The lookup is only performed if the mysql.user-table
+  contains a text hostname with wilcards for the client. Also, do note that
+  the IP and hostname seen by the backend will be those of the machine running
+  MariaDB MaxScale, while the username and password will be those of the
+  original client.
 
 * MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
   a new authentication protocol which does not support pre-4.1 style passwords.
