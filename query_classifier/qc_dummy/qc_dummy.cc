@@ -96,7 +96,7 @@ int32_t qc_dummy_setup(const char* args)
     return QC_RESULT_OK;
 }
 
-int qc_dummy_process_init(void)
+int32_t qc_dummy_process_init(void)
 {
     return QC_RESULT_OK;
 }
@@ -105,13 +105,19 @@ void qc_dummy_process_end(void)
 {
 }
 
-int qc_dummy_thread_init(void)
+int32_t qc_dummy_thread_init(void)
 {
     return QC_RESULT_OK;
 }
 
 void qc_dummy_thread_end(void)
 {
+}
+
+int32_t qc_dummy_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
+{
+    *preparable_stmt = NULL;
+    return QC_RESULT_OK;
 }
 
 extern "C"
@@ -138,6 +144,7 @@ extern "C"
             qc_dummy_get_prepare_operation,
             qc_dummy_get_field_info,
             qc_dummy_get_function_info,
+            qc_dummy_get_preparable_stmt,
         };
 
         static MXS_MODULE info =

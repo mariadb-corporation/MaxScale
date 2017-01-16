@@ -283,6 +283,18 @@ char* qc_get_prepare_name(GWBUF* query)
     return name;
 }
 
+GWBUF* qc_get_preparable_stmt(GWBUF* stmt)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+    GWBUF* preparable_stmt = NULL;
+
+    classifier->qc_get_preparable_stmt(stmt, &preparable_stmt);
+
+    return preparable_stmt;
+}
+
 struct type_name_info field_usage_to_type_name_info(qc_field_usage_t usage)
 {
     struct type_name_info info;

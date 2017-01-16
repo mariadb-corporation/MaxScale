@@ -2796,6 +2796,7 @@ static int32_t qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char**
 static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical);
 static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
 static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
+static int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -3411,6 +3412,38 @@ int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos
     return rv;
 }
 
+int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
+{
+    QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
+    ss_dassert(this_unit.initialized);
+    ss_dassert(this_thread.initialized);
+
+    *preparable_stmt = NULL;
+
+    QC_SQLITE_INFO* info = get_query_info(stmt);
+
+    if (info)
+    {
+        if (qc_info_is_valid(info->status))
+        {
+            // TODO: Extract the preparable stmt.
+            ss_dassert(!true);
+            rv = QC_RESULT_OK;
+        }
+        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            log_invalid_data(stmt, "cannot report field info");
+        }
+    }
+    else
+    {
+        MXS_ERROR("The query could not be parsed. Response not valid.");
+    }
+
+    return rv;
+}
+
 /**
  * EXPORTS
  */
@@ -3437,6 +3470,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_prepare_operation,
         qc_sqlite_get_field_info,
         qc_sqlite_get_function_info,
+        qc_sqlite_get_preparable_stmt,
     };
 
     static MXS_MODULE info =

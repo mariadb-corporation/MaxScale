@@ -1851,6 +1851,15 @@ int32_t qc_mysql_get_prepare_operation(GWBUF* stmt, int32_t* operation)
     return QC_RESULT_OK;
 }
 
+int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
+{
+    *preparable_stmt = NULL;
+
+    // TODO: Extract preparable stmt.
+    ss_dassert(!true);
+    return QC_RESULT_OK;
+}
+
 static bool should_exclude(const char* name, List<Item>* excludep)
 {
     bool exclude = false;

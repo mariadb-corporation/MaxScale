@@ -342,6 +342,23 @@ typedef struct query_classifier
      *         exhaustion or equivalent.
      */
     int32_t (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
+
+    /**
+     * Return the preparable statement of a PREPARE statement.
+     *
+     * @param stmt             A statement.
+     * @param preparable_stmt  On return, the preparable statement (provided @c stmt is a
+     *                         PREPARE statement), if @c QC_RESULT_OK is returned. Otherwise
+     *                         NULL.
+     *
+     * @attention The returned GWBUF is the property of @c stmt and will be deleted when
+     *            @c stmt is. If the preparable statement need to be retained beyond the
+     *            lifetime of @c stmt, it must be cloned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_preparable_stmt)(GWBUF* stmt, GWBUF** preparable_stmt);
 } QUERY_CLASSIFIER;
 
 /**
@@ -577,6 +594,22 @@ char* qc_get_prepare_name(GWBUF* stmt);
  *         is a PREPARE statement; otherwise QUERY_OP_UNDEFINED.
  */
 qc_query_op_t qc_get_prepare_operation(GWBUF* stmt);
+
+/**
+ * Returns the preparable statement of a PREPARE statment. Other query classifier
+ * functions can then be used on the returned statement to find out information
+ * about the preparable statement. The returned @c GWBUF should not be used for
+ * anything else but for obtaining information about the preparable statement.
+ *
+ * @param stmt  A buffer containing a COM_QUERY packet.
+ *
+ * @return The preparable statement, if @stmt was a PREPARE statement, or
+ *         NULL.
+ *
+ * @attention The returned @c GWBUF is the property of @c stmt and will be
+ *            deleted along with it.
+ */
+GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
 
 /**
  * Returns the tables accessed by the statement.
