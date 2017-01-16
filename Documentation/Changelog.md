@@ -1,7 +1,4 @@
 #Changelog
-## MariaDB MaxScale 2.1
-* MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate VIM mode start
-  MaxAdmin with -i.
 
 ## MariaDB MaxScale 2.0
 * MariaDB MaxScale is licensed under MariaDB BSL.

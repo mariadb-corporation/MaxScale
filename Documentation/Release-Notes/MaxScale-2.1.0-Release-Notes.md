@@ -120,6 +120,11 @@ can be taken into use by disabling the new `root_node_as_master` option.
 
 For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.md).
 
+### MaxAdmin editing mode
+
+MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate
+with VIM-mode start MaxAdmin with option -i.
+
 ## New Features
 
 ### Dynamic server configuration
