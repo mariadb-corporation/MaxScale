@@ -185,6 +185,7 @@ static const char *server_params[] =
     "port",
     "address",
     "authenticator",
+    "authenticator_options",
     "monitoruser",
     "monitorpw",
     "persistpoolmax",
