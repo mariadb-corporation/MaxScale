@@ -49,21 +49,21 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
         plugin_name = default_qc_name;
     }
 
-    bool success = false;
+    int32_t rv = QC_RESULT_ERROR;
     classifier = qc_load(plugin_name);
 
     if (classifier)
     {
-        success = classifier->qc_setup(plugin_args);
+        rv = classifier->qc_setup(plugin_args);
 
-        if (!success)
+        if (rv != QC_RESULT_OK)
         {
             qc_unload(classifier);
             classifier = NULL;
         }
     }
 
-    return success;
+    return (rv == QC_RESULT_OK) ? true : false;
 }
 
 bool qc_process_init(void)
@@ -126,7 +126,11 @@ qc_parse_result_t qc_parse(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_parse(query);
+    int32_t result = QC_QUERY_INVALID;
+
+    classifier->qc_parse(query, &result);
+
+    return (qc_parse_result_t)result;
 }
 
 uint32_t qc_get_type(GWBUF* query)
@@ -134,7 +138,11 @@ uint32_t qc_get_type(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_type(query);
+    uint32_t type_mask = QUERY_TYPE_UNKNOWN;
+
+    classifier->qc_get_type(query, &type_mask);
+
+    return type_mask;
 }
 
 qc_query_op_t qc_get_operation(GWBUF* query)
@@ -142,7 +150,11 @@ qc_query_op_t qc_get_operation(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_operation(query);
+    int32_t op = QUERY_OP_UNDEFINED;
+
+    classifier->qc_get_operation(query, &op);
+
+    return (qc_query_op_t)op;
 }
 
 char* qc_get_created_table_name(GWBUF* query)
@@ -150,7 +162,11 @@ char* qc_get_created_table_name(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_created_table_name(query);
+    char* name = NULL;
+
+    classifier->qc_get_created_table_name(query, &name);
+
+    return name;
 }
 
 bool qc_is_drop_table_query(GWBUF* query)
@@ -158,7 +174,11 @@ bool qc_is_drop_table_query(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_is_drop_table_query(query);
+    int32_t is_drop_table = 0;
+
+    classifier->qc_is_drop_table_query(query, &is_drop_table);
+
+    return (is_drop_table != 0) ? true : false;
 }
 
 char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
@@ -166,7 +186,12 @@ char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_table_names(query, tblsize, fullnames);
+    char** names = NULL;
+    *tblsize = 0;
+
+    classifier->qc_get_table_names(query, fullnames, &names, tblsize);
+
+    return names;
 }
 
 char* qc_get_canonical(GWBUF* query)
@@ -178,7 +203,7 @@ char* qc_get_canonical(GWBUF* query)
 
     if (classifier->qc_get_canonical)
     {
-        rval = classifier->qc_get_canonical(query);
+        classifier->qc_get_canonical(query, &rval);
     }
     else
     {
@@ -198,7 +223,11 @@ bool qc_query_has_clause(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_query_has_clause(query);
+    int32_t has_clause = 0;
+
+    classifier->qc_query_has_clause(query, &has_clause);
+
+    return (has_clause != 0) ? true : false;
 }
 
 void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
@@ -206,7 +235,13 @@ void qc_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_info
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_get_field_info(query, infos, n_infos);
+    *infos = NULL;
+
+    uint32_t n = 0;
+
+    classifier->qc_get_field_info(query, infos, &n);
+
+    *n_infos = n;
 }
 
 void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
@@ -214,7 +249,13 @@ void qc_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* 
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_get_function_info(query, infos, n_infos);
+    *infos = NULL;
+
+    uint32_t n = 0;
+
+    classifier->qc_get_function_info(query, infos, &n);
+
+    *n_infos = n;
 }
 
 char** qc_get_database_names(GWBUF* query, int* sizep)
@@ -222,7 +263,12 @@ char** qc_get_database_names(GWBUF* query, int* sizep)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_database_names(query, sizep);
+    char** names = NULL;
+    *sizep = 0;
+
+    classifier->qc_get_database_names(query, &names, sizep);
+
+    return names;
 }
 
 char* qc_get_prepare_name(GWBUF* query)
@@ -230,7 +276,11 @@ char* qc_get_prepare_name(GWBUF* query)
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_get_prepare_name(query);
+    char* name = NULL;
+
+    classifier->qc_get_prepare_name(query, &name);
+
+    return name;
 }
 
 struct type_name_info field_usage_to_type_name_info(qc_field_usage_t usage)

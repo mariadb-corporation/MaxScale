@@ -163,7 +163,8 @@ QUERY_CLASSIFIER* get_classifier(const char* zName, const char* zArgs)
 
     if (pClassifier)
     {
-        if (!pClassifier->qc_setup(zArgs) || (pClassifier->qc_process_init() != 0))
+        if ((pClassifier->qc_setup(zArgs) != QC_RESULT_OK) ||
+            ((pClassifier->qc_process_init() != QC_RESULT_OK)))
         {
             cerr << "error: Could not setup or init classifier " << zName << "." << endl;
             qc_unload(pClassifier);
@@ -307,12 +308,14 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     struct timespec finish;
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    qc_parse_result_t rv1 = pClassifier1->qc_parse(pCopy1);
+    int32_t rv1;
+    pClassifier1->qc_parse(pCopy1, &rv1);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    qc_parse_result_t rv2 = pClassifier2->qc_parse(pCopy2);
+    int32_t rv2;
+    pClassifier2->qc_parse(pCopy2, &rv2);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 
@@ -336,7 +339,7 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
             success = true;
         }
 
-        ss << rv1 << " != " << rv2;
+        ss << static_cast<qc_parse_result_t>(rv1) << " != " << static_cast<qc_parse_result_t>(rv2);
     }
 
     report(success, ss.str());
@@ -350,8 +353,10 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_get_type              : ";
 
-    uint32_t rv1 = pClassifier1->qc_get_type(pCopy1);
-    uint32_t rv2 = pClassifier2->qc_get_type(pCopy2);
+    uint32_t rv1;
+    pClassifier1->qc_get_type(pCopy1, &rv1);
+    uint32_t rv2;
+    pClassifier2->qc_get_type(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -416,20 +421,25 @@ bool compare_get_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_get_operation         : ";
 
-    qc_query_op_t rv1 = pClassifier1->qc_get_operation(pCopy1);
-    qc_query_op_t rv2 = pClassifier2->qc_get_operation(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_get_operation(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_get_operation(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << qc_op_to_string(rv1);
+        ss << "Ok : " << qc_op_to_string(static_cast<qc_query_op_t>(rv1));
         success = true;
     }
     else
     {
-        ss << "ERR: " << qc_op_to_string(rv1) << " != " << qc_op_to_string(rv2);
+        ss << "ERR: "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv1))
+           << " != "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv2));
     }
 
     report(success, ss.str());
@@ -443,8 +453,10 @@ bool compare_get_created_table_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy
     bool success = false;
     const char HEADING[] = "qc_get_created_table_name: ";
 
-    char* rv1 = pClassifier1->qc_get_created_table_name(pCopy1);
-    char* rv2 = pClassifier2->qc_get_created_table_name(pCopy2);
+    char* rv1;
+    pClassifier1->qc_get_created_table_name(pCopy1, &rv1);
+    char* rv2;
+    pClassifier2->qc_get_created_table_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -473,20 +485,22 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_is_drop_table_query   : ";
 
-    bool rv1 = pClassifier1->qc_is_drop_table_query(pCopy1);
-    bool rv2 = pClassifier2->qc_is_drop_table_query(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_is_drop_table_query(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_is_drop_table_query(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<bool>(rv1);
         success = true;
     }
     else
     {
-        ss << "ERR: " << rv1 << " != " << rv2;
+        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
     }
 
     report(success, ss.str());
@@ -561,8 +575,10 @@ bool compare_get_table_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     int n1 = 0;
     int n2 = 0;
 
-    char** rv1 = pClassifier1->qc_get_table_names(pCopy1, &n1, full);
-    char** rv2 = pClassifier2->qc_get_table_names(pCopy2, &n2, full);
+    char** rv1;
+    pClassifier1->qc_get_table_names(pCopy1, full, &rv1, &n1);
+    char** rv2;
+    pClassifier2->qc_get_table_names(pCopy2, full, &rv2, &n2);
 
     // The order need not be the same, so let's compare a set.
     std::set<string> names1;
@@ -620,20 +636,22 @@ bool compare_query_has_clause(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_query_has_clause      : ";
 
-    bool rv1 = pClassifier1->qc_query_has_clause(pCopy1);
-    bool rv2 = pClassifier2->qc_query_has_clause(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_query_has_clause(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_query_has_clause(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<bool>(rv1);
         success = true;
     }
     else
     {
-        ss << "ERR: " << rv1 << " != " << rv2;
+        ss << "ERR: " << static_cast<bool>(rv1) << " != " << static_cast<bool>(rv2);
     }
 
     report(success, ss.str());
@@ -701,8 +719,10 @@ bool compare_get_database_names(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     int n1 = 0;
     int n2 = 0;
 
-    char** rv1 = pClassifier1->qc_get_database_names(pCopy1, &n1);
-    char** rv2 = pClassifier2->qc_get_database_names(pCopy2, &n2);
+    char** rv1;
+    pClassifier1->qc_get_database_names(pCopy1, &rv1, &n1);
+    char** rv2;
+    pClassifier2->qc_get_database_names(pCopy2, &rv2, &n2);
 
     stringstream ss;
     ss << HEADING;
@@ -735,8 +755,10 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_get_prepare_name      : ";
 
-    char* rv1 = pClassifier1->qc_get_prepare_name(pCopy1);
-    char* rv2 = pClassifier2->qc_get_prepare_name(pCopy2);
+    char* rv1;
+    pClassifier1->qc_get_prepare_name(pCopy1, &rv1);
+    char* rv2;
+    pClassifier2->qc_get_prepare_name(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -765,20 +787,25 @@ bool compare_get_prepare_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1
     bool success = false;
     const char HEADING[] = "qc_get_prepare_operation : ";
 
-    qc_query_op_t rv1 = pClassifier1->qc_get_prepare_operation(pCopy1);
-    qc_query_op_t rv2 = pClassifier2->qc_get_prepare_operation(pCopy2);
+    int32_t rv1;
+    pClassifier1->qc_get_prepare_operation(pCopy1, &rv1);
+    int32_t rv2;
+    pClassifier2->qc_get_prepare_operation(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << qc_op_to_string(rv1);
+        ss << "Ok : " << qc_op_to_string(static_cast<qc_query_op_t>(rv1));
         success = true;
     }
     else
     {
-        ss << "ERR: " << qc_op_to_string(rv1) << " != " << qc_op_to_string(rv2);
+        ss << "ERR: "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv1))
+           << " != "
+           << qc_op_to_string(static_cast<qc_query_op_t>(rv2));
     }
 
     report(success, ss.str());
@@ -999,8 +1026,8 @@ bool compare_get_field_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     const QC_FIELD_INFO* infos1;
     const QC_FIELD_INFO* infos2;
-    size_t n_infos1;
-    size_t n_infos2;
+    uint32_t n_infos1;
+    uint32_t n_infos2;
 
     pClassifier1->qc_get_field_info(pCopy1, &infos1, &n_infos1);
     pClassifier2->qc_get_field_info(pCopy2, &infos2, &n_infos2);
@@ -1128,8 +1155,8 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     const QC_FUNCTION_INFO* infos1;
     const QC_FUNCTION_INFO* infos2;
-    size_t n_infos1;
-    size_t n_infos2;
+    uint32_t n_infos1;
+    uint32_t n_infos2;
 
     pClassifier1->qc_get_function_info(pCopy1, &infos1, &n_infos1);
     pClassifier2->qc_get_function_info(pCopy2, &infos2, &n_infos2);

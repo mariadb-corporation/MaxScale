@@ -2782,20 +2782,20 @@ void maxscaleUse(Parse* pParse, Token* pToken)
 /**
  * API
  */
-static bool qc_sqlite_setup(const char* args);
-static int qc_sqlite_process_init(void);
+static int32_t qc_sqlite_setup(const char* args);
+static int32_t qc_sqlite_process_init(void);
 static void qc_sqlite_process_end(void);
-static int qc_sqlite_thread_init(void);
+static int32_t qc_sqlite_thread_init(void);
 static void qc_sqlite_thread_end(void);
-static qc_parse_result_t qc_sqlite_parse(GWBUF* query);
-static uint32_t qc_sqlite_get_type(GWBUF* query);
-static qc_query_op_t qc_sqlite_get_operation(GWBUF* query);
-static char* qc_sqlite_get_created_table_name(GWBUF* query);
-static bool qc_sqlite_is_drop_table_query(GWBUF* query);
-static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames);
-static char* qc_sqlite_get_canonical(GWBUF* query);
-static bool qc_sqlite_query_has_clause(GWBUF* query);
-static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep);
+static int32_t qc_sqlite_parse(GWBUF* query, int32_t* result);
+static int32_t qc_sqlite_get_type(GWBUF* query, uint32_t* typemask);
+static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op);
+static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** name);
+static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table);
+static int32_t qc_sqlite_get_table_names(GWBUF* query, int32_t fullnames, char*** names, int* tblsize);
+static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical);
+static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause);
+static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** names, int* sizep);
 
 static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 {
@@ -2814,7 +2814,7 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
 
 static char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
 
-static bool qc_sqlite_setup(const char* args)
+static int32_t qc_sqlite_setup(const char* args)
 {
     QC_TRACE();
     assert(!this_unit.setup);
@@ -2861,10 +2861,10 @@ static bool qc_sqlite_setup(const char* args)
     this_unit.setup = true;
     this_unit.log_level = log_level;
 
-    return this_unit.setup;
+    return this_unit.setup ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
-static int qc_sqlite_process_init(void)
+static int32_t qc_sqlite_process_init(void)
 {
     QC_TRACE();
     assert(this_unit.setup);
@@ -2915,7 +2915,7 @@ static int qc_sqlite_process_init(void)
         MXS_ERROR("Failed to initialize sqlite3.");
     }
 
-    return this_unit.initialized ? 0 : -1;
+    return this_unit.initialized ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
 static void qc_sqlite_process_end(void)
@@ -2931,7 +2931,7 @@ static void qc_sqlite_process_end(void)
     this_unit.initialized = false;
 }
 
-static int qc_sqlite_thread_init(void)
+static int32_t qc_sqlite_thread_init(void)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
@@ -2982,7 +2982,7 @@ static int qc_sqlite_thread_init(void)
                   (unsigned long) pthread_self(), rc, sqlite3_errstr(rc));
     }
 
-    return this_thread.initialized ? 0 : -1;
+    return this_thread.initialized ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
 static void qc_sqlite_thread_end(void)
@@ -3004,7 +3004,7 @@ static void qc_sqlite_thread_end(void)
     this_thread.initialized = false;
 }
 
-static qc_parse_result_t qc_sqlite_parse(GWBUF* query)
+static int32_t qc_sqlite_parse(GWBUF* query, int32_t* result)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
@@ -3012,23 +3012,34 @@ static qc_parse_result_t qc_sqlite_parse(GWBUF* query)
 
     QC_SQLITE_INFO* info = get_query_info(query);
 
-    return info ? info->status : QC_QUERY_INVALID;
+    if (info)
+    {
+        *result = info->status;
+    }
+    else
+    {
+        *result = QC_QUERY_INVALID;
+    }
+
+    return info ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
 
-static uint32_t qc_sqlite_get_type(GWBUF* query)
+static int32_t qc_sqlite_get_type(GWBUF* query, uint32_t* type_mask)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    uint32_t types = QUERY_TYPE_UNKNOWN;
+    *type_mask = QUERY_TYPE_UNKNOWN;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (qc_info_is_valid(info->status))
         {
-            types = info->types;
+            *type_mask = info->types;
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3040,23 +3051,25 @@ static uint32_t qc_sqlite_get_type(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return types;
+    return rv;
 }
 
-static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
+static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    *op = QUERY_OP_UNDEFINED;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (qc_info_is_valid(info->status))
         {
-            op = info->operation;
+            *op = info->operation;
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3068,16 +3081,17 @@ static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return op;
+    return rv;
 }
 
-static char* qc_sqlite_get_created_table_name(GWBUF* query)
+static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** created_table_name)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    char* created_table_name = NULL;
+    *created_table_name = NULL;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
@@ -3086,8 +3100,9 @@ static char* qc_sqlite_get_created_table_name(GWBUF* query)
         {
             if (info->created_table_name)
             {
-                created_table_name = MXS_STRDUP(info->created_table_name);
+                *created_table_name = MXS_STRDUP(info->created_table_name);
                 MXS_ABORT_IF_NULL(created_table_name);
+                rv = QC_RESULT_OK;
             }
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -3100,23 +3115,25 @@ static char* qc_sqlite_get_created_table_name(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return created_table_name;
+    return rv;
 }
 
-static bool qc_sqlite_is_drop_table_query(GWBUF* query)
+static int32_t qc_sqlite_is_drop_table_query(GWBUF* query, int32_t* is_drop_table)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    bool is_drop_table = false;
+    *is_drop_table = 0;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (qc_info_is_valid(info->status))
         {
-            is_drop_table = info->is_drop_table;
+            *is_drop_table = info->is_drop_table;
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3128,19 +3145,22 @@ static bool qc_sqlite_is_drop_table_query(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return is_drop_table;
+    return rv;
 }
 
-static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
+static int32_t qc_sqlite_get_table_names(GWBUF* query,
+                                         int32_t fullnames,
+                                         char*** table_names,
+                                         int32_t* tblsize)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    char** table_names = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
+    *table_names = NULL;
     *tblsize = 0;
+    QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
@@ -3148,21 +3168,23 @@ static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnam
         {
             if (fullnames)
             {
-                table_names = info->table_fullnames;
+                *table_names = info->table_fullnames;
             }
             else
             {
-                table_names = info->table_names;
+                *table_names = info->table_names;
             }
 
-            if (table_names)
+            if (*table_names)
             {
-                table_names = copy_string_array(table_names, tblsize);
+                *table_names = copy_string_array(*table_names, tblsize);
             }
             else
             {
                 *tblsize = 0;
             }
+
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3174,34 +3196,39 @@ static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnam
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return table_names;
+    return rv;
 }
 
-static char* qc_sqlite_get_canonical(GWBUF* query)
+static int32_t qc_sqlite_get_canonical(GWBUF* query, char** canonical)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
+
+    *canonical = NULL;
 
     MXS_ERROR("qc_get_canonical not implemented yet.");
 
-    return NULL;
+    return rv;
 }
 
-static bool qc_sqlite_query_has_clause(GWBUF* query)
+static int32_t qc_sqlite_query_has_clause(GWBUF* query, int32_t* has_clause)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    bool has_clause = false;
+    *has_clause = false;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (qc_info_is_valid(info->status))
         {
-            has_clause = info->has_clause;
+            *has_clause = info->has_clause;
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3213,19 +3240,19 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return has_clause;
+    return rv;
 }
 
-static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
+static int32_t qc_sqlite_get_database_names(GWBUF* query, char*** database_names, int* sizep)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    char** database_names = NULL;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
+    *database_names = NULL;
     *sizep = 0;
+    QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
@@ -3233,8 +3260,10 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
         {
             if (info->database_names)
             {
-                database_names = copy_string_array(info->database_names, sizep);
+                *database_names = copy_string_array(info->database_names, sizep);
             }
+
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3246,16 +3275,17 @@ static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return database_names;
+    return rv;
 }
 
-static char* qc_sqlite_get_prepare_name(GWBUF* query)
+static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    char* name = NULL;
+    *prepare_name = NULL;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
@@ -3264,8 +3294,10 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
         {
             if (info->prepare_name)
             {
-                name = MXS_STRDUP(info->prepare_name);
+                *prepare_name = MXS_STRDUP(info->prepare_name);
             }
+
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3277,40 +3309,44 @@ static char* qc_sqlite_get_prepare_name(GWBUF* query)
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return name;
+    return rv;
 }
 
-static qc_query_op_t qc_sqlite_get_prepare_operation(GWBUF* query)
+static int32_t qc_sqlite_get_prepare_operation(GWBUF* query, int32_t* op)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    qc_query_op_t op = QUERY_OP_UNDEFINED;
+    *op = QUERY_OP_UNDEFINED;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (qc_info_is_valid(info->status))
         {
-            op = info->prepare_operation;
+            *op = info->prepare_operation;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
             log_invalid_data(query, "cannot report the operation of a prepared statement");
         }
+
+        rv = QC_RESULT_OK;
     }
     else
     {
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
 
-    return op;
+    return rv;
 }
 
-void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t* n_infos)
+int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
@@ -3325,6 +3361,8 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
         {
             *infos = info->field_infos;
             *n_infos = info->field_infos_len;
+
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3335,11 +3373,14 @@ void qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, size_t*
     {
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
+
+    return rv;
 }
 
-void qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, size_t* n_infos)
+int32_t qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, uint32_t* n_infos)
 {
     QC_TRACE();
+    int32_t rv = QC_RESULT_ERROR;
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
@@ -3354,6 +3395,8 @@ void qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, s
         {
             *infos = info->function_infos;
             *n_infos = info->function_infos_len;
+
+            rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -3364,6 +3407,8 @@ void qc_sqlite_get_function_info(GWBUF* query, const QC_FUNCTION_INFO** infos, s
     {
         MXS_ERROR("The query could not be parsed. Response not valid.");
     }
+
+    return rv;
 }
 
 /**

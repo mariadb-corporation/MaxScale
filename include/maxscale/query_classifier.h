@@ -128,6 +128,16 @@ typedef struct qc_function_info
 } QC_FUNCTION_INFO;
 
 /**
+ * Each API function returns @c QC_RESULT_OK if the actual parsing process
+ * succeeded, and some error code otherwise.
+ */
+typedef enum qc_result
+{
+    QC_RESULT_OK,
+    QC_RESULT_ERROR
+} qc_result_t;
+
+/**
  * QUERY_CLASSIFIER defines the object a query classifier plugin must
  * implement and return.
  *
@@ -136,29 +146,202 @@ typedef struct qc_function_info
  */
 typedef struct query_classifier
 {
-    bool (*qc_setup)(const char* args);
+    /**
+     * Called once to setup the query classifier
+     *
+     * @param args  The value of `query_classifier_args` in the configuration file.
+     *
+     * @return QC_RESULT_OK, if the query classifier could be setup, otherwise
+     *         some specific error code.
+     */
+    int32_t (*qc_setup)(const char* args);
 
-    int (*qc_process_init)(void);
+    /**
+     * Called once at process startup, after @c qc_setup has successfully
+     * been called.
+     *
+     * @return QC_RESULT_OK, if the process initialization succeeded.
+     */
+    int32_t (*qc_process_init)(void);
+
+    /**
+     * Called once at process shutdown.
+     */
     void (*qc_process_end)(void);
 
-    int (*qc_thread_init)(void);
+    /**
+     * Called once per each thread, except for the thread for which @c qc_process_init
+     * was called.
+     *
+     * @return QC_RESULT_OK, if the thread initialization succeeded.
+     */
+    int32_t (*qc_thread_init)(void);
+
+    /**
+     * Called once when a thread finishes, except for the thread for which @c qc_process_init
+     * was called.
+     */
     void (*qc_thread_end)(void);
 
-    qc_parse_result_t (*qc_parse)(GWBUF* stmt);
+    /**
+     * Called to explicitly parse a statement.
+     *
+     * @param stmt    The statement to be parsed.
+     * @param result  On return, the parse result, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_parse)(GWBUF* stmt, int32_t* result);
 
-    uint32_t (*qc_get_type)(GWBUF* stmt);
-    qc_query_op_t (*qc_get_operation)(GWBUF* stmt);
+    /**
+     * Reports the type of the statement.
+     *
+     * @param stmt  A statement.
+     * @param type  On return, the type mask (combination of @c qc_query_type_t),
+     *              if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_type)(GWBUF* stmt, uint32_t* type);
 
-    char* (*qc_get_created_table_name)(GWBUF* stmt);
-    bool (*qc_is_drop_table_query)(GWBUF* stmt);
-    char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
-    char* (*qc_get_canonical)(GWBUF* stmt);
-    bool (*qc_query_has_clause)(GWBUF* stmt);
-    char** (*qc_get_database_names)(GWBUF* stmt, int* size);
-    char* (*qc_get_prepare_name)(GWBUF* stmt);
-    qc_query_op_t (*qc_get_prepare_operation)(GWBUF* stmt);
-    void (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos);
-    void (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n_infos);
+    /**
+     * Reports the operation of the statement.
+     *
+     * @param stmt  A statement.
+     * @param type  On return, the operation (one of @c qc_query_op_t), if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_operation)(GWBUF* stmt, int32_t* op);
+
+    /**
+     * Reports the name of a created table.
+     *
+     * @param stmt  A statement.
+     * @param name  On return, the name of the created table, if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_created_table_name)(GWBUF* stmt, char** name);
+
+    /**
+     * Reports whether a statement is a "DROP TABLE ..." statement.
+     *
+     * @param stmt           A statement
+     * @param is_drop_table  On return, non-zero if the statement is a DROP TABLE
+     *                       statement, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_is_drop_table_query)(GWBUF* stmt, int32_t* is_drop_table);
+
+    /**
+     * Returns all table names.
+     *
+     * @param stmt       A statement.
+     * @param fullnames  If non-zero, the full (i.e. qualified) names are returned.
+     * @param names      On return, the names of the statement, if @c QC_RESULT_OK
+     *                   is returned.
+     * @param n_names    On return, how many names were returned, if @c QC_RESULT_OK
+     *                   is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_table_names)(GWBUF* stmt, int32_t full_names, char*** names, int32_t *n_names);
+
+    /**
+     * The canonical version of a statement.
+     *
+     * @param stmt       A statement.
+     * @param canonical  On return, the canonical version of the statement, if @c QC_RESULT_OK
+     *                   is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_canonical)(GWBUF* stmt, char** canonical);
+
+    /**
+     * Reports whether the statement has a where clause.
+     *
+     * @param stmt        A statement.
+     * @param has_clause  On return, non-zero if the statement has a where clause, if
+     *                    @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_query_has_clause)(GWBUF* stmt, int32_t* has_clause);
+
+    /**
+     * Reports the database names.
+     *
+     * @param stmt   A statement.
+     * @param names  On return, the database names, if
+     *               @c QC_RESULT_OK is returned.
+     * @param size   On return, the number of names in @names, if
+     *               @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_database_names)(GWBUF* stmt, char*** names, int32_t* size);
+
+    /**
+     * Reports the prepare name.
+     *
+     * @param stmt  A statement.
+     * @param name  On return, the name of a prepare statement, if
+     *              @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_prepare_name)(GWBUF* stmt, char** name);
+
+    /**
+     * Reports the prepare operation.
+     *
+     * @param stmt  A statement.
+     * @param name  On return, the operation (one of @c qc_query_op_t) of a prepare
+     *              statement, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_prepare_operation)(GWBUF* stmt, int32_t* op);
+
+    /**
+     * Reports field information.
+     *
+     * @param stmt    A statement.
+     * @param infos   On return, array of field infos, if @c QC_RESULT_OK is returned.
+     * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_field_info)(GWBUF* stmt, const QC_FIELD_INFO** infos, uint32_t* n_infos);
+
+    /**
+     * The canonical version of a statement.
+     *
+     * @param stmt  A statement.
+     * @param infos   On return, array of function infos, if @c QC_RESULT_OK is returned.
+     * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
+     *
+     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
+     *         exhaustion or equivalent.
+     */
+    int32_t (*qc_get_function_info)(GWBUF* stmt, const QC_FUNCTION_INFO** infos, uint32_t* n_infos);
 } QUERY_CLASSIFIER;
 
 /**
