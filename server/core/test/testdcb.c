@@ -61,11 +61,13 @@ test1()
     printAllDCBs();
     ss_info_dassert(true, "Something is true");
     ss_dfprintf(stderr, "\t..done\n");
+    dcb->state = DCB_STATE_POLLING;
     dcb_close(dcb);
     ss_dfprintf(stderr, "Freed original dcb");
     ss_info_dassert(!dcb_isvalid(dcb), "Freed DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\nMake clone DCB a zombie");
     clone->state = DCB_STATE_NOPOLLING;
+    dcb_add_to_list(clone);
     dcb_close(clone);
     ss_dfprintf(stderr, "\t..done\nProcess the zombies list");
     dcb_process_zombies(0);
@@ -79,6 +81,7 @@ test1()
 int main(int argc, char **argv)
 {
     int result = 0;
+    dcb_global_init();
 
     result += test1();
 

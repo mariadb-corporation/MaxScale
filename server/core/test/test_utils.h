@@ -20,6 +20,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/config.h>
 #include "../maxscale/statistics.h"
 
 void init_test_env(char *path)
@@ -28,8 +29,11 @@ void init_test_env(char *path)
 
     const char* logdir = path ? path : TEST_LOG_DIR;
 
+    config_get_global_options()->n_threads = 1;
+
     ts_stats_init();
     mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
+    dcb_global_init();
     poll_init();
     hkinit();
 }

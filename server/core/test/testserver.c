@@ -55,7 +55,7 @@ test1()
 
     /* Server tests */
     ss_dfprintf(stderr, "testserver : creating server called MyServer");
-    set_libdir(MXS_STRDUP_A("../../modules/authenticator/"));
+    set_libdir(MXS_STRDUP_A("../../modules/authenticator/NullAuthAllow/"));
     server = server_alloc("uniquename", "127.0.0.1", 9876, "HTTPD", "NullAuthAllow", NULL);
     ss_info_dassert(server, "Allocating the server should not fail");
     mxs_log_flush_sync();
