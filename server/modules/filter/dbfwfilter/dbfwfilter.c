@@ -967,6 +967,27 @@ void dbfw_yyerror(void* scanner, const char* error)
 }
 
 /**
+ * @brief Find a rule by name
+ *
+ * @param rules List of all rules
+ * @param name Name of the rule
+ * @return Pointer to the rule or NULL if rule was not found
+ */
+static RULE* find_rule_by_name(RULE* rules, const char* name)
+{
+    while (rules)
+    {
+        if (strcmp(rules->name, name) == 0)
+        {
+            return rules;
+        }
+        rules = rules->next;
+    }
+
+    return NULL;
+}
+
+/**
  * Create a new rule
  *
  * The rule is created with the default type which will always match. The rule
@@ -976,25 +997,33 @@ void dbfw_yyerror(void* scanner, const char* error)
  */
 bool create_rule(void* scanner, const char* name)
 {
-    bool rval = true;
-    RULE *ruledef = MXS_MALLOC(sizeof(RULE));
+    bool rval = false;
+    struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t)scanner);
+    ss_dassert(rstack);
 
-    if (ruledef && (ruledef->name = MXS_STRDUP(name)))
+    if (find_rule_by_name(rstack->rule, name) == NULL)
     {
-        ruledef->type = RT_UNDEFINED;
-        ruledef->on_queries = QUERY_OP_UNDEFINED;
-        struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
-        ss_dassert(rstack);
-        ruledef->next = rstack->rule;
-        ruledef->active = NULL;
-        ruledef->times_matched = 0;
-        ruledef->data = NULL;
-        rstack->rule = ruledef;
+        RULE *ruledef = MXS_MALLOC(sizeof(RULE));
+
+        if (ruledef && (ruledef->name = MXS_STRDUP(name)))
+        {
+            ruledef->type = RT_UNDEFINED;
+            ruledef->on_queries = QUERY_OP_UNDEFINED;
+            ruledef->next = rstack->rule;
+            ruledef->active = NULL;
+            ruledef->times_matched = 0;
+            ruledef->data = NULL;
+            rstack->rule = ruledef;
+            rval = true;
+        }
+        else
+        {
+            MXS_FREE(ruledef);
+        }
     }
     else
     {
-        MXS_FREE(ruledef);
-        rval = false;
+        MXS_ERROR("Redefinition of rule '%s' on line %d.", name, dbfw_yyget_lineno(scanner));
     }
 
     return rval;
@@ -1308,27 +1337,6 @@ bool define_regex_rule(void* scanner, char* pattern)
     }
 
     return re != NULL;
-}
-
-/**
- * @brief Find a rule by name
- *
- * @param rules List of all rules
- * @param name Name of the rule
- * @return Pointer to the rule or NULL if rule was not found
- */
-static RULE* find_rule_by_name(RULE* rules, const char* name)
-{
-    while (rules)
-    {
-        if (strcmp(rules->name, name) == 0)
-        {
-            return rules;
-        }
-        rules = rules->next;
-    }
-
-    return NULL;
 }
 
 /**
