@@ -70,6 +70,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 
+#include "maxscale/config.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
 

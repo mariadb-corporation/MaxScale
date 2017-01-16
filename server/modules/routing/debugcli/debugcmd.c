@@ -1947,7 +1947,7 @@ reload_dbusers(DCB *dcb, SERVICE *service)
 }
 
 /**
- * Relaod the configuration data from the config file
+ * Reload the configuration data from the config file
  *
  * @param dcb           DCB to use to send output
  */

@@ -66,6 +66,8 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+
+#include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/service.h"
 

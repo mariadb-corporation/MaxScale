@@ -34,6 +34,8 @@
 #include <maxscale/spinlock.h>
 #include "maxscale/filter.h"
 
+#include "maxscale/config.h"
+
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
 

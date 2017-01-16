@@ -18,6 +18,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/modules.h>
 
+#include "maxscale/config.h"
 #include "maxscale/service.h"
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;

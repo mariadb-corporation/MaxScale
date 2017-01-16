@@ -66,6 +66,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/gwdirs.h>
 
+#include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/service.h"
 
@@ -718,8 +719,7 @@ config_load(const char *filename)
  *
  * @return True on success, false on fatal error.
  */
-bool
-config_reload()
+bool config_reload()
 {
     bool rval = false;
 
@@ -2305,11 +2305,6 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     return rval;
 }
 
-/**
- * Return the pointer to the global options for MaxScale.
- * @return Pointer to the GATEWAY_CONF structure. This is a static structure and
- * should not be modified.
- */
 GATEWAY_CONF* config_get_global_options()
 {
     return &gateway;

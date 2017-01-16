@@ -42,6 +42,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
 
+#include "maxscale/config.h"
+
 static MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 

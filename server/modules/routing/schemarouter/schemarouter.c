@@ -743,14 +743,17 @@ static ROUTER* createInstance(SERVICE *service, char **options)
 
     if ((param = config_get_param(conf, "ignore_databases")))
     {
-        char *sptr, *tok, *val = config_clean_string_list(param->value);
+        char val[strlen(param->value) + 1];
+        strcpy(val, param->value);
 
-        tok = strtok_r(val, ",", &sptr);
+        const char *sep = ", \t";
+        char *sptr;
+        char *tok = strtok_r(val, sep, &sptr);
 
         while (tok)
         {
             hashtable_add(router->ignored_dbs, tok, "");
-            tok = strtok_r(NULL, ",", &sptr);
+            tok = strtok_r(NULL, sep, &sptr);
         }
     }
 
