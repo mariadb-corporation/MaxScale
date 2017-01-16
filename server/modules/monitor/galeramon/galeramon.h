@@ -62,6 +62,8 @@ typedef struct
                                     * have a wsrep_local_index of 0 */
     bool use_priority; /*< Use server priorities */
     uint64_t events; /*< enabled events */
+    bool set_donor_nodes; /**< set the wrep_sst_donor variable with an
+                           * ordered list of nodes */
 } GALERA_MONITOR;
 
 MXS_END_DECLS
