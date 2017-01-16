@@ -781,38 +781,6 @@ bool compare_get_prepare_name(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_get_prepare_operation(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                                   QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_get_prepare_operation : ";
-
-    int32_t rv1;
-    pClassifier1->qc_get_prepare_operation(pCopy1, &rv1);
-    int32_t rv2;
-    pClassifier2->qc_get_prepare_operation(pCopy2, &rv2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : " << qc_op_to_string(static_cast<qc_query_op_t>(rv1));
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: "
-           << qc_op_to_string(static_cast<qc_query_op_t>(rv1))
-           << " != "
-           << qc_op_to_string(static_cast<qc_query_op_t>(rv2));
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
 bool operator == (const QC_FIELD_INFO& lhs, const QC_FIELD_INFO& rhs)
 {
     bool rv = false;
@@ -1206,7 +1174,6 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_prepare_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_function_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
 

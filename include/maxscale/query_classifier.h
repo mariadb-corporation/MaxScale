@@ -308,18 +308,6 @@ typedef struct query_classifier
     int32_t (*qc_get_prepare_name)(GWBUF* stmt, char** name);
 
     /**
-     * Reports the prepare operation.
-     *
-     * @param stmt  A statement.
-     * @param name  On return, the operation (one of @c qc_query_op_t) of a prepare
-     *              statement, if @c QC_RESULT_OK is returned.
-     *
-     * @return QC_RESULT_OK, if the parsing was not aborted due to resource
-     *         exhaustion or equivalent.
-     */
-    int32_t (*qc_get_prepare_operation)(GWBUF* stmt, int32_t* op);
-
-    /**
      * Reports field information.
      *
      * @param stmt    A statement.
@@ -583,17 +571,6 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
  *       the server.
  */
 char* qc_get_prepare_name(GWBUF* stmt);
-
-/**
- * Returns the operator of the prepared statement, if the statement
- * is a PREPARE statement.
- *
- * @param stmt  A buffer containing a COM_QUERY packet.
- *
- * @return The operator of the prepared statement, if the statement
- *         is a PREPARE statement; otherwise QUERY_OP_UNDEFINED.
- */
-qc_query_op_t qc_get_prepare_operation(GWBUF* stmt);
 
 /**
  * Returns the preparable statement of a PREPARE statment. Other query classifier

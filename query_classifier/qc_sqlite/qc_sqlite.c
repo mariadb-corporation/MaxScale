@@ -3313,37 +3313,6 @@ static int32_t qc_sqlite_get_prepare_name(GWBUF* query, char** prepare_name)
     return rv;
 }
 
-static int32_t qc_sqlite_get_prepare_operation(GWBUF* query, int32_t* op)
-{
-    QC_TRACE();
-    int32_t rv = QC_RESULT_ERROR;
-    ss_dassert(this_unit.initialized);
-    ss_dassert(this_thread.initialized);
-
-    *op = QUERY_OP_UNDEFINED;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
-    if (info)
-    {
-        if (qc_info_is_valid(info->status))
-        {
-            *op = info->prepare_operation;
-        }
-        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            log_invalid_data(query, "cannot report the operation of a prepared statement");
-        }
-
-        rv = QC_RESULT_OK;
-    }
-    else
-    {
-        MXS_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return rv;
-}
-
 int32_t qc_sqlite_get_field_info(GWBUF* query, const QC_FIELD_INFO** infos, uint32_t* n_infos)
 {
     QC_TRACE();
@@ -3467,7 +3436,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_query_has_clause,
         qc_sqlite_get_database_names,
         qc_sqlite_get_prepare_name,
-        qc_sqlite_get_prepare_operation,
         qc_sqlite_get_field_info,
         qc_sqlite_get_function_info,
         qc_sqlite_get_preparable_stmt,

@@ -71,12 +71,6 @@ int32_t qc_dummy_get_prepare_name(GWBUF* query, char** pzName)
     return QC_RESULT_OK;
 }
 
-int32_t qc_dummy_get_prepare_operation(GWBUF* query, int32_t* pOp)
-{
-    *pOp = QUERY_OP_UNDEFINED;
-    return QC_RESULT_OK;
-}
-
 int32_t qc_dummy_get_field_info(GWBUF* query, const QC_FIELD_INFO** ppInfos, uint32_t* nInfos)
 {
     *ppInfos = NULL;
@@ -141,7 +135,6 @@ extern "C"
             qc_dummy_query_has_clause,
             qc_dummy_get_database_names,
             qc_dummy_get_prepare_name,
-            qc_dummy_get_prepare_operation,
             qc_dummy_get_field_info,
             qc_dummy_get_function_info,
             qc_dummy_get_preparable_stmt,
