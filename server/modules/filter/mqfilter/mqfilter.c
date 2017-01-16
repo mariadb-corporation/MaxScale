@@ -960,14 +960,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     {
         success = true;
 
-        if (!my_instance->log_all)
-        {
-            if (!qc_is_real_query(queue))
-            {
-                goto send_downstream;
-            }
-        }
-
         if (my_instance->trgtype == TRG_ALL)
         {
             MXS_INFO("Trigger is TRG_ALL");
@@ -1229,7 +1221,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
         /** Pass the query downstream */
     }
-send_downstream:
+
     return my_session->down.routeQuery(my_session->down.instance,
                                        my_session->down.session, queue);
 }
