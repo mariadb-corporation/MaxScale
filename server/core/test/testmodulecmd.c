@@ -15,7 +15,9 @@
  * Test modulecmd.h functionality
  */
 
+#include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
+#include <maxscale/gwdirs.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/session.h>
 
@@ -347,6 +349,44 @@ int test_pointers()
     return 0;
 }
 
+bool monfn(const MODULECMD_ARG *argv)
+{
+    return true;
+}
+
+int test_domain_matching()
+{
+    const char *ns = "mysqlmon";
+    const char *id = "test_domain_matching";
+
+    modulecmd_arg_type_t args[] = {
+        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
+    };
+
+    TEST(modulecmd_register_command(ns, id, monfn, 1, args), "Registering a command should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    const MODULECMD *cmd = modulecmd_find_command(ns, id);
+    TEST(cmd, "The registered command should be found");
+
+    /** Create a monitor */
+    char *libdir = MXS_STRDUP_A("../../modules/monitor/mysqlmon/");
+    set_libdir(libdir);
+    monitor_alloc((char*)ns, "mysqlmon");
+
+    const void* params[] = {ns};
+
+    MODULECMD_ARG *arg = modulecmd_arg_parse(cmd, 1, params);
+    TEST(arg, "Parsing arguments should succeed");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    TEST(modulecmd_call_command(cmd, arg), "Module call should be successful");
+    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+
+    modulecmd_arg_free(arg);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int rc = 0;
@@ -356,6 +396,7 @@ int main(int argc, char **argv)
     rc += test_module_errors();
     rc += test_map();
     rc += test_pointers();
+    rc += test_domain_matching();
 
     return rc;
 }
