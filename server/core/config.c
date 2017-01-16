@@ -1950,13 +1950,6 @@ check_config_objects(CONFIG_CONTEXT *context)
     return rval;
 }
 
-/**
- * Used for boolean settings where values may be 1, yes or true
- * to enable a setting or -, no, false to disable a setting.
- *
- * @param       str     String to convert to a boolean
- * @return      Truth value
- */
 int
 config_truth_value(const char *str)
 {

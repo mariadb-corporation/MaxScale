@@ -118,8 +118,6 @@ void service_update_weights();
 void  serviceAddRouterOption(SERVICE *service, char *option);
 void  serviceClearRouterOptions(SERVICE *service);
 void  service_update(SERVICE *service, char *router, char *user, char *auth);
-bool  service_set_param_value(SERVICE* service, CONFIG_PARAMETER* param, char* valstr,
-                              count_spec_t count_spec, config_param_type_t type);
 
 /**
  * @brief Add parameters to a service

@@ -264,7 +264,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
                              hashtable_item_free, info_free_func);
         handle->server_info = server_info;
         handle->shutdown = 0;
-        handle->id = config_get_gateway_id();
+        handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
         spinlock_init(&handle->lock);
     }

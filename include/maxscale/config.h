@@ -49,16 +49,7 @@ enum
     MAX_PARAM_LEN = 256
 };
 
-typedef enum
-{
-    UNDEFINED_TYPE     = 0x00,
-    STRING_TYPE        = 0x01,
-    COUNT_TYPE         = 0x02,
-    PERCENT_TYPE       = 0x04,
-    BOOL_TYPE          = 0x08,
-    SQLVAR_TARGET_TYPE = 0x10
-} config_param_type_t;
-
+/** TODO: Remove this from the core and move it inside readwritesplit */
 typedef enum
 {
     TYPE_UNDEFINED = 0,
@@ -323,14 +314,32 @@ struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key
 char* config_copy_string(const CONFIG_PARAMETER *params, const char *key);
 
 /**
+ * @brief Convert string truth value
+ *
+ * Used for truth values with @c 1, @c yes or @c true for a boolean true value and @c 0, @c no
+ * or @c false for a boolean false value.
+ *
+ * @param str String to convert to a truth value
+ *
+ * @return 1 if @c value is true, 0 if value is false and -1 if the value is not
+ * a valid truth value
+ */
+int config_truth_value(const char *value);
+
+/** TODO: Add new capability that allows skipping of permission checks */
+bool                is_internal_service(const char *router);
+
+/***************************************************************************************
+ * TODO: Move the following functions to a header that's internal to the MaxScale core *
+ ***************************************************************************************/
+
+/**
  * @brief Generate default module parameters
  *
  * Adds any default parameters to @c ctx that aren't already in it.
  *
  * @param ctx    Configuration context where the parameters are added
  * @param params Module parameters
- *
- * TODO: Move this to a header internal to the MaxScale core
  */
 void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params);
 
@@ -338,15 +347,12 @@ char*               config_clean_string_list(const char* str);
 CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
 void                config_enable_feedback_task(void);
 void                config_disable_feedback_task(void);
-unsigned long       config_get_gateway_id(void);
 GATEWAY_CONF*       config_get_global_options();
 bool                config_load(const char *);
 unsigned int        config_nbpolls();
 unsigned int        config_pollsleep();
 bool                config_reload();
 int                 config_threadcount();
-int                 config_truth_value(const char *);
 void                config_parameter_free(CONFIG_PARAMETER* p1);
-bool                is_internal_service(const char *router);
 
 MXS_END_DECLS
