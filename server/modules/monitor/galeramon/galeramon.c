@@ -39,6 +39,9 @@
 #include <maxscale/dcb.h>
 #include <maxscale/alloc.h>
 
+#define DONOR_NODE_NAME_MAX_LEN 60
+#define DONOR_LIST_SET_VAR "SET GLOBAL wsrep_sst_donor = \""
+
 static void monitorMain(void *);
 
 /** Log a warning when a bad 'wsrep_local_index' is found */
@@ -51,6 +54,7 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR*);
 static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
+static void update_sst_donor_nodes(MONITOR*, int);
 
 /**
  * The module entry point routine. It is this routine that
@@ -102,6 +106,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
                  MXS_MODULE_OPT_NONE,
                  monitor_event_enum_values
             },
+            {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -144,6 +149,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
     handle->use_priority = config_get_bool(params, "use_priority");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->set_donor_nodes = config_get_bool(params, "set_donor_nodes");
 
     /** SHOW STATUS doesn't require any special permissions */
     if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'wsrep_local_state'"))
@@ -191,6 +197,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
     dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
                handle->disableMasterRoleSetting ? "on" : "off");
+    dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (handle->set_donor_nodes == 1) ? "on" : "off");
 }
 
 /**
@@ -531,7 +538,17 @@ monitorMain(void *arg)
         mon_process_state_changes(mon, handle->script, handle->events);
 
         mon_hangup_failed_servers(mon);
+
         servers_status_current_to_pending(mon);
+
+        /* Set the global var "wsrep_sst_donor"
+         * with a sorted list of "wsrep_node_name" for slave nodes
+         */
+        if (handle->set_donor_nodes)
+        {
+           update_sst_donor_nodes(mon, is_cluster);
+        }
+
         release_monitor_servers(mon);
     }
 }
@@ -644,4 +661,128 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
             return candidate_master;
         }
     }
+}
+
+/**
+ * Set the global variable wsrep_sst_donor in the cluster
+ *
+ * The monitor user must have the privileges for setting global vars.
+ *
+ * Galera monitor fetches from each joined slave node the var 'wsrep_node_name'
+ * A list of nodes is automatically build and it's sorted by wsrep_local_index DESC
+ * or by priority ASC if use_priority option is set.
+ *
+ * The list is then added to SET GLOBAL VARIABLE wrep_sst_donor =
+ * The variable must be sent to all slave nodes.
+ *
+ * All slave nodes have a sorted list of nodes tht can be used as donor nodes.
+ *
+ * If there is only one node the funcion returns,
+ *
+ * @param   mon        The monitor handler
+ * @param   is_cluster The number of joined nodes
+ */
+static void update_sst_donor_nodes(MONITOR *mon, int is_cluster)
+{
+    MONITOR_SERVERS *ptr;
+    MYSQL_ROW row;
+    MYSQL_RES *result;
+    if (is_cluster == 1)
+    {
+        MXS_DEBUG("Only one server in the cluster: update_sst_donor_nodes is not performed");
+        return;
+    }
+
+    /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
+
+    char *donor_list = MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) +
+                                  is_cluster * DONOR_NODE_NAME_MAX_LEN +
+                                  is_cluster + 1);
+
+    if (donor_list == NULL)
+    {
+        MXS_ERROR("can't execute update_sst_donor_nodes() due to memory allocation error");
+        return;
+    }
+
+    strcpy(donor_list, DONOR_LIST_SET_VAR);
+
+    ptr = mon->databases;
+
+    while (ptr)
+    {
+        if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
+        {
+
+            /* Get the Galera node name */
+            if (mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
+                && (result = mysql_store_result(ptr->con)) != NULL)
+            {
+                if (mysql_field_count(ptr->con) < 2)
+                {
+                    mysql_free_result(result);
+                    MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
+                              "Expected 2 columns");
+                    return;
+                }
+
+                while ((row = mysql_fetch_row(result)))
+                {
+                    MXS_DEBUG("wsrep_node_name name for %s is [%s]",
+                            ptr->server->unique_name,
+                            row[1]);
+
+                    strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
+                    strcat(donor_list, ",");
+                }
+
+                mysql_free_result(result);
+            }
+            else
+            {
+                MXS_ERROR("Error while selecting 'wsrep_node_name' from node %s: %s",
+                          ptr->server->unique_name,
+                          mysql_error(ptr->con));
+            }
+        }
+
+        ptr = ptr->next;
+    }
+
+    int donor_list_size = strlen(donor_list);
+    if (donor_list[donor_list_size - 1] == ',')
+    {
+        donor_list[donor_list_size - 1] = '\0';
+    }
+
+    strcat(donor_list, "\"");
+
+    MXS_DEBUG("Sending %s to all slave nodes",
+               donor_list);
+
+    /* Set now rep_sst_donor in each slave node */
+    ptr = mon->databases;
+    while (ptr)
+    {
+        if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
+        {
+
+            /* Set the Galera SST donor node list */
+            if (mysql_query(ptr->con, donor_list) == 0)
+            {
+                MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
+                          ptr->server->unique_name);
+            }
+            else
+            {
+                MXS_ERROR("SET GLOBAL rep_sst_donor error in node %s: %s",
+                           ptr->server->unique_name,
+                           mysql_error(ptr->con));
+            }
+        }
+
+        ptr = ptr->next;
+    }
+
+    MXS_FREE(donor_list);
 }
