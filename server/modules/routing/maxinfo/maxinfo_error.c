@@ -22,6 +22,9 @@
  *
  * @endverbatim
  */
+
+#include "maxinfo.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +39,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include "maxinfo.h"
 #include <maxscale/log_manager.h>
 
 

@@ -15,6 +15,8 @@
  * @file auroramon.c - Amazon RDS Aurora monitor
  */
 
+#define MXS_MODULE_NAME "auroramon"
+
 #include <maxscale/modinfo.h>
 #include <maxscale/thread.h>
 #include <maxscale/monitor.h>

@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -21,7 +24,6 @@
 #include <maxscale/modutil.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 /**
  * @file rwsplit_tmp_table.c   The functions that carry out checks on

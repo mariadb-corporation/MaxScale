@@ -40,6 +40,8 @@
  * @endverbatim
  */
 
+#include "blr.h"
+
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +50,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include "blr.h"
 
 
 static void printVersion(const char *progname);

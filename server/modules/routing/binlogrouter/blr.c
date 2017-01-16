@@ -59,6 +59,9 @@
  *
  * @endverbatim
  */
+
+#include "blr.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +74,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
-#include "blr.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>

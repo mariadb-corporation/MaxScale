@@ -14,11 +14,9 @@
 /**
  * @file avro_schema.c - Avro schema related functions
  */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
 
 #include "avrorouter.h"
+
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <stdio.h>

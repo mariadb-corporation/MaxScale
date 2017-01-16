@@ -23,6 +23,9 @@
  *
  * @endverbatim
  */
+
+#define MXS_MODULE_NAME "debugcli"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

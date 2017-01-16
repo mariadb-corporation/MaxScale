@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "insertstream"
+
 #include <maxscale/cdefs.h>
 
 #include <strings.h>

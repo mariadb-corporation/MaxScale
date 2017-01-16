@@ -27,6 +27,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "NullAuthDeny"
+
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.h>

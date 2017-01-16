@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "namedserverfilter"
+
 #include <stdio.h>
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>

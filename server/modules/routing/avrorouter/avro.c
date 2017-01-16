@@ -24,8 +24,7 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "avrorouter"
-#include <maxscale/cdefs.h>
+#include "avrorouter.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +47,6 @@
 #include <ini.h>
 #include <sys/stat.h>
 
-#include "avrorouter.h"
 #include <maxscale/random_jkiss.h>
 #include <binlog_common.h>
 #include <avro/errors.h>

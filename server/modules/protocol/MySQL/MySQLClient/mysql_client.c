@@ -45,6 +45,9 @@
  * 07/02/2016   Martin Brampton         Split off authentication and SSL.
  * 31/05/2016   Martin Brampton         Implement connection throttling
  */
+
+#define MXS_MODULE_NAME "MySQLClient"
+
 #include <maxscale/protocol.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>

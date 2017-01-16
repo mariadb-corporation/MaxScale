@@ -29,6 +29,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "MySQLBackendAuth"
+
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>

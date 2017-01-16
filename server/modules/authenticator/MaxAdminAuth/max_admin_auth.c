@@ -26,6 +26,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "MaxAdminAuth"
+
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>

@@ -24,6 +24,8 @@
  * @endverbatim
  */
 
+#include "avrorouter.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -37,7 +39,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
-#include "avrorouter.h"
 #include <maxavro.h>
 #include <maxscale/alloc.h>
 

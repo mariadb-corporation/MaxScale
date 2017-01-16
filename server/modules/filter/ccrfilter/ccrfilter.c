@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "ccrfilter"
+
 #include <stdio.h>
 #include <maxscale/filter.h>
 #include <maxscale/modinfo.h>

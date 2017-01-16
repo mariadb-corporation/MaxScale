@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "regexfilter"
+
 #include <maxscale/cdefs.h>
 #include <string.h>
 #include <stdio.h>

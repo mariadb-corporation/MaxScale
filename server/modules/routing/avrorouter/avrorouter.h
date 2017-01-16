@@ -18,6 +18,9 @@
  * MaxScale AVRO router
  *
  */
+
+#define MXS_MODULE_NAME "avrorouter"
+
 #include <maxscale/cdefs.h>
 #include <stdbool.h>
 #include <stdint.h>

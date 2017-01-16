@@ -25,6 +25,7 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "ndbclustermon"
 
 #include "../mysqlmon.h"
 #include <maxscale/alloc.h>

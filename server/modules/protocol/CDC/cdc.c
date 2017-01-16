@@ -30,6 +30,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "CDC"
+
 #include <cdc.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>

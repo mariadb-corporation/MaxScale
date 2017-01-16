@@ -45,6 +45,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "mysqlmon"
+
 #include "../mysqlmon.h"
 #include <maxscale/dcb.h>
 #include <maxscale/modutil.h>

@@ -40,6 +40,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "tpmfilter"
+
 #include <maxscale/cdefs.h>
 
 #include <ctype.h>

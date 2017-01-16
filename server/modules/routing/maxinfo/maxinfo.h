@@ -26,6 +26,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "maxinfo"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>

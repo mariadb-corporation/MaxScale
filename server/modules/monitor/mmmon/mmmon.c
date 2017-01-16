@@ -25,6 +25,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "mmmon"
+
 #include "mmmon.h"
 #include <maxscale/dcb.h>
 #include <maxscale/alloc.h>

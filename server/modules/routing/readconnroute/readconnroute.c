@@ -69,25 +69,23 @@
  *
  * @endverbatim
  */
+
+#include "readconnection.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <maxscale/alloc.h>
-#include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
-#include "readconnection.h"
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>
-
 #include <maxscale/log_manager.h>
-
 #include <maxscale/protocol/mysql.h>
-
 #include <maxscale/modutil.h>
 
 /* The router entry points */

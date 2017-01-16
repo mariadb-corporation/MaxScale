@@ -43,6 +43,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "binlogrouter"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>

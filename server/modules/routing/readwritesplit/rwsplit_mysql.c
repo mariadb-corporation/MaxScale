@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
@@ -18,7 +21,6 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 
 #include <mysql.h>

@@ -56,6 +56,9 @@
  *@endverbatim
  * See the individual struct documentations for logging trigger parameters
  */
+
+#define MXS_MODULE_NAME "mqfilter"
+
 #include <my_config.h>
 #include <stdio.h>
 #include <fcntl.h>

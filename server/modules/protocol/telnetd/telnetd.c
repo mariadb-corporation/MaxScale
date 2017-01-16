@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#define MXS_MODULE_NAME "telnetd"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

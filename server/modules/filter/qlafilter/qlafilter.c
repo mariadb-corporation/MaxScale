@@ -34,6 +34,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "qlafilter"
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>

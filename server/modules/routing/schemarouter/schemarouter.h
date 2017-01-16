@@ -25,6 +25,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "schemarouter"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>

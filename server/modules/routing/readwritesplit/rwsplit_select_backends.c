@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "readwritesplit.h"
+
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -17,7 +20,6 @@
 #include <stdint.h>
 
 #include <maxscale/router.h>
-#include "readwritesplit.h"
 #include "rwsplit_internal.h"
 /**
  * @file rwsplit_select_backends.c   The functions that implement back end

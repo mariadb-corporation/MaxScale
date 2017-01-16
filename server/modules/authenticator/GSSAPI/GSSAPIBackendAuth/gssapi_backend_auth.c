@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "GSSAPIBackendAuth"
+
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>

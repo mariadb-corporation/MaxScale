@@ -24,6 +24,8 @@
  * @endverbatim
  */
 
+#include "maxinfo.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +41,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/poll.h>
-#include "maxinfo.h"
 #include <maxscale/log_manager.h>
 
 static MAXINFO_TREE *make_tree_node(MAXINFO_OPERATOR, char *, MAXINFO_TREE *, MAXINFO_TREE *);

@@ -33,6 +33,7 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "galeramon"
 
 #include "galeramon.h"
 #include <maxscale/dcb.h>

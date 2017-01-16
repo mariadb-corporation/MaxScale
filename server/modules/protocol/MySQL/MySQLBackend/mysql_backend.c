@@ -11,6 +11,8 @@
  * Public License.
  */
 
+#define MXS_MODULE_NAME "MySQLBackend"
+
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>

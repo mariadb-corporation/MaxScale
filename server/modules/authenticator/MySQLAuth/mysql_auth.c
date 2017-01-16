@@ -25,6 +25,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "MySQLAuth"
+
 #include <mysql_auth.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/gw_authenticator.h>

@@ -11,11 +11,11 @@
  * Public License.
  */
 
+#include "avrorouter.h"
 
 #include <maxscale/mysql_utils.h>
 #include <jansson.h>
 #include <maxscale/alloc.h>
-#include "avrorouter.h"
 #include <strings.h>
 
 #define WRITE_EVENT         0

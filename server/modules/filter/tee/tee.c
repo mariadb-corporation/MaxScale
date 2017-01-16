@@ -41,6 +41,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "tee"
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <maxscale/filter.h>

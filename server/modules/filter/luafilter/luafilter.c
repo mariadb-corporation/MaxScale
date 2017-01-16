@@ -36,6 +36,8 @@
  * or diagnostic being made for the session script.
  */
 
+#define MXS_MODULE_NAME "luafilter"
+
 #include <maxscale/cdefs.h>
 #include <lauxlib.h>
 #include <lua.h>

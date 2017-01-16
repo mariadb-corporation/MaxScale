@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include "schemarouter.h"
+
 #include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
@@ -17,7 +20,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <maxscale/router.h>
-#include "schemarouter.h"
 #include "sharding_common.h"
 #include <maxscale/secrets.h>
 #include <mysql.h>

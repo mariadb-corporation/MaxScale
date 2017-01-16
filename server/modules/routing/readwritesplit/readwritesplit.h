@@ -25,9 +25,12 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "readwritesplit"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/service.h>
 #include <math.h>
 
 MXS_BEGIN_DECLS

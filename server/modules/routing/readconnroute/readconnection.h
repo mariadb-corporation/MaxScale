@@ -27,8 +27,11 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "readconnroute"
+
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
+#include <maxscale/service.h>
 
 MXS_BEGIN_DECLS
 

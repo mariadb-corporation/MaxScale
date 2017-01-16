@@ -35,6 +35,8 @@
  * @endverbatim
  */
 
+#define MXS_MODULE_NAME "MySQLAuth"
+
 #include <stdio.h>
 #include <ctype.h>
 #include <mysql.h>

@@ -33,6 +33,7 @@
  */
 
 #include "avrorouter.h"
+
 #include <maxscale/debug.h>
 #include <glob.h>
 
