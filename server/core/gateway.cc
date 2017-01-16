@@ -1777,6 +1777,11 @@ int main(int argc, char **argv)
 
     MXS_NOTICE("MariaDB MaxScale %s started", MAXSCALE_VERSION);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
+
+#ifdef SS_DEBUG
+    MXS_NOTICE("Commit: %s", MAXSCALE_COMMIT);
+#endif
+
     /*
      * Set the data directory. We use a unique directory name to avoid conflicts
      * if multiple instances of MaxScale are being run on the same machine.
