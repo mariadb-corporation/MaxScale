@@ -88,6 +88,7 @@ typedef struct parsing_info_st
     QC_FUNCTION_INFO* function_infos;
     size_t function_infos_len;
     size_t function_infos_capacity;
+    GWBUF* preparable_stmt;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -1547,6 +1548,8 @@ static void parsing_info_done(void* ptr)
         }
         free(pi->function_infos);
 
+        gwbuf_free(pi->preparable_stmt);
+
         free(pi);
     }
 }
@@ -1775,10 +1778,84 @@ int32_t qc_mysql_get_prepare_name(GWBUF* stmt, char** namep)
 
 int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 {
-    *preparable_stmt = NULL;
+    if (stmt)
+    {
+        if (ensure_query_is_parsed(stmt))
+        {
+            LEX* lex = get_lex(stmt);
 
-    // TODO: Extract preparable stmt.
-    ss_dassert(!true);
+            if (lex->sql_command == SQLCOM_PREPARE)
+            {
+                parsing_info_t* pi = get_pinfo(stmt);
+
+                if (!pi->preparable_stmt)
+                {
+                    // This is terriby inefficient, but as qc_mysqlembedded is not used
+                    // for anything else but comparisons it is ok.
+                    const char* preparable_str = lex->prepared_stmt_code.str;
+                    size_t preparable_str_len = lex->prepared_stmt_code.length;
+
+                    // MySQL does not parse e.g. "select * from x where ?=5". To work
+                    // around that we'll replace all "?":s with "@a":s. We might replace
+                    // something unnecessarily, but that won't hurt the classification.
+                    size_t n_questions = 0;
+                    const char* p = preparable_str;
+                    while (p < preparable_str + preparable_str_len)
+                    {
+                        if (*p == '?')
+                        {
+                            ++n_questions;
+                        }
+
+                        ++p;
+                    }
+
+                    size_t preparable_stmt_len = preparable_str_len + n_questions * 2;
+                    size_t payload_len = preparable_stmt_len + 1;
+                    size_t packet_len = MYSQL_HEADER_LEN + payload_len;
+
+                    GWBUF* preperable_stmt = gwbuf_alloc(packet_len);
+
+                    if (preperable_stmt)
+                    {
+                        // Encode the length of the payload in the 3 first bytes.
+                        *((unsigned char*)GWBUF_DATA(preperable_stmt) + 0) = payload_len;
+                        *((unsigned char*)GWBUF_DATA(preperable_stmt) + 1) = (payload_len >> 8);
+                        *((unsigned char*)GWBUF_DATA(preperable_stmt) + 2) = (payload_len >> 16);
+                        // Sequence id
+                        *((unsigned char*)GWBUF_DATA(preperable_stmt) + 3) = 0x00;
+                        // Payload, starts with command.
+                        *((unsigned char*)GWBUF_DATA(preperable_stmt) + 4) = COM_QUERY;
+                        // Is followed by the statement.
+                        char *s = (char*)GWBUF_DATA(preperable_stmt) + 5;
+                        p = preparable_str;
+
+                        while (p < preparable_str + preparable_str_len)
+                        {
+                            switch (*p)
+                            {
+                            case '?':
+                                *s++ = '@';
+                                *s = 'a';
+                                break;
+
+                            default:
+                                *s = *p;
+                            }
+
+                            ++p;
+                            ++s;
+                        }
+                    }
+
+                    pi->preparable_stmt = preperable_stmt;
+                }
+
+                *preparable_stmt = pi->preparable_stmt;
+            }
+        }
+    }
+
     return QC_RESULT_OK;
 }
 

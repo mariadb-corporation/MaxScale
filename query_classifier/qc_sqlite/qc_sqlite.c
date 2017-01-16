@@ -75,9 +75,7 @@ typedef struct qc_sqlite_info
     int keyword_1;                   // The first encountered keyword.
     int keyword_2;                   // The second encountered keyword.
     char* prepare_name;              // The name of a prepared statement.
-    qc_query_op_t prepare_operation; // The operation of a prepared statement.
-    char* preparable_stmt;           // The preparable statement.
-    size_t preparable_stmt_length;   // The length of the preparable statement.
+    GWBUF* preparable_stmt;          // The preparable statement.
     QC_FIELD_INFO *field_infos;      // Pointer to array of QC_FIELD_INFOs.
     size_t field_infos_len;          // The used entries in field_infos.
     size_t field_infos_capacity;     // The capacity of the field_infos array.
@@ -347,7 +345,7 @@ static void info_finish(QC_SQLITE_INFO* info)
     free(info->created_table_name);
     free_string_array(info->database_names);
     free(info->prepare_name);
-    free(info->preparable_stmt);
+    gwbuf_free(info->preparable_stmt);
     free_field_infos(info->field_infos, info->field_infos_len);
     free_function_infos(info->function_infos, info->function_infos_len);
 }
@@ -384,9 +382,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     info->keyword_1 = 0; // Sqlite3 starts numbering tokens from 1, so 0 means
     info->keyword_2 = 0; // that we have not seen a keyword.
     info->prepare_name = NULL;
-    info->prepare_operation = QUERY_OP_UNDEFINED;
     info->preparable_stmt = NULL;
-    info->preparable_stmt_length = 0;
     info->field_infos = NULL;
     info->field_infos_len = 0;
     info->field_infos_capacity = 0;
@@ -528,29 +524,6 @@ static bool parse_query(GWBUF* query)
                     parse_query_string(s, len);
                     this_thread.info->query = NULL;
                     this_thread.info->query_len = 0;
-
-                    if ((info->types & QUERY_TYPE_PREPARE_NAMED_STMT) && info->preparable_stmt)
-                    {
-                        QC_SQLITE_INFO* preparable_info = info_alloc();
-
-                        if (preparable_info)
-                        {
-                            this_thread.info = preparable_info;
-
-                            const char *preparable_s = info->preparable_stmt;
-                            size_t preparable_len = info->preparable_stmt_length;
-
-                            this_thread.info->query = preparable_s;
-                            this_thread.info->query_len = preparable_len;
-                            parse_query_string(preparable_s, preparable_len);
-                            this_thread.info->query = NULL;
-                            this_thread.info->query_len = 0;
-
-                            info->prepare_operation = preparable_info->operation;
-
-                            info_free(preparable_info);
-                        }
-                    }
 
                     // TODO: Add return value to gwbuf_add_buffer_object.
                     // Always added; also when it was not recognized. If it was not recognized now,
@@ -2328,11 +2301,25 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
         info->prepare_name[pName->n] = 0;
     }
 
-    info->preparable_stmt_length = pStmt->n - 2;
-    info->preparable_stmt = MXS_MALLOC(info->preparable_stmt_length);
+    size_t preparable_stmt_len = pStmt->n - 2;
+    size_t payload_len = 1 + preparable_stmt_len;
+    size_t packet_len = MYSQL_HEADER_LEN + payload_len;
+
+    info->preparable_stmt = gwbuf_alloc(packet_len);
+
     if (info->preparable_stmt)
     {
-        memcpy(info->preparable_stmt, pStmt->z + 1, pStmt->n - 2);
+        uint8_t* ptr = GWBUF_DATA(info->preparable_stmt);
+        // Payload length
+        *ptr++ = payload_len;
+        *ptr++ = (payload_len >> 8);
+        *ptr++ = (payload_len >> 16);
+        // Sequence id
+        *ptr++ = 0x00;
+        // Command
+        *ptr++ = MYSQL_COM_QUERY;
+
+        memcpy(ptr, pStmt->z + 1, pStmt->n - 2);
     }
 }
 
@@ -3396,8 +3383,7 @@ int32_t qc_sqlite_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
     {
         if (qc_info_is_valid(info->status))
         {
-            // TODO: Extract the preparable stmt.
-            ss_dassert(!true);
+            *preparable_stmt = info->preparable_stmt;
             rv = QC_RESULT_OK;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))

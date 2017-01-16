@@ -80,6 +80,7 @@ struct State
     size_t n_errors;
     struct timespec time1;
     struct timespec time2;
+    string indent;
 } global = { false,            // query_printed
              "",               // query
              VERBOSITY_NORMAL, // verbosity
@@ -90,7 +91,9 @@ struct State
              0,                // n_statements
              0,                // n_errors
              { 0, 0 },         // time1
-             { 0,  0} };       // time2
+             { 0,  0},         // time2
+             ""                // indent
+};
 
 ostream& operator << (ostream& out, qc_parse_result_t x)
 {
@@ -237,7 +240,7 @@ void report(bool success, const string& s)
 
                 if (global.verbosity >= VERBOSITY_MAX)
                 {
-                    cout << s << endl;
+                    cout << global.indent << s << endl;
                     global.result_printed = true;
                 }
             }
@@ -252,7 +255,7 @@ void report(bool success, const string& s)
                 report_query();
             }
 
-            cout << s << endl;
+            cout << global.indent << s << endl;
             global.result_printed = true;
         }
     }
@@ -324,7 +327,7 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     if (rv1 == rv2)
     {
-        ss << "Ok : " << rv1;
+        ss << "Ok : " << static_cast<qc_parse_result_t>(rv1);
         success = true;
     }
     else
@@ -1157,35 +1160,71 @@ bool compare_get_function_info(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 }
 
 
-bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
+bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
+             QUERY_CLASSIFIER* pClassifier2, GWBUF* pBuf2)
 {
-    GWBUF* pCopy1 = create_gwbuf(s);
-    GWBUF* pCopy2 = create_gwbuf(s);
-
     int errors = 0;
 
-    errors += !compare_parse(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_type(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_created_table_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_is_drop_table_query(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, false);
-    errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, true);
-    errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_database_names(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_prepare_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_field_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_get_function_info(pClassifier1, pCopy1, pClassifier2, pCopy2);
-
-    gwbuf_free(pCopy1);
-    gwbuf_free(pCopy2);
+    errors += !compare_parse(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_type(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_operation(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_created_table_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_is_drop_table_query(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, false);
+    errors += !compare_get_table_names(pClassifier1, pBuf1, pClassifier2, pBuf2, true);
+    errors += !compare_query_has_clause(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_database_names(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_prepare_name(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_field_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
+    errors += !compare_get_function_info(pClassifier1, pBuf1, pClassifier2, pBuf2);
 
     if (global.result_printed)
     {
         cout << endl;
     }
 
-    return errors == 0;
+    bool success = (errors == 0);
+
+    uint32_t type_mask1;
+    pClassifier1->qc_get_type(pBuf1, &type_mask1);
+
+    uint32_t type_mask2;
+    pClassifier2->qc_get_type(pBuf2, &type_mask2);
+
+    if ((type_mask1 == type_mask2) &&
+        ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))
+    {
+        GWBUF* pPreparable1;
+        pClassifier1->qc_get_preparable_stmt(pBuf1, &pPreparable1);
+        ss_dassert(pPreparable1);
+
+        GWBUF* pPreparable2;
+        pClassifier2->qc_get_preparable_stmt(pBuf2, &pPreparable2);
+        ss_dassert(pPreparable2);
+
+        string indent = global.indent;
+        global.indent += string(4, ' ');
+
+        success = compare(pClassifier1, pPreparable1,
+                          pClassifier2, pPreparable2);
+
+        global.indent = indent;
+    }
+
+    return success;
+}
+
+bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, const string& s)
+{
+    GWBUF* pCopy1 = create_gwbuf(s);
+    GWBUF* pCopy2 = create_gwbuf(s);
+
+    bool success = compare(pClassifier1, pCopy1, pClassifier2, pCopy2);
+
+    gwbuf_free(pCopy1);
+    gwbuf_free(pCopy2);
+
+    return success;
 }
 
 inline void ltrim(std::string &s)
