@@ -161,14 +161,6 @@ bool qc_is_drop_table_query(GWBUF* query)
     return classifier->qc_is_drop_table_query(query);
 }
 
-bool qc_is_real_query(GWBUF* query)
-{
-    QC_TRACE();
-    ss_dassert(classifier);
-
-    return classifier->qc_is_real_query(query);
-}
-
 char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
 {
     QC_TRACE();

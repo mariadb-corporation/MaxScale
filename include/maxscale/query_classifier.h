@@ -151,7 +151,6 @@ typedef struct query_classifier
 
     char* (*qc_get_created_table_name)(GWBUF* stmt);
     bool (*qc_is_drop_table_query)(GWBUF* stmt);
-    bool (*qc_is_real_query)(GWBUF* stmt);
     char** (*qc_get_table_names)(GWBUF* stmt, int* tblsize, bool fullnames);
     char* (*qc_get_canonical)(GWBUF* stmt);
     bool (*qc_query_has_clause)(GWBUF* stmt);
@@ -435,21 +434,6 @@ uint32_t qc_get_type(GWBUF* stmt);
  * @todo This function is far too specific.
  */
 bool qc_is_drop_table_query(GWBUF* stmt);
-
-/**
- * Returns whether the statement is a "real" statement. Statements that affect
- * the underlying database are considered real statements, while statements that
- * target specific rows or variable data are regarded as real statement. That is,
- * a real statement is  SELECT, UPDATE, INSERT, DELETE or a variation thereof.
- *
- * @param stmt  A buffer containing a COM_QUERY.
- *
- * @return True if the statement is a real query, false otherwise.
- *
- * @todo Consider whether the function name should be changed or the function
- *       removed altogether.
- */
-bool qc_is_real_query(GWBUF* stmt);
 
 /**
  * Returns the string representation of a query operation.

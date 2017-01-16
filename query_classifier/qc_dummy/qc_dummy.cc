@@ -36,11 +36,6 @@ char* qc_get_created_table_name(GWBUF* querybuf)
     return NULL;
 }
 
-bool qc_is_real_query(GWBUF* querybuf)
-{
-    return false;
-}
-
 bool qc_is_drop_table_query(GWBUF* querybuf)
 {
     return false;
@@ -117,7 +112,6 @@ extern "C"
             qc_get_operation,
             qc_get_created_table_name,
             qc_is_drop_table_query,
-            qc_is_real_query,
             qc_get_table_names,
             NULL,
             qc_query_has_clause,

@@ -1379,61 +1379,6 @@ char* qc_get_created_table_name(GWBUF* querybuf)
     return table_name;
 }
 
-bool qc_is_real_query(GWBUF* querybuf)
-{
-    bool succp;
-    LEX* lex;
-
-    if (querybuf == NULL)
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    if (!ensure_query_is_parsed(querybuf))
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    if ((lex = get_lex(querybuf)) == NULL)
-    {
-        succp = false;
-        goto retblock;
-    }
-
-    switch (lex->sql_command)
-    {
-    case SQLCOM_SELECT:
-        succp = lex->all_selects_list->table_list.elements > 0;
-        goto retblock;
-        break;
-
-    case SQLCOM_UPDATE_MULTI:
-    case SQLCOM_UPDATE:
-    case SQLCOM_INSERT:
-    case SQLCOM_INSERT_SELECT:
-    case SQLCOM_DELETE:
-    case SQLCOM_DELETE_MULTI:
-    case SQLCOM_TRUNCATE:
-    case SQLCOM_REPLACE:
-    case SQLCOM_REPLACE_SELECT:
-    case SQLCOM_PREPARE:
-    case SQLCOM_EXECUTE:
-        succp = true;
-        goto retblock;
-        break;
-
-    default:
-        succp = false;
-        goto retblock;
-        break;
-    }
-
-retblock:
-    return succp;
-}
-
 bool qc_is_drop_table_query(GWBUF* querybuf)
 {
     bool answer = false;
@@ -2777,7 +2722,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_get_operation,
         qc_get_created_table_name,
         qc_is_drop_table_query,
-        qc_is_real_query,
         qc_get_table_names,
         NULL,
         qc_query_has_clause,

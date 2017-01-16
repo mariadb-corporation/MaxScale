@@ -60,7 +60,6 @@ typedef struct qc_sqlite_info
 
     uint32_t types;                  // The types of the query.
     qc_query_op_t operation;         // The operation in question.
-    bool is_real_query;              // SELECT, UPDATE, INSERT, DELETE or a variation.
     bool has_clause;                 // Has WHERE or HAVING.
     char** table_names;              // Array of table names used in the query.
     size_t table_names_len;          // The used entries in table_names.
@@ -370,7 +369,6 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
 
     info->types = QUERY_TYPE_UNKNOWN;
     info->operation = QUERY_OP_UNDEFINED;
-    info->is_real_query = false;
     info->has_clause = false;
     info->table_names = NULL;
     info->table_names_len = 0;
@@ -1176,7 +1174,6 @@ static void update_field_infos_from_select(QC_SQLITE_INFO* info,
             if (pSrc->a[i].zName)
             {
                 update_names(info, pSrc->a[i].zDatabase, pSrc->a[i].zName);
-                info->is_real_query = true;
             }
 
             if (pSrc->a[i].pSelect)
@@ -1471,7 +1468,6 @@ void mxs_sqlite3CreateView(Parse *pParse,     /* The parsing context */
     if (pSelect)
     {
         update_field_infos_from_select(info, pSelect, QC_USED_IN_SELECT, NULL);
-        info->is_real_query = false;
     }
 
     exposed_sqlite3ExprListDelete(pParse->db, pCNames);
@@ -1488,7 +1484,6 @@ void mxs_sqlite3DeleteFrom(Parse* pParse, SrcList* pTabList, Expr* pWhere, SrcLi
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
     info->operation = QUERY_OP_DELETE;
-    info->is_real_query = true;
     info->has_clause = pWhere ? true : false;
 
     if (pUsing)
@@ -1605,7 +1600,6 @@ void mxs_sqlite3EndTable(Parse *pParse,    /* Parse context */
         if (pSelect)
         {
             update_field_infos_from_select(info, pSelect, QC_USED_IN_SELECT, NULL);
-            info->is_real_query = false;
         }
         else if (pOldTable)
         {
@@ -1643,7 +1637,6 @@ void mxs_sqlite3Insert(Parse* pParse,
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
     info->operation = QUERY_OP_INSERT;
-    info->is_real_query = true;
     ss_dassert(pTabList);
     ss_dassert(pTabList->nSrc >= 1);
     update_names_from_srclist(info, pTabList);
@@ -1782,7 +1775,6 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
     info->operation = QUERY_OP_UPDATE;
-    info->is_real_query = true;
     update_names_from_srclist(info, pTabList);
     info->has_clause = (pWhere ? true : false);
 
@@ -1958,7 +1950,6 @@ void maxscaleExecute(Parse* pParse, Token* pName)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_WRITE;
-    info->is_real_query = true;
 
     info->prepare_name = MXS_MALLOC(pName->n + 1);
     if (info->prepare_name)
@@ -2121,7 +2112,6 @@ void maxscaleKeyword(int token)
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_WRITE;
             info->operation = QUERY_OP_DELETE;
-            info->is_real_query = true;
             break;
 
         case TK_DESC:
@@ -2138,7 +2128,6 @@ void maxscaleKeyword(int token)
         case TK_EXECUTE:
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_WRITE;
-            info->is_real_query = true;
             break;
 
         case TK_EXPLAIN:
@@ -2160,7 +2149,6 @@ void maxscaleKeyword(int token)
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_WRITE;
             info->operation = QUERY_OP_INSERT;
-            info->is_real_query = true;
             break;
 
         case TK_LOCK:
@@ -2171,14 +2159,12 @@ void maxscaleKeyword(int token)
         case TK_PREPARE:
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_PREPARE_NAMED_STMT;
-            info->is_real_query = true;
             break;
 
         case TK_REPLACE:
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_WRITE;
             info->operation = QUERY_OP_INSERT;
-            info->is_real_query = true;
             break;
 
         case TK_REVOKE:
@@ -2218,13 +2204,11 @@ void maxscaleKeyword(int token)
             info->status = QC_QUERY_TOKENIZED;
             info->types = QUERY_TYPE_WRITE;
             info->operation = QUERY_OP_UPDATE;
-            info->is_real_query = true;
             break;
 
         case TK_TRUNCATE:
             info->status = QC_QUERY_TOKENIZED;
             info->types = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
-            info->is_real_query = true;
             break;
 
         default:
@@ -2336,7 +2320,6 @@ void maxscalePrepare(Parse* pParse, Token* pName, Token* pStmt)
 
     info->status = QC_QUERY_PARSED;
     info->types = QUERY_TYPE_PREPARE_NAMED_STMT;
-    info->is_real_query = true;
 
     info->prepare_name = MXS_MALLOC(pName->n + 1);
     if (info->prepare_name)
@@ -2537,7 +2520,6 @@ void maxscaleSet(Parse* pParse, int scope, mxs_set_t kind, ExprList* pList)
                         {
                             update_field_infos_from_select(info, pValue->x.pSelect,
                                                            QC_USED_IN_SUBSELECT, NULL);
-                            info->is_real_query = false; // TODO: This is what qc_mysqlembedded claims.
                         }
                     }
                     break;
@@ -2763,7 +2745,6 @@ void maxscaleTruncate(Parse* pParse, Token* pDatabase, Token* pName)
     info->status = QC_QUERY_PARSED;
     info->types = (QUERY_TYPE_WRITE | QUERY_TYPE_COMMIT);
     info->operation = QUERY_OP_TRUNCATE;
-    info->is_real_query = true;
 
     char* zDatabase;
 
@@ -2811,7 +2792,6 @@ static uint32_t qc_sqlite_get_type(GWBUF* query);
 static qc_query_op_t qc_sqlite_get_operation(GWBUF* query);
 static char* qc_sqlite_get_created_table_name(GWBUF* query);
 static bool qc_sqlite_is_drop_table_query(GWBUF* query);
-static bool qc_sqlite_is_real_query(GWBUF* query);
 static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames);
 static char* qc_sqlite_get_canonical(GWBUF* query);
 static bool qc_sqlite_query_has_clause(GWBUF* query);
@@ -3151,34 +3131,6 @@ static bool qc_sqlite_is_drop_table_query(GWBUF* query)
     return is_drop_table;
 }
 
-static bool qc_sqlite_is_real_query(GWBUF* query)
-{
-    QC_TRACE();
-    ss_dassert(this_unit.initialized);
-    ss_dassert(this_thread.initialized);
-
-    bool is_real_query = false;
-    QC_SQLITE_INFO* info = get_query_info(query);
-
-    if (info)
-    {
-        if (qc_info_is_valid(info->status))
-        {
-            is_real_query = info->is_real_query;
-        }
-        else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
-        {
-            log_invalid_data(query, "cannot report whether query is a real query");
-        }
-    }
-    else
-    {
-        MXS_ERROR("The query could not be parsed. Response not valid.");
-    }
-
-    return is_real_query;
-}
-
 static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
 {
     QC_TRACE();
@@ -3432,7 +3384,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
         qc_sqlite_get_operation,
         qc_sqlite_get_created_table_name,
         qc_sqlite_is_drop_table_query,
-        qc_sqlite_is_real_query,
         qc_sqlite_get_table_names,
         NULL,
         qc_sqlite_query_has_clause,

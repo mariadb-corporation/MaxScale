@@ -494,33 +494,6 @@ bool compare_is_drop_table_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     return success;
 }
 
-bool compare_is_real_query(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
-                           QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
-{
-    bool success = false;
-    const char HEADING[] = "qc_is_real_query         : ";
-
-    bool rv1 = pClassifier1->qc_is_real_query(pCopy1);
-    bool rv2 = pClassifier2->qc_is_real_query(pCopy2);
-
-    stringstream ss;
-    ss << HEADING;
-
-    if (rv1 == rv2)
-    {
-        ss << "Ok : " << rv1;
-        success = true;
-    }
-    else
-    {
-        ss << "ERR: " << rv1 << " != " << rv2;
-    }
-
-    report(success, ss.str());
-
-    return success;
-}
-
 bool compare_strings(const char* const* strings1, const char* const* strings2, int n)
 {
     for (int i = 0; i < n; ++i)
@@ -1201,7 +1174,6 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, QUERY_CLASSIFIER* pClassifier2, con
     errors += !compare_get_operation(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_created_table_name(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_is_drop_table_query(pClassifier1, pCopy1, pClassifier2, pCopy2);
-    errors += !compare_is_real_query(pClassifier1, pCopy1, pClassifier2, pCopy2);
     errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, false);
     errors += !compare_get_table_names(pClassifier1, pCopy1, pClassifier2, pCopy2, true);
     errors += !compare_query_has_clause(pClassifier1, pCopy1, pClassifier2, pCopy2);
