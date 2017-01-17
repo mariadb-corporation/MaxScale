@@ -55,7 +55,8 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *,
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
 static void update_sst_donor_nodes(MONITOR*, int);
-static int compare_cluster_node_index (const void*, const void*, void *);
+static int compare_node_index(const void*, const void*);
+static int compare_node_priority(const void*, const void*);
 
 /**
  * The module entry point routine. It is this routine that
@@ -746,13 +747,16 @@ static void update_sst_donor_nodes(MONITOR *mon, int is_cluster)
     }
 
     /* Set order type */
-    int sort_order = (!ignore_priority) && (int)handle->use_priority;
+    bool sort_order = (!ignore_priority) && (int)handle->use_priority;
 
     /* Sort the array */
-    qsort_r(node_list, found_slaves, sizeof(MONITOR_SERVERS *), compare_cluster_node_index, (void *)&sort_order);
+    qsort(node_list,
+          found_slaves,
+          sizeof(MONITOR_SERVERS *),
+          sort_order ? compare_node_priority : compare_node_index);
 
     /* Select nodename from each server and append it to node_list */
-    for (int k=0; k < found_slaves; k++)
+    for (int k = 0; k < found_slaves; k++)
     {
         MONITOR_SERVERS *ptr = node_list[k];
 
@@ -821,7 +825,29 @@ static void update_sst_donor_nodes(MONITOR *mon, int is_cluster)
 }
 
 /**
- * Compare routine for slave nodes sorting
+ * Compare routine for slave nodes sorted by 'wsrep_local_index'
+ *
+ * The default order is DESC.
+ *
+ * Nodes with lowest 'wsrep_local_index' value
+ * are at the end of the list.
+ *
+ * @param   a        Pointer to array value
+ * @param   b        Pointer to array value
+ * @return  A number less than, threater than or equal to 0
+ */
+
+static int compare_node_index (const void *a, const void *b)
+{
+    const MONITOR_SERVERS *s_a = *(MONITOR_SERVERS * const *)a;
+    const MONITOR_SERVERS *s_b = *(MONITOR_SERVERS * const *)b;
+
+    // Order is DESC: b - a
+    return s_b->server->node_id - s_a->server->node_id;
+}
+
+/**
+ * Compare routine for slave nodes sorted by node priority
  *
  * The default order is DESC.
  *
@@ -829,80 +855,67 @@ static void update_sst_donor_nodes(MONITOR *mon, int is_cluster)
  * are handled.
  *
  * Note: the master selection algorithm is:
- * 1) node with lowest  wsrep_local_index OR
- * 2) lowest priority value and > 0
+ * node with lowest priority value and > 0
  *
- * the sorting order DESC, will add master candidates
+ * This sorting function will add master candidates
  * at the end of the list.
  *
  * @param   a        Pointer to array value
  * @param   b        Pointer to array value
- * @param   order    Ordering by wsrep_local_index or node priority
  * @return  A number less than, threater than or equal to 0
  */
 
-static int compare_cluster_node_index (const void *a, const void *b, void *order)
+static int compare_node_priority (const void *a, const void *b)
 {
+    const MONITOR_SERVERS *s_a = *(MONITOR_SERVERS * const *)a;
+    const MONITOR_SERVERS *s_b = *(MONITOR_SERVERS * const *)b;
 
-  const MONITOR_SERVERS *s_a = *(MONITOR_SERVERS * const *)a;
-  const MONITOR_SERVERS *s_b = *(MONITOR_SERVERS * const *)b;
+    const char *pri_a = server_get_parameter(s_a->server, "priority");
+    const char *pri_b = server_get_parameter(s_b->server, "priority");
 
-  int list_order = *(int *)order;
+    /**
+     * Check priority parameter:
+     *
+     * Return a - b in case of issues
+     */
+    if (!pri_a && pri_b)
+    {
+        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+                  s_a->server->unique_name);
+        return -(INT_MAX - 1);
+    }
+    else if (pri_a && !pri_b)
+    {
+        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+                  s_b->server->unique_name);
+        return INT_MAX - 1;
+    }
+    else if (!pri_a && !pri_b)
+    {
+        MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
+                  s_a->server->unique_name,
+                  s_b->server->unique_name);
+        return 0;
+    }
 
-  if (list_order)
-  {
-      const char *pri_a = server_get_parameter(s_a->server, "priority");
-      const char *pri_b = server_get_parameter(s_b->server, "priority");
+    /* The given  priority is valid */
+    int pri_val_a = atoi(pri_a);
+    int pri_val_b = atoi(pri_b);
 
-      /**
-       * Check priority parameter:
-       *
-       * Return a - b in case of issues
-       */
-      if (!pri_a && pri_b)
-      {
-          MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                    s_a->server->unique_name);
-          return -(INT_MAX - 1);
-      }
-      else if (pri_a && !pri_b)
-      {
-          MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                    s_b->server->unique_name);
-          return INT_MAX - 1;
-      }
-      else if (!pri_a && !pri_b)
-      {
-          MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
-                    s_a->server->unique_name,
-                    s_b->server->unique_name);
-          return 0;
-      }
+    /* Return a - b in case of issues */
+    if ((pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return pri_val_a;
+    }
+    else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && (pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return -pri_val_b;
+    }
+    else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return 0;
+    }
 
-      /* The given  priority is valid */
-      int pri_val_a = atoi(pri_a);
-      int pri_val_b = atoi(pri_b);
-
-      /* Return a - b in case of issues */
-      if ((pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
-      {
-          return pri_val_a;
-      }
-      else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && (pri_val_b < INT_MAX && pri_val_b > 0))
-      {
-          return -pri_val_b;
-      }
-      else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
-      {
-          return 0;
-      }
-
-      // The order is DESC: b -a
-      return pri_val_b - pri_val_a;
-  }
-  else
-  {
-      // Order is DESC: b - a
-      return s_b->server->node_id - s_a->server->node_id;
-  }
+    // The order is DESC: b -a
+    return pri_val_b - pri_val_a;
 }
