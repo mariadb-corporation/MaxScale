@@ -529,7 +529,7 @@ typedef struct router_instance
     char                    *master_uuid;   /*< Set UUID of the master, sent to slaves */
     DCB                     *master;        /*< DCB for master connection */
     DCB                     *client;        /*< DCB for dummy client */
-    SESSION                 *session;       /*< Fake session for master connection */
+    MXS_SESSION             *session;       /*< Fake session for master connection */
     unsigned int            master_state;   /*< State of the master FSM */
     uint8_t                 lastEventReceived; /*< Last even received */
     uint32_t                lastEventTimestamp; /*< Timestamp from last event */

@@ -145,7 +145,7 @@ static int telnetd_read_event(DCB* dcb)
 {
     int n;
     GWBUF *head = NULL;
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     TELNETD *telnetd = (TELNETD *)dcb->protocol;
     char *password, *t;
 
@@ -203,7 +203,7 @@ static int telnetd_read_event(DCB* dcb)
                     MXS_FREE(password);
                     break;
                 case TELNETD_STATE_DATA:
-                    SESSION_ROUTE_QUERY(session, head);
+                    MXS_SESSION_ROUTE_QUERY(session, head);
                     break;
                 }
             }

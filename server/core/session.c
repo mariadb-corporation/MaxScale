@@ -45,7 +45,7 @@
 #include "maxscale/filter.h"
 
 /* A session with null values, used for initialization */
-static SESSION session_initialized = SESSION_INIT;
+static MXS_SESSION session_initialized = SESSION_INIT;
 
 /** Global session id; updated safely by use of atomic_add */
 static int session_id;
@@ -53,11 +53,11 @@ static int session_id;
 static struct session session_dummy_struct;
 
 static void session_initialize(void *session);
-static int session_setup_filters(SESSION *session);
-static void session_simple_free(SESSION *session, DCB *dcb);
-static void session_add_to_all_list(SESSION *session);
-static SESSION *session_find_free();
-static void session_final_free(SESSION *session);
+static int session_setup_filters(MXS_SESSION *session);
+static void session_simple_free(MXS_SESSION *session, DCB *dcb);
+static void session_add_to_all_list(MXS_SESSION *session);
+static MXS_SESSION *session_find_free();
+static void session_final_free(MXS_SESSION *session);
 
 /**
  * @brief Initialize a session
@@ -75,7 +75,7 @@ static void session_final_free(SESSION *session);
 static void
 session_initialize(void *session)
 {
-    *(SESSION *)session = session_initialized;
+    *(MXS_SESSION *)session = session_initialized;
 }
 
 /**
@@ -89,10 +89,10 @@ session_initialize(void *session)
  * @param client_dcb    The client side DCB
  * @return              The newly created session or NULL if an error occured
  */
-SESSION *
+MXS_SESSION *
 session_alloc(SERVICE *service, DCB *client_dcb)
 {
-    SESSION *session = (SESSION *)(MXS_MALLOC(sizeof(*session)));
+    MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
 
     if (NULL == session)
     {
@@ -217,10 +217,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
  * @param client_dcb    The client side DCB
  * @return              The dummy created session
  */
-SESSION *
+MXS_SESSION *
 session_set_dummy(DCB *client_dcb)
 {
-    SESSION *session;
+    MXS_SESSION *session;
 
     session = &session_dummy_struct;
     session->ses_chk_top = CHK_NUM_SESSION;
@@ -248,7 +248,7 @@ session_set_dummy(DCB *client_dcb)
  * @param session      session
  * @param priority syslog priority
  */
-void session_enable_log_priority(SESSION* session, int priority)
+void session_enable_log_priority(MXS_SESSION* session, int priority)
 {
     session->enabled_log_priorities |= (1 << priority);
     atomic_add((int *)&mxs_log_session_count[priority], 1);
@@ -262,7 +262,7 @@ void session_enable_log_priority(SESSION* session, int priority)
  * @param session   session
  * @param priority syslog priority
  */
-void session_disable_log_priority(SESSION* session, int priority)
+void session_disable_log_priority(MXS_SESSION* session, int priority)
 {
     if (session->enabled_log_priorities & (1 << priority))
     {
@@ -279,7 +279,7 @@ void session_disable_log_priority(SESSION* session, int priority)
  * @return              True if the session was sucessfully linked to the DCB
  */
 bool
-session_link_dcb(SESSION *session, DCB *dcb)
+session_link_dcb(MXS_SESSION *session, DCB *dcb)
 {
     spinlock_acquire(&session->ses_lock);
     ss_info_dassert(session->state != SESSION_STATE_FREE,
@@ -307,7 +307,7 @@ session_link_dcb(SESSION *session, DCB *dcb)
  * @param session       The session to deallocate
  */
 static void
-session_simple_free(SESSION *session, DCB *dcb)
+session_simple_free(MXS_SESSION *session, DCB *dcb)
 {
     /* Does this possibly need a lock? */
     if (dcb->data && !DCB_IS_CLONE(dcb))
@@ -339,7 +339,7 @@ session_simple_free(SESSION *session, DCB *dcb)
  *
  * @param session       The session to deallocate
  */
-static void session_free(SESSION *session)
+static void session_free(MXS_SESSION *session)
 {
     CHK_SESSION(session);
     ss_dassert(session->refcount == 0);
@@ -396,7 +396,7 @@ static void session_free(SESSION *session)
 }
 
 static void
-session_final_free(SESSION *session)
+session_final_free(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
     MXS_FREE(session);
@@ -409,7 +409,7 @@ session_final_free(SESSION *session)
  * @return              1 if the session is valid otherwise 0
  */
 int
-session_isvalid(SESSION *session)
+session_isvalid(MXS_SESSION *session)
 {
     return session != NULL;
 }
@@ -420,7 +420,7 @@ session_isvalid(SESSION *session)
  * @param session       Session to print
  */
 void
-printSession(SESSION *session)
+printSession(MXS_SESSION *session)
 {
     struct tm result;
     char timebuf[40];
@@ -501,7 +501,7 @@ dprintAllSessions(DCB *dcb)
  * @param print_session   The session to print
  */
 void
-dprintSession(DCB *dcb, SESSION *print_session)
+dprintSession(DCB *dcb, MXS_SESSION *print_session)
 {
     struct tm result;
     char buf[30];
@@ -546,7 +546,7 @@ bool dListSessions_cb(DCB *dcb, void *data)
     if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
         DCB *out_dcb = (DCB*)data;
-        SESSION *session = dcb->session;
+        MXS_SESSION *session = dcb->session;
         dcb_printf(out_dcb, "%-16lu | %-15s | %-14s | %s\n", session->ses_id,
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
@@ -584,7 +584,7 @@ dListSessions(DCB *dcb)
  * @return A string representation of the session state
  */
 char *
-session_state(session_state_t state)
+session_state(mxs_session_state_t state)
 {
     switch (state)
     {
@@ -624,7 +624,7 @@ session_state(session_state_t state)
  * @return      0 if filter creation fails
  */
 static int
-session_setup_filters(SESSION *session)
+session_setup_filters(MXS_SESSION *session)
 {
     SERVICE *service = session->service;
     MXS_DOWNSTREAM *head;
@@ -698,7 +698,7 @@ session_setup_filters(SESSION *session)
 int
 session_reply(void *instance, void *session, GWBUF *data)
 {
-    SESSION *the_session = (SESSION *)session;
+    MXS_SESSION *the_session = (MXS_SESSION *)session;
 
     return the_session->client_dcb->func.write(the_session->client_dcb, data);
 }
@@ -709,7 +709,7 @@ session_reply(void *instance, void *session, GWBUF *data)
  * @param session       The session whose client address to return
  */
 const char *
-session_get_remote(const SESSION *session)
+session_get_remote(const MXS_SESSION *session)
 {
     if (session && session->client_dcb)
     {
@@ -718,7 +718,7 @@ session_get_remote(const SESSION *session)
     return NULL;
 }
 
-bool session_route_query(SESSION* ses, GWBUF* buf)
+bool session_route_query(MXS_SESSION* ses, GWBUF* buf)
 {
     bool succp;
 
@@ -751,7 +751,7 @@ return_succp:
  * @return      The user name or NULL if it can not be determined.
  */
 const char *
-session_get_user(const SESSION *session)
+session_get_user(const MXS_SESSION *session)
 {
     return (session && session->client_dcb) ? session->client_dcb->user : NULL;
 }
@@ -784,7 +784,7 @@ bool dcb_iter_cb(DCB *dcb, void *data)
     else
     {
         char buf[20];
-        SESSION *list_session = dcb->session;
+        MXS_SESSION *list_session = dcb->session;
 
         cbdata->index++;
         cbdata->row = resultset_make_row(cbdata->set);
@@ -867,21 +867,21 @@ sessionGetList(SESSIONLISTFILTER filter)
 }
 /*lint +e429 */
 
-session_trx_state_t session_get_trx_state(const SESSION* ses)
+mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses)
 {
     return ses->trx_state;
 }
 
-session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state)
+mxs_session_trx_state_t session_set_trx_state(MXS_SESSION* ses, mxs_session_trx_state_t new_state)
 {
-    session_trx_state_t prev_state = ses->trx_state;
+    mxs_session_trx_state_t prev_state = ses->trx_state;
 
     ses->trx_state = new_state;
 
     return prev_state;
 }
 
-const char* session_trx_state_to_string(session_trx_state_t state)
+const char* session_trx_state_to_string(mxs_session_trx_state_t state)
 {
     switch (state)
     {
@@ -902,7 +902,7 @@ const char* session_trx_state_to_string(session_trx_state_t state)
 static bool ses_find_id(DCB *dcb, void *data)
 {
     void **params = (void**)data;
-    SESSION **ses = (SESSION**)params[0];
+    MXS_SESSION **ses = (MXS_SESSION**)params[0];
     int *id = (int*)params[1];
     bool rval = true;
 
@@ -915,9 +915,9 @@ static bool ses_find_id(DCB *dcb, void *data)
     return rval;
 }
 
-SESSION* session_get_by_id(int id)
+MXS_SESSION* session_get_by_id(int id)
 {
-    SESSION *session = NULL;
+    MXS_SESSION *session = NULL;
     void *params[] = {&session, &id};
 
     dcb_foreach(ses_find_id, params);
@@ -925,13 +925,13 @@ SESSION* session_get_by_id(int id)
     return session;
 }
 
-SESSION* session_get_ref(SESSION *session)
+MXS_SESSION* session_get_ref(MXS_SESSION *session)
 {
     atomic_add(&session->refcount, 1);
     return session;
 }
 
-void session_put_ref(SESSION *session)
+void session_put_ref(MXS_SESSION *session)
 {
     if (session && session->state != SESSION_STATE_DUMMY)
     {
@@ -943,7 +943,7 @@ void session_put_ref(SESSION *session)
     }
 }
 
-bool session_store_stmt(SESSION *session, GWBUF *buf, const SERVER *server)
+bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const SERVER *server)
 {
     bool rval = false;
 
@@ -964,7 +964,7 @@ bool session_store_stmt(SESSION *session, GWBUF *buf, const SERVER *server)
     return rval;
 }
 
-bool session_take_stmt(SESSION *session, GWBUF **buffer, const SERVER **target)
+bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const SERVER **target)
 {
     bool rval = false;
 
@@ -980,7 +980,7 @@ bool session_take_stmt(SESSION *session, GWBUF **buffer, const SERVER **target)
     return rval;
 }
 
-void session_clear_stmt(SESSION *session)
+void session_clear_stmt(MXS_SESSION *session)
 {
     gwbuf_free(session->stmt.buffer);
     session->stmt.buffer = NULL;

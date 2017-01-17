@@ -47,7 +47,7 @@
 #include "maxrows.h"
 
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
 static void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
 static void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_DOWNSTREAM *downstream);
@@ -157,13 +157,13 @@ typedef struct maxrows_session_data
     MXS_DOWNSTREAM          down;              /**< The previous filter or equivalent. */
     MXS_UPSTREAM            up;                /**< The next filter or equivalent. */
     MAXROWS_RESPONSE_STATE  res;               /**< The response state. */
-    SESSION                *session;           /**< The session this data is associated with. */
+    MXS_SESSION             *session;          /**< The session this data is associated with. */
     maxrows_session_state_t state;
     bool                    large_packet;      /**< Large packet (> 16MB)) indicator */
     bool                    discard_resultset; /**< Discard resultset indicator */
 } MAXROWS_SESSION_DATA;
 
-static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance, SESSION *session);
+static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance, MXS_SESSION *session);
 static void maxrows_session_data_free(MAXROWS_SESSION_DATA *data);
 
 static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata);
@@ -211,7 +211,7 @@ static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAM
  *
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
     MAXROWS_SESSION_DATA *csdata = maxrows_session_data_create(cinstance, session);
@@ -448,7 +448,7 @@ static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
  * @return Session data or NULL if creation fails.
  */
 static MAXROWS_SESSION_DATA *maxrows_session_data_create(MAXROWS_INSTANCE *instance,
-                                                         SESSION* session)
+                                                         MXS_SESSION* session)
 {
     MAXROWS_SESSION_DATA *data = (MAXROWS_SESSION_DATA*)MXS_CALLOC(1, sizeof(MAXROWS_SESSION_DATA));
 

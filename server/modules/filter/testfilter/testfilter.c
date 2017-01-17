@@ -31,7 +31,7 @@
 
 
 static  MXS_FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *params);
-static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
@@ -137,7 +137,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @return Session specific data for this session
  */
 static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
     TEST_SESSION    *my_session;

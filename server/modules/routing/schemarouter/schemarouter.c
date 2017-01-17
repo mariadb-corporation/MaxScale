@@ -58,7 +58,7 @@
  */
 
 static ROUTER* createInstance(SERVICE *service, char **options);
-static void*   newSession(ROUTER *instance, SESSION *session);
+static void*   newSession(ROUTER *instance, MXS_SESSION *session);
 static void    closeSession(ROUTER *instance, void *session);
 static void    freeSession(ROUTER *instance, void *session);
 static int     routeQuery(ROUTER *instance, void *session, GWBUF *queue);
@@ -85,7 +85,7 @@ static uint64_t getCapabilities(void);
 
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
-                                    SESSION*         session,
+                                    MXS_SESSION*     session,
                                     ROUTER_INSTANCE* router);
 
 static bool get_shard_dcb(DCB**              dcb,
@@ -133,7 +133,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
                                         ROUTER_CLIENT_SES* rses,
                                         DCB*               backend_dcb,
                                         GWBUF*             errmsg);
-static void handle_error_reply_client(SESSION*           ses,
+static void handle_error_reply_client(MXS_SESSION*       ses,
                                       ROUTER_CLIENT_SES* rses,
                                       DCB*               backend_dcb,
                                       GWBUF*             errmsg);
@@ -847,7 +847,7 @@ enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* 
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static void* newSession(ROUTER* router_inst, SESSION* session)
+static void* newSession(ROUTER* router_inst, MXS_SESSION* session)
 {
     backend_ref_t* backend_ref; /*< array of backend references (DCB, BACKEND, cursor) */
     ROUTER_CLIENT_SES* client_rses = NULL;
@@ -2678,7 +2678,7 @@ static void bref_set_state(backend_ref_t* bref, bref_state_t state)
  */
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
-                                    SESSION*         session,
+                                    MXS_SESSION*     session,
                                     ROUTER_INSTANCE* router)
 {
     bool succp = true;
@@ -3566,7 +3566,7 @@ static void handleError(ROUTER*        instance,
                         error_action_t action,
                         bool*          succp)
 {
-    SESSION* session;
+    MXS_SESSION* session;
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
 
@@ -3638,12 +3638,12 @@ static void handleError(ROUTER*        instance,
 }
 
 
-static void handle_error_reply_client(SESSION*           ses,
+static void handle_error_reply_client(MXS_SESSION*       ses,
                                       ROUTER_CLIENT_SES* rses,
                                       DCB*               backend_dcb,
                                       GWBUF*             errmsg)
 {
-    session_state_t sesstate;
+    mxs_session_state_t sesstate;
     DCB* client_dcb;
     backend_ref_t*  bref;
 
@@ -3709,7 +3709,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
                                         DCB*               backend_dcb,
                                         GWBUF*             errmsg)
 {
-    SESSION* ses;
+    MXS_SESSION* ses;
     unsigned char cmd = *((unsigned char*)errmsg->start + 4);
 
     backend_ref_t* bref;

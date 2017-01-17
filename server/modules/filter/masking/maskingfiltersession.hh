@@ -29,14 +29,14 @@ public:
 
     ~MaskingFilterSession();
 
-    static MaskingFilterSession* create(SESSION* pSession, const MaskingFilter* pFilter);
+    static MaskingFilterSession* create(MXS_SESSION* pSession, const MaskingFilter* pFilter);
 
     int routeQuery(GWBUF* pPacket);
 
     int clientReply(GWBUF* pPacket);
 
 private:
-    MaskingFilterSession(SESSION* pSession, const MaskingFilter* pFilter);
+    MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter);
 
     MaskingFilterSession(const MaskingFilterSession&);
     MaskingFilterSession& operator = (const MaskingFilterSession&);

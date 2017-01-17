@@ -321,13 +321,13 @@ bool cache_rules_should_store(CACHE_RULES *self, const char *default_db, const G
     return should_store;
 }
 
-bool cache_rules_should_use(CACHE_RULES *self, const SESSION *session)
+bool cache_rules_should_use(CACHE_RULES *self, const MXS_SESSION *session)
 {
     bool should_use = false;
 
     CACHE_RULE *rule = self->use_rules;
-    const char *user = session_get_user((SESSION*)session);
-    const char *host = session_get_remote((SESSION*)session);
+    const char *user = session_get_user((MXS_SESSION*)session);
+    const char *host = session_get_remote((MXS_SESSION*)session);
 
     if (!user)
     {
@@ -409,7 +409,7 @@ bool CacheRules::should_store(const char* zdefault_db, const GWBUF* pquery) cons
     return cache_rules_should_store(prules_, zdefault_db, pquery);
 }
 
-bool CacheRules::should_use(const SESSION* psession) const
+bool CacheRules::should_use(const MXS_SESSION* psession) const
 {
     return cache_rules_should_use(prules_, psession);
 }

@@ -96,7 +96,7 @@ int dbfw_yyparse(void*);
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
@@ -261,7 +261,7 @@ typedef struct
  */
 typedef struct
 {
-    SESSION       *session;      /*< Client session structure */
+    MXS_SESSION   *session;      /*< Client session structure */
     char          *errmsg;       /*< Rule specific error message */
     QUERYSPEED    *query_speed;  /*< How fast the user has executed queries */
     MXS_DOWNSTREAM down;         /*< Next object in the downstream chain */
@@ -1599,7 +1599,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @return Session specific data for this session
  */
 static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     FW_SESSION *my_session;
 

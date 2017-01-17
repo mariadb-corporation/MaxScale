@@ -107,7 +107,7 @@ bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)
     return m_sRules->should_store(zDefaultDb, pQuery);
 }
 
-bool Cache::should_use(const SESSION* pSession)
+bool Cache::should_use(const MXS_SESSION* pSession)
 {
     return m_sRules->should_use(pSession);
 }

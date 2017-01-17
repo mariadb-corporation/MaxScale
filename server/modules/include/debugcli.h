@@ -59,7 +59,7 @@ typedef struct cli_instance
 typedef struct cli_session
 {
     char        cmdbuf[CMDBUFLEN]; /*< The command buffer used to build up user commands */
-    SESSION     *session;      /*< The gateway session */
+    MXS_SESSION *session;      /*< The gateway session */
     struct cli_session
         *next;         /*< The next pointer for the list of sessions */
 } CLI_SESSION;

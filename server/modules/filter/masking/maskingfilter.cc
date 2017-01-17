@@ -133,7 +133,7 @@ MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG
 }
 
 
-MaskingFilterSession* MaskingFilter::newSession(SESSION* pSession)
+MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 {
     return MaskingFilterSession::create(pSession, this);
 }

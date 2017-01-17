@@ -411,7 +411,7 @@ bool filter_load(MXS_FILTER_DEF* filter)
  *                      if the filter could not be created
  */
 MXS_DOWNSTREAM *
-filter_apply(MXS_FILTER_DEF *filter, SESSION *session, MXS_DOWNSTREAM *downstream)
+filter_apply(MXS_FILTER_DEF *filter, MXS_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
     MXS_DOWNSTREAM *me;
 

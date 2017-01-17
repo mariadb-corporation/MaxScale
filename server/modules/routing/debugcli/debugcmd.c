@@ -2138,7 +2138,7 @@ bool seslog_cb(DCB *dcb, void *data)
     struct log_action_entry *entry = ((void**)data)[0];
     size_t *id = ((void**)data)[1];
     bool enable = (bool)((void**)data)[2];
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
 
     if (session->ses_id == *id)
     {
@@ -2251,7 +2251,7 @@ bool sesprio_cb(DCB *dcb, void *data)
     int *priority = ((void**)data)[0];
     size_t *id = ((void**)data)[1];
     bool enable = (bool)((void**)data)[2];
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
 
     if (session->ses_id == *id)
     {

@@ -20,7 +20,7 @@ namespace maxscale
 // FilterSession
 //
 
-FilterSession::FilterSession(SESSION* pSession)
+FilterSession::FilterSession(MXS_SESSION* pSession)
     : m_pSession(pSession)
 {
 }

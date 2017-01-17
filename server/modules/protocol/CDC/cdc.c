@@ -117,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static int
 cdc_read_event(DCB* dcb)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     CDC_protocol *protocol = (CDC_protocol *) dcb->protocol;
     int n, auth_val, rc = 0;
     GWBUF *head = NULL;
@@ -199,7 +199,7 @@ cdc_read_event(DCB* dcb)
                          (int)GWBUF_LENGTH(head), (char*)GWBUF_DATA(head));
 
                 // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                rc = SESSION_ROUTE_QUERY(session, head);
+                rc = MXS_SESSION_ROUTE_QUERY(session, head);
             }
             break;
 

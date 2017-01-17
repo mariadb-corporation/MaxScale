@@ -70,7 +70,7 @@ typedef enum error_action
 typedef struct router_object
 {
     ROUTER  *(*createInstance)(SERVICE *service, char **options);
-    void    *(*newSession)(ROUTER *instance, SESSION *session);
+    void    *(*newSession)(ROUTER *instance, MXS_SESSION *session);
     void     (*closeSession)(ROUTER *instance, void *router_session);
     void     (*freeSession)(ROUTER *instance, void *router_session);
     int32_t  (*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);

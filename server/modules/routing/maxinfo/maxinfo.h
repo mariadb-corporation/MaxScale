@@ -58,9 +58,9 @@ typedef struct maxinfo_instance
 
 typedef struct maxinfo_session
 {
-    SESSION     *session;   /*< The MaxScale session */
-    DCB     *dcb;       /*< DCB of the client side */
-    GWBUF       *queue;     /*< Queue for building contiguous requests */
+    MXS_SESSION    *session;   /*< The MaxScale session */
+    DCB            *dcb;       /*< DCB of the client side */
+    GWBUF          *queue;     /*< Queue for building contiguous requests */
     struct maxinfo_session
         *next;      /*< The next pointer for the list of sessions */
 } INFO_SESSION;

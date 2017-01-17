@@ -46,10 +46,10 @@ static int
 test1()
 {
     SERVICE     *service;
-    SESSION     *session;
-    DCB     *dcb;
-    int     result;
-    int     argc = 3;
+    MXS_SESSION *session;
+    DCB         *dcb;
+    int         result;
+    int         argc = 3;
 
     mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     init_test_env(NULL);

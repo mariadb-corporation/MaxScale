@@ -152,7 +152,7 @@ bool cache_rules_should_store(CACHE_RULES *rules, const char *default_db, const 
  *
  * @return True, if the cache should be used.
  */
-bool cache_rules_should_use(CACHE_RULES *rules, const SESSION *session);
+bool cache_rules_should_use(CACHE_RULES *rules, const MXS_SESSION *session);
 
 MXS_END_DECLS
 
@@ -209,7 +209,7 @@ public:
      *
      * @return True, if the cache should be used.
      */
-    bool should_use(const SESSION* psession) const;
+    bool should_use(const MXS_SESSION* psession) const;
 
 private:
     CacheRules(CACHE_RULES* prules);

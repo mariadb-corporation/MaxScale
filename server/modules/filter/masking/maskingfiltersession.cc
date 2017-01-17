@@ -25,7 +25,7 @@ using std::ostream;
 using std::string;
 using std::stringstream;
 
-MaskingFilterSession::MaskingFilterSession(SESSION* pSession, const MaskingFilter* pFilter)
+MaskingFilterSession::MaskingFilterSession(MXS_SESSION* pSession, const MaskingFilter* pFilter)
     : maxscale::FilterSession(pSession)
     , m_filter(*pFilter)
     , m_state(IGNORING_RESPONSE)
@@ -37,7 +37,7 @@ MaskingFilterSession::~MaskingFilterSession()
 }
 
 //static
-MaskingFilterSession* MaskingFilterSession::create(SESSION* pSession, const MaskingFilter* pFilter)
+MaskingFilterSession* MaskingFilterSession::create(MXS_SESSION* pSession, const MaskingFilter* pFilter)
 {
     return new MaskingFilterSession(pSession, pFilter);
 }

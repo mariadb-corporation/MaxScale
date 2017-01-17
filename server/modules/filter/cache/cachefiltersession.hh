@@ -58,7 +58,7 @@ public:
      *
      * @return A new instance or NULL if memory allocation fails.
      */
-    static CacheFilterSession* Create(Cache* pCache, SESSION* pSession);
+    static CacheFilterSession* Create(Cache* pCache, MXS_SESSION* pSession);
 
     /**
      * The session has been closed.
@@ -106,7 +106,7 @@ private:
     void store_result();
 
 private:
-    CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb);
+    CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
     CacheFilterSession(const CacheFilterSession&);
     CacheFilterSession& operator = (const CacheFilterSession&);

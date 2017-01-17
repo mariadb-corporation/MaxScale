@@ -150,10 +150,10 @@ public:
     void diagnostics(DCB *pDcb);
 
 protected:
-    FilterSession(SESSION* pSession);
+    FilterSession(MXS_SESSION* pSession);
 
 protected:
-    SESSION*   m_pSession; /*< The SESSION this filter session is associated with. */
+    MXS_SESSION*   m_pSession; /*< The SESSION this filter session is associated with. */
     Downstream m_down;     /*< The downstream component. */
     Upstream   m_up;       /*< The upstream component. */
 };
@@ -212,7 +212,7 @@ public:
         return reinterpret_cast<MXS_FILTER*>(pFilter);
     }
 
-    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, SESSION* pSession)
+    static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession)
     {
         FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
         void* pFilterSession;

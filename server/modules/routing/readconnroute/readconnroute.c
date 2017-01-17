@@ -90,7 +90,7 @@
 
 /* The router entry points */
 static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, SESSION *session);
+static void *newSession(ROUTER *instance, MXS_SESSION *session);
 static void closeSession(ROUTER *instance, void *router_session);
 static void freeSession(ROUTER *instance, void *router_session);
 static int routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
@@ -268,7 +268,7 @@ createInstance(SERVICE *service, char **options)
  * @return Session specific data for this session
  */
 static void *
-newSession(ROUTER *instance, SESSION *session)
+newSession(ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
@@ -695,8 +695,8 @@ static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
 
 {
     DCB *client_dcb;
-    SESSION *session = problem_dcb->session;
-    session_state_t sesstate;
+    MXS_SESSION *session = problem_dcb->session;
+    mxs_session_state_t sesstate;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
 
     /** Don't handle same error twice on same DCB */
@@ -848,7 +848,7 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession)
 {
     ss_dassert(dcb != NULL);
-    SESSION* session = dcb->session;
+    MXS_SESSION* session = dcb->session;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*) routersession;
     SERVICE* service = session->service;
     ROUTER* router = (ROUTER *) service->router;

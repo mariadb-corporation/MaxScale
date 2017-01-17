@@ -16,7 +16,7 @@
 #include <maxscale/modinfo.h>
 
 static  ROUTER *createInstance(SERVICE *service, char **options);
-static  void   *newSession(ROUTER *instance, SESSION *session);
+static  void   *newSession(ROUTER *instance, MXS_SESSION *session);
 static  void   closeSession(ROUTER *instance, void *session);
 static  void   freeSession(ROUTER *instance, void *session);
 static  int    routeQuery(ROUTER *instance, void *session, GWBUF *queue);
@@ -105,9 +105,9 @@ createInstance(SERVICE *service, char **options)
  * @return Session specific data for this session
  */
 static  void    *
-newSession(ROUTER *instance, SESSION *session)
+newSession(ROUTER *instance, MXS_SESSION *session)
 {
-    return (SESSION*)MXS_MALLOC(sizeof(TESTSESSION));
+    return (MXS_SESSION*)MXS_MALLOC(sizeof(TESTSESSION));
 }
 
 /**

@@ -90,7 +90,7 @@
 /* The router entry points */
 static  ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
-static  void    *newSession(ROUTER *instance, SESSION *session);
+static  void    *newSession(ROUTER *instance, MXS_SESSION *session);
 static  void    closeSession(ROUTER *instance, void *router_session);
 static  void    freeSession(ROUTER *instance, void *router_session);
 static  int     routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
@@ -961,7 +961,7 @@ free_instance(ROUTER_INSTANCE *instance)
  * @return Session specific data for this session
  */
 static void *
-newSession(ROUTER *instance, SESSION *session)
+newSession(ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave;

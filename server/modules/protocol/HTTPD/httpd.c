@@ -125,7 +125,7 @@ static char *httpd_default_auth()
  */
 static int httpd_read_event(DCB* dcb)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN - 1] = "";
@@ -291,7 +291,7 @@ static int httpd_read_event(DCB* dcb)
     {
         strcpy((char *)GWBUF_DATA(uri), url);
         gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
-        SESSION_ROUTE_QUERY(session, uri);
+        MXS_SESSION_ROUTE_QUERY(session, uri);
     }
 
     /* force the client connecton close */

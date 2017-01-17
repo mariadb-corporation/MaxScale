@@ -130,7 +130,7 @@ static void dcb_initialize(void *dcb);
 static void dcb_final_free(DCB *dcb);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
-static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
+static int  dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf);
 static inline DCB * dcb_find_in_list(DCB *dcb);
 static inline void dcb_process_victim_queue(int threadid);
 static void dcb_stop_polling_and_shutdown (DCB *dcb);
@@ -341,7 +341,7 @@ dcb_final_free(DCB *dcb)
         /*<
          * Terminate client session.
          */
-        SESSION *local_session = dcb->session;
+        MXS_SESSION *local_session = dcb->session;
         dcb->session = NULL;
         CHK_SESSION(local_session);
         if (SESSION_STATE_DUMMY != local_session->state)
@@ -634,7 +634,7 @@ dcb_stop_polling_and_shutdown(DCB *dcb)
  * @return              The new allocated dcb or NULL if the DCB was not connected
  */
 DCB *
-dcb_connect(SERVER *server, SESSION *session, const char *protocol)
+dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
 {
     DCB         *dcb;
     MXS_PROTOCOL  *funcs;
@@ -1712,7 +1712,7 @@ dcb_maybe_add_persistent(DCB *dcb)
              * Terminate client session.
              */
         {
-            SESSION *local_session = dcb->session;
+            MXS_SESSION *local_session = dcb->session;
             session_set_dummy(dcb);
             CHK_SESSION(local_session);
             if (SESSION_STATE_DUMMY != local_session->state)
@@ -2572,7 +2572,7 @@ dcb_null_write(DCB *dcb, GWBUF *buf)
  * @param buf           The buffer with the new auth request
  */
 static int
-dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
+dcb_null_auth(DCB *dcb, SERVER *server, MXS_SESSION *session, GWBUF *buf)
 {
     return 0;
 }
@@ -3524,7 +3524,7 @@ void dcb_process_idle_sessions(int thr)
         {
             if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
             {
-                SESSION *session = dcb->session;
+                MXS_SESSION *session = dcb->session;
 
                 if (session->service && session->client_dcb && session->client_dcb->state == DCB_STATE_POLLING &&
                     hkheartbeat - session->client_dcb->last_read > session->service->conn_idle_timeout * 10)

@@ -100,7 +100,7 @@ static unsigned char required_packets[] =
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char* name, char **options, CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
@@ -147,7 +147,7 @@ typedef struct
     int replies[2]; /* Number of queries received */
     int reply_packets[2]; /* Number of OK, ERR, LOCAL_INFILE_REQUEST or RESULT_SET packets received */
     DCB *branch_dcb; /* Client DCB for "branch" service */
-    SESSION *branch_session; /* The branch service session */
+    MXS_SESSION *branch_session; /* The branch service session */
     TEE_INSTANCE *instance;
     int n_duped; /* Number of duplicated queries */
     int n_rejected; /* Number of rejected queries */
@@ -165,7 +165,7 @@ typedef struct
 
 typedef struct orphan_session_tt
 {
-    SESSION* session; /*< The child branch session whose parent was freed before
+    MXS_SESSION* session; /*< The child branch session whose parent was freed before
                * the child session was in a suitable state. */
     struct orphan_session_tt* next;
 } orphan_session_t;
@@ -187,7 +187,7 @@ int route_single_query(TEE_INSTANCE* my_instance,
                        GWBUF* buffer,
                        GWBUF* clone);
 int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer);
-void create_orphan(SESSION* ses);
+void create_orphan(MXS_SESSION* ses);
 
 static void
 orphan_free(void* data)
@@ -419,7 +419,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @return Session specific data for this session
  */
 static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     TEE_INSTANCE *my_instance = (TEE_INSTANCE *) instance;
     TEE_SESSION *my_session;
@@ -479,7 +479,7 @@ newSession(MXS_FILTER *instance, SESSION *session)
         if (my_session->active)
         {
             DCB* dcb;
-            SESSION* ses;
+            MXS_SESSION* ses;
             if ((dcb = dcb_clone(session->client_dcb)) == NULL)
             {
                 freeSession(instance, (MXS_FILTER_SESSION *) my_session);
@@ -527,7 +527,7 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
     TEE_SESSION *my_session = (TEE_SESSION *) session;
     ROUTER_OBJECT *router;
     void *router_instance, *rsession;
-    SESSION *bsession;
+    MXS_SESSION *bsession;
 #ifdef SS_DEBUG
     MXS_INFO("Tee close: %d", atomic_add(&debug_seq, 1));
 #endif
@@ -583,8 +583,8 @@ static void
 freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    SESSION* ses = my_session->branch_session;
-    session_state_t state;
+    MXS_SESSION* ses = my_session->branch_session;
+    mxs_session_state_t state;
 #ifdef SS_DEBUG
     MXS_INFO("Tee free: %d", atomic_add(&debug_seq, 1));
 #endif
@@ -892,7 +892,7 @@ int route_single_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF
 
             if (my_session->branch_session->state == SESSION_STATE_ROUTER_READY)
             {
-                SESSION_ROUTE_QUERY(my_session->branch_session, clone);
+                MXS_SESSION_ROUTE_QUERY(my_session->branch_session, clone);
             }
             else
             {
@@ -950,7 +950,7 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
     return 1;
 }
 
-void create_orphan(SESSION* ses)
+void create_orphan(MXS_SESSION* ses)
 {
     orphan_session_t* orphan = MXS_MALLOC(sizeof(orphan_session_t));
     if (orphan)

@@ -35,7 +35,7 @@
  * @endverbatim
  */
 
-static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history);
+static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history);
 
 static void log_server_connections(select_criteria_t select_criteria,
                                    backend_ref_t *backend_ref, int router_nservers);
@@ -152,7 +152,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                     int router_nservers, int max_nslaves,
                                     int max_slave_rlag,
                                     select_criteria_t select_criteria,
-                                    SESSION *session,
+                                    MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
                                     bool active_session)
 {
@@ -419,7 +419,7 @@ static int bref_cmp_current_load(const void *bref1, const void *bref2)
  * @param execute_history Execute session command history
  * @return True if successful, false if an error occurred
  */
-static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history)
+static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execute_history)
 {
     SERVER *serv = bref->ref->server;
     bool rval = false;

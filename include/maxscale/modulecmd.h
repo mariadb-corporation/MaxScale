@@ -89,7 +89,7 @@ struct arg_node
         bool           boolean;
         SERVICE        *service;
         SERVER         *server;
-        SESSION        *session;
+        MXS_SESSION    *session;
         DCB            *dcb;
         MXS_MONITOR    *monitor;
         MXS_FILTER_DEF *filter;

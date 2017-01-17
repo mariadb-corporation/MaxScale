@@ -69,7 +69,7 @@ typedef enum
     SESSION_STATE_TO_BE_FREED,      /*< ready to be freed as soon as there are no references */
     SESSION_STATE_FREE,             /*< for all sessions */
     SESSION_STATE_DUMMY             /*< dummy session for consistency */
-} session_state_t;
+} mxs_session_state_t;
 
 typedef enum
 {
@@ -89,7 +89,7 @@ typedef enum
     SESSION_TRX_READ_ONLY   = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
     /*< An explicit READ WRITE transaction is active. */
     SESSION_TRX_READ_WRITE  = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT)
-} session_trx_state_t;
+} mxs_session_trx_state_t;
 
 /**
  * Convert transaction state to string representation.
@@ -97,7 +97,7 @@ typedef enum
  * @param state A transaction state.
  * @return String representation of the state.
  */
-const char* session_trx_state_to_string(session_trx_state_t state);
+const char* session_trx_state_to_string(mxs_session_trx_state_t state);
 
 /**
  * The downstream element in the filter chain. This may refer to
@@ -160,30 +160,30 @@ typedef enum
  */
 typedef struct session
 {
-    skygw_chk_t     ses_chk_top;
-    SPINLOCK        ses_lock;
-    session_state_t state;            /*< Current descriptor state */
-    size_t          ses_id;           /*< Unique session identifier */
-    int             enabled_log_priorities; /*< Bitfield of enabled syslog priorities */
-    struct dcb      *client_dcb;      /*< The client connection */
-    void            *router_session;  /*< The router instance data */
-    SESSION_STATS   stats;            /*< Session statistics */
-    struct service  *service;         /*< The service this session is using */
-    int             n_filters;        /*< Number of filter sessions */
-    SESSION_FILTER  *filters;         /*< The filters in use within this session */
-    MXS_DOWNSTREAM  head;             /*< Head of the filter chain */
-    MXS_UPSTREAM    tail;             /*< The tail of the filter chain */
-    int             refcount;         /*< Reference count on the session */
-    bool            ses_is_child;     /*< this is a child session */
-    session_trx_state_t trx_state;    /*< The current transaction state. */
-    bool            autocommit;       /*< Whether autocommit is on. */
+    skygw_chk_t             ses_chk_top;
+    SPINLOCK                ses_lock;
+    mxs_session_state_t     state;            /*< Current descriptor state */
+    size_t                  ses_id;           /*< Unique session identifier */
+    int                     enabled_log_priorities; /*< Bitfield of enabled syslog priorities */
+    struct dcb              *client_dcb;      /*< The client connection */
+    void                    *router_session;  /*< The router instance data */
+    SESSION_STATS           stats;            /*< Session statistics */
+    struct service          *service;         /*< The service this session is using */
+    int                     n_filters;        /*< Number of filter sessions */
+    SESSION_FILTER          *filters;         /*< The filters in use within this session */
+    MXS_DOWNSTREAM          head;             /*< Head of the filter chain */
+    MXS_UPSTREAM            tail;             /*< The tail of the filter chain */
+    int                     refcount;         /*< Reference count on the session */
+    bool                    ses_is_child;     /*< this is a child session */
+    mxs_session_trx_state_t trx_state;        /*< The current transaction state. */
+    bool                    autocommit;       /*< Whether autocommit is on. */
     struct
     {
         GWBUF *buffer; /**< Buffer containing the statement */
         const struct server *target; /**< Where the statement was sent */
     } stmt;  /**< Current statement being executed */
     skygw_chk_t     ses_chk_tail;
-} SESSION;
+} MXS_SESSION;
 
 #define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, .ses_lock = SPINLOCK_INIT, \
     .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
@@ -196,7 +196,7 @@ typedef struct session
  * the incoming data to the first element in the pipeline of filters and
  * routers.
  */
-#define SESSION_ROUTE_QUERY(sess, buf)                          \
+#define MXS_SESSION_ROUTE_QUERY(sess, buf)                          \
     ((sess)->head.routeQuery)((sess)->head.instance,            \
                               (sess)->head.session, (buf))
 /**
@@ -208,22 +208,22 @@ typedef struct session
     ((sess)->tail.clientReply)((sess)->tail.instance,           \
                                (sess)->tail.session, (buf))
 
-SESSION *session_alloc(struct service *, struct dcb *);
-SESSION *session_set_dummy(struct dcb *);
-int session_isvalid(SESSION *);
+MXS_SESSION *session_alloc(struct service *, struct dcb *);
+MXS_SESSION *session_set_dummy(struct dcb *);
+int session_isvalid(MXS_SESSION *);
 int session_reply(void *inst, void *session, GWBUF *data);
-const char *session_get_remote(const SESSION *);
-const char *session_get_user(const SESSION *);
+const char *session_get_remote(const MXS_SESSION *);
+const char *session_get_user(const MXS_SESSION *);
 void printAllSessions();
-void printSession(SESSION *);
+void printSession(MXS_SESSION *);
 void dprintSessionList(DCB *pdcb);
 void dprintAllSessions(struct dcb *);
-void dprintSession(struct dcb *, SESSION *);
+void dprintSession(struct dcb *, MXS_SESSION *);
 void dListSessions(struct dcb *);
-char *session_state(session_state_t);
-bool session_link_dcb(SESSION *, struct dcb *);
-void session_enable_log_priority(SESSION* ses, int priority);
-void session_disable_log_priority(SESSION* ses, int priority);
+char *session_state(mxs_session_state_t);
+bool session_link_dcb(MXS_SESSION *, struct dcb *);
+void session_enable_log_priority(MXS_SESSION* ses, int priority);
+void session_disable_log_priority(MXS_SESSION* ses, int priority);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
 
 /**
@@ -246,7 +246,7 @@ RESULTSET *sessionGetList(SESSIONLISTFILTER);
  * @param ses The SESSION object.
  * @return The transaction state.
  */
-session_trx_state_t session_get_trx_state(const SESSION* ses);
+mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses);
 
 /**
  * Set the transaction state of the session.
@@ -258,7 +258,7 @@ session_trx_state_t session_get_trx_state(const SESSION* ses);
  *
  * @return The previous transaction state.
  */
-session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_state);
+mxs_session_trx_state_t session_set_trx_state(MXS_SESSION* ses, mxs_session_trx_state_t new_state);
 
 /**
  * Tells whether an explicit READ ONLY transaction is active.
@@ -271,7 +271,7 @@ session_trx_state_t session_set_trx_state(SESSION* ses, session_trx_state_t new_
  * @return True if an explicit READ ONLY transaction is active,
  *         false otherwise.
  */
-static inline bool session_trx_is_read_only(const SESSION* ses)
+static inline bool session_trx_is_read_only(const MXS_SESSION* ses)
 {
     return ses->trx_state == SESSION_TRX_READ_ONLY;
 }
@@ -287,7 +287,7 @@ static inline bool session_trx_is_read_only(const SESSION* ses)
  * @return True if an explicit READ WRITE  transaction is active,
  *         false otherwise.
  */
-static inline bool session_trx_is_read_write(const SESSION* ses)
+static inline bool session_trx_is_read_write(const MXS_SESSION* ses)
 {
     return ses->trx_state == SESSION_TRX_READ_WRITE;
 }
@@ -309,7 +309,7 @@ static inline bool session_trx_is_read_write(const SESSION* ses)
  *
  * @return True if autocommit has been set ON, false otherwise.
  */
-static inline bool session_is_autocommit(const SESSION* ses)
+static inline bool session_is_autocommit(const MXS_SESSION* ses)
 {
     return ses->autocommit;
 }
@@ -324,7 +324,7 @@ static inline bool session_is_autocommit(const SESSION* ses)
  *
  * @return True if a transaction is active, false otherwise.
  */
-static inline bool session_trx_is_active(const SESSION* ses)
+static inline bool session_trx_is_active(const MXS_SESSION* ses)
 {
     return !session_is_autocommit(ses) || (ses->trx_state & SESSION_TRX_ACTIVE_BIT);
 }
@@ -337,7 +337,7 @@ static inline bool session_trx_is_active(const SESSION* ses)
  * @param enable True if autocommit is enabled, false otherwise.
  * @return The previous state.
  */
-static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
+static inline bool session_set_autocommit(MXS_SESSION* ses, bool autocommit)
 {
     bool prev_autocommit = ses->autocommit;
     ses->autocommit = autocommit;
@@ -354,7 +354,7 @@ static inline bool session_set_autocommit(SESSION* ses, bool autocommit)
  *
  * @note The caller must free the session reference by calling session_put_ref
  */
-SESSION* session_get_by_id(int id);
+MXS_SESSION* session_get_by_id(int id);
 
 /**
  * @brief Get a session reference
@@ -367,14 +367,14 @@ SESSION* session_get_by_id(int id);
  *
  * @note The caller must free the session reference by calling session_put_ref
  */
-SESSION* session_get_ref(SESSION *sessoin);
+MXS_SESSION* session_get_ref(MXS_SESSION *sessoin);
 
 /**
  * @brief Release a session reference
  *
  * @param session Session reference to release
  */
-void session_put_ref(SESSION *session);
+void session_put_ref(MXS_SESSION *session);
 
 /**
  * @brief Store the current statement into session
@@ -387,7 +387,7 @@ void session_put_ref(SESSION *session);
  * @param server Server where the statement is being executed
  * @return True if statement was successfully stored, false if the cloning of @c buf failed.
  */
-bool session_store_stmt(SESSION *session, GWBUF *buf, const struct server *server);
+bool session_store_stmt(MXS_SESSION *session, GWBUF *buf, const struct server *server);
 
 /**
  * @brief Fetch stored statement
@@ -399,13 +399,13 @@ bool session_store_stmt(SESSION *session, GWBUF *buf, const struct server *serve
  * @param target Pointer where target server is stored
  * @return True if a statement was stored
  */
-bool session_take_stmt(SESSION *session, GWBUF **buffer, const struct server **target);
+bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server **target);
 
 /**
  * Clear the stored statement
  *
  * @param session Session to clear
  */
-void session_clear_stmt(SESSION *session);
+void session_clear_stmt(MXS_SESSION *session);
 
 MXS_END_DECLS

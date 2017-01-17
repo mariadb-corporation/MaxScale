@@ -66,7 +66,7 @@ public:
      *
      * @return True of cached results should be used.
      */
-    bool should_use(const SESSION* pSession);
+    bool should_use(const MXS_SESSION* pSession);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.

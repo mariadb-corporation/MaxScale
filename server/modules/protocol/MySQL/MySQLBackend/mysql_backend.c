@@ -53,7 +53,7 @@
  *
  */
 
-static int gw_create_backend_connection(DCB *backend, SERVER *server, SESSION *in_session);
+static int gw_create_backend_connection(DCB *backend, SERVER *server, MXS_SESSION *in_session);
 static int gw_read_backend_event(DCB* dcb);
 static int gw_write_backend_event(DCB *dcb);
 static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
@@ -62,7 +62,7 @@ static int gw_backend_close(DCB *dcb);
 static int gw_backend_hangup(DCB *dcb);
 static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer);
 static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
-static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
+static int gw_change_user(DCB *backend_dcb, SERVER *server, MXS_SESSION *in_session, GWBUF *queue);
 static char *gw_backend_default_auth();
 static GWBUF* process_response_data(DCB* dcb, GWBUF** readbuf, int nbytes_to_process);
 extern char* create_auth_failed_msg(GWBUF* readbuf, char* hostaddr, uint8_t* sha1);
@@ -168,7 +168,7 @@ static char *gw_backend_default_auth()
  */
 static int gw_create_backend_connection(DCB *backend_dcb,
                                         SERVER *server,
-                                        SESSION *session)
+                                        MXS_SESSION *session)
 {
     MySQLProtocol *protocol = NULL;
     int rv = -1;
@@ -614,7 +614,7 @@ gw_read_backend_event(DCB *dcb)
 static void
 gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
 
     /* Only reload the users table if authentication failed and the
@@ -705,7 +705,7 @@ static int
 gw_read_and_write(DCB *dcb)
 {
     GWBUF *read_buffer = NULL;
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     int nbytes_read;
     int return_code = 0;
 
@@ -1119,13 +1119,13 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  */
 static int gw_error_backend_event(DCB *dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
     void* rsession;
     ROUTER_OBJECT* router;
     ROUTER* router_instance;
     GWBUF* errbuf;
     bool succp;
-    session_state_t ses_state;
+    mxs_session_state_t ses_state;
 
     CHK_DCB(dcb);
     session = dcb->session;
@@ -1246,13 +1246,13 @@ retblock:
  */
 static int gw_backend_hangup(DCB *dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
     void* rsession;
     ROUTER_OBJECT* router;
     ROUTER* router_instance;
     bool succp;
     GWBUF* errbuf;
-    session_state_t ses_state;
+    mxs_session_state_t ses_state;
 
     CHK_DCB(dcb);
     if (dcb->persistentstart)
@@ -1346,7 +1346,7 @@ retblock:
  */
 static int gw_backend_close(DCB *dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
     GWBUF* quitbuf;
 
     CHK_DCB(dcb);
@@ -1450,7 +1450,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 
     if (rc == 0)
     {
-        SESSION *session = dcb->session;
+        MXS_SESSION *session = dcb->session;
         CHK_SESSION(session);
         ROUTER_OBJECT *router = session->service->router;
         ROUTER *router_instance = session->service->router_instance;
@@ -1493,7 +1493,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
  */
 static int gw_change_user(DCB *backend,
                           SERVER *server,
-                          SESSION *in_session,
+                          MXS_SESSION *in_session,
                           GWBUF *queue)
 {
     MYSQL_session *current_session = NULL;

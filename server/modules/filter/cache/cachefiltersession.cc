@@ -34,7 +34,7 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 
 }
 
-CacheFilterSession::CacheFilterSession(SESSION* pSession, Cache* pCache, char* zDefaultDb)
+CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_pCache(pCache)
@@ -54,7 +54,7 @@ CacheFilterSession::~CacheFilterSession()
 }
 
 //static
-CacheFilterSession* CacheFilterSession::Create(Cache* pCache, SESSION* pSession)
+CacheFilterSession* CacheFilterSession::Create(Cache* pCache, MXS_SESSION* pSession)
 {
     CacheFilterSession* pCacheFilterSession = NULL;
 
@@ -136,7 +136,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
             // possible.
             if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
             {
-                SESSION *session = m_pSession;
+                MXS_SESSION *session = m_pSession;
 
                 if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
                     session_trx_is_read_only(session))

@@ -35,7 +35,7 @@ public:
         return *m_sCache.get();
     }
 
-    CacheFilterSession* newSession(SESSION* pSession);
+    CacheFilterSession* newSession(MXS_SESSION* pSession);
 
     void diagnostics(DCB* pDcb);
 

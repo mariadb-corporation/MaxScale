@@ -31,7 +31,7 @@ public:
     ~MaskingFilter();
     static MaskingFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
 
-    MaskingFilterSession* newSession(SESSION* pSession);
+    MaskingFilterSession* newSession(MXS_SESSION* pSession);
 
     void diagnostics(DCB* pDcb);
 

@@ -44,7 +44,7 @@
 
 /* The router entry points */
 static  ROUTER *createInstance(SERVICE *service, char **options);
-static  void   *newSession(ROUTER *instance, SESSION *session);
+static  void   *newSession(ROUTER *instance, MXS_SESSION *session);
 static  void   closeSession(ROUTER *instance, void *router_session);
 static  void   freeSession(ROUTER *instance, void *router_session);
 static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
@@ -149,7 +149,7 @@ createInstance(SERVICE *service, char **options)
  * @return Session specific data for this session
  */
 static  void    *
-newSession(ROUTER *instance, SESSION *session)
+newSession(ROUTER *instance, MXS_SESSION *session)
 {
     CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
     CLI_SESSION *client;

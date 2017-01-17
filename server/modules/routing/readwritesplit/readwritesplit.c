@@ -69,7 +69,7 @@
  */
 
 static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, SESSION *session);
+static void *newSession(ROUTER *instance, MXS_SESSION *session);
 static void closeSession(ROUTER *instance, void *session);
 static void freeSession(ROUTER *instance, void *session);
 static int routeQuery(ROUTER *instance, void *session, GWBUF *queue);
@@ -96,7 +96,7 @@ static uint64_t getCapabilities(void);
 static void free_rwsplit_instance(ROUTER_INSTANCE *router);
 static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
                                            char **options);
-static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
                                       DCB *backend_dcb, GWBUF *errmsg);
 static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                         ROUTER_CLIENT_SES **rses,
@@ -313,7 +313,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
  * @param session   The MaxScale session (generic connection data)
  * @return Session specific data for this session, i.e. a router session
  */
-static void *newSession(ROUTER *router_inst, SESSION *session)
+static void *newSession(ROUTER *router_inst, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_inst;
     ROUTER_CLIENT_SES *client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
@@ -1179,7 +1179,7 @@ int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
     MXS_DEBUG("%lu [router_handle_state_switch] %s %s:%d in state %s",
               pthread_self(), STRDCBREASON(reason), srv->name, srv->port,
               STRSRVSTATUS(srv));
-    CHK_SESSION(((SESSION *)dcb->session));
+    CHK_SESSION(((MXS_SESSION *)dcb->session));
     if (dcb->session->router_session)
     {
         CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
@@ -1334,7 +1334,7 @@ static void handleError(ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *problem_dcb,
                         error_action_t action, bool *succp)
 {
-    SESSION *session;
+    MXS_SESSION *session;
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
 
@@ -1490,10 +1490,10 @@ static void handleError(ROUTER *instance, void *router_session,
  * @param backend_dcb   DCB for the backend server that has failed
  * @param errmsg        GWBUF containing the error message
  */
-static void handle_error_reply_client(SESSION *ses, ROUTER_CLIENT_SES *rses,
+static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
                                       DCB *backend_dcb, GWBUF *errmsg)
 {
-    session_state_t sesstate;
+    mxs_session_state_t sesstate;
     DCB *client_dcb;
     backend_ref_t *bref;
 
@@ -1594,7 +1594,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
                                         DCB *backend_dcb, GWBUF *errmsg)
 {
     ROUTER_CLIENT_SES *myrses;
-    SESSION *ses;
+    MXS_SESSION *ses;
     int max_nslaves;
     int max_slave_rlag;
     backend_ref_t *bref;

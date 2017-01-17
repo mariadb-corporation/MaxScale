@@ -133,7 +133,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                                     int router_nservers, int max_nslaves,
                                     int max_slave_rlag,
                                     select_criteria_t select_criteria,
-                                    SESSION *session,
+                                    MXS_SESSION *session,
                                     ROUTER_INSTANCE *router,
                                     bool active_session);
 

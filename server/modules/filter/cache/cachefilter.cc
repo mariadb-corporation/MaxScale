@@ -260,7 +260,7 @@ CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, CONFIG_PAR
     return pFilter;
 }
 
-CacheFilterSession* CacheFilter::newSession(SESSION* pSession)
+CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
 {
     return CacheFilterSession::Create(m_sCache.get(), pSession);
 }

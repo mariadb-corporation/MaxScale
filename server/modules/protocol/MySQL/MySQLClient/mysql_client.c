@@ -79,7 +79,7 @@ static int gw_client_hangup_event(DCB *dcb);
 static char *gw_default_auth();
 static int gw_connection_limit(DCB *dcb, int limit);
 static int MySQLSendHandshake(DCB* dcb);
-static int route_by_statement(SESSION *, uint64_t, GWBUF **);
+static int route_by_statement(MXS_SESSION *, uint64_t, GWBUF **);
 static void mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number);
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
@@ -672,7 +672,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        SESSION *session = session_alloc(dcb->service, dcb);
+        MXS_SESSION *session = session_alloc(dcb->service, dcb);
 
         if (session != NULL)
         {
@@ -864,8 +864,8 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
 static int
 gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 {
-    SESSION *session;
-    session_state_t session_state_value;
+    MXS_SESSION *session;
+    mxs_session_state_t session_state_value;
     uint64_t capabilities = 0;
 
     session = dcb->session;
@@ -923,7 +923,7 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 static int
 gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
 {
-    SESSION *session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     uint8_t *payload = GWBUF_DATA(read_buffer);
     MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
     CHK_PROTOCOL(proto);
@@ -955,7 +955,7 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
         /** Feed whole packet to router, which will free it
          *  and return 1 for success, 0 for failure
          */
-        return_code = SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
+        return_code = MXS_SESSION_ROUTE_QUERY(session, read_buffer) ? 0 : 1;
     }
     /* else return_code is still 0 from when it was originally set */
     /* Note that read_buffer has been freed or transferred by this point */
@@ -1286,7 +1286,7 @@ static void gw_process_one_new_client(DCB *client_dcb)
 
 static int gw_error_client_event(DCB* dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
 
     CHK_DCB(dcb);
 
@@ -1316,7 +1316,7 @@ retblock:
 static int
 gw_client_close(DCB *dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
     ROUTER_OBJECT* router;
     void* router_instance;
 #if defined(SS_DEBUG)
@@ -1378,7 +1378,7 @@ gw_client_close(DCB *dcb)
  */
 static int gw_client_hangup_event(DCB *dcb)
 {
-    SESSION* session;
+    MXS_SESSION* session;
 
     CHK_DCB(dcb);
     session = dcb->session;
@@ -1415,7 +1415,7 @@ retblock:
  *
  * @return 1 if succeed,
  */
-static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
+static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF** p_readbuf)
 {
     int rc;
     GWBUF* packetbuf;
@@ -1496,7 +1496,7 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
                             }
                             else
                             {
-                                session_trx_state_t trx_state;
+                                mxs_session_trx_state_t trx_state;
                                 if (type & QUERY_TYPE_WRITE)
                                 {
                                     trx_state = SESSION_TRX_READ_WRITE;
@@ -1527,7 +1527,7 @@ static int route_by_statement(SESSION* session, uint64_t capabilities, GWBUF** p
             }
 
             /** Route query */
-            rc = SESSION_ROUTE_QUERY(session, packetbuf);
+            rc = MXS_SESSION_ROUTE_QUERY(session, packetbuf);
         }
         else
         {
