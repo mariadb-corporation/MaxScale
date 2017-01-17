@@ -204,20 +204,20 @@ const char* maxavro_get_error_string(MAXAVRO_FILE *file)
 {
     switch (file->last_error)
     {
-        case MAXAVRO_ERR_IO:
-            return "MAXAVRO_ERR_IO";
+    case MAXAVRO_ERR_IO:
+        return "MAXAVRO_ERR_IO";
 
-        case MAXAVRO_ERR_MEMORY:
-            return "MAXAVRO_ERR_MEMORY";
+    case MAXAVRO_ERR_MEMORY:
+        return "MAXAVRO_ERR_MEMORY";
 
-        case MAXAVRO_ERR_VALUE_OVERFLOW:
-            return "MAXAVRO_ERR_VALUE_OVERFLOW";
+    case MAXAVRO_ERR_VALUE_OVERFLOW:
+        return "MAXAVRO_ERR_VALUE_OVERFLOW";
 
-        case MAXAVRO_ERR_NONE:
-            return "MAXAVRO_ERR_NONE";
+    case MAXAVRO_ERR_NONE:
+        return "MAXAVRO_ERR_NONE";
 
-        default:
-            return "UNKNOWN ERROR";
+    default:
+        return "UNKNOWN ERROR";
     }
 }
 

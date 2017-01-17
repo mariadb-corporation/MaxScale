@@ -137,18 +137,18 @@ int main(int argc, char** argv)
     {
         switch (c)
         {
-            case 'v':
-                verbose++;
-                break;
-            case 'd':
-                dump = true;
-                break;
-            case 'f':
-                seekto = strtol(optarg, NULL, 10);
-                break;
-            case 'c':
-                num_rows = strtol(optarg, NULL, 10);
-                break;
+        case 'v':
+            verbose++;
+            break;
+        case 'd':
+            dump = true;
+            break;
+        case 'f':
+            seekto = strtol(optarg, NULL, 10);
+            break;
+        case 'c':
+            num_rows = strtol(optarg, NULL, 10);
+            break;
         }
     }
 

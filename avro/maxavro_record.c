@@ -35,7 +35,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
     json_t* value = NULL;
     switch (field->type)
     {
-        case MAXAVRO_TYPE_BOOL:
+    case MAXAVRO_TYPE_BOOL:
         {
             int i = 0;
             if (fread(&i, 1, 1, file->file) == 1)
@@ -45,8 +45,8 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         }
         break;
 
-        case MAXAVRO_TYPE_INT:
-        case MAXAVRO_TYPE_LONG:
+    case MAXAVRO_TYPE_INT:
+    case MAXAVRO_TYPE_LONG:
         {
             uint64_t val = 0;
             maxavro_read_integer(file, &val);
@@ -55,7 +55,7 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         }
         break;
 
-        case MAXAVRO_TYPE_ENUM:
+    case MAXAVRO_TYPE_ENUM:
         {
             uint64_t val = 0;
             maxavro_read_integer(file, &val);
@@ -73,8 +73,8 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         }
         break;
 
-        case MAXAVRO_TYPE_FLOAT:
-        case MAXAVRO_TYPE_DOUBLE:
+    case MAXAVRO_TYPE_FLOAT:
+    case MAXAVRO_TYPE_DOUBLE:
         {
             double d = 0;
             maxavro_read_double(file, &d);
@@ -82,8 +82,8 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         }
         break;
 
-        case MAXAVRO_TYPE_BYTES:
-        case MAXAVRO_TYPE_STRING:
+    case MAXAVRO_TYPE_BYTES:
+    case MAXAVRO_TYPE_STRING:
         {
             char *str = maxavro_read_string(file);
             if (str)
@@ -94,9 +94,9 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         }
         break;
 
-        default:
-            MXS_ERROR("Unimplemented type: %d", field->type);
-            break;
+    default:
+        MXS_ERROR("Unimplemented type: %d", field->type);
+        break;
     }
     return value;
 }
@@ -105,33 +105,33 @@ static void skip_value(MAXAVRO_FILE *file, enum maxavro_value_type type)
 {
     switch (type)
     {
-        case MAXAVRO_TYPE_INT:
-        case MAXAVRO_TYPE_LONG:
-        case MAXAVRO_TYPE_ENUM:
+    case MAXAVRO_TYPE_INT:
+    case MAXAVRO_TYPE_LONG:
+    case MAXAVRO_TYPE_ENUM:
         {
             uint64_t val = 0;
             maxavro_read_integer(file, &val);
         }
         break;
 
-        case MAXAVRO_TYPE_FLOAT:
-        case MAXAVRO_TYPE_DOUBLE:
+    case MAXAVRO_TYPE_FLOAT:
+    case MAXAVRO_TYPE_DOUBLE:
         {
             double d = 0;
             maxavro_read_double(file, &d);
         }
         break;
 
-        case MAXAVRO_TYPE_BYTES:
-        case MAXAVRO_TYPE_STRING:
+    case MAXAVRO_TYPE_BYTES:
+    case MAXAVRO_TYPE_STRING:
         {
             maxavro_skip_string(file);
         }
         break;
 
-        default:
-            MXS_ERROR("Unimplemented type: %d - %s", type, type_to_string(type));
-            break;
+    default:
+        MXS_ERROR("Unimplemented type: %d - %s", type, type_to_string(type));
+        break;
     }
 }
 

@@ -147,51 +147,51 @@ main(int argc, char **argv)
     {
         switch (c)
         {
-            case 'h':
-                use_inet_socket = true;
-                hostname = strdup(optarg);
-                break;
+        case 'h':
+            use_inet_socket = true;
+            hostname = strdup(optarg);
+            break;
 
-            case 'p':
-                use_inet_socket = true;
-                // If password was not given, ask for it later
-                if (optarg != NULL)
-                {
-                    passwd = strdup(optarg);
-                    memset(optarg, '\0', strlen(optarg));
-                }
-                break;
+        case 'p':
+            use_inet_socket = true;
+            // If password was not given, ask for it later
+            if (optarg != NULL)
+            {
+                passwd = strdup(optarg);
+                memset(optarg, '\0', strlen(optarg));
+            }
+            break;
 
-            case 'P':
-                use_inet_socket = true;
-                port = strdup(optarg);
-                break;
+        case 'P':
+            use_inet_socket = true;
+            port = strdup(optarg);
+            break;
 
-            case 'u':
-                use_inet_socket = true;
-                user = strdup(optarg);
-                break;
+        case 'u':
+            use_inet_socket = true;
+            user = strdup(optarg);
+            break;
 
-            case 'S':
-                use_unix_socket = true;
-                socket_path = strdup(optarg);
-                break;
+        case 'S':
+            use_unix_socket = true;
+            socket_path = strdup(optarg);
+            break;
 
-            case 'v':
-                PrintVersion(*argv);
-                exit(EXIT_SUCCESS);
+        case 'v':
+            PrintVersion(*argv);
+            exit(EXIT_SUCCESS);
 
-            case 'e':
-                use_emacs = 1;
-                break;
+        case 'e':
+            use_emacs = 1;
+            break;
 
-            case 'i':
-                use_emacs = 0;
-                break;
+        case 'i':
+            use_emacs = 0;
+            break;
 
-            case '?':
-                DoUsage(argv[0]);
-                exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
+        case '?':
+            DoUsage(argv[0]);
+            exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
         }
     }
 

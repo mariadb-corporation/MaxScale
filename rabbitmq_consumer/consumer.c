@@ -421,13 +421,13 @@ int main(int argc, char** argv)
     {
         switch (ch)
         {
-            case 'c':
-                cnfnlen = strlen(optarg);
-                cnfpath = strdup(optarg);
-                break;
-            default:
+        case 'c':
+            cnfnlen = strlen(optarg);
+            cnfpath = strdup(optarg);
+            break;
+        default:
 
-                break;
+            break;
         }
     }
 
