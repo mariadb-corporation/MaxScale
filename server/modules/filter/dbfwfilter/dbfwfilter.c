@@ -2350,11 +2350,10 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         rval = dcb->func.write(dcb, err);
     }
     else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT) ||
-             qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
              modutil_is_SQL_prepare(queue))
     {
         GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
-                                     "prepared statements.");
+                                     "binary prepared statements.");
         gwbuf_free(queue);
         MXS_FREE(my_session->errmsg);
         my_session->errmsg = NULL;
@@ -2362,6 +2361,14 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     }
     else
     {
+        GWBUF* analyzed_queue = queue;
+
+        if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
+        {
+            analyzed_queue = qc_get_preparable_stmt(queue);
+            ss_dassert(analyzed_queue);
+        }
+
         DBFW_USER *user = find_user_data(thr_users, dcb->user, dcb->remote);
         bool query_ok = false;
 
@@ -2370,9 +2377,9 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             bool match = false;
             char* rname = NULL;
 
-            if (check_match_any(my_instance, my_session, queue, user, &rname) ||
-                check_match_all(my_instance, my_session, queue, user, false, &rname) ||
-                check_match_all(my_instance, my_session, queue, user, true, &rname))
+            if (check_match_any(my_instance, my_session, analyzed_queue, user, &rname) ||
+                check_match_all(my_instance, my_session, analyzed_queue, user, false, &rname) ||
+                check_match_all(my_instance, my_session, analyzed_queue, user, true, &rname))
             {
                 match = true;
             }
@@ -2407,7 +2414,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             {
                 char *sql;
                 int len;
-                if (modutil_extract_SQL(queue, &sql, &len))
+                if (modutil_extract_SQL(analyzed_queue, &sql, &len))
                 {
                     len = MXS_MIN(len, FW_MAX_SQL_LEN);
                     if (match && my_instance->log_match & FW_LOG_MATCH)
