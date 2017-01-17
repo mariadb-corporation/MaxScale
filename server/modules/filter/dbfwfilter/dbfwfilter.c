@@ -2349,19 +2349,15 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         my_session->errmsg = NULL;
         rval = dcb->func.write(dcb, err);
     }
-    else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT) ||
-             modutil_is_SQL_prepare(queue))
-    {
-        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
-                                     "binary prepared statements.");
-        gwbuf_free(queue);
-        MXS_FREE(my_session->errmsg);
-        my_session->errmsg = NULL;
-        rval = dcb->func.write(dcb, err);
-    }
     else
     {
         GWBUF* analyzed_queue = queue;
+
+        // QUERY_TYPE_PREPARE_STMT need not be handled separately as the
+        // information about statements in COM_STMT_PREPARE packets is
+        // accessed exactly like the information of COM_QUERY packets. However,
+        // with named prepared statements in COM_QUERY packets, we need to take
+        // out the preparable statement and base our decisions on that.
 
         if (qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT))
         {
