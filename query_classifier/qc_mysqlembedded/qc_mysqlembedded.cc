@@ -2526,7 +2526,8 @@ int32_t qc_mysql_get_field_info(GWBUF* buf, const QC_FIELD_INFO** infos, uint32_
 
         if ((lex->sql_command == SQLCOM_INSERT) ||
             (lex->sql_command == SQLCOM_INSERT_SELECT) ||
-            (lex->sql_command == SQLCOM_REPLACE))
+            (lex->sql_command == SQLCOM_REPLACE) ||
+            (lex->sql_command == SQLCOM_REPLACE_SELECT))
         {
             List_iterator<Item> ilist(lex->field_list);
             while (Item *item = ilist++)
