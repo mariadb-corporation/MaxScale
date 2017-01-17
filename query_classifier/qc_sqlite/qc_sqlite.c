@@ -507,7 +507,9 @@ static bool parse_query(GWBUF* query)
         if ((GWBUF_LENGTH(query) >= MYSQL_HEADER_LEN + 1) &&
             (GWBUF_LENGTH(query) == MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data)))
         {
-            if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
+            uint8_t command = MYSQL_GET_COMMAND(data);
+
+            if ((command == MYSQL_COM_QUERY) || (command == MYSQL_COM_STMT_PREPARE))
             {
                 QC_SQLITE_INFO* info = info_alloc();
 
@@ -524,6 +526,11 @@ static bool parse_query(GWBUF* query)
                     parse_query_string(s, len);
                     this_thread.info->query = NULL;
                     this_thread.info->query_len = 0;
+
+                    if (command == MYSQL_COM_STMT_PREPARE)
+                    {
+                        info->types |= QUERY_TYPE_PREPARE_STMT;
+                    }
 
                     // TODO: Add return value to gwbuf_add_buffer_object.
                     // Always added; also when it was not recognized. If it was not recognized now,

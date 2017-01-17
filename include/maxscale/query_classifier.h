@@ -197,7 +197,7 @@ typedef struct query_classifier
     /**
      * Reports the type of the statement.
      *
-     * @param stmt  A statement.
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
      * @param type  On return, the type mask (combination of @c qc_query_type_t),
      *              if @c QC_RESULT_OK is returned.
      *
@@ -209,7 +209,7 @@ typedef struct query_classifier
     /**
      * Reports the operation of the statement.
      *
-     * @param stmt  A statement.
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
      * @param type  On return, the operation (one of @c qc_query_op_t), if
      *              @c QC_RESULT_OK is returned.
      *
@@ -221,7 +221,7 @@ typedef struct query_classifier
     /**
      * Reports the name of a created table.
      *
-     * @param stmt  A statement.
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
      * @param name  On return, the name of the created table, if
      *              @c QC_RESULT_OK is returned.
      *
@@ -233,7 +233,7 @@ typedef struct query_classifier
     /**
      * Reports whether a statement is a "DROP TABLE ..." statement.
      *
-     * @param stmt           A statement
+     * @param stmt           A COM_QUERY or COM_STMT_PREPARE packet
      * @param is_drop_table  On return, non-zero if the statement is a DROP TABLE
      *                       statement, if @c QC_RESULT_OK is returned.
      *
@@ -245,7 +245,7 @@ typedef struct query_classifier
     /**
      * Returns all table names.
      *
-     * @param stmt       A statement.
+     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
      * @param fullnames  If non-zero, the full (i.e. qualified) names are returned.
      * @param names      On return, the names of the statement, if @c QC_RESULT_OK
      *                   is returned.
@@ -260,7 +260,7 @@ typedef struct query_classifier
     /**
      * The canonical version of a statement.
      *
-     * @param stmt       A statement.
+     * @param stmt       A COM_QUERY or COM_STMT_PREPARE packet.
      * @param canonical  On return, the canonical version of the statement, if @c QC_RESULT_OK
      *                   is returned.
      *
@@ -272,7 +272,7 @@ typedef struct query_classifier
     /**
      * Reports whether the statement has a where clause.
      *
-     * @param stmt        A statement.
+     * @param stmt        A COM_QUERY or COM_STMT_PREPARE packet.
      * @param has_clause  On return, non-zero if the statement has a where clause, if
      *                    @c QC_RESULT_OK is returned.
      *
@@ -284,7 +284,7 @@ typedef struct query_classifier
     /**
      * Reports the database names.
      *
-     * @param stmt   A statement.
+     * @param stmt   A COM_QUERY or COM_STMT_PREPARE packet.
      * @param names  On return, the database names, if
      *               @c QC_RESULT_OK is returned.
      * @param size   On return, the number of names in @names, if
@@ -298,7 +298,7 @@ typedef struct query_classifier
     /**
      * Reports the prepare name.
      *
-     * @param stmt  A statement.
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
      * @param name  On return, the name of a prepare statement, if
      *              @c QC_RESULT_OK is returned.
      *
@@ -310,7 +310,7 @@ typedef struct query_classifier
     /**
      * Reports field information.
      *
-     * @param stmt    A statement.
+     * @param stmt    A COM_QUERY or COM_STMT_PREPARE packet.
      * @param infos   On return, array of field infos, if @c QC_RESULT_OK is returned.
      * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
      *
@@ -322,7 +322,7 @@ typedef struct query_classifier
     /**
      * The canonical version of a statement.
      *
-     * @param stmt  A statement.
+     * @param stmt  A COM_QUERY or COM_STMT_PREPARE packet.
      * @param infos   On return, array of function infos, if @c QC_RESULT_OK is returned.
      * @param n_infos On return, the size of @c infos, if @c QC_RESULT_OK is returned.
      *
@@ -334,7 +334,7 @@ typedef struct query_classifier
     /**
      * Return the preparable statement of a PREPARE statement.
      *
-     * @param stmt             A statement.
+     * @param stmt             A COM_QUERY or COM_STMT_PREPARE packet.
      * @param preparable_stmt  On return, the preparable statement (provided @c stmt is a
      *                         PREPARE statement), if @c QC_RESULT_OK is returned. Otherwise
      *                         NULL.
@@ -454,7 +454,7 @@ void qc_thread_end(void);
  * already then this function will only return the result of that parsing;
  * the statement will not be parsed again.
  *
- * @param stmt  A buffer containing an COM_QUERY packet.
+ * @param stmt  A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return To what extent the statement could be parsed.
  */
@@ -482,7 +482,7 @@ char* qc_field_usage_mask_to_string(uint32_t usage_mask);
 /**
  * Returns information about affected fields.
  *
- * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param infos    Pointer to pointer that after the call will point to an
  *                 array of QC_FIELD_INFO:s.
  * @param n_infos  Pointer to size_t variable where the number of items
@@ -497,7 +497,7 @@ void qc_get_field_info(GWBUF* stmt, const QC_FIELD_INFO** infos, size_t* n_infos
 /**
  * Returns information about function usage.
  *
- * @param stmt     A buffer containing a COM_QUERY packet.
+ * @param stmt     A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param infos    Pointer to pointer that after the call will point to an
  *                 array of QC_FUNCTION_INFO:s.
  * @param n_infos  Pointer to size_t variable where the number of items
@@ -512,7 +512,7 @@ void qc_get_function_info(GWBUF* stmt, const QC_FUNCTION_INFO** infos, size_t* n
 /**
  * Returns the statement, with literals replaced with question marks.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return A statement in its canonical form, or NULL if a memory
  *         allocation fails. The string must be freed by the caller.
@@ -522,7 +522,7 @@ char* qc_get_canonical(GWBUF* stmt);
 /**
  * Returns the name of the created table.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The name of the created table or NULL if the statement
  *         does not create a table or a memory allocation failed.
@@ -534,7 +534,7 @@ char* qc_get_created_table_name(GWBUF* stmt);
  * Returns the databases accessed by the statement. Note that a
  * possible default database is not returned.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param size  Pointer to integer where the number of databases
  *              is stored.
  *
@@ -548,7 +548,7 @@ char** qc_get_database_names(GWBUF* stmt, int* size);
 /**
  * Returns the operation of the statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The operation of the statement.
  */
@@ -558,7 +558,7 @@ qc_query_op_t qc_get_operation(GWBUF* stmt);
  * Returns the name of the prepared statement, if the statement
  * is a PREPARE or EXECUTE statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return The name of the prepared statement, if the statement
  *         is a PREPARE or EXECUTE statement; otherwise NULL.
@@ -578,10 +578,16 @@ char* qc_get_prepare_name(GWBUF* stmt);
  * about the preparable statement. The returned @c GWBUF should not be used for
  * anything else but for obtaining information about the preparable statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
- * @return The preparable statement, if @stmt was a PREPARE statement, or
- *         NULL.
+ * @return The preparable statement, if @stmt was a COM_QUERY PREPARE statement,
+ *         or NULL.
+ *
+ * @attention If the packet was a COM_STMT_PREPARE, then this function will
+ *            return NULL and the actual properties of the query can be obtained
+ *            by calling any of the qc-functions directly on the GWBUF containing
+ *            the COM_STMT_PREPARE. However, the type mask will contain the
+ *            bit @c QUERY_TYPE_PREPARE_STMT.
  *
  * @attention The returned @c GWBUF is the property of @c stmt and will be
  *            deleted along with it.
@@ -591,7 +597,7 @@ GWBUF* qc_get_preparable_stmt(GWBUF* stmt);
 /**
  * Returns the tables accessed by the statement.
  *
- * @param stmt       A buffer containing a COM_QUERY packet.
+ * @param stmt       A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  * @param tblsize    Pointer to integer where the number of tables is stored.
  * @param fullnames  If true, a table names will include the database name
  *                   as well (if explicitly referred to in the statement).
@@ -609,7 +615,7 @@ char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
  * should be tested against specific qc_query_type_t values* using the
  * bitwise & operator, never using the == operator.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return A bitmask with the type(s) the query.
  *
@@ -620,7 +626,7 @@ uint32_t qc_get_type(GWBUF* stmt);
 /**
  * Returns whether the statement is a DROP TABLE statement.
  *
- * @param stmt  A buffer containing a COM_QUERY packet.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return True if the statement is a DROP TABLE statement, false otherwise.
  *
@@ -655,7 +661,7 @@ static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
 /**
  * Returns whether the statement has a WHERE or a USING clause.
  *
- * @param stmt  A buffer containing a COM_QUERY.
+ * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.
  *
  * @return True, if the statement has a WHERE or USING clause, false
  *         otherwise.
