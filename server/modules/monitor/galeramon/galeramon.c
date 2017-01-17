@@ -740,7 +740,7 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
         ptr = ptr->next;
     }
 
-    if (ignore_priority)
+    if (ignore_priority && handle->use_priority)
     {
         MXS_DEBUG("Use priority is set but no server has priority parameter. "
                   "Donor server list will be ordered by 'wsrep_local_index'");
