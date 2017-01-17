@@ -138,24 +138,24 @@ int64_t ts_stats_get(ts_stats_t stats, enum ts_stats_type type)
 
         switch (type)
         {
-            case TS_STATS_MAX:
-                if (value > best)
-                {
-                    best = value;
-                }
-                break;
+        case TS_STATS_MAX:
+            if (value > best)
+            {
+                best = value;
+            }
+            break;
 
-            case TS_STATS_MIX:
-                if (value < best)
-                {
-                    best = value;
-                }
-                break;
+        case TS_STATS_MIX:
+            if (value < best)
+            {
+                best = value;
+            }
+            break;
 
-            case TS_STATS_AVG:
-            case TS_STATS_SUM:
-                best += value;
-                break;
+        case TS_STATS_AVG:
+        case TS_STATS_SUM:
+            best += value;
+            break;
         }
     }
 

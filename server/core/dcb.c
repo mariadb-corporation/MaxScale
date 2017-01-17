@@ -680,7 +680,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     }
 
     if ((funcs = (MXS_PROTOCOL *)load_module(protocol,
-                                           MODULE_PROTOCOL)) == NULL)
+                                             MODULE_PROTOCOL)) == NULL)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_final_free(dcb);
@@ -693,8 +693,8 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
     dcb->protoname = MXS_STRDUP_A(protocol);
 
     const char *authenticator = server->authenticator ?
-        server->authenticator : dcb->func.auth_default ?
-        dcb->func.auth_default() : "NullAuthDeny";
+                                server->authenticator : dcb->func.auth_default ?
+                                dcb->func.auth_default() : "NullAuthDeny";
 
     GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR*)load_module(authenticator,
                                                                MODULE_AUTHENTICATOR);
@@ -1141,7 +1141,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
         MXS_DEBUG("%lu [%s] SSL connection appears to have hung up",
                   pthread_self(),
                   __func__
-                );
+                 );
         poll_fake_hangup_event(dcb);
         *nsingleread = 0;
         break;
@@ -1151,7 +1151,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
         MXS_DEBUG("%lu [%s] SSL connection want read",
                   pthread_self(),
                   __func__
-                );
+                 );
         dcb->ssl_read_want_write = false;
         dcb->ssl_read_want_read = true;
         *nsingleread = 0;
@@ -1162,7 +1162,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
         MXS_DEBUG("%lu [%s] SSL connection want write",
                   pthread_self(),
                   __func__
-                );
+                 );
         dcb->ssl_read_want_write = true;
         dcb->ssl_read_want_read = false;
         *nsingleread = 0;
@@ -1583,25 +1583,25 @@ static void log_illegal_dcb(DCB *dcb)
 
     switch (dcb->dcb_role)
     {
-        case DCB_ROLE_BACKEND_HANDLER:
-            connected_to = dcb->server->unique_name;
-            break;
+    case DCB_ROLE_BACKEND_HANDLER:
+        connected_to = dcb->server->unique_name;
+        break;
 
-        case DCB_ROLE_CLIENT_HANDLER:
-            connected_to = dcb->remote;
-            break;
+    case DCB_ROLE_CLIENT_HANDLER:
+        connected_to = dcb->remote;
+        break;
 
-        case DCB_ROLE_INTERNAL:
-            connected_to = "Internal DCB";
-            break;
+    case DCB_ROLE_INTERNAL:
+        connected_to = "Internal DCB";
+        break;
 
-        case DCB_ROLE_SERVICE_LISTENER:
-            connected_to = dcb->service->name;
-            break;
+    case DCB_ROLE_SERVICE_LISTENER:
+        connected_to = dcb->service->name;
+        break;
 
-        default:
-            connected_to = "Illegal DCB role";
-            break;
+    default:
+        connected_to = "Illegal DCB role";
+        break;
     }
 
     MXS_ERROR("[dcb_close] Error : Removing DCB %p but it is in state %s "
@@ -1840,12 +1840,12 @@ void printAllDCBs()
 void
 dprintOneDCB(DCB *pdcb, DCB *dcb)
 {
-/* TODO: Uncomment once listmanager code is in use
-    if (false == dcb->entry_is_in_use)
-    {
-        return;
-    }
-*/
+    /* TODO: Uncomment once listmanager code is in use
+        if (false == dcb->entry_is_in_use)
+        {
+            return;
+        }
+    */
     dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
     dcb_printf(pdcb, "\tDCB state:          %s\n",
                gw_dcb_state2string(dcb->state));
@@ -2147,22 +2147,22 @@ gw_dcb_state2string(dcb_state_t state)
 {
     switch (state)
     {
-        case DCB_STATE_ALLOC:
-            return "DCB Allocated";
-        case DCB_STATE_POLLING:
-            return "DCB in the polling loop";
-        case DCB_STATE_NOPOLLING:
-            return "DCB not in polling loop";
-        case DCB_STATE_LISTENING:
-            return "DCB for listening socket";
-        case DCB_STATE_DISCONNECTED:
-            return "DCB socket closed";
-        case DCB_STATE_ZOMBIE:
-            return "DCB Zombie";
-        case DCB_STATE_UNDEFINED:
-            return "DCB undefined state";
-        default:
-            return "DCB (unknown - erroneous)";
+    case DCB_STATE_ALLOC:
+        return "DCB Allocated";
+    case DCB_STATE_POLLING:
+        return "DCB in the polling loop";
+    case DCB_STATE_NOPOLLING:
+        return "DCB not in polling loop";
+    case DCB_STATE_LISTENING:
+        return "DCB for listening socket";
+    case DCB_STATE_DISCONNECTED:
+        return "DCB socket closed";
+    case DCB_STATE_ZOMBIE:
+        return "DCB Zombie";
+    case DCB_STATE_UNDEFINED:
+        return "DCB undefined state";
+    default:
+        return "DCB (unknown - erroneous)";
     }
 }
 
@@ -2661,40 +2661,40 @@ bool count_by_usage_cb(DCB *dcb, void *data)
 
     switch (d->type)
     {
-        case DCB_USAGE_CLIENT:
-            if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
-            {
-                d->count++;
-            }
-            break;
-        case DCB_USAGE_LISTENER:
-            if (dcb->state == DCB_STATE_LISTENING)
-            {
-                d->count++;
-            }
-            break;
-        case DCB_USAGE_BACKEND:
-            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                d->count++;
-            }
-            break;
-        case DCB_USAGE_INTERNAL:
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
-                dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                d->count++;
-            }
-            break;
-        case DCB_USAGE_ZOMBIE:
-            if (DCB_ISZOMBIE(dcb))
-            {
-                d->count++;
-            }
-            break;
-        case DCB_USAGE_ALL:
+    case DCB_USAGE_CLIENT:
+        if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+        {
             d->count++;
-            break;
+        }
+        break;
+    case DCB_USAGE_LISTENER:
+        if (dcb->state == DCB_STATE_LISTENING)
+        {
+            d->count++;
+        }
+        break;
+    case DCB_USAGE_BACKEND:
+        if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+        {
+            d->count++;
+        }
+        break;
+    case DCB_USAGE_INTERNAL:
+        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
+            dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+        {
+            d->count++;
+        }
+        break;
+    case DCB_USAGE_ZOMBIE:
+        if (DCB_ISZOMBIE(dcb))
+        {
+            d->count++;
+        }
+        break;
+    case DCB_USAGE_ALL:
+        d->count++;
+        break;
     }
 
     return true;
@@ -2767,52 +2767,52 @@ int dcb_accept_SSL(DCB* dcb)
 
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {
-        case SSL_ERROR_NONE:
-            MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
-            dcb->ssl_state = SSL_ESTABLISHED;
-            dcb->ssl_read_want_write = false;
-            return 1;
+    case SSL_ERROR_NONE:
+        MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
+        dcb->ssl_state = SSL_ESTABLISHED;
+        dcb->ssl_read_want_write = false;
+        return 1;
 
-        case SSL_ERROR_WANT_READ:
-            MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user, remote);
-            return 0;
+    case SSL_ERROR_WANT_READ:
+        MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user, remote);
+        return 0;
 
-        case SSL_ERROR_WANT_WRITE:
-            MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user, remote);
-            dcb->ssl_read_want_write = true;
-            return 0;
+    case SSL_ERROR_WANT_WRITE:
+        MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user, remote);
+        dcb->ssl_read_want_write = true;
+        return 0;
 
-        case SSL_ERROR_ZERO_RETURN:
-            MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
-            dcb_log_errors_SSL(dcb, __func__, 0);
+    case SSL_ERROR_ZERO_RETURN:
+        MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
+        dcb_log_errors_SSL(dcb, __func__, 0);
+        poll_fake_hangup_event(dcb);
+        return 0;
+
+    case SSL_ERROR_SYSCALL:
+        MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
+        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        {
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
+            return -1;
+        }
+        else
+        {
             return 0;
+        }
 
-        case SSL_ERROR_SYSCALL:
-            MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
-            if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
-            {
-                dcb->ssl_state = SSL_HANDSHAKE_FAILED;
-                poll_fake_hangup_event(dcb);
-                return -1;
-            }
-            else
-            {
-                return 0;
-            }
-
-        default:
-            MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
-            if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
-            {
-                dcb->ssl_state = SSL_HANDSHAKE_FAILED;
-                poll_fake_hangup_event(dcb);
-                return -1;
-            }
-            else
-            {
-                return 0;
-            }
+    default:
+        MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
+        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        {
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(dcb);
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
     }
 }
 
@@ -2841,60 +2841,60 @@ int dcb_connect_SSL(DCB* dcb)
     ssl_rval = SSL_connect(dcb->ssl);
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {
-        case SSL_ERROR_NONE:
-            MXS_DEBUG("SSL_connect done for %s", dcb->remote);
-            dcb->ssl_state = SSL_ESTABLISHED;
-            dcb->ssl_read_want_write = false;
-            return_code = 1;
-            break;
+    case SSL_ERROR_NONE:
+        MXS_DEBUG("SSL_connect done for %s", dcb->remote);
+        dcb->ssl_state = SSL_ESTABLISHED;
+        dcb->ssl_read_want_write = false;
+        return_code = 1;
+        break;
 
-        case SSL_ERROR_WANT_READ:
-            MXS_DEBUG("SSL_connect ongoing want read for %s", dcb->remote);
+    case SSL_ERROR_WANT_READ:
+        MXS_DEBUG("SSL_connect ongoing want read for %s", dcb->remote);
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_WANT_WRITE:
+        MXS_DEBUG("SSL_connect ongoing want write for %s", dcb->remote);
+        dcb->ssl_read_want_write = true;
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_ZERO_RETURN:
+        MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", dcb->remote);
+        if (dcb_log_errors_SSL(dcb, __func__, 0) < 0)
+        {
+            poll_fake_hangup_event(dcb);
+        }
+        return_code = 0;
+        break;
+
+    case SSL_ERROR_SYSCALL:
+        MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->remote);
+        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        {
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(dcb);
+            return_code = -1;
+        }
+        else
+        {
             return_code = 0;
-            break;
+        }
+        break;
 
-        case SSL_ERROR_WANT_WRITE:
-            MXS_DEBUG("SSL_connect ongoing want write for %s", dcb->remote);
-            dcb->ssl_read_want_write = true;
-            return_code = 0;
-            break;
-
-        case SSL_ERROR_ZERO_RETURN:
-            MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", dcb->remote);
-            if (dcb_log_errors_SSL(dcb, __func__, 0) < 0)
-            {
-                poll_fake_hangup_event(dcb);
-            }
-            return_code = 0;
-            break;
-
-        case SSL_ERROR_SYSCALL:
-            MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->remote);
-            if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
-            {
-                dcb->ssl_state = SSL_HANDSHAKE_FAILED;
-                poll_fake_hangup_event(dcb);
-                return_code = -1;
-            }
-            else
-            {
-                return_code = 0;
-            }
-            break;
-
-        default:
-            MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->remote);
-            if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
-            {
-                dcb->ssl_state = SSL_HANDSHAKE_FAILED;
-                poll_fake_hangup_event(dcb);
-                return -1;
-            }
-            else
-            {
-                return 0;
-            }
-            break;
+    default:
+        MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->remote);
+        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        {
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
+            poll_fake_hangup_event(dcb);
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+        break;
     }
     return return_code;
 }
@@ -3014,7 +3014,7 @@ dcb_accept(DCB *listener)
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create &&
                 (client_dcb->authenticator_data = client_dcb->authfunc.create(
-                 client_dcb->listener->auth_instance)) == NULL)
+                                                      client_dcb->listener->auth_instance)) == NULL)
             {
                 MXS_ERROR("Failed to create authenticator for client DCB.");
                 dcb_close(client_dcb);

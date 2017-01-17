@@ -919,18 +919,18 @@ static int logmanager_write_log(int            priority,
 
         switch (priority)
         {
-            case LOG_EMERG:
-            case LOG_ALERT:
-            case LOG_CRIT:
-            case LOG_ERR:
-            case LOG_WARNING:
-            case LOG_NOTICE:
-                syslog(priority, "%s", message);
-                break;
+        case LOG_EMERG:
+        case LOG_ALERT:
+        case LOG_CRIT:
+        case LOG_ERR:
+        case LOG_WARNING:
+        case LOG_NOTICE:
+            syslog(priority, "%s", message);
+            break;
 
-            default:
-                // LOG_INFO and LOG_DEBUG messages are never written to syslog.
-                break;
+        default:
+            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
+            break;
         }
     }
     /** remove double line feed */
@@ -1995,22 +1995,22 @@ static void logfile_done(logfile_t* lf)
 {
     switch (lf->lf_state)
     {
-        case RUN:
-            CHK_LOGFILE(lf);
-        /** fallthrough */
-        case INIT:
-            /** Test if list is initialized before freeing it */
-            if (lf->lf_blockbuf_list.mlist_versno != 0)
-            {
-                mlist_done(&lf->lf_blockbuf_list);
-            }
-            logfile_free_memory(lf);
-            lf->lf_state = DONE;
-        /** fallthrough */
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_LOGFILE(lf);
+    /** fallthrough */
+    case INIT:
+        /** Test if list is initialized before freeing it */
+        if (lf->lf_blockbuf_list.mlist_versno != 0)
+        {
+            mlist_done(&lf->lf_blockbuf_list);
+        }
+        logfile_free_memory(lf);
+        lf->lf_state = DONE;
+    /** fallthrough */
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2122,30 +2122,30 @@ static void filewriter_done(filewriter_t* fw, bool write_footer)
 {
     switch (fw->fwr_state)
     {
-        case RUN:
-            CHK_FILEWRITER(fw);
-            if (log_config.use_stdout)
+    case RUN:
+        CHK_FILEWRITER(fw);
+        if (log_config.use_stdout)
+        {
+            skygw_file_free(fw->fwr_file);
+        }
+        else
+        {
+            if (write_footer)
             {
-                skygw_file_free(fw->fwr_file);
+                logfile_write_footer(fw->fwr_file, "MariaDB MaxScale is shut down.");
             }
-            else
-            {
-                if (write_footer)
-                {
-                    logfile_write_footer(fw->fwr_file, "MariaDB MaxScale is shut down.");
-                }
 
-                skygw_file_close(fw->fwr_file);
-            }
-        case INIT:
-            fw->fwr_logmes = NULL;
-            fw->fwr_clientmes = NULL;
-            fw->fwr_state = DONE;
-            break;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+            skygw_file_close(fw->fwr_file);
+        }
+    case INIT:
+        fw->fwr_logmes = NULL;
+        fw->fwr_clientmes = NULL;
+        fw->fwr_state = DONE;
+        break;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2397,15 +2397,15 @@ static void fnames_conf_done(fnames_conf_t* fn)
 {
     switch (fn->fn_state)
     {
-        case RUN:
-            CHK_FNAMES_CONF(fn);
-        case INIT:
-            fnames_conf_free_memory(fn);
-            fn->fn_state = DONE;
-        case DONE:
-        case UNINIT:
-        default:
-            break;
+    case RUN:
+        CHK_FNAMES_CONF(fn);
+    case INIT:
+        fnames_conf_free_memory(fn);
+        fn->fn_state = DONE;
+    case DONE:
+    case UNINIT:
+    default:
+        break;
     }
 }
 
@@ -2624,25 +2624,25 @@ static const char* priority_name(int priority)
 {
     switch (priority)
     {
-        case LOG_EMERG:
-            return "emercency";
-        case LOG_ALERT:
-            return "alert";
-        case LOG_CRIT:
-            return "critical";
-        case LOG_ERR:
-            return "error";
-        case LOG_WARNING:
-            return "warning";
-        case LOG_NOTICE:
-            return "notice";
-        case LOG_INFO:
-            return "informational";
-        case LOG_DEBUG:
-            return "debug";
-        default:
-            assert(!true);
-            return "unknown";
+    case LOG_EMERG:
+        return "emercency";
+    case LOG_ALERT:
+        return "alert";
+    case LOG_CRIT:
+        return "critical";
+    case LOG_ERR:
+        return "error";
+    case LOG_WARNING:
+        return "warning";
+    case LOG_NOTICE:
+        return "notice";
+    case LOG_INFO:
+        return "informational";
+    case LOG_DEBUG:
+        return "debug";
+    default:
+        assert(!true);
+        return "unknown";
     }
 }
 
@@ -2706,51 +2706,51 @@ static log_prefix_t priority_to_prefix(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-            prefix.text = PREFIX_EMERG;
-            prefix.len = sizeof(PREFIX_EMERG);
-            break;
+    case LOG_EMERG:
+        prefix.text = PREFIX_EMERG;
+        prefix.len = sizeof(PREFIX_EMERG);
+        break;
 
-        case LOG_ALERT:
-            prefix.text = PREFIX_ALERT;
-            prefix.len = sizeof(PREFIX_ALERT);
-            break;
+    case LOG_ALERT:
+        prefix.text = PREFIX_ALERT;
+        prefix.len = sizeof(PREFIX_ALERT);
+        break;
 
-        case LOG_CRIT:
-            prefix.text = PREFIX_CRIT;
-            prefix.len = sizeof(PREFIX_CRIT);
-            break;
+    case LOG_CRIT:
+        prefix.text = PREFIX_CRIT;
+        prefix.len = sizeof(PREFIX_CRIT);
+        break;
 
-        case LOG_ERR:
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    case LOG_ERR:
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
 
-        case LOG_WARNING:
-            prefix.text = PREFIX_WARNING;
-            prefix.len = sizeof(PREFIX_WARNING);
-            break;
+    case LOG_WARNING:
+        prefix.text = PREFIX_WARNING;
+        prefix.len = sizeof(PREFIX_WARNING);
+        break;
 
-        case LOG_NOTICE:
-            prefix.text = PREFIX_NOTICE;
-            prefix.len = sizeof(PREFIX_NOTICE);
-            break;
+    case LOG_NOTICE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
 
-        case LOG_INFO:
-            prefix.text = PREFIX_INFO;
-            prefix.len = sizeof(PREFIX_INFO);
-            break;
+    case LOG_INFO:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
 
-        case LOG_DEBUG:
-            prefix.text = PREFIX_DEBUG;
-            prefix.len = sizeof(PREFIX_DEBUG);
-            break;
+    case LOG_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
 
-        default:
-            assert(!true);
-            prefix.text = PREFIX_ERROR;
-            prefix.len = sizeof(PREFIX_ERROR);
-            break;
+    default:
+        assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
     }
 
     --prefix.len; // Remove trailing NULL.
@@ -2764,19 +2764,19 @@ static enum log_flush priority_to_flush(int priority)
 
     switch (priority)
     {
-        case LOG_EMERG:
-        case LOG_ALERT:
-        case LOG_CRIT:
-        case LOG_ERR:
-            return LOG_FLUSH_YES;
+    case LOG_EMERG:
+    case LOG_ALERT:
+    case LOG_CRIT:
+    case LOG_ERR:
+        return LOG_FLUSH_YES;
 
-        default:
-            assert(!true);
-        case LOG_WARNING:
-        case LOG_NOTICE:
-        case LOG_INFO:
-        case LOG_DEBUG:
-            return LOG_FLUSH_NO;
+    default:
+        assert(!true);
+    case LOG_WARNING:
+    case LOG_NOTICE:
+    case LOG_INFO:
+    case LOG_DEBUG:
+        return LOG_FLUSH_NO;
     }
 }
 

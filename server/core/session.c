@@ -514,16 +514,16 @@ dprintSession(DCB *dcb, SESSION *print_session)
     if (print_session->client_dcb && print_session->client_dcb->remote)
     {
         double idle = (hkheartbeat - print_session->client_dcb->last_read);
-        idle = idle > 0 ? idle/10.f : 0;
+        idle = idle > 0 ? idle / 10.f : 0;
         dcb_printf(dcb, "\tClient Address:          %s%s%s\n",
-                   print_session->client_dcb->user?print_session->client_dcb->user:"",
-                   print_session->client_dcb->user?"@":"",
+                   print_session->client_dcb->user ? print_session->client_dcb->user : "",
+                   print_session->client_dcb->user ? "@" : "",
                    print_session->client_dcb->remote);
         dcb_printf(dcb, "\tConnected:               %s\n",
                    asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
         if (print_session->client_dcb->state == DCB_STATE_POLLING)
         {
-            dcb_printf(dcb, "\tIdle:                %.0f seconds\n",idle);
+            dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
         }
 
     }

@@ -25,9 +25,9 @@
  * - Global constants applicable across the line can be defined here.
  */
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 # define MXS_BEGIN_DECLS extern "C" {
-# define MXS_END_DECLS	 }
+# define MXS_END_DECLS   }
 #else
 # define MXS_BEGIN_DECLS
 # define MXS_END_DECLS

@@ -272,7 +272,7 @@ mxs_mysql_name_kind_t mxs_mysql_name_to_pcre(char *pcre,
         case '{':
         case '}':
             *pcre++ = '\\';
-            // Flowthrough
+        // Flowthrough
         default:
             *pcre = *mysql;
         }

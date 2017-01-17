@@ -359,7 +359,8 @@ int test_domain_matching()
     const char *ns = "mysqlmon";
     const char *id = "test_domain_matching";
 
-    modulecmd_arg_type_t args[] = {
+    modulecmd_arg_type_t args[] =
+    {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
     };
 

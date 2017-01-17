@@ -36,68 +36,68 @@ const char* column_type_to_string(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_DECIMAL:
-            return "DECIMAL";
-        case TABLE_COL_TYPE_TINY:
-            return "TINY";
-        case TABLE_COL_TYPE_SHORT:
-            return "SHORT";
-        case TABLE_COL_TYPE_LONG:
-            return "LONG";
-        case TABLE_COL_TYPE_FLOAT:
-            return "FLOAT";
-        case TABLE_COL_TYPE_DOUBLE:
-            return "DOUBLE";
-        case TABLE_COL_TYPE_NULL:
-            return "NULL";
-        case TABLE_COL_TYPE_TIMESTAMP:
-            return "TIMESTAMP";
-        case TABLE_COL_TYPE_LONGLONG:
-            return "LONGLONG";
-        case TABLE_COL_TYPE_INT24:
-            return "INT24";
-        case TABLE_COL_TYPE_DATE:
-            return "DATE";
-        case TABLE_COL_TYPE_TIME:
-            return "TIME";
-        case TABLE_COL_TYPE_DATETIME:
-            return "DATETIME";
-        case TABLE_COL_TYPE_YEAR:
-            return "YEAR";
-        case TABLE_COL_TYPE_NEWDATE:
-            return "NEWDATE";
-        case TABLE_COL_TYPE_VARCHAR:
-            return "VARCHAR";
-        case TABLE_COL_TYPE_BIT:
-            return "BIT";
-        case TABLE_COL_TYPE_TIMESTAMP2:
-            return "TIMESTAMP2";
-        case TABLE_COL_TYPE_DATETIME2:
-            return "DATETIME2";
-        case TABLE_COL_TYPE_TIME2:
-            return "TIME2";
-        case TABLE_COL_TYPE_NEWDECIMAL:
-            return "NEWDECIMAL";
-        case TABLE_COL_TYPE_ENUM:
-            return "ENUM";
-        case TABLE_COL_TYPE_SET:
-            return "SET";
-        case TABLE_COL_TYPE_TINY_BLOB:
-            return "TINY_BLOB";
-        case TABLE_COL_TYPE_MEDIUM_BLOB:
-            return "MEDIUM_BLOB";
-        case TABLE_COL_TYPE_LONG_BLOB:
-            return "LONG_BLOB";
-        case TABLE_COL_TYPE_BLOB:
-            return "BLOB";
-        case TABLE_COL_TYPE_VAR_STRING:
-            return "VAR_STRING";
-        case TABLE_COL_TYPE_STRING:
-            return "STRING";
-        case TABLE_COL_TYPE_GEOMETRY:
-            return "GEOMETRY";
-        default:
-            break;
+    case TABLE_COL_TYPE_DECIMAL:
+        return "DECIMAL";
+    case TABLE_COL_TYPE_TINY:
+        return "TINY";
+    case TABLE_COL_TYPE_SHORT:
+        return "SHORT";
+    case TABLE_COL_TYPE_LONG:
+        return "LONG";
+    case TABLE_COL_TYPE_FLOAT:
+        return "FLOAT";
+    case TABLE_COL_TYPE_DOUBLE:
+        return "DOUBLE";
+    case TABLE_COL_TYPE_NULL:
+        return "NULL";
+    case TABLE_COL_TYPE_TIMESTAMP:
+        return "TIMESTAMP";
+    case TABLE_COL_TYPE_LONGLONG:
+        return "LONGLONG";
+    case TABLE_COL_TYPE_INT24:
+        return "INT24";
+    case TABLE_COL_TYPE_DATE:
+        return "DATE";
+    case TABLE_COL_TYPE_TIME:
+        return "TIME";
+    case TABLE_COL_TYPE_DATETIME:
+        return "DATETIME";
+    case TABLE_COL_TYPE_YEAR:
+        return "YEAR";
+    case TABLE_COL_TYPE_NEWDATE:
+        return "NEWDATE";
+    case TABLE_COL_TYPE_VARCHAR:
+        return "VARCHAR";
+    case TABLE_COL_TYPE_BIT:
+        return "BIT";
+    case TABLE_COL_TYPE_TIMESTAMP2:
+        return "TIMESTAMP2";
+    case TABLE_COL_TYPE_DATETIME2:
+        return "DATETIME2";
+    case TABLE_COL_TYPE_TIME2:
+        return "TIME2";
+    case TABLE_COL_TYPE_NEWDECIMAL:
+        return "NEWDECIMAL";
+    case TABLE_COL_TYPE_ENUM:
+        return "ENUM";
+    case TABLE_COL_TYPE_SET:
+        return "SET";
+    case TABLE_COL_TYPE_TINY_BLOB:
+        return "TINY_BLOB";
+    case TABLE_COL_TYPE_MEDIUM_BLOB:
+        return "MEDIUM_BLOB";
+    case TABLE_COL_TYPE_LONG_BLOB:
+        return "LONG_BLOB";
+    case TABLE_COL_TYPE_BLOB:
+        return "BLOB";
+    case TABLE_COL_TYPE_VAR_STRING:
+        return "VAR_STRING";
+    case TABLE_COL_TYPE_STRING:
+        return "STRING";
+    case TABLE_COL_TYPE_GEOMETRY:
+        return "GEOMETRY";
+    default:
+        break;
     }
     return "UNKNOWN";
 }
@@ -106,11 +106,11 @@ bool column_is_blob(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_TINY_BLOB:
-        case TABLE_COL_TYPE_MEDIUM_BLOB:
-        case TABLE_COL_TYPE_LONG_BLOB:
-        case TABLE_COL_TYPE_BLOB:
-            return true;
+    case TABLE_COL_TYPE_TINY_BLOB:
+    case TABLE_COL_TYPE_MEDIUM_BLOB:
+    case TABLE_COL_TYPE_LONG_BLOB:
+    case TABLE_COL_TYPE_BLOB:
+        return true;
     }
     return false;
 }
@@ -126,15 +126,15 @@ bool column_is_variable_string(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_DECIMAL:
-        case TABLE_COL_TYPE_VARCHAR:
-        case TABLE_COL_TYPE_BIT:
-        case TABLE_COL_TYPE_NEWDECIMAL:
-        case TABLE_COL_TYPE_VAR_STRING:
-        case TABLE_COL_TYPE_GEOMETRY:
-            return true;
-        default:
-            return false;
+    case TABLE_COL_TYPE_DECIMAL:
+    case TABLE_COL_TYPE_VARCHAR:
+    case TABLE_COL_TYPE_BIT:
+    case TABLE_COL_TYPE_NEWDECIMAL:
+    case TABLE_COL_TYPE_VAR_STRING:
+    case TABLE_COL_TYPE_GEOMETRY:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -157,15 +157,15 @@ bool column_is_temporal(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_YEAR:
-        case TABLE_COL_TYPE_DATE:
-        case TABLE_COL_TYPE_TIME:
-        case TABLE_COL_TYPE_TIME2:
-        case TABLE_COL_TYPE_DATETIME:
-        case TABLE_COL_TYPE_DATETIME2:
-        case TABLE_COL_TYPE_TIMESTAMP:
-        case TABLE_COL_TYPE_TIMESTAMP2:
-            return true;
+    case TABLE_COL_TYPE_YEAR:
+    case TABLE_COL_TYPE_DATE:
+    case TABLE_COL_TYPE_TIME:
+    case TABLE_COL_TYPE_TIME2:
+    case TABLE_COL_TYPE_DATETIME:
+    case TABLE_COL_TYPE_DATETIME2:
+    case TABLE_COL_TYPE_TIMESTAMP:
+    case TABLE_COL_TYPE_TIMESTAMP2:
+        return true;
     }
     return false;
 }
@@ -379,7 +379,7 @@ size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest)
  * @return Length of the processed field in bytes
  */
 size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
-                    uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest)
+                  uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest)
 {
     if (metadata[1])
     {
@@ -399,29 +399,29 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_YEAR:
-            return 1;
+    case TABLE_COL_TYPE_YEAR:
+        return 1;
 
-        case TABLE_COL_TYPE_TIME:
-        case TABLE_COL_TYPE_DATE:
-            return 3;
+    case TABLE_COL_TYPE_TIME:
+    case TABLE_COL_TYPE_DATE:
+        return 3;
 
-        case TABLE_COL_TYPE_TIME2:
-            return 3 + ((decimals + 1) / 2);
+    case TABLE_COL_TYPE_TIME2:
+        return 3 + ((decimals + 1) / 2);
 
-        case TABLE_COL_TYPE_DATETIME:
-        case TABLE_COL_TYPE_TIMESTAMP:
-            return 4;
+    case TABLE_COL_TYPE_DATETIME:
+    case TABLE_COL_TYPE_TIMESTAMP:
+        return 4;
 
-        case TABLE_COL_TYPE_TIMESTAMP2:
-            return 4 + ((decimals + 1) / 2);
+    case TABLE_COL_TYPE_TIMESTAMP2:
+        return 4 + ((decimals + 1) / 2);
 
-        case TABLE_COL_TYPE_DATETIME2:
-            return 5 + ((decimals + 1) / 2);
+    case TABLE_COL_TYPE_DATETIME2:
+        return 5 + ((decimals + 1) / 2);
 
-        default:
-            MXS_ERROR("Unknown field type: %x %s", type, column_type_to_string(type));
-            break;
+    default:
+        MXS_ERROR("Unknown field type: %x %s", type, column_type_to_string(type));
+        break;
     }
 
     return 0;
@@ -440,31 +440,31 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, stru
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_YEAR:
-            unpack_year(ptr, tm);
-            break;
+    case TABLE_COL_TYPE_YEAR:
+        unpack_year(ptr, tm);
+        break;
 
-        case TABLE_COL_TYPE_DATETIME:
-            // This is not used with MariaDB RBR
-            //unpack_datetime(ptr, *metadata, tm);
-            break;
+    case TABLE_COL_TYPE_DATETIME:
+        // This is not used with MariaDB RBR
+        //unpack_datetime(ptr, *metadata, tm);
+        break;
 
-        case TABLE_COL_TYPE_DATETIME2:
-            unpack_datetime2(ptr, *metadata, tm);
-            break;
+    case TABLE_COL_TYPE_DATETIME2:
+        unpack_datetime2(ptr, *metadata, tm);
+        break;
 
-        case TABLE_COL_TYPE_TIME:
-            unpack_time(ptr, tm);
-            break;
+    case TABLE_COL_TYPE_TIME:
+        unpack_time(ptr, tm);
+        break;
 
-        case TABLE_COL_TYPE_DATE:
-            unpack_date(ptr, tm);
-            break;
+    case TABLE_COL_TYPE_DATE:
+        unpack_date(ptr, tm);
+        break;
 
-        case TABLE_COL_TYPE_TIMESTAMP:
-        case TABLE_COL_TYPE_TIMESTAMP2:
-            unpack_timestamp(ptr, *metadata, tm);
-            break;
+    case TABLE_COL_TYPE_TIMESTAMP:
+    case TABLE_COL_TYPE_TIMESTAMP2:
+        unpack_timestamp(ptr, *metadata, tm);
+        break;
     }
     return temporal_field_size(type, *metadata);
 }
@@ -475,30 +475,30 @@ void format_temporal_value(char *str, size_t size, uint8_t type, struct tm *tm)
 
     switch (type)
     {
-        case TABLE_COL_TYPE_DATETIME:
-        case TABLE_COL_TYPE_DATETIME2:
-        case TABLE_COL_TYPE_TIMESTAMP:
-        case TABLE_COL_TYPE_TIMESTAMP2:
-            format = "%Y-%m-%d %H:%M:%S";
-            break;
+    case TABLE_COL_TYPE_DATETIME:
+    case TABLE_COL_TYPE_DATETIME2:
+    case TABLE_COL_TYPE_TIMESTAMP:
+    case TABLE_COL_TYPE_TIMESTAMP2:
+        format = "%Y-%m-%d %H:%M:%S";
+        break;
 
-        case TABLE_COL_TYPE_TIME:
-        case TABLE_COL_TYPE_TIME2:
-            format = "%H:%M:%S";
-            break;
+    case TABLE_COL_TYPE_TIME:
+    case TABLE_COL_TYPE_TIME2:
+        format = "%H:%M:%S";
+        break;
 
-        case TABLE_COL_TYPE_DATE:
-            format = "%Y-%m-%d";
-            break;
+    case TABLE_COL_TYPE_DATE:
+        format = "%Y-%m-%d";
+        break;
 
-        case TABLE_COL_TYPE_YEAR:
-            format = "%Y";
-            break;
+    case TABLE_COL_TYPE_YEAR:
+        format = "%Y";
+        break;
 
-        default:
-            MXS_ERROR("Unexpected temporal type: %x %s", type, column_type_to_string(type));
-            ss_dassert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected temporal type: %x %s", type, column_type_to_string(type));
+        ss_dassert(false);
+        break;
     }
     strftime(str, size, format, tm);
 }
@@ -521,31 +521,31 @@ size_t unpack_numeric_field(uint8_t *src, uint8_t type, uint8_t *metadata, uint8
     size_t size = 0;
     switch (type)
     {
-        case TABLE_COL_TYPE_LONG:
-        case TABLE_COL_TYPE_FLOAT:
-            size = 4;
-            break;
+    case TABLE_COL_TYPE_LONG:
+    case TABLE_COL_TYPE_FLOAT:
+        size = 4;
+        break;
 
-        case TABLE_COL_TYPE_INT24:
-            size = 3;
-            break;
+    case TABLE_COL_TYPE_INT24:
+        size = 3;
+        break;
 
-        case TABLE_COL_TYPE_LONGLONG:
-        case TABLE_COL_TYPE_DOUBLE:
-            size = 8;
-            break;
+    case TABLE_COL_TYPE_LONGLONG:
+    case TABLE_COL_TYPE_DOUBLE:
+        size = 8;
+        break;
 
-        case TABLE_COL_TYPE_SHORT:
-            size = 2;
-            break;
+    case TABLE_COL_TYPE_SHORT:
+        size = 2;
+        break;
 
-        case TABLE_COL_TYPE_TINY:
-            size = 1;
-            break;
+    case TABLE_COL_TYPE_TINY:
+        size = 1;
+        break;
 
-        default:
-            MXS_ERROR("Bad column type: %x %s", type, column_type_to_string(type));
-            break;
+    default:
+        MXS_ERROR("Bad column type: %x %s", type, column_type_to_string(type));
+        break;
     }
 
     memcpy(dest, src, size);
@@ -558,30 +558,34 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
 
     switch (bytes)
     {
-        case 1:
-            val = ptr[0];
-            break;
-        case 2:
-            val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
-            break;
-        case 3:
-            val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) | ((uint64_t)ptr[0] << 16);
-            break;
-        case 4:
-            val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
-            break;
-        case 5:
-            val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) | ((uint64_t)ptr[0] << 32);
-            break;
-        case 6:
-            val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) | ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
-            break;
-        case 7:
-            val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) | ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) | ((uint64_t)ptr[0] << 48);
-            break;
-        case 8:
-            val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) | ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
-            break;
+    case 1:
+        val = ptr[0];
+        break;
+    case 2:
+        val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
+        break;
+    case 3:
+        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) | ((uint64_t)ptr[0] << 16);
+        break;
+    case 4:
+        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+        break;
+    case 5:
+        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) | ((
+                                                                                                                      uint64_t)ptr[0] << 32);
+        break;
+    case 6:
+        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) | ((
+                                                                                                                      uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+        break;
+    case 7:
+        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) | ((
+                                                                                                                      uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) | ((uint64_t)ptr[0] << 48);
+        break;
+    case 8:
+        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) | ((
+                                                                                                                      uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+        break;
     }
 
     return val;

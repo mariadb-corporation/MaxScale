@@ -855,56 +855,56 @@ char* strnchr_esc_mysql(char* ptr, char c, int len)
         {
             switch (*p)
             {
-                case '\\':
-                    escaped = true;
-                    break;
+            case '\\':
+                escaped = true;
+                break;
 
-                case '\'':
-                case '"':
-                    if (!quoted)
-                    {
-                        quoted = true;
-                        qc = *p;
-                    }
-                    else if (*p == qc)
-                    {
-                        quoted = false;
-                    }
-                    break;
+            case '\'':
+            case '"':
+                if (!quoted)
+                {
+                    quoted = true;
+                    qc = *p;
+                }
+                else if (*p == qc)
+                {
+                    quoted = false;
+                }
+                break;
 
-                case '/':
-                    if (p + 1 < end && *(p + 1) == '*')
-                    {
-                        comment = true;
-                        p += 1;
-                    }
-                    break;
+            case '/':
+                if (p + 1 < end && *(p + 1) == '*')
+                {
+                    comment = true;
+                    p += 1;
+                }
+                break;
 
-                case '*':
-                    if (comment && p + 1 < end && *(p + 1) == '/')
-                    {
-                        comment = false;
-                        p += 1;
-                    }
-                    break;
+            case '*':
+                if (comment && p + 1 < end && *(p + 1) == '/')
+                {
+                    comment = false;
+                    p += 1;
+                }
+                break;
 
-                case '`':
-                    backtick = !backtick;
-                    break;
+            case '`':
+                backtick = !backtick;
+                break;
 
-                case '#':
+            case '#':
+                return NULL;
+
+            case '-':
+                if (p + 2 < end && *(p + 1) == '-' &&
+                    isspace(*(p + 2)))
+                {
                     return NULL;
+                }
+                break;
 
-                case '-':
-                    if (p + 2 < end && *(p + 1) == '-' &&
-                        isspace(*(p + 2)))
-                    {
-                        return NULL;
-                    }
-                    break;
-
-                default:
-                    break;
+            default:
+                break;
             }
 
             if (*p == c && !escaped && !quoted && !comment && !backtick)
@@ -940,23 +940,23 @@ bool is_mysql_statement_end(const char* start, int len)
     {
         switch (*ptr)
         {
-            case '-':
-                if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
-                {
-                    rval = true;
-                }
-                break;
-
-            case '#':
+        case '-':
+            if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
+            {
                 rval = true;
-                break;
+            }
+            break;
 
-            case '/':
-                if (ptr < start + len - 1 && *(ptr + 1) == '*')
-                {
-                    rval = true;
-                }
-                break;
+        case '#':
+            rval = true;
+            break;
+
+        case '/':
+            if (ptr < start + len - 1 && *(ptr + 1) == '*')
+            {
+                rval = true;
+            }
+            break;
         }
     }
     else

@@ -66,7 +66,7 @@ static inline int
 mxs_queue_count(QUEUE_CONFIG *queue_config)
 {
     int count = queue_config->end - queue_config->start;
-    return count < 0 ? (count + queue_config->queue_limit + 1): count;
+    return count < 0 ? (count + queue_config->queue_limit + 1) : count;
 }
 
 MXS_END_DECLS

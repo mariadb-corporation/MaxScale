@@ -190,9 +190,9 @@ static const MXS_ENUM_VALUE monitor_event_enum_values[] =
 
 /** Default value for the `events` parameter */
 static const char MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,slave_down,"
-    "slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,"
-    "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
-    "new_master,new_slave,new_synced,new_donor,new_ndb";
+                                                  "slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,"
+                                                  "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
+                                                  "new_master,new_slave,new_synced,new_donor,new_ndb";
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
@@ -235,8 +235,8 @@ struct monitor
     size_t interval;              /**< The monitor interval */
     bool created_online;          /**< Whether this monitor was created at runtime */
     volatile bool server_pending_changes;
-                                  /**< Are there any pending changes to a server?
-                                     * If yes, the next monitor loop starts early.  */
+    /**< Are there any pending changes to a server?
+       * If yes, the next monitor loop starts early.  */
     struct monitor *next;         /**< Next monitor in the linked list */
 };
 

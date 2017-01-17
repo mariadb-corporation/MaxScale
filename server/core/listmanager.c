@@ -231,7 +231,7 @@ dprintListStats(DCB *pdcb, LIST_CONFIG *list_config, const char *listname)
     dcb_printf(pdcb, "Maximum ever used at once:    %d\n", list_config->maximum);
     dcb_printf(pdcb, "Currently free for reuse:     %d\n", list_config->freecount);
     dcb_printf(pdcb, "Total in use + free:          %d\n",
-            list_config->freecount + list_config->count);
+               list_config->freecount + list_config->count);
     dcb_printf(pdcb, "Number of memory allocations: %d\n", list_config->num_malloc);
 }
 

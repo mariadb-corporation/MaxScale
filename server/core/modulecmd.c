@@ -220,144 +220,144 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
     {
         switch (MODULECMD_GET_TYPE(type))
         {
-            case MODULECMD_ARG_NONE:
-                arg->type.type = MODULECMD_ARG_NONE;
-                rval = true;
-                break;
+        case MODULECMD_ARG_NONE:
+            arg->type.type = MODULECMD_ARG_NONE;
+            rval = true;
+            break;
 
-            case MODULECMD_ARG_STRING:
-                if ((arg->value.string = MXS_STRDUP((char*)value)))
+        case MODULECMD_ARG_STRING:
+            if ((arg->value.string = MXS_STRDUP((char*)value)))
+            {
+                arg->type.type = MODULECMD_ARG_STRING;
+                rval = true;
+            }
+            else
+            {
+                *err = "memory allocation failed";
+            }
+            break;
+
+        case MODULECMD_ARG_BOOLEAN:
+            {
+                int truthval = config_truth_value((char*)value);
+                if (truthval != -1)
                 {
-                    arg->type.type = MODULECMD_ARG_STRING;
+                    arg->value.boolean = truthval;
+                    arg->type.type = MODULECMD_ARG_BOOLEAN;
                     rval = true;
                 }
                 else
                 {
-                    *err = "memory allocation failed";
+                    *err = "not a boolean value";
                 }
-                break;
+            }
+            break;
 
-            case MODULECMD_ARG_BOOLEAN:
+        case MODULECMD_ARG_SERVICE:
+            if ((arg->value.service = service_find((char*)value)))
+            {
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                    strcmp(cmd->domain, arg->value.service->routerModule) == 0)
                 {
-                    int truthval = config_truth_value((char*)value);
-                    if (truthval != -1)
-                    {
-                        arg->value.boolean = truthval;
-                        arg->type.type = MODULECMD_ARG_BOOLEAN;
-                        rval = true;
-                    }
-                    else
-                    {
-                        *err = "not a boolean value";
-                    }
-                }
-                break;
-
-            case MODULECMD_ARG_SERVICE:
-                if ((arg->value.service = service_find((char*)value)))
-                {
-                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                        strcmp(cmd->domain, arg->value.service->routerModule) == 0)
-                    {
-                        arg->type.type = MODULECMD_ARG_SERVICE;
-                        rval = true;
-                    }
-                    else
-                    {
-                        *err = "router and domain names don't match";
-                    }
+                    arg->type.type = MODULECMD_ARG_SERVICE;
+                    rval = true;
                 }
                 else
                 {
-                    *err = "service not found";
+                    *err = "router and domain names don't match";
                 }
-                break;
+            }
+            else
+            {
+                *err = "service not found";
+            }
+            break;
 
-            case MODULECMD_ARG_SERVER:
-                if ((arg->value.server = server_find_by_unique_name((char*)value)))
+        case MODULECMD_ARG_SERVER:
+            if ((arg->value.server = server_find_by_unique_name((char*)value)))
+            {
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                    strcmp(cmd->domain, arg->value.server->protocol) == 0)
                 {
-                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                        strcmp(cmd->domain, arg->value.server->protocol) == 0)
-                    {
-                        arg->type.type = MODULECMD_ARG_SERVER;
-                        rval = true;
-                    }
-                    else
-                    {
-                        *err = "server and domain names don't match";
-                    }
+                    arg->type.type = MODULECMD_ARG_SERVER;
+                    rval = true;
                 }
                 else
                 {
-                    *err = "server not found";
+                    *err = "server and domain names don't match";
                 }
-                break;
+            }
+            else
+            {
+                *err = "server not found";
+            }
+            break;
 
-            case MODULECMD_ARG_SESSION:
-                if ((arg->value.session = session_get_by_id(atoi(value))))
+        case MODULECMD_ARG_SESSION:
+            if ((arg->value.session = session_get_by_id(atoi(value))))
+            {
+                arg->type.type = MODULECMD_ARG_SESSION;
+            }
+            rval = true;
+            break;
+
+        case MODULECMD_ARG_DCB:
+            arg->type.type = MODULECMD_ARG_DCB;
+            arg->value.dcb = (DCB*)value;
+            rval = true;
+            break;
+
+        case MODULECMD_ARG_MONITOR:
+            if ((arg->value.monitor = monitor_find((char*)value)))
+            {
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                    strcmp(cmd->domain, arg->value.monitor->module_name) == 0)
                 {
-                    arg->type.type = MODULECMD_ARG_SESSION;
-                }
-                rval = true;
-                break;
-
-            case MODULECMD_ARG_DCB:
-                arg->type.type = MODULECMD_ARG_DCB;
-                arg->value.dcb = (DCB*)value;
-                rval = true;
-                break;
-
-            case MODULECMD_ARG_MONITOR:
-                if ((arg->value.monitor = monitor_find((char*)value)))
-                {
-                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                        strcmp(cmd->domain, arg->value.monitor->module_name) == 0)
-                    {
-                        arg->type.type = MODULECMD_ARG_MONITOR;
-                        rval = true;
-                    }
-                    else
-                    {
-                        *err = "monitor and domain names don't match";
-                    }
+                    arg->type.type = MODULECMD_ARG_MONITOR;
+                    rval = true;
                 }
                 else
                 {
-                    *err = "monitor not found";
+                    *err = "monitor and domain names don't match";
                 }
-                break;
+            }
+            else
+            {
+                *err = "monitor not found";
+            }
+            break;
 
-            case MODULECMD_ARG_FILTER:
-                if ((arg->value.filter = filter_def_find((char*)value)))
+        case MODULECMD_ARG_FILTER:
+            if ((arg->value.filter = filter_def_find((char*)value)))
+            {
+                if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
+                    strcmp(cmd->domain, arg->value.filter->module) == 0)
                 {
-                    if (MODULECMD_ALLOW_NAME_MISMATCH(type) ||
-                        strcmp(cmd->domain, arg->value.filter->module) == 0)
-                    {
-                        arg->type.type = MODULECMD_ARG_FILTER;
-                        rval = true;
-                    }
-                    else
-                    {
-                        *err = "filter and domain names don't match";
-                    }
+                    arg->type.type = MODULECMD_ARG_FILTER;
+                    rval = true;
                 }
                 else
                 {
-                    *err = "filter not found";
+                    *err = "filter and domain names don't match";
                 }
-                break;
+            }
+            else
+            {
+                *err = "filter not found";
+            }
+            break;
 
-            case MODULECMD_ARG_OUTPUT:
-                arg->type.type = MODULECMD_ARG_OUTPUT;
-                arg->value.dcb = (DCB*)value;
-                rval = true;
-                break;
+        case MODULECMD_ARG_OUTPUT:
+            arg->type.type = MODULECMD_ARG_OUTPUT;
+            arg->value.dcb = (DCB*)value;
+            rval = true;
+            break;
 
-            default:
-                ss_dassert(false);
-                MXS_ERROR("Undefined argument type: %0lx", type->type);
-                *err = "internal error";
-                break;
+        default:
+            ss_dassert(false);
+            MXS_ERROR("Undefined argument type: %0lx", type->type);
+            *err = "internal error";
+            break;
         }
     }
     else
@@ -392,16 +392,16 @@ static void free_argument(struct arg_node *arg)
 {
     switch (arg->type.type)
     {
-        case MODULECMD_ARG_STRING:
-            MXS_FREE(arg->value.string);
-            break;
+    case MODULECMD_ARG_STRING:
+        MXS_FREE(arg->value.string);
+        break;
 
-        case MODULECMD_ARG_SESSION:
-            session_put_ref(arg->value.session);
-            break;
+    case MODULECMD_ARG_SESSION:
+        session_put_ref(arg->value.session);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
@@ -568,7 +568,7 @@ const char* modulecmd_get_error()
 }
 
 bool modulecmd_foreach(const char *domain_re, const char *ident_re,
-                   bool(*fn)(const MODULECMD *cmd, void *data), void *data)
+                       bool(*fn)(const MODULECMD *cmd, void *data), void *data)
 {
     bool rval = true;
     bool stop = false;
@@ -578,16 +578,16 @@ bool modulecmd_foreach(const char *domain_re, const char *ident_re,
     {
         int err;
         mxs_pcre2_result_t d_res = domain_re ?
-            mxs_pcre2_simple_match(domain_re, domain->domain, 0, &err) :
-            MXS_PCRE2_MATCH;
+                                   mxs_pcre2_simple_match(domain_re, domain->domain, 0, &err) :
+                                   MXS_PCRE2_MATCH;
 
         if (d_res == MXS_PCRE2_MATCH)
         {
             for (MODULECMD *cmd = domain->commands; cmd && rval; cmd = cmd->next)
             {
                 mxs_pcre2_result_t i_res = ident_re ?
-                    mxs_pcre2_simple_match(ident_re, cmd->identifier, 0, &err) :
-                    MXS_PCRE2_MATCH;
+                                           mxs_pcre2_simple_match(ident_re, cmd->identifier, 0, &err) :
+                                           MXS_PCRE2_MATCH;
 
                 if (i_res == MXS_PCRE2_MATCH)
                 {
@@ -628,50 +628,50 @@ char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
 
     switch (MODULECMD_GET_TYPE(type))
     {
-        case MODULECMD_ARG_NONE:
-            strtype = "NONE";
-            break;
+    case MODULECMD_ARG_NONE:
+        strtype = "NONE";
+        break;
 
-        case MODULECMD_ARG_STRING:
-            strtype = "STRING";
-            break;
+    case MODULECMD_ARG_STRING:
+        strtype = "STRING";
+        break;
 
-        case MODULECMD_ARG_BOOLEAN:
-            strtype = "BOOLEAN";
-            break;
+    case MODULECMD_ARG_BOOLEAN:
+        strtype = "BOOLEAN";
+        break;
 
-        case MODULECMD_ARG_SERVICE:
-            strtype = "SERVICE";
-            break;
+    case MODULECMD_ARG_SERVICE:
+        strtype = "SERVICE";
+        break;
 
-        case MODULECMD_ARG_SERVER:
-            strtype = "SERVER";
-            break;
+    case MODULECMD_ARG_SERVER:
+        strtype = "SERVER";
+        break;
 
-        case MODULECMD_ARG_SESSION:
-            strtype = "SESSION";
-            break;
+    case MODULECMD_ARG_SESSION:
+        strtype = "SESSION";
+        break;
 
-        case MODULECMD_ARG_DCB:
-            strtype = "DCB";
-            break;
+    case MODULECMD_ARG_DCB:
+        strtype = "DCB";
+        break;
 
-        case MODULECMD_ARG_MONITOR:
-            strtype = "MONITOR";
-            break;
+    case MODULECMD_ARG_MONITOR:
+        strtype = "MONITOR";
+        break;
 
-        case MODULECMD_ARG_FILTER:
-            strtype = "FILTER";
-            break;
+    case MODULECMD_ARG_FILTER:
+        strtype = "FILTER";
+        break;
 
-        case MODULECMD_ARG_OUTPUT:
-            strtype = "OUTPUT";
-            break;
+    case MODULECMD_ARG_OUTPUT:
+        strtype = "OUTPUT";
+        break;
 
-        default:
-            ss_dassert(false);
-            MXS_ERROR("Unknown type");
-            break;
+    default:
+        ss_dassert(false);
+        MXS_ERROR("Unknown type");
+        break;
     }
 
     size_t slen = strlen(strtype);
@@ -690,5 +690,5 @@ char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
 bool modulecmd_arg_is_present(const MODULECMD_ARG *arg, int idx)
 {
     return arg->argc > idx &&
-        MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
+           MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
 }

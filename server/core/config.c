@@ -173,9 +173,9 @@ static const char *monitor_params[] =
 
 static const char *filter_params[] =
 {
-     "type",
-     "module",
-     NULL
+    "type",
+    "module",
+    NULL
 };
 
 static const char *server_params[] =
@@ -576,21 +576,21 @@ static bool contains_cnf_files(const char *path)
 
     switch (rc)
     {
-        case 0:
-            rval = true;
-            break;
+    case 0:
+        rval = true;
+        break;
 
-        case GLOB_NOSPACE:
-            MXS_OOM();
-            break;
+    case GLOB_NOSPACE:
+        MXS_OOM();
+        break;
 
-        case GLOB_ABORTED:
-            MXS_ERROR("Failed to read directory '%s'", path);
-            break;
+    case GLOB_ABORTED:
+        MXS_ERROR("Failed to read directory '%s'", path);
+        break;
 
-        default:
-            ss_dassert(rc == GLOB_NOMATCH);
-            break;
+    default:
+        ss_dassert(rc == GLOB_NOMATCH);
+        break;
     }
 
     globfree(&matches);
@@ -955,56 +955,56 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
 
     switch (*end)
     {
-        case 'T':
-        case 't':
-            if (*(end + 1) == 'i')
-            {
-                size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-            }
-            else
-            {
-                size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
-            }
-            break;
+    case 'T':
+    case 't':
+        if (*(end + 1) == 'i')
+        {
+            size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
 
-        case 'G':
-        case 'g':
-            if (*(end + 1) == 'i')
-            {
-                size *= 1024ULL * 1024ULL * 1024ULL;
-            }
-            else
-            {
-                size *= 1000ULL * 1000ULL * 1000ULL;
-            }
-            break;
+    case 'G':
+    case 'g':
+        if (*(end + 1) == 'i')
+        {
+            size *= 1024ULL * 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL * 1000ULL;
+        }
+        break;
 
-        case 'M':
-        case 'm':
-            if (*(end + 1) == 'i')
-            {
-                size *= 1024ULL * 1024ULL;
-            }
-            else
-            {
-                size *= 1000ULL * 1000ULL;
-            }
-            break;
+    case 'M':
+    case 'm':
+        if (*(end + 1) == 'i')
+        {
+            size *= 1024ULL * 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL * 1000ULL;
+        }
+        break;
 
-        case 'K':
-        case 'k':
-            if (*(end + 1) == 'i')
-            {
-                size *= 1024ULL;
-            }
-            else
-            {
-                size *= 1000ULL;
-            }
-            break;
+    case 'K':
+    case 'k':
+        if (*(end + 1) == 'i')
+        {
+            size *= 1024ULL;
+        }
+        else
+        {
+            size *= 1000ULL;
+        }
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     return size;
@@ -3151,10 +3151,10 @@ bool config_have_required_ssl_params(CONFIG_CONTEXT *obj)
     CONFIG_PARAMETER *param = obj->parameters;
 
     return config_get_param(param, "ssl") &&
-        config_get_param(param, "ssl_key") &&
-        config_get_param(param, "ssl_cert") &&
-        config_get_param(param, "ssl_ca_cert") &&
-        strcmp(config_get_value_string(param, "ssl"), "required") == 0;
+           config_get_param(param, "ssl_key") &&
+           config_get_param(param, "ssl_cert") &&
+           config_get_param(param, "ssl_ca_cert") &&
+           strcmp(config_get_value_string(param, "ssl"), "required") == 0;
 }
 
 bool config_is_ssl_parameter(const char *key)
@@ -3266,125 +3266,125 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
 
             switch (params[i].type)
             {
-                case MXS_MODULE_PARAM_COUNT:
-                    if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
-                    {
-                        valid = true;
-                    }
-                    break;
+            case MXS_MODULE_PARAM_COUNT:
+                if ((strtol(value, &endptr, 10)) >= 0 && endptr != value && *endptr == '\0')
+                {
+                    valid = true;
+                }
+                break;
 
-                case MXS_MODULE_PARAM_INT:
-                    strtol(value, &endptr, 10);
-                    if (endptr != value && *endptr == '\0')
-                    {
-                        valid = true;
-                    }
-                    break;
+            case MXS_MODULE_PARAM_INT:
+                strtol(value, &endptr, 10);
+                if (endptr != value && *endptr == '\0')
+                {
+                    valid = true;
+                }
+                break;
 
-                case MXS_MODULE_PARAM_SIZE:
-                    strtoll(value, &endptr, 10);
-                    if (endptr != value)
+            case MXS_MODULE_PARAM_SIZE:
+                strtoll(value, &endptr, 10);
+                if (endptr != value)
+                {
+                    switch (*endptr)
                     {
-                        switch (*endptr)
+                    case 'T':
+                    case 't':
+                    case 'G':
+                    case 'g':
+                    case 'M':
+                    case 'm':
+                    case 'K':
+                    case 'k':
+                        if (*endptr == '\0' ||
+                            (*endptr == 'i' && *(endptr + 1) == '\0'))
                         {
-                            case 'T':
-                            case 't':
-                            case 'G':
-                            case 'g':
-                            case 'M':
-                            case 'm':
-                            case 'K':
-                            case 'k':
-                                if (*endptr == '\0' ||
-                                    (*endptr == 'i' && *(endptr + 1) == '\0'))
-                                {
-                                    valid = true;
-                                }
-                                break;
+                            valid = true;
+                        }
+                        break;
 
-                            case '\0':
+                    case '\0':
+                        valid = true;
+                        break;
+
+                    default:
+                        break;
+                    }
+                }
+                break;
+
+            case MXS_MODULE_PARAM_BOOL:
+                if (config_truth_value(value) != -1)
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_STRING:
+                if (*value)
+                {
+                    valid = true;
+                }
+                break;
+
+            case MXS_MODULE_PARAM_ENUM:
+                if (params[i].accepted_values)
+                {
+                    char *endptr;
+                    const char *delim = ", \t";
+                    char buf[strlen(value) + 1];
+                    strcpy(buf, value);
+                    char *tok = strtok_r(buf, delim, &endptr);
+
+                    while (tok)
+                    {
+                        valid = false;
+
+                        for (int j = 0; params[i].accepted_values[j].name; j++)
+                        {
+                            if (strcmp(params[i].accepted_values[j].name, tok) == 0)
+                            {
                                 valid = true;
                                 break;
-
-                            default:
-                                break;
+                            }
                         }
-                    }
-                    break;
 
-                case MXS_MODULE_PARAM_BOOL:
-                    if (config_truth_value(value) != -1)
-                    {
-                        valid = true;
-                    }
-                    break;
+                        tok = strtok_r(NULL, delim, &endptr);
 
-                case MXS_MODULE_PARAM_STRING:
-                    if (*value)
-                    {
-                        valid = true;
-                    }
-                    break;
-
-                case MXS_MODULE_PARAM_ENUM:
-                    if (params[i].accepted_values)
-                    {
-                        char *endptr;
-                        const char *delim = ", \t";
-                        char buf[strlen(value) + 1];
-                        strcpy(buf, value);
-                        char *tok = strtok_r(buf, delim, &endptr);
-
-                        while (tok)
+                        if ((params[i].options & MXS_MODULE_OPT_ENUM_UNIQUE) && (tok || !valid))
                         {
+                            /** Either the only defined enum value is not valid
+                             * or multiple values were defined */
                             valid = false;
-
-                            for (int j = 0; params[i].accepted_values[j].name; j++)
-                            {
-                                if (strcmp(params[i].accepted_values[j].name, tok) == 0)
-                                {
-                                    valid = true;
-                                    break;
-                                }
-                            }
-
-                            tok = strtok_r(NULL, delim, &endptr);
-
-                            if ((params[i].options & MXS_MODULE_OPT_ENUM_UNIQUE) && (tok || !valid))
-                            {
-                                /** Either the only defined enum value is not valid
-                                 * or multiple values were defined */
-                                valid = false;
-                                break;
-                            }
+                            break;
                         }
                     }
-                    break;
+                }
+                break;
 
-                case MXS_MODULE_PARAM_SERVICE:
-                    if ((context && config_contains_type(context, value, "service")) ||
-                        service_find(value))
-                    {
-                        valid = true;
-                    }
-                    break;
+            case MXS_MODULE_PARAM_SERVICE:
+                if ((context && config_contains_type(context, value, "service")) ||
+                    service_find(value))
+                {
+                    valid = true;
+                }
+                break;
 
-                case MXS_MODULE_PARAM_SERVER:
-                    if ((context && config_contains_type(context, value, "server")) ||
-                        server_find_by_unique_name(value))
-                    {
-                        valid = true;
-                    }
-                    break;
+            case MXS_MODULE_PARAM_SERVER:
+                if ((context && config_contains_type(context, value, "server")) ||
+                    server_find_by_unique_name(value))
+                {
+                    valid = true;
+                }
+                break;
 
-                case MXS_MODULE_PARAM_PATH:
-                    valid = check_path_parameter(&params[i], value);
-                    break;
+            case MXS_MODULE_PARAM_PATH:
+                valid = check_path_parameter(&params[i], value);
+                break;
 
-                default:
-                    MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
-                    ss_dassert(false);
-                    break;
+            default:
+                MXS_ERROR("Unexpected module parameter type: %d", params[i].type);
+                ss_dassert(false);
+                break;
             }
         }
     }

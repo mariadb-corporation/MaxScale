@@ -424,21 +424,21 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 
     switch (monitor->state)
     {
-        case MONITOR_STATE_RUNNING:
-            state = "Running";
-            break;
-        case MONITOR_STATE_STOPPING:
-            state = "Stopping";
-            break;
-        case MONITOR_STATE_STOPPED:
-            state = "Stopped";
-            break;
-        case MONITOR_STATE_ALLOC:
-            state = "Allocated";
-            break;
-        default:
-            state = "Unknown";
-            break;
+    case MONITOR_STATE_RUNNING:
+        state = "Running";
+        break;
+    case MONITOR_STATE_STOPPING:
+        state = "Stopping";
+        break;
+    case MONITOR_STATE_STOPPED:
+        state = "Stopped";
+        break;
+    case MONITOR_STATE_ALLOC:
+        state = "Allocated";
+        break;
+    default:
+        state = "Unknown";
+        break;
     }
 
     dcb_printf(dcb, "Monitor:           %p\n", monitor);
@@ -557,22 +557,22 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value)
     {
         switch (type)
         {
-            case MONITOR_CONNECT_TIMEOUT:
-                mon->connect_timeout = value;
-                break;
+        case MONITOR_CONNECT_TIMEOUT:
+            mon->connect_timeout = value;
+            break;
 
-            case MONITOR_READ_TIMEOUT:
-                mon->read_timeout = value;
-                break;
+        case MONITOR_READ_TIMEOUT:
+            mon->read_timeout = value;
+            break;
 
-            case MONITOR_WRITE_TIMEOUT:
-                mon->write_timeout = value;
-                break;
+        case MONITOR_WRITE_TIMEOUT:
+            mon->write_timeout = value;
+            break;
 
-            default:
-                MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
-                rval = false;
-                break;
+        default:
+            MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+            rval = false;
+            break;
         }
     }
     else
@@ -678,30 +678,30 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
                       mondb->server->port, mysql_error(mondb->con));
             switch (mysql_errno(mondb->con))
             {
-                case ER_ACCESS_DENIED_ERROR:
-                case ER_DBACCESS_DENIED_ERROR:
-                case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
-                    break;
-                default:
-                    rval = true;
-                    break;
+            case ER_ACCESS_DENIED_ERROR:
+            case ER_DBACCESS_DENIED_ERROR:
+            case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
+                break;
+            default:
+                rval = true;
+                break;
             }
         }
         else if (mysql_query(mondb->con, query) != 0)
         {
             switch (mysql_errno(mondb->con))
             {
-                case ER_TABLEACCESS_DENIED_ERROR:
-                case ER_COLUMNACCESS_DENIED_ERROR:
-                case ER_SPECIFIC_ACCESS_DENIED_ERROR:
-                case ER_PROCACCESS_DENIED_ERROR:
-                case ER_KILL_DENIED_ERROR:
-                    rval = false;
-                    break;
+            case ER_TABLEACCESS_DENIED_ERROR:
+            case ER_COLUMNACCESS_DENIED_ERROR:
+            case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+            case ER_PROCACCESS_DENIED_ERROR:
+            case ER_KILL_DENIED_ERROR:
+                rval = false;
+                break;
 
-                default:
-                    rval = true;
-                    break;
+            default:
+                rval = true;
+                break;
             }
 
             MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
@@ -869,30 +869,30 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
     switch (event_type)
     {
-        case UP_EVENT:
-            return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
-                   (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-                   (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
-                   (present & SERVER_NDB) ? NDB_UP_EVENT :
-                   SERVER_UP_EVENT;
-        case DOWN_EVENT:
-            return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-                   (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-                   (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-                   (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
-                   SERVER_DOWN_EVENT;
-        case LOSS_EVENT:
-            return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
-                   (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
-                   (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-                   LOST_NDB_EVENT;
-        case NEW_EVENT:
-            return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
-                   (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-                   (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-                   NEW_NDB_EVENT;
-        default:
-            return UNDEFINED_EVENT;
+    case UP_EVENT:
+        return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+               (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+               (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+               (present & SERVER_NDB) ? NDB_UP_EVENT :
+               SERVER_UP_EVENT;
+    case DOWN_EVENT:
+        return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+               (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+               (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+               (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
+               SERVER_DOWN_EVENT;
+    case LOSS_EVENT:
+        return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+               (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+               (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+               LOST_NDB_EVENT;
+    case NEW_EVENT:
+        return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+               (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+               (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+               NEW_NDB_EVENT;
+    default:
+        return UNDEFINED_EVENT;
     }
 }
 

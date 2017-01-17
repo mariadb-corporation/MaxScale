@@ -41,11 +41,12 @@ public:
     // pointer_type  : The type of a pointer to an element, either "uint8_t*" or "const uint8_t*".
     // reference_type: The type of a reference to an element, either "uint8_t&" or "const uint8_t&".
     template<class buf_type, class pointer_type, class reference_type>
-    class iterator_base : public std::iterator<std::forward_iterator_tag, // The type of the iterator
-                                               uint8_t,                   // The type of the elems
-                                               std::ptrdiff_t,            // Difference between two its
-                                               pointer_type,              // The type of pointer to an elem
-                                               reference_type>            // The reference type of an elem
+    class iterator_base : public std::iterator <
+        std::forward_iterator_tag, // The type of the iterator
+        uint8_t,                   // The type of the elems
+        std::ptrdiff_t,            // Difference between two its
+        pointer_type,              // The type of pointer to an elem
+        reference_type >           // The reference type of an elem
     {
     public:
         /**

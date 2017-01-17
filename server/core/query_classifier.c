@@ -306,48 +306,48 @@ struct type_name_info field_usage_to_type_name_info(qc_field_usage_t usage)
             static const char name[] = "QC_USED_IN_SELECT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QC_USED_IN_SUBSELECT:
         {
             static const char name[] = "QC_USED_IN_SUBSELECT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QC_USED_IN_WHERE:
         {
             static const char name[] = "QC_USED_IN_WHERE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QC_USED_IN_SET:
         {
             static const char name[] = "QC_USED_IN_SET";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QC_USED_IN_GROUP_BY:
         {
             static const char name[] = "QC_USED_IN_GROUP_BY";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     default:
         {
             static const char name[] = "UNKNOWN_FIELD_USAGE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
     }
 
     return info;
@@ -435,43 +435,43 @@ const char* qc_op_to_string(qc_query_op_t op)
     switch (op)
     {
     case QUERY_OP_UNDEFINED:
-	return "QUERY_OP_UNDEFINED";
+        return "QUERY_OP_UNDEFINED";
 
     case QUERY_OP_SELECT:
-	return "QUERY_OP_SELECT";
+        return "QUERY_OP_SELECT";
 
     case QUERY_OP_UPDATE:
-	return "QUERY_OP_UPDATE";
+        return "QUERY_OP_UPDATE";
 
     case QUERY_OP_INSERT:
-	return "QUERY_OP_INSERT";
+        return "QUERY_OP_INSERT";
 
     case QUERY_OP_DELETE:
-	return "QUERY_OP_DELETE";
+        return "QUERY_OP_DELETE";
 
     case QUERY_OP_TRUNCATE:
-	return "QUERY_OP_TRUNCATE";
+        return "QUERY_OP_TRUNCATE";
 
     case QUERY_OP_ALTER:
-	return "QUERY_OP_ALTER";
+        return "QUERY_OP_ALTER";
 
     case QUERY_OP_CREATE:
-	return "QUERY_OP_CREATE";
+        return "QUERY_OP_CREATE";
 
     case QUERY_OP_DROP:
-	return "QUERY_OP_DROP";
+        return "QUERY_OP_DROP";
 
     case QUERY_OP_CHANGE_DB:
-	return "QUERY_OP_CHANGE_DB";
+        return "QUERY_OP_CHANGE_DB";
 
     case QUERY_OP_LOAD:
-	return "QUERY_OP_LOAD";
+        return "QUERY_OP_LOAD";
 
     case QUERY_OP_GRANT:
-	return "QUERY_OP_GRANT";
+        return "QUERY_OP_GRANT";
 
     case QUERY_OP_REVOKE:
-	return "QUERY_OP_REVOKE";
+        return "QUERY_OP_REVOKE";
 
     default:
         return "UNKNOWN_QUERY_OP";
@@ -489,48 +489,48 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
             static const char name[] = "QUERY_TYPE_UNKNOWN";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_LOCAL_READ:
         {
             static const char name[] = "QUERY_TYPE_LOCAL_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_READ:
         {
             static const char name[] = "QUERY_TYPE_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_WRITE:
         {
             static const char name[] = "QUERY_TYPE_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_MASTER_READ:
         {
             static const char name[] = "QUERY_TYPE_MASTER_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_SESSION_WRITE:
         {
             static const char name[] = "QUERY_TYPE_SESSION_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_USERVAR_WRITE:
         {
@@ -545,138 +545,138 @@ struct type_name_info type_to_type_name_info(qc_query_type_t type)
             static const char name[] = "QUERY_TYPE_USERVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_SYSVAR_READ:
         {
             static const char name[] = "QUERY_TYPE_SYSVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
-        /** Not implemented yet */
-        //case QUERY_TYPE_SYSVAR_WRITE:
+    /** Not implemented yet */
+    //case QUERY_TYPE_SYSVAR_WRITE:
     case QUERY_TYPE_GSYSVAR_READ:
         {
             static const char name[] = "QUERY_TYPE_GSYSVAR_READ";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_GSYSVAR_WRITE:
         {
             static const char name[] = "QUERY_TYPE_GSYSVAR_WRITE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_BEGIN_TRX:
         {
             static const char name[] = "QUERY_TYPE_BEGIN_TRX";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_ENABLE_AUTOCOMMIT:
         {
             static const char name[] = "QUERY_TYPE_ENABLE_AUTOCOMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_DISABLE_AUTOCOMMIT:
         {
             static const char name[] = "QUERY_TYPE_DISABLE_AUTOCOMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_ROLLBACK:
         {
             static const char name[] = "QUERY_TYPE_ROLLBACK";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_COMMIT:
         {
             static const char name[] = "QUERY_TYPE_COMMIT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_PREPARE_NAMED_STMT:
         {
             static const char name[] = "QUERY_TYPE_PREPARE_NAMED_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_PREPARE_STMT:
         {
             static const char name[] = "QUERY_TYPE_PREPARE_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_EXEC_STMT:
         {
             static const char name[] = "QUERY_TYPE_EXEC_STMT";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_CREATE_TMP_TABLE:
         {
             static const char name[] = "QUERY_TYPE_CREATE_TMP_TABLE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_READ_TMP_TABLE:
         {
             static const char name[] = "QUERY_TYPE_READ_TMP_TABLE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_SHOW_DATABASES:
         {
             static const char name[] = "QUERY_TYPE_SHOW_DATABASES";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     case QUERY_TYPE_SHOW_TABLES:
         {
             static const char name[] = "QUERY_TYPE_SHOW_TABLES";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
 
     default:
         {
             static const char name[] = "UNKNOWN_QUERY_TYPE";
             info.name = name;
             info.name_len = sizeof(name) - 1;
-	}
-	break;
+        }
+        break;
     }
 
     return info;

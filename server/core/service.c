@@ -318,19 +318,19 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     {
         switch (port->listener->authfunc.loadusers(port))
         {
-            case MXS_AUTH_LOADUSERS_FATAL:
-                MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
-                          "service is not started.", service->name, port->name);
-                close_port(port);
-                return 0;
+        case MXS_AUTH_LOADUSERS_FATAL:
+            MXS_ERROR("[%s] Fatal error when loading users for listener '%s', "
+                      "service is not started.", service->name, port->name);
+            close_port(port);
+            return 0;
 
-            case MXS_AUTH_LOADUSERS_ERROR:
-                MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                            " might not work.", service->name, port->name);
-                break;
+        case MXS_AUTH_LOADUSERS_ERROR:
+            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                        " might not work.", service->name, port->name);
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 
@@ -1223,7 +1223,7 @@ serviceSetFilters(SERVICE *service, char *filters)
         n++;
         MXS_FILTER_DEF **tmp;
         if ((tmp = (MXS_FILTER_DEF **) MXS_REALLOC(flist,
-                                               (n + 1) * sizeof(MXS_FILTER_DEF *))) == NULL)
+                                                   (n + 1) * sizeof(MXS_FILTER_DEF *))) == NULL)
         {
             rval = false;
             break;
@@ -1393,18 +1393,18 @@ void dprintService(DCB *dcb, SERVICE *service)
     dcb_printf(dcb, "\tRouter:                              %s\n", service->routerModule);
     switch (service->state)
     {
-        case SERVICE_STATE_STARTED:
-            dcb_printf(dcb, "\tState:                               Started\n");
-            break;
-        case SERVICE_STATE_STOPPED:
-            dcb_printf(dcb, "\tState:                               Stopped\n");
-            break;
-        case SERVICE_STATE_FAILED:
-            dcb_printf(dcb, "\tState:                               Failed\n");
-            break;
-        case SERVICE_STATE_ALLOC:
-            dcb_printf(dcb, "\tState:                               Allocated\n");
-            break;
+    case SERVICE_STATE_STARTED:
+        dcb_printf(dcb, "\tState:                               Started\n");
+        break;
+    case SERVICE_STATE_STOPPED:
+        dcb_printf(dcb, "\tState:                               Stopped\n");
+        break;
+    case SERVICE_STATE_FAILED:
+        dcb_printf(dcb, "\tState:                               Failed\n");
+        break;
+    case SERVICE_STATE_ALLOC:
+        dcb_printf(dcb, "\tState:                               Allocated\n");
+        break;
     }
     if (service->router && service->router_instance)
     {
@@ -1635,20 +1635,20 @@ int service_refresh_users(SERVICE *service)
                 {
                     switch (port->listener->authfunc.loadusers(port))
                     {
-                        case MXS_AUTH_LOADUSERS_FATAL:
-                            MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
-                                      " authentication will not work.", service->name, port->name);
-                            ret = 1;
-                            break;
+                    case MXS_AUTH_LOADUSERS_FATAL:
+                        MXS_ERROR("[%s] Fatal error when loading users for listener '%s',"
+                                  " authentication will not work.", service->name, port->name);
+                        ret = 1;
+                        break;
 
-                        case MXS_AUTH_LOADUSERS_ERROR:
-                            MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
-                                        " might not work.", service->name, port->name);
-                            ret = 1;
-                            break;
+                    case MXS_AUTH_LOADUSERS_ERROR:
+                        MXS_WARNING("[%s] Failed to load users for listener '%s', authentication"
+                                    " might not work.", service->name, port->name);
+                        ret = 1;
+                        break;
 
-                        default:
-                            break;
+                    default:
+                        break;
                     }
                 }
             }
@@ -2135,12 +2135,12 @@ static void service_calculate_weights(SERVICE *service)
                     if (perc == 0)
                     {
                         MXS_WARNING("Weighting parameter '%s' with a value of %d for"
-                                  " server '%s' rounds down to zero with total weight"
-                                  " of %d for service '%s'. No queries will be "
-                                  "routed to this server as long as a server with"
-                                  " positive weight is available.",
-                                  weightby, wght, server->server->unique_name,
-                                  total, service->name);
+                                    " server '%s' rounds down to zero with total weight"
+                                    " of %d for service '%s'. No queries will be "
+                                    "routed to this server as long as a server with"
+                                    " positive weight is available.",
+                                    weightby, wght, server->server->unique_name,
+                                    total, service->name);
                     }
                     else if (perc < 0)
                     {

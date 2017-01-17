@@ -216,17 +216,17 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
                 mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
                 switch (rc)
                 {
-                    case MXS_PCRE2_ERROR:
-                        MXS_FREE(dest);
-                        rval = false;
-                        break;
-                    case MXS_PCRE2_MATCH:
-                        MXS_FREE(cmd->argv[i]);
-                        cmd->argv[i] = dest;
-                        break;
-                    case MXS_PCRE2_NOMATCH:
-                        MXS_FREE(dest);
-                        break;
+                case MXS_PCRE2_ERROR:
+                    MXS_FREE(dest);
+                    rval = false;
+                    break;
+                case MXS_PCRE2_MATCH:
+                    MXS_FREE(cmd->argv[i]);
+                    cmd->argv[i] = dest;
+                    break;
+                case MXS_PCRE2_NOMATCH:
+                    MXS_FREE(dest);
+                    break;
                 }
             }
         }

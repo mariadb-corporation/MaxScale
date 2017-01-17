@@ -109,9 +109,9 @@ test1()
                 if ((input_counter - output_counter) != TEST_QUEUE_SIZE)
                 {
                     ss_dfprintf(stderr, "\nFailed enqueue, but input counter %d and output counter %d do not differ by %d.\n",
-                        input_counter,
-                        output_counter,
-                        TEST_QUEUE_SIZE);
+                                input_counter,
+                                output_counter,
+                                TEST_QUEUE_SIZE);
                     return 4;
                 }
                 filled++;
@@ -127,61 +127,61 @@ test1()
                         if (*(int *)entry.queued_object != output_counter)
                         {
                             ss_dfprintf(stderr, "\nOutput counter was %d, but dequeue gave %d.\n",
-                                output_counter,
-                                *(int *)entry.queued_object);
+                                        output_counter,
+                                        *(int *)entry.queued_object);
                             return 10;
                         }
                         output_counter++;
                     }
                     else
                     {
-                    hkheartbeat += (HEARTBEATS_TO_EXPIRE + 1);
-                    if (mxs_dequeue_if_expired(queue, &entry))
-                    {
-                        if (*(int *)entry.queued_object != output_counter)
+                        hkheartbeat += (HEARTBEATS_TO_EXPIRE + 1);
+                        if (mxs_dequeue_if_expired(queue, &entry))
                         {
-                            ss_dfprintf(stderr, "\nOutput counter was %d, but dequeue gave %d.\n",
-                                output_counter,
-                                *(int *)entry.queued_object);
-                            return 6;
+                            if (*(int *)entry.queued_object != output_counter)
+                            {
+                                ss_dfprintf(stderr, "\nOutput counter was %d, but dequeue gave %d.\n",
+                                            output_counter,
+                                            *(int *)entry.queued_object);
+                                return 6;
+                            }
+                            output_counter++;
                         }
-                        output_counter++;
-                    }
-                    else
-                    {
-                        ss_dfprintf(stderr, "\nReturned no expired entry even though all are expired.\n");
-                        return 7;
-                    }
-                    expired++;
+                        else
+                        {
+                            ss_dfprintf(stderr, "\nReturned no expired entry even though all are expired.\n");
+                            return 7;
+                        }
+                        expired++;
                     }
                 }
             }
         }
         else
         {
-           QUEUE_ENTRY entry;
-           if (mxs_dequeue(queue, &entry))
-           {
-               if (*(int *)entry.queued_object != output_counter)
-               {
+            QUEUE_ENTRY entry;
+            if (mxs_dequeue(queue, &entry))
+            {
+                if (*(int *)entry.queued_object != output_counter)
+                {
                     ss_dfprintf(stderr, "\nOutput counter was %d, but dequeue gave %d.\n",
-                        output_counter,
-                        *(int *)entry.queued_object);
+                                output_counter,
+                                *(int *)entry.queued_object);
                     return 8;
-               }
-               output_counter++;
-           }
-           else
-           {
-               if (input_counter != output_counter)
-               {
+                }
+                output_counter++;
+            }
+            else
+            {
+                if (input_counter != output_counter)
+                {
                     ss_dfprintf(stderr, "\nNULL from dequeue, but input counter %d and output counter %d.\n",
-                        input_counter,
-                        output_counter);
+                                input_counter,
+                                output_counter);
                     return 9;
-               }
-               emptied++;
-           }
+                }
+                emptied++;
+            }
         }
     }
 

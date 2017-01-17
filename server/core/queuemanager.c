@@ -55,7 +55,7 @@ QUEUE_CONFIG
     QUEUE_CONFIG *new_queue = (QUEUE_CONFIG *)MXS_CALLOC(1, sizeof(QUEUE_CONFIG));
     if (new_queue)
     {
-        new_queue->queue_array = MXS_CALLOC(limit+1, sizeof(QUEUE_ENTRY));
+        new_queue->queue_array = MXS_CALLOC(limit + 1, sizeof(QUEUE_ENTRY));
         if (new_queue->queue_array)
         {
             new_queue->queue_limit = limit;

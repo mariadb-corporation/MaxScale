@@ -1203,25 +1203,25 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
         switch (server->server_ssl->ssl_method_type)
         {
-            case SERVICE_TLS10:
-                version = "TLSV10";
-                break;
+        case SERVICE_TLS10:
+            version = "TLSV10";
+            break;
 
 #ifdef OPENSSL_1_0
-            case SERVICE_TLS11:
-                version = "TLSV11";
-                break;
+        case SERVICE_TLS11:
+            version = "TLSV11";
+            break;
 
-            case SERVICE_TLS12:
-                version = "TLSV12";
-                break;
+        case SERVICE_TLS12:
+            version = "TLSV12";
+            break;
 #endif
-            case SERVICE_SSL_TLS_MAX:
-                version = "MAX";
-                break;
+        case SERVICE_SSL_TLS_MAX:
+            version = "MAX";
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
 
         if (version)
@@ -1273,7 +1273,7 @@ bool server_serialize(const SERVER *server)
 }
 
 SERVER* server_find_destroyed(const char *name, const char *protocol,
-                                     const char *authenticator, const char *auth_options)
+                              const char *authenticator, const char *auth_options)
 {
     spinlock_acquire(&server_spin);
     SERVER *server = allServers;

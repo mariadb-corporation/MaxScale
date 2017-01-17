@@ -1327,186 +1327,186 @@ int main(int argc, char **argv)
 
         switch (opt)
         {
-            case 'd':
-                /*< Debug mode, maxscale runs in this same process */
-                daemon_mode = false;
-                break;
+        case 'd':
+            /*< Debug mode, maxscale runs in this same process */
+            daemon_mode = false;
+            break;
 
-            case 'f':
-                /*<
-                 * Simply copy the conf file argument. Expand or validate
-                 * it when MaxScale home directory is resolved.
-                 */
-                if (optarg[0] != '-')
-                {
-                    cnf_file_arg = strndup(optarg, PATH_MAX);
-                }
-                if (cnf_file_arg == NULL)
-                {
-                    const char* logerr =
-                        "Configuration file argument "
-                        "identifier \'-f\' was specified but "
-                        "the argument didn't specify\n  a valid "
-                        "configuration file or the argument "
-                        "was missing.";
-                    print_log_n_stderr(true, true, logerr, logerr, 0);
-                    usage();
-                    succp = false;
-                }
-                break;
+        case 'f':
+            /*<
+             * Simply copy the conf file argument. Expand or validate
+             * it when MaxScale home directory is resolved.
+             */
+            if (optarg[0] != '-')
+            {
+                cnf_file_arg = strndup(optarg, PATH_MAX);
+            }
+            if (cnf_file_arg == NULL)
+            {
+                const char* logerr =
+                    "Configuration file argument "
+                    "identifier \'-f\' was specified but "
+                    "the argument didn't specify\n  a valid "
+                    "configuration file or the argument "
+                    "was missing.";
+                print_log_n_stderr(true, true, logerr, logerr, 0);
+                usage();
+                succp = false;
+            }
+            break;
 
-            case 'v':
-                rc = EXIT_SUCCESS;
-                printf("MaxScale %s\n", MAXSCALE_VERSION);
-                goto return_main;
+        case 'v':
+            rc = EXIT_SUCCESS;
+            printf("MaxScale %s\n", MAXSCALE_VERSION);
+            goto return_main;
 
-            case 'V':
-                rc = EXIT_SUCCESS;
-                printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
-                goto return_main;
+        case 'V':
+            rc = EXIT_SUCCESS;
+            printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
+            goto return_main;
 
-            case 'l':
-                if (strncasecmp(optarg, "file", PATH_MAX) == 0)
-                {
-                    *log_to_shm = false;
-                    log_to_shm_configured = true;
-                }
-                else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-                {
-                    *log_to_shm = true;
-                    log_to_shm_configured = true;
-                }
-                else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
-                {
-                    to_stdout = true;
-                    *log_to_shm = false;
-                    log_to_shm_configured = true;
-                }
-                else
-                {
-                    const char* logerr =
-                        "Configuration file argument "
-                        "identifier \'-l\' was specified but "
-                        "the argument didn't specify\n  a valid "
-                        "configuration file or the argument "
-                        "was missing.";
-                    print_log_n_stderr(true, true, logerr, logerr, 0);
-                    usage();
-                    succp = false;
-                }
-                break;
-            case 'L':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    set_logdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'N':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    set_langdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'P':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
-                {
-                    set_piddir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'D':
-                snprintf(datadir, PATH_MAX, "%s", optarg);
-                datadir[PATH_MAX] = '\0';
-                set_datadir(MXS_STRDUP_A(optarg));
-                datadir_defined = true;
-                break;
-            case 'C':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    set_configdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'B':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    set_libdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'A':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
-                {
-                    set_cachedir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
+        case 'l':
+            if (strncasecmp(optarg, "file", PATH_MAX) == 0)
+            {
+                *log_to_shm = false;
+                log_to_shm_configured = true;
+            }
+            else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
+            {
+                *log_to_shm = true;
+                log_to_shm_configured = true;
+            }
+            else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
+            {
+                to_stdout = true;
+                *log_to_shm = false;
+                log_to_shm_configured = true;
+            }
+            else
+            {
+                const char* logerr =
+                    "Configuration file argument "
+                    "identifier \'-l\' was specified but "
+                    "the argument didn't specify\n  a valid "
+                    "configuration file or the argument "
+                    "was missing.";
+                print_log_n_stderr(true, true, logerr, logerr, 0);
+                usage();
+                succp = false;
+            }
+            break;
+        case 'L':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_logdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'N':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_langdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'P':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            {
+                set_piddir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'D':
+            snprintf(datadir, PATH_MAX, "%s", optarg);
+            datadir[PATH_MAX] = '\0';
+            set_datadir(MXS_STRDUP_A(optarg));
+            datadir_defined = true;
+            break;
+        case 'C':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_configdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'B':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_libdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'A':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            {
+                set_cachedir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
 
-            case 'E':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    set_execdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
-            case 'F':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
-                {
-                    set_config_persistdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
+        case 'E':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_execdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'F':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            {
+                set_config_persistdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
 
-            case 'M':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
-                {
-                    set_module_configdir(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
+        case 'M':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, true))
+            {
+                set_module_configdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
 
-            case 'R':
-                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
-                {
-                    succp = set_dirs(tmp_path);
-                    free(tmp_path);
-                }
-                else
-                {
-                    succp = false;
-                }
-                break;
+        case 'R':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                succp = set_dirs(tmp_path);
+                free(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
 
-            case 'S':
+        case 'S':
             {
                 char* tok = strstr(optarg, "=");
                 if (tok)
@@ -1525,7 +1525,7 @@ int main(int argc, char **argv)
                 }
             }
             break;
-            case 's':
+        case 's':
             {
                 char* tok = strstr(optarg, "=");
                 if (tok)
@@ -1544,28 +1544,28 @@ int main(int argc, char **argv)
                 }
             }
             break;
-            case 'U':
-                if (set_user(optarg) != 0)
-                {
-                    succp = false;
-                }
-                break;
-            case 'G':
-                set_log_augmentation(optarg);
-                break;
-            case '?':
-                usage();
-                rc = EXIT_SUCCESS;
-                goto return_main;
-
-            case 'c':
-                config_check = true;
-                break;
-
-            default:
-                usage();
+        case 'U':
+            if (set_user(optarg) != 0)
+            {
                 succp = false;
-                break;
+            }
+            break;
+        case 'G':
+            set_log_augmentation(optarg);
+            break;
+        case '?':
+            usage();
+            rc = EXIT_SUCCESS;
+            goto return_main;
+
+        case 'c':
+            config_check = true;
+            break;
+
+        default:
+            usage();
+            succp = false;
+            break;
         }
 
         if (!succp)
@@ -2665,16 +2665,16 @@ static void log_exit_status()
 {
     switch (last_signal)
     {
-        case SIGTERM:
-            MXS_NOTICE("MaxScale received signal SIGTERM. Exiting.");
-            break;
+    case SIGTERM:
+        MXS_NOTICE("MaxScale received signal SIGTERM. Exiting.");
+        break;
 
-        case SIGINT:
-            MXS_NOTICE("MaxScale received signal SIGINT. Exiting.");
-            break;
+    case SIGINT:
+        MXS_NOTICE("MaxScale received signal SIGINT. Exiting.");
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 

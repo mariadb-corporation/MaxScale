@@ -71,7 +71,8 @@ typedef struct ssl_listener
     char *ssl_key;                      /*< SSL private key */
     char *ssl_ca_cert;                  /*< SSL CA certificate */
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
-    struct ssl_listener *next;          /*< Next SSL configuration, currently used to store obsolete configurations */
+    struct ssl_listener
+        *next;          /*< Next SSL configuration, currently used to store obsolete configurations */
 } SSL_LISTENER;
 
 int ssl_authenticate_client(struct dcb *dcb, bool is_capable);

@@ -545,7 +545,7 @@ strip_escape_chars(char* val)
 #define BUFFER_GROWTH_RATE 1.2
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-    "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
+                                                  "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
 
 /**
  * Remove SQL comments from the end of a string
@@ -614,7 +614,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-    "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
+                                                 "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace literal numbers and user variables with a question mark.
@@ -755,7 +755,8 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
     memcpy(newstr, haystack, match.rm_so + 1);
     memcpy(newstr + match.rm_so + 1, replacement, rlen);
     /** +1 is terminating byte */
-    memcpy(newstr + match.rm_so + 1 + rlen, haystack + match.rm_so + 1 + nlen, hlen - (match.rm_so + 1) - nlen + 1);
+    memcpy(newstr + match.rm_so + 1 + rlen, haystack + match.rm_so + 1 + nlen,
+           hlen - (match.rm_so + 1) - nlen + 1);
 
     regfree(&re);
     free(haystack);
@@ -766,7 +767,7 @@ retblock:
 
 static pcre2_code* replace_quoted_re = NULL;
 static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
+                                                 "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
 
 /**
  * Replace contents of single or double quoted strings with question marks.

@@ -60,9 +60,9 @@ static LOADED_MODULE *registered = NULL;
 
 static LOADED_MODULE *find_module(const char *module);
 static LOADED_MODULE* register_module(const char *module,
-                                const char *type,
-                                void *dlhandle,
-                                MXS_MODULE *mod_info);
+                                      const char *type,
+                                      void *dlhandle,
+                                      MXS_MODULE *mod_info);
 static void unregister_module(const char *module);
 int module_create_feedback_report(GWBUF **buffer, LOADED_MODULE *modules, FEEDBACK_CONF *cfg);
 int do_http_post(GWBUF *buffer, void *cfg);
@@ -270,9 +270,9 @@ find_module(const char *module)
  * @return The new registered module or NULL on memory allocation failure
  */
 static LOADED_MODULE* register_module(const char *module,
-                                const char *type,
-                                void *dlhandle,
-                                MXS_MODULE *mod_info)
+                                      const char *type,
+                                      void *dlhandle,
+                                      MXS_MODULE *mod_info)
 {
     module = MXS_STRDUP(module);
     type = MXS_STRDUP(type);

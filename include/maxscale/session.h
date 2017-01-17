@@ -154,7 +154,7 @@ typedef enum
  * A session status block is created for each user (client) connection
  * to the database, it links the descriptors, routing implementation
  * and originating service together for the client session.
- * 
+ *
  * Note that the first few fields (up to and including "entry_is_ready") must
  * precisely match the LIST_ENTRY structure defined in the list manager.
  */

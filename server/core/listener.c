@@ -235,7 +235,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 
     if (!ssl_listener->ssl_init_done)
     {
-        switch(ssl_listener->ssl_method_type)
+        switch (ssl_listener->ssl_method_type)
         {
         case SERVICE_TLS10:
             ssl_listener->method = (SSL_METHOD*)TLSv1_method();
@@ -248,7 +248,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
             ssl_listener->method = (SSL_METHOD*)TLSv1_2_method();
             break;
 #endif
-            /** Rest of these use the maximum available SSL/TLS methods */
+        /** Rest of these use the maximum available SSL/TLS methods */
         case SERVICE_SSL_MAX:
             ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
@@ -356,9 +356,10 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 static RSA *
 tmp_rsa_callback(SSL *s, int is_export, int keylength)
 {
-    RSA *rsa_tmp=NULL;
+    RSA *rsa_tmp = NULL;
 
-    switch (keylength) {
+    switch (keylength)
+    {
     case 512:
         if (rsa_512)
         {
@@ -367,28 +368,28 @@ tmp_rsa_callback(SSL *s, int is_export, int keylength)
         else
         {
             /* generate on the fly, should not happen in this example */
-            rsa_tmp = RSA_generate_key(keylength,RSA_F4,NULL,NULL);
+            rsa_tmp = RSA_generate_key(keylength, RSA_F4, NULL, NULL);
             rsa_512 = rsa_tmp; /* Remember for later reuse */
         }
         break;
     case 1024:
         if (rsa_1024)
         {
-            rsa_tmp=rsa_1024;
+            rsa_tmp = rsa_1024;
         }
         break;
     default:
         /* Generating a key on the fly is very costly, so use what is there */
         if (rsa_1024)
         {
-            rsa_tmp=rsa_1024;
+            rsa_tmp = rsa_1024;
         }
         else
         {
-            rsa_tmp=rsa_512; /* Use at least a shorter key */
+            rsa_tmp = rsa_512; /* Use at least a shorter key */
         }
     }
-    return(rsa_tmp);
+    return (rsa_tmp);
 }
 
 /**
@@ -451,25 +452,25 @@ static bool create_listener_config(const SERV_LISTENER *listener, const char *fi
 
         switch (listener->ssl->ssl_method_type)
         {
-            case SERVICE_TLS10:
-                version = "TLSV10";
-                break;
+        case SERVICE_TLS10:
+            version = "TLSV10";
+            break;
 
 #ifdef OPENSSL_1_0
-            case SERVICE_TLS11:
-                version = "TLSV11";
-                break;
+        case SERVICE_TLS11:
+            version = "TLSV11";
+            break;
 
-            case SERVICE_TLS12:
-                version = "TLSV12";
-                break;
+        case SERVICE_TLS12:
+            version = "TLSV12";
+            break;
 #endif
-            case SERVICE_SSL_TLS_MAX:
-                version = "MAX";
-                break;
+        case SERVICE_SSL_TLS_MAX:
+            version = "MAX";
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
 
         if (version)
