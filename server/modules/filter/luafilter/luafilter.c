@@ -56,7 +56,7 @@
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_DOWNSTREAM *downstream);
@@ -182,7 +182,7 @@ typedef struct
  */
 typedef struct
 {
-    SESSION* session;
+    MXS_SESSION* session;
     lua_State* lua_state;
     GWBUF* current_query;
     SPINLOCK lock;
@@ -279,7 +279,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
  * @param session The session itself
  * @return Session specific data for this session
  */
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session)
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     LUA_SESSION *my_session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;

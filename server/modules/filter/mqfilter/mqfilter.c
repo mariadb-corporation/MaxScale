@@ -87,7 +87,7 @@ static int hktask_id = 0;
  * The filter entry points
  */
 static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, SESSION *session);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
@@ -234,7 +234,7 @@ typedef struct
     char* db; /**The currently active database*/
     MXS_DOWNSTREAM down;
     MXS_UPSTREAM up;
-    SESSION* session;
+    MXS_SESSION* session;
     bool was_query; /**True if the previous routeQuery call had valid content*/
 } MQ_SESSION;
 
@@ -803,7 +803,7 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
  * @return Session specific data for this session
  */
 static MXS_FILTER_SESSION *
-newSession(MXS_FILTER *instance, SESSION *session)
+newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
     MYSQL_session *sessauth = session->client_dcb->data;
     char *db = sessauth->db;

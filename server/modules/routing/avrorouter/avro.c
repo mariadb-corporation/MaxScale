@@ -72,7 +72,7 @@ static const char* alter_table_regex =
 
 /* The router entry points */
 static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, SESSION *session);
+static void *newSession(ROUTER *instance, MXS_SESSION *session);
 static void closeSession(ROUTER *instance, void *router_session);
 static void freeSession(ROUTER *instance, void *router_session);
 static int routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
@@ -620,7 +620,7 @@ createInstance(SERVICE *service, char **options)
  * @return Session specific data for this session
  */
 static void *
-newSession(ROUTER *instance, SESSION *session)
+newSession(ROUTER *instance, MXS_SESSION *session)
 {
     AVRO_INSTANCE *inst = (AVRO_INSTANCE *) instance;
     AVRO_CLIENT *client;
