@@ -127,14 +127,14 @@ static int id_gen(lua_State* state)
     return 1;
 }
 
-static int lua_qc_get_type(lua_State* state)
+static int lua_qc_get_type_mask(lua_State* state)
 {
     int ibuf = lua_upvalueindex(1);
     GWBUF *buf = *((GWBUF**)lua_touserdata(state, ibuf));
 
     if (buf)
     {
-        uint32_t type = qc_get_type(buf);
+        uint32_t type = qc_get_type_mask(buf);
         char *mask = qc_typemask_to_string(type);
         lua_pushstring(state, mask);
         MXS_FREE(mask);
@@ -243,8 +243,8 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
                 /** Expose a part of the query classifier API */
                 lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
-                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_type, 1);
-                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_type");
+                lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_type_mask, 1);
+                lua_setglobal(my_instance->global_lua_state, "lua_qc_get_type_mask");
 
                 lua_pushlightuserdata(my_instance->global_lua_state, &current_global_query);
                 lua_pushcclosure(my_instance->global_lua_state, lua_qc_get_operation, 1);
@@ -314,8 +314,8 @@ static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session
 
             /** Expose a part of the query classifier API */
             lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
-            lua_pushcclosure(my_session->lua_state, lua_qc_get_type, 1);
-            lua_setglobal(my_session->lua_state, "lua_qc_get_type");
+            lua_pushcclosure(my_session->lua_state, lua_qc_get_type_mask, 1);
+            lua_setglobal(my_session->lua_state, "lua_qc_get_type_mask");
 
             lua_pushlightuserdata(my_session->lua_state, &my_session->current_query);
             lua_pushcclosure(my_session->lua_state, lua_qc_get_operation, 1);

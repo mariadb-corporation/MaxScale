@@ -439,7 +439,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
     {
         if ((ptr = modutil_get_SQL(queue)) != NULL)
         {
-            uint32_t query_type = qc_get_type(queue);
+            uint32_t query_type = qc_get_type_mask(queue);
             int query_len = strlen(ptr);
             my_session->query_end = false;
 

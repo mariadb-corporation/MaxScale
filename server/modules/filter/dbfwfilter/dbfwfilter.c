@@ -2337,7 +2337,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
     {
-        type = qc_get_type(queue);
+        type = qc_get_type_mask(queue);
     }
 
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)

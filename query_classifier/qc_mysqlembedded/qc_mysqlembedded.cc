@@ -158,7 +158,7 @@ int32_t qc_mysql_parse(GWBUF* querybuf, int32_t* result)
     return QC_RESULT_OK;
 }
 
-int32_t qc_mysql_get_type(GWBUF* querybuf, uint32_t* type_mask)
+int32_t qc_mysql_get_type_mask(GWBUF* querybuf, uint32_t* type_mask)
 {
     *type_mask = QUERY_TYPE_UNKNOWN;
     MYSQL* mysql;
@@ -2731,7 +2731,7 @@ extern "C"
             qc_mysql_thread_init,
             qc_mysql_thread_end,
             qc_mysql_parse,
-            qc_mysql_get_type,
+            qc_mysql_get_type_mask,
             qc_mysql_get_operation,
             qc_mysql_get_created_table_name,
             qc_mysql_is_drop_table_query,

@@ -208,7 +208,7 @@ int test(FILE* input, FILE* expected)
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
-            qc_query_type_t type = qc_get_type(buff);
+            qc_query_type_t type = qc_get_type_mask(buff);
             char expbuff[256];
             int expos = 0;
 

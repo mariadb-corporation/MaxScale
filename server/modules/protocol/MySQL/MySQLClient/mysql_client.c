@@ -1485,7 +1485,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
                     if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
                     {
-                        uint32_t type = qc_get_type(packetbuf);
+                        uint32_t type = qc_get_type_mask(packetbuf);
 
                         if (type & QUERY_TYPE_BEGIN_TRX)
                         {

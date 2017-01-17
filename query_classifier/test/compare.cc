@@ -354,12 +354,12 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
                       QUERY_CLASSIFIER* pClassifier2, GWBUF* pCopy2)
 {
     bool success = false;
-    const char HEADING[] = "qc_get_type              : ";
+    const char HEADING[] = "qc_get_type_mask         : ";
 
     uint32_t rv1;
-    pClassifier1->qc_get_type(pCopy1, &rv1);
+    pClassifier1->qc_get_type_mask(pCopy1, &rv1);
     uint32_t rv2;
-    pClassifier2->qc_get_type(pCopy2, &rv2);
+    pClassifier2->qc_get_type_mask(pCopy2, &rv2);
 
     stringstream ss;
     ss << HEADING;
@@ -1186,10 +1186,10 @@ bool compare(QUERY_CLASSIFIER* pClassifier1, GWBUF* pBuf1,
     bool success = (errors == 0);
 
     uint32_t type_mask1;
-    pClassifier1->qc_get_type(pBuf1, &type_mask1);
+    pClassifier1->qc_get_type_mask(pBuf1, &type_mask1);
 
     uint32_t type_mask2;
-    pClassifier2->qc_get_type(pBuf2, &type_mask2);
+    pClassifier2->qc_get_type_mask(pBuf2, &type_mask2);
 
     if ((type_mask1 == type_mask2) &&
         ((type_mask1 & QUERY_TYPE_PREPARE_NAMED_STMT) || (type_mask1 & QUERY_TYPE_PREPARE_STMT)))

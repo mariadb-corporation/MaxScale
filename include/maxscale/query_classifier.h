@@ -204,7 +204,7 @@ typedef struct query_classifier
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (*qc_get_type)(GWBUF* stmt, uint32_t* type);
+    int32_t (*qc_get_type_mask)(GWBUF* stmt, uint32_t* type);
 
     /**
      * Reports the operation of the statement.
@@ -448,7 +448,7 @@ void qc_thread_end(void);
  * to what extent the statement could be parsed.
  *
  * There is no need to call this function explicitly before calling any of
- * the other functions; e.g. qc_get_type(). When some particular property of
+ * the other functions; e.g. qc_get_type_mask(). When some particular property of
  * a statement is asked for, the statement will be parsed if it has not been
  * parsed yet. Also, if the statement in the provided buffer has been parsed
  * already then this function will only return the result of that parsing;
@@ -621,7 +621,7 @@ char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
  *
  * @see qc_query_is_type
  */
-uint32_t qc_get_type(GWBUF* stmt);
+uint32_t qc_get_type_mask(GWBUF* stmt);
 
 /**
  * Returns whether the statement is a DROP TABLE statement.

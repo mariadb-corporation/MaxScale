@@ -1765,12 +1765,12 @@ static int routeQuery(ROUTER* instance,
         break;
 
     case MYSQL_COM_QUERY:
-        qtype = qc_get_type(querybuf);
+        qtype = qc_get_type_mask(querybuf);
         op = qc_get_operation(querybuf);
         break;
 
     case MYSQL_COM_STMT_PREPARE:
-        qtype = qc_get_type(querybuf);
+        qtype = qc_get_type_mask(querybuf);
         qtype |= QUERY_TYPE_PREPARE_STMT;
         break;
 

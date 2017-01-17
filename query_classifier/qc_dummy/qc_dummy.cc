@@ -21,7 +21,7 @@ int32_t qc_dummy_parse(GWBUF* querybuf, int32_t* pResult)
     return QC_RESULT_OK;
 }
 
-int32_t qc_dummy_get_type(GWBUF* querybuf, uint32_t* pType_mask)
+int32_t qc_dummy_get_type_mask(GWBUF* querybuf, uint32_t* pType_mask)
 {
     *pType_mask = QUERY_TYPE_UNKNOWN;
     return QC_RESULT_OK;
@@ -126,7 +126,7 @@ extern "C"
             qc_dummy_thread_init,
             qc_dummy_thread_end,
             qc_dummy_parse,
-            qc_dummy_get_type,
+            qc_dummy_get_type_mask,
             qc_dummy_get_operation,
             qc_dummy_get_created_table_name,
             qc_dummy_is_drop_table_query,

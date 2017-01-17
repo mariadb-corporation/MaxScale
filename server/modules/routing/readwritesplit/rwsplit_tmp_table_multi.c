@@ -392,11 +392,11 @@ determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
             break;
 
         case MYSQL_COM_QUERY:
-            qtype = qc_get_type(querybuf);
+            qtype = qc_get_type_mask(querybuf);
             break;
 
         case MYSQL_COM_STMT_PREPARE:
-            qtype = qc_get_type(querybuf);
+            qtype = qc_get_type_mask(querybuf);
             qtype |= QUERY_TYPE_PREPARE_STMT;
             break;
 

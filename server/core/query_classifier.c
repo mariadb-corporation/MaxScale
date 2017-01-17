@@ -133,14 +133,14 @@ qc_parse_result_t qc_parse(GWBUF* query)
     return (qc_parse_result_t)result;
 }
 
-uint32_t qc_get_type(GWBUF* query)
+uint32_t qc_get_type_mask(GWBUF* query)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
     uint32_t type_mask = QUERY_TYPE_UNKNOWN;
 
-    classifier->qc_get_type(query, &type_mask);
+    classifier->qc_get_type_mask(query, &type_mask);
 
     return type_mask;
 }
