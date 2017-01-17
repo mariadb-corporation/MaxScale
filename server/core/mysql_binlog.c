@@ -291,7 +291,9 @@ static void unpack_datetime2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
     dest->tm_hour = time >> 12;
     dest->tm_mday = date % (1 << 5);
     dest->tm_mon = yearmonth % 13;
-    dest->tm_year = yearmonth / 13;
+
+    /** struct tm stores the year as: Year - 1900 */
+    dest->tm_year = (yearmonth / 13) - 1900;
 }
 
 /** Unpack a "reverse" byte order value */
