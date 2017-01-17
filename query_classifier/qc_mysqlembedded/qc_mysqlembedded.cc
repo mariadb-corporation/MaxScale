@@ -638,25 +638,25 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         {
             type |= QUERY_TYPE_GSYSVAR_READ;
         }
-            /**
-             * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
-             */
+        /**
+         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+         */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
             type |= QUERY_TYPE_GSYSVAR_WRITE;
         }
 
-            /*
-             * SHOW GLOBAL STATUS - Route to master
-             */
+        /*
+         * SHOW GLOBAL STATUS - Route to master
+         */
         else if (lex->sql_command == SQLCOM_SHOW_STATUS)
         {
             type = QUERY_TYPE_WRITE;
         }
-            /**
-             * REVOKE ALL, ASSIGN_TO_KEYCACHE,
-             * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
-             */
+        /**
+         * REVOKE ALL, ASSIGN_TO_KEYCACHE,
+         * PRELOAD_KEYS, FLUSH, RESET, CREATE|ALTER|DROP SERVER
+         */
 
         else
         {
@@ -674,9 +674,9 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
         {
             type |= QUERY_TYPE_SYSVAR_READ;
         }
-            /**
-             * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
-             */
+        /**
+         * SET syntax http://dev.mysql.com/doc/refman/5.6/en/set-statement.html
+         */
         else if (lex->sql_command == SQLCOM_SET_OPTION)
         {
             /** Either user- or system variable write */
@@ -941,7 +941,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                         }
                         break;
 
-                        /** System session variable */
+                    /** System session variable */
                     case Item_func::GSYSVAR_FUNC:
                         {
                             const char* name = item->name;
@@ -962,7 +962,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                         }
                         break;
 
-                        /** User-defined variable read */
+                    /** User-defined variable read */
                     case Item_func::GUSERVAR_FUNC:
                         func_qtype |= QUERY_TYPE_USERVAR_READ;
                         MXS_DEBUG("%lu [resolve_query_type] "
@@ -971,7 +971,7 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                                   pthread_self());
                         break;
 
-                        /** User-defined variable modification */
+                    /** User-defined variable modification */
                     case Item_func::SUSERVAR_FUNC:
                         func_qtype |= QUERY_TYPE_USERVAR_WRITE;
                         MXS_DEBUG("%lu [resolve_query_type] "
@@ -1170,9 +1170,9 @@ char* qc_get_stmtname(GWBUF* buf)
         mysql->thd == NULL ||
         (THD *) (mysql->thd))->lex == NULL ||
         (THD *) (mysql->thd))->lex->prepared_stmt_name == NULL)
-        {
-            return NULL;
-        }
+    {
+        return NULL;
+    }
 
     return ((THD *) (mysql->thd))->lex->prepared_stmt_name.str;
 }
@@ -1297,7 +1297,7 @@ int32_t qc_mysql_get_table_names(GWBUF* querybuf, int32_t fullnames, char*** tab
         {
             if (i >= currtblsz)
             {
-                tmp = (char**) malloc(sizeof (char*)*(currtblsz * 2 + 1));
+                tmp = (char**) malloc(sizeof (char*) * (currtblsz * 2 + 1));
 
                 if (tmp)
                 {
@@ -1616,7 +1616,7 @@ int32_t qc_mysql_get_database_names(GWBUF* querybuf, char*** databasesp, int* si
                 if (i >= currsz)
                 {
                     tmp = (char**) realloc(databases,
-                                           sizeof (char*)*(currsz * 2 + 1));
+                                           sizeof (char*) * (currsz * 2 + 1));
 
                     if (tmp == NULL)
                     {
@@ -2609,7 +2609,8 @@ const int IDX_DATADIR = 2;
 const int IDX_LANGUAGE = 3;
 const int N_OPTIONS = (sizeof(server_options) / sizeof(server_options[0])) - 1;
 
-const char* server_groups[] = {
+const char* server_groups[] =
+{
     "embedded",
     "server",
     "server",
@@ -2720,48 +2721,48 @@ void qc_mysql_thread_end(void)
 extern "C"
 {
 
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static QUERY_CLASSIFIER qc =
+    MXS_MODULE* MXS_CREATE_MODULE()
     {
-        qc_mysql_setup,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end,
-        qc_mysql_parse,
-        qc_mysql_get_type,
-        qc_mysql_get_operation,
-        qc_mysql_get_created_table_name,
-        qc_mysql_is_drop_table_query,
-        qc_mysql_get_table_names,
-        NULL,
-        qc_mysql_query_has_clause,
-        qc_mysql_get_database_names,
-        qc_mysql_get_prepare_name,
-        qc_mysql_get_field_info,
-        qc_mysql_get_function_info,
-        qc_mysql_get_preparable_stmt,
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_QUERY_CLASSIFIER,
-        MXS_MODULE_IN_DEVELOPMENT,
-        QUERY_CLASSIFIER_VERSION,
-        "Query classifier based upon MySQL Embedded",
-        "V1.0.0",
-        &qc,
-        qc_mysql_process_init,
-        qc_mysql_process_end,
-        qc_mysql_thread_init,
-        qc_mysql_thread_end,
+        static QUERY_CLASSIFIER qc =
         {
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
+            qc_mysql_setup,
+            qc_mysql_process_init,
+            qc_mysql_process_end,
+            qc_mysql_thread_init,
+            qc_mysql_thread_end,
+            qc_mysql_parse,
+            qc_mysql_get_type,
+            qc_mysql_get_operation,
+            qc_mysql_get_created_table_name,
+            qc_mysql_is_drop_table_query,
+            qc_mysql_get_table_names,
+            NULL,
+            qc_mysql_query_has_clause,
+            qc_mysql_get_database_names,
+            qc_mysql_get_prepare_name,
+            qc_mysql_get_field_info,
+            qc_mysql_get_function_info,
+            qc_mysql_get_preparable_stmt,
+        };
 
-    return &info;
-}
+        static MXS_MODULE info =
+        {
+            MXS_MODULE_API_QUERY_CLASSIFIER,
+            MXS_MODULE_IN_DEVELOPMENT,
+            QUERY_CLASSIFIER_VERSION,
+            "Query classifier based upon MySQL Embedded",
+            "V1.0.0",
+            &qc,
+            qc_mysql_process_init,
+            qc_mysql_process_end,
+            qc_mysql_thread_init,
+            qc_mysql_thread_end,
+            {
+                {MXS_END_MODULE_PARAMS}
+            }
+        };
+
+        return &info;
+    }
 
 }

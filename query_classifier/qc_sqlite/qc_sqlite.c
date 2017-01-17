@@ -993,7 +993,7 @@ static void update_field_infos(QC_SQLITE_INFO* info,
 
     default:
         MXS_DEBUG("Token %d not handled explicitly.", pExpr->op);
-        // Fallthrough intended.
+    // Fallthrough intended.
     case TK_BETWEEN:
     case TK_CASE:
     case TK_EXISTS:

@@ -49,8 +49,8 @@ int main(int argc, char** argv)
     qc_setup("qc_sqlite", NULL);
     qc_process_init();
 
-    infile = fopen(argv[1],"rb");
-    outfile = fopen(argv[2],"wb");
+    infile = fopen(argv[1], "rb");
+    outfile = fopen(argv[2], "wb");
 
     if (infile == NULL || outfile == NULL)
     {
