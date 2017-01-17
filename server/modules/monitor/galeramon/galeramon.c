@@ -55,6 +55,8 @@ static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *, MXS_MONITO
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(mxs_monitor_event_t event);
 static void update_sst_donor_nodes(MXS_MONITOR*, int);
+static int compare_node_index(const void*, const void*);
+static int compare_node_priority(const void*, const void*);
 
 /**
  * The module entry point routine. It is this routine that
@@ -614,7 +616,9 @@ static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR* mon)
          * This means that we can't connect to the root node of the cluster.
          *
          * If the node is down, the cluster would recalculate the index values
-         * and we would find it. In this case, we just can't connect to it.  */
+         * and we would find it. In this case, we just can't connect to it.
+         */
+
         candidate_master = NULL;
     }
 
@@ -688,12 +692,17 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
     MXS_MONITOR_SERVERS *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
+    GALERA_MONITOR *handle = mon->handle;
+    bool ignore_priority = true;
+
     if (is_cluster == 1)
     {
         MXS_DEBUG("Only one server in the cluster: update_sst_donor_nodes is not performed");
         return;
     }
 
+    unsigned int found_slaves = 0;
+    MXS_MONITOR_SERVERS *node_list[is_cluster - 1];
     /* Donor list size = DONOR_LIST_SET_VAR + n_hosts * max_host_len + n_hosts + 1 */
 
     char *donor_list = MXS_CALLOC(1, strlen(DONOR_LIST_SET_VAR) +
@@ -710,44 +719,77 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 
     ptr = mon->databases;
 
+    /* Create an array of slave nodes */
     while (ptr)
     {
         if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
         {
+            node_list[found_slaves] = (MXS_MONITOR_SERVERS *)ptr;
+            found_slaves++;
 
-            /* Get the Galera node name */
-            if (mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
-                && (result = mysql_store_result(ptr->con)) != NULL)
+            /* Check the server parameter "priority"
+             * If no server has "priority" set, then
+             * the server list will be order by default method.
+             */
+            if (handle->use_priority &&
+                server_get_parameter(ptr->server, "priority"))
             {
-                if (mysql_field_count(ptr->con) < 2)
-                {
-                    mysql_free_result(result);
-                    MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
-                              "Expected 2 columns");
-                    return;
-                }
-
-                while ((row = mysql_fetch_row(result)))
-                {
-                    MXS_DEBUG("wsrep_node_name name for %s is [%s]",
-                              ptr->server->unique_name,
-                              row[1]);
-
-                    strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
-                    strcat(donor_list, ",");
-                }
-
-                mysql_free_result(result);
-            }
-            else
-            {
-                MXS_ERROR("Error while selecting 'wsrep_node_name' from node %s: %s",
-                          ptr->server->unique_name,
-                          mysql_error(ptr->con));
+                ignore_priority = false;
             }
         }
-
         ptr = ptr->next;
+    }
+
+    if (ignore_priority)
+    {
+        MXS_DEBUG("Use priority is set but no server has priority parameter. "
+                  "Donor server list will be ordered by 'wsrep_local_index'");
+    }
+
+    /* Set order type */
+    bool sort_order = (!ignore_priority) && (int)handle->use_priority;
+
+    /* Sort the array */
+    qsort(node_list,
+          found_slaves,
+          sizeof(MXS_MONITOR_SERVERS *),
+          sort_order ? compare_node_priority : compare_node_index);
+
+    /* Select nodename from each server and append it to node_list */
+    for (int k = 0; k < found_slaves; k++)
+    {
+        MXS_MONITOR_SERVERS *ptr = node_list[k];
+
+        /* Get the Galera node name */
+        if (mysql_query(ptr->con, "SHOW VARIABLES LIKE 'wsrep_node_name'") == 0
+            && (result = mysql_store_result(ptr->con)) != NULL)
+        {
+            if (mysql_field_count(ptr->con) < 2)
+            {
+                mysql_free_result(result);
+                MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_node_name'\". "
+                          "Expected 2 columns");
+                return;
+            }
+
+            while ((row = mysql_fetch_row(result)))
+            {
+                MXS_DEBUG("wsrep_node_name name for %s is [%s]",
+                          ptr->server->unique_name,
+                          row[1]);
+
+                strncat(donor_list, row[1], DONOR_NODE_NAME_MAX_LEN);
+                strcat(donor_list, ",");
+            }
+
+            mysql_free_result(result);
+        }
+        else
+        {
+            MXS_ERROR("Error while selecting 'wsrep_node_name' from node %s: %s",
+                      ptr->server->unique_name,
+                      mysql_error(ptr->con));
+        }
     }
 
     int donor_list_size = strlen(donor_list);
@@ -762,28 +804,118 @@ static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
               donor_list);
 
     /* Set now rep_sst_donor in each slave node */
-    ptr = mon->databases;
-    while (ptr)
+    for (int k = 0; k < found_slaves; k++)
     {
-        if (SERVER_IS_JOINED(ptr->server) && SERVER_IS_SLAVE(ptr->server))
+        MXS_MONITOR_SERVERS *ptr = node_list[k];
+        /* Set the Galera SST donor node list */
+        if (mysql_query(ptr->con, donor_list) == 0)
         {
-
-            /* Set the Galera SST donor node list */
-            if (mysql_query(ptr->con, donor_list) == 0)
-            {
-                MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
-                          ptr->server->unique_name);
-            }
-            else
-            {
-                MXS_ERROR("SET GLOBAL rep_sst_donor error in node %s: %s",
-                          ptr->server->unique_name,
-                          mysql_error(ptr->con));
-            }
+            MXS_DEBUG("SET GLOBAL rep_sst_donor OK in node %s",
+                      ptr->server->unique_name);
         }
-
-        ptr = ptr->next;
+        else
+        {
+            MXS_ERROR("SET GLOBAL rep_sst_donor error in node %s: %s",
+                      ptr->server->unique_name,
+                      mysql_error(ptr->con));
+        }
     }
 
     MXS_FREE(donor_list);
+}
+
+/**
+ * Compare routine for slave nodes sorted by 'wsrep_local_index'
+ *
+ * The default order is DESC.
+ *
+ * Nodes with lowest 'wsrep_local_index' value
+ * are at the end of the list.
+ *
+ * @param   a        Pointer to array value
+ * @param   b        Pointer to array value
+ * @return  A number less than, threater than or equal to 0
+ */
+
+static int compare_node_index (const void *a, const void *b)
+{
+    const MXS_MONITOR_SERVERS *s_a = *(MXS_MONITOR_SERVERS * const *)a;
+    const MXS_MONITOR_SERVERS *s_b = *(MXS_MONITOR_SERVERS * const *)b;
+
+    // Order is DESC: b - a
+    return s_b->server->node_id - s_a->server->node_id;
+}
+
+/**
+ * Compare routine for slave nodes sorted by node priority
+ *
+ * The default order is DESC.
+ *
+ * Some special cases, i.e: no give priority, or 0 value
+ * are handled.
+ *
+ * Note: the master selection algorithm is:
+ * node with lowest priority value and > 0
+ *
+ * This sorting function will add master candidates
+ * at the end of the list.
+ *
+ * @param   a        Pointer to array value
+ * @param   b        Pointer to array value
+ * @return  A number less than, threater than or equal to 0
+ */
+
+static int compare_node_priority (const void *a, const void *b)
+{
+    const MXS_MONITOR_SERVERS *s_a = *(MXS_MONITOR_SERVERS * const *)a;
+    const MXS_MONITOR_SERVERS *s_b = *(MXS_MONITOR_SERVERS * const *)b;
+
+    const char *pri_a = server_get_parameter(s_a->server, "priority");
+    const char *pri_b = server_get_parameter(s_b->server, "priority");
+
+    /**
+     * Check priority parameter:
+     *
+     * Return a - b in case of issues
+     */
+    if (!pri_a && pri_b)
+    {
+        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+                  s_a->server->unique_name);
+        return -(INT_MAX - 1);
+    }
+    else if (pri_a && !pri_b)
+    {
+        MXS_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
+                  s_b->server->unique_name);
+        return INT_MAX - 1;
+    }
+    else if (!pri_a && !pri_b)
+    {
+        MXS_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
+                  s_a->server->unique_name,
+                  s_b->server->unique_name);
+        return 0;
+    }
+
+    /* The given  priority is valid */
+    int pri_val_a = atoi(pri_a);
+    int pri_val_b = atoi(pri_b);
+
+    /* Return a - b in case of issues */
+    if ((pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return pri_val_a;
+    }
+    else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && (pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return -pri_val_b;
+    }
+    else if (!(pri_val_a < INT_MAX && pri_val_a > 0) && !(pri_val_b < INT_MAX && pri_val_b > 0))
+    {
+        return 0;
+    }
+
+    // The order is DESC: b -a
+    return pri_val_b - pri_val_a;
 }
