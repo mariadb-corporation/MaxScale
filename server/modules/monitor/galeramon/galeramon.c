@@ -47,14 +47,14 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
-static void stopMonitor(MONITOR *);
-static void diagnostics(DCB *, const MONITOR *);
-static MONITOR_SERVERS *get_candidate_master(MONITOR*);
-static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
+static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *params);
+static void stopMonitor(MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR*);
+static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *, MXS_MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
-bool isGaleraEvent(monitor_event_t event);
-static void update_sst_donor_nodes(MONITOR*, int);
+bool isGaleraEvent(mxs_monitor_event_t event);
+static void update_sst_donor_nodes(MXS_MONITOR*, int);
 
 /**
  * The module entry point routine. It is this routine that
@@ -68,7 +68,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Galera Monitor module.");
 
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
@@ -79,7 +79,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_GA,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "A Galera cluster monitor",
         "V2.0.0",
         &MyObject,
@@ -102,9 +102,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "events",
                 MXS_MODULE_PARAM_ENUM,
-                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
                 MXS_MODULE_OPT_NONE,
-                monitor_event_enum_values
+                mxs_monitor_event_enum_values
             },
             {"set_donor_nodes", MXS_MODULE_PARAM_BOOL, "false"},
             {MXS_END_MODULE_PARAMS}
@@ -122,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
 {
     GALERA_MONITOR *handle = mon->handle;
     if (handle != NULL)
@@ -137,7 +137,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
             return NULL;
         }
         handle->shutdown = 0;
-        handle->id = MONITOR_DEFAULT_ID;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
         spinlock_init(&handle->lock);
     }
@@ -148,7 +148,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
     handle->root_node_as_master = config_get_bool(params, "root_node_as_master");
     handle->use_priority = config_get_bool(params, "use_priority");
     handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
     handle->set_donor_nodes = config_get_bool(params, "set_donor_nodes");
 
     /** SHOW STATUS doesn't require any special permissions */
@@ -174,7 +174,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
 
@@ -189,7 +189,7 @@ stopMonitor(MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, const MONITOR *mon)
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const GALERA_MONITOR *handle = (const GALERA_MONITOR *) mon->handle;
 
@@ -209,7 +209,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
  * @param database      The database to probe
  */
 static void
-monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 {
     GALERA_MONITOR* handle = (GALERA_MONITOR*) mon->handle;
     MYSQL_ROW row;
@@ -232,7 +232,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     /* Also clear Joined */
     server_clear_status_nolock(&temp_server, SERVER_JOINED);
 
-    connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
@@ -380,15 +380,15 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = (MONITOR*) arg;
+    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
     GALERA_MONITOR *handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
-    MONITOR_SERVERS *candidate_master = NULL;
+    MXS_MONITOR_SERVERS *candidate_master = NULL;
     int master_stickiness;
     int is_cluster = 0;
     int log_no_members = 1;
-    monitor_event_t evtype;
+    mxs_monitor_event_t evtype;
 
     spinlock_acquire(&mon->lock);
     handle = (GALERA_MONITOR *) mon->handle;
@@ -399,20 +399,20 @@ monitorMain(void *arg)
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
-    handle->status = MONITOR_RUNNING;
+    handle->status = MXS_MONITOR_RUNNING;
 
     while (1)
     {
         if (handle->shutdown)
         {
-            handle->status = MONITOR_STOPPING;
+            handle->status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MONITOR_STOPPED;
+            handle->status = MXS_MONITOR_STOPPED;
             return;
         }
 
         /** Wait base interval */
-        thread_millisleep(MON_BASE_INTERVAL_MS);
+        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
 
         /**
          * Calculate how far away the monitor interval is from its full
@@ -421,8 +421,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -562,10 +562,10 @@ monitorMain(void *arg)
  * @param   servers The monitored servers list
  * @return  The candidate master on success, NULL on failure
  */
-static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
+static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR* mon)
 {
-    MONITOR_SERVERS *moitor_servers = mon->databases;
-    MONITOR_SERVERS *candidate_master = NULL;
+    MXS_MONITOR_SERVERS *moitor_servers = mon->databases;
+    MXS_MONITOR_SERVERS *candidate_master = NULL;
     GALERA_MONITOR* handle = mon->handle;
     long min_id = -1;
     int minval = INT_MAX;
@@ -635,8 +635,9 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
  * @param   candidate_master The candidate master server accordingly to the selection rule
  * @return  The  master node pointer (could be NULL)
  */
-static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master,
-                                           int master_stickiness)
+static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *current_master,
+                                               MXS_MONITOR_SERVERS *candidate_master,
+                                               int master_stickiness)
 {
     /*
      * if current master is not set or master_stickiness is not enable
@@ -682,9 +683,9 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
  * @param   mon        The monitor handler
  * @param   is_cluster The number of joined nodes
  */
-static void update_sst_donor_nodes(MONITOR *mon, int is_cluster)
+static void update_sst_donor_nodes(MXS_MONITOR *mon, int is_cluster)
 {
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
     MYSQL_ROW row;
     MYSQL_RES *result;
     if (is_cluster == 1)

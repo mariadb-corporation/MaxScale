@@ -41,18 +41,18 @@ MXS_MODULE info =
 {
     MXS_MODULE_API_MONITOR,
     MXS_MODULE_BETA_RELEASE,
-    MONITOR_VERSION,
+    MXS_MONITOR_VERSION,
     "A Multi-Master Multi Master monitor",
     "V1.1.1"
 };
 /*lint +e14 */
 
-static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *);
-static void stopMonitor(MONITOR *);
-static void diagnostics(DCB *, const MONITOR *);
+static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *);
+static void stopMonitor(MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
-static MONITOR_SERVERS *get_current_master(MONITOR *);
-static bool isMySQLEvent(monitor_event_t event);
+static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *);
+static bool isMySQLEvent(mxs_monitor_event_t event);
 
 /**
  * The module entry point routine. It is this routine that
@@ -66,7 +66,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the Multi-Master Monitor module.");
 
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
@@ -77,7 +77,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
         &MyObject,
@@ -96,9 +96,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "events",
                 MXS_MODULE_PARAM_ENUM,
-                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
                 MXS_MODULE_OPT_NONE,
-                monitor_event_enum_values
+                mxs_monitor_event_enum_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -117,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
 {
     MM_MONITOR *handle = mon->handle;
 
@@ -133,14 +133,14 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
             return NULL;
         }
         handle->shutdown = 0;
-        handle->id = MONITOR_DEFAULT_ID;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
         spinlock_init(&handle->lock);
     }
 
     handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
     handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
     if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
     {
@@ -164,7 +164,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
 
@@ -178,7 +178,7 @@ stopMonitor(MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MONITOR *mon)
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
 
@@ -192,7 +192,7 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -209,7 +209,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 
     /** Store previous status */
     database->mon_prev_status = database->server->status;
-    connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_connect_to_db(mon, database);
 
     if (rval != MONITOR_CONN_OK)
     {
@@ -475,11 +475,11 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = (MONITOR*) arg;
+    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
     MM_MONITOR *handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
     int detect_stale_master = false;
-    MONITOR_SERVERS *root_master = NULL;
+    MXS_MONITOR_SERVERS *root_master = NULL;
     size_t nrounds = 0;
 
     spinlock_acquire(&mon->lock);
@@ -493,19 +493,19 @@ monitorMain(void *arg)
         return;
     }
 
-    handle->status = MONITOR_RUNNING;
+    handle->status = MXS_MONITOR_RUNNING;
     while (1)
     {
         if (handle->shutdown)
         {
-            handle->status = MONITOR_STOPPING;
+            handle->status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MONITOR_STOPPED;
+            handle->status = MXS_MONITOR_STOPPED;
             return;
         }
 
         /** Wait base interval */
-        thread_millisleep(MON_BASE_INTERVAL_MS);
+        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
         /**
          * Calculate how far away the monitor interval is from its full
          * cycle and if monitor interval time further than the base
@@ -513,8 +513,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -628,10 +628,10 @@ detectStaleMaster(void *arg, int enable)
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-static MONITOR_SERVERS *get_current_master(MONITOR *mon)
+static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *mon)
 {
     MM_MONITOR* handle = mon->handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
 
     ptr = mon->databases;
 

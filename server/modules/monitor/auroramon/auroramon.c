@@ -42,7 +42,7 @@ typedef struct aurora_monitor
  * @param monitor  Monitor object
  * @param database Server whose status should be updated
  */
-void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
+void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
 {
     if (!SERVER_IN_MAINT(database->server))
     {
@@ -51,7 +51,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
         database->mon_prev_status = database->server->status;
 
         /** Try to connect to or ping the database */
-        connect_result_t rval = mon_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_connect_to_db(monitor, database);
 
         if (rval == MONITOR_CONN_OK)
         {
@@ -111,7 +111,7 @@ void update_server_status(MONITOR *monitor, MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MONITOR *monitor = (MONITOR*)arg;
+    MXS_MONITOR *monitor = (MXS_MONITOR*)arg;
     AURORA_MONITOR *handle = monitor->handle;
 
     if (mysql_thread_init())
@@ -125,7 +125,7 @@ monitorMain(void *arg)
         lock_monitor_servers(monitor);
         servers_status_pending_to_current(monitor);
 
-        for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+        for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
         {
             update_server_status(monitor, ptr);
 
@@ -154,8 +154,8 @@ monitorMain(void *arg)
                 // Admin has changed something, skip sleep
                 break;
             }
-            thread_millisleep(MON_BASE_INTERVAL_MS);
-            ms += MON_BASE_INTERVAL_MS;
+            thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
+            ms += MXS_MON_BASE_INTERVAL_MS;
         }
     }
 
@@ -184,7 +184,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
  * @return Monitor handle
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
 {
     AURORA_MONITOR *handle = mon->handle;
 
@@ -213,7 +213,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
     }
 
     handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
     if (thread_start(&handle->thread, monitorMain, mon) == NULL)
     {
@@ -231,7 +231,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     AURORA_MONITOR *handle = (AURORA_MONITOR *) mon->handle;
 
@@ -246,7 +246,7 @@ stopMonitor(MONITOR *mon)
  * @param mon   The monitor
  */
 static void
-diagnostics(DCB *dcb, const MONITOR *mon)
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
 }
 
@@ -259,7 +259,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
@@ -270,7 +270,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "Aurora monitor",
         "V1.0.0",
         &MyObject,
@@ -288,9 +288,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "events",
                 MXS_MODULE_PARAM_ENUM,
-                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
                 MXS_MODULE_OPT_NONE,
-                monitor_event_enum_values
+                mxs_monitor_event_enum_values
             },
             {MXS_END_MODULE_PARAMS}
         }

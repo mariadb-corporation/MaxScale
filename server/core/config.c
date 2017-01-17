@@ -2878,7 +2878,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         {
             /** Not the cleanest way of figuring out whether the configuration
              * was stored but it should be OK for now */
-            ((MONITOR*)obj->element)->created_online = true;
+            ((MXS_MONITOR*)obj->element)->created_online = true;
         }
     }
     else
@@ -2919,14 +2919,14 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             {
                 MXS_NOTICE("Invalid 'monitor_interval' parameter for monitor '%s', "
                            "using default value of %d milliseconds.",
-                           obj->object, MONITOR_INTERVAL);
+                           obj->object, MONITOR_DEFAULT_INTERVAL);
             }
         }
         else
         {
             MXS_NOTICE("Monitor '%s' is missing the 'monitor_interval' parameter, "
                        "using default value of %d milliseconds.",
-                       obj->object, MONITOR_INTERVAL);
+                       obj->object, MONITOR_DEFAULT_INTERVAL);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");

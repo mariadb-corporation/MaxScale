@@ -1311,7 +1311,7 @@ void server_set_status(SERVER *server, int bit)
      * but the race condition cannot cause significant harm. Monitors are never
      * freed so the pointer stays valid.
      */
-    MONITOR *mon = monitor_server_in_use(server);
+    MXS_MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {
@@ -1338,7 +1338,7 @@ void server_set_status(SERVER *server, int bit)
  */
 void server_clear_status(SERVER *server, int bit)
 {
-    MONITOR *mon = monitor_server_in_use(server);
+    MXS_MONITOR *mon = monitor_server_in_use(server);
     spinlock_acquire(&server->lock);
     if (mon && mon->state == MONITOR_STATE_RUNNING)
     {

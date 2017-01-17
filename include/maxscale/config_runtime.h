@@ -117,7 +117,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value);
+bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value);
 
 /**
  * @brief Create a new listener for a service
@@ -176,4 +176,4 @@ bool runtime_create_monitor(const char *name, const char *module);
  * @param monitor Monitor to destroy
  * @return True if monitor was destroyed
  */
-bool runtime_destroy_monitor(MONITOR *monitor);
+bool runtime_destroy_monitor(MXS_MONITOR *monitor);

@@ -74,17 +74,17 @@
 
 static void monitorMain(void *);
 
-static void *startMonitor(MONITOR *, const CONFIG_PARAMETER*);
-static void stopMonitor(MONITOR *);
-static void diagnostics(DCB *, const MONITOR *);
-static MONITOR_SERVERS *getServerByNodeId(MONITOR_SERVERS *, long);
-static MONITOR_SERVERS *getSlaveOfNodeId(MONITOR_SERVERS *, long);
-static MONITOR_SERVERS *get_replication_tree(MONITOR *, int);
-static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
-static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
+static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER*);
+static void stopMonitor(MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static MXS_MONITOR_SERVERS *getServerByNodeId(MXS_MONITOR_SERVERS *, long);
+static MXS_MONITOR_SERVERS *getSlaveOfNodeId(MXS_MONITOR_SERVERS *, long);
+static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *, int);
+static void set_master_heartbeat(MYSQL_MONITOR *, MXS_MONITOR_SERVERS *);
+static void set_slave_heartbeat(MXS_MONITOR *, MXS_MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
-static bool isMySQLEvent(monitor_event_t event);
-void check_maxscale_schema_replication(MONITOR *monitor);
+static bool isMySQLEvent(mxs_monitor_event_t event);
+void check_maxscale_schema_replication(MXS_MONITOR *monitor);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
@@ -100,7 +100,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Monitor module.");
 
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
@@ -111,7 +111,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_GA,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",
         &MyObject,
@@ -136,9 +136,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "events",
                 MXS_MODULE_PARAM_ENUM,
-                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
                 MXS_MODULE_OPT_NONE,
-                monitor_event_enum_values
+                mxs_monitor_event_enum_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -207,7 +207,7 @@ void info_free_func(void *val)
  * @return True on success, false if initialization failed. At the moment
  *         initialization can only fail if memory allocation fails.
  */
-bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *database)
 {
     MYSQL_SERVER_INFO info = MYSQL_SERVER_INFO_INIT;
     bool rval = true;
@@ -241,7 +241,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
+startMonitor(MXS_MONITOR *monitor, const CONFIG_PARAMETER* params)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*) monitor->handle;
 
@@ -282,7 +282,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     handle->failcount = config_get_integer(params, "failcount");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
     bool error = false;
 
@@ -318,7 +318,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
 
@@ -332,7 +332,7 @@ stopMonitor(MONITOR *mon)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MONITOR *mon)
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
 
@@ -341,7 +341,7 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
     dcb_printf(dcb, "Server information\n\n");
 
-    for (MONITOR_SERVERS *db = mon->databases; db; db = db->next)
+    for (MXS_MONITOR_SERVERS *db = mon->databases; db; db = db->next)
     {
         MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
         dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
@@ -370,7 +370,7 @@ enum mysql_server_version
     MYSQL_SERVER_VERSION_51
 };
 
-static inline void monitor_mysql_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info,
+static inline void monitor_mysql_db(MXS_MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info,
                                     enum mysql_server_version server_version)
 {
     int columns, i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
@@ -500,10 +500,10 @@ static inline void monitor_mysql_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO
  * @param mon Monitor
  * @return Lowest server ID master in the monitor
  */
-static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
+static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
 {
-    MONITOR_SERVERS* database = mon->databases;
-    MONITOR_SERVERS *ptr, *rval = NULL;
+    MXS_MONITOR_SERVERS* database = mon->databases;
+    MXS_MONITOR_SERVERS *ptr, *rval = NULL;
     int i;
     while (database)
     {
@@ -594,7 +594,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
+monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 {
     MYSQL_MONITOR* handle = mon->handle;
     MYSQL_ROW row;
@@ -613,7 +613,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
     if (database->con == NULL || mysql_ping(database->con) != 0)
     {
-        connect_result_t rval;
+        mxs_connect_result_t rval;
         if ((rval = mon_connect_to_db(mon, database)) == MONITOR_CONN_OK)
         {
             server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
@@ -743,7 +743,7 @@ struct graph_node
     bool active;
     struct graph_node *parent;
     MYSQL_SERVER_INFO *info;
-    MONITOR_SERVERS *db;
+    MXS_MONITOR_SERVERS *db;
 };
 
 /**
@@ -853,13 +853,13 @@ static void visit_node(struct graph_node *node, struct graph_node **stack,
  * member. Nodes in a group get a positive group ID where the nodes not in a
  * group get a group ID of 0.
  */
-void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nservers)
+void find_graph_cycles(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *database, int nservers)
 {
     struct graph_node graph[nservers];
     struct graph_node *stack[nservers];
     int nodes = 0;
 
-    for (MONITOR_SERVERS *db = database; db; db = db->next)
+    for (MXS_MONITOR_SERVERS *db = database; db; db = db->next)
     {
         graph[nodes].info = hashtable_fetch(handle->server_info, db->server->unique_name);
         graph[nodes].db = db;
@@ -960,7 +960,7 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nse
  *
  * @return True if failover is required
  */
-bool failover_required(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
+bool failover_required(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
 {
     int candidates = 0;
 
@@ -998,7 +998,7 @@ bool failover_required(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
  * @param handle Monitor instance
  * @param db     Monitor servers
  */
-void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
+void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
 {
     while (db)
     {
@@ -1033,13 +1033,13 @@ void do_failover(MYSQL_MONITOR *handle, MONITOR_SERVERS *db)
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = (MONITOR*) arg;
+    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
     MYSQL_MONITOR *handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
     int replication_heartbeat;
     bool detect_stale_master;
     int num_servers = 0;
-    MONITOR_SERVERS *root_master = NULL;
+    MXS_MONITOR_SERVERS *root_master = NULL;
     size_t nrounds = 0;
     int log_no_master = 1;
     bool heartbeat_checked = false;
@@ -1055,19 +1055,19 @@ monitorMain(void *arg)
         MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
-    handle->status = MONITOR_RUNNING;
+    handle->status = MXS_MONITOR_RUNNING;
 
     while (1)
     {
         if (handle->shutdown)
         {
-            handle->status = MONITOR_STOPPING;
+            handle->status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MONITOR_STOPPED;
+            handle->status = MXS_MONITOR_STOPPED;
             return;
         }
         /** Wait base interval */
-        thread_millisleep(MON_BASE_INTERVAL_MS);
+        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
 
         if (handle->replicationHeartbeat && !heartbeat_checked)
         {
@@ -1082,8 +1082,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            (((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-             MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
+            (((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+             MXS_MON_BASE_INTERVAL_MS) && (!mon->server_pending_changes))
         {
             nrounds += 1;
             continue;
@@ -1383,8 +1383,8 @@ monitorMain(void *arg)
  * @param node_id   The MySQL server_id to fetch
  * @return      The server with the required server_id
  */
-static MONITOR_SERVERS *
-getServerByNodeId(MONITOR_SERVERS *ptr, long node_id)
+static MXS_MONITOR_SERVERS *
+getServerByNodeId(MXS_MONITOR_SERVERS *ptr, long node_id)
 {
     SERVER *current;
     while (ptr)
@@ -1406,8 +1406,8 @@ getServerByNodeId(MONITOR_SERVERS *ptr, long node_id)
  * @param node_id   The MySQL server_id to fetch
  * @return      The slave server of this node_id
  */
-static MONITOR_SERVERS *
-getSlaveOfNodeId(MONITOR_SERVERS *ptr, long node_id)
+static MXS_MONITOR_SERVERS *
+getSlaveOfNodeId(MXS_MONITOR_SERVERS *ptr, long node_id)
 {
     SERVER *current;
     while (ptr)
@@ -1430,7 +1430,7 @@ getSlaveOfNodeId(MONITOR_SERVERS *ptr, long node_id)
  * @param handle    The monitor handle
  * @param database      The number database server
  */
-static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *database)
 {
     unsigned long id = handle->id;
     time_t heartbeat;
@@ -1565,7 +1565,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
  * @param handle    The monitor handle
  * @param database      The number database server
  */
-static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
+static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*) mon->handle;
     unsigned long id = handle->id;
@@ -1676,11 +1676,11 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
  * @return      The server at root level with SERVER_MASTER bit
  */
 
-static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
+static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *mon, int num_servers)
 {
     MYSQL_MONITOR* handle = (MYSQL_MONITOR*) mon->handle;
-    MONITOR_SERVERS *ptr;
-    MONITOR_SERVERS *backend;
+    MXS_MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *backend;
     SERVER *current;
     int depth = 0;
     long node_id;
@@ -1706,7 +1706,7 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
         node_id = current->master_id;
         if (node_id < 1)
         {
-            MONITOR_SERVERS *find_slave;
+            MXS_MONITOR_SERVERS *find_slave;
             find_slave = getSlaveOfNodeId(mon->databases, current->node_id);
 
             if (find_slave == NULL)
@@ -1753,7 +1753,7 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
             }
             else
             {
-                MONITOR_SERVERS *master;
+                MXS_MONITOR_SERVERS *master;
                 current->depth = depth;
 
                 master = getServerByNodeId(mon->databases, current->master_id);
@@ -1849,7 +1849,7 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id)
  * @return False if the table is not replicated or an error occurred when querying
  * the server
  */
-bool check_replicate_ignore_table(MONITOR_SERVERS* database)
+bool check_replicate_ignore_table(MXS_MONITOR_SERVERS* database)
 {
     MYSQL_RES *result;
     bool rval = true;
@@ -1893,7 +1893,7 @@ bool check_replicate_ignore_table(MONITOR_SERVERS* database)
  * @return False if the table is not replicated or an error occurred when querying
  * the server
  */
-bool check_replicate_do_table(MONITOR_SERVERS* database)
+bool check_replicate_do_table(MXS_MONITOR_SERVERS* database)
 {
     MYSQL_RES *result;
     bool rval = true;
@@ -1936,7 +1936,7 @@ bool check_replicate_do_table(MONITOR_SERVERS* database)
  * @return False if the table is not replicated or an error occurred when trying to
  * query the server.
  */
-bool check_replicate_wild_do_table(MONITOR_SERVERS* database)
+bool check_replicate_wild_do_table(MXS_MONITOR_SERVERS* database)
 {
     MYSQL_RES *result;
     bool rval = true;
@@ -1983,7 +1983,7 @@ bool check_replicate_wild_do_table(MONITOR_SERVERS* database)
  * @return False if the table is not replicated or an error occurred when trying to
  * query the server.
  */
-bool check_replicate_wild_ignore_table(MONITOR_SERVERS* database)
+bool check_replicate_wild_ignore_table(MXS_MONITOR_SERVERS* database)
 {
     MYSQL_RES *result;
     bool rval = true;
@@ -2028,14 +2028,14 @@ bool check_replicate_wild_ignore_table(MONITOR_SERVERS* database)
  * servers and log a warning if problems were found.
  * @param monitor Monitor structure
  */
-void check_maxscale_schema_replication(MONITOR *monitor)
+void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 {
-    MONITOR_SERVERS* database = monitor->databases;
+    MXS_MONITOR_SERVERS* database = monitor->databases;
     bool err = false;
 
     while (database)
     {
-        connect_result_t rval = mon_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_connect_to_db(monitor, database);
         if (rval == MONITOR_CONN_OK)
         {
             if (!check_replicate_ignore_table(database) ||

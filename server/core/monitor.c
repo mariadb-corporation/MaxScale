@@ -44,10 +44,10 @@
 
 #include "maxscale/config.h"
 
-static MONITOR  *allMonitors = NULL;
+static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
-static void monitor_server_free_all(MONITOR_SERVERS *servers);
+static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers);
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
@@ -57,13 +57,13 @@ static void monitor_server_free_all(MONITOR_SERVERS *servers);
  * @param module        The module to load
  * @return      The newly created monitor
  */
-MONITOR *
+MXS_MONITOR *
 monitor_alloc(char *name, char *module)
 {
     name = MXS_STRDUP(name);
     char *my_module = MXS_STRDUP(module);
 
-    MONITOR *mon = (MONITOR *)MXS_MALLOC(sizeof(MONITOR));
+    MXS_MONITOR *mon = (MXS_MONITOR *)MXS_MALLOC(sizeof(MXS_MONITOR));
 
     if (!name || !mon || !my_module)
     {
@@ -90,7 +90,7 @@ monitor_alloc(char *name, char *module)
     mon->read_timeout = DEFAULT_READ_TIMEOUT;
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-    mon->interval = MONITOR_INTERVAL;
+    mon->interval = MONITOR_DEFAULT_INTERVAL;
     mon->parameters = NULL;
     mon->created_online = false;
     mon->server_pending_changes = false;
@@ -110,9 +110,9 @@ monitor_alloc(char *name, char *module)
  * @param mon   The monitor to free
  */
 void
-monitor_free(MONITOR *mon)
+monitor_free(MXS_MONITOR *mon)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     mon->module->stopMonitor(mon);
     mon->state = MONITOR_STATE_FREED;
@@ -148,7 +148,7 @@ monitor_free(MONITOR *mon)
  * @param monitor The Monitor that should be started
  */
 void
-monitorStart(MONITOR *monitor, void* params)
+monitorStart(MXS_MONITOR *monitor, void* params)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -169,7 +169,7 @@ monitorStart(MONITOR *monitor, void* params)
  */
 void monitorStartAll()
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -187,7 +187,7 @@ void monitorStartAll()
  * @param monitor       The monitor to stop
  */
 void
-monitorStop(MONITOR *monitor)
+monitorStop(MXS_MONITOR *monitor)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -198,7 +198,7 @@ monitorStop(MONITOR *monitor)
         monitor->module->stopMonitor(monitor);
         monitor->state = MONITOR_STATE_STOPPED;
 
-        MONITOR_SERVERS* db = monitor->databases;
+        MXS_MONITOR_SERVERS* db = monitor->databases;
         while (db)
         {
             // TODO: Create a generic entry point for this or move it inside stopMonitor
@@ -217,7 +217,7 @@ monitorStop(MONITOR *monitor)
 void
 monitorStopAll()
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -236,7 +236,7 @@ monitorStopAll()
  * @param mon           The Monitor instance
  * @param server        The Server to add to the monitoring
  */
-bool monitorAddServer(MONITOR *mon, SERVER *server)
+bool monitorAddServer(MXS_MONITOR *mon, SERVER *server)
 {
     bool rval = false;
 
@@ -247,7 +247,7 @@ bool monitorAddServer(MONITOR *mon, SERVER *server)
     else
     {
         rval = true;
-        MONITOR_SERVERS *db = (MONITOR_SERVERS *)MXS_MALLOC(sizeof(MONITOR_SERVERS));
+        MXS_MONITOR_SERVERS *db = (MXS_MONITOR_SERVERS *)MXS_MALLOC(sizeof(MXS_MONITOR_SERVERS));
         MXS_ABORT_IF_NULL(db);
 
         db->server = server;
@@ -275,7 +275,7 @@ bool monitorAddServer(MONITOR *mon, SERVER *server)
         }
         else
         {
-            MONITOR_SERVERS *ptr = mon->databases;
+            MXS_MONITOR_SERVERS *ptr = mon->databases;
             while (ptr->next != NULL)
             {
                 ptr = ptr->next;
@@ -293,7 +293,7 @@ bool monitorAddServer(MONITOR *mon, SERVER *server)
     return rval;
 }
 
-static void monitor_server_free(MONITOR_SERVERS *tofree)
+static void monitor_server_free(MXS_MONITOR_SERVERS *tofree)
 {
     if (tofree)
     {
@@ -309,11 +309,11 @@ static void monitor_server_free(MONITOR_SERVERS *tofree)
  * Free monitor server list
  * @param servers Servers to free
  */
-static void monitor_server_free_all(MONITOR_SERVERS *servers)
+static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers)
 {
     while (servers)
     {
-        MONITOR_SERVERS *tofree = servers;
+        MXS_MONITOR_SERVERS *tofree = servers;
         servers = servers->next;
         monitor_server_free(tofree);
     }
@@ -325,7 +325,7 @@ static void monitor_server_free_all(MONITOR_SERVERS *servers)
  * @param mon           The Monitor instance
  * @param server        The Server to remove
  */
-void monitorRemoveServer(MONITOR *mon, SERVER *server)
+void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
 {
     monitor_state_t old_state = mon->state;
 
@@ -336,7 +336,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
 
     spinlock_acquire(&mon->lock);
 
-    MONITOR_SERVERS *ptr = mon->databases;
+    MXS_MONITOR_SERVERS *ptr = mon->databases;
 
     if (ptr && ptr->server == server)
     {
@@ -344,7 +344,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
     }
     else
     {
-        MONITOR_SERVERS *prev = ptr;
+        MXS_MONITOR_SERVERS *prev = ptr;
 
         while (ptr)
         {
@@ -379,7 +379,7 @@ void monitorRemoveServer(MONITOR *mon, SERVER *server)
  * @param passwd        The default password associated to the default user.
  */
 void
-monitorAddUser(MONITOR *mon, char *user, char *passwd)
+monitorAddUser(MXS_MONITOR *mon, char *user, char *passwd)
 {
     if (user != mon->user)
     {
@@ -400,7 +400,7 @@ monitorAddUser(MONITOR *mon, char *user, char *passwd)
 void
 monitorShowAll(DCB *dcb)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -418,7 +418,7 @@ monitorShowAll(DCB *dcb)
  * @param dcb   DCB for printing output
  */
 void
-monitorShow(DCB *dcb, MONITOR *monitor)
+monitorShow(DCB *dcb, MXS_MONITOR *monitor)
 {
     const char *state;
 
@@ -452,7 +452,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 
     const char *sep = "";
 
-    for (MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+    for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
     {
         dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
         sep = ", ";
@@ -486,7 +486,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 void
 monitorList(DCB *dcb)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -510,10 +510,10 @@ monitorList(DCB *dcb)
  * @param       name    The name of the monitor
  * @return      Pointer to the monitor or NULL
  */
-MONITOR *
+MXS_MONITOR *
 monitor_find(const char *name)
 {
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -536,7 +536,7 @@ monitor_find(const char *name)
  * @param interval      The sampling interval in milliseconds
  */
 void
-monitorSetInterval(MONITOR *mon, unsigned long interval)
+monitorSetInterval(MXS_MONITOR *mon, unsigned long interval)
 {
     mon->interval = interval;
 }
@@ -549,7 +549,7 @@ monitorSetInterval(MONITOR *mon, unsigned long interval)
  * @param value         The timeout to set
  */
 bool
-monitorSetNetworkTimeout(MONITOR *mon, int type, int value)
+monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
 {
     bool rval = true;
 
@@ -597,7 +597,7 @@ monitorRowCallback(RESULTSET *set, void *data)
     int i = 0;;
     char buf[20];
     RESULT_ROW *row;
-    MONITOR *ptr;
+    MXS_MONITOR *ptr;
 
     spinlock_acquire(&monLock);
     ptr = allMonitors;
@@ -655,7 +655,7 @@ monitorGetList()
  * @param query Query to execute
  * @return True on success, false if monitor credentials lack permissions
  */
-bool check_monitor_permissions(MONITOR* monitor, const char* query)
+bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 {
     if (monitor->databases == NULL || // No servers to check
         config_get_global_options()->skip_permission_checks)
@@ -668,7 +668,7 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
     GATEWAY_CONF* cnf = config_get_global_options();
     bool rval = false;
 
-    for (MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
+    for (MXS_MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
     {
         if (mon_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
         {
@@ -732,7 +732,7 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
+void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params)
 {
     while (params)
     {
@@ -746,7 +746,7 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
     }
 }
 
-bool monitorRemoveParameter(MONITOR *monitor, const char *key)
+bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
 {
     CONFIG_PARAMETER *prev = NULL;
 
@@ -779,7 +779,7 @@ bool monitorRemoveParameter(MONITOR *monitor, const char *key)
  * @param bit           The bit to clear for the server
  */
 void
-monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
+monitor_set_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
 {
     ptr->pending_status |= bit;
 }
@@ -791,7 +791,7 @@ monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
  * @param bit           The bit to clear for the server
  */
 void
-monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
+monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
 {
     ptr->pending_status &= ~bit;
 }
@@ -803,8 +803,8 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
  * @param   node                The monitor server data for a particular server
  * @result  monitor_event_t     A monitor event (enum)
  */
-monitor_event_t
-mon_get_event_type(MONITOR_SERVERS* node)
+mxs_monitor_event_t
+mon_get_event_type(MXS_MONITOR_SERVERS* node)
 {
     typedef enum
     {
@@ -902,15 +902,15 @@ mon_get_event_type(MONITOR_SERVERS* node)
  * @result  string  The name of the monitor event for the server
  */
 const char*
-mon_get_event_name(MONITOR_SERVERS* node)
+mon_get_event_name(MXS_MONITOR_SERVERS* node)
 {
-    monitor_event_t event = mon_get_event_type(node);
+    mxs_monitor_event_t event = mon_get_event_type(node);
 
-    for (int i = 0; monitor_event_enum_values[i].name; i++)
+    for (int i = 0; mxs_monitor_event_enum_values[i].name; i++)
     {
-        if (monitor_event_enum_values[i].enum_value & event)
+        if (mxs_monitor_event_enum_values[i].enum_value & event)
         {
-            return monitor_event_enum_values[i].name;
+            return mxs_monitor_event_enum_values[i].name;
         }
     }
 
@@ -924,7 +924,7 @@ mon_get_event_name(MONITOR_SERVERS* node)
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
  */
-static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len, int status)
+static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     char *separator = "";
     char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
@@ -950,7 +950,7 @@ static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len,
  * @return              true if status has changed or false
  */
 bool
-mon_status_changed(MONITOR_SERVERS* mon_srv)
+mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
 {
     /* Previous status is -1 if not yet set */
     return (mon_srv->mon_prev_status != -1
@@ -966,7 +966,7 @@ mon_status_changed(MONITOR_SERVERS* mon_srv)
  * @return              true if failed status can be logged or false
  */
 bool
-mon_print_fail_status(MONITOR_SERVERS* mon_srv)
+mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv)
 {
     return (SERVER_IS_DOWN(mon_srv->server) && mon_srv->mon_err_count == 0);
 }
@@ -978,7 +978,7 @@ mon_print_fail_status(MONITOR_SERVERS* mon_srv)
  * @param script Script to execute
  */
 void
-monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, const char* script)
+monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* script)
 {
     char arg[strlen(script) + 1];
     strcpy(arg, script);
@@ -1098,10 +1098,10 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, const char* script)
  * @param database Monitored database
  * @return MONITOR_CONN_OK if the connection is OK else the reason for the failure
  */
-connect_result_t
-mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
+mxs_connect_result_t
+mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
-    connect_result_t rval = MONITOR_CONN_OK;
+    mxs_connect_result_t rval = MONITOR_CONN_OK;
 
     /** Return if the connection is OK */
     if (database->con && mysql_ping(database->con) == 0)
@@ -1164,7 +1164,7 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
  * @param rval Return value of mon_connect_to_db
  */
 void
-mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
+mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
               "Monitor timed out when connecting to server %s:%d : \"%s\"" :
@@ -1173,7 +1173,7 @@ mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
               mysql_error(database->con));
 }
 
-void mon_log_state_change(MONITOR_SERVERS *ptr)
+void mon_log_state_change(MXS_MONITOR_SERVERS *ptr)
 {
     SERVER srv;
     srv.status = ptr->mon_prev_status;
@@ -1186,17 +1186,17 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     MXS_FREE(next);
 }
 
-MONITOR* monitor_server_in_use(const SERVER *server)
+MXS_MONITOR* monitor_server_in_use(const SERVER *server)
 {
-    MONITOR *rval = NULL;
+    MXS_MONITOR *rval = NULL;
 
     spinlock_acquire(&monLock);
 
-    for (MONITOR *mon = allMonitors; mon && !rval; mon = mon->next)
+    for (MXS_MONITOR *mon = allMonitors; mon && !rval; mon = mon->next)
     {
         spinlock_acquire(&mon->lock);
 
-        for (MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
+        for (MXS_MONITOR_SERVERS *db = mon->databases; db && !rval; db = db->next)
         {
             if (db->server == server)
             {
@@ -1219,7 +1219,7 @@ MONITOR* monitor_server_in_use(const SERVER *server)
  * @param filename Filename where configuration is written
  * @return True on success, false on error
  */
-static bool create_monitor_server_config(const MONITOR *monitor, const char *filename)
+static bool create_monitor_server_config(const MXS_MONITOR *monitor, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1242,7 +1242,7 @@ static bool create_monitor_server_config(const MONITOR *monitor, const char *fil
     if (monitor->databases)
     {
         dprintf(file, "servers=");
-        for (MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
         {
             if (db != monitor->databases)
             {
@@ -1258,7 +1258,7 @@ static bool create_monitor_server_config(const MONITOR *monitor, const char *fil
     return true;
 }
 
-static bool create_monitor_config(const MONITOR *monitor, const char *filename)
+static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
@@ -1290,7 +1290,7 @@ static bool create_monitor_config(const MONITOR *monitor, const char *filename)
     return true;
 }
 
-bool monitor_serialize_servers(const MONITOR *monitor)
+bool monitor_serialize_servers(const MXS_MONITOR *monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1327,7 +1327,7 @@ bool monitor_serialize_servers(const MONITOR *monitor)
     return rval;
 }
 
-bool monitor_serialize(const MONITOR *monitor)
+bool monitor_serialize(const MXS_MONITOR *monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
@@ -1364,9 +1364,9 @@ bool monitor_serialize(const MONITOR *monitor)
     return rval;
 }
 
-void mon_hangup_failed_servers(MONITOR *monitor)
+void mon_hangup_failed_servers(MXS_MONITOR *monitor)
 {
-    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr) &&
             (!(SERVER_IS_RUNNING(ptr->server)) ||
@@ -1381,9 +1381,9 @@ void mon_hangup_failed_servers(MONITOR *monitor)
   * only be max 1 monitor per server.
   * @param monitor The target monitor
   */
-void lock_monitor_servers(MONITOR *monitor)
+void lock_monitor_servers(MXS_MONITOR *monitor)
 {
-    MONITOR_SERVERS *ptr = monitor->databases;
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
     while (ptr)
     {
         spinlock_acquire(&ptr->server->lock);
@@ -1395,9 +1395,9 @@ void lock_monitor_servers(MONITOR *monitor)
   * only be max 1 monitor per server.
   * @param monitor The target monitor
   */
-void release_monitor_servers(MONITOR *monitor)
+void release_monitor_servers(MXS_MONITOR *monitor)
 {
-    MONITOR_SERVERS *ptr = monitor->databases;
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
     while (ptr)
     {
         spinlock_release(&ptr->server->lock);
@@ -1410,9 +1410,9 @@ void release_monitor_servers(MONITOR *monitor)
   * a monitor loop, after the servers are locked.
   * @param monitor The target monitor
   */
-void servers_status_pending_to_current(MONITOR *monitor)
+void servers_status_pending_to_current(MXS_MONITOR *monitor)
 {
-    MONITOR_SERVERS *ptr = monitor->databases;
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
     while (ptr)
     {
         ptr->server->status = ptr->server->status_pending;
@@ -1426,9 +1426,9 @@ void servers_status_pending_to_current(MONITOR *monitor)
   *  a monitor loop, before the servers are released.
   *  @param monitor The target monitor
   */
-void servers_status_current_to_pending(MONITOR *monitor)
+void servers_status_current_to_pending(MXS_MONITOR *monitor)
 {
-    MONITOR_SERVERS *ptr = monitor->databases;
+    MXS_MONITOR_SERVERS *ptr = monitor->databases;
     while (ptr)
     {
         ptr->server->status_pending = ptr->server->status;
@@ -1436,9 +1436,9 @@ void servers_status_current_to_pending(MONITOR *monitor)
     }
 }
 
-void mon_process_state_changes(MONITOR *monitor, const char *script, uint64_t events)
+void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_t events)
 {
-    for (MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
+    for (MXS_MONITOR_SERVERS *ptr = monitor->databases; ptr; ptr = ptr->next)
     {
         if (mon_status_changed(ptr))
         {

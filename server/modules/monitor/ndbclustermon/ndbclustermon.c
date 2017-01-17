@@ -39,10 +39,10 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
-static void stopMonitor(MONITOR *);
-static void diagnostics(DCB *, const MONITOR *);
-bool isNdbEvent(monitor_event_t event);
+static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *params);
+static void stopMonitor(MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+bool isNdbEvent(mxs_monitor_event_t event);
 
 
 
@@ -58,7 +58,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise the MySQL Cluster Monitor module.");
 
-    static MONITOR_OBJECT MyObject =
+    static MXS_MONITOR_OBJECT MyObject =
     {
         startMonitor,
         stopMonitor,
@@ -69,7 +69,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_MONITOR,
         MXS_MODULE_BETA_RELEASE,
-        MONITOR_VERSION,
+        MXS_MONITOR_VERSION,
         "A MySQL cluster SQL node monitor",
         "V2.1.0",
         &MyObject,
@@ -87,9 +87,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "events",
                 MXS_MODULE_PARAM_ENUM,
-                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MONITOR_EVENT_DEFAULT_VALUE,
                 MXS_MODULE_OPT_NONE,
-                monitor_event_enum_values
+                mxs_monitor_event_enum_values
             },
             {MXS_END_MODULE_PARAMS} // No parameters
         }
@@ -107,7 +107,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
 {
     MYSQL_MONITOR *handle = mon->handle;
     bool have_events = false, script_error = false;
@@ -124,13 +124,13 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
             return NULL;
         }
         handle->shutdown = 0;
-        handle->id = MONITOR_DEFAULT_ID;
+        handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
         spinlock_init(&handle->lock);
     }
 
     handle->script = config_copy_string(params, "script");
-    handle->events = config_get_enum(params, "events", monitor_event_enum_values);
+    handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
     /** SHOW STATUS doesn't require any special permissions */
     if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
@@ -155,7 +155,7 @@ startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(MONITOR *mon)
+stopMonitor(MXS_MONITOR *mon)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
 
@@ -170,7 +170,7 @@ stopMonitor(MONITOR *mon)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, const MONITOR *mon)
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
 }
 
@@ -180,7 +180,7 @@ diagnostics(DCB *dcb, const MONITOR *mon)
  * @param database  The database to probe
  */
 static void
-monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPasswd, MONITOR *mon)
+monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultPasswd, MXS_MONITOR *mon)
 {
     MYSQL_ROW row;
     MYSQL_RES *result;
@@ -193,7 +193,7 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
         return;
     }
 
-    connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         server_clear_status_nolock(database->server, SERVER_RUNNING);
@@ -293,9 +293,9 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = arg;
+    MXS_MONITOR* mon = arg;
     MYSQL_MONITOR *handle;
-    MONITOR_SERVERS *ptr;
+    MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
 
     spinlock_acquire(&mon->lock);
@@ -307,20 +307,20 @@ monitorMain(void *arg)
         MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
-    handle->status = MONITOR_RUNNING;
+    handle->status = MXS_MONITOR_RUNNING;
 
     while (1)
     {
         if (handle->shutdown)
         {
-            handle->status = MONITOR_STOPPING;
+            handle->status = MXS_MONITOR_STOPPING;
             mysql_thread_end();
-            handle->status = MONITOR_STOPPED;
+            handle->status = MXS_MONITOR_STOPPED;
             return;
         }
 
         /** Wait base interval */
-        thread_millisleep(MON_BASE_INTERVAL_MS);
+        thread_millisleep(MXS_MON_BASE_INTERVAL_MS);
         /**
          * Calculate how far away the monitor interval is from its full
          * cycle and if monitor interval time further than the base
@@ -328,8 +328,8 @@ monitorMain(void *arg)
          * round.
          */
         if (nrounds != 0 &&
-            ((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >=
-            MON_BASE_INTERVAL_MS)
+            ((nrounds * MXS_MON_BASE_INTERVAL_MS) % mon->interval) >=
+            MXS_MON_BASE_INTERVAL_MS)
         {
             nrounds += 1;
             continue;

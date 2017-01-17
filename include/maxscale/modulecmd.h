@@ -85,13 +85,13 @@ struct arg_node
     modulecmd_arg_type_t  type;
     union
     {
-        char            *string;
-        bool            boolean;
+        char           *string;
+        bool           boolean;
         SERVICE        *service;
         SERVER         *server;
         SESSION        *session;
         DCB            *dcb;
-        MONITOR        *monitor;
+        MXS_MONITOR    *monitor;
         MXS_FILTER_DEF *filter;
     } value;
 };

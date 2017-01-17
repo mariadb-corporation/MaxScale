@@ -426,7 +426,7 @@ static void shutdown_server()
 }
 
 static void shutdown_service(DCB *dcb, SERVICE *service);
-static void shutdown_monitor(DCB *dcb, MONITOR *monitor);
+static void shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor);
 
 static void
 shutdown_listener(DCB *dcb, SERVICE *service, const char *name)
@@ -512,7 +512,7 @@ struct subcommand syncoptions[] =
 };
 
 static void restart_service(DCB *dcb, SERVICE *service);
-static void restart_monitor(DCB *dcb, MONITOR *monitor);
+static void restart_monitor(DCB *dcb, MXS_MONITOR *monitor);
 
 static void
 restart_listener(DCB *dcb, SERVICE *service, const char *name)
@@ -1183,7 +1183,7 @@ static void destroyListener(DCB *dcb, SERVICE *service, const char *name)
 }
 
 
-static void destroyMonitor(DCB *dcb, MONITOR *monitor)
+static void destroyMonitor(DCB *dcb, MXS_MONITOR *monitor)
 {
     char name[strlen(monitor->name) + 1];
     strcpy(name, monitor->name);
@@ -1312,9 +1312,9 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
     }
 }
 
-static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
-                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                         char *v10, char *v11)
+static void alterMonitor(DCB *dcb, MXS_MONITOR *monitor, char *v1, char *v2, char *v3,
+                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                        char *v10, char *v11)
 {
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -2056,7 +2056,7 @@ show_log_throttling(DCB *dcb)
  * @param monitor       The monitor to shutdown
  */
 static void
-shutdown_monitor(DCB *dcb, MONITOR *monitor)
+shutdown_monitor(DCB *dcb, MXS_MONITOR *monitor)
 {
     monitorStop(monitor);
 }
@@ -2068,7 +2068,7 @@ shutdown_monitor(DCB *dcb, MONITOR *monitor)
  * @param monitor       The monitor to restart
  */
 static void
-restart_monitor(DCB *dcb, MONITOR *monitor)
+restart_monitor(DCB *dcb, MXS_MONITOR *monitor)
 {
     monitorStart(monitor, monitor->parameters);
 }

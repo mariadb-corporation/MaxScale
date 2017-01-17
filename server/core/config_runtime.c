@@ -29,7 +29,7 @@ bool runtime_link_server(SERVER *server, const char *target)
 
     bool rval = false;
     SERVICE *service = service_find(target);
-    MONITOR *monitor = service ? NULL : monitor_find(target);
+    MXS_MONITOR *monitor = service ? NULL : monitor_find(target);
 
     if (service)
     {
@@ -64,7 +64,7 @@ bool runtime_unlink_server(SERVER *server, const char *target)
 
     bool rval = false;
     SERVICE *service = service_find(target);
-    MONITOR *monitor = service ? NULL : monitor_find(target);
+    MXS_MONITOR *monitor = service ? NULL : monitor_find(target);
 
     if (service || monitor)
     {
@@ -343,7 +343,7 @@ static long get_positive_int(const char *value)
  *
  * @param monitor Monitor to modify
  */
-static void add_monitor_defaults(MONITOR *monitor)
+static void add_monitor_defaults(MXS_MONITOR *monitor)
 {
     /** Inject the default module parameters in case we only deleted
      * a parameter */
@@ -363,7 +363,7 @@ static void add_monitor_defaults(MONITOR *monitor)
     }
 }
 
-bool runtime_alter_monitor(MONITOR *monitor, char *key, char *value)
+bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
 {
     spinlock_acquire(&crt_lock);
     bool valid = false;
@@ -583,7 +583,7 @@ bool runtime_create_monitor(const char *name, const char *module)
 
     if (monitor_find(name) == NULL)
     {
-        MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
+        MXS_MONITOR *monitor = monitor_alloc((char*)name, (char*)module);
 
         if (monitor)
         {
@@ -603,7 +603,7 @@ bool runtime_create_monitor(const char *name, const char *module)
     return rval;
 }
 
-bool runtime_destroy_monitor(MONITOR *monitor)
+bool runtime_destroy_monitor(MXS_MONITOR *monitor)
 {
     bool rval = false;
     char filename[PATH_MAX];
