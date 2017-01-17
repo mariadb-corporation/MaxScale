@@ -47,3 +47,9 @@ INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);
 # warning: [qc_sqlite] Statement was only partially parsed
 # (Sqlite3 error: SQL logic error or missing database, near "ON": syntax error):
 # "INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a)"
+
+PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';
+# warning: [qc_sqlite] Statement was classified only based on keywords
+# (Sqlite3 error: SQL logic error or missing database, near "SET": syntax error):
+# "UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1"
+
