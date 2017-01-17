@@ -25,7 +25,7 @@ MXS_BEGIN_DECLS
  * This is basically the link between a plugin to load and the
  * options to pass to that plugin.
  */
-typedef struct mxs_filter_def
+struct mxs_filter_def
 {
     char *name;                   /**< The Filter name */
     char *module;                 /**< The module to load */
@@ -35,7 +35,7 @@ typedef struct mxs_filter_def
     MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
     SPINLOCK spin;                /**< Spinlock to protect the filter definition */
     struct mxs_filter_def *next;  /**< Next filter in the chain of all filters */
-} MXS_FILTER_DEF;
+};
 
 void filter_add_option(MXS_FILTER_DEF *filter_def, const char *option);
 void filter_add_parameter(MXS_FILTER_DEF *filter_def, const char *name, const char *value);
