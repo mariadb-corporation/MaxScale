@@ -132,7 +132,7 @@ static const MXS_ENUM_VALUE enc_algo_values[] =
 {
     {"aes_cbc", BLR_AES_CBC},
 #if OPENSSL_VERSION_NUMBER > 0x10000000L
-    {"aes_ctr",BLR_AES_CTR},
+    {"aes_ctr", BLR_AES_CTR},
 #endif
     {NULL}
 };
@@ -864,7 +864,7 @@ createInstance(SERVICE *service, char **options)
     if (inst->trx_safe)
     {
         MXS_NOTICE("%s: Service has transaction safety option set to ON",
-                 service->name);
+                   service->name);
     }
 
     /* Log whether the binlog encryption option value is on */
@@ -1652,9 +1652,9 @@ diagnostics(ROUTER *router, DCB *dcb)
                 {
                     dcb_printf(dcb, "\t\tSlave_mode:                              catchup. %s%s\n",
                                ((session->cstate & CS_EXPECTCB) == 0 ? "" :
-                               "Waiting for DCB queue to drain."),
+                                "Waiting for DCB queue to drain."),
                                ((session->cstate & CS_BUSY) == 0 ? "" :
-                               " Busy in slave catchup."));
+                                " Busy in slave catchup."));
                 }
             }
 #if SPINLOCK_PROFILE
@@ -2469,11 +2469,11 @@ destroyInstance(ROUTER *instance)
     }
 
     MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
-               "read up to log %s, pos %lu, transaction safe pos %lu",
-               inst->service->name,
-               inst->service->dbref->server->name,
-               inst->service->dbref->server->port,
-               inst->binlog_name, inst->current_pos, inst->binlog_position);
+             "read up to log %s, pos %lu, transaction safe pos %lu",
+             inst->service->name,
+             inst->service->dbref->server->name,
+             inst->service->dbref->server->port,
+             inst->binlog_name, inst->current_pos, inst->binlog_position);
 
     if (inst->trx_safe && inst->pending_transaction)
     {
@@ -2509,71 +2509,71 @@ unsigned int from_hex(char c)
  */
 bool blr_extract_key(const char *buffer, int nline, ROUTER_INSTANCE *router)
 {
-  char *p = (char *)buffer;
-  int length = 0;
-  uint8_t *key = (uint8_t *)router->encryption.key_value;
+    char *p = (char *)buffer;
+    int length = 0;
+    uint8_t *key = (uint8_t *)router->encryption.key_value;
 
-  while (isspace(*p) && *p != '\n')
-  {
-      p++;
-  }
+    while (isspace(*p) && *p != '\n')
+    {
+        p++;
+    }
 
-  /* Skip comments */
-  if (*p == '#')
-  {
-      return false;
-  }
+    /* Skip comments */
+    if (*p == '#')
+    {
+        return false;
+    }
 
-  unsigned int id = strtoll(p, &p, 10);
+    unsigned int id = strtoll(p, &p, 10);
 
-  /* key range is 1 .. 255 */
-  if (id < 1 || id > 255)
-  {
-      MXS_WARNING("Invalid Key Id (values 1..255) found in file %s. Line %d, index 0.",
-                  router->encryption.key_management_filename,
-                  nline);
-      return false;
-  }
+    /* key range is 1 .. 255 */
+    if (id < 1 || id > 255)
+    {
+        MXS_WARNING("Invalid Key Id (values 1..255) found in file %s. Line %d, index 0.",
+                    router->encryption.key_management_filename,
+                    nline);
+        return false;
+    }
 
-  /* Continue only if read id is BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
-  if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
-  {
-      return false;
-  }
+    /* Continue only if read id is BINLOG_SYSTEM_DATA_CRYPTO_SCHEME (value is 1) */
+    if (id != BINLOG_SYSTEM_DATA_CRYPTO_SCHEME)
+    {
+        return false;
+    }
 
-  /* Look for ';' separator */
-  if (*p != ';')
-  {
-      MXS_ERROR("Syntax error in Encryption Key file at line %d, index %lu. File %s",
-                nline,
-                p - buffer,
-                router->encryption.key_management_filename);
-      return false;
-  }
+    /* Look for ';' separator */
+    if (*p != ';')
+    {
+        MXS_ERROR("Syntax error in Encryption Key file at line %d, index %lu. File %s",
+                  nline,
+                  p - buffer,
+                  router->encryption.key_management_filename);
+        return false;
+    }
 
-  p++;
+    p++;
 
-  /* Now read the hex data */
+    /* Now read the hex data */
 
-  while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
-  {
-      key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
-      p += 2;
-  }
+    while (isxdigit(p[0]) && isxdigit(p[1]) && length <= BINLOG_AES_MAX_KEY_LEN)
+    {
+        key[length++] =  from_hex(p[0]) * 16 + from_hex(p[1]);
+        p += 2;
+    }
 
-  if (isxdigit(*p) ||
-     (length != 16 && length != 24 && length != 32))
-  {
-      MXS_ERROR("Found invalid Encryption Key at line %d, index %lu. File %s",
-                nline,
-                p - buffer,
-                router->encryption.key_management_filename);
-      return false;
-  }
+    if (isxdigit(*p) ||
+        (length != 16 && length != 24 && length != 32))
+    {
+        MXS_ERROR("Found invalid Encryption Key at line %d, index %lu. File %s",
+                  nline,
+                  p - buffer,
+                  router->encryption.key_management_filename);
+        return false;
+    }
 
-  router->encryption.key_len = length;
+    router->encryption.key_len = length;
 
-  return true;
+    return true;
 }
 
 /**
@@ -2589,8 +2589,8 @@ bool blr_get_encryption_key(ROUTER_INSTANCE *router)
     if (router->encryption.key_management_filename == NULL)
     {
         MXS_ERROR("Service %s, encryption key is not set. "
-                   "Please specify key filename with 'encryption_key_file'",
-                   router->service->name);
+                  "Please specify key filename with 'encryption_key_file'",
+                  router->service->name);
         return false;
     }
     else
@@ -2668,8 +2668,8 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
     if (!found_keyid)
     {
         MXS_ERROR("No Key with Id = 1 has been found in file %s. Read %d lines.",
-                   router->encryption.key_management_filename,
-                   n_lines);
+                  router->encryption.key_management_filename,
+                  n_lines);
         return n_lines;
     }
     else

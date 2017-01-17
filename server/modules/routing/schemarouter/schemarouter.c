@@ -236,25 +236,25 @@ char* get_lenenc_str(void* data)
     {
         switch (*(ptr))
         {
-            case 0xfb:
-                return NULL;
-            case 0xfc:
-                size = *(ptr + 1) + (*(ptr + 2) << 8);
-                offset = 2;
-                break;
-            case 0xfd:
-                size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
-                offset = 3;
-                break;
-            case 0xfe:
-                size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
-                       (*(ptr + 4) << 24) + ((uintptr_t) * (ptr + 5) << 32) +
-                       ((uintptr_t) * (ptr + 6) << 40) +
-                       ((uintptr_t) * (ptr + 7) << 48) + ((uintptr_t) * (ptr + 8) << 56);
-                offset = 8;
-                break;
-            default:
-                return NULL;
+        case 0xfb:
+            return NULL;
+        case 0xfc:
+            size = *(ptr + 1) + (*(ptr + 2) << 8);
+            offset = 2;
+            break;
+        case 0xfd:
+            size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
+            offset = 3;
+            break;
+        case 0xfe:
+            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
+                   (*(ptr + 4) << 24) + ((uintptr_t) * (ptr + 5) << 32) +
+                   ((uintptr_t) * (ptr + 6) << 40) +
+                   ((uintptr_t) * (ptr + 7) << 48) + ((uintptr_t) * (ptr + 8) << 56);
+            offset = 8;
+            break;
+        default:
+            return NULL;
         }
     }
 
@@ -1747,48 +1747,48 @@ static int routeQuery(ROUTER* instance,
 
     switch (packet_type)
     {
-        case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
-        case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
-        case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
-        case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
-        case MYSQL_COM_PING:        /*< 0e all servers are pinged */
-        case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-        case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
-        case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-        case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
-            qtype = QUERY_TYPE_SESSION_WRITE;
-            break;
+    case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
+    case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
+    case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
+    case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
+    case MYSQL_COM_PING:        /*< 0e all servers are pinged */
+    case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+    case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
+    case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+    case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
+        qtype = QUERY_TYPE_SESSION_WRITE;
+        break;
 
-        case MYSQL_COM_CREATE_DB:   /**< 5 DDL must go to the master */
-        case MYSQL_COM_DROP_DB:     /**< 6 DDL must go to the master */
-            qtype = QUERY_TYPE_WRITE;
-            break;
+    case MYSQL_COM_CREATE_DB:   /**< 5 DDL must go to the master */
+    case MYSQL_COM_DROP_DB:     /**< 6 DDL must go to the master */
+        qtype = QUERY_TYPE_WRITE;
+        break;
 
-        case MYSQL_COM_QUERY:
-            qtype = qc_get_type(querybuf);
-            op = qc_get_operation(querybuf);
-            break;
+    case MYSQL_COM_QUERY:
+        qtype = qc_get_type(querybuf);
+        op = qc_get_operation(querybuf);
+        break;
 
-        case MYSQL_COM_STMT_PREPARE:
-            qtype = qc_get_type(querybuf);
-            qtype |= QUERY_TYPE_PREPARE_STMT;
-            break;
+    case MYSQL_COM_STMT_PREPARE:
+        qtype = qc_get_type(querybuf);
+        qtype |= QUERY_TYPE_PREPARE_STMT;
+        break;
 
-        case MYSQL_COM_STMT_EXECUTE:
-            /** Parsing is not needed for this type of packet */
-            qtype = QUERY_TYPE_EXEC_STMT;
-            break;
+    case MYSQL_COM_STMT_EXECUTE:
+        /** Parsing is not needed for this type of packet */
+        qtype = QUERY_TYPE_EXEC_STMT;
+        break;
 
-        case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-        case MYSQL_COM_STATISTICS:     /**< 9 ? */
-        case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
-        case MYSQL_COM_CONNECT:        /**< 0b ? */
-        case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
-        case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
-        case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-        case MYSQL_COM_DAEMON:         /**< 1d ? */
-        default:
-            break;
+    case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
+    case MYSQL_COM_STATISTICS:     /**< 9 ? */
+    case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
+    case MYSQL_COM_CONNECT:        /**< 0b ? */
+    case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
+    case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
+    case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
+    case MYSQL_COM_DAEMON:         /**< 1d ? */
+    default:
+        break;
     } /**< switch by packet type */
 
 
@@ -1797,7 +1797,7 @@ static int routeQuery(ROUTER* instance,
         uint8_t* packet = GWBUF_DATA(querybuf);
         unsigned char ptype = packet[4];
         size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
-                         MYSQL_GET_PAYLOAD_LEN((unsigned char *)querybuf->start) - 1);
+                             MYSQL_GET_PAYLOAD_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);
         char* qtypestr = qc_typemask_to_string(qtype);
@@ -2870,22 +2870,22 @@ static void rses_property_done(rses_property_t* prop)
 
     switch (prop->rses_prop_type)
     {
-        case RSES_PROP_TYPE_SESCMD:
-            mysql_sescmd_done(&prop->rses_prop_data.sescmd);
-            break;
+    case RSES_PROP_TYPE_SESCMD:
+        mysql_sescmd_done(&prop->rses_prop_data.sescmd);
+        break;
 
-        case RSES_PROP_TYPE_TMPTABLES:
-            hashtable_free(prop->rses_prop_data.temp_tables);
-            break;
+    case RSES_PROP_TYPE_TMPTABLES:
+        hashtable_free(prop->rses_prop_data.temp_tables);
+        break;
 
-        default:
-            MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
-                      "in property %p",
-                      pthread_self(),
-                      prop->rses_prop_type,
-                      prop);
-            ss_dassert(false);
-            break;
+    default:
+        MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
+                  "in property %p",
+                  pthread_self(),
+                  prop->rses_prop_type,
+                  prop);
+        ss_dassert(false);
+        break;
     }
     MXS_FREE(prop);
 }
@@ -3215,24 +3215,24 @@ static bool execute_sescmd_in_backend(backend_ref_t* backend_ref)
 
     switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
     {
-        case MYSQL_COM_CHANGE_USER:
-            /** This makes it possible to handle replies correctly */
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            rc = dcb->func.auth(dcb,
-                                NULL,
-                                dcb->session,
-                                sescmd_cursor_clone_querybuf(scur));
-            break;
+    case MYSQL_COM_CHANGE_USER:
+        /** This makes it possible to handle replies correctly */
+        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+        rc = dcb->func.auth(dcb,
+                            NULL,
+                            dcb->session,
+                            sescmd_cursor_clone_querybuf(scur));
+        break;
 
-        case MYSQL_COM_QUERY:
-        default:
-            /**
-             * Mark session command buffer, it triggers writing
-             * MySQL command to protocol
-             */
-            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-            rc = dcb->func.write(dcb, sescmd_cursor_clone_querybuf(scur));
-            break;
+    case MYSQL_COM_QUERY:
+    default:
+        /**
+         * Mark session command buffer, it triggers writing
+         * MySQL command to protocol
+         */
+        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+        rc = dcb->func.write(dcb, sescmd_cursor_clone_querybuf(scur));
+        break;
     }
 
     if (rc == 1)
@@ -3600,7 +3600,7 @@ static void handleError(ROUTER*        instance,
 
         switch (action)
         {
-            case ERRACT_NEW_CONNECTION:
+        case ERRACT_NEW_CONNECTION:
             {
                 if (!rses_begin_locked_router_action(rses))
                 {
@@ -3619,7 +3619,7 @@ static void handleError(ROUTER*        instance,
                 break;
             }
 
-            case ERRACT_REPLY_CLIENT:
+        case ERRACT_REPLY_CLIENT:
             {
                 handle_error_reply_client(session,
                                           rses,
@@ -3629,9 +3629,9 @@ static void handleError(ROUTER*        instance,
                 break;
             }
 
-            default:
-                *succp = false;
-                break;
+        default:
+            *succp = false;
+            break;
         }
     }
     dcb_close(problem_dcb);
@@ -3859,14 +3859,14 @@ static int router_handle_state_switch(DCB* dcb,
 
     switch (reason)
     {
-        case DCB_REASON_NOT_RESPONDING:
-            atomic_add(&bref->bref_backend->connections, -1);
-            MXS_INFO("server %s not responding", srv->unique_name);
-            dcb->func.hangup(dcb);
-            break;
+    case DCB_REASON_NOT_RESPONDING:
+        atomic_add(&bref->bref_backend->connections, -1);
+        MXS_INFO("server %s not responding", srv->unique_name);
+        dcb->func.hangup(dcb);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
 return_rc:

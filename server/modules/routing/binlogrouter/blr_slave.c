@@ -203,7 +203,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         slave->stats.n_queries++;
         return blr_slave_query(router, slave, queue);
 
-        case COM_REGISTER_SLAVE:
+    case COM_REGISTER_SLAVE:
         if (router->master_state == BLRM_UNCONFIGURED)
         {
             slave->state = BLRS_ERRORED;
@@ -242,7 +242,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             return blr_slave_register(router, slave, queue);
         }
 
-        case COM_BINLOG_DUMP:
+    case COM_BINLOG_DUMP:
         {
             char task_name[BLRM_TASK_NAME_LEN + 1] = "";
             int rc = 0;
@@ -826,8 +826,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             else
             {
-                 MXS_FREE(query_text);
-                 return blr_slave_send_ok(router, slave);
+                MXS_FREE(query_text);
+                return blr_slave_send_ok(router, slave);
             }
         }
     } /* RESET current configured master */
@@ -1092,8 +1092,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                             MXS_INFO("%s: created new binlog file '%s' by 'CHANGE MASTER TO' command",
                                      router->service->name, router->binlog_name);
                         }
-                     }
-                     return blr_slave_send_ok(router, slave);
+                    }
+                    return blr_slave_send_ok(router, slave);
                 }
             }
         }
@@ -1506,7 +1506,8 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
-    snprintf(column, max_column_size, "%s", router->service->dbref->server->name ? router->service->dbref->server->name : "");
+    snprintf(column, max_column_size, "%s",
+             router->service->dbref->server->name ? router->service->dbref->server->name : "");
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
     memcpy((char *)ptr, column, col_len);      // Result string
@@ -2384,48 +2385,48 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
              *
              * Read it if slave->encryption_ctx is NULL and set the slave->encryption_ctx accordingly
              */
-             spinlock_acquire(&slave->catch_lock);
+            spinlock_acquire(&slave->catch_lock);
 
-             if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT && !slave->encryption_ctx)
-             {
-                 /* read it, set slave & file context */
-                 uint8_t *record_ptr = GWBUF_DATA(record);
-                 SLAVE_ENCRYPTION_CTX *encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
+            if (hdr.event_type == MARIADB10_START_ENCRYPTION_EVENT && !slave->encryption_ctx)
+            {
+                /* read it, set slave & file context */
+                uint8_t *record_ptr = GWBUF_DATA(record);
+                SLAVE_ENCRYPTION_CTX *encryption_ctx = MXS_CALLOC(1, sizeof(SLAVE_ENCRYPTION_CTX));
 
-                 MXS_ABORT_IF_NULL(encryption_ctx);
-                 record_ptr += BINLOG_EVENT_HDR_LEN;
-                 encryption_ctx->binlog_crypto_scheme = record_ptr[0];
-                 memcpy(&encryption_ctx->binlog_key_version, record_ptr + 1, BLRM_KEY_VERSION_LENGTH);
-                 memcpy(encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
+                MXS_ABORT_IF_NULL(encryption_ctx);
+                record_ptr += BINLOG_EVENT_HDR_LEN;
+                encryption_ctx->binlog_crypto_scheme = record_ptr[0];
+                memcpy(&encryption_ctx->binlog_key_version, record_ptr + 1, BLRM_KEY_VERSION_LENGTH);
+                memcpy(encryption_ctx->nonce, record_ptr + 1 + BLRM_KEY_VERSION_LENGTH, BLRM_NONCE_LENGTH);
 
-                 /* Save current first_enc_event_pos */
-                 encryption_ctx->first_enc_event_pos = hdr.next_pos;
+                /* Save current first_enc_event_pos */
+                encryption_ctx->first_enc_event_pos = hdr.next_pos;
 
-                 /* set the encryption ctx into slave */
-                 slave->encryption_ctx = encryption_ctx;
+                /* set the encryption ctx into slave */
+                slave->encryption_ctx = encryption_ctx;
 
-                 MXS_INFO("Start Encryption event found while reading. Binlog %s is encrypted. First event at %lu",
-                          slave->binlogfile,
-                          (unsigned long) hdr.next_pos);
-             }
-             else
-             {
-                 MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
-                          blr_get_event_description(router, hdr.event_type), 
-                          (unsigned long)hdr.event_size,
-                          slave->binlogfile,
-                          (unsigned long) slave->binlog_pos);
-             }
+                MXS_INFO("Start Encryption event found while reading. Binlog %s is encrypted. First event at %lu",
+                         slave->binlogfile,
+                         (unsigned long) hdr.next_pos);
+            }
+            else
+            {
+                MXS_INFO("Found ignorable event [%s] of size %lu while reading binlog %s at %lu",
+                         blr_get_event_description(router, hdr.event_type),
+                         (unsigned long)hdr.event_size,
+                         slave->binlogfile,
+                         (unsigned long) slave->binlog_pos);
+            }
 
-             /* set next pos */
-             slave->binlog_pos = hdr.next_pos;
+            /* set next pos */
+            slave->binlog_pos = hdr.next_pos;
 
-             spinlock_release(&slave->catch_lock);
+            spinlock_release(&slave->catch_lock);
 
-             gwbuf_free(record);
-             record = NULL;
+            gwbuf_free(record);
+            record = NULL;
 
-             break;
+            break;
         }
 
         if (hdr.event_type == ROTATE_EVENT)
@@ -2527,7 +2528,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     /**
      * End of while reading
      * Checking last buffer first
-     */ 
+     */
     if (record == NULL)
     {
         slave->stats.n_failed_read++;
@@ -3333,7 +3334,8 @@ static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
     GWBUF *pkt;
-    uint8_t ok_packet[] = {
+    uint8_t ok_packet[] =
+    {
         7, 0, 0, // Payload length
         1, // Seqno,
         0, // OK,
@@ -3616,7 +3618,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         }
     }
 
-     /** Start replication from master */
+    /** Start replication from master */
     blr_start_master(router);
 
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, "
@@ -3726,7 +3728,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
     if ((cmd_string = MXS_STRDUP(cmd_ptr + 2)) == NULL)
     {
-        static const char MESSAGE[] ="error allocating memory for statement parsing";
+        static const char MESSAGE[] = "error allocating memory for statement parsing";
         ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
         strcpy(error, MESSAGE);
 
@@ -3807,23 +3809,24 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
     {
         if (change_master.ssl_enabled && atoi(change_master.ssl_enabled))
         {
-            snprintf(error, BINLOG_ERROR_MSG_LEN, "MASTER_SSL=1 but some required options are missing: check MASTER_SSL_CERT, MASTER_SSL_KEY, MASTER_SSL_CA");
+            snprintf(error, BINLOG_ERROR_MSG_LEN,
+                     "MASTER_SSL=1 but some required options are missing: check MASTER_SSL_CERT, MASTER_SSL_KEY, MASTER_SSL_CA");
             ssl_error = -1;
         }
     }
 
     if (ssl_error == -1)
     {
-            MXS_ERROR("%s: %s", router->service->name, error);
+        MXS_ERROR("%s: %s", router->service->name, error);
 
-            /* restore previous master_host and master_port */
-            blr_master_restore_config(router, current_master);
+        /* restore previous master_host and master_port */
+        blr_master_restore_config(router, current_master);
 
-            blr_master_free_parsed_options(&change_master);
+        blr_master_free_parsed_options(&change_master);
 
-            spinlock_release(&router->lock);
+        spinlock_release(&router->lock);
 
-            return -1;
+        return -1;
     }
 
     /**
@@ -5680,7 +5683,7 @@ blr_escape_config_string(char *input)
     }
     else
     {
-        if (ptr+1)
+        if (ptr + 1)
         {
             ptr++;
         }
@@ -5814,16 +5817,20 @@ blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *
     }
 
     if (updated)
+    {
         return 1;
+    }
     else
+    {
         return 0;
+    }
 }
 
 /**
  * Notify a waiting slave that new events are stored in binlog file
  *
  * @param    slave Current connected slave
- * @return   true if slave has been notified 
+ * @return   true if slave has been notified
  *
  */
 bool blr_notify_waiting_slave(ROUTER_SLAVE *slave)

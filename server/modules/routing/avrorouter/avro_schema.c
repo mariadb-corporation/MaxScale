@@ -42,34 +42,34 @@ static const char* column_type_to_avro_type(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_TINY:
-        case TABLE_COL_TYPE_SHORT:
-        case TABLE_COL_TYPE_LONG:
-        case TABLE_COL_TYPE_INT24:
-        case TABLE_COL_TYPE_BIT:
-            return "int";
+    case TABLE_COL_TYPE_TINY:
+    case TABLE_COL_TYPE_SHORT:
+    case TABLE_COL_TYPE_LONG:
+    case TABLE_COL_TYPE_INT24:
+    case TABLE_COL_TYPE_BIT:
+        return "int";
 
-        case TABLE_COL_TYPE_FLOAT:
-            return "float";
+    case TABLE_COL_TYPE_FLOAT:
+        return "float";
 
-        case TABLE_COL_TYPE_DOUBLE:
-        case TABLE_COL_TYPE_NEWDECIMAL:
-            return "double";
+    case TABLE_COL_TYPE_DOUBLE:
+    case TABLE_COL_TYPE_NEWDECIMAL:
+        return "double";
 
-        case TABLE_COL_TYPE_NULL:
-            return "null";
+    case TABLE_COL_TYPE_NULL:
+        return "null";
 
-        case TABLE_COL_TYPE_LONGLONG:
-            return "long";
+    case TABLE_COL_TYPE_LONGLONG:
+        return "long";
 
-        case TABLE_COL_TYPE_TINY_BLOB:
-        case TABLE_COL_TYPE_MEDIUM_BLOB:
-        case TABLE_COL_TYPE_LONG_BLOB:
-        case TABLE_COL_TYPE_BLOB:
-            return "bytes";
+    case TABLE_COL_TYPE_TINY_BLOB:
+    case TABLE_COL_TYPE_MEDIUM_BLOB:
+    case TABLE_COL_TYPE_LONG_BLOB:
+    case TABLE_COL_TYPE_BLOB:
+        return "bytes";
 
-        default:
-            return "string";
+    default:
+        return "string";
     }
 }
 
@@ -284,16 +284,16 @@ static const char* get_table_definition(const char *sql, int* size)
         {
             switch (*ptr)
             {
-                case '(':
-                    depth++;
-                    break;
+            case '(':
+                depth++;
+                break;
 
-                case ')':
-                    depth--;
-                    break;
+            case ')':
+                depth--;
+                break;
 
-                default:
-                    break;
+            default:
+                break;
             }
 
             /** We found the last closing parenthesis */

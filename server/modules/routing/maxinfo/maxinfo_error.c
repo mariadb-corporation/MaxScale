@@ -58,18 +58,18 @@ maxinfo_send_parse_error(DCB *dcb, char *sql, PARSE_ERROR err)
 
     switch (err)
     {
-        case PARSE_NOERROR:
-            desc = "No error";
-            break;
-        case PARSE_MALFORMED_SHOW:
-            desc = "Expected show <command> [like <pattern>]";
-            break;
-        case PARSE_EXPECTED_LIKE:
-            desc = "Expected LIKE <pattern>";
-            break;
-        case PARSE_SYNTAX_ERROR:
-            desc = "Syntax error";
-            break;
+    case PARSE_NOERROR:
+        desc = "No error";
+        break;
+    case PARSE_MALFORMED_SHOW:
+        desc = "Expected show <command> [like <pattern>]";
+        break;
+    case PARSE_EXPECTED_LIKE:
+        desc = "Expected LIKE <pattern>";
+        break;
+    case PARSE_SYNTAX_ERROR:
+        desc = "Syntax error";
+        break;
     }
 
     len = strlen(sql) + strlen(desc) + 20;

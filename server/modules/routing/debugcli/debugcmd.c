@@ -864,9 +864,11 @@ struct subcommand addoptions[] =
         "The TARGET must be a list of service and monitor names\n"
         "e.g. add server my-db my-service 'Cluster Monitor'\n"
         "A server can be assigned to a maximum of 11 objects in one command",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        {
+            ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
     },
     { EMPTY_OPTION}
 };
@@ -915,9 +917,11 @@ struct subcommand removeoptions[] =
         "The TARGET must be a list of service and monitor names\n"
         "e.g. remove server my-db my-service 'Cluster Monitor'\n"
         "A server can be removed from a maximum of 11 objects in one command",
-        {ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        {
+            ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
     },
     {
         EMPTY_OPTION
@@ -1309,8 +1313,8 @@ static void alterServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3,
 }
 
 static void alterMonitor(DCB *dcb, MONITOR *monitor, char *v1, char *v2, char *v3,
-                        char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
-                        char *v10, char *v11)
+                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                         char *v10, char *v11)
 {
     char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
     const int items = sizeof(values) / sizeof(values[0]);
@@ -1363,9 +1367,11 @@ struct subcommand alteroptions[] =
         "ssl_cert_verify_depth Certificate verification depth\n\n"
         "To configure SSL for a newly created server, the 'ssl', 'ssl_cert',\n"
         "'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.\n",
-        { ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        {
+            ARG_TYPE_SERVER, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
     },
     {
         "monitor", 2, 12, alterMonitor,
@@ -1373,9 +1379,11 @@ struct subcommand alteroptions[] =
         "Usage: alter monitor NAME KEY=VALUE ...\n\n"
         "This will alter an existing parameter of a monitor. To remove parameters,\n"
         "pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='",
-        {ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        {
+            ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
     },
     {
         EMPTY_OPTION
@@ -1445,9 +1453,11 @@ struct subcommand calloptions[] =
         "Call module command",
         "Usage: call command NAMESPACE COMMAND ARGS...\n\n"
         "To list all registered commands, run 'list commands'.\n",
-        { ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+        {
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
-            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING}
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
     },
     {
         EMPTY_OPTION
@@ -1499,44 +1509,44 @@ convert_arg(char *arg, int arg_type)
 
     switch (arg_type)
     {
-        case ARG_TYPE_ADDRESS:
-            rval = (unsigned long)strtol(arg, NULL, 0);
-            break;
+    case ARG_TYPE_ADDRESS:
+        rval = (unsigned long)strtol(arg, NULL, 0);
+        break;
 
-        case ARG_TYPE_STRING:
-            rval = (unsigned long)arg;
-            break;
+    case ARG_TYPE_STRING:
+        rval = (unsigned long)arg;
+        break;
 
-        case ARG_TYPE_SERVICE:
-            rval = (unsigned long)service_find(arg);
-            break;
+    case ARG_TYPE_SERVICE:
+        rval = (unsigned long)service_find(arg);
+        break;
 
-        case ARG_TYPE_SERVER:
-            rval = (unsigned long)server_find_by_unique_name(arg);
-            break;
+    case ARG_TYPE_SERVER:
+        rval = (unsigned long)server_find_by_unique_name(arg);
+        break;
 
-        case ARG_TYPE_SESSION:
-            rval = (unsigned long)session_get_by_id(strtol(arg, NULL, 0));
-            break;
+    case ARG_TYPE_SESSION:
+        rval = (unsigned long)session_get_by_id(strtol(arg, NULL, 0));
+        break;
 
-        case ARG_TYPE_MONITOR:
-            rval = (unsigned long)monitor_find(arg);
-            break;
+    case ARG_TYPE_MONITOR:
+        rval = (unsigned long)monitor_find(arg);
+        break;
 
-        case ARG_TYPE_FILTER:
-            rval = (unsigned long)filter_def_find(arg);
-            break;
+    case ARG_TYPE_FILTER:
+        rval = (unsigned long)filter_def_find(arg);
+        break;
 
-        case ARG_TYPE_NUMERIC:
+    case ARG_TYPE_NUMERIC:
 
-            for (int i = 0; arg[i]; i++)
+        for (int i = 0; arg[i]; i++)
+        {
+            if (isdigit(arg[i]))
             {
-                if (isdigit(arg[i]))
-                {
-                    break;
-                }
+                break;
             }
-            rval = atoi(arg);
+        }
+        rval = atoi(arg);
     }
 
     return rval;
@@ -1546,12 +1556,12 @@ static void free_arg(int arg_type, void *value)
 {
     switch (arg_type)
     {
-        case ARG_TYPE_SESSION:
-            session_put_ref(value);
-            break;
+    case ARG_TYPE_SESSION:
+        session_put_ref(value);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
@@ -1754,66 +1764,66 @@ execute_cmd(CLI_SESSION *cli)
                             {
                                 switch (cmds[i].options[j].argc_max)
                                 {
-                                    case 0:
-                                        cmds[i].options[j].fn(dcb);
-                                        break;
-                                    case 1:
-                                        cmds[i].options[j].fn(dcb, arg_list[0]);
-                                        break;
-                                    case 2:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
-                                        break;
-                                    case 3:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
-                                        break;
-                                    case 4:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3]);
-                                        break;
-                                    case 5:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4]);
-                                        break;
-                                    case 6:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5]);
-                                        break;
-                                    case 7:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6]);
-                                        break;
-                                    case 8:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6], arg_list[7]);
-                                        break;
-                                    case 9:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6], arg_list[7], arg_list[8]);
-                                        break;
-                                    case 10:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6], arg_list[7], arg_list[8],
-                                                              arg_list[9]);
-                                        break;
-                                    case 11:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6], arg_list[7], arg_list[8],
-                                                              arg_list[9], arg_list[10]);
-                                        break;
-                                    case 12:
-                                        cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
-                                                              arg_list[3], arg_list[4], arg_list[5],
-                                                              arg_list[6], arg_list[7], arg_list[8],
-                                                              arg_list[9], arg_list[10], arg_list[11]);
-                                        break;
-                                    default:
-                                        dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
-                                        break;
+                                case 0:
+                                    cmds[i].options[j].fn(dcb);
+                                    break;
+                                case 1:
+                                    cmds[i].options[j].fn(dcb, arg_list[0]);
+                                    break;
+                                case 2:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1]);
+                                    break;
+                                case 3:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2]);
+                                    break;
+                                case 4:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3]);
+                                    break;
+                                case 5:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4]);
+                                    break;
+                                case 6:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5]);
+                                    break;
+                                case 7:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6]);
+                                    break;
+                                case 8:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7]);
+                                    break;
+                                case 9:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8]);
+                                    break;
+                                case 10:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9]);
+                                    break;
+                                case 11:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10]);
+                                    break;
+                                case 12:
+                                    cmds[i].options[j].fn(dcb, arg_list[0], arg_list[1], arg_list[2],
+                                                          arg_list[3], arg_list[4], arg_list[5],
+                                                          arg_list[6], arg_list[7], arg_list[8],
+                                                          arg_list[9], arg_list[10], arg_list[11]);
+                                    break;
+                                default:
+                                    dcb_printf(dcb, "Error: Maximum argument count is %d.\n", MAXARGS);
+                                    break;
                                 }
                             }
 

@@ -358,18 +358,18 @@ execute(ROUTER *rinstance, void *router_session, GWBUF *queue)
     {
         switch (MYSQL_COMMAND(queue))
         {
-            case COM_PING:
-                rc = maxinfo_ping(instance, session, queue);
-                break;
-            case COM_STATISTICS:
-                rc = maxinfo_statistics(instance, session, queue);
-                break;
-            case COM_QUIT:
-                break;
-            default:
-                MXS_ERROR("Unexpected MySQL command 0x%x",
-                          MYSQL_COMMAND(queue));
-                break;
+        case COM_PING:
+            rc = maxinfo_ping(instance, session, queue);
+            break;
+        case COM_STATISTICS:
+            rc = maxinfo_statistics(instance, session, queue);
+            break;
+        case COM_QUIT:
+            break;
+        default:
+            MXS_ERROR("Unexpected MySQL command 0x%x",
+                      MYSQL_COMMAND(queue));
+            break;
         }
     }
     // MaxInfo doesn't route the data forward so it should be freed.

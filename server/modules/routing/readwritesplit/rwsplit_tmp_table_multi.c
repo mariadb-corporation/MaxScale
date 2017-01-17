@@ -47,7 +47,7 @@
 
 /**
  * @brief Check for dropping of temporary tables
- * 
+ *
  * Check if the query is a DROP TABLE... query and
  * if it targets a temporary table, remove it from the hashtable.
  * @param router_cli_ses Router client session
@@ -55,7 +55,7 @@
  * @param type The type of the query resolved so far
  */
 void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
-    mysql_server_cmd_t packet_type)
+                          mysql_server_cmd_t packet_type)
 {
     if (packet_type != MYSQL_COM_QUERY && packet_type != MYSQL_COM_DROP_DB)
     {
@@ -112,8 +112,8 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
  * @return The type of the query
  */
 bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                         GWBUF *querybuf,
-                                         qc_query_type_t qtype)
+                       GWBUF *querybuf,
+                       qc_query_type_t qtype)
 {
 
     bool target_tmp_table = false;
@@ -199,7 +199,7 @@ bool is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
  * @param type The type of the query resolved so far
  */
 void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
-                                   GWBUF *querybuf, qc_query_type_t type)
+                            GWBUF *querybuf, qc_query_type_t type)
 {
     if (!qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
     {
@@ -357,11 +357,11 @@ bool check_for_multi_stmt(GWBUF *buf, void *protocol, mysql_server_cmd_t packet_
 
 /**
  * @brief Determine the type of a query
- * 
+ *
  * @param querybuf      GWBUF containing the query
  * @param packet_type   Integer denoting DB specific enum
  * @param non_empty_packet  Boolean to be set by this function
- * 
+ *
  * @return qc_query_type_t the query type; also the non_empty_packet bool is set
  */
 qc_query_type_t
@@ -374,47 +374,47 @@ determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
         mysql_server_cmd_t my_packet_type = (mysql_server_cmd_t)packet_type;
         switch (my_packet_type)
         {
-            case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
-            case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
-            case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
-            case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
-            case MYSQL_COM_PING:        /*< 0e all servers are pinged */
-            case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-                qtype = QUERY_TYPE_SESSION_WRITE;
-                break;
+        case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
+        case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
+        case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
+        case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
+        case MYSQL_COM_PING:        /*< 0e all servers are pinged */
+        case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+            qtype = QUERY_TYPE_SESSION_WRITE;
+            break;
 
-            case MYSQL_COM_CREATE_DB:           /**< 5 DDL must go to the master */
-            case MYSQL_COM_DROP_DB:             /**< 6 DDL must go to the master */
-            case MYSQL_COM_STMT_CLOSE:          /*< free prepared statement */
-            case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-            case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
-                qtype = QUERY_TYPE_WRITE;
-                break;
+        case MYSQL_COM_CREATE_DB:           /**< 5 DDL must go to the master */
+        case MYSQL_COM_DROP_DB:             /**< 6 DDL must go to the master */
+        case MYSQL_COM_STMT_CLOSE:          /*< free prepared statement */
+        case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+        case MYSQL_COM_STMT_RESET: /*< resets the data of a prepared statement */
+            qtype = QUERY_TYPE_WRITE;
+            break;
 
-            case MYSQL_COM_QUERY:
-                qtype = qc_get_type(querybuf);
-                break;
+        case MYSQL_COM_QUERY:
+            qtype = qc_get_type(querybuf);
+            break;
 
-            case MYSQL_COM_STMT_PREPARE:
-                qtype = qc_get_type(querybuf);
-                qtype |= QUERY_TYPE_PREPARE_STMT;
-                break;
+        case MYSQL_COM_STMT_PREPARE:
+            qtype = qc_get_type(querybuf);
+            qtype |= QUERY_TYPE_PREPARE_STMT;
+            break;
 
-            case MYSQL_COM_STMT_EXECUTE:
-                /** Parsing is not needed for this type of packet */
-                qtype = QUERY_TYPE_EXEC_STMT;
-                break;
+        case MYSQL_COM_STMT_EXECUTE:
+            /** Parsing is not needed for this type of packet */
+            qtype = QUERY_TYPE_EXEC_STMT;
+            break;
 
-            case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-            case MYSQL_COM_STATISTICS:     /**< 9 ? */
-            case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
-            case MYSQL_COM_CONNECT:        /**< 0b ? */
-            case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
-            case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
-            case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-            case MYSQL_COM_DAEMON:         /**< 1d ? */
-            default:
-                break;
+        case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
+        case MYSQL_COM_STATISTICS:     /**< 9 ? */
+        case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
+        case MYSQL_COM_CONNECT:        /**< 0b ? */
+        case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
+        case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
+        case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
+        case MYSQL_COM_DAEMON:         /**< 1d ? */
+        default:
+            break;
         } /**< switch by packet type */
     }
     return qtype;

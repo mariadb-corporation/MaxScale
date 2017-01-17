@@ -69,37 +69,37 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 {
     switch (tree->op)
     {
-        case MAXOP_SHOW:
-            exec_show(dcb, tree);
-            break;
-        case MAXOP_SELECT:
-            exec_select(dcb, tree);
-            break;
+    case MAXOP_SHOW:
+        exec_show(dcb, tree);
+        break;
+    case MAXOP_SELECT:
+        exec_select(dcb, tree);
+        break;
 
-        case MAXOP_FLUSH:
-            exec_flush(dcb, tree);
-            break;
-        case MAXOP_SET:
-            exec_set(dcb, tree);
-            break;
-        case MAXOP_CLEAR:
-            exec_clear(dcb, tree);
-            break;
-        case MAXOP_SHUTDOWN:
-            exec_shutdown(dcb, tree);
-            break;
-        case MAXOP_RESTART:
-            exec_restart(dcb, tree);
-            break;
+    case MAXOP_FLUSH:
+        exec_flush(dcb, tree);
+        break;
+    case MAXOP_SET:
+        exec_set(dcb, tree);
+        break;
+    case MAXOP_CLEAR:
+        exec_clear(dcb, tree);
+        break;
+    case MAXOP_SHUTDOWN:
+        exec_shutdown(dcb, tree);
+        break;
+    case MAXOP_RESTART:
+        exec_restart(dcb, tree);
+        break;
 
-        case MAXOP_TABLE:
-        case MAXOP_COLUMNS:
-        case MAXOP_LITERAL:
-        case MAXOP_PREDICATE:
-        case MAXOP_LIKE:
-        case MAXOP_EQUAL:
-        default:
-            maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
+    case MAXOP_TABLE:
+    case MAXOP_COLUMNS:
+    case MAXOP_LITERAL:
+    case MAXOP_PREDICATE:
+    case MAXOP_LIKE:
+    case MAXOP_EQUAL:
+    default:
+        maxinfo_send_error(dcb, 0, "Unexpected operator in parse tree");
     }
 }
 
@@ -852,17 +852,17 @@ variable_row(RESULTSET *result, void *data)
         resultset_row_set(row, 0, variables[context->index].name);
         switch (variables[context->index].type)
         {
-            case VT_STRING:
-                resultset_row_set(row, 1,
-                                  (char *)(*variables[context->index].func)());
-                break;
-            case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*variables[context->index].func)());
-                resultset_row_set(row, 1, buf);
-                break;
-            default:
-                ss_dassert(!true);
+        case VT_STRING:
+            resultset_row_set(row, 1,
+                              (char *)(*variables[context->index].func)());
+            break;
+        case VT_INT:
+            snprintf(buf, 80, "%ld",
+                     (long)(*variables[context->index].func)());
+            resultset_row_set(row, 1, buf);
+            break;
+        default:
+            ss_dassert(!true);
         }
         context->index++;
         return row;
@@ -1134,17 +1134,17 @@ status_row(RESULTSET *result, void *data)
         resultset_row_set(row, 0, status[context->index].name);
         switch (status[context->index].type)
         {
-            case VT_STRING:
-                resultset_row_set(row, 1,
-                                  (char *)(*status[context->index].func)());
-                break;
-            case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*status[context->index].func)());
-                resultset_row_set(row, 1, buf);
-                break;
-            default:
-                ss_dassert(!true);
+        case VT_STRING:
+            resultset_row_set(row, 1,
+                              (char *)(*status[context->index].func)());
+            break;
+        case VT_INT:
+            snprintf(buf, 80, "%ld",
+                     (long)(*status[context->index].func)());
+            resultset_row_set(row, 1, buf);
+            break;
+        default:
+            ss_dassert(!true);
         }
         context->index++;
         return row;

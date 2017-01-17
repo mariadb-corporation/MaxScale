@@ -70,113 +70,113 @@ maxinfo_parse(char *sql, PARSE_ERROR *parse_error)
     {
         switch (token)
         {
-            case LT_SHOW:
-                MXS_FREE(text); // not needed
-                ptr = fetch_token(ptr, &token, &text);
-                if (ptr == NULL || token != LT_STRING)
-                {
-                    // Expected show "name"
-                    *parse_error = PARSE_MALFORMED_SHOW;
-                    return NULL;
-                }
-                tree = make_tree_node(MAXOP_SHOW, text, NULL, NULL);
-                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
-                {
-                    return tree;
-                }
-                else if (token == LT_LIKE)
-                {
-                    if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
-                    {
-                        tree->right = make_tree_node(MAXOP_LIKE,
-                                                     text, NULL, NULL);
-                        return tree;
-                    }
-                    else
-                    {
-                        // Expected expression
-                        *parse_error = PARSE_EXPECTED_LIKE;
-                        maxinfo_free_tree(tree);
-                        return NULL;
-                    }
-                }
-                // Malformed show
-                MXS_FREE(text);
-                maxinfo_free_tree(tree);
+        case LT_SHOW:
+            MXS_FREE(text); // not needed
+            ptr = fetch_token(ptr, &token, &text);
+            if (ptr == NULL || token != LT_STRING)
+            {
+                // Expected show "name"
                 *parse_error = PARSE_MALFORMED_SHOW;
                 return NULL;
-#if 0
-            case LT_SELECT:
-                MXS_FREE(text); // not needed
-                col = parse_column_list(&ptr);
-                table = parse_table_name(&ptr);
-                return make_tree_node(MAXOP_SELECT, NULL, col, table);
-#endif
-            case LT_FLUSH:
-                MXS_FREE(text); // not needed
-                ptr = fetch_token(ptr, &token, &text);
-                return make_tree_node(MAXOP_FLUSH, text, NULL, NULL);
-
-            case LT_SHUTDOWN:
-                MXS_FREE(text);
-                ptr = fetch_token(ptr, &token, &text);
-                tree = make_tree_node(MAXOP_SHUTDOWN, text, NULL, NULL);
-
-                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+            }
+            tree = make_tree_node(MAXOP_SHOW, text, NULL, NULL);
+            if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+            {
+                return tree;
+            }
+            else if (token == LT_LIKE)
+            {
+                if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
                 {
-                    /** Possibly SHUTDOWN MAXSCALE */
+                    tree->right = make_tree_node(MAXOP_LIKE,
+                                                 text, NULL, NULL);
                     return tree;
                 }
-                tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
-
-                if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+                else
                 {
-                    /** Unknown token after SHUTDOWN MONITOR|SERVICE */
-                    *parse_error = PARSE_SYNTAX_ERROR;
+                    // Expected expression
+                    *parse_error = PARSE_EXPECTED_LIKE;
                     maxinfo_free_tree(tree);
                     return NULL;
                 }
+            }
+            // Malformed show
+            MXS_FREE(text);
+            maxinfo_free_tree(tree);
+            *parse_error = PARSE_MALFORMED_SHOW;
+            return NULL;
+#if 0
+        case LT_SELECT:
+            MXS_FREE(text); // not needed
+            col = parse_column_list(&ptr);
+            table = parse_table_name(&ptr);
+            return make_tree_node(MAXOP_SELECT, NULL, col, table);
+#endif
+        case LT_FLUSH:
+            MXS_FREE(text); // not needed
+            ptr = fetch_token(ptr, &token, &text);
+            return make_tree_node(MAXOP_FLUSH, text, NULL, NULL);
+
+        case LT_SHUTDOWN:
+            MXS_FREE(text);
+            ptr = fetch_token(ptr, &token, &text);
+            tree = make_tree_node(MAXOP_SHUTDOWN, text, NULL, NULL);
+
+            if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+            {
+                /** Possibly SHUTDOWN MAXSCALE */
                 return tree;
+            }
+            tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
 
-            case LT_RESTART:
-                MXS_FREE(text);
-                ptr = fetch_token(ptr, &token, &text);
-                tree = make_tree_node(MAXOP_RESTART, text, NULL, NULL);
-
-                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
-                {
-                    /** Missing token for RESTART MONITOR|SERVICE */
-                    *parse_error = PARSE_SYNTAX_ERROR;
-                    maxinfo_free_tree(tree);
-                    return NULL;
-                }
-                tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
-
-                if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
-                {
-                    /** Unknown token after RESTART MONITOR|SERVICE */
-                    *parse_error = PARSE_SYNTAX_ERROR;
-                    MXS_FREE(text);
-                    maxinfo_free_tree(tree);
-                    return NULL;
-                }
-                return tree;
-
-            case LT_SET:
-                MXS_FREE(text); // not needed
-                ptr = fetch_token(ptr, &token, &text);
-                tree = make_tree_node(MAXOP_SET, text, NULL, NULL);
-                return maxinfo_parse_literals(tree, 2, ptr, parse_error);
-
-            case LT_CLEAR:
-                MXS_FREE(text); // not needed
-                ptr = fetch_token(ptr, &token, &text);
-                tree = make_tree_node(MAXOP_CLEAR, text, NULL, NULL);
-                return maxinfo_parse_literals(tree, 2, ptr, parse_error);
-                break;
-            default:
+            if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+            {
+                /** Unknown token after SHUTDOWN MONITOR|SERVICE */
                 *parse_error = PARSE_SYNTAX_ERROR;
+                maxinfo_free_tree(tree);
                 return NULL;
+            }
+            return tree;
+
+        case LT_RESTART:
+            MXS_FREE(text);
+            ptr = fetch_token(ptr, &token, &text);
+            tree = make_tree_node(MAXOP_RESTART, text, NULL, NULL);
+
+            if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+            {
+                /** Missing token for RESTART MONITOR|SERVICE */
+                *parse_error = PARSE_SYNTAX_ERROR;
+                maxinfo_free_tree(tree);
+                return NULL;
+            }
+            tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
+
+            if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+            {
+                /** Unknown token after RESTART MONITOR|SERVICE */
+                *parse_error = PARSE_SYNTAX_ERROR;
+                MXS_FREE(text);
+                maxinfo_free_tree(tree);
+                return NULL;
+            }
+            return tree;
+
+        case LT_SET:
+            MXS_FREE(text); // not needed
+            ptr = fetch_token(ptr, &token, &text);
+            tree = make_tree_node(MAXOP_SET, text, NULL, NULL);
+            return maxinfo_parse_literals(tree, 2, ptr, parse_error);
+
+        case LT_CLEAR:
+            MXS_FREE(text); // not needed
+            ptr = fetch_token(ptr, &token, &text);
+            tree = make_tree_node(MAXOP_CLEAR, text, NULL, NULL);
+            return maxinfo_parse_literals(tree, 2, ptr, parse_error);
+            break;
+        default:
+            *parse_error = PARSE_SYNTAX_ERROR;
+            return NULL;
         }
     }
     *parse_error = PARSE_SYNTAX_ERROR;
@@ -201,28 +201,28 @@ parse_column_list(char **ptr)
     *ptr = fetch_token(*ptr, &lookahead, &text2);
     switch (token)
     {
-        case LT_STRING:
-            switch (lookahead)
-            {
-                case LT_COMMA:
-                    rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
-                                          parse_column_list(ptr));
-                    break;
-                case LT_FROM:
-                    rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
-                                          NULL);
-                    break;
-                default:
-                    break;
-            }
+    case LT_STRING:
+        switch (lookahead)
+        {
+        case LT_COMMA:
+            rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
+                                  parse_column_list(ptr));
             break;
-        case LT_STAR:
-            if (lookahead != LT_FROM)
-                rval = make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
-                                      NULL);
+        case LT_FROM:
+            rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
+                                  NULL);
             break;
         default:
             break;
+        }
+        break;
+    case LT_STAR:
+        if (lookahead != LT_FROM)
+            rval = make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
+                                  NULL);
+        break;
+    default:
+        break;
     }
     MXS_FREE(text);
     MXS_FREE(text2);

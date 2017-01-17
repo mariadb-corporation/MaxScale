@@ -23,7 +23,7 @@
 #include "rwsplit_internal.h"
 /**
  * @file rwsplit_select_backends.c   The functions that implement back end
- * selection for the read write split router. All of these functions are 
+ * selection for the read write split router. All of these functions are
  * internal to that router and not intended to be called from elsewhere.
  *
  * @verbatim
@@ -38,7 +38,7 @@
 static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_history);
 
 static void log_server_connections(select_criteria_t select_criteria,
-                            backend_ref_t *backend_ref, int router_nservers);
+                                   backend_ref_t *backend_ref, int router_nservers);
 
 static SERVER_REF *get_root_master(backend_ref_t *servers, int router_nservers);
 
@@ -86,7 +86,7 @@ static bool bref_valid_for_slave(const backend_ref_t *bref, const SERVER *master
     SERVER *server = bref->ref->server;
 
     return (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) &&
-        (master_host == NULL || (server != master_host));
+           (master_host == NULL || (server != master_host));
 }
 
 /**
@@ -148,13 +148,13 @@ backend_ref_t* get_slave_candidate(backend_ref_t *bref, int n, const SERVER *mas
  * @return true, if at least one master and one slave was found.
  */
 bool select_connect_backend_servers(backend_ref_t **p_master_ref,
-                                           backend_ref_t *backend_ref,
-                                           int router_nservers, int max_nslaves,
-                                           int max_slave_rlag,
-                                           select_criteria_t select_criteria,
-                                           SESSION *session,
-                                           ROUTER_INSTANCE *router,
-                                           bool active_session)
+                                    backend_ref_t *backend_ref,
+                                    int router_nservers, int max_nslaves,
+                                    int max_slave_rlag,
+                                    select_criteria_t select_criteria,
+                                    SESSION *session,
+                                    ROUTER_INSTANCE *router,
+                                    bool active_session)
 {
     if (p_master_ref == NULL || backend_ref == NULL)
     {
@@ -285,7 +285,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             } /* for */
         }
     }
-        /** Failure cases */
+    /** Failure cases */
     else
     {
         MXS_ERROR("Couldn't establish required amount of slave connections for "
@@ -471,7 +471,7 @@ static bool connect_server(backend_ref_t *bref, SESSION *session, bool execute_h
  * @param router_nservers Number of backends in @p backend_ref
  */
 static void log_server_connections(select_criteria_t select_criteria,
-                            backend_ref_t *backend_ref, int router_nservers)
+                                   backend_ref_t *backend_ref, int router_nservers)
 {
     if (select_criteria == LEAST_GLOBAL_CONNECTIONS ||
         select_criteria == LEAST_ROUTER_CONNECTIONS ||
@@ -488,31 +488,31 @@ static void log_server_connections(select_criteria_t select_criteria,
 
             switch (select_criteria)
             {
-                case LEAST_GLOBAL_CONNECTIONS:
-                    MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
-                             b->server->stats.n_current, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_GLOBAL_CONNECTIONS:
+                MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
+                         b->server->stats.n_current, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_ROUTER_CONNECTIONS:
-                    MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
-                             b->connections, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_ROUTER_CONNECTIONS:
+                MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
+                         b->connections, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_CURRENT_OPERATIONS:
-                    MXS_INFO("current operations : %d in \t%s:%d %s",
-                             b->server->stats.n_current_ops,
-                             b->server->name, b->server->port,
-                             STRSRVSTATUS(b->server));
-                    break;
+            case LEAST_CURRENT_OPERATIONS:
+                MXS_INFO("current operations : %d in \t%s:%d %s",
+                         b->server->stats.n_current_ops,
+                         b->server->name, b->server->port,
+                         STRSRVSTATUS(b->server));
+                break;
 
-                case LEAST_BEHIND_MASTER:
-                    MXS_INFO("replication lag : %d in \t%s:%d %s",
-                             b->server->rlag, b->server->name,
-                             b->server->port, STRSRVSTATUS(b->server));
-                default:
-                    break;
+            case LEAST_BEHIND_MASTER:
+                MXS_INFO("replication lag : %d in \t%s:%d %s",
+                         b->server->rlag, b->server->name,
+                         b->server->port, STRSRVSTATUS(b->server));
+            default:
+                break;
             }
         }
     }

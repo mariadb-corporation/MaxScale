@@ -44,24 +44,24 @@ static int get_event_type(uint8_t event)
     switch (event)
     {
 
-        case WRITE_ROWS_EVENTv0:
-        case WRITE_ROWS_EVENTv1:
-        case WRITE_ROWS_EVENTv2:
-            return WRITE_EVENT;
+    case WRITE_ROWS_EVENTv0:
+    case WRITE_ROWS_EVENTv1:
+    case WRITE_ROWS_EVENTv2:
+        return WRITE_EVENT;
 
-        case UPDATE_ROWS_EVENTv0:
-        case UPDATE_ROWS_EVENTv1:
-        case UPDATE_ROWS_EVENTv2:
-            return UPDATE_EVENT;
+    case UPDATE_ROWS_EVENTv0:
+    case UPDATE_ROWS_EVENTv1:
+    case UPDATE_ROWS_EVENTv2:
+        return UPDATE_EVENT;
 
-        case DELETE_ROWS_EVENTv0:
-        case DELETE_ROWS_EVENTv1:
-        case DELETE_ROWS_EVENTv2:
-            return DELETE_EVENT;
+    case DELETE_ROWS_EVENTv0:
+    case DELETE_ROWS_EVENTv1:
+    case DELETE_ROWS_EVENTv2:
+        return DELETE_EVENT;
 
-        default:
-            MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
-            return -1;
+    default:
+        MXS_ERROR("Unexpected event type: %d (%0x)", event, event);
+        return -1;
     }
 }
 
@@ -357,43 +357,43 @@ void set_numeric_field_value(avro_value_t *field, uint8_t type, uint8_t *metadat
 
     switch (type)
     {
-        case TABLE_COL_TYPE_TINY:
-            i = *value;
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_TINY:
+        i = *value;
+        avro_value_set_int(field, i);
+        break;
 
-        case TABLE_COL_TYPE_SHORT:
-            memcpy(&i, value, 2);
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_SHORT:
+        memcpy(&i, value, 2);
+        avro_value_set_int(field, i);
+        break;
 
-        case TABLE_COL_TYPE_INT24:
-            memcpy(&i, value, 3);
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_INT24:
+        memcpy(&i, value, 3);
+        avro_value_set_int(field, i);
+        break;
 
-        case TABLE_COL_TYPE_LONG:
-            memcpy(&i, value, 4);
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_LONG:
+        memcpy(&i, value, 4);
+        avro_value_set_int(field, i);
+        break;
 
-        case TABLE_COL_TYPE_LONGLONG:
-            memcpy(&i, value, 8);
-            avro_value_set_int(field, i);
-            break;
+    case TABLE_COL_TYPE_LONGLONG:
+        memcpy(&i, value, 8);
+        avro_value_set_int(field, i);
+        break;
 
-        case TABLE_COL_TYPE_FLOAT:
-            memcpy(&i, value, 4);
-            avro_value_set_float(field, (float)i);
-            break;
+    case TABLE_COL_TYPE_FLOAT:
+        memcpy(&i, value, 4);
+        avro_value_set_float(field, (float)i);
+        break;
 
-        case TABLE_COL_TYPE_DOUBLE:
-            memcpy(&i, value, 8);
-            avro_value_set_float(field, (double)i);
-            break;
+    case TABLE_COL_TYPE_DOUBLE:
+        memcpy(&i, value, 8);
+        avro_value_set_float(field, (double)i);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
@@ -426,26 +426,26 @@ int get_metadata_len(uint8_t type)
 {
     switch (type)
     {
-        case TABLE_COL_TYPE_STRING:
-        case TABLE_COL_TYPE_VAR_STRING:
-        case TABLE_COL_TYPE_VARCHAR:
-        case TABLE_COL_TYPE_DECIMAL:
-        case TABLE_COL_TYPE_NEWDECIMAL:
-        case TABLE_COL_TYPE_ENUM:
-        case TABLE_COL_TYPE_SET:
-        case TABLE_COL_TYPE_BIT:
-            return 2;
+    case TABLE_COL_TYPE_STRING:
+    case TABLE_COL_TYPE_VAR_STRING:
+    case TABLE_COL_TYPE_VARCHAR:
+    case TABLE_COL_TYPE_DECIMAL:
+    case TABLE_COL_TYPE_NEWDECIMAL:
+    case TABLE_COL_TYPE_ENUM:
+    case TABLE_COL_TYPE_SET:
+    case TABLE_COL_TYPE_BIT:
+        return 2;
 
-        case TABLE_COL_TYPE_BLOB:
-        case TABLE_COL_TYPE_FLOAT:
-        case TABLE_COL_TYPE_DOUBLE:
-        case TABLE_COL_TYPE_DATETIME2:
-        case TABLE_COL_TYPE_TIMESTAMP2:
-        case TABLE_COL_TYPE_TIME2:
-            return 1;
+    case TABLE_COL_TYPE_BLOB:
+    case TABLE_COL_TYPE_FLOAT:
+    case TABLE_COL_TYPE_DOUBLE:
+    case TABLE_COL_TYPE_DATETIME2:
+    case TABLE_COL_TYPE_TIMESTAMP2:
+    case TABLE_COL_TYPE_TIME2:
+        return 1;
 
-        default:
-            return 0;
+    default:
+        return 0;
     }
 }
 

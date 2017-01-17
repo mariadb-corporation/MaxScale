@@ -76,9 +76,9 @@ mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop)
  * Create session command property.
  */
 mysql_sescmd_t *mysql_sescmd_init(rses_property_t *rses_prop,
-                                         GWBUF *sescmd_buf,
-                                         unsigned char packet_type,
-                                         ROUTER_CLIENT_SES *rses)
+                                  GWBUF *sescmd_buf,
+                                  unsigned char packet_type,
+                                  ROUTER_CLIENT_SES *rses)
 {
     mysql_sescmd_t *sescmd;
 
@@ -131,8 +131,8 @@ void mysql_sescmd_done(mysql_sescmd_t *sescmd)
  * 9. s+q+
  */
 GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
-                                            backend_ref_t *bref,
-                                            bool *reconnect)
+                                     backend_ref_t *bref,
+                                     bool *reconnect)
 {
     mysql_sescmd_t *scmd;
     sescmd_cursor_t *scur;
@@ -176,7 +176,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                 MXS_ERROR("Slave server '%s': response differs from master's response. "
                           "Closing connection due to inconsistent session state.",
                           bref->ref->server->unique_name);
-                close_failed_bref(bref, true);                
+                close_failed_bref(bref, true);
 
                 RW_CHK_DCB(bref, bref->bref_dcb);
                 dcb_close(bref->bref_dcb);
@@ -301,7 +301,7 @@ bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
 
 /** router must be locked */
 void sescmd_cursor_set_active(sescmd_cursor_t *sescmd_cursor,
-                                     bool value)
+                              bool value)
 {
     ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
     /** avoid calling unnecessarily */

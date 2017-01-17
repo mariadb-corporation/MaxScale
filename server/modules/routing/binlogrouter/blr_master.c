@@ -724,72 +724,72 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             router->master_state = BLRM_REQUEST_BINLOGDUMP;
         }
     case BLRM_CHECK_SEMISYNC:
-    {
-        /**
-         * This branch could be reached as fallthrough from BLRM_REGISTER
-         * if request_semi_sync option is false
-         */
-         if (router->master_state == BLRM_CHECK_SEMISYNC)
-         {
-             /* Get master semi-sync installed, enabled, disabled */
-             router->master_semi_sync = blr_get_master_semisync(buf);
+        {
+            /**
+             * This branch could be reached as fallthrough from BLRM_REGISTER
+             * if request_semi_sync option is false
+             */
+            if (router->master_state == BLRM_CHECK_SEMISYNC)
+            {
+                /* Get master semi-sync installed, enabled, disabled */
+                router->master_semi_sync = blr_get_master_semisync(buf);
 
-             /* Discard buffer */
-             gwbuf_free(buf);
+                /* Discard buffer */
+                gwbuf_free(buf);
 
-             if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
-             {
-                 /* not installed */
-                 MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync capability",
-                            router->service->name,
-                            router->service->dbref->server->name,
-                            router->service->dbref->server->port);
+                if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
+                {
+                    /* not installed */
+                    MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync capability",
+                               router->service->name,
+                               router->service->dbref->server->name,
+                               router->service->dbref->server->port);
 
-                 /* Continue */
-                 router->master_state = BLRM_REQUEST_BINLOGDUMP;
+                    /* Continue */
+                    router->master_state = BLRM_REQUEST_BINLOGDUMP;
 
-             }
-             else
-             {
-                 if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
-                 {
-                     /* Installed but not enabled,  right now */
-                     MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync enabled right now, "
-                                "Requesting Semi-Sync Replication",
-                                router->service->name,
-                                router->service->dbref->server->name,
-                                router->service->dbref->server->port);
-                 }
-                 else
-                 {
-                     /* Installed and enabled */
-                     MXS_NOTICE("%s: master server %s:%d has semi_sync enabled, Requesting Semi-Sync Replication",
-                                router->service->name,
-                                router->service->dbref->server->name,
-                                router->service->dbref->server->port);
-                 }
+                }
+                else
+                {
+                    if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
+                    {
+                        /* Installed but not enabled,  right now */
+                        MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync enabled right now, "
+                                   "Requesting Semi-Sync Replication",
+                                   router->service->name,
+                                   router->service->dbref->server->name,
+                                   router->service->dbref->server->port);
+                    }
+                    else
+                    {
+                        /* Installed and enabled */
+                        MXS_NOTICE("%s: master server %s:%d has semi_sync enabled, Requesting Semi-Sync Replication",
+                                   router->service->name,
+                                   router->service->dbref->server->name,
+                                   router->service->dbref->server->port);
+                    }
 
-                 buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
-                 router->master_state = BLRM_REQUEST_SEMISYNC;
-                 router->master->func.write(router->master, buf);
+                    buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
+                    router->master_state = BLRM_REQUEST_SEMISYNC;
+                    router->master->func.write(router->master, buf);
 
-                 break;
+                    break;
+                }
             }
         }
-    }
     case BLRM_REQUEST_SEMISYNC:
         /**
          * This branch could be reached as fallthrough from BLRM_REGISTER or BLRM_CHECK_SEMISYNC
          * if request_semi_sync option is false or master doesn't support semisync or it's not enabled
          */
-         if (router->master_state == BLRM_REQUEST_SEMISYNC)
-         {
-             /* discard master reply */
-             gwbuf_free(buf);
+        if (router->master_state == BLRM_REQUEST_SEMISYNC)
+        {
+            /* discard master reply */
+            gwbuf_free(buf);
 
-             /* Continue */
-             router->master_state = BLRM_REQUEST_BINLOGDUMP;
-         }
+            /* Continue */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+        }
 
     case BLRM_REQUEST_BINLOGDUMP:
         /**
@@ -1361,7 +1361,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         var_block_len = ptr[MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2];
 
                         statement_len = len - (MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 4 + 4 + 1 + 2 + 2 \
-                                        + var_block_len + 1 + db_name_len);
+                                               + var_block_len + 1 + db_name_len);
                         statement_sql = MXS_CALLOC(1, statement_len + 1);
                         MXS_ABORT_IF_NULL(statement_sql);
                         memcpy(statement_sql,
@@ -2540,11 +2540,16 @@ blr_get_master_semisync(GWBUF *buf)
     }
     free(key);
 
-    if (val) {
+    if (val)
+    {
         if (strncasecmp(val, "ON", 4) == 0)
+        {
             master_semisync = MASTER_SEMISYNC_ENABLED;
+        }
         else
+        {
             master_semisync = MASTER_SEMISYNC_DISABLED;
+        }
     }
     free(val);
 

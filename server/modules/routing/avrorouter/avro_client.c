@@ -71,45 +71,45 @@ avro_client_handle_request(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *qu
 
     switch (client->state)
     {
-        case AVRO_CLIENT_ERRORED:
-            /* force disconnection */
-            return 0;
-            break;
-        case AVRO_CLIENT_UNREGISTERED:
-            if (avro_client_do_registration(router, client, queue) == 0)
-            {
-                client->state = AVRO_CLIENT_ERRORED;
-                dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed\n");
-                /* force disconnection */
-                dcb_close(client->dcb);
-                rval = 0;
-            }
-            else
-            {
-                /* Send OK ack to client */
-                dcb_printf(client->dcb, "OK\n");
-
-                client->state = AVRO_CLIENT_REGISTERED;
-                MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
-                         client->dcb->service->name,
-                         client->dcb->remote != NULL ? client->dcb->remote : "");
-            }
-            break;
-        case AVRO_CLIENT_REGISTERED:
-        case AVRO_CLIENT_REQUEST_DATA:
-            if (client->state == AVRO_CLIENT_REGISTERED)
-            {
-                client->state = AVRO_CLIENT_REQUEST_DATA;
-            }
-
-            /* Process command from client */
-            avro_client_process_command(router, client, queue);
-
-            break;
-        default:
+    case AVRO_CLIENT_ERRORED:
+        /* force disconnection */
+        return 0;
+        break;
+    case AVRO_CLIENT_UNREGISTERED:
+        if (avro_client_do_registration(router, client, queue) == 0)
+        {
             client->state = AVRO_CLIENT_ERRORED;
+            dcb_printf(client->dcb, "ERR, code 12, msg: Registration failed\n");
+            /* force disconnection */
+            dcb_close(client->dcb);
             rval = 0;
-            break;
+        }
+        else
+        {
+            /* Send OK ack to client */
+            dcb_printf(client->dcb, "OK\n");
+
+            client->state = AVRO_CLIENT_REGISTERED;
+            MXS_INFO("%s: Client [%s] has completed REGISTRATION action",
+                     client->dcb->service->name,
+                     client->dcb->remote != NULL ? client->dcb->remote : "");
+        }
+        break;
+    case AVRO_CLIENT_REGISTERED:
+    case AVRO_CLIENT_REQUEST_DATA:
+        if (client->state == AVRO_CLIENT_REGISTERED)
+        {
+            client->state = AVRO_CLIENT_REQUEST_DATA;
+        }
+
+        /* Process command from client */
+        avro_client_process_command(router, client, queue);
+
+        break;
+    default:
+        client->state = AVRO_CLIENT_ERRORED;
+        rval = 0;
+        break;
     }
 
     gwbuf_free(queue);
@@ -223,15 +223,15 @@ void extract_gtid_request(gtid_pos_t *gtid, const char *start, int len)
             char *end;
             switch (read)
             {
-                case 0:
-                    gtid->domain = strtol(ptr, &end, 10);
-                    break;
-                case 1:
-                    gtid->server_id = strtol(ptr, &end, 10);
-                    break;
-                case 2:
-                    gtid->seq = strtol(ptr, &end, 10);
-                    break;
+            case 0:
+                gtid->domain = strtol(ptr, &end, 10);
+                break;
+            case 1:
+                gtid->server_id = strtol(ptr, &end, 10);
+                break;
+            case 2:
+                gtid->seq = strtol(ptr, &end, 10);
+                break;
             }
             read++;
             ptr = end;
@@ -783,25 +783,25 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
 
         switch (client->format)
         {
-            case AVRO_FORMAT_JSON:
-                /** Currently only JSON format supports seeking to a GTID */
-                if (client->requested_gtid &&
-                    seek_to_index_pos(client, client->file_handle) &&
-                    seek_to_gtid(client, client->file_handle))
-                {
-                    client->requested_gtid = false;
-                }
+        case AVRO_FORMAT_JSON:
+            /** Currently only JSON format supports seeking to a GTID */
+            if (client->requested_gtid &&
+                seek_to_index_pos(client, client->file_handle) &&
+                seek_to_gtid(client, client->file_handle))
+            {
+                client->requested_gtid = false;
+            }
 
-                read_more = stream_json(client);
-                break;
+            read_more = stream_json(client);
+            break;
 
-            case AVRO_FORMAT_AVRO:
-                read_more = stream_binary(client);
-                break;
+        case AVRO_FORMAT_AVRO:
+            read_more = stream_binary(client);
+            break;
 
-            default:
-                MXS_ERROR("Unexpected format: %d", client->format);
-                break;
+        default:
+            MXS_ERROR("Unexpected format: %d", client->format);
+            break;
         }
 
 
@@ -986,16 +986,16 @@ int avro_client_callback(DCB *dcb, DCB_REASON reason, void *userdata)
 
             switch (client->format)
             {
-                case AVRO_FORMAT_JSON:
-                    schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir);
-                    break;
+            case AVRO_FORMAT_JSON:
+                schema = read_avro_json_schema(client->avro_binfile, client->router->avrodir);
+                break;
 
-                case AVRO_FORMAT_AVRO:
-                    schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir);
-                    break;
+            case AVRO_FORMAT_AVRO:
+                schema = read_avro_binary_schema(client->avro_binfile, client->router->avrodir);
+                break;
 
-                default:
-                    MXS_ERROR("Unknown client format: %d", client->format);
+            default:
+                MXS_ERROR("Unknown client format: %d", client->format);
             }
 
             if (schema)

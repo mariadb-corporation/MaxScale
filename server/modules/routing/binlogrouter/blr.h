@@ -501,12 +501,12 @@ typedef struct
  */
 typedef struct binlog_encryption_setup
 {
-  bool enabled;
-  int encryption_algorithm;
-  char *key_management_filename;
-  uint8_t key_value[BINLOG_AES_MAX_KEY_LEN];
-  unsigned long key_len;
-  uint8_t key_id;
+    bool enabled;
+    int encryption_algorithm;
+    char *key_management_filename;
+    uint8_t key_value[BINLOG_AES_MAX_KEY_LEN];
+    unsigned long key_len;
+    uint8_t key_id;
 } BINLOG_ENCRYPTION_SETUP;
 
 /**
@@ -756,7 +756,8 @@ extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *, uint32_t po
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
-extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *, const SLAVE_ENCRYPTION_CTX *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *, char *,
+                              const SLAVE_ENCRYPTION_CTX *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 extern unsigned long blr_file_size(BLFILE *);
 extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);

@@ -264,13 +264,13 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     CONFIG_PARAMETER *params = service->svc_config_param;
 
     router->rwsplit_config.use_sql_variables_in = config_get_enum(params, "use_sql_variables_in",
-                                                          use_sql_variables_in_values);
+                                                                  use_sql_variables_in_values);
 
     router->rwsplit_config.slave_selection_criteria = config_get_enum(params, "slave_selection_criteria",
-                                                              slave_selection_criteria_values);
+                                                                      slave_selection_criteria_values);
 
     router->rwsplit_config.master_failure_mode = config_get_enum(params, "master_failure_mode",
-                                                         master_failure_mode_values);
+                                                                 master_failure_mode_values);
 
     router->rwsplit_config.max_slave_replication_lag = config_get_integer(params, "max_slave_replication_lag");
     router->rwsplit_config.retry_failed_reads = config_get_bool(params, "retry_failed_reads");
@@ -1027,20 +1027,20 @@ void rses_property_done(rses_property_t *prop)
 
     switch (prop->rses_prop_type)
     {
-        case RSES_PROP_TYPE_SESCMD:
-            mysql_sescmd_done(&prop->rses_prop_data.sescmd);
-            break;
+    case RSES_PROP_TYPE_SESCMD:
+        mysql_sescmd_done(&prop->rses_prop_data.sescmd);
+        break;
 
-        case RSES_PROP_TYPE_TMPTABLES:
-            hashtable_free(prop->rses_prop_data.temp_tables);
-            break;
+    case RSES_PROP_TYPE_TMPTABLES:
+        hashtable_free(prop->rses_prop_data.temp_tables);
+        break;
 
-        default:
-            MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
-                      "in property %p", pthread_self(), prop->rses_prop_type, prop);
+    default:
+        MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
+                  "in property %p", pthread_self(), prop->rses_prop_type, prop);
 
-            ss_dassert(false);
-            break;
+        ss_dassert(false);
+        break;
     }
     MXS_FREE(prop);
 }
@@ -1187,12 +1187,12 @@ int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
 
     switch (reason)
     {
-        case DCB_REASON_NOT_RESPONDING:
-            dcb->func.hangup(dcb);
-            break;
+    case DCB_REASON_NOT_RESPONDING:
+        dcb->func.hangup(dcb);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
 return_rc:
@@ -1386,7 +1386,7 @@ static void handleError(ROUTER *instance, void *router_session,
 
         switch (action)
         {
-            case ERRACT_NEW_CONNECTION:
+        case ERRACT_NEW_CONNECTION:
             {
                 /**
                  * If master has lost its Master status error can't be
@@ -1456,7 +1456,7 @@ static void handleError(ROUTER *instance, void *router_session,
                 else
                 {
                     const char *remote = problem_dcb->state == DCB_STATE_POLLING &&
-                        problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
+                                         problem_dcb->server ? problem_dcb->server->unique_name : "CLOSED";
 
                     MXS_ERROR("DCB connected to '%s' is not in use by the router "
                               "session, not closing it. DCB is in state '%s'",
@@ -1465,17 +1465,17 @@ static void handleError(ROUTER *instance, void *router_session,
                 break;
             }
 
-            case ERRACT_REPLY_CLIENT:
+        case ERRACT_REPLY_CLIENT:
             {
                 handle_error_reply_client(session, rses, problem_dcb, errmsgbuf);
                 *succp = false; /*< no new backend servers were made available */
                 break;
             }
 
-            default:
-                ss_dassert(!true);
-                *succp = false;
-                break;
+        default:
+            ss_dassert(!true);
+            *succp = false;
+            break;
         }
     }
 

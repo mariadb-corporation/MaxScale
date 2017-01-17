@@ -252,7 +252,7 @@ printUsage(const char *progname)
  *
  * @param inst        The current binlog instance
  * @param key_file    The AES Key filename
- * @param aes_algo    The AES algorithm 
+ * @param aes_algo    The AES algorithm
  * @return            1 on failure, 0 on success
  */
 static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *aes_algo)
@@ -273,34 +273,34 @@ static int set_encryption_options(ROUTER_INSTANCE *inst, char *key_file, char *a
         }
         else
         {
-           /* Check aes algorithm */
-           if (aes_algo)
-           {
-              int ret = blr_check_encryption_algorithm(aes_algo);
-              if (ret > -1)
-              {
-                  inst->encryption.encryption_algorithm = ret;
-              }
-              else
-              {
-                 MXS_ERROR("Invalid encryption_algorithm '%s'. "
-                           "Supported algorithms: %s",
-                           aes_algo,
-                           blr_encryption_algorithm_list());
-                 return 1;
-              }
-           }
-           else
-           {
-              inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
-           }
+            /* Check aes algorithm */
+            if (aes_algo)
+            {
+                int ret = blr_check_encryption_algorithm(aes_algo);
+                if (ret > -1)
+                {
+                    inst->encryption.encryption_algorithm = ret;
+                }
+                else
+                {
+                    MXS_ERROR("Invalid encryption_algorithm '%s'. "
+                              "Supported algorithms: %s",
+                              aes_algo,
+                              blr_encryption_algorithm_list());
+                    return 1;
+                }
+            }
+            else
+            {
+                inst->encryption.encryption_algorithm = BINLOG_DEFAULT_ENC_ALGO;
+            }
 
-           MXS_NOTICE("Decrypting binlog file with algorithm: %s,"
-                      " KEY len %lu bits",
-                      blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
-                      8 * inst->encryption.key_len);
+            MXS_NOTICE("Decrypting binlog file with algorithm: %s,"
+                       " KEY len %lu bits",
+                       blr_get_encryption_algorithm(inst->encryption.encryption_algorithm),
+                       8 * inst->encryption.key_len);
 
-           return 0;
+            return 0;
         }
     }
     else

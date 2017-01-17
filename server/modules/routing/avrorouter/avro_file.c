@@ -279,25 +279,25 @@ bool avro_load_conversion_state(AVRO_INSTANCE *router)
 
     switch (rc)
     {
-        case 0:
-            rval = true;
-            MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
-                       router->binlog_name, router->current_pos, router->gtid.domain,
-                       router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
-            break;
+    case 0:
+        rval = true;
+        MXS_NOTICE("Loaded stored binary log conversion state: File: [%s] Position: [%ld] GTID: [%lu-%lu-%lu:%lu]",
+                   router->binlog_name, router->current_pos, router->gtid.domain,
+                   router->gtid.server_id, router->gtid.seq, router->gtid.event_num);
+        break;
 
-        case -1:
-            MXS_ERROR("Failed to open file '%s'. ", filename);
-            break;
+    case -1:
+        MXS_ERROR("Failed to open file '%s'. ", filename);
+        break;
 
-        case -2:
-            MXS_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
-            break;
+    case -2:
+        MXS_ERROR("Failed to allocate enough memory when parsing file '%s'. ", filename);
+        break;
 
-        default:
-            MXS_ERROR("Failed to parse stored conversion state '%s', error "
-                      "on line %d. ", filename, rc);
-            break;
+    default:
+        MXS_ERROR("Failed to parse stored conversion state '%s', error "
+                  "on line %d. ", filename, rc);
+        break;
     }
 
     return rval;
@@ -509,9 +509,9 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         {
             switch (n)
             {
-                case 0:
-                    break;
-                case -1:
+            case 0:
+                break;
+            case -1:
                 {
                     char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
                     strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
@@ -525,12 +525,12 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                                   router->binlog_name, router->binlog_fd);
                     break;
                 }
-                default:
-                    MXS_ERROR("Short read when reading the header. "
-                              "Expected 19 bytes but got %d bytes. "
-                              "Binlog file is %s, position %llu",
-                              n, router->binlog_name, pos);
-                    break;
+            default:
+                MXS_ERROR("Short read when reading the header. "
+                          "Expected 19 bytes but got %d bytes. "
+                          "Binlog file is %s, position %llu",
+                          n, router->binlog_name, pos);
+                break;
             }
 
             router->current_pos = pos;
@@ -635,17 +635,17 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
 
             switch (event_header_ntypes)
             {
-                case 168: /* mariadb 10 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 163;
-                    break;
+            case 168: /* mariadb 10 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 163;
+                break;
 
-                case 165: /* mariadb 5 LOG_EVENT_TYPES*/
-                    event_header_ntypes -= 160;
-                    break;
+            case 165: /* mariadb 5 LOG_EVENT_TYPES*/
+                event_header_ntypes -= 160;
+                break;
 
-                default: /* mysql 5.6 LOG_EVENT_TYPES = 35 */
-                    event_header_ntypes -= 35;
-                    break;
+            default: /* mysql 5.6 LOG_EVENT_TYPES = 35 */
+                event_header_ntypes -= 35;
+                break;
             }
 
             n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
