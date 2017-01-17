@@ -129,16 +129,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {
                 "script",
-                 MXS_MODULE_PARAM_PATH,
-                 NULL,
-                 MXS_MODULE_OPT_PATH_X_OK
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_X_OK
             },
             {
                 "events",
-                 MXS_MODULE_PARAM_ENUM,
-                 MONITOR_EVENT_DEFAULT_VALUE,
-                 MXS_MODULE_OPT_NONE,
-                 monitor_event_enum_values
+                MXS_MODULE_PARAM_ENUM,
+                MONITOR_EVENT_DEFAULT_VALUE,
+                MXS_MODULE_OPT_NONE,
+                monitor_event_enum_values
             },
             {MXS_END_MODULE_PARAMS}
         }
