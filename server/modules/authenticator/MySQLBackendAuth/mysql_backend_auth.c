@@ -93,22 +93,22 @@ static int auth_backend_extract(DCB *dcb, GWBUF *buf)
 
     switch (mba->state)
     {
-        case MBA_NEED_OK:
-            if (mxs_mysql_is_ok_packet(buf))
-            {
-                rval = MXS_AUTH_SUCCEEDED;
-                mba->state = MBA_AUTH_OK;
-            }
-            else
-            {
-                mba->state = MBA_AUTH_FAILED;
-            }
-            break;
+    case MBA_NEED_OK:
+        if (mxs_mysql_is_ok_packet(buf))
+        {
+            rval = MXS_AUTH_SUCCEEDED;
+            mba->state = MBA_AUTH_OK;
+        }
+        else
+        {
+            mba->state = MBA_AUTH_FAILED;
+        }
+        break;
 
-        default:
-            MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
-            ss_dassert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected call to MySQLBackendAuth::extract");
+        ss_dassert(false);
+        break;
     }
 
     return rval;

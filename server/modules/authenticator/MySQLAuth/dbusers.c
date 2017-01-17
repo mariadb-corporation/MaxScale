@@ -285,9 +285,9 @@ replace_mysql_users(SERV_LISTENER *listener)
         return i;
     }
 
-     /** TODO: Figure out a way to create a checksum function in the backend server
-      * so that we can avoid querying the complete list of users every time we
-      * need to refresh the users */
+    /** TODO: Figure out a way to create a checksum function in the backend server
+     * so that we can avoid querying the complete list of users every time we
+     * need to refresh the users */
     MXS_DEBUG("%lu [replace_mysql_users] users' tables replaced", pthread_self());
     USERS *oldusers = listener->users;
     listener->users = newusers;
@@ -428,10 +428,10 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
         key.netmask = 0;
     }
     else if ((strnlen(host, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN) &&
-            /** The host is an ip-address and has a '_'-wildcard but not '%'
-             * (combination of both is invalid). */
-            ((is_ipaddress(host) && host_has_singlechar_wildcard(host)) ||
-            /** The host is not an ip-address and has a '%'- or '_'-wildcard (or both). */
+             /** The host is an ip-address and has a '_'-wildcard but not '%'
+              * (combination of both is invalid). */
+             ((is_ipaddress(host) && host_has_singlechar_wildcard(host)) ||
+              /** The host is not an ip-address and has a '%'- or '_'-wildcard (or both). */
               (!is_ipaddress(host) && strpbrk(host, "%_"))))
     {
         strcpy(key.hostname, host);
@@ -1462,7 +1462,7 @@ get_users(SERV_LISTENER *listener, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        ss_debug(int dbnames =) get_databases(listener, con);
+        ss_debug(int dbnames = ) get_databases(listener, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }
@@ -1762,13 +1762,13 @@ static int uh_cmpfun(const void* v1, const void* v2)
 
     if ((strcmp(hu1->user, hu2->user) == 0) &&
         /** Check for wildcard hostnames */
-       ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
+        ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
          /** If no wildcard hostname is stored, check for network address. */
-        (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) &&
+         (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) &&
           (hu1->netmask >= hu2->netmask)) ||
          /** Finally, one of the hostnames may be a domain name with wildcards
              while the other is an IP-address. This requires a DNS-lookup. */
-        (wildcard_host && wildcard_domain_match(hu1->hostname, hu2->hostname))))
+         (wildcard_host && wildcard_domain_match(hu1->hostname, hu2->hostname))))
     {
         /* if no database name was passed, auth is ok */
         if (hu1->resource == NULL || (hu1->resource && !strlen(hu1->resource)))
@@ -2521,7 +2521,7 @@ static int add_wildcard_users(USERS *users, char* name, char* host, char* passwo
  * are missing.
  */
 static bool check_server_permissions(SERVICE *service, SERVER* server,
-                                    const char* user, const char* password)
+                                     const char* user, const char* password)
 {
     MYSQL *mysql = gw_mysql_init();
 
@@ -2561,7 +2561,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
     char query[MAX_QUERY_STR_LEN];
     const char* query_pw = strstr(server->server_string, "5.7.") ?
-        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
     bool rval = true;
     snprintf(query, sizeof(query), "SELECT user, host, %s, Select_priv FROM mysql.user limit 1", query_pw);
 
@@ -2628,8 +2628,8 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
             MXS_WARNING("[%s] User '%s' is missing SELECT privileges on mysql.tables_priv table. "
-                      "Database name will be ignored in authentication. "
-                      "MySQL error message: %s", service->name, user, mysql_error(mysql));
+                        "Database name will be ignored in authentication. "
+                        "MySQL error message: %s", service->name, user, mysql_error(mysql));
         }
         else
         {
@@ -2744,7 +2744,7 @@ static void merge_netmask(char *host)
              */
             *delimiter_loc = '/';
             MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
-                    "Merge incomplete: %s", host);
+                      "Merge incomplete: %s", host);
             return;
         }
 
@@ -2760,7 +2760,7 @@ static void merge_netmask(char *host)
     {
         *delimiter_loc = '/';
         MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
-                "Merge incomplete: %s", host);
+                  "Merge incomplete: %s", host);
     }
 }
 
@@ -2787,13 +2787,13 @@ static bool wildcard_domain_match(const char *host1, const char *host2)
     const char *wc_domain;
 
     if (is_ipaddress(host1) && !strpbrk(host1, "%_") && !is_ipaddress(host2) &&
-            strpbrk(host2, "%_"))
+        strpbrk(host2, "%_"))
     {
         ip_address = host1;
         wc_domain = host2;
     }
-    else if(is_ipaddress(host2) && !strpbrk(host2, "%_") && !is_ipaddress(host1) &&
-            strpbrk(host1, "%_"))
+    else if (is_ipaddress(host2) && !strpbrk(host2, "%_") && !is_ipaddress(host1) &&
+             strpbrk(host1, "%_"))
     {
         ip_address = host2;
         wc_domain = host1;
@@ -2827,15 +2827,15 @@ static bool wildcard_domain_match(const char *host1, const char *host2)
     MXS_DEBUG("Resolving '%s'", ip_address);
     char client_hostname[MYSQL_HOST_MAXLEN];
     int lookup_result = getnameinfo(
-            (struct sockaddr*)&bin_address, sizeof(struct sockaddr_in),
-            client_hostname, sizeof(client_hostname),
-            NULL, 0, // No need for the port
-            NI_NAMEREQD); // Text address only
+                            (struct sockaddr*)&bin_address, sizeof(struct sockaddr_in),
+                            client_hostname, sizeof(client_hostname),
+                            NULL, 0, // No need for the port
+                            NI_NAMEREQD); // Text address only
 
     if (lookup_result != 0)
     {
         MXS_ERROR("Client hostname lookup failed, getnameinfo() returned: '%s'.",
-                gai_strerror(lookup_result));
+                  gai_strerror(lookup_result));
     }
     else
     {
@@ -2843,12 +2843,12 @@ static bool wildcard_domain_match(const char *host1, const char *host2)
         /* We have a host name, try to match regular expression.
          * modutil_mysql_wildcard_match() translates sql-wildcards to pcre2-format. */
         mxs_pcre2_result_t regex_result = modutil_mysql_wildcard_match(wc_domain,
-                client_hostname);
+                                                                       client_hostname);
         if (regex_result == MXS_PCRE2_MATCH)
         {
             return true;
         }
-        else if(regex_result == MXS_PCRE2_ERROR)
+        else if (regex_result == MXS_PCRE2_ERROR)
         {
             MXS_ERROR("Malformed host name for regex matching: '%s'.", wc_domain);
         }

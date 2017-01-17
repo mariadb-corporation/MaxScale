@@ -278,20 +278,20 @@ static int gssapi_auth_extract(DCB *dcb, GWBUF *read_buffer)
 
     switch (auth->state)
     {
-        case GSSAPI_AUTH_INIT:
-            copy_client_information(dcb, read_buffer);
-            rval = MXS_AUTH_SUCCEEDED;
-            break;
+    case GSSAPI_AUTH_INIT:
+        copy_client_information(dcb, read_buffer);
+        rval = MXS_AUTH_SUCCEEDED;
+        break;
 
-        case GSSAPI_AUTH_DATA_SENT:
-            store_client_token(dcb, read_buffer);
-            rval = MXS_AUTH_SUCCEEDED;
-            break;
+    case GSSAPI_AUTH_DATA_SENT:
+        store_client_token(dcb, read_buffer);
+        rval = MXS_AUTH_SUCCEEDED;
+        break;
 
-        default:
-            MXS_ERROR("Unexpected authentication state: %d", auth->state);
-            ss_dassert(false);
-            break;
+    default:
+        MXS_ERROR("Unexpected authentication state: %d", auth->state);
+        ss_dassert(false);
+        break;
     }
 
     return rval;

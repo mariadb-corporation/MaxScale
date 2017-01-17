@@ -250,7 +250,7 @@ mysql_auth_authenticate(DCB *dcb)
         else if (dcb->service->log_auth_warnings)
         {
             MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
-                       dcb->service->name, client_data->user, dcb->remote, ntohs(dcb->ipv4.sin_port));
+                        dcb->service->name, client_data->user, dcb->remote, ntohs(dcb->ipv4.sin_port));
             if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
                 !dcb->service->localhost_match_wildcard_host)
             {

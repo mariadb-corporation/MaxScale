@@ -45,7 +45,7 @@ typedef struct http_auth
 {
     char* user;
     char* pw;
-}HTTP_AUTH;
+} HTTP_AUTH;
 
 /**
  * The module entry point routine. It is this routine that
