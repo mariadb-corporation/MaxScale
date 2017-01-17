@@ -2333,7 +2333,12 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         thr_rule_version = rule_version;
     }
 
-    uint32_t type = qc_get_type(queue);
+    uint32_t type = 0;
+
+    if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
+    {
+        type = qc_get_type(queue);
+    }
 
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
