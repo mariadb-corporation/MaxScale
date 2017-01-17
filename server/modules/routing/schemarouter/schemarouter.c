@@ -305,7 +305,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
 
     if (PTR_IS_ERR(ptr))
     {
-        MXS_INFO("schemarouter: SHOW DATABASES returned an error.");
+        MXS_INFO("SHOW DATABASES returned an error.");
         gwbuf_free(buf);
         return SHOWDB_FATAL_ERROR;
     }
@@ -320,7 +320,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
 
         if (ptr >= (unsigned char*) buf->end)
         {
-            MXS_INFO("schemarouter: Malformed packet for SHOW DATABASES.");
+            MXS_INFO("Malformed packet for SHOW DATABASES.");
             *buffer = gwbuf_append(buf, *buffer);
             return SHOWDB_FATAL_ERROR;
         }
@@ -341,7 +341,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         {
             if (hashtable_add(rses->shardmap->hash, data, target))
             {
-                MXS_INFO("schemarouter: <%s, %s>", target, data);
+                MXS_INFO("<%s, %s>", target, data);
             }
             else
             {
@@ -368,12 +368,12 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
     if (ptr < (unsigned char*) buf->end && PTR_IS_EOF(ptr) && bref->n_mapping_eof == 1)
     {
         atomic_add(&bref->n_mapping_eof, 1);
-        MXS_INFO("schemarouter: SHOW DATABASES fully received from %s.",
+        MXS_INFO("SHOW DATABASES fully received from %s.",
                  bref->bref_backend->server->unique_name);
     }
     else
     {
-        MXS_INFO("schemarouter: SHOW DATABASES partially received from %s.",
+        MXS_INFO("SHOW DATABASES partially received from %s.",
                  bref->bref_backend->server->unique_name);
     }
 
@@ -434,7 +434,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
             clone = gwbuf_clone(buffer);
             dcb = session->rses_backend_ref[i].bref_dcb;
             rval |= !dcb->func.write(dcb, clone);
-            MXS_DEBUG("schemarouter: Wrote SHOW DATABASES to %s for session %p: returned %d",
+            MXS_DEBUG("Wrote SHOW DATABASES to %s for session %p: returned %d",
                       session->rses_backend_ref[i].bref_backend->server->unique_name,
                       session->rses_client_dcb->session,
                       rval);
@@ -481,7 +481,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                     /** Warn about improper usage of the router */
                     if (rval && strcmp(name, rval) != 0)
                     {
-                        MXS_ERROR("Schemarouter: Query targets databases on servers '%s' and '%s'. "
+                        MXS_ERROR("Query targets databases on servers '%s' and '%s'. "
                                   "Cross database queries across servers are not supported.",
                                   rval, name);
                     }
@@ -489,7 +489,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                     {
                         rval = name;
                         has_dbs = true;
-                        MXS_INFO("schemarouter: Query targets database '%s' on server '%s'", dbnms[i], rval);
+                        MXS_INFO("Query targets database '%s' on server '%s'", dbnms[i], rval);
                     }
                 }
             }
@@ -513,7 +513,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
 
             if (tmp)
             {
-                MXS_INFO("schemarouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
+                MXS_INFO("SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
             }
         }
         MXS_FREE(query);
@@ -521,7 +521,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
         if (tmp == NULL)
         {
             rval = (char*) hashtable_fetch(ht, client->current_db);
-            MXS_INFO("schemarouter: SHOW TABLES query, current database '%s' on server '%s'",
+            MXS_INFO("SHOW TABLES query, current database '%s' on server '%s'",
                      client->current_db, rval);
         }
         else
@@ -541,7 +541,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                 if (strcmp(srvnm, buffer->hint->data) == 0)
                 {
                     rval = srvnm;
-                    MXS_INFO("schemarouter: Routing hint found (%s)", srvnm);
+                    MXS_INFO("Routing hint found (%s)", srvnm);
                 }
             }
         }
@@ -556,7 +556,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
             rval = (char*) hashtable_fetch(ht, client->current_db);
             if (rval)
             {
-                MXS_INFO("schemarouter: Using active database '%s'", client->current_db);
+                MXS_INFO("Using active database '%s'", client->current_db);
             }
         }
     }
@@ -704,7 +704,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
 
     if ((config_get_param(conf, "auth_all_servers")) == NULL)
     {
-        MXS_NOTICE("Schemarouter: Authentication data is fetched from all servers. To disable this "
+        MXS_NOTICE("Authentication data is fetched from all servers. To disable this "
                    "add 'auth_all_servers=0' to the service.");
         service->users_from_all = true;
     }
@@ -767,7 +767,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
 
         if (value == NULL)
         {
-            MXS_ERROR("Unknown router options for Schemarouter: %s", options[i]);
+            MXS_ERROR("Unknown router options for %s", options[i]);
             failure = true;
             break;
         }
@@ -797,7 +797,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
         }
         else
         {
-            MXS_ERROR("Unknown router options for Schemarouter: %s", options[i]);
+            MXS_ERROR("Unknown router options for %s", options[i]);
             failure = true;
             break;
         }
@@ -871,13 +871,13 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
         strcpy(db, data->db);
         *data->db = 0;
         using_db = true;
-        MXS_INFO("schemarouter: Client logging in directly to a database '%s', "
+        MXS_INFO("Client logging in directly to a database '%s', "
                  "postponing until databases have been mapped.", db);
     }
 
     if (!have_db)
     {
-        MXS_INFO("schemarouter: Client'%s' connecting with empty database.", data->user);
+        MXS_INFO("Client'%s' connecting with empty database.", data->user);
     }
 
     spinlock_release(&session->ses_lock);
@@ -1665,7 +1665,7 @@ static int routeQuery(ROUTER* instance,
         {
             int init_rval = 1;
             char* querystr = modutil_get_SQL(querybuf);
-            MXS_INFO("schemarouter: Storing query for session %p: %s",
+            MXS_INFO("Storing query for session %p: %s",
                      router_cli_ses->rses_client_dcb->session,
                      querystr);
             MXS_FREE(querystr);
@@ -1897,14 +1897,14 @@ static int routeQuery(ROUTER* instance,
 
         if (tname)
         {
-            MXS_INFO("schemarouter: INIT_DB for database '%s' on server '%s'",
+            MXS_INFO("INIT_DB for database '%s' on server '%s'",
                      router_cli_ses->current_db, tname);
             route_target = TARGET_NAMED_SERVER;
             targetserver = MXS_STRDUP_A(tname);
         }
         else
         {
-            MXS_INFO("schemarouter: INIT_DB with unknown database");
+            MXS_INFO("INIT_DB with unknown database");
         }
         spinlock_release(&router_cli_ses->shardmap->lock);
     }
@@ -1927,7 +1927,7 @@ static int routeQuery(ROUTER* instance,
             }
             else
             {
-                MXS_INFO("schemarouter: Backend server '%s' is not in a viable state", tname);
+                MXS_INFO("Backend server '%s' is not in a viable state", tname);
 
                 /**
                  * Shard is not a viable target right now so we check
@@ -1956,7 +1956,7 @@ static int routeQuery(ROUTER* instance,
              */
 
             route_target = TARGET_ANY;
-            MXS_INFO("schemarouter: Routing query to first available backend.");
+            MXS_INFO("Routing query to first available backend.");
 
         }
         else
@@ -2032,7 +2032,7 @@ static int routeQuery(ROUTER* instance,
         if (TARGET_IS_ANY(route_target))
         {
             /**No valid backends alive*/
-            MXS_ERROR("Schemarouter: Failed to route query, no backends are available.");
+            MXS_ERROR("Failed to route query, no backends are available.");
             rses_end_locked_router_action(router_cli_ses);
             ret = 0;
             goto retblock;
@@ -2290,7 +2290,7 @@ static void clientReply(ROUTER* instance,
         return;
     }
 
-    MXS_DEBUG("schemarouter: Reply from [%s] session [%p]"
+    MXS_DEBUG("Reply from [%s] session [%p]"
               " mapping [%s] queries queued [%s]",
               bref->bref_backend->server->unique_name,
               router_cli_ses->rses_client_dcb->session,
@@ -2364,7 +2364,7 @@ static void clientReply(ROUTER* instance,
 
     if (router_cli_ses->init & INIT_USE_DB)
     {
-        MXS_DEBUG("schemarouter: Reply to USE '%s' received for session %p",
+        MXS_DEBUG("Reply to USE '%s' received for session %p",
                   router_cli_ses->connect_db,
                   router_cli_ses->rses_client_dcb->session);
         router_cli_ses->init &= ~INIT_USE_DB;
@@ -2465,7 +2465,7 @@ static void clientReply(ROUTER* instance,
         unsigned char* cmd = (unsigned char*) writebuf->start;
         int state = router_cli_ses->init;
         /** Write reply to client DCB */
-        MXS_INFO("schemarouter: returning reply [%s] "
+        MXS_INFO("returning reply [%s] "
                  "state [%s]  session [%p]",
                  PTR_IS_ERR(cmd) ? "ERR" : PTR_IS_OK(cmd) ? "OK" : "RSET",
                  state & INIT_UNINT ? "UNINIT" : state & INIT_MAPPING ? "MAPPING" : "READY",
@@ -3861,7 +3861,7 @@ static int router_handle_state_switch(DCB* dcb,
     {
         case DCB_REASON_NOT_RESPONDING:
             atomic_add(&bref->bref_backend->connections, -1);
-            MXS_INFO("schemarouter: server %s not responding", srv->unique_name);
+            MXS_INFO("server %s not responding", srv->unique_name);
             dcb->func.hangup(dcb);
             break;
 
@@ -4057,7 +4057,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
             if (get_shard_dcb(&dcb, router_cli_ses, target))
             {
                 dcb->func.write(dcb, buffer);
-                MXS_DEBUG("schemarouter: USE '%s' sent to %s for session %p",
+                MXS_DEBUG("USE '%s' sent to %s for session %p",
                           router_cli_ses->connect_db,
                           target,
                           router_cli_ses->rses_client_dcb->session);
@@ -4065,7 +4065,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
             }
             else
             {
-                MXS_INFO("schemarouter: Couldn't find target DCB for '%s'.", target);
+                MXS_INFO("Couldn't find target DCB for '%s'.", target);
             }
         }
         else
@@ -4076,7 +4076,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
     else
     {
         /** Unknown database, hang up on the client*/
-        MXS_INFO("schemarouter: Connecting to a non-existent database '%s'",
+        MXS_INFO("Connecting to a non-existent database '%s'",
                  router_cli_ses->connect_db);
         char errmsg[128 + MYSQL_DATABASE_MAXLEN + 1];
         sprintf(errmsg, "Unknown database '%s'", router_cli_ses->connect_db);
@@ -4101,7 +4101,7 @@ void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
     tmp->next = NULL;
 #ifdef SS_DEBUG
     char* querystr = modutil_get_SQL(tmp);
-    MXS_DEBUG("schemarouter: Sending queued buffer for session %p: %s",
+    MXS_DEBUG("Sending queued buffer for session %p: %s",
               router_cli_ses->rses_client_dcb->session,
               querystr);
     MXS_FREE(querystr);
@@ -4137,7 +4137,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
             if (rc == SHOWDB_FULL_RESPONSE)
             {
                 router_cli_ses->rses_backend_ref[i].bref_mapped = true;
-                MXS_DEBUG("schemarouter: Received SHOW DATABASES reply from %s for session %p",
+                MXS_DEBUG("Received SHOW DATABASES reply from %s for session %p",
                           router_cli_ses->rses_backend_ref[i].bref_backend->server->unique_name,
                           router_cli_ses->rses_client_dcb->session);
             }
@@ -4145,7 +4145,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
             {
                 bref->map_queue = writebuf;
                 writebuf = NULL;
-                MXS_DEBUG("schemarouter: Received partial SHOW DATABASES reply from %s for session %p",
+                MXS_DEBUG("Received partial SHOW DATABASES reply from %s for session %p",
                           router_cli_ses->rses_backend_ref[i].bref_backend->server->unique_name,
                           router_cli_ses->rses_client_dcb->session);
             }
@@ -4198,7 +4198,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
         if (BREF_IS_IN_USE(&bkrf[i]) && !BREF_IS_MAPPED(&bkrf[i]))
         {
             mapped = false;
-            MXS_DEBUG("schemarouter: Still waiting for reply to SHOW DATABASES from %s for session %p",
+            MXS_DEBUG("Still waiting for reply to SHOW DATABASES from %s for session %p",
                       bkrf[i].bref_backend->server->unique_name,
                       router_cli_ses->rses_client_dcb->session);
         }

@@ -295,7 +295,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->match && regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            MXS_ERROR("qlafilter: Invalid regular expression '%s' for the 'match' "
+            MXS_ERROR("Invalid regular expression '%s' for the 'match' "
                       "parameter.", my_instance->match);
             MXS_FREE(my_instance->match);
             my_instance->match = NULL;
@@ -304,7 +304,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->nomatch && regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
-            MXS_ERROR("qlafilter: Invalid regular expression '%s' for the 'nomatch'"
+            MXS_ERROR("Invalid regular expression '%s' for the 'nomatch'"
                       " parameter.", my_instance->nomatch);
             MXS_FREE(my_instance->nomatch);
             my_instance->nomatch = NULL;
@@ -715,7 +715,7 @@ static FILE* open_log_file(uint32_t data_flags, QLA_INSTANCE *instance, const ch
         {
             // Weird error, file opened but a write failed. Best to stop.
             fclose(fp);
-            MXS_ERROR("qlafilter: Failed to print header to file %s.", filename);
+            MXS_ERROR("Failed to print header to file %s.", filename);
             return NULL;
         }
     }

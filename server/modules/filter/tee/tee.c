@@ -254,7 +254,7 @@ orphan_free(void* data)
 #ifdef SS_DEBUG
     if (o_stopping + o_ready > 0)
     {
-        MXS_DEBUG("tee.c: %d orphans in "
+        MXS_DEBUG("%d orphans in "
                   "SESSION_STATE_STOPPING, %d orphans in "
                   "SESSION_STATE_ROUTER_READY. ", o_stopping, o_ready);
     }
@@ -278,7 +278,7 @@ orphan_free(void* data)
     }
 
 #ifdef SS_DEBUG
-    MXS_DEBUG("tee.c: %d orphans freed.", o_freed);
+    MXS_DEBUG("%d orphans freed.", o_freed);
 #endif
 }
 
@@ -379,7 +379,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->match && regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            MXS_ERROR("tee: Invalid regular expression '%s' for the match parameter.",
+            MXS_ERROR("Invalid regular expression '%s' for the match parameter.",
                       my_instance->match);
             MXS_FREE(my_instance->match);
             MXS_FREE(my_instance->nomatch);
@@ -391,7 +391,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (my_instance->nomatch && regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
-            MXS_ERROR("tee: Invalid regular expression '%s' for the nomatch paramter.",
+            MXS_ERROR("Invalid regular expression '%s' for the nomatch paramter.",
                       my_instance->nomatch);
             if (my_instance->match)
             {
@@ -927,7 +927,7 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
     {
         case 0x1b:
             my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
-            MXS_INFO("tee: client %s multistatements",
+            MXS_INFO("client %s multistatements",
                      my_session->client_multistatement ? "enabled" : "disabled");
         case 0x03:
         case 0x16:

@@ -213,7 +213,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         if (my_instance->match &&
             regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            MXS_ERROR("topfilter: Invalid regular expression '%s'"
+            MXS_ERROR("Invalid regular expression '%s'"
                       " for the 'match' parameter.",
                       my_instance->match);
             regfree(&my_instance->re);
@@ -224,7 +224,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         if (my_instance->exclude &&
             regcomp(&my_instance->exre, my_instance->exclude, cflags))
         {
-            MXS_ERROR("topfilter: Invalid regular expression '%s'"
+            MXS_ERROR("Invalid regular expression '%s'"
                       " for the 'nomatch' parameter.\n",
                       my_instance->exclude);
             regfree(&my_instance->exre);

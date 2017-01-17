@@ -367,7 +367,7 @@ execute(ROUTER *rinstance, void *router_session, GWBUF *queue)
             case COM_QUIT:
                 break;
             default:
-                MXS_ERROR("maxinfo: Unexpected MySQL command 0x%x",
+                MXS_ERROR("Unexpected MySQL command 0x%x",
                           MYSQL_COMMAND(queue));
                 break;
         }
@@ -603,7 +603,7 @@ maxinfo_execute_query(INFO_INSTANCE *instance, INFO_SESSION *session, char *sql)
     MAXINFO_TREE    *tree;
     PARSE_ERROR err;
 
-    MXS_INFO("maxinfo: SQL statement: '%s' for 0x%p.",
+    MXS_INFO("SQL statement: '%s' for 0x%p.",
              sql, session->dcb);
     if (strcmp(sql, "select @@version_comment limit 1") == 0)
     {

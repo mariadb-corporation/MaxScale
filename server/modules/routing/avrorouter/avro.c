@@ -481,13 +481,13 @@ createInstance(SERVICE *service, char **options)
                 }
                 else
                 {
-                    MXS_WARNING("[avrorouter] Unknown router option: '%s'", options[i]);
+                    MXS_WARNING("Unknown router option: '%s'", options[i]);
                     err = true;
                 }
             }
             else
             {
-                MXS_WARNING("[avrorouter] Unknown router option: '%s'", options[i]);
+                MXS_WARNING("Unknown router option: '%s'", options[i]);
                 err = true;
             }
         }
@@ -602,7 +602,7 @@ createInstance(SERVICE *service, char **options)
     /* Start the scan, read, convert AVRO task */
     conversion_task_ctl(inst, true);
 
-    MXS_INFO("AVRO: current MySQL binlog file is %s, pos is %lu\n",
+    MXS_INFO("current MySQL binlog file is %s, pos is %lu\n",
              inst->binlog_name, inst->current_pos);
 
     return (ROUTER *) inst;
@@ -625,7 +625,7 @@ newSession(ROUTER *instance, SESSION *session)
     AVRO_INSTANCE *inst = (AVRO_INSTANCE *) instance;
     AVRO_CLIENT *client;
 
-    MXS_DEBUG("avrorouter: %lu [newSession] new router session with "
+    MXS_DEBUG("%lu [newSession] new router session with "
               "session %p, and inst %p.", pthread_self(), session, inst);
 
     if ((client = (AVRO_CLIENT *) MXS_CALLOC(1, sizeof(AVRO_CLIENT))) == NULL)

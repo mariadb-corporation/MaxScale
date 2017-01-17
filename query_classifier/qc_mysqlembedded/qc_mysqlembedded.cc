@@ -2649,7 +2649,7 @@ int32_t qc_mysql_setup(const char* args)
 {
     if (args)
     {
-        MXS_WARNING("qc_mysqlembedded: '%s' provided as arguments, "
+        MXS_WARNING("'%s' provided as arguments, "
                     "even though no arguments are supported.", args);
     }
 

@@ -442,7 +442,7 @@ newSession(ROUTER *instance, SESSION *session)
 
     CHK_CLIENT_RSES(client_rses);
 
-    MXS_INFO("Readconnroute: New session for server %s. Connections : %d",
+    MXS_INFO("New session for server %s. Connections : %d",
              candidate->server->unique_name, candidate->connections);
 
     return(void *) client_rses;

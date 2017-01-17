@@ -574,7 +574,7 @@ monitorMain(void *arg)
                     !(ptr->pending_status & SERVER_MASTER))
                 {
                     /* in this case server->status will not be updated from pending_status */
-                    MXS_NOTICE("[mysql_mon]: root server [%s:%i] is no longer Master, let's "
+                    MXS_NOTICE("root server [%s:%i] is no longer Master, let's "
                                "use it again even if it could be a stale master, you have "
                                "been warned!", ptr->server->name, ptr->server->port);
                     /* Set the STALE bit for this server in server struct */

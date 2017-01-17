@@ -188,7 +188,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
                 }
                 else
                 {
-                    MXS_ERROR("ccrfilter: unsupported option '%s'.", options[i]);
+                    MXS_ERROR("unsupported option '%s'.", options[i]);
                 }
             }
         }
@@ -199,7 +199,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             if (regcomp(&my_instance->re, my_instance->match, cflags))
             {
-                MXS_ERROR("ccrfilter: Failed to compile regex '%s'.", my_instance->match);
+                MXS_ERROR("Failed to compile regex '%s'.", my_instance->match);
             }
         }
 
@@ -209,7 +209,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
             {
-                MXS_ERROR("ccrfilter: Failed to compile regex '%s'.", my_instance->nomatch);
+                MXS_ERROR("Failed to compile regex '%s'.", my_instance->nomatch);
             }
         }
     }

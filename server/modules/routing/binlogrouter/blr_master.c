@@ -171,7 +171,7 @@ blr_start_master(void* data)
     spinlock_release(&router->lock);
     if ((client = dcb_alloc(DCB_ROLE_INTERNAL, NULL)) == NULL)
     {
-        MXS_ERROR("Binlog router: failed to create DCB for dummy client");
+        MXS_ERROR("failed to create DCB for dummy client");
         return;
     }
     router->client = client;
@@ -179,7 +179,7 @@ blr_start_master(void* data)
     client->data = CreateMySQLAuthData(router->user, router->password, "");
     if ((router->session = session_alloc(router->service, client)) == NULL)
     {
-        MXS_ERROR("Binlog router: failed to create session for connection to master");
+        MXS_ERROR("failed to create session for connection to master");
         return;
     }
     client->session = router->session;
@@ -198,7 +198,7 @@ blr_start_master(void* data)
         {
             router->retry_backoff = BLR_MAX_BACKOFF;
         }
-        MXS_ERROR("Binlog router: failed to connect to master server '%s'",
+        MXS_ERROR("failed to connect to master server '%s'",
                   router->service->dbref->server->unique_name);
         return;
     }

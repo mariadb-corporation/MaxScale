@@ -962,7 +962,7 @@ struct parser_stack
  */
 void dbfw_yyerror(void* scanner, const char* error)
 {
-    MXS_ERROR("dbfwfilter: Error on line %d, %s: %s\n", dbfw_yyget_lineno(scanner),
+    MXS_ERROR("Error on line %d, %s: %s\n", dbfw_yyget_lineno(scanner),
               error, dbfw_yyget_text(scanner));
 }
 
@@ -1332,7 +1332,7 @@ bool define_regex_rule(void* scanner, char* pattern)
     {
         PCRE2_UCHAR errbuf[MXS_STRERROR_BUFLEN];
         pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-        MXS_ERROR("dbfwfilter: Invalid regular expression '%s': %s",
+        MXS_ERROR("Invalid regular expression '%s': %s",
                   start, errbuf);
     }
 
@@ -1792,7 +1792,7 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
     char *msg = NULL;
 
     char format[] =
-        "dbfwfilter: Query could not be %s and will hence be rejected. "
+        "Query could not be %s and will hence be rejected. "
         "Please ensure that the SQL syntax is correct";
     size_t len = sizeof(format) + strlen(reason); // sizeof includes the trailing NULL as well.
     char message[len];
@@ -1846,7 +1846,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
             *msg = MXS_STRDUP_A(emsg);
             matches = true;
 
-            MXS_INFO("dbfwfilter: rule '%s': user denied for %f seconds",
+            MXS_INFO("rule '%s': user denied for %f seconds",
                      rulebook->rule->name, blocked_for);
         }
         else
@@ -1859,7 +1859,7 @@ bool match_throttle(FW_SESSION* my_session, RULE_BOOK *rulebook, char **msg)
     {
         if (queryspeed->count >= queryspeed->limit)
         {
-            MXS_INFO("dbfwfilter: rule '%s': query limit triggered (%d queries in %d seconds), "
+            MXS_INFO("rule '%s': query limit triggered (%d queries in %d seconds), "
                      "denying queries from user for %d seconds.", rulebook->rule->name,
                      queryspeed->limit, queryspeed->period, queryspeed->cooldown);
 
@@ -1897,7 +1897,7 @@ void match_regex(RULE_BOOK *rulebook, const char *query, bool *matches, char **m
                         (PCRE2_SPTR)query, PCRE2_ZERO_TERMINATED,
                         0, 0, mdata, NULL) > 0)
         {
-            MXS_NOTICE("dbfwfilter: rule '%s': regex matched on query", rulebook->rule->name);
+            MXS_NOTICE("rule '%s': regex matched on query", rulebook->rule->name);
             *matches = true;
             *msg = MXS_STRDUP_A("Permission denied, query matched regular expression.");
         }
@@ -1928,7 +1928,7 @@ void match_column(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg)
             {
                 char emsg[strlen(strln->value) + 100];
                 sprintf(emsg, "Permission denied to column '%s'.", strln->value);
-                MXS_NOTICE("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                MXS_NOTICE("rule '%s': query targets forbidden column: %s",
                            rulebook->rule->name, strln->value);
                 *msg = MXS_STRDUP_A(emsg);
                 *matches = true;
@@ -1956,7 +1956,7 @@ void match_function(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg
             {
                 char emsg[strlen(strln->value) + 100];
                 sprintf(emsg, "Permission denied to function '%s'.", strln->value);
-                MXS_NOTICE("dbfwfilter: rule '%s': query uses forbidden function: %s",
+                MXS_NOTICE("rule '%s': query uses forbidden function: %s",
                            rulebook->rule->name, strln->value);
                 *msg = MXS_STRDUP_A(emsg);
                 *matches = true;
@@ -1977,7 +1977,7 @@ void match_wildcard(RULE_BOOK *rulebook, GWBUF *queue, bool *matches, char **msg
     {
         if (strcmp(infos[i].column, "*") == 0)
         {
-            MXS_NOTICE("dbfwfilter: rule '%s': query contains a wildcard.", rulebook->rule->name);
+            MXS_NOTICE("rule '%s': query contains a wildcard.", rulebook->rule->name);
             *matches = true;
             *msg = MXS_STRDUP_A("Usage of wildcard denied.");
         }
@@ -2063,7 +2063,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             case RT_PERMISSION:
                 matches = true;
                 msg = MXS_STRDUP_A("Permission denied at this time.");
-                MXS_NOTICE("dbfwfilter: rule '%s': query denied at this time.", rulebook->rule->name);
+                MXS_NOTICE("rule '%s': query denied at this time.", rulebook->rule->name);
                 break;
 
             case RT_COLUMN:
@@ -2096,7 +2096,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 {
                     matches = true;
                     msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
-                    MXS_NOTICE("dbfwfilter: rule '%s': query has no where/having "
+                    MXS_NOTICE("rule '%s': query has no where/having "
                                "clause, query is denied.", rulebook->rule->name);
                 }
                 break;

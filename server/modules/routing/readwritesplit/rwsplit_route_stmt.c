@@ -1000,9 +1000,7 @@ bool handle_hinted_target(ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
              * backend server.
              */
             named_server = hint->data;
-            MXS_INFO("Hint: route to server "
-                 "'%s'",
-                 named_server);
+            MXS_INFO("Hint: route to server '%s'", named_server);
         }
         else if (hint->type == HINT_PARAMETER &&
              (strncasecmp((char *)hint->data, "max_slave_replication_lag",

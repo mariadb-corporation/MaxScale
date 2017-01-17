@@ -198,7 +198,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
             {
-                MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
+                MXS_ERROR("Failed to open file '%s'.", logfile);
                 free_instance(my_instance);
                 return NULL;
             }
@@ -220,7 +220,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         {
             char errbuffer[1024];
             pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
-            MXS_ERROR("regexfilter: Compiling regular expression '%s' failed at %lu: %s",
+            MXS_ERROR("Compiling regular expression '%s' failed at %lu: %s",
                       my_instance->match, erroffset, errbuffer);
             free_instance(my_instance);
             return NULL;
@@ -229,7 +229,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         if ((my_instance->match_data =
                  pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
         {
-            MXS_ERROR("regexfilter: Failure to create PCRE2 matching data. "
+            MXS_ERROR("Failure to create PCRE2 matching data. "
                       "This is most likely caused by a lack of available memory.");
             free_instance(my_instance);
             return NULL;

@@ -1442,7 +1442,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
     if (handle->master == NULL)
     {
-        MXS_ERROR("[mysql_mon]: set_master_heartbeat called without an available Master server");
+        MXS_ERROR("set_master_heartbeat called without an available Master server");
         return;
     }
 
@@ -1450,7 +1450,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
     if (mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
                     "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
     {
-        MXS_ERROR( "[mysql_mon]: Error checking for replication_heartbeat in Master server"
+        MXS_ERROR( "Error checking for replication_heartbeat in Master server"
                    ": %s", mysql_error(database->con));
         database->server->rlag = -1;
     }
@@ -1478,7 +1478,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
                         "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
                         "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
         {
-            MXS_ERROR("[mysql_mon]: Error creating maxscale_schema.replication_heartbeat "
+            MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
                       "table in Master server: %s", mysql_error(database->con));
 
             database->server->rlag = -1;
@@ -1493,7 +1493,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
     if (mysql_query(database->con, heartbeat_purge_query))
     {
-        MXS_ERROR("[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat "
+        MXS_ERROR("Error deleting from maxscale_schema.replication_heartbeat "
                   "table: [%s], %s",
                   heartbeat_purge_query,
                   mysql_error(database->con));
@@ -1514,7 +1514,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
         database->server->rlag = -1;
 
-        MXS_ERROR("[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
+        MXS_ERROR("Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
                   heartbeat_insert_query,
                   mysql_error(database->con));
     }
@@ -1532,7 +1532,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
                 database->server->rlag = -1;
 
-                MXS_ERROR("[mysql_mon]: Error inserting into "
+                MXS_ERROR("Error inserting into "
                           "maxscale_schema.replication_heartbeat table: [%s], %s",
                           heartbeat_insert_query,
                           mysql_error(database->con));
@@ -1542,7 +1542,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
                 /* Set replication lag to 0 for the master */
                 database->server->rlag = 0;
 
-                MXS_DEBUG("[mysql_mon]: heartbeat table inserted data for %s:%i",
+                MXS_DEBUG("heartbeat table inserted data for %s:%i",
                           database->server->name, database->server->port);
             }
         }
@@ -1551,7 +1551,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
             /* Set replication lag as 0 for the master */
             database->server->rlag = 0;
 
-            MXS_DEBUG("[mysql_mon]: heartbeat table updated for Master %s:%i",
+            MXS_DEBUG("heartbeat table updated for Master %s:%i",
                       database->server->name, database->server->port);
         }
     }
@@ -1576,7 +1576,7 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
 
     if (handle->master == NULL)
     {
-        MXS_ERROR("[mysql_mon]: set_slave_heartbeat called without an available Master server");
+        MXS_ERROR("set_slave_heartbeat called without an available Master server");
         return;
     }
 
@@ -1648,14 +1648,14 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
 
         if (handle->master->server->node_id < 0)
         {
-            MXS_ERROR("[mysql_mon]: error: replication heartbeat: "
+            MXS_ERROR("error: replication heartbeat: "
                       "master_server_id NOT available for %s:%i",
                       database->server->name,
                       database->server->port);
         }
         else
         {
-            MXS_ERROR("[mysql_mon]: error: replication heartbeat: "
+            MXS_ERROR("error: replication heartbeat: "
                       "failed selecting from hearthbeat table of %s:%i : [%s], %s",
                       database->server->name,
                       database->server->port,

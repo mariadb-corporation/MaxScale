@@ -1255,7 +1255,7 @@ get_users(SERV_LISTENER *listener, USERS *users)
     if (server != NULL &&
         (mxs_mysql_real_connect(con, server->server, service_user, dpwd) != NULL))
     {
-        MXS_DEBUG("Dbusers : Loading data from backend database with "
+        MXS_DEBUG("Loading data from backend database with "
                   "Master role [%s:%i] for service [%s]",
                   server->server->name,
                   server->server->port,

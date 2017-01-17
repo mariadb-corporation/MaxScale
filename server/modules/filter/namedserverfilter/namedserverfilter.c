@@ -165,7 +165,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (regcomp(&my_instance->re, my_instance->match, cflags))
         {
-            MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.", my_instance->match);
+            MXS_ERROR("Invalid regular expression '%s'.", my_instance->match);
             MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
