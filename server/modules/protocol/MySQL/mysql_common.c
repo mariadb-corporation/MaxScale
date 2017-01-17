@@ -166,22 +166,22 @@ const char* gw_mysql_protocol_state2string (int state)
 {
     switch (state)
     {
-        case MXS_AUTH_STATE_INIT:
-            return "Authentication initialized";
-        case MXS_AUTH_STATE_PENDING_CONNECT:
-            return "Network connection pending";
-        case MXS_AUTH_STATE_CONNECTED:
-            return "Network connection created";
-        case MXS_AUTH_STATE_MESSAGE_READ:
-            return "Read server handshake";
-        case MXS_AUTH_STATE_RESPONSE_SENT:
-            return "Response to handshake sent";
-        case MXS_AUTH_STATE_FAILED:
-            return "Authentication failed";
-        case MXS_AUTH_STATE_COMPLETE:
-            return "Authentication is complete.";
-        default:
-            return "MySQL (unknown protocol state)";
+    case MXS_AUTH_STATE_INIT:
+        return "Authentication initialized";
+    case MXS_AUTH_STATE_PENDING_CONNECT:
+        return "Network connection pending";
+    case MXS_AUTH_STATE_CONNECTED:
+        return "Network connection created";
+    case MXS_AUTH_STATE_MESSAGE_READ:
+        return "Read server handshake";
+    case MXS_AUTH_STATE_RESPONSE_SENT:
+        return "Response to handshake sent";
+    case MXS_AUTH_STATE_FAILED:
+        return "Authentication failed";
+    case MXS_AUTH_STATE_COMPLETE:
+        return "Authentication is complete.";
+    default:
+        return "MySQL (unknown protocol state)";
     }
 }
 
@@ -841,27 +841,27 @@ void init_response_status(GWBUF*             buf,
     {
         switch (cmd)
         {
-            case MYSQL_COM_STMT_PREPARE:
-                gwbuf_copy_data(buf, 9, 2, readbuf);
-                nparam = gw_mysql_get_byte2(readbuf);
-                gwbuf_copy_data(buf, 11, 2, readbuf);
-                nattr = gw_mysql_get_byte2(readbuf);
-                *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
-                break;
+        case MYSQL_COM_STMT_PREPARE:
+            gwbuf_copy_data(buf, 9, 2, readbuf);
+            nparam = gw_mysql_get_byte2(readbuf);
+            gwbuf_copy_data(buf, 11, 2, readbuf);
+            nattr = gw_mysql_get_byte2(readbuf);
+            *npackets = 1 + nparam + MXS_MIN(1, nparam) + nattr + MXS_MIN(nattr, 1);
+            break;
 
-            case MYSQL_COM_QUIT:
-            case MYSQL_COM_STMT_SEND_LONG_DATA:
-            case MYSQL_COM_STMT_CLOSE:
-                *npackets = 0; /*< these don't reply anything */
-                break;
+        case MYSQL_COM_QUIT:
+        case MYSQL_COM_STMT_SEND_LONG_DATA:
+        case MYSQL_COM_STMT_CLOSE:
+            *npackets = 0; /*< these don't reply anything */
+            break;
 
-            default:
-                /**
-                 * assume that other session commands respond
-                 * OK or ERR
-                 */
-                *npackets = 1;
-                break;
+        default:
+            /**
+             * assume that other session commands respond
+             * OK or ERR
+             */
+            *npackets = 1;
+            break;
         }
     }
 
@@ -1570,18 +1570,18 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
         switch (cmd)
         {
 
-            case MYSQL_REPLY_OK:
-            case MYSQL_REPLY_ERR:
-            case MYSQL_REPLY_LOCAL_INFILE:
-            case MYSQL_REPLY_EOF:
-                /** Not a result set */
-                break;
-            default:
-                if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 1, &cmd) && cmd > 1)
-                {
-                    rval = true;
-                }
-                break;
+        case MYSQL_REPLY_OK:
+        case MYSQL_REPLY_ERR:
+        case MYSQL_REPLY_LOCAL_INFILE:
+        case MYSQL_REPLY_EOF:
+            /** Not a result set */
+            break;
+        default:
+            if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 1, &cmd) && cmd > 1)
+            {
+                rval = true;
+            }
+            break;
         }
     }
 

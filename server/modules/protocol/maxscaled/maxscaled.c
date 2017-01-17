@@ -424,7 +424,7 @@ static int maxscaled_listen(DCB *listener, char *config)
     /* check for default UNIX socket */
     if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)
     {
-       socket_path = MAXADMIN_DEFAULT_SOCKET;
+        socket_path = MAXADMIN_DEFAULT_SOCKET;
     }
     else
     {

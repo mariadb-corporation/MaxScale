@@ -30,19 +30,58 @@
 #include <maxscale/buffer.h>
 #include <maxscale/protocol.h>
 
-static int test_read(DCB* dcb){ return 1;}
-static int test_write(DCB *dcb, GWBUF* buf){ return 1;}
-static int test_write_ready(DCB *dcb){ return 1;}
-static int test_error(DCB *dcb){ return 1;}
-static int test_hangup(DCB *dcb){ return 1;}
-static int test_accept(DCB *dcb){ return 1;}
-static int test_connect(struct dcb *dcb, struct server *srv, struct session *ses){ return 1;}
-static int test_close(DCB *dcb){ return 1;}
-static int test_listen(DCB *dcb, char *config){ return 1;}
-static int test_auth(DCB* dcb, struct server *srv, struct session *ses, GWBUF *buf){ return 1;}
-static int test_session(DCB *dcb, void* data){ return 1;}
-static char *test_default_auth(){return "NullAuthAllow";}
-static int test_connection_limit(DCB *dcb, int limit){return 0;}
+static int test_read(DCB* dcb)
+{
+    return 1;
+}
+static int test_write(DCB *dcb, GWBUF* buf)
+{
+    return 1;
+}
+static int test_write_ready(DCB *dcb)
+{
+    return 1;
+}
+static int test_error(DCB *dcb)
+{
+    return 1;
+}
+static int test_hangup(DCB *dcb)
+{
+    return 1;
+}
+static int test_accept(DCB *dcb)
+{
+    return 1;
+}
+static int test_connect(struct dcb *dcb, struct server *srv, struct session *ses)
+{
+    return 1;
+}
+static int test_close(DCB *dcb)
+{
+    return 1;
+}
+static int test_listen(DCB *dcb, char *config)
+{
+    return 1;
+}
+static int test_auth(DCB* dcb, struct server *srv, struct session *ses, GWBUF *buf)
+{
+    return 1;
+}
+static int test_session(DCB *dcb, void* data)
+{
+    return 1;
+}
+static char *test_default_auth()
+{
+    return "NullAuthAllow";
+}
+static int test_connection_limit(DCB *dcb, int limit)
+{
+    return 0;
+}
 
 /**
  * The module entry point routine. It is this routine that

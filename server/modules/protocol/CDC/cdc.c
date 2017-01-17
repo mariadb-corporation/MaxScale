@@ -127,88 +127,88 @@ cdc_read_event(DCB* dcb)
     {
         switch (protocol->state)
         {
-            case CDC_STATE_WAIT_FOR_AUTH:
-                if (CDC_STATE_AUTH_OK == (
-                        /* Fill CDC_session from incoming packet */
-                        auth_val = dcb->authfunc.extract(dcb, head)))
+        case CDC_STATE_WAIT_FOR_AUTH:
+            if (CDC_STATE_AUTH_OK == (
+                    /* Fill CDC_session from incoming packet */
+                    auth_val = dcb->authfunc.extract(dcb, head)))
+            {
+                /* Call protocol authentication */
+                auth_val = dcb->authfunc.authenticate(dcb);
+            }
+
+            /* Discard input buffer */
+            gwbuf_free(head);
+
+            if (auth_val == CDC_STATE_AUTH_OK)
+            {
+                /* start a real session */
+                session = session_alloc(dcb->service, dcb);
+
+                if (session != NULL)
                 {
-                    /* Call protocol authentication */
-                    auth_val = dcb->authfunc.authenticate(dcb);
-                }
+                    protocol->state = CDC_STATE_HANDLE_REQUEST;
 
-                /* Discard input buffer */
-                gwbuf_free(head);
+                    write_auth_ack(dcb);
 
-                if (auth_val == CDC_STATE_AUTH_OK)
-                {
-                    /* start a real session */
-                    session = session_alloc(dcb->service, dcb);
-
-                    if (session != NULL)
-                    {
-                        protocol->state = CDC_STATE_HANDLE_REQUEST;
-
-                        write_auth_ack(dcb);
-
-                        MXS_INFO("%s: Client [%s] authenticated with user [%s]",
-                                 dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
-                                 client_data->user);
-                    }
-                    else
-                    {
-                        auth_val = CDC_STATE_AUTH_NO_SESSION;
-                    }
-                }
-
-                if (auth_val != CDC_STATE_AUTH_OK)
-                {
-                    protocol->state = CDC_STATE_AUTH_ERR;
-
-                    write_auth_err(dcb);
-                    MXS_ERROR("%s: authentication failure from [%s], user [%s]",
-                              dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
-                              client_data->user);
-
-                    /* force the client connection close */
-                    dcb_close(dcb);
-
-                }
-                break;
-
-            case CDC_STATE_HANDLE_REQUEST:
-                // handle CLOSE command, it shoudl be routed as well and client connection closed after last transmission
-                if (strncmp((char*)GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
-                {
-                    MXS_INFO("%s: Client [%s] has requested CLOSE action",
-                             dcb->service->name, dcb->remote != NULL ? dcb->remote : "");
-
-                    // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                    // the router will close the client connection
-                    //rc = SESSION_ROUTE_QUERY(session, head);
-
-                    // buffer not handled by router right now, consume it
-                    gwbuf_free(head);
-
-                    /* right now, just force the client connection close */
-                    dcb_close(dcb);
+                    MXS_INFO("%s: Client [%s] authenticated with user [%s]",
+                             dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
+                             client_data->user);
                 }
                 else
                 {
-                    MXS_INFO("%s: Client [%s] requested [%.*s] action",
-                             dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
-                             (int)GWBUF_LENGTH(head), (char*)GWBUF_DATA(head));
-
-                    // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                    rc = SESSION_ROUTE_QUERY(session, head);
+                    auth_val = CDC_STATE_AUTH_NO_SESSION;
                 }
-                break;
+            }
 
-            default:
-                MXS_INFO("%s: Client [%s] in unknown state %d", dcb->service->name,
-                         dcb->remote != NULL ? dcb->remote : "", protocol->state);
+            if (auth_val != CDC_STATE_AUTH_OK)
+            {
+                protocol->state = CDC_STATE_AUTH_ERR;
+
+                write_auth_err(dcb);
+                MXS_ERROR("%s: authentication failure from [%s], user [%s]",
+                          dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
+                          client_data->user);
+
+                /* force the client connection close */
+                dcb_close(dcb);
+
+            }
+            break;
+
+        case CDC_STATE_HANDLE_REQUEST:
+            // handle CLOSE command, it shoudl be routed as well and client connection closed after last transmission
+            if (strncmp((char*)GWBUF_DATA(head), "CLOSE", GWBUF_LENGTH(head)) == 0)
+            {
+                MXS_INFO("%s: Client [%s] has requested CLOSE action",
+                         dcb->service->name, dcb->remote != NULL ? dcb->remote : "");
+
+                // gwbuf_set_type(head, GWBUF_TYPE_CDC);
+                // the router will close the client connection
+                //rc = SESSION_ROUTE_QUERY(session, head);
+
+                // buffer not handled by router right now, consume it
                 gwbuf_free(head);
 
-                break;
+                /* right now, just force the client connection close */
+                dcb_close(dcb);
+            }
+            else
+            {
+                MXS_INFO("%s: Client [%s] requested [%.*s] action",
+                         dcb->service->name, dcb->remote != NULL ? dcb->remote : "",
+                         (int)GWBUF_LENGTH(head), (char*)GWBUF_DATA(head));
+
+                // gwbuf_set_type(head, GWBUF_TYPE_CDC);
+                rc = SESSION_ROUTE_QUERY(session, head);
+            }
+            break;
+
+        default:
+            MXS_INFO("%s: Client [%s] in unknown state %d", dcb->service->name,
+                     dcb->remote != NULL ? dcb->remote : "", protocol->state);
+            gwbuf_free(head);
+
+            break;
         }
     }
 

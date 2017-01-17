@@ -211,48 +211,48 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     /*< Set protocol state */
     switch (rv)
     {
-        case 0:
-            ss_dassert(fd > 0);
-            protocol->fd = fd;
-            protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-            MXS_DEBUG("%lu [gw_create_backend_connection] Established "
-                      "connection to %s:%i, protocol fd %d client "
-                      "fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+    case 0:
+        ss_dassert(fd > 0);
+        protocol->fd = fd;
+        protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+        MXS_DEBUG("%lu [gw_create_backend_connection] Established "
+                  "connection to %s:%i, protocol fd %d client "
+                  "fd %d.",
+                  pthread_self(),
+                  server->name,
+                  server->port,
+                  protocol->fd,
+                  session->client_dcb->fd);
+        break;
 
-        case 1:
-            /* The state MYSQL_PENDING_CONNECT is likely to be transitory,    */
-            /* as it means the calls have been successful but the connection  */
-            /* has not yet completed and the calls are non-blocking.          */
-            ss_dassert(fd > 0);
-            protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
-            protocol->fd = fd;
-            MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
-                      "pending to %s:%i, protocol fd %d client fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+    case 1:
+        /* The state MYSQL_PENDING_CONNECT is likely to be transitory,    */
+        /* as it means the calls have been successful but the connection  */
+        /* has not yet completed and the calls are non-blocking.          */
+        ss_dassert(fd > 0);
+        protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
+        protocol->fd = fd;
+        MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
+                  "pending to %s:%i, protocol fd %d client fd %d.",
+                  pthread_self(),
+                  server->name,
+                  server->port,
+                  protocol->fd,
+                  session->client_dcb->fd);
+        break;
 
-        default:
-            /* Failure - the state reverts to its initial value */
-            ss_dassert(fd == -1);
-            ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
-            MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
-                      "failed to %s:%i, protocol fd %d client fd %d.",
-                      pthread_self(),
-                      server->name,
-                      server->port,
-                      protocol->fd,
-                      session->client_dcb->fd);
-            break;
+    default:
+        /* Failure - the state reverts to its initial value */
+        ss_dassert(fd == -1);
+        ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
+        MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
+                  "failed to %s:%i, protocol fd %d client fd %d.",
+                  pthread_self(),
+                  server->name,
+                  server->port,
+                  protocol->fd,
+                  session->client_dcb->fd);
+        break;
     } /*< switch */
 
 return_fd:
@@ -454,16 +454,16 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
     {
         switch (dcb->authfunc.authenticate(dcb))
         {
-            case MXS_AUTH_INCOMPLETE:
-            case MXS_AUTH_SSL_INCOMPLETE:
-                rval = MXS_AUTH_STATE_RESPONSE_SENT;
-                break;
+        case MXS_AUTH_INCOMPLETE:
+        case MXS_AUTH_SSL_INCOMPLETE:
+            rval = MXS_AUTH_STATE_RESPONSE_SENT;
+            break;
 
-            case MXS_AUTH_SUCCEEDED:
-                rval = MXS_AUTH_STATE_COMPLETE;
+        case MXS_AUTH_SUCCEEDED:
+            rval = MXS_AUTH_STATE_COMPLETE;
 
-            default:
-                break;
+        default:
+            break;
         }
     }
 
@@ -691,7 +691,7 @@ static inline bool session_ok_to_route(DCB *dcb)
 static inline bool expecting_resultset(MySQLProtocol *proto)
 {
     return proto->current_command == MYSQL_COM_QUERY ||
-        proto->current_command == MYSQL_COM_STMT_FETCH;
+           proto->current_command == MYSQL_COM_STMT_FETCH;
 }
 
 /**
@@ -1011,24 +1011,24 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
      */
     switch (backend_protocol->protocol_auth_state)
     {
-        case MXS_AUTH_STATE_HANDSHAKE_FAILED:
-        case MXS_AUTH_STATE_FAILED:
-            if (dcb->session->state != SESSION_STATE_STOPPING)
-            {
-                MXS_ERROR("Unable to write to backend '%s' due to "
-                          "%s failure. Server in state %s.",
-                          dcb->server->unique_name,
-                          backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
-                          "handshake" : "authentication",
-                          STRSRVSTATUS(dcb->server));
-            }
+    case MXS_AUTH_STATE_HANDSHAKE_FAILED:
+    case MXS_AUTH_STATE_FAILED:
+        if (dcb->session->state != SESSION_STATE_STOPPING)
+        {
+            MXS_ERROR("Unable to write to backend '%s' due to "
+                      "%s failure. Server in state %s.",
+                      dcb->server->unique_name,
+                      backend_protocol->protocol_auth_state == MXS_AUTH_STATE_HANDSHAKE_FAILED ?
+                      "handshake" : "authentication",
+                      STRSRVSTATUS(dcb->server));
+        }
 
-            gwbuf_free(queue);
-            rc = 0;
+        gwbuf_free(queue);
+        rc = 0;
 
-            break;
+        break;
 
-        case MXS_AUTH_STATE_COMPLETE:
+    case MXS_AUTH_STATE_COMPLETE:
         {
             uint8_t* ptr = GWBUF_DATA(queue);
             mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
@@ -1076,7 +1076,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         }
         break;
 
-        default:
+    default:
         {
             MXS_DEBUG("%lu [gw_MySQLWrite_backend] delayed write to "
                       "dcb %p fd %d protocol state %s.",

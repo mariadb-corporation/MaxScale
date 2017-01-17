@@ -462,22 +462,22 @@ int gw_read_client_event(DCB* dcb)
 
     switch (protocol->protocol_auth_state)
     {
-        /**
-         *
-         * When a listener receives a new connection request, it creates a
-         * request handler DCB to for the client connection. The listener also
-         * sends the initial authentication request to the client. The first
-         * time this function is called from the poll loop, the client reply
-         * to the authentication request should be available.
-         *
-         * If the authentication is successful the protocol authentication state
-         * will be changed to MYSQL_IDLE (see below).
-         *
-         */
+    /**
+     *
+     * When a listener receives a new connection request, it creates a
+     * request handler DCB to for the client connection. The listener also
+     * sends the initial authentication request to the client. The first
+     * time this function is called from the poll loop, the client reply
+     * to the authentication request should be available.
+     *
+     * If the authentication is successful the protocol authentication state
+     * will be changed to MYSQL_IDLE (see below).
+     *
+     */
     case MXS_AUTH_STATE_MESSAGE_READ:
         /* After this call read_buffer will point to freed data */
         if (nbytes_read < 3 || (0 == max_bytes && nbytes_read <
-            (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
+                                (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4)) ||
             (0 != max_bytes && nbytes_read < max_bytes))
         {
 
@@ -488,26 +488,26 @@ int gw_read_client_event(DCB* dcb)
         return_code = gw_read_do_authentication(dcb, read_buffer, nbytes_read);
         break;
 
-        /**
-         *
-         * Once a client connection is authenticated, the protocol authentication
-         * state will be MYSQL_IDLE and so every event of data received will
-         * result in a call that comes to this section of code.
-         *
-         */
-        case MXS_AUTH_STATE_COMPLETE:
-            /* After this call read_buffer will point to freed data */
-            return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
-            break;
+    /**
+     *
+     * Once a client connection is authenticated, the protocol authentication
+     * state will be MYSQL_IDLE and so every event of data received will
+     * result in a call that comes to this section of code.
+     *
+     */
+    case MXS_AUTH_STATE_COMPLETE:
+        /* After this call read_buffer will point to freed data */
+        return_code = gw_read_normal_data(dcb, read_buffer, nbytes_read);
+        break;
 
-        case MXS_AUTH_STATE_FAILED:
-            gwbuf_free(read_buffer);
-            return_code = 1;
-            break;
+    case MXS_AUTH_STATE_FAILED:
+        gwbuf_free(read_buffer);
+        return_code = 1;
+        break;
 
-        default:
-            MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
-            break;
+    default:
+        MXS_ERROR("In mysql_client.c unexpected protocol authentication state");
+        break;
     }
 
     return return_code;
@@ -527,7 +527,7 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 
     gwbuf_copy_data(buffer, 0, len, data);
     ss_dassert(MYSQL_GET_PAYLOAD_LEN(data) + MYSQL_HEADER_LEN == len ||
-        len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
+               len == MYSQL_AUTH_PACKET_BASE_SIZE); // For SSL request packet
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
@@ -1016,84 +1016,84 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
 
     switch (auth_val)
     {
-        case MXS_AUTH_NO_SESSION:
-            MXS_DEBUG("%lu [gw_read_client_event] session "
-                      "creation failed. fd %d, "
-                      "state = MYSQL_AUTH_NO_SESSION.",
-                      pthread_self(),
-                      dcb->fd);
+    case MXS_AUTH_NO_SESSION:
+        MXS_DEBUG("%lu [gw_read_client_event] session "
+                  "creation failed. fd %d, "
+                  "state = MYSQL_AUTH_NO_SESSION.",
+                  pthread_self(),
+                  dcb->fd);
 
-            /** Send ERR 1045 to client */
-            mysql_send_auth_error(dcb,
-                                  packet_number,
-                                  0,
-                                  "failed to create new session");
-            break;
-        case MXS_AUTH_FAILED_DB:
-            MXS_DEBUG("%lu [gw_read_client_event] database "
-                      "specified was not valid. fd %d, "
-                      "state = MYSQL_FAILED_AUTH_DB.",
-                      pthread_self(),
-                      dcb->fd);
-            /** Send error 1049 to client */
-            message_len = 25 + MYSQL_DATABASE_MAXLEN;
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb,
+                              packet_number,
+                              0,
+                              "failed to create new session");
+        break;
+    case MXS_AUTH_FAILED_DB:
+        MXS_DEBUG("%lu [gw_read_client_event] database "
+                  "specified was not valid. fd %d, "
+                  "state = MYSQL_FAILED_AUTH_DB.",
+                  pthread_self(),
+                  dcb->fd);
+        /** Send error 1049 to client */
+        message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
-            fail_str = MXS_CALLOC(1, message_len + 1);
-            MXS_ABORT_IF_NULL(fail_str);
-            snprintf(fail_str, message_len, "Unknown database '%s'",
-                     (char*)((MYSQL_session *)dcb->data)->db);
+        fail_str = MXS_CALLOC(1, message_len + 1);
+        MXS_ABORT_IF_NULL(fail_str);
+        snprintf(fail_str, message_len, "Unknown database '%s'",
+                 (char*)((MYSQL_session *)dcb->data)->db);
 
-            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
-            break;
-        case MXS_AUTH_FAILED_SSL:
-            MXS_DEBUG("%lu [gw_read_client_event] client is "
-                      "not SSL capable for SSL listener. fd %d, "
-                      "state = MYSQL_FAILED_AUTH_SSL.",
-                      pthread_self(),
-                      dcb->fd);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
+        break;
+    case MXS_AUTH_FAILED_SSL:
+        MXS_DEBUG("%lu [gw_read_client_event] client is "
+                  "not SSL capable for SSL listener. fd %d, "
+                  "state = MYSQL_FAILED_AUTH_SSL.",
+                  pthread_self(),
+                  dcb->fd);
 
-            /** Send ERR 1045 to client */
-            mysql_send_auth_error(dcb,
-                                  packet_number,
-                                  0,
-                                  "Access without SSL denied");
-            break;
-        case MXS_AUTH_SSL_INCOMPLETE:
-            MXS_DEBUG("%lu [gw_read_client_event] unable to "
-                      "complete SSL authentication. fd %d, "
-                      "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                      pthread_self(),
-                      dcb->fd);
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb,
+                              packet_number,
+                              0,
+                              "Access without SSL denied");
+        break;
+    case MXS_AUTH_SSL_INCOMPLETE:
+        MXS_DEBUG("%lu [gw_read_client_event] unable to "
+                  "complete SSL authentication. fd %d, "
+                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
+                  pthread_self(),
+                  dcb->fd);
 
-            /** Send ERR 1045 to client */
-            mysql_send_auth_error(dcb,
-                                  packet_number,
-                                  0,
-                                  "failed to complete SSL authentication");
-            break;
-        case MXS_AUTH_FAILED:
-            MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-                      "state = MYSQL_FAILED_AUTH.",
-                      pthread_self(),
-                      dcb->fd);
-            /** Send error 1045 to client */
-            fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-                                            dcb->remote,
-                                            (char*)((MYSQL_session *)dcb->data)->client_sha1,
-                                            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
-            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
-            break;
-        default:
-            MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-                      "state unrecognized.",
-                      pthread_self(),
-                      dcb->fd);
-            /** Send error 1045 to client */
-            fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-                                            dcb->remote,
-                                            (char*)((MYSQL_session *)dcb->data)->client_sha1,
-                                            (char*)((MYSQL_session *)dcb->data)->db, auth_val);
-            modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+        /** Send ERR 1045 to client */
+        mysql_send_auth_error(dcb,
+                              packet_number,
+                              0,
+                              "failed to complete SSL authentication");
+        break;
+    case MXS_AUTH_FAILED:
+        MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
+                  "state = MYSQL_FAILED_AUTH.",
+                  pthread_self(),
+                  dcb->fd);
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+                                        dcb->remote,
+                                        (char*)((MYSQL_session *)dcb->data)->client_sha1,
+                                        (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
+        break;
+    default:
+        MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
+                  "state unrecognized.",
+                  pthread_self(),
+                  dcb->fd);
+        /** Send error 1045 to client */
+        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+                                        dcb->remote,
+                                        (char*)((MYSQL_session *)dcb->data)->client_sha1,
+                                        (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+        modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
     MXS_FREE(fail_str);
 }
