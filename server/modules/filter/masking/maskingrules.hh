@@ -90,13 +90,34 @@ public:
 
         std::string match() const;
 
-        const std::string& column() const { return m_column; }
-        const std::string& table() const { return m_table; }
-        const std::string& database() const { return m_database; }
-        const std::string& value() const { return m_value; }
-        const std::string& fill() const { return m_fill; }
-        const std::vector<SAccount>& applies_to() const { return m_applies_to; }
-        const std::vector<SAccount>& exempted() const { return m_exempted; }
+        const std::string& column() const
+        {
+            return m_column;
+        }
+        const std::string& table() const
+        {
+            return m_table;
+        }
+        const std::string& database() const
+        {
+            return m_database;
+        }
+        const std::string& value() const
+        {
+            return m_value;
+        }
+        const std::string& fill() const
+        {
+            return m_fill;
+        }
+        const std::vector<SAccount>& applies_to() const
+        {
+            return m_applies_to;
+        }
+        const std::vector<SAccount>& exempted() const
+        {
+            return m_exempted;
+        }
 
         /**
          * Create a Rule instance

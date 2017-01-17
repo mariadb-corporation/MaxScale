@@ -96,15 +96,15 @@ static const char* token_get_keyword(
 {
     switch (token->token)
     {
-        case TOK_EOL:
-            return "End of line";
-            break;
+    case TOK_EOL:
+        return "End of line";
+        break;
 
-        case TOK_STRING:
-            return token->value;
-            break;
+    case TOK_STRING:
+        return token->value;
+        break;
 
-        default:
+    default:
         {
             int i = 0;
             while (i < TOK_EOL && keywords[i].token != token->token)
@@ -276,144 +276,144 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
     {
         switch (state)
         {
-            case HS_INIT:
-                switch (tok->token)
-                {
-                    case TOK_ROUTE:
-                        state = HS_ROUTE;
-                        break;
-                    case TOK_STRING:
-                        state = HS_NAME;
-                        lvalue = MXS_STRDUP_A(tok->value);
-                        break;
-                    case TOK_STOP:
-                        /* Action: pop active hint */
-                        hint_pop(session);
-                        state = HS_INIT;
-                        break;
-                    case TOK_START:
-                        hintname = NULL;
-                        mode = HM_START;
-                        state = HS_INIT;
-                        break;
-                    default:
-                        /* Error: expected hint, name or STOP */
-                        MXS_ERROR("Syntax error in hint. Expected "
-                                  "'route', 'stop' or hint name instead of "
-                                  "'%s'. Hint ignored.",
-                                  token_get_keyword(tok));
-                        token_free(tok);
-                        goto retblock;
-                }
+        case HS_INIT:
+            switch (tok->token)
+            {
+            case TOK_ROUTE:
+                state = HS_ROUTE;
                 break;
-            case HS_ROUTE:
-                if (tok->token != TOK_TO)
-                {
-                    /* Error, expect TO */;
-                    MXS_ERROR("Syntax error in hint. Expected "
-                              "'to' instead of '%s'. Hint ignored.",
-                              token_get_keyword(tok));
-                    token_free(tok);
-                    goto retblock;
-                }
-                state = HS_ROUTE1;
+            case TOK_STRING:
+                state = HS_NAME;
+                lvalue = MXS_STRDUP_A(tok->value);
                 break;
-            case HS_ROUTE1:
-                switch (tok->token)
-                {
-                    case TOK_MASTER:
-                        rval = hint_create_route(rval,
-                                                 HINT_ROUTE_TO_MASTER, NULL);
-                        break;
-                    case TOK_SLAVE:
-                        rval = hint_create_route(rval,
-                                                 HINT_ROUTE_TO_SLAVE, NULL);
-                        break;
-                    case TOK_SERVER:
-                        state = HS_ROUTE_SERVER;
-                        break;
-                    default:
-                        /* Error expected MASTER, SLAVE or SERVER */
-                        MXS_ERROR("Syntax error in hint. Expected "
-                                  "'master', 'slave', or 'server' instead "
-                                  "of '%s'. Hint ignored.",
-                                  token_get_keyword(tok));
-
-                        token_free(tok);
-                        goto retblock;
-                }
-                break;
-            case HS_ROUTE_SERVER:
-                if (tok->token == TOK_STRING)
-                {
-                    rval = hint_create_route(rval,
-                                             HINT_ROUTE_TO_NAMED_SERVER, tok->value);
-                }
-                else
-                {
-                    /* Error: Expected server name */
-                    MXS_ERROR("Syntax error in hint. Expected "
-                              "server name instead of '%s'. Hint "
-                              "ignored.",
-                              token_get_keyword(tok));
-                    token_free(tok);
-                    goto retblock;
-                }
-                break;
-            case HS_NAME:
-                switch (tok->token)
-                {
-                    case TOK_EQUAL:
-                        pname = lvalue;
-                        state = HS_PVALUE;
-                        break;
-                    case TOK_PREPARE:
-                        pname = lvalue;
-                        state = HS_PREPARE;
-                        break;
-                    case TOK_START:
-                        /* Action start(lvalue) */
-                        hintname = lvalue;
-                        mode = HM_START;
-                        state = HS_INIT;
-                        break;
-                    default:
-                        /* Error, token tok->value not expected */
-                        MXS_ERROR("Syntax error in hint. Expected "
-                                  "'=', 'prepare', or 'start' instead of "
-                                  "'%s'. Hint ignored.",
-                                  token_get_keyword(tok));
-                        token_free(tok);
-                        goto retblock;
-                }
-                break;
-            case HS_PVALUE:
-                /* Action: pname = tok->value */
-                rval = hint_create_parameter(rval, pname, tok->value);
+            case TOK_STOP:
+                /* Action: pop active hint */
+                hint_pop(session);
                 state = HS_INIT;
                 break;
-            case HS_PREPARE:
-                mode = HM_PREPARE;
-                hintname = lvalue;
-                switch (tok->token)
-                {
-                    case TOK_ROUTE:
-                        state = HS_ROUTE;
-                        break;
-                    case TOK_STRING:
-                        state = HS_NAME;
-                        lvalue = tok->value;
-                        break;
-                    default:
-                        /* Error, token tok->value not expected */
-                        MXS_ERROR("Syntax error in hint. Expected "
-                                  "'route' or hint name instead of "
-                                  "'%s'. Hint ignored.",
-                                  token_get_keyword(tok));
-                        token_free(tok);
-                        goto retblock;
-                }
+            case TOK_START:
+                hintname = NULL;
+                mode = HM_START;
+                state = HS_INIT;
                 break;
+            default:
+                /* Error: expected hint, name or STOP */
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "'route', 'stop' or hint name instead of "
+                          "'%s'. Hint ignored.",
+                          token_get_keyword(tok));
+                token_free(tok);
+                goto retblock;
+            }
+            break;
+        case HS_ROUTE:
+            if (tok->token != TOK_TO)
+            {
+                /* Error, expect TO */;
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "'to' instead of '%s'. Hint ignored.",
+                          token_get_keyword(tok));
+                token_free(tok);
+                goto retblock;
+            }
+            state = HS_ROUTE1;
+            break;
+        case HS_ROUTE1:
+            switch (tok->token)
+            {
+            case TOK_MASTER:
+                rval = hint_create_route(rval,
+                                         HINT_ROUTE_TO_MASTER, NULL);
+                break;
+            case TOK_SLAVE:
+                rval = hint_create_route(rval,
+                                         HINT_ROUTE_TO_SLAVE, NULL);
+                break;
+            case TOK_SERVER:
+                state = HS_ROUTE_SERVER;
+                break;
+            default:
+                /* Error expected MASTER, SLAVE or SERVER */
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "'master', 'slave', or 'server' instead "
+                          "of '%s'. Hint ignored.",
+                          token_get_keyword(tok));
+
+                token_free(tok);
+                goto retblock;
+            }
+            break;
+        case HS_ROUTE_SERVER:
+            if (tok->token == TOK_STRING)
+            {
+                rval = hint_create_route(rval,
+                                         HINT_ROUTE_TO_NAMED_SERVER, tok->value);
+            }
+            else
+            {
+                /* Error: Expected server name */
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "server name instead of '%s'. Hint "
+                          "ignored.",
+                          token_get_keyword(tok));
+                token_free(tok);
+                goto retblock;
+            }
+            break;
+        case HS_NAME:
+            switch (tok->token)
+            {
+            case TOK_EQUAL:
+                pname = lvalue;
+                state = HS_PVALUE;
+                break;
+            case TOK_PREPARE:
+                pname = lvalue;
+                state = HS_PREPARE;
+                break;
+            case TOK_START:
+                /* Action start(lvalue) */
+                hintname = lvalue;
+                mode = HM_START;
+                state = HS_INIT;
+                break;
+            default:
+                /* Error, token tok->value not expected */
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "'=', 'prepare', or 'start' instead of "
+                          "'%s'. Hint ignored.",
+                          token_get_keyword(tok));
+                token_free(tok);
+                goto retblock;
+            }
+            break;
+        case HS_PVALUE:
+            /* Action: pname = tok->value */
+            rval = hint_create_parameter(rval, pname, tok->value);
+            state = HS_INIT;
+            break;
+        case HS_PREPARE:
+            mode = HM_PREPARE;
+            hintname = lvalue;
+            switch (tok->token)
+            {
+            case TOK_ROUTE:
+                state = HS_ROUTE;
+                break;
+            case TOK_STRING:
+                state = HS_NAME;
+                lvalue = tok->value;
+                break;
+            default:
+                /* Error, token tok->value not expected */
+                MXS_ERROR("Syntax error in hint. Expected "
+                          "'route' or hint name instead of "
+                          "'%s'. Hint ignored.",
+                          token_get_keyword(tok));
+                token_free(tok);
+                goto retblock;
+            }
+            break;
         }
         token_free(tok);
     } /*< while */
@@ -425,68 +425,68 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
 
     switch (mode)
     {
-        case HM_START:
-            /*
-             * We are starting either a predefined set of hints,
-             * creating a new set of hints and starting in a single
-             * operation or starting an anonymous block of hints.
-             */
-            if (hintname == NULL && rval != NULL)
+    case HM_START:
+        /*
+         * We are starting either a predefined set of hints,
+         * creating a new set of hints and starting in a single
+         * operation or starting an anonymous block of hints.
+         */
+        if (hintname == NULL && rval != NULL)
+        {
+            /* We are starting an anonymous block of hints */
+            hint_push(session, rval);
+            rval = NULL;
+        }
+        else if (hintname && rval)
+        {
+            /* We are creating and starting a block of hints */
+            if (lookup_named_hint(session, hintname) != NULL)
             {
-                /* We are starting an anonymous block of hints */
-                hint_push(session, rval);
-                rval = NULL;
-            }
-            else if (hintname && rval)
-            {
-                /* We are creating and starting a block of hints */
-                if (lookup_named_hint(session, hintname) != NULL)
-                {
-                    /* Error hint with this name already exists */
-                }
-                else
-                {
-                    create_named_hint(session, hintname, rval);
-                    hint_push(session, hint_dup(rval));
-                }
-            }
-            else if (hintname && rval == NULL)
-            {
-                /* We starting an already define set of named hints */
-                rval = lookup_named_hint(session, hintname);
-                hint_push(session, hint_dup(rval));
-                MXS_FREE(hintname);
-                rval = NULL;
-            }
-            else if (hintname == NULL && rval == NULL)
-            {
-                /* Error case */
-            }
-            break;
-        case HM_PREPARE:
-            /*
-             * We are preparing a named set of hints. Note this does
-             * not trigger the usage of these hints currently.
-             */
-            if (hintname == NULL || rval == NULL)
-            {
-                /* Error case, name and hints must be defined */
+                /* Error hint with this name already exists */
             }
             else
             {
                 create_named_hint(session, hintname, rval);
+                hint_push(session, hint_dup(rval));
             }
-            /* We are not starting the hints now, so return an empty
-             * hint set.
-             */
+        }
+        else if (hintname && rval == NULL)
+        {
+            /* We starting an already define set of named hints */
+            rval = lookup_named_hint(session, hintname);
+            hint_push(session, hint_dup(rval));
+            MXS_FREE(hintname);
             rval = NULL;
-            break;
-        case HM_EXECUTE:
-            /*
-             * We have a one-off hint for the statement we are
-             * currently forwarding.
-             */
-            break;
+        }
+        else if (hintname == NULL && rval == NULL)
+        {
+            /* Error case */
+        }
+        break;
+    case HM_PREPARE:
+        /*
+         * We are preparing a named set of hints. Note this does
+         * not trigger the usage of these hints currently.
+         */
+        if (hintname == NULL || rval == NULL)
+        {
+            /* Error case, name and hints must be defined */
+        }
+        else
+        {
+            create_named_hint(session, hintname, rval);
+        }
+        /* We are not starting the hints now, so return an empty
+         * hint set.
+         */
+        rval = NULL;
+        break;
+    case HM_EXECUTE:
+        /*
+         * We have a one-off hint for the statement we are
+         * currently forwarding.
+         */
+        break;
     }
 
 retblock:

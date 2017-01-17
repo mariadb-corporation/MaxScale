@@ -283,7 +283,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
         }
     }
 
-    return(MXS_FILTER *)my_instance;
+    return (MXS_FILTER *)my_instance;
 }
 
 /**

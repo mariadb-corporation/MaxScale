@@ -836,26 +836,26 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {
             {
                 "rules",
-                 MXS_MODULE_PARAM_PATH,
-                 NULL,
-                 MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_PATH_R_OK
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_REQUIRED | MXS_MODULE_OPT_PATH_R_OK
             },
             {
                 "log_match",
-                 MXS_MODULE_PARAM_BOOL,
-                 "false"
+                MXS_MODULE_PARAM_BOOL,
+                "false"
             },
             {
                 "log_no_match",
-                 MXS_MODULE_PARAM_BOOL,
-                 "false"
+                MXS_MODULE_PARAM_BOOL,
+                "false"
             },
             {
                 "action",
-                 MXS_MODULE_PARAM_ENUM,
-                 "block",
-                 MXS_MODULE_OPT_ENUM_UNIQUE,
-                 action_values
+                MXS_MODULE_PARAM_ENUM,
+                "block",
+                MXS_MODULE_OPT_ENUM_UNIQUE,
+                action_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -901,29 +901,29 @@ char* get_regex_string(char** saved)
             {
                 switch (*ptr)
                 {
-                    case '\'':
-                    case '"':
-                        if (quoted)
+                case '\'':
+                case '"':
+                    if (quoted)
+                    {
+                        if (*ptr == delimiter)
                         {
-                            if (*ptr == delimiter)
-                            {
-                                *ptr = '\0';
-                                *saved = ptr + 1;
-                                return start;
-                            }
+                            *ptr = '\0';
+                            *saved = ptr + 1;
+                            return start;
                         }
-                        else
-                        {
-                            delimiter = *ptr;
-                            start = ptr + 1;
-                            quoted = true;
-                        }
-                        break;
-                    case '\\':
-                        escaped = true;
-                        break;
-                    default:
-                        break;
+                    }
+                    else
+                    {
+                        delimiter = *ptr;
+                        start = ptr + 1;
+                        quoted = true;
+                    }
+                    break;
+                case '\\':
+                    escaped = true;
+                    break;
+                default:
+                    break;
                 }
             }
         }
@@ -1045,21 +1045,21 @@ static void rule_free_all(RULE* rule)
 
         switch (rule->type)
         {
-            case RT_COLUMN:
-            case RT_FUNCTION:
-                strlink_free((STRLINK*) rule->data);
-                break;
+        case RT_COLUMN:
+        case RT_FUNCTION:
+            strlink_free((STRLINK*) rule->data);
+            break;
 
-            case RT_THROTTLE:
-                MXS_FREE(rule->data);
-                break;
+        case RT_THROTTLE:
+            MXS_FREE(rule->data);
+            break;
 
-            case RT_REGEX:
-                pcre2_code_free((pcre2_code*) rule->data);
-                break;
+        case RT_REGEX:
+            pcre2_code_free((pcre2_code*) rule->data);
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
 
         MXS_FREE(rule->name);
@@ -1402,20 +1402,20 @@ static bool process_user_templates(HASHTABLE *users, user_template_t *templates,
 
             switch (templates->type)
             {
-                case FWTOK_MATCH_ANY:
-                    tail->next = user->rules_or;
-                    user->rules_or = foundrules;
-                    break;
+            case FWTOK_MATCH_ANY:
+                tail->next = user->rules_or;
+                user->rules_or = foundrules;
+                break;
 
-                case FWTOK_MATCH_ALL:
-                    tail->next = user->rules_and;
-                    user->rules_and = foundrules;
-                    break;
+            case FWTOK_MATCH_ALL:
+                tail->next = user->rules_and;
+                user->rules_and = foundrules;
+                break;
 
-                case FWTOK_MATCH_STRICT_ALL:
-                    tail->next = user->rules_strict_and;
-                    user->rules_strict_and = foundrules;
-                    break;
+            case FWTOK_MATCH_STRICT_ALL:
+                tail->next = user->rules_strict_and;
+                user->rules_strict_and = foundrules;
+                break;
             }
         }
         else
@@ -2027,17 +2027,17 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 {
                     switch (optype)
                     {
-                        case QUERY_OP_SELECT:
-                        case QUERY_OP_UPDATE:
-                        case QUERY_OP_INSERT:
-                        case QUERY_OP_DELETE:
-                            // In these cases, we have to be able to trust what qc_get_field_info
-                            // returns. Unless the query was parsed completely, we cannot do that.
-                            msg = create_parse_error(my_instance, "parsed completely", query, &matches);
-                            goto queryresolved;
+                    case QUERY_OP_SELECT:
+                    case QUERY_OP_UPDATE:
+                    case QUERY_OP_INSERT:
+                    case QUERY_OP_DELETE:
+                        // In these cases, we have to be able to trust what qc_get_field_info
+                        // returns. Unless the query was parsed completely, we cannot do that.
+                        msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+                        goto queryresolved;
 
-                        default:
-                            break;
+                    default:
+                        break;
                     }
                 }
             }
@@ -2051,58 +2051,58 @@ bool rule_matches(FW_INSTANCE* my_instance,
     {
         switch (rulebook->rule->type)
         {
-            case RT_UNDEFINED:
-                ss_dassert(false);
-                MXS_ERROR("Undefined rule type found.");
-                break;
+        case RT_UNDEFINED:
+            ss_dassert(false);
+            MXS_ERROR("Undefined rule type found.");
+            break;
 
-            case RT_REGEX:
-                match_regex(rulebook, query, &matches, &msg);
-                break;
+        case RT_REGEX:
+            match_regex(rulebook, query, &matches, &msg);
+            break;
 
-            case RT_PERMISSION:
+        case RT_PERMISSION:
+            matches = true;
+            msg = MXS_STRDUP_A("Permission denied at this time.");
+            MXS_NOTICE("rule '%s': query denied at this time.", rulebook->rule->name);
+            break;
+
+        case RT_COLUMN:
+            if (is_sql)
+            {
+                match_column(rulebook, queue, &matches, &msg);
+            }
+            break;
+
+        case RT_FUNCTION:
+            if (is_sql)
+            {
+                match_function(rulebook, queue, &matches, &msg);
+            }
+            break;
+
+        case RT_WILDCARD:
+            if (is_sql)
+            {
+                match_wildcard(rulebook, queue, &matches, &msg);
+            }
+            break;
+
+        case RT_THROTTLE:
+            matches = match_throttle(my_session, rulebook, &msg);
+            break;
+
+        case RT_CLAUSE:
+            if (is_sql && !qc_query_has_clause(queue))
+            {
                 matches = true;
-                msg = MXS_STRDUP_A("Permission denied at this time.");
-                MXS_NOTICE("rule '%s': query denied at this time.", rulebook->rule->name);
-                break;
+                msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
+                MXS_NOTICE("rule '%s': query has no where/having "
+                           "clause, query is denied.", rulebook->rule->name);
+            }
+            break;
 
-            case RT_COLUMN:
-                if (is_sql)
-                {
-                    match_column(rulebook, queue, &matches, &msg);
-                }
-                break;
-
-            case RT_FUNCTION:
-                if (is_sql)
-                {
-                    match_function(rulebook, queue, &matches, &msg);
-                }
-                break;
-
-            case RT_WILDCARD:
-                if (is_sql)
-                {
-                    match_wildcard(rulebook, queue, &matches, &msg);
-                }
-                break;
-
-            case RT_THROTTLE:
-                matches = match_throttle(my_session, rulebook, &msg);
-                break;
-
-            case RT_CLAUSE:
-                if (is_sql && !qc_query_has_clause(queue))
-                {
-                    matches = true;
-                    msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
-                    MXS_NOTICE("rule '%s': query has no where/having "
-                               "clause, query is denied.", rulebook->rule->name);
-                }
-                break;
-
-            default:
-                break;
+        default:
+            break;
 
         }
     }
@@ -2374,28 +2374,28 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
             switch (my_instance->action)
             {
-                case FW_ACTION_ALLOW:
-                    if (match)
-                    {
-                        query_ok = true;
-                    }
-                    break;
-
-                case FW_ACTION_BLOCK:
-                    if (!match)
-                    {
-                        query_ok = true;
-                    }
-                    break;
-
-                case FW_ACTION_IGNORE:
+            case FW_ACTION_ALLOW:
+                if (match)
+                {
                     query_ok = true;
-                    break;
+                }
+                break;
 
-                default:
-                    MXS_ERROR("Unknown dbfwfilter action: %d", my_instance->action);
-                    ss_dassert(false);
-                    break;
+            case FW_ACTION_BLOCK:
+                if (!match)
+                {
+                    query_ok = true;
+                }
+                break;
+
+            case FW_ACTION_IGNORE:
+                query_ok = true;
+                break;
+
+            default:
+                MXS_ERROR("Unknown dbfwfilter action: %d", my_instance->action);
+                ss_dassert(false);
+                break;
             }
 
             if (my_instance->log_match != FW_LOG_NONE)

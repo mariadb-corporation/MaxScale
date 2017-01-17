@@ -49,7 +49,10 @@ protected:
 
     virtual void print_usage(const char* zProgram);
 
-    std::ostream& out() const { return m_out; }
+    std::ostream& out() const
+    {
+        return m_out;
+    }
 
 private:
     TestStorage(const TestStorage&);

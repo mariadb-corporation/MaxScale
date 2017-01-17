@@ -340,10 +340,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"user", MXS_MODULE_PARAM_STRING},
             {
                 "options",
-                 MXS_MODULE_PARAM_ENUM,
-                 "ignorecase",
-                 MXS_MODULE_OPT_NONE,
-                 option_values
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -925,20 +925,20 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
 
     switch (command)
     {
-        case 0x1b:
-            my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
-            MXS_INFO("client %s multistatements",
-                     my_session->client_multistatement ? "enabled" : "disabled");
-        case 0x03:
-        case 0x16:
-        case 0x17:
-        case 0x04:
-        case 0x0a:
-            memset(my_session->multipacket, (char) true, 2 * sizeof(bool));
-            break;
-        default:
-            memset(my_session->multipacket, (char) false, 2 * sizeof(bool));
-            break;
+    case 0x1b:
+        my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
+        MXS_INFO("client %s multistatements",
+                 my_session->client_multistatement ? "enabled" : "disabled");
+    case 0x03:
+    case 0x16:
+    case 0x17:
+    case 0x04:
+    case 0x0a:
+        memset(my_session->multipacket, (char) true, 2 * sizeof(bool));
+        break;
+    default:
+        memset(my_session->multipacket, (char) false, 2 * sizeof(bool));
+        break;
     }
 
     memset(my_session->replies, 0, 2 * sizeof(int));

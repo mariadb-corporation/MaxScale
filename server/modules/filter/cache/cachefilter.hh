@@ -24,8 +24,16 @@ public:
 
     static CacheFilter* create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams);
 
-    Cache& cache() { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
-    const Cache& cache() const { ss_dassert(m_sCache.get()); return *m_sCache.get(); }
+    Cache& cache()
+    {
+        ss_dassert(m_sCache.get());
+        return *m_sCache.get();
+    }
+    const Cache& cache() const
+    {
+        ss_dassert(m_sCache.get());
+        return *m_sCache.get();
+    }
 
     CacheFilterSession* newSession(SESSION* pSession);
 

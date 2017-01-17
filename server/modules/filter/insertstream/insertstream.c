@@ -280,46 +280,46 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
     {
         switch (my_session->state)
         {
-            case DS_STREAM_CLOSED:
-                /** We're opening a new stream */
-                strcpy(my_session->target, target);
-                my_session->queue = queue;
-                my_session->state = DS_REQUEST_SENT;
-                my_session->packet_num = 0;
-                queue = create_load_data_command(target);
-                break;
+        case DS_STREAM_CLOSED:
+            /** We're opening a new stream */
+            strcpy(my_session->target, target);
+            my_session->queue = queue;
+            my_session->state = DS_REQUEST_SENT;
+            my_session->packet_num = 0;
+            queue = create_load_data_command(target);
+            break;
 
-            case DS_REQUEST_ACCEPTED:
-                my_session->state = DS_STREAM_OPEN;
-                /** Fallthrough */
+        case DS_REQUEST_ACCEPTED:
+            my_session->state = DS_STREAM_OPEN;
+        /** Fallthrough */
 
-            case DS_STREAM_OPEN:
-                if (strcmp(target, my_session->target) == 0)
-                {
-                    /**
-                     * Stream is open and targets match, convert the insert into
-                     * a data stream
-                     */
-                    uint8_t packet_num = ++my_session->packet_num;
-                    send_ok = true;
-                    queue = convert_to_stream(queue, packet_num);
-                }
-                else
-                {
-                    /**
-                     * Target mismatch
-                     *
-                     * TODO: Instead of sending an error, we could just open a new stream
-                     */
-                    gwbuf_free(queue);
-                    send_error = true;
-                }
-                break;
+        case DS_STREAM_OPEN:
+            if (strcmp(target, my_session->target) == 0)
+            {
+                /**
+                 * Stream is open and targets match, convert the insert into
+                 * a data stream
+                 */
+                uint8_t packet_num = ++my_session->packet_num;
+                send_ok = true;
+                queue = convert_to_stream(queue, packet_num);
+            }
+            else
+            {
+                /**
+                 * Target mismatch
+                 *
+                 * TODO: Instead of sending an error, we could just open a new stream
+                 */
+                gwbuf_free(queue);
+                send_error = true;
+            }
+            break;
 
-            default:
-                MXS_ERROR("Unexpected state: %d", my_session->state);
-                ss_dassert(false);
-                break;
+        default:
+            MXS_ERROR("Unexpected state: %d", my_session->state);
+            ss_dassert(false);
+            break;
         }
     }
     else
@@ -331,22 +331,22 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
 
         switch (my_session->state)
         {
-            case DS_STREAM_OPEN:
-                /** Stream is open, we need to close it */
-                my_session->state = DS_CLOSING_STREAM;
-                send_empty = true;
-                packet_num = ++my_session->packet_num;
-                my_session->queue = queue;
-                break;
+        case DS_STREAM_OPEN:
+            /** Stream is open, we need to close it */
+            my_session->state = DS_CLOSING_STREAM;
+            send_empty = true;
+            packet_num = ++my_session->packet_num;
+            my_session->queue = queue;
+            break;
 
-            case DS_REQUEST_ACCEPTED:
-                my_session->state = DS_STREAM_OPEN;
-                send_ok = true;
-                break;
+        case DS_REQUEST_ACCEPTED:
+            my_session->state = DS_STREAM_OPEN;
+            send_ok = true;
+            break;
 
-            default:
-                ss_dassert(my_session->state == DS_STREAM_CLOSED);
-                break;
+        default:
+            ss_dassert(my_session->state == DS_STREAM_CLOSED);
+            break;
         }
 
         if (send_empty)

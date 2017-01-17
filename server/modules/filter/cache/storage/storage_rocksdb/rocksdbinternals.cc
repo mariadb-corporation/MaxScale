@@ -25,7 +25,8 @@
 bool RocksDBInternals::is_stale(const rocksdb::Slice& value, int32_t ttl, rocksdb::Env* pEnv)
 {
     if (ttl <= 0)
-    {  // Data is fresh if TTL is non-positive
+    {
+        // Data is fresh if TTL is non-positive
         return false;
     }
 

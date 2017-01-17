@@ -173,7 +173,6 @@ static void
 freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     MXS_FREE(session);
-    return;
 }
 
 /**

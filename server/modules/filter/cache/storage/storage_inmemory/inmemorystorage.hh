@@ -62,7 +62,7 @@ private:
     struct Entry
     {
         Entry()
-        : time(0)
+            : time(0)
         {}
 
         uint32_t time;

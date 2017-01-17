@@ -171,10 +171,10 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"user", MXS_MODULE_PARAM_STRING},
             {
                 "options",
-                 MXS_MODULE_PARAM_ENUM,
-                 "ignorecase",
-                 MXS_MODULE_OPT_NONE,
-                 option_values
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
             },
             {MXS_END_MODULE_PARAMS}
         }

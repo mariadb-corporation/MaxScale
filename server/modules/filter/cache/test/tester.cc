@@ -46,7 +46,10 @@ public:
         return Thread(pTask);
     }
 
-    Tester::Task* task() { return m_pTask; }
+    Tester::Task* task()
+    {
+        return m_pTask;
+    }
 
     void start()
     {

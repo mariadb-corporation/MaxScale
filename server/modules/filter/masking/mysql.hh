@@ -116,10 +116,10 @@ public:
      * A _random access iterator_ to a @c LEncString.
      */
     class iterator : public std::iterator<std::random_access_iterator_tag,
-                                          char,
-                                          std::ptrdiff_t,
-                                          char*,
-                                          char&>
+        char,
+        std::ptrdiff_t,
+        char*,
+        char&>
     {
     public:
         iterator(char* pS)
@@ -488,8 +488,14 @@ public:
         ERR_PACKET = 0xff,
     };
 
-    uint32_t packet_len() const { return m_packet_len; }
-    uint8_t packet_no() const { return m_packet_no; }
+    uint32_t packet_len() const
+    {
+        return m_packet_len;
+    }
+    uint8_t packet_no() const
+    {
+        return m_packet_no;
+    }
 
 protected:
     ComPacket(GWBUF* pPacket)
@@ -624,7 +630,10 @@ public:
         ++m_pData;
     }
 
-    uint8_t command() const { return m_command; }
+    uint8_t command() const
+    {
+        return m_command;
+    }
 
 protected:
     uint8_t m_command;
@@ -667,13 +676,34 @@ public:
         m_pData += 1;
     }
 
-    const LEncString& catalog() const { return m_catalog; }
-    const LEncString& schema() const { return m_schema; }
-    const LEncString& table() const { return m_table; }
-    const LEncString& org_table() const { return m_org_table; }
-    const LEncString& name() const { return m_name; }
-    const LEncString& org_name() const { return m_org_name; }
-    enum_field_types  type() const { return m_type; }
+    const LEncString& catalog() const
+    {
+        return m_catalog;
+    }
+    const LEncString& schema() const
+    {
+        return m_schema;
+    }
+    const LEncString& table() const
+    {
+        return m_table;
+    }
+    const LEncString& org_table() const
+    {
+        return m_org_table;
+    }
+    const LEncString& name() const
+    {
+        return m_name;
+    }
+    const LEncString& org_name() const
+    {
+        return m_org_name;
+    }
+    enum_field_types  type() const
+    {
+        return m_type;
+    }
 
     std::string to_string() const
     {
@@ -763,9 +793,9 @@ public:
         case MYSQL_TYPE_VAR_STRING:
             return true;
 
-            // These, although returned as length-encoded strings, also in the case of
-            // a binary resultset row, are not are not considered to be strings from the
-            // perspective of masking.
+        // These, although returned as length-encoded strings, also in the case of
+        // a binary resultset row, are not are not considered to be strings from the
+        // perspective of masking.
         case MYSQL_TYPE_BIT:
         case MYSQL_TYPE_DECIMAL:
         case MYSQL_TYPE_ENUM:
@@ -826,10 +856,10 @@ typedef CQRResultsetValue CQRBinaryResultsetValue;
  *            typedef @c ComQueryResponse::TextResultset::iterator.
  */
 class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
-                                                         CQRTextResultsetValue,
-                                                         std::ptrdiff_t,
-                                                         CQRTextResultsetValue*,
-                                                         CQRTextResultsetValue>
+    CQRTextResultsetValue,
+    std::ptrdiff_t,
+    CQRTextResultsetValue*,
+    CQRTextResultsetValue>
 {
 public:
     typedef CQRTextResultsetValue Value;
@@ -887,10 +917,10 @@ private:
  *            typedef @c ComQueryResponse::BinaryResultset::iterator.
  */
 class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag,
-                                                           CQRBinaryResultsetValue,
-                                                           std::ptrdiff_t,
-                                                           CQRBinaryResultsetValue*,
-                                                           CQRBinaryResultsetValue>
+    CQRBinaryResultsetValue,
+    std::ptrdiff_t,
+    CQRBinaryResultsetValue*,
+    CQRBinaryResultsetValue>
 {
 public:
     typedef CQRBinaryResultsetValue Value;
@@ -1162,7 +1192,10 @@ public:
     {
     }
 
-    uint64_t nFields() const { return m_nFields; }
+    uint64_t nFields() const
+    {
+        return m_nFields;
+    }
 
 private:
     LEncInt m_nFields;

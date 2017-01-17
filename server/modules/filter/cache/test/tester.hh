@@ -52,12 +52,18 @@ public:
          *
          * @return True, if the task should terminate, i.e., return from @c run.
          */
-        bool should_terminate() const { return m_terminate; }
+        bool should_terminate() const
+        {
+            return m_terminate;
+        }
 
         /**
          * Tell the task to terminate.
          */
-        void terminate() { m_terminate = true; }
+        void terminate()
+        {
+            m_terminate = true;
+        }
 
         /**
          * Calls terminate on the provided task. For use in algorithms.
@@ -98,14 +104,20 @@ public:
          *
          * @return  The value returned by @run.
          */
-        int rv() const { return m_rv; }
+        int rv() const
+        {
+            return m_rv;
+        }
 
         /**
          * The stream to be used for user output.
          *
          * @return  The output stream to be used.
          */
-        std::ostream& out() const { return m_out; }
+        std::ostream& out() const
+        {
+            return m_out;
+        }
 
     protected:
         /**
@@ -118,7 +130,10 @@ public:
 
     private:
         friend class Thread;
-        void set_rv(int rv) { m_rv = rv; }
+        void set_rv(int rv)
+        {
+            m_rv = rv;
+        }
 
     private:
         Task(const Task&);
@@ -249,7 +264,10 @@ protected:
      *
      * @return A stream.
      */
-    std::ostream& out() const { return m_out; }
+    std::ostream& out() const
+    {
+        return m_out;
+    }
 
     /**
      * Execute a specific number of tasks in as many threads.

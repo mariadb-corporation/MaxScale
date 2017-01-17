@@ -122,10 +122,22 @@ private:
             remove();
         }
 
-        const CACHE_KEY* key() const { return pkey_; }
-        size_t size() const { return size_; }
-        Node* next() const { return pnext_; }
-        Node* prev() const { return pprev_; }
+        const CACHE_KEY* key() const
+        {
+            return pkey_;
+        }
+        size_t size() const
+        {
+            return size_;
+        }
+        Node* next() const
+        {
+            return pnext_;
+        }
+        Node* prev() const
+        {
+            return pprev_;
+        }
 
         /**
          * Move the node before the node provided as argument.

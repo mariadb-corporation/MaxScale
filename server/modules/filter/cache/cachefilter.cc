@@ -142,9 +142,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {
                 "storage",
-                 MXS_MODULE_PARAM_STRING,
-                 NULL,
-                 MXS_MODULE_OPT_REQUIRED
+                MXS_MODULE_PARAM_STRING,
+                NULL,
+                MXS_MODULE_OPT_REQUIRED
             },
             {
                 "storage_options",
@@ -157,44 +157,44 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 "soft_ttl",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_SOFT_TTL
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_SOFT_TTL
             },
             {
                 "max_resultset_rows",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_RESULTSET_ROWS
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_RESULTSET_ROWS
             },
             {
                 "max_resultset_size",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_RESULTSET_SIZE
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_RESULTSET_SIZE
             },
             {
                 "max_count",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_MAX_COUNT
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_MAX_COUNT
             },
             {
                 "max_size",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_THREAD_MODEL
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_THREAD_MODEL
             },
             {
                 "rules",
-                 MXS_MODULE_PARAM_PATH
+                MXS_MODULE_PARAM_PATH
             },
             {
                 "debug",
-                 MXS_MODULE_PARAM_COUNT,
-                 CACHE_DEFAULT_DEBUG
+                MXS_MODULE_PARAM_COUNT,
+                CACHE_DEFAULT_DEBUG
             },
             {
                 "cached_data",
-                 MXS_MODULE_PARAM_ENUM,
-                 CACHE_DEFAULT_THREAD_MODEL,
-                 MXS_MODULE_OPT_NONE,
-                 cached_data_values
+                MXS_MODULE_PARAM_ENUM,
+                CACHE_DEFAULT_THREAD_MODEL,
+                MXS_MODULE_OPT_NONE,
+                cached_data_values
             },
             {MXS_END_MODULE_PARAMS}
         }

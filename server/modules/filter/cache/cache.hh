@@ -42,7 +42,10 @@ public:
 
     void show(DCB* pDcb) const;
 
-    const CACHE_CONFIG& config() const { return m_config; }
+    const CACHE_CONFIG& config() const
+    {
+        return m_config;
+    }
 
     virtual json_t* get_info(uint32_t what = INFO_ALL) const = 0;
 

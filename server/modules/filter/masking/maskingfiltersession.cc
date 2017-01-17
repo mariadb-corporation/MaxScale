@@ -111,7 +111,7 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
     switch (response.type())
     {
     case ComPacket::OK_PACKET: // OK
-        // We'll end up here also in the case of a multi-result.
+    // We'll end up here also in the case of a multi-result.
     case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;

@@ -170,7 +170,7 @@ struct expected_account
     }
 };
 
-const size_t nExpected_accounts = (sizeof(expected_accounts)/sizeof(expected_accounts[0]));
+const size_t nExpected_accounts = (sizeof(expected_accounts) / sizeof(expected_accounts[0]));
 
 class MaskingRulesTester
 {

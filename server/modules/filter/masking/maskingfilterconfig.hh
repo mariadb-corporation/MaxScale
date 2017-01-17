@@ -38,12 +38,27 @@ public:
     {}
     ~MaskingFilterConfig() {}
 
-    const std::string&   name() const { return m_name; }
-    const std::string&   rules_file() const { return m_rules_file; }
-    warn_type_mismatch_t warn_type_mismatch() const { return m_warn_type_mismatch; }
+    const std::string&   name() const
+    {
+        return m_name;
+    }
+    const std::string&   rules_file() const
+    {
+        return m_rules_file;
+    }
+    warn_type_mismatch_t warn_type_mismatch() const
+    {
+        return m_warn_type_mismatch;
+    }
 
-    void set_rules_file(const std::string& s) { m_rules_file = s; }
-    void set_warn_type_mismatch(warn_type_mismatch_t w) { m_warn_type_mismatch = w; }
+    void set_rules_file(const std::string& s)
+    {
+        m_rules_file = s;
+    }
+    void set_warn_type_mismatch(warn_type_mismatch_t w)
+    {
+        m_warn_type_mismatch = w;
+    }
 
     static warn_type_mismatch_t get_warn_type_mismatch(const CONFIG_PARAMETER* pParams);
 

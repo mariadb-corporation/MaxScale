@@ -186,8 +186,8 @@ typedef struct
     lua_State* lua_state;
     GWBUF* current_query;
     SPINLOCK lock;
-     MXS_DOWNSTREAM down;
-     MXS_UPSTREAM up;
+    MXS_DOWNSTREAM down;
+    MXS_UPSTREAM up;
 } LUA_SESSION;
 
 /**

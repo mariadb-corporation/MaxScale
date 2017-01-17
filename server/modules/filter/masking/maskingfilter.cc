@@ -85,9 +85,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread finish. */
         {
             { Config::rules_file_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
-            { Config::warn_type_mismatch_name,
-              MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
-              MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
+            {
+                Config::warn_type_mismatch_name,
+                MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
+                MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values
+            },
             { MXS_END_MODULE_PARAMS }
         }
     };

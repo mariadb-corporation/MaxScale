@@ -96,18 +96,18 @@ MXS_MODULE* MXS_CREATE_MODULE()
         {
             {
                 "max_resultset_rows",
-                 MXS_MODULE_PARAM_COUNT,
-                 MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
+                MXS_MODULE_PARAM_COUNT,
+                MAXROWS_DEFAULT_MAX_RESULTSET_ROWS
             },
             {
                 "max_resultset_size",
-                 MXS_MODULE_PARAM_COUNT,
-                 MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
+                MXS_MODULE_PARAM_COUNT,
+                MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
             },
             {
                 "debug",
-                 MXS_MODULE_PARAM_COUNT,
-                 MAXROWS_DEFAULT_DEBUG
+                MXS_MODULE_PARAM_COUNT,
+                MAXROWS_DEFAULT_DEBUG
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -701,11 +701,11 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 break;
             }
 
-           /*
-            * Check packet size against MYSQL_PACKET_LENGTH_MAX
-            * If true then break as received could be not complete
-            * EOF or OK packet could be seen after receiving the full large packet
-            */
+            /*
+             * Check packet size against MYSQL_PACKET_LENGTH_MAX
+             * If true then break as received could be not complete
+             * EOF or OK packet could be seen after receiving the full large packet
+             */
             if (packetlen == (MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN))
             {
                 // Mark the beginning of a large packet receiving
@@ -906,7 +906,7 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
 static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
 {
     /* Note: sequence id is always 01 (4th byte) */
-    uint8_t ok[MAXROWS_OK_PACKET_LEN] = {07,00,00,01,00,00,00,02,00,00,00};
+    uint8_t ok[MAXROWS_OK_PACKET_LEN] = {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
     GWBUF *packet = gwbuf_alloc(MAXROWS_OK_PACKET_LEN);
     uint8_t *ptr = GWBUF_DATA(packet);
     memcpy(ptr, &ok, MAXROWS_OK_PACKET_LEN);

@@ -97,11 +97,20 @@ private:
             return m_sRules;
         }
 
-        bool is_multi_result() const { return m_multi_result; }
+        bool is_multi_result() const
+        {
+            return m_multi_result;
+        }
 
-        uint32_t total_fields() const { return m_nTotal_fields; }
+        uint32_t total_fields() const
+        {
+            return m_nTotal_fields;
+        }
 
-        void set_total_fields(uint32_t n) { m_nTotal_fields = n; }
+        void set_total_fields(uint32_t n)
+        {
+            m_nTotal_fields = n;
+        }
 
         bool append_type_and_rule(enum_field_types type, const MaskingRules::Rule* pRule)
         {

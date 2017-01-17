@@ -122,7 +122,8 @@ bool deletePath(const string& path)
         // FTS_XDEV     - Don't cross filesystem boundaries
         FTS *pFts = fts_open(files, FTS_NOCHDIR | FTS_PHYSICAL | FTS_XDEV, NULL);
 
-        if (pFts) {
+        if (pFts)
+        {
             FTSENT* pCurrent;
             while ((pCurrent = fts_read(pFts)))
             {
@@ -178,7 +179,8 @@ bool deletePath(const string& path)
                 MXS_NOTICE("Deleted cache storage at '%s'.", path.c_str());
             }
 
-            if (pFts) {
+            if (pFts)
+            {
                 fts_close(pFts);
             }
         }
@@ -393,7 +395,10 @@ cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF& que
 
     // dbs now contain each accessed database in sorted order. Now copy them to a single string.
     string tag;
-    for_each(dbs.begin(), dbs.end(), [&tag](const string& db) { tag.append(db); });
+    for_each(dbs.begin(), dbs.end(), [&tag](const string & db)
+    {
+        tag.append(db);
+    });
 
     memset(pKey->data, 0, CACHE_KEY_MAXLEN);
 
@@ -432,15 +437,16 @@ cache_result_t RocksDBStorage::get_info(uint32_t what, json_t** ppInfo) const
         auto sStatistics = m_sDb->GetOptions().statistics;
 
         for_each(rocksdb::TickersNameMap.begin(), rocksdb::TickersNameMap.end(),
-                 [pInfo, sStatistics](const std::pair<rocksdb::Tickers, string>& tickerName) {
-                     json_t* pValue = json_integer(sStatistics->getTickerCount(tickerName.first));
+                 [pInfo, sStatistics](const std::pair<rocksdb::Tickers, string>& tickerName)
+        {
+            json_t* pValue = json_integer(sStatistics->getTickerCount(tickerName.first));
 
-                     if (pValue)
-                     {
-                         json_object_set(pInfo, tickerName.second.c_str(), pValue);
-                         json_decref(pValue);
-                     }
-                 });
+            if (pValue)
+            {
+                json_object_set(pInfo, tickerName.second.c_str(), pValue);
+                json_decref(pValue);
+            }
+        });
 
         *ppInfo = pInfo;
     }

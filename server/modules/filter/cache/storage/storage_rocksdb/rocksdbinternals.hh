@@ -19,7 +19,7 @@
 
 #if (ROCKSDB_MAJOR != 4) || (ROCKSDB_MINOR != 9)
 #error RocksDBStorage was created with knowledge of RocksDB 4.9 internals.\
-       The version used is something else. Ensure the knowledge is still applicable.
+The version used is something else. Ensure the knowledge is still applicable.
 #endif
 
 namespace RocksDBInternals

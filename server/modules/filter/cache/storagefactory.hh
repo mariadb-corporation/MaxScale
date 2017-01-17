@@ -31,7 +31,10 @@ public:
      *
      * @return Bitmask of @c cache_storage_capabilities_t values.
      */
-    uint32_t capabilities() const { return m_caps; }
+    uint32_t capabilities() const
+    {
+        return m_caps;
+    }
 
     /**
      * The capabilities of storages loaded via this factory. These
@@ -39,7 +42,10 @@ public:
      *
      * @return Bitmask of @c cache_storage_capabilities_t values.
      */
-    uint32_t storage_capabilities() const { return m_storage_caps; }
+    uint32_t storage_capabilities() const
+    {
+        return m_storage_caps;
+    }
 
     /**
      * Create storage instance.

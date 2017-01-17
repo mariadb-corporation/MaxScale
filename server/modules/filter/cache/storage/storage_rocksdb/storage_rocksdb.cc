@@ -21,9 +21,9 @@
 extern "C"
 {
 
-CACHE_STORAGE_API* CacheGetStorageAPI()
-{
-    return &StorageModule<RocksDBStorage>::s_api;
-}
+    CACHE_STORAGE_API* CacheGetStorageAPI()
+    {
+        return &StorageModule<RocksDBStorage>::s_api;
+    }
 
 }
