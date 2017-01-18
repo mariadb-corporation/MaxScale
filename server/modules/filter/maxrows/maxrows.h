@@ -16,9 +16,6 @@
 
 MXS_BEGIN_DECLS
 
-#define MAXROWS_OK_PACKET_LEN              11
-#define MAXROWS_EOF_PACKET_LEN             9
-
 /*
  * The EOF packet 2 bytes flags start after:
  * network header (4 bytes) + eof indicator (1) + 2 bytes warnings count)

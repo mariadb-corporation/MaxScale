@@ -679,8 +679,8 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
     {
         bool pending_large_data = csdata->large_packet;
         // header array holds a full EOF packet
-        uint8_t header[MAXROWS_EOF_PACKET_LEN];
-        gwbuf_copy_data(csdata->res.data, csdata->res.offset, MAXROWS_EOF_PACKET_LEN, header);
+        uint8_t header[MYSQL_EOF_PACKET_LEN];
+        gwbuf_copy_data(csdata->res.data, csdata->res.offset, MYSQL_EOF_PACKET_LEN, header);
 
         size_t packetlen = MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(header);
 
@@ -691,7 +691,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
              * max is 1 byte less than EOF_PACKET_LEN
              * If true skip data processing.
              */
-            if (pending_large_data && (packetlen >= MYSQL_HEADER_LEN && packetlen < MAXROWS_EOF_PACKET_LEN))
+            if (pending_large_data && (packetlen >= MYSQL_HEADER_LEN && packetlen < MYSQL_EOF_PACKET_LEN))
             {
                 // Update offset, number of rows and break
                 csdata->res.offset += packetlen;
@@ -776,9 +776,9 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                  * If so more results set could come. The end of stream
                  * will be an OK packet.
                  */
-                if (packetlen < MAXROWS_EOF_PACKET_LEN)
+                if (packetlen < MYSQL_EOF_PACKET_LEN)
                 {
-                    MXS_ERROR("EOF packet has size of %lu instead of %d", packetlen, MAXROWS_EOF_PACKET_LEN);
+                    MXS_ERROR("EOF packet has size of %lu instead of %ld", packetlen, MYSQL_EOF_PACKET_LEN);
                     rv = send_ok_upstream(csdata);
                     csdata->state = MAXROWS_EXPECTING_NOTHING;
                     break;
@@ -906,10 +906,10 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
 static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
 {
     /* Note: sequence id is always 01 (4th byte) */
-    uint8_t ok[MAXROWS_OK_PACKET_LEN] = {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
-    GWBUF *packet = gwbuf_alloc(MAXROWS_OK_PACKET_LEN);
+    uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
+    GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
     uint8_t *ptr = GWBUF_DATA(packet);
-    memcpy(ptr, &ok, MAXROWS_OK_PACKET_LEN);
+    memcpy(ptr, &ok, MYSQL_OK_PACKET_MIN_LEN);
 
     ss_dassert(csdata->res.data != NULL);
 

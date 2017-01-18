@@ -73,6 +73,7 @@ MXS_BEGIN_DECLS
 #define MYSQL_HEADER_LEN 4L
 #define MYSQL_CHECKSUM_LEN 4L
 #define MYSQL_EOF_PACKET_LEN 9L
+#define MYSQL_OK_PACKET_MIN_LEN 11L
 
 /**
  * Offsets and sizes of various parts of the client packet. If the offset is
