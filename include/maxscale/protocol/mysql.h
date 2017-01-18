@@ -69,8 +69,10 @@ MXS_BEGIN_DECLS
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
+
 #define MYSQL_HEADER_LEN 4L
 #define MYSQL_CHECKSUM_LEN 4L
+#define MYSQL_EOF_PACKET_LEN 9L
 
 /**
  * Offsets and sizes of various parts of the client packet. If the offset is
