@@ -4,8 +4,8 @@
 # number.
 
 set(MAXSCALE_VERSION_MAJOR "2" CACHE STRING "Major version")
-set(MAXSCALE_VERSION_MINOR "0" CACHE STRING "Minor version")
-set(MAXSCALE_VERSION_PATCH "3" CACHE STRING "Patch version")
+set(MAXSCALE_VERSION_MINOR "1" CACHE STRING "Minor version")
+set(MAXSCALE_VERSION_PATCH "0" CACHE STRING "Patch version")
 
 # This should only be incremented if a package is rebuilt
 set(MAXSCALE_BUILD_NUMBER 1 CACHE STRING "Release number")
