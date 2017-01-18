@@ -178,7 +178,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "max_size",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_THREAD_MODEL
+                CACHE_DEFAULT_MAX_SIZE
             },
             {
                 "rules",
