@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/monitor.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/modules.h>
 #include <maxscale/log_manager.h>
@@ -42,6 +41,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/gwdirs.h>
 
+#include "maxscale/monitor.h"
 #include "maxscale/config.h"
 
 static MXS_MONITOR  *allMonitors = NULL;

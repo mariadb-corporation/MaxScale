@@ -20,6 +20,7 @@
 
 #include "maxscale/config.h"
 #include "maxscale/service.h"
+#include "maxscale/monitor.h"
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 

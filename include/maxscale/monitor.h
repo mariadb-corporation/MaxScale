@@ -13,25 +13,7 @@
  */
 
 /**
- * @file monitor.h      The interface to the monitor module
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 07/07/13     Mark Riddoch            Initial implementation
- * 25/07/13     Mark Riddoch            Addition of diagnotics
- * 23/05/14     Mark Riddoch            Addition of routine to find monitors by name
- * 23/05/14     Massimiliano Pinto      Addition of defaultId and setInterval
- * 23/06/14     Massimiliano Pinto      Addition of replicationHeartbeat
- * 28/08/14     Massimiliano Pinto      Addition of detectStaleMaster
- * 30/10/14     Massimiliano Pinto      Addition of disableMasterFailback
- * 07/11/14     Massimiliano Pinto      Addition of setNetworkTimeout
- * 19/02/15     Mark Riddoch            Addition of monitorGetList
- * 19/11/15     Martin Brampton         Automation of event and name declaration, absorption
- *                                      of what was formerly monitor_common.h
- *
- * @endverbatim
+ * @file include/maxscale/monitor.h - The public monitor interface
  */
 
 #include <maxscale/cdefs.h>
@@ -47,27 +29,33 @@
 
 MXS_BEGIN_DECLS
 
-/**
- * The "Module Object" for a monitor module.
- *
- * The monitor modules are designed to monitor the backend databases that the gateway
- * connects to and provide information regarding the status of the databases that
- * is used in the routing decisions.
- *
- * startMonitor is called to start the monitoring process, it is called on the main
- * thread of the gateway and is responsible for creating a thread for the monitor
- * itself to run on. This should use the entry points defined in the thread.h
- * header file rather than make direct calls to the operating system thrading libraries.
- * The return from startMonitor is a void * handle that will be passed to all other monitor
- * API calls.
- *
- * stopMonitor is responsible for shutting down and destroying a monitor.
- */
-
 struct mxs_monitor;
 typedef struct mxs_monitor MXS_MONITOR;
 
-typedef struct
+/**
+ * @verbatim
+ * The "module object" structure for a backend monitor module
+ *
+ * Monitor modules monitor the backend databases that MaxScale connects to.
+ * The information provided by a monitor is used in routing decisions.
+ *
+ * The entry points are:
+ *      startMonitor    Called by main to start the monitor
+ *      stopMonitor     Called by main to shut down and destroy a monitor
+ *      diagnostics     Called for diagnostic output
+ *
+ * startMonitor is called to start the monitoring process, it is called on the
+ * MaxScale main thread and is responsible for creating a thread for the monitor
+ * itself to run on. This should use the entry points defined in the thread.h
+ * header file rather than make direct calls to the operating system threading
+ * libraries. The return from startMonitor is a pointer that will be passed to
+ * all other monitor API calls.
+ *
+ * @endverbatim
+ *
+ * @see load_module
+ */
+typedef struct mxs_monitor_object
 {
     void *(*startMonitor)(MXS_MONITOR *monitor, const CONFIG_PARAMETER *params);
     void (*stopMonitor)(MXS_MONITOR *monitor);
@@ -83,6 +71,15 @@ typedef struct
 /** Monitor's poll frequency */
 #define MXS_MON_BASE_INTERVAL_MS 100
 
+#define MXS_MONITOR_RUNNING 1
+#define MXS_MONITOR_STOPPING 2
+#define MXS_MONITOR_STOPPED 3
+
+#define MXS_MONITOR_DEFAULT_ID 1UL // unsigned long value
+
+#define MAX_MONITOR_USER_LEN     512
+#define MAX_MONITOR_PASSWORD_LEN 512
+
 /**
  * Monitor state bit mask values
  */
@@ -95,16 +92,6 @@ typedef enum
     MONITOR_STATE_FREED     = 0x08
 } monitor_state_t;
 
-/**
- * Monitor network timeout types
- */
-typedef enum
-{
-    MONITOR_CONNECT_TIMEOUT = 0,
-    MONITOR_READ_TIMEOUT    = 1,
-    MONITOR_WRITE_TIMEOUT   = 2
-} monitor_timeouts_t;
-
 /*
  * Results of attempt at database connection for monitoring
  */
@@ -114,23 +101,6 @@ typedef enum
     MONITOR_CONN_REFUSED,
     MONITOR_CONN_TIMEOUT
 } mxs_connect_result_t;
-
-#define MON_ARG_MAX 8192
-
-#define DEFAULT_CONNECT_TIMEOUT 3
-#define DEFAULT_READ_TIMEOUT 1
-#define DEFAULT_WRITE_TIMEOUT 2
-
-
-#define MXS_MONITOR_RUNNING 1
-#define MXS_MONITOR_STOPPING 2
-#define MXS_MONITOR_STOPPED 3
-
-#define MONITOR_DEFAULT_INTERVAL 10000 // in milliseconds
-#define MXS_MONITOR_DEFAULT_ID 1UL // unsigned long value
-
-#define MAX_MONITOR_USER_LEN     512
-#define MAX_MONITOR_PASSWORD_LEN 512
 
 /** Monitor events */
 typedef enum
@@ -159,6 +129,52 @@ typedef enum
     NEW_DONOR_EVENT   = (1 << 20), /**< new_donor */
     NEW_NDB_EVENT     = (1 << 21), /**< new_ndb */
 } mxs_monitor_event_t;
+
+/**
+ * The linked list of servers that are being monitored by the monitor module.
+ */
+typedef struct monitor_servers
+{
+    SERVER *server;               /**< The server being monitored */
+    MYSQL *con;                   /**< The MySQL connection */
+    bool log_version_err;
+    int mon_err_count;
+    unsigned int mon_prev_status;
+    unsigned int pending_status;  /**< Pending Status flag bitmap */
+    struct monitor_servers *next; /**< The next server in the list */
+} MXS_MONITOR_SERVERS;
+
+/**
+ * Representation of the running monitor.
+ */
+struct mxs_monitor
+{
+    char *name;                   /**< The name of the monitor module */
+    char user[MAX_MONITOR_USER_LEN]; /*< Monitor username */
+    char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
+    SPINLOCK lock;
+    CONFIG_PARAMETER* parameters; /*< configuration parameters */
+    MXS_MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
+    monitor_state_t state;        /**< The state of the monitor */
+    int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
+    int read_timeout;             /**< Timeout in seconds to read from the server.
+                                   * There are retries and the total effective timeout
+                                   * value is three times the option value.
+                                   */
+    int write_timeout;            /**< Timeout in seconds for each attempt to write to the server.
+                                   * There are retries and the total effective timeout value is
+                                   * two times the option value.
+                                   */
+    MXS_MONITOR_OBJECT *module;   /**< The "monitor object" */
+    char *module_name;            /**< Name of the monitor module */
+    void *handle;                 /**< Handle returned from startMonitor */
+    size_t interval;              /**< The monitor interval */
+    bool created_online;          /**< Whether this monitor was created at runtime */
+    volatile bool server_pending_changes;
+    /**< Are there any pending changes to a server?
+       * If yes, the next monitor loop starts early.  */
+    struct mxs_monitor *next;     /**< Next monitor in the linked list */
+};
 
 static const MXS_ENUM_VALUE mxs_monitor_event_enum_values[] =
 {
@@ -193,85 +209,30 @@ static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,sla
                                                       "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
                                                       "new_master,new_slave,new_synced,new_donor,new_ndb";
 
-/**
- * The linked list of servers that are being monitored by the monitor module.
- */
-typedef struct monitor_servers
-{
-    SERVER *server;               /**< The server being monitored */
-    MYSQL *con;                   /**< The MySQL connection */
-    bool log_version_err;
-    int mon_err_count;
-    unsigned int mon_prev_status;
-    unsigned int pending_status;  /**< Pending Status flag bitmap */
-    struct monitor_servers *next; /**< The next server in the list */
-} MXS_MONITOR_SERVERS;
+MXS_MONITOR *monitor_find(const char *);
+void monitorStop(MXS_MONITOR *);
+void monitorStart(MXS_MONITOR *, void*);
 
-/**
- * Representation of the running monitor.
- */
-struct mxs_monitor
-{
-    char *name;                   /**< The name of the monitor module */
-    char user[MAX_MONITOR_USER_LEN]; /*< Monitor username */
-    char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
-    SPINLOCK lock;
-    CONFIG_PARAMETER* parameters; /*< configuration parameters */
-    MXS_MONITOR_SERVERS* databases;   /*< List of databases the monitor monitors */
-    monitor_state_t state;        /**< The state of the monitor */
-    int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
-    int read_timeout;             /**< Timeout in seconds to read from the server.
-                                   * There are retries and the total effective timeout
-                                   * value is three times the option value.
-                                   */
-    int write_timeout;            /**< Timeout in seconds for each attempt to write to the server.
-                                     * There are retries and the total effective timeout value is
-                                     * two times the option value.
-                                     */
-    MXS_MONITOR_OBJECT *module;       /**< The "monitor object" */
-    char *module_name;            /**< Name of the monitor module */
-    void *handle;                 /**< Handle returned from startMonitor */
-    size_t interval;              /**< The monitor interval */
-    bool created_online;          /**< Whether this monitor was created at runtime */
-    volatile bool server_pending_changes;
-    /**< Are there any pending changes to a server?
-       * If yes, the next monitor loop starts early.  */
-    struct mxs_monitor *next;         /**< Next monitor in the linked list */
-};
+void monitorShowAll(DCB *);
+void monitorShow(DCB *, MXS_MONITOR *);
+void monitorList(DCB *);
+RESULTSET *monitorGetList();
 
-extern MXS_MONITOR *monitor_alloc(char *, char *);
-extern void monitor_free(MXS_MONITOR *);
-extern MXS_MONITOR *monitor_find(const char *);
-extern bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
-extern void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
-extern void monitorAddUser(MXS_MONITOR *, char *, char *);
-extern void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params);
-extern bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
-extern void monitorStop(MXS_MONITOR *);
-extern void monitorStart(MXS_MONITOR *, void*);
-extern void monitorStopAll();
-extern void monitorStartAll();
-extern void monitorShowAll(DCB *);
-extern void monitorShow(DCB *, MXS_MONITOR *);
-extern void monitorList(DCB *);
-extern void monitorSetInterval (MXS_MONITOR *, unsigned long);
-extern bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
-extern RESULTSET *monitorGetList();
-extern bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
+bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
-mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node);
-const char* mon_get_event_name(MXS_MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);
 void monitor_set_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);
-bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv);
-bool mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv);
-mxs_connect_result_t mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
-void mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval);
-void mon_log_state_change(MXS_MONITOR_SERVERS *ptr);
-void lock_monitor_servers(MXS_MONITOR *monitor);
-void release_monitor_servers(MXS_MONITOR *monitor);
 void servers_status_pending_to_current(MXS_MONITOR *monitor);
 void servers_status_current_to_pending(MXS_MONITOR *monitor);
+
+bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv);
+bool mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv);
+
+mxs_connect_result_t mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
+void mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval);
+
+void lock_monitor_servers(MXS_MONITOR *monitor);
+void release_monitor_servers(MXS_MONITOR *monitor);
 
 /**
  * @brief Handle state change events
@@ -293,38 +254,5 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
  * @param monitor Monitor object
  */
 void mon_hangup_failed_servers(MXS_MONITOR *monitor);
-
-/**
- * @brief Serialize the servers of a monitor to a file
- *
- * This partially converts @c monitor into an INI format file. Only the servers
- * of the monitor are serialized. This allows the monitor to keep monitoring
- * the servers that were added at runtime even after a restart.
- *
- * NOTE: This does not persist the complete monitor configuration and requires
- * that an existing monitor configuration is in the main configuration file.
- * Changes to monitor parameters are not persisted.
- *
- * @param monitor Monitor to serialize
- * @return False if the serialization of the monitor fails, true if it was successful
- */
-bool monitor_serialize_servers(const MXS_MONITOR *monitor);
-
-/**
- * @brief Serialize a monitor to a file
- *
- * This converts the static configuration of the monitor into an INI format file.
- *
- * @param monitor Monitor to serialize
- * @return True if serialization was successful
- */
-bool monitor_serialize(const MXS_MONITOR *monitor);
-
-/**
- * Check if a server is being monitored and return the monitor.
- * @param server Server that is queried
- * @return The monitor watching this server, or NULL if not monitored
- */
-MXS_MONITOR* monitor_server_in_use(const SERVER *server);
 
 MXS_END_DECLS

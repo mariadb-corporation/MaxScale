@@ -39,7 +39,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <maxscale/service.h>
-#include <maxscale/monitor.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
 #include <maxscale/spinlock.h>
@@ -50,6 +49,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modules.h>
 #include <maxscale/gwdirs.h>
+
+#include "maxscale/monitor.h"
 
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08

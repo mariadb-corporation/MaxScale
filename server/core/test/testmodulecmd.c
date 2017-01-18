@@ -21,6 +21,8 @@
 #include <maxscale/modulecmd.h>
 #include <maxscale/session.h>
 
+#include "../maxscale/monitor.h"
+
 #define TEST(a, b) do{if (!(a)){printf("%s:%d "b"\n", __FILE__, __LINE__);return 1;}}while(false)
 
 static bool ok = false;
