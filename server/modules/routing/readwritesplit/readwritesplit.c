@@ -765,7 +765,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
     if (writebuf != NULL && client_dcb != NULL)
     {
         /** Write reply to client DCB */
-        SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
     /** Unlock router session */
     rses_end_locked_router_action(router_cli_ses);

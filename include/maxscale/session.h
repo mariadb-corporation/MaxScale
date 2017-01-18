@@ -204,7 +204,7 @@ typedef struct session
  * the replies to the first element in the pipeline of filters and
  * the protocol.
  */
-#define SESSION_ROUTE_REPLY(sess, buf)                          \
+#define MXS_SESSION_ROUTE_REPLY(sess, buf)                          \
     ((sess)->tail.clientReply)((sess)->tail.instance,           \
                                (sess)->tail.session, (buf))
 
@@ -243,7 +243,7 @@ RESULTSET *sessionGetList(SESSIONLISTFILTER);
  * @note The return value is valid only if either a router or a filter
  *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
  *
- * @param ses The SESSION object.
+ * @param ses The MXS_SESSION object.
  * @return The transaction state.
  */
 mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses);
@@ -253,7 +253,7 @@ mxs_session_trx_state_t session_get_trx_state(const MXS_SESSION* ses);
  *
  * NOTE: Only the protocol object may call this.
  *
- * @param ses       The SESSION object.
+ * @param ses       The MXS_SESSION object.
  * @param new_state The new transaction state.
  *
  * @return The previous transaction state.
@@ -350,7 +350,7 @@ static inline bool session_set_autocommit(MXS_SESSION* ses, bool autocommit)
  * This creates an additional reference to a session whose unique ID matches @c id.
  *
  * @param id Unique session ID
- * @return Reference to a SESSION or NULL if the session was not found
+ * @return Reference to a MXS_SESSION or NULL if the session was not found
  *
  * @note The caller must free the session reference by calling session_put_ref
  */
@@ -363,7 +363,7 @@ MXS_SESSION* session_get_by_id(int id);
  * as long as it is needed.
  *
  * @param session Session reference to get
- * @return Reference to a SESSION
+ * @return Reference to a MXS_SESSION
  *
  * @note The caller must free the session reference by calling session_put_ref
  */

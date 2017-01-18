@@ -594,7 +594,7 @@ dcb_process_victim_queue(int threadid)
 
         /** After these calls, the DCB should be treated as if it were freed.
          * Whether it is actually freed depends on the type of the DCB and how
-         * many DCBs are linked to it via the SESSION object. */
+         * many DCBs are linked to it via the MXS_SESSION object. */
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_remove_from_list(dcb);
         dcb_final_free(dcb);

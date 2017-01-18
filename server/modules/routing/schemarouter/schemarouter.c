@@ -2470,7 +2470,7 @@ static void clientReply(ROUTER* instance,
                  PTR_IS_ERR(cmd) ? "ERR" : PTR_IS_OK(cmd) ? "OK" : "RSET",
                  state & INIT_UNINT ? "UNINIT" : state & INIT_MAPPING ? "MAPPING" : "READY",
                  router_cli_ses->rses_client_dcb->session);
-        SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
+        MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
     /** Unlock router session */
     rses_end_locked_router_action(router_cli_ses);

@@ -153,9 +153,9 @@ protected:
     FilterSession(MXS_SESSION* pSession);
 
 protected:
-    MXS_SESSION*   m_pSession; /*< The SESSION this filter session is associated with. */
-    Downstream m_down;     /*< The downstream component. */
-    Upstream   m_up;       /*< The upstream component. */
+    MXS_SESSION*   m_pSession; /*< The MXS_SESSION this filter session is associated with. */
+    Downstream     m_down;     /*< The downstream component. */
+    Upstream       m_up;       /*< The upstream component. */
 };
 
 
@@ -180,7 +180,7 @@ protected:
  * public:
  *      static MyFilter* create(const char* zName, char** pzOptions, FILTER_PARAMETER** ppParams);
  *
- *      MyFilterSession* newSession(SESSION* pSession);
+ *      MyFilterSession* newSession(MXS_SESSION* pSession);
  *
  *      void diagnostics(DCB* pDcb);
  *      static uint64_t getCapabilities();
