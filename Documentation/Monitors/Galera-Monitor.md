@@ -76,6 +76,32 @@ If the `root_node_as_master` option is disabled for galeramon, the node with the
 lowest index will always be chosen as the master. If it is enabled, only the
 node with a a _wsrep_local_index_ value of 0 can be chosed as the master.
 
+### `set_donor_nodes`
+
+This option controls whether the global variable _wsrep_sst_donor_ should be set
+in each cluster node with _slave' status_.
+The variable contains a list of slave servers, automatically sorted, with
+possible master candidates at its end.
+
+The sorting is based either on _wsrep_local_index_ or node server _priority_
+depending on the value of _use_priority_ option.
+If no server has _priority_ defined the sorting switches to _wsrep_local_index_.
+Node names are collected by fetching the result of the variable _wsrep_node_name_.
+
+Example of variable being set in all slave nodes, assuming three nodes:
+```
+SET GLOBAL wsrep_sst_donor = "galera001,galera000"
+```
+
+**Note**: 
+in order to set the global variable _wsrep_sst_donor_, proper privileges are
+required for the monitor user that connects to cluster nodes.
+This option is disabled by default and was introduced in MaxScale 2.1.0.
+
+```
+set_donor_nodes=true
+```
+
 ## Interaction with Server Priorities
 
 If the `use_priority` option is set and a server is configured with the
