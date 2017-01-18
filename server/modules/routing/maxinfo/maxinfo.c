@@ -34,7 +34,6 @@
 #include <time.h>
 #include <maxscale/alloc.h>
 #include <maxscale/service.h>
-#include <maxscale/session.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
 #include <maxscale/modules.h>
@@ -52,6 +51,8 @@
 #include <maxscale/resultset.h>
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
+
+#include "../../../core/maxscale/session.h"
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 

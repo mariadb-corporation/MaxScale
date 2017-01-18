@@ -53,7 +53,6 @@
 #include <errno.h>
 #include <maxscale/alloc.h>
 #include <maxscale/service.h>
-#include <maxscale/session.h>
 #include <maxscale/router.h>
 #include <maxscale/filter.h>
 #include <maxscale/modules.h>
@@ -77,6 +76,8 @@
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>
 #include <sys/syslog.h>
+
+#include "../../../core/maxscale/session.h"
 
 #define MAXARGS 12
 

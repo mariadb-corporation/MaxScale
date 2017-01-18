@@ -63,20 +63,21 @@
  *
  * @endverbatim
  */
-#include <stdio.h>
+#include <maxscale/dcb.h>
+
+#include <errno.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <signal.h>
-#include <maxscale/dcb.h>
+#include <time.h>
+
 #include <maxscale/spinlock.h>
 #include <maxscale/server.h>
-#include <maxscale/session.h>
 #include <maxscale/service.h>
 #include <maxscale/modules.h>
 #include <maxscale/router.h>
-#include <errno.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
 #include <maxscale/log_manager.h>
@@ -92,6 +93,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 #include <maxscale/platform.h>
+
+#include "maxscale/session.h"
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized = DCB_INIT;

@@ -28,11 +28,13 @@
  * @endverbatim
  */
 #include <maxscale/session.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/dcb.h>
@@ -42,6 +44,8 @@
 #include <maxscale/router.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
+
+#include "maxscale/session.h"
 #include "maxscale/filter.h"
 
 /* A session with null values, used for initialization */
@@ -230,7 +234,7 @@ session_set_dummy(DCB *client_dcb)
     session->service = NULL;
     session->client_dcb = NULL;
     session->n_filters = 0;
-    memset(&session->stats, 0, sizeof(SESSION_STATS));
+    memset(&session->stats, 0, sizeof(MXS_SESSION_STATS));
     session->stats.connect = 0;
     session->state = SESSION_STATE_DUMMY;
     session->refcount = 1;
@@ -688,7 +692,7 @@ session_setup_filters(MXS_SESSION *session)
 }
 
 /**
- * Entry point for the final element int he upstream filter, i.e. the writing
+ * Entry point for the final element in the upstream filter, i.e. the writing
  * of the data to the client.
  *
  * @param       instance        The "instance" data
