@@ -493,16 +493,6 @@ public:
         MAX_PAYLOAD_LEN = 0xffffff
     };
 
-    uint32_t payload_len() const
-    {
-        return m_payload_len;
-    }
-    uint8_t packet_no() const
-    {
-        return m_packet_no;
-    }
-
-protected:
     ComPacket(GWBUF* pPacket)
         : m_pPacket(pPacket)
         , m_pData(GWBUF_DATA(pPacket))
@@ -521,6 +511,22 @@ protected:
         m_pData += MYSQL_HEADER_LEN;
     }
 
+    uint32_t payload_len() const
+    {
+        return m_payload_len;
+    }
+
+    uint32_t packet_len() const
+    {
+        return MYSQL_HEADER_LEN + m_payload_len;
+    }
+
+    uint8_t packet_no() const
+    {
+        return m_packet_no;
+    }
+
+protected:
     GWBUF*   m_pPacket;
     uint8_t* m_pData;
 
@@ -542,13 +548,22 @@ public:
         : ComPacket(pPacket)
         , m_type(*m_pData)
     {
+        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
 
+    ComResponse(const ComPacket& packet)
+        : ComPacket(packet)
+        , m_type(*m_pData)
+    {
+        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
+        ++m_pData;
+    }
     ComResponse(const ComResponse& packet)
         : ComPacket(packet)
         , m_type(packet.m_type)
     {
+        ss_dassert(packet_len() >= MYSQL_HEADER_LEN + 1);
         ++m_pData;
     }
 
@@ -579,6 +594,12 @@ protected:
 class ComEOF : public ComResponse
 {
 public:
+    enum
+    {
+        PAYLOAD_LEN = 5,
+        PACKET_LEN  = MYSQL_HEADER_LEN + PAYLOAD_LEN
+    };
+
     ComEOF(GWBUF* pPacket)
         : ComResponse(pPacket)
     {

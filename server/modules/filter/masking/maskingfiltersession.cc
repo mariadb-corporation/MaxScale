@@ -216,28 +216,26 @@ void warn_of_type_mismatch(const MaskingRules::Rule& rule)
 
 void MaskingFilterSession::handle_row(GWBUF* pPacket)
 {
-    ComResponse response(pPacket);
+    ComPacket response(pPacket);
 
-    switch (response.type())
+    if ((response.payload_len() == ComEOF::PAYLOAD_LEN) &&
+        (ComResponse(response).type() == ComPacket::EOF_PACKET))
     {
-    case ComPacket::EOF_PACKET:
         // EOF after last row.
+        ComEOF eof(response);
+
+        if (eof.status() & SERVER_MORE_RESULTS_EXIST)
         {
-            ComEOF eof(response);
-
-            if (eof.status() & SERVER_MORE_RESULTS_EXIST)
-            {
-                m_res.reset_multi();
-                m_state = EXPECTING_RESPONSE;
-            }
-            else
-            {
-                m_state = EXPECTING_NOTHING;
-            }
+            m_res.reset_multi();
+            m_state = EXPECTING_RESPONSE;
         }
-        break;
-
-    default:
+        else
+        {
+            m_state = EXPECTING_NOTHING;
+        }
+    }
+    else
+    {
         if (m_res.some_rule_matches())
         {
             if (response.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)
@@ -267,7 +265,7 @@ void MaskingFilterSession::handle_large_payload()
     }
 }
 
-void MaskingFilterSession::mask_values(ComResponse& response)
+void MaskingFilterSession::mask_values(ComPacket& response)
 {
     switch (m_res.command())
     {

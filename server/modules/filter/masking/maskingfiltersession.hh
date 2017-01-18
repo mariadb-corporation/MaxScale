@@ -59,7 +59,7 @@ private:
     void handle_eof(GWBUF* pPacket);
     void handle_large_payload();
 
-    void mask_values(ComResponse& response);
+    void mask_values(ComPacket& response);
 
 private:
     typedef std::tr1::shared_ptr<MaskingRules> SMaskingRules;
