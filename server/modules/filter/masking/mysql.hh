@@ -596,8 +596,8 @@ class ComEOF : public ComResponse
 public:
     enum
     {
-        PAYLOAD_LEN = 5,
-        PACKET_LEN  = MYSQL_HEADER_LEN + PAYLOAD_LEN
+        PACKET_LEN  = MYSQL_EOF_PACKET_LEN,
+        PAYLOAD_LEN = MYSQL_EOF_PACKET_LEN - MYSQL_HEADER_LEN
     };
 
     ComEOF(GWBUF* pPacket)
