@@ -13,10 +13,11 @@
 
 #include <maxscale/query_classifier.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modules.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+
+#include "../core/maxscale/modules.h"
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED

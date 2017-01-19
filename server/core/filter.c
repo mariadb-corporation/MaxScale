@@ -29,12 +29,12 @@
 #include <errno.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modules.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
 #include "maxscale/filter.h"
 
 #include "maxscale/config.h"
+#include "maxscale/modules.h"
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */

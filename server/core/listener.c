@@ -38,7 +38,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>
 #include <maxscale/users.h>
-#include <maxscale/modules.h>
 #include <maxscale/service.h>
 
 static RSA *rsa_512 = NULL;

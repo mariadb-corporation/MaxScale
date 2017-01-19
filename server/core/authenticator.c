@@ -13,9 +13,9 @@
 
 #include <maxscale/gw_authenticator.h>
 #include <maxscale/modutil.h>
-#include <maxscale/modules.h>
 #include <maxscale/alloc.h>
 
+#include "maxscale/modules.h"
 /**
  * @file authenticator.c - Authenticator module functions
  */

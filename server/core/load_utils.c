@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
-#include <maxscale/modules.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
@@ -44,6 +43,8 @@
 #include <openssl/sha.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/alloc.h>
+
+#include "maxscale/modules.h"
 
 typedef struct loaded_module
 {

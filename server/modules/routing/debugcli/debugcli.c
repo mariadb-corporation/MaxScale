@@ -32,7 +32,6 @@
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/router.h>
-#include <maxscale/modules.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>

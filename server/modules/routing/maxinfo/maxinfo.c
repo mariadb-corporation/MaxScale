@@ -36,7 +36,6 @@
 #include <maxscale/service.h>
 #include <maxscale/server.h>
 #include <maxscale/router.h>
-#include <maxscale/modules.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
 #include <maxscale/monitor.h>
@@ -52,6 +51,7 @@
 #include <maxscale/secrets.h>
 #include <maxscale/users.h>
 
+#include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/session.h"
 #include "../../../core/maxscale/monitor.h"
 

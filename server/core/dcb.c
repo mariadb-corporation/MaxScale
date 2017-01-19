@@ -76,7 +76,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>
-#include <maxscale/modules.h>
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
@@ -95,6 +94,7 @@
 #include <maxscale/platform.h>
 
 #include "maxscale/session.h"
+#include "maxscale/modules.h"
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized = DCB_INIT;

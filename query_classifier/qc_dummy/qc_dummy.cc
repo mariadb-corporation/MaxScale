@@ -12,8 +12,9 @@
  */
 
 #define MXS_MODULE_NAME "qc_sqlite"
-#include <maxscale/modules.h>
 #include <maxscale/query_classifier.h>
+
+#include "../../server/core/maxscale/config.h"
 
 int32_t qc_dummy_parse(GWBUF* querybuf, int32_t* pResult)
 {

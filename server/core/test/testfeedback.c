@@ -43,8 +43,8 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/buffer.h>
 #include <regex.h>
-#include <maxscale/modules.h>
 #include <maxscale/maxscale_test.h>
+
 #include "../load_utils.c"
 
 static char* server_options[] =

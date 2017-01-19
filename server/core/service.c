@@ -54,7 +54,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listener.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modules.h>
 #include <maxscale/poll.h>
 #include <maxscale/protocol.h>
 #include <maxscale/queuemanager.h>
@@ -70,6 +69,7 @@
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/service.h"
+#include "maxscale/modules.h"
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000

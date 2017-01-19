@@ -16,11 +16,11 @@
 #include <maxscale/config_runtime.h>
 #include <maxscale/gwdirs.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/modules.h>
 
 #include "maxscale/config.h"
 #include "maxscale/service.h"
 #include "maxscale/monitor.h"
+#include "maxscale/modules.h"
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 

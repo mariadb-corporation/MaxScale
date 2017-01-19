@@ -58,7 +58,6 @@
 #include <maxscale/service.h>
 #include <maxscale/router.h>
 #include <maxscale/filter.h>
-#include <maxscale/modules.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/atomic.h>
 #include <maxscale/server.h>
@@ -80,6 +79,8 @@
 #include "../../../core/maxscale/monitor.h"
 
 #include "../../../core/maxscale/session.h"
+
+#include "../../../core/maxscale/modules.h"
 
 #define MAXARGS 12
 

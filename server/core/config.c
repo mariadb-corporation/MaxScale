@@ -58,7 +58,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/modules.h>
 #include <maxscale/notification.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/spinlock.h>
@@ -69,6 +68,7 @@
 #include "maxscale/filter.h"
 #include "maxscale/service.h"
 #include "maxscale/monitor.h"
+#include "maxscale/modules.h"
 
 typedef struct duplicate_context
 {
