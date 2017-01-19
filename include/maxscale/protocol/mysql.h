@@ -70,10 +70,10 @@ MXS_BEGIN_DECLS
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
 
-#define MYSQL_HEADER_LEN 4L
-#define MYSQL_CHECKSUM_LEN 4L
-#define MYSQL_EOF_PACKET_LEN 9L
-#define MYSQL_OK_PACKET_MIN_LEN 11L
+#define MYSQL_HEADER_LEN 4
+#define MYSQL_CHECKSUM_LEN 4
+#define MYSQL_EOF_PACKET_LEN 9
+#define MYSQL_OK_PACKET_MIN_LEN 11
 
 /**
  * Offsets and sizes of various parts of the client packet. If the offset is

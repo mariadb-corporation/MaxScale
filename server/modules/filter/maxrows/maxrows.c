@@ -778,7 +778,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                  */
                 if (packetlen < MYSQL_EOF_PACKET_LEN)
                 {
-                    MXS_ERROR("EOF packet has size of %lu instead of %ld", packetlen, MYSQL_EOF_PACKET_LEN);
+                    MXS_ERROR("EOF packet has size of %lu instead of %d", packetlen, MYSQL_EOF_PACKET_LEN);
                     rv = send_ok_upstream(csdata);
                     csdata->state = MAXROWS_EXPECTING_NOTHING;
                     break;

@@ -2310,8 +2310,8 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
     }
     else
     {
-        MXS_ERROR("failed to allocate %ld bytes of memory when writing an"
-                  " event.", datalen + MYSQL_HEADER_LEN);
+        MXS_ERROR("failed to allocate %u bytes of memory when writing an "
+                  "event.", datalen + MYSQL_HEADER_LEN);
         rval = false;
     }
     return rval;

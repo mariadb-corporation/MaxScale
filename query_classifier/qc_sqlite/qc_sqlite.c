@@ -553,7 +553,7 @@ static bool parse_query(GWBUF* query)
         }
         else
         {
-            MXS_ERROR("Packet size %ld, provided buffer is %ld.",
+            MXS_ERROR("Packet size %u, provided buffer is %ld.",
                       MYSQL_HEADER_LEN + MYSQL_GET_PAYLOAD_LEN(data),
                       GWBUF_LENGTH(query));
         }
