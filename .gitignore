@@ -7,3 +7,6 @@
 # Netbeans Project files
 nbproject/
 /build/
+
+# RBCommons
+.reviewboardrc
