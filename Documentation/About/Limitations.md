@@ -208,5 +208,5 @@ and routed. Here is a list of the current limitations.
 
 ## Dbfwfilter limitations
 
-The Database Firewall filter does not support multi-statements. Using them
-will result in an error being sent to the client.
+The Database Firewall filter does not support multi-statements or prepared
+statements. Using them will result in an error being sent to the client.
