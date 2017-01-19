@@ -513,7 +513,8 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
             if (listener && listener_serialize(listener) && serviceLaunchListener(service, listener))
             {
-                MXS_NOTICE("Created listener '%s' at %s:%s for service '%s'",
+                MXS_NOTICE("Created %slistener '%s' at %s:%s for service '%s'%s",
+                           ssl ? "TLS encrypted " : "",
                            name, print_addr, port, service->name);
             }
             else
