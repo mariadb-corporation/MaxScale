@@ -298,6 +298,9 @@ int Mariadb_nodes::start_galera()
     int local_result = 0;
     local_result += stop_nodes();
 
+    // Remove the grastate.dat file
+    ssh_node(0, "rm -f /var/lib/mysql/grastate.dat", true);
+
     printf("Starting new Galera cluster\n");  fflush(stdout);
     local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
 
