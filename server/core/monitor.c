@@ -917,6 +917,7 @@ mon_get_event_name(MXS_MONITOR_SERVERS* node)
         }
     }
 
+    ss_dassert(false);
     return "undefined_event";
 }
 
@@ -1176,7 +1177,7 @@ mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval)
               mysql_error(database->con));
 }
 
-void mon_log_state_change(MXS_MONITOR_SERVERS *ptr)
+static void mon_log_state_change(MXS_MONITOR_SERVERS *ptr)
 {
     SERVER srv;
     srv.status = ptr->mon_prev_status;

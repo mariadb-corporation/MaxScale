@@ -66,8 +66,6 @@ extern bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node);
 const char* mon_get_event_name(MXS_MONITOR_SERVERS* node);
 
-void mon_log_state_change(MXS_MONITOR_SERVERS *ptr);
-
 /**
  * @brief Serialize the servers of a monitor to a file
  *
