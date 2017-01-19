@@ -106,7 +106,7 @@ enum mxs_module_param_options
 typedef struct mxs_enum_value
 {
     const char *name; /**< Name of the enum value */
-    int         enum_value; /**< The integer value of the enum */
+    uint64_t    enum_value; /**< The integer value of the enum */
 } MXS_ENUM_VALUE;
 
 /** Module parameter declaration */
