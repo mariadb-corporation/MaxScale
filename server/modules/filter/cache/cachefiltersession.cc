@@ -477,12 +477,9 @@ int CacheFilterSession::handle_expecting_rows()
 
         if (m_res.offset + packetlen <= buflen)
         {
-            // We have at least one complete packet.
-            int command = (int)MYSQL_GET_COMMAND(header);
-
-            switch (command)
+            if ((packetlen == MYSQL_EOF_PACKET_LEN) && (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_EOF))
             {
-            case 0xfe: // EOF, the one after the rows.
+                // The last EOF packet
                 m_res.offset += packetlen;
                 ss_dassert(m_res.offset == buflen);
 
@@ -490,10 +487,10 @@ int CacheFilterSession::handle_expecting_rows()
 
                 rv = send_upstream();
                 m_state = CACHE_EXPECTING_NOTHING;
-                break;
-
-            case 0xfb: // NULL
-            default: // length-encoded-string
+            }
+            else
+            {
+                // Length encode strings, 0xfb denoting NULL.
                 m_res.offset += packetlen;
                 ++m_res.nRows;
 
@@ -507,7 +504,6 @@ int CacheFilterSession::handle_expecting_rows()
                     m_res.offset = buflen; // To abort the loop.
                     m_state = CACHE_IGNORING_RESPONSE;
                 }
-                break;
             }
         }
         else
