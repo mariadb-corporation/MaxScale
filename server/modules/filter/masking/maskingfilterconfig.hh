@@ -36,7 +36,7 @@ public:
     static const MXS_ENUM_VALUE large_payload_values[];
     static const char*          large_payload_default;
 
-    static const char*          rules_file_name;
+    static const char*          rules_name;
 
     static const char*          warn_type_mismatch_name;
     static const MXS_ENUM_VALUE warn_type_mismatch_values[];
@@ -45,7 +45,7 @@ public:
     MaskingFilterConfig(const char* zName, const CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
-        , m_rules_file(get_rules_file(pParams))
+        , m_rules(get_rules(pParams))
         , m_warn_type_mismatch(get_warn_type_mismatch(pParams))
     {}
     ~MaskingFilterConfig() {}
@@ -60,9 +60,9 @@ public:
         return m_large_payload;
     }
 
-    const std::string& rules_file() const
+    const std::string& rules() const
     {
-        return m_rules_file;
+        return m_rules;
     }
 
     warn_type_mismatch_t warn_type_mismatch() const
@@ -75,9 +75,9 @@ public:
         m_large_payload = l;
     }
 
-    void set_rules_file(const std::string& s)
+    void set_rules(const std::string& s)
     {
-        m_rules_file = s;
+        m_rules = s;
     }
     void set_warn_type_mismatch(warn_type_mismatch_t w)
     {
@@ -85,12 +85,12 @@ public:
     }
 
     static large_payload_t get_large_payload(const CONFIG_PARAMETER* pParams);
-    static std::string get_rules_file(const CONFIG_PARAMETER* pParams);
+    static std::string get_rules(const CONFIG_PARAMETER* pParams);
     static warn_type_mismatch_t get_warn_type_mismatch(const CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;
     large_payload_t      m_large_payload;
-    std::string          m_rules_file;
+    std::string          m_rules;
     warn_type_mismatch_t m_warn_type_mismatch;
 };

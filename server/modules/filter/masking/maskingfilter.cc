@@ -84,7 +84,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
-            { Config::rules_file_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
+            { Config::rules_name, MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED },
             { Config::warn_type_mismatch_name,
               MXS_MODULE_PARAM_ENUM, Config::warn_type_mismatch_default,
               MXS_MODULE_OPT_NONE, Config::warn_type_mismatch_values },
@@ -120,7 +120,7 @@ MaskingFilter* MaskingFilter::create(const char* zName, char** pzOptions, CONFIG
 
     Config config(zName, pParams);
 
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules_file().c_str());
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(config.rules().c_str());
 
     if (sRules.get())
     {
@@ -155,7 +155,7 @@ std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const
 
 void MaskingFilter::reload(DCB* pOut)
 {
-    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules_file().c_str());
+    auto_ptr<MaskingRules> sRules = MaskingRules::load(m_config.rules().c_str());
 
     if (sRules.get())
     {

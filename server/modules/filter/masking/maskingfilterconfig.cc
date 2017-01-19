@@ -18,7 +18,7 @@ namespace
 {
 
 const char config_name_large_payload[]       = "large_payload";
-const char config_name_rules_file[]          = "rules_file";
+const char config_name_rules[]               = "rules";
 const char config_name_warn_type_mismatch[]  = "warn_type_mismatch";
 
 const char config_value_abort[]  = "abort";
@@ -47,11 +47,11 @@ const MXS_ENUM_VALUE MaskingFilterConfig::large_payload_values[] =
 const char* MaskingFilterConfig::large_payload_default = config_value_abort;
 
 /*
- * PARAM rules_file
+ * PARAM rules
  */
 
 //static
-const char* MaskingFilterConfig::rules_file_name = config_name_rules_file;
+const char* MaskingFilterConfig::rules_name = config_name_rules;
 
 /*
  * PARAM warn_type_mismatch
@@ -84,9 +84,9 @@ MaskingFilterConfig::get_large_payload(const CONFIG_PARAMETER* pParams)
 }
 
 //static
-std::string MaskingFilterConfig::get_rules_file(const CONFIG_PARAMETER* pParams)
+std::string MaskingFilterConfig::get_rules(const CONFIG_PARAMETER* pParams)
 {
-    return config_get_string(pParams, rules_file_name);
+    return config_get_string(pParams, rules_name);
 }
 
 //static

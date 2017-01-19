@@ -73,7 +73,7 @@ configuration setup.
 [Mask-SSN]
 type=filter
 module=masking
-rules_file=...
+rules=...
 
 [SomeService]
 type=service
@@ -83,9 +83,9 @@ filters=Mask-SSN
 
 ## Filter Parameters
 
-The masking filter has one mandatory parameter - `rules_file`.
+The masking filter has one mandatory parameter - `rules`.
 
-#### `rules_file`
+#### `rules`
 
 Specifies the path of the file where the masking rules are stored.
 A relative path is interpreted relative to the _module configuration directory_
@@ -93,7 +93,7 @@ of MariaDB MaxScale. The default module configuration directory is
 _/etc/maxscale.modules.d_.
 
 ```
-rules_file=/path/to/rules-file
+rules=/path/to/rules-file
 ```
 
 #### `warn_type_mismatch`
