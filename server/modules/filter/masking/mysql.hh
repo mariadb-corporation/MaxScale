@@ -483,13 +483,6 @@ class ComPacket
 public:
     enum
     {
-        OK_PACKET  = 0x00,
-        EOF_PACKET = 0xfe,
-        ERR_PACKET = 0xff,
-    };
-
-    enum
-    {
         MAX_PAYLOAD_LEN = 0xffffff
     };
 
@@ -544,6 +537,14 @@ private:
 class ComResponse : public ComPacket
 {
 public:
+    enum
+    {
+        OK_PACKET           = MYSQL_REPLY_OK,          // 0x00
+        EOF_PACKET          = MYSQL_REPLY_EOF,         // 0xfe
+        ERR_PACKET          = MYSQL_REPLY_ERR,         // 0xff
+        LOCAL_INFILE_PACKET = MYSQL_REPLY_LOCAL_INFILE // 0xfb
+    };
+
     ComResponse(GWBUF* pPacket)
         : ComPacket(pPacket)
         , m_type(*m_pData)
@@ -574,17 +575,17 @@ public:
 
     bool is_ok() const
     {
-        return m_type == ComPacket::OK_PACKET;
+        return m_type == ComResponse::OK_PACKET;
     }
 
     bool is_eof() const
     {
-        return m_type == ComPacket::EOF_PACKET;
+        return m_type == ComResponse::EOF_PACKET;
     }
 
     bool is_err() const
     {
-        return m_type == ComPacket::ERR_PACKET;
+        return m_type == ComResponse::ERR_PACKET;
     }
 
 protected:

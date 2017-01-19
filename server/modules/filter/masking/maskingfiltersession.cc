@@ -126,9 +126,9 @@ void MaskingFilterSession::handle_response(GWBUF* pPacket)
 
     switch (response.type())
     {
-    case ComPacket::OK_PACKET: // OK
-    // We'll end up here also in the case of a multi-result.
-    case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+    case ComResponse::OK_PACKET:
+        // We'll end up here also in the case of a multi-result.
+    case ComResponse::LOCAL_INFILE_PACKET: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
         m_state = EXPECTING_NOTHING;
         break;
 
@@ -219,7 +219,7 @@ void MaskingFilterSession::handle_row(GWBUF* pPacket)
     ComPacket response(pPacket);
 
     if ((response.payload_len() == ComEOF::PAYLOAD_LEN) &&
-        (ComResponse(response).type() == ComPacket::EOF_PACKET))
+        (ComResponse(response).type() == ComResponse::EOF_PACKET))
     {
         // EOF after last row.
         ComEOF eof(response);
