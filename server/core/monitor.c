@@ -36,7 +36,7 @@
 #include <maxscale/alloc.h>
 #include <mysqld_error.h>
 #include <maxscale/externcmd.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/pcre2.h>

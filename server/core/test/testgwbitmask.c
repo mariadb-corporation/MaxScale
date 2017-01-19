@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <maxscale/gwbitmask.h>
+#include <maxscale/bitmask.h>
 
 #include <maxscale/debug.h>
 

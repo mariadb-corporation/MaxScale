@@ -55,7 +55,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/maxscale.h>

@@ -20,7 +20,7 @@
 #include <maxscale/users.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <sys/stat.h>
 
 /**

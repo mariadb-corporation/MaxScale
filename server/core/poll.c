@@ -23,7 +23,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/dcb.h>
 #include <maxscale/atomic.h>
-#include <maxscale/gwbitmask.h>
+#include <maxscale/bitmask.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/config.h>

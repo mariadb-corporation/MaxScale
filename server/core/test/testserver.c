@@ -36,7 +36,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/server.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 
 // This is pretty ugly but it's required to test internal functions
 #include "../config.c"

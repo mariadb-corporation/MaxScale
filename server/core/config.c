@@ -62,7 +62,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"

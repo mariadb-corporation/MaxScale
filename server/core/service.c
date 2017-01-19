@@ -50,7 +50,7 @@
 #include <fcntl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/listener.h>
 #include <maxscale/log_manager.h>

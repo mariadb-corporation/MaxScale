@@ -22,7 +22,7 @@
 #include <rocksdb/env.h>
 #include <rocksdb/statistics.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 #include "rocksdbinternals.hh"

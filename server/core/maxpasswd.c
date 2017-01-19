@@ -23,7 +23,7 @@
  * @endverbatim
  */
 #include <stdio.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/secrets.h>
 

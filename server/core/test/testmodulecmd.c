@@ -17,7 +17,7 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include <maxscale/session.h>
 

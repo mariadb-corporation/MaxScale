@@ -29,11 +29,11 @@
 
 #include <mysql_auth.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/gw_authenticator.h>
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include "dbusers.h"
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
 

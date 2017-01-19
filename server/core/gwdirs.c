@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
 

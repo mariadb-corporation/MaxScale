@@ -33,7 +33,7 @@
 #define MXS_MODULE_NAME "maxrows"
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>

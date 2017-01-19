@@ -53,14 +53,14 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
 #include <mysql_auth.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/ssl.h>
 #include <maxscale/poll.h>
 #include <maxscale/modinfo.h>
 #include <sys/stat.h>
 #include <maxscale/modutil.h>
 #include <netinet/tcp.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/gw_authenticator.h>
+#include <maxscale/authenticator.h>
 #include <maxscale/session.h>
 
 static int process_init(void);

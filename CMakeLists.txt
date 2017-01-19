@@ -117,7 +117,7 @@ endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/version.h.in ${CMAKE_BINARY_DIR}/include/maxscale/version.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/gwdirs.h.in ${CMAKE_BINARY_DIR}/include/maxscale/gwdirs.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/paths.h.in ${CMAKE_BINARY_DIR}/include/maxscale/paths.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/adminusers.h.in ${CMAKE_BINARY_DIR}/include/maxscale/adminusers.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/include/maxscale/maxscale_test.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
@@ -305,7 +305,7 @@ if(PACKAGE)
 endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
-#       situation in gwdirs.h.in.
+#       situation in paths.h.in.
 if (NOT PACKAGE)
   install(DIRECTORY DESTINATION var/cache/maxscale)
   install(DIRECTORY DESTINATION var/log/maxscale)

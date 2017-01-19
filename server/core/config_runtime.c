@@ -14,7 +14,7 @@
 #include <strings.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config_runtime.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
 
 #include "maxscale/config.h"

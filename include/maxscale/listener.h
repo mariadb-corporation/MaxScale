@@ -28,7 +28,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/protocol.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/ssl.h>
 #include <maxscale/hashtable.h>
 
 MXS_BEGIN_DECLS

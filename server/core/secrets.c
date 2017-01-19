@@ -16,7 +16,7 @@
 #include <maxscale/log_manager.h>
 #include <ctype.h>
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/random_jkiss.h>
 #include <maxscale/alloc.h>
 

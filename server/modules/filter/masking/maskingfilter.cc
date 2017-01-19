@@ -13,7 +13,7 @@
 
 #define MXS_MODULE_NAME "masking"
 #include "maskingfilter.hh"
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include "maskingrules.hh"
 

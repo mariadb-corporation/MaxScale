@@ -20,7 +20,7 @@
 #include <maxscale/buffer.h>
 #include <mysql.h>
 #include <unistd.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 
 char* append(char* types, const char* type_name, size_t* lenp)

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <maxscale/gwbitmask.h>
+#include <maxscale/bitmask.h>
 #include <maxscale/alloc.h>
 
 /**

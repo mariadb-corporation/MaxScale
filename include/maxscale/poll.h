@@ -27,7 +27,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
-#include <maxscale/gwbitmask.h>
+#include <maxscale/bitmask.h>
 #include <maxscale/resultset.h>
 #include <sys/epoll.h>
 

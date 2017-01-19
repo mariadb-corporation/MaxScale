@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include "rules.h"
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/protocol/mysql.h>

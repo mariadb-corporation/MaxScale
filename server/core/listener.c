@@ -32,8 +32,8 @@
 #include <string.h>
 #include <fcntl.h>
 #include <maxscale/listener.h>
-#include <maxscale/gwdirs.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/paths.h>
+#include <maxscale/ssl.h>
 #include <maxscale/protocol.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/alloc.h>

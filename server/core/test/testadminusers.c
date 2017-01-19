@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>

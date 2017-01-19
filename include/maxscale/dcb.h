@@ -49,10 +49,10 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
 #include <maxscale/protocol.h>
-#include <maxscale/gw_authenticator.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/authenticator.h>
+#include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/gwbitmask.h>
+#include <maxscale/bitmask.h>
 #include <netinet/in.h>
 
 MXS_BEGIN_DECLS

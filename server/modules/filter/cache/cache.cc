@@ -15,7 +15,7 @@
 #include "cache.hh"
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include "storagefactory.hh"
 #include "storage.hh"
 

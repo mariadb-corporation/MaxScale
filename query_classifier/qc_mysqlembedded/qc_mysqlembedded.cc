@@ -64,7 +64,7 @@
 #define MYSQL_COM_INIT_DB     COM_INIT_DB
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
 #include <maxscale/protocol/mysql.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/utils.h>
 
 #include <stdio.h>

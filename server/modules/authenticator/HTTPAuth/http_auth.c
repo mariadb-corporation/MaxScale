@@ -26,7 +26,7 @@
 
 #define MXS_MODULE_NAME "HTTPAuth"
 
-#include <maxscale/gw_authenticator.h>
+#include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/dcb.h>

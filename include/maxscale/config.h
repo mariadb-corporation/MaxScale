@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
-#include <maxscale/gw_ssl.h>
+#include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
 
 MXS_BEGIN_DECLS

@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 #include <cdc.h>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modutil.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>

@@ -17,7 +17,7 @@
 #include <sys/param.h>
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include "cachefilter.h"
 #include "lrustoragest.hh"

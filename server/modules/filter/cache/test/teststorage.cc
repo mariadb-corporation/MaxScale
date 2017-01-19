@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/query_classifier.h>
 #include "storagefactory.hh"

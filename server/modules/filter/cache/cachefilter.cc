@@ -14,7 +14,7 @@
 #define MXS_MODULE_NAME "cache"
 #include "cachefilter.hh"
 #include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/modulecmd.h>
 #include "cachemt.hh"
 #include "cachept.hh"

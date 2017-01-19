@@ -13,7 +13,7 @@
 
 #include <stdio.h>
 #include <maxscale/buffer.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 
 #define MYSQL_HEADER_LEN 4

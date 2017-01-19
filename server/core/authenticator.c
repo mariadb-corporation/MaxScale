@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/gw_authenticator.h>
+#include <maxscale/authenticator.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
 

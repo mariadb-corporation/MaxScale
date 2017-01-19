@@ -52,7 +52,7 @@
 #include <avro/errors.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modulecmd.h>
-#include <maxscale/gwdirs.h>
+#include <maxscale/paths.h>
 
 #ifndef BINLOG_NAMEFMT
 #define BINLOG_NAMEFMT      "%s.%06d"
