@@ -346,7 +346,7 @@ int CacheFilterSession::handle_expecting_fields()
 
             switch (command)
             {
-            case 0xfe: // EOF, the one after the fields.
+            case MYSQL_REPLY_EOF: // The EOF after the fields.
                 m_res.offset += packetlen;
                 m_state = CACHE_EXPECTING_ROWS;
                 rv = handle_expecting_rows();
@@ -403,15 +403,15 @@ int CacheFilterSession::handle_expecting_response()
 
         switch ((int)MYSQL_GET_COMMAND(header))
         {
-        case 0x00: // OK
-        case 0xff: // ERR
+        case MYSQL_REPLY_OK:
+        case MYSQL_REPLY_ERR:
             store_result();
 
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
 
-        case 0xfb: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
+        case MYSQL_REPLY_LOCAL_INFILE: // GET_MORE_CLIENT_DATA/SEND_MORE_CLIENT_DATA
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;
@@ -536,7 +536,7 @@ int CacheFilterSession::handle_expecting_use_response()
 
         switch (command)
         {
-        case 0x00: // OK
+        case MYSQL_REPLY_OK:
             // In case m_zUseDb could not be allocated in routeQuery(), we will
             // in fact reset the default db here. That's ok as it will prevent broken
             // entries in the cache.
@@ -545,7 +545,7 @@ int CacheFilterSession::handle_expecting_use_response()
             m_zUseDb = NULL;
             break;
 
-        case 0xff: // ERR
+        case MYSQL_REPLY_ERR:
             MXS_FREE(m_zUseDb);
             m_zUseDb = NULL;
             break;
