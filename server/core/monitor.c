@@ -27,22 +27,25 @@
  *
  * @endverbatim
  */
+#include <maxscale/monitor.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/modules.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
-#include <maxscale/pcre2.h>
-#include <maxscale/externcmd.h>
-#include <mysqld_error.h>
-#include <maxscale/mysql_utils.h>
-#include <maxscale/alloc.h>
-#include <maxscale/gwdirs.h>
 
-#include "maxscale/monitor.h"
+#include <maxscale/alloc.h>
+#include <mysqld_error.h>
+#include <maxscale/externcmd.h>
+#include <maxscale/gwdirs.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modules.h>
+#include <maxscale/mysql_utils.h>
+#include <maxscale/pcre2.h>
+#include <maxscale/secrets.h>
+#include <maxscale/spinlock.h>
+
 #include "maxscale/config.h"
+#include "maxscale/monitor.h"
 
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;

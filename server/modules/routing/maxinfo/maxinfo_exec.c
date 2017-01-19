@@ -33,7 +33,6 @@
 #include <maxscale/service.h>
 #include <maxscale/router.h>
 #include <maxscale/modules.h>
-#include <maxscale/monitor.h>
 #include <maxscale/version.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
@@ -47,6 +46,7 @@
 #include <maxscale/config.h>
 
 #include "../../../core/maxscale/session.h"
+#include "../../../core/maxscale/monitor.h"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);

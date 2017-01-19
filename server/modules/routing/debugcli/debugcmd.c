@@ -51,6 +51,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <telnetd.h>
+#include <sys/syslog.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/service.h>
 #include <maxscale/router.h>
@@ -65,9 +68,7 @@
 #include <maxscale/poll.h>
 #include <maxscale/users.h>
 #include <maxscale/config.h>
-#include <telnetd.h>
 #include <maxscale/adminusers.h>
-#include <maxscale/monitor.h>
 #include <debugcli.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
@@ -75,7 +76,8 @@
 #include <maxscale/config_runtime.h>
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>
-#include <sys/syslog.h>
+
+#include "../../../core/maxscale/monitor.h"
 
 #include "../../../core/maxscale/session.h"
 

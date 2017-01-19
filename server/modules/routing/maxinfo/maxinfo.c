@@ -53,6 +53,7 @@
 #include <maxscale/users.h>
 
 #include "../../../core/maxscale/session.h"
+#include "../../../core/maxscale/monitor.h"
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 

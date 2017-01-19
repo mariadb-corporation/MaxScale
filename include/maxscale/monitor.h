@@ -17,15 +17,17 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <mysql.h>
-#include <maxscale/server.h>
-#include <maxscale/dcb.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/resultset.h>
+
 #include <maxscale/config.h>
+#include <maxscale/dcb.h>
 #include <maxscale/externcmd.h>
-#include <maxscale/secrets.h>
+#include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
+#include <maxscale/resultset.h>
+#include <maxscale/secrets.h>
+#include <maxscale/server.h>
 
 MXS_BEGIN_DECLS
 
@@ -208,15 +210,6 @@ static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,sla
                                                       "slave_up,server_down,server_up,synced_down,synced_up,donor_down,donor_up,"
                                                       "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
                                                       "new_master,new_slave,new_synced,new_donor,new_ndb";
-
-MXS_MONITOR *monitor_find(const char *);
-void monitorStop(MXS_MONITOR *);
-void monitorStart(MXS_MONITOR *, void*);
-
-void monitorShowAll(DCB *);
-void monitorShow(DCB *, MXS_MONITOR *);
-void monitorList(DCB *);
-RESULTSET *monitorGetList();
 
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 

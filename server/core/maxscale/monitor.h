@@ -41,8 +41,18 @@ typedef enum
 extern MXS_MONITOR *monitor_alloc(char *, char *);
 extern void monitor_free(MXS_MONITOR *);
 
+void monitorStart(MXS_MONITOR *, void*);
+void monitorStop(MXS_MONITOR *);
 extern void monitorStopAll();
 extern void monitorStartAll();
+
+MXS_MONITOR *monitor_find(const char *);
+
+void monitorShow(DCB *, MXS_MONITOR *);
+void monitorShowAll(DCB *);
+
+void monitorList(DCB *);
+RESULTSET *monitorGetList();
 
 extern bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
 extern void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
