@@ -83,7 +83,7 @@ void auth_backend_destroy(void *data)
  * @param dcb Request handler DCB connected to the client
  * @param buffer Buffer containing data from client
  * @return Authentication status
- * @see gw_quthenticator.h
+ * @see authenticator.h
  * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 static int auth_backend_extract(DCB *dcb, GWBUF *buf)
@@ -119,7 +119,7 @@ static int auth_backend_extract(DCB *dcb, GWBUF *buf)
  *
  * @param dcb Backend DCB
  * @return Authentication status
- * @see gw_authenticator.h
+ * @see authenticator.h
  */
 static int auth_backend_authenticate(DCB *dcb)
 {
