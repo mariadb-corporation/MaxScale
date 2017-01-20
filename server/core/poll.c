@@ -11,32 +11,36 @@
  * Public License.
  */
 
+#include <maxscale/poll.h>
+
+#include <errno.h>
 #include <inttypes.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <unistd.h>
+
+#include <mysql.h>
 #include <sys/epoll.h>
-#include <errno.h>
+
 #include <maxscale/alloc.h>
-#include <maxscale/poll.h>
-#include <maxscale/dcb.h>
 #include <maxscale/atomic.h>
 #include <maxscale/bitmask.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/housekeeper.h>
 #include <maxscale/config.h>
-#include <mysql.h>
+#include <maxscale/dcb.h>
+#include <maxscale/housekeeper.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/platform.h>
+#include <maxscale/query_classifier.h>
 #include <maxscale/resultset.h>
+#include <maxscale/server.h>
 #include <maxscale/session.h>
 #include <maxscale/statistics.h>
-#include <maxscale/query_classifier.h>
-#include <maxscale/utils.h>
-#include <maxscale/server.h>
-#include <maxscale/statistics.h>
 #include <maxscale/thread.h>
-#include <maxscale/platform.h>
+#include <maxscale/utils.h>
+
+#include "maxscale/poll.h"
 
 #define         PROFILE_POLL    0
 
@@ -325,15 +329,7 @@ poll_init()
 #endif
 }
 
-/**
- * Add a DCB to the set of descriptors within the polling
- * environment.
- *
- * @param dcb   The descriptor to add to the poll
- * @return      -1 on error or 0 on success
- */
-int
-poll_add_dcb(DCB *dcb)
+int poll_add_dcb(DCB *dcb)
 {
     int rc = -1;
     dcb_state_t old_state = dcb->state;
@@ -457,15 +453,7 @@ poll_add_dcb(DCB *dcb)
     return rc;
 }
 
-/**
- * Remove a descriptor from the set of descriptors within the
- * polling environment.
- *
- * @param dcb   The descriptor to remove
- * @return      -1 on error or 0 on success; actually always 0
- */
-int
-poll_remove_dcb(DCB *dcb)
+int poll_remove_dcb(DCB *dcb)
 {
     int dcbfd, rc = 0;
     struct  epoll_event ev;
@@ -1496,15 +1484,6 @@ poll_loadav(void *data)
     }
 }
 
-/**
- * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
- * The event pretends that there is something to read for the DCB. Actually
- * the incoming data is stored in the DCB's readqueue where it is read.
- *
- * @param dcb   DCB where the event and data are added
- * @param buf   GWBUF including the data
- *
- */
 void poll_add_epollin_event_to_dcb(DCB*   dcb,
                                    GWBUF* buf)
 {
@@ -1551,53 +1530,17 @@ static void poll_add_event_to_dcb(DCB*       dcb,
     }
 }
 
-/*
- * Insert a fake write completion event for a DCB into the polling
- * queue.
- *
- * This is used to trigger transmission activity on another DCB from
- * within the event processing routine of a DCB. or to allow a DCB
- * to defer some further output processing, to allow for other DCBs
- * to receive a slice of the processing time. Fake events are added
- * to the tail of the event queue, in the same way that real events
- * are, so maintain the "fairness" of processing.
- *
- * @param dcb   DCB to emulate an EPOLLOUT event for
- */
-void
-poll_fake_write_event(DCB *dcb)
+void poll_fake_write_event(DCB *dcb)
 {
     poll_add_event_to_dcb(dcb, NULL, EPOLLOUT);
 }
 
-/*
- * Insert a fake read completion event for a DCB into the polling
- * queue.
- *
- * This is used to trigger transmission activity on another DCB from
- * within the event processing routine of a DCB. or to allow a DCB
- * to defer some further input processing, to allow for other DCBs
- * to receive a slice of the processing time. Fake events are added
- * to the tail of the event queue, in the same way that real events
- * are, so maintain the "fairness" of processing.
- *
- * @param dcb   DCB to emulate an EPOLLIN event for
- */
-void
-poll_fake_read_event(DCB *dcb)
+void poll_fake_read_event(DCB *dcb)
 {
     poll_add_event_to_dcb(dcb, NULL, EPOLLIN);
 }
 
-/*
- * Insert a fake hangup event for a DCB into the polling queue.
- *
- * This is used when a monitor detects that a server is not responding.
- *
- * @param dcb   DCB to emulate an EPOLLOUT event for
- */
-void
-poll_fake_hangup_event(DCB *dcb)
+void poll_fake_hangup_event(DCB *dcb)
 {
 #ifdef EPOLLRDHUP
     uint32_t ev = EPOLLRDHUP;

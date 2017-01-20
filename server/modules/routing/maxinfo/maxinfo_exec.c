@@ -38,16 +38,16 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
-#include <maxscale/poll.h>
 #include <maxscale/resultset.h>
 #include <maxscale/router.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/version.h>
 
-#include "../../../core/maxscale/session.h"
 #include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/monitor.h"
+#include "../../../core/maxscale/poll.h"
+#include "../../../core/maxscale/session.h"
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);

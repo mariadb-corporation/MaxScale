@@ -64,7 +64,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
-#include <maxscale/poll.h>
 #include <maxscale/users.h>
 #include <maxscale/config.h>
 #include <maxscale/adminusers.h>
@@ -76,11 +75,10 @@
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>
 
-#include "../../../core/maxscale/monitor.h"
-
-#include "../../../core/maxscale/session.h"
-
 #include "../../../core/maxscale/modules.h"
+#include "../../../core/maxscale/monitor.h"
+#include "../../../core/maxscale/session.h"
+#include "../../../core/maxscale/poll.h"
 
 #define MAXARGS 12
 

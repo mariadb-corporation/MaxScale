@@ -33,9 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <maxscale/poll.h>
 #include <maxscale/dcb.h>
 #include <maxscale/listener.h>
+
 #include "test_utils.h"
 
 /**

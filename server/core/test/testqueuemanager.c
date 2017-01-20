@@ -41,6 +41,7 @@ extern int debug_check_fail;
 #include <maxscale/random_jkiss.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/alloc.h>
+
 #include "test_utils.h"
 
 /**

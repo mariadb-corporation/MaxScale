@@ -50,6 +50,7 @@
 #include <maxscale/paths.h>
 
 #include "maxscale/monitor.h"
+#include "maxscale/poll.h"
 
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08

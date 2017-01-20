@@ -43,7 +43,6 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/poll.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
 #include <maxscale/version.h>
@@ -52,8 +51,9 @@
 #include <maxscale/users.h>
 
 #include "../../../core/maxscale/modules.h"
-#include "../../../core/maxscale/session.h"
 #include "../../../core/maxscale/monitor.h"
+#include "../../../core/maxscale/session.h"
+#include "../../../core/maxscale/poll.h"
 
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 

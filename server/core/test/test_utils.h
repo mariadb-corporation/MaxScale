@@ -15,13 +15,15 @@
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/poll.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/maxscale_test.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/config.h>
+
+#include "../maxscale/poll.h"
 #include "../maxscale/statistics.h"
+
 
 void init_test_env(char *path)
 {

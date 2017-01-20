@@ -13,68 +13,82 @@
  */
 
 /**
- * @file poll.h     The poll related functionality
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 19/06/13     Mark Riddoch    Initial implementation
- * 17/10/15     Martin Brampton Declare fake event functions
- *
- * @endverbatim
+ * @file include/maxscale/poll.h - The public poll interface
  */
 
 #include <maxscale/cdefs.h>
+
+#include <maxscale/buffer.h>
 #include <maxscale/dcb.h>
-#include <maxscale/bitmask.h>
-#include <maxscale/resultset.h>
-#include <sys/epoll.h>
 
 MXS_BEGIN_DECLS
 
-#define MAX_EVENTS 1000
+/*
+ * Insert a fake hangup event for a DCB into the polling queue.
+ *
+ * This is used when a monitor detects that a server is not responding.
+ *
+ * @param dcb   DCB to emulate an EPOLLOUT event for
+ */
+void poll_fake_hangup_event(DCB *dcb);
+
+/*
+ * Insert a fake write completion event for a DCB into the polling
+ * queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB. or to allow a DCB
+ * to defer some further output processing, to allow for other DCBs
+ * to receive a slice of the processing time. Fake events are added
+ * to the tail of the event queue, in the same way that real events
+ * are, so maintain the "fairness" of processing.
+ *
+ * @param dcb   DCB to emulate an EPOLLOUT event for
+ */
+void poll_fake_write_event(DCB *dcb);
+
+/*
+ * Insert a fake read completion event for a DCB into the polling
+ * queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB. or to allow a DCB
+ * to defer some further input processing, to allow for other DCBs
+ * to receive a slice of the processing time. Fake events are added
+ * to the tail of the event queue, in the same way that real events
+ * are, so maintain the "fairness" of processing.
+ *
+ * @param dcb   DCB to emulate an EPOLLIN event for
+ */
+void poll_fake_read_event(DCB *dcb);
 
 /**
- * A statistic identifier that can be returned by poll_get_stat
+ * Add a DCB to the set of descriptors within the polling
+ * environment.
+ *
+ * @param dcb   The descriptor to add to the poll
+ * @return      -1 on error or 0 on success
  */
-typedef enum
-{
-    POLL_STAT_READ,
-    POLL_STAT_WRITE,
-    POLL_STAT_ERROR,
-    POLL_STAT_HANGUP,
-    POLL_STAT_ACCEPT,
-    POLL_STAT_EVQ_LEN,
-    POLL_STAT_EVQ_MAX,
-    POLL_STAT_MAX_QTIME,
-    POLL_STAT_MAX_EXECTIME
-} POLL_STAT;
+int poll_add_dcb(DCB *);
 
-enum poll_message
-{
-    POLL_MSG_CLEAN_PERSISTENT = 0x01
-};
+/**
+ * Remove a descriptor from the set of descriptors within the
+ * polling environment.
+ *
+ * @param dcb   The descriptor to remove
+ * @return      -1 on error or 0 on success; actually always 0
+ */
+int poll_remove_dcb(DCB *);
 
-extern  void            poll_init();
-extern  int             poll_add_dcb(DCB *);
-extern  int             poll_remove_dcb(DCB *);
-extern  void            poll_waitevents(void *);
-extern  void            poll_shutdown();
-extern  GWBITMASK       *poll_bitmask();
-extern  void            poll_set_maxwait(unsigned int);
-extern  void            poll_set_nonblocking_polls(unsigned int);
-extern  void            dprintPollStats(DCB *);
-extern  void            dShowThreads(DCB *dcb);
-extern  void            poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
-extern  void            dShowEventQ(DCB *dcb);
-extern  void            dShowEventStats(DCB *dcb);
-extern  int             poll_get_stat(POLL_STAT stat);
-extern  RESULTSET       *eventTimesGetList();
-extern  void            poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev);
-extern  void            poll_fake_hangup_event(DCB *dcb);
-extern  void            poll_fake_write_event(DCB *dcb);
-extern  void            poll_fake_read_event(DCB *dcb);
-extern  void            poll_send_message(enum poll_message msg, void *data);
+/**
+ * Add given GWBUF to DCB's readqueue and add a pending EPOLLIN event for DCB.
+ * The event pretends that there is something to read for the DCB. Actually
+ * the incoming data is stored in the DCB's readqueue where it is read.
+ *
+ * @param dcb   DCB where the event and data are added
+ * @param buf   GWBUF including the data
+ *
+ */
+void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
 
 MXS_END_DECLS

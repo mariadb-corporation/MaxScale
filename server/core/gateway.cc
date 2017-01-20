@@ -36,31 +36,32 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <execinfo.h>
 #include <ftw.h>
 #include <getopt.h>
-#include <pwd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <ini.h>
+#include <openssl/opensslconf.h>
+#include <pwd.h>
 #include <sys/file.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
-#include <unistd.h>
-#include <openssl/opensslconf.h>
-#include <ini.h>
+
 #include <maxscale/alloc.h>
-#include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/paths.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/memlog.h>
-#include <maxscale/poll.h>
+#include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
@@ -69,10 +70,11 @@
 #include <maxscale/version.h>
 
 #include "maxscale/config.h"
+#include "maxscale/modules.h"
+#include "maxscale/monitor.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
-#include "maxscale/monitor.h"
-#include "maxscale/modules.h"
+#include "maxscale/poll.h"
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
