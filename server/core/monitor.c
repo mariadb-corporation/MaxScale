@@ -953,14 +953,31 @@ static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int 
  * @param mon_srv       The monitored server
  * @return              true if status has changed or false
  */
-bool
-mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
+bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
 {
+    bool rval = false;
+
     /* Previous status is -1 if not yet set */
-    return (mon_srv->mon_prev_status != -1
-            && mon_srv->mon_prev_status != mon_srv->server->status
-            /** If the server is going into maintenance or coming out of it, don't trigger a state change */
-            && ((mon_srv->mon_prev_status | mon_srv->server->status) & SERVER_MAINT) == 0);
+    if (mon_srv->mon_prev_status != -1)
+    {
+        unsigned int relevant_bits = SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE |
+                                     SERVER_JOINED | SERVER_NDB | SERVER_MAINT |
+                                     SERVER_SLAVE_OF_EXTERNAL_MASTER | SERVER_RELAY_MASTER;
+
+        unsigned int old_status = mon_srv->mon_prev_status & relevant_bits;
+        unsigned int new_status = mon_srv->server->status & relevant_bits;
+
+        /**
+         * The state has changed if the relevant state bits are not the same and
+         * the server is not going into maintenance or coming out of it
+         */
+        if (old_status != new_status && ((old_status | new_status) & SERVER_MAINT) == 0)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 /**
