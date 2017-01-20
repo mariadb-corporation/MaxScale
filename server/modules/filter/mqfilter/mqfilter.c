@@ -974,41 +974,39 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 
         if (my_instance->trgtype & TRG_SOURCE && my_instance->src_trg)
         {
-            if (session_isvalid(my_session->session))
-            {
-                sessusr = session_get_user(my_session->session);
-                sesshost = session_get_remote(my_session->session);
 
-                /**Username was configured*/
-                if (my_instance->src_trg->usize > 0)
+            sessusr = session_get_user(my_session->session);
+            sesshost = session_get_remote(my_session->session);
+
+            /**Username was configured*/
+            if (my_instance->src_trg->usize > 0)
+            {
+                for (i = 0; i < my_instance->src_trg->usize; i++)
                 {
-                    for (i = 0; i < my_instance->src_trg->usize; i++)
+                    if (strcmp(my_instance->src_trg->user[i], sessusr) == 0)
                     {
-                        if (strcmp(my_instance->src_trg->user[i], sessusr) == 0)
-                        {
-                            MXS_INFO("Trigger is TRG_SOURCE: user: %s = %s",
-                                     my_instance->src_trg->user[i], sessusr);
-                            src_ok = true;
-                            break;
-                        }
+                        MXS_INFO("Trigger is TRG_SOURCE: user: %s = %s",
+                                 my_instance->src_trg->user[i], sessusr);
+                        src_ok = true;
+                        break;
                     }
                 }
+            }
 
-                /**If username was not matched, try to match hostname*/
+            /**If username was not matched, try to match hostname*/
 
-                if (!src_ok && my_instance->src_trg->hsize > 0)
+            if (!src_ok && my_instance->src_trg->hsize > 0)
+            {
+
+                for (i = 0; i < my_instance->src_trg->hsize; i++)
                 {
 
-                    for (i = 0; i < my_instance->src_trg->hsize; i++)
+                    if (strcmp(my_instance->src_trg->host[i], sesshost) == 0)
                     {
-
-                        if (strcmp(my_instance->src_trg->host[i], sesshost) == 0)
-                        {
-                            MXS_INFO("Trigger is TRG_SOURCE: host: %s = %s",
-                                     my_instance->src_trg->host[i], sesshost);
-                            src_ok = true;
-                            break;
-                        }
+                        MXS_INFO("Trigger is TRG_SOURCE: host: %s = %s",
+                                 my_instance->src_trg->host[i], sesshost);
+                        src_ok = true;
+                        break;
                     }
                 }
             }
