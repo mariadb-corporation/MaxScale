@@ -307,7 +307,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
          * Not a simple SELECT statement, possibly modifies data. If we're processing a statement
          * with unknown query type, the safest thing to do is to treat it as a data modifying statement.
          */
-        if ((qc_get_operation(queue) & ~QUERY_OP_SELECT) != 0)
+        if (qc_query_is_type(qc_get_type_mask(queue), QUERY_TYPE_WRITE))
         {
             if ((sql = modutil_get_SQL(queue)) != NULL)
             {
@@ -317,8 +317,18 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
                     if (my_instance->match == NULL ||
                         (my_instance->match && regexec(&my_instance->re, sql, 0, NULL, 0) == 0))
                     {
-                        my_session->hints_left = my_instance->count;
-                        my_session->last_modification = now;
+                        if (my_instance->count)
+                        {
+                            my_session->hints_left = my_instance->count;
+                            MXS_INFO("Write operation detected, next %d queries routed to master", my_instance->count);
+                        }
+
+                        if (my_instance->time)
+                        {
+                            my_session->last_modification = now;
+                            MXS_INFO("Write operation detected, queries routed to master for %d seconds", my_instance->time);
+                        }
+
                         my_instance->stats.n_modified++;
                     }
                 }
