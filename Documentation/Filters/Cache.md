@@ -1,13 +1,25 @@
 # Cache
 
 ## Overview
-The cache filter is capable of caching the result of SELECTs, so that subsequent identical
-SELECTs are served directly by MaxScale, without being routed to any server.
+The cache filter is a simple cache that is capable of caching the result of
+SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
+without the queries being routed to any server.
+
+_Note that the cache is still experimental._
+
+## Limitations
+
+* Currently there is **no** cache invalidation, apart from _time-to-live_. This
+will be changed in forthcoming releases.
+
+* Resultsets of prepared statements are **not** cached. This will be changed
+in forthcoming releases.
 
 ## Configuration
 
-The cache filter is straightforward to configure and simple to add to any
-existing service.
+The cache is simple to add to any existing service. However, some experimentation
+may be required in order to find the configuration settings that provide
+the maximum benefit.
 
 ```
 [Cache]
@@ -18,7 +30,7 @@ soft_ttl=20
 storage=...
 storage_options=...
 rules=...
-debug=...
+...
 
 [Cached Routing Service]
 type=service
@@ -40,7 +52,9 @@ sharing.
 ### Filter Parameters
 
 The cache filter has one mandatory parameter - `storage` - and a few
-optional ones.
+optional ones. Note that it is advisable to specify `max_size` to prevent
+the cache from using up all memory there is, in case there is very litte
+overlap among the queries.
 
 #### `storage`
 
@@ -48,7 +62,7 @@ The name of the module that provides the storage for the cache. That
 module will be loaded and provided with the value of `storage_options` as
 argument. For instance:
 ```
-storage=storage_rocksdb
+storage=storage_inmemory
 ```
 
 #### `storage_options`
@@ -113,7 +127,9 @@ The maximum number of items the cache may contain. If the limit has been
 reached and a new item should be stored, then an older item will be evicted.
 
 Note that if `cached_data` is `thread_specific` then this limit will be
-applied to each cache _separately_.
+applied to each cache _separately_. That is, if a thread specific cache
+is used, then the total number of cached items is #threads * the value
+of `max_count`.
 ```
 max_count=1000
 ```
@@ -129,7 +145,8 @@ Note that the value of `max_size` must be at least as large as the value of
 `max_resultset_size`.
 
 Note that if `cached_data` is `thread_specific` then this limit will be
-applied to each cache _separately_.
+applied to each cache _separately_. That is, if a thread specific cache
+is used, then the total size is #threads * the value of `max_size`.
 ```
 max_size=1000
 ```
@@ -175,7 +192,7 @@ denoting different logging.
    * ` 2` (`0b00010`) A non-matching rule is logged.
    * ` 4` (`0b00100`) A decision to use data from the cache is logged.
    * ` 8` (`0b01000`) A decision not to use data from the cache is logged.
-   * '16' (`0b10000`) Higher level decisions are logged.
+   * `16` (`0b10000`) Higher level decisions are logged.
 
 Default is `0`. To log everything, give `debug` a value of `31`.
 
@@ -409,6 +426,7 @@ For instance, the following are equivalent:
     "op": "like",
     "value": "bob@.*"
 }
+```
 
 Note that if _op_ is `=` or `!=` then the usual assumptions apply,
 that is, a value of `bob` is equivalent with `'bob'@'%'`. If _like_
