@@ -44,7 +44,7 @@
 static int
 test1()
 {
-    static GWBITMASK    bitmask, another;
+    static MXS_BITMASK bitmask, another;
     int     i;
 
     /* Hint tests */

@@ -51,7 +51,7 @@ static void max_admin_auth_free_client_data(DCB *dcb);
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                                 /* No initialize entry point */
         NULL,                                 /* No create entry point */
@@ -67,7 +67,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MaxScale Admin client authenticator implementation",
         "V2.1.0",
         &MyObject,

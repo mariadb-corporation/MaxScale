@@ -105,7 +105,7 @@ static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
 static fake_event_t **fake_events; /*< Thread-specific fake event queue */
 static SPINLOCK      *fake_event_lock;
 static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
-static GWBITMASK poll_mask;
+static MXS_BITMASK poll_mask;
 
 /** Poll cross-thread messaging variables */
 static volatile int     *poll_msg;
@@ -1195,7 +1195,7 @@ poll_shutdown()
  *
  * @return The bitmask of the running polling threads
  */
-GWBITMASK *
+MXS_BITMASK *
 poll_bitmask()
 {
     return &poll_mask;

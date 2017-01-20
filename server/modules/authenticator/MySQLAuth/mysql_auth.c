@@ -75,7 +75,7 @@ static int mysql_auth_set_client_data(
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         mysql_auth_init,                  /* Initialize the authenticator */
         NULL,                             /* No create entry point */
@@ -91,7 +91,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MySQL client to MaxScale authenticator implementation",
         "V1.1.0",
         &MyObject,

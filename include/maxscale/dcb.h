@@ -130,11 +130,11 @@ typedef struct dcbstats
  */
 typedef struct
 {
-    GWBITMASK       bitmask;        /*< The bitmask of threads */
+    MXS_BITMASK     bitmask;        /*< The bitmask of threads */
     struct dcb      *next;          /*< Next pointer for the zombie list */
 } DCBMM;
 
-#define DCBMM_INIT {GWBITMASK_INIT}
+#define DCBMM_INIT {MXS_BITMASK_INIT}
 
 /* DCB states */
 typedef enum
@@ -237,7 +237,7 @@ typedef struct dcb
     struct session  *session;       /**< The owning session */
     struct servlistener *listener;  /**< For a client DCB, the listener data */
     MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
-    GWAUTHENTICATOR authfunc;       /**< The authenticator functions for this descriptor */
+    MXS_AUTHENTICATOR authfunc;     /**< The authenticator functions for this descriptor */
 
     int             writeqlen;      /**< Current number of byes in the write queue */
     SPINLOCK        writeqlock;     /**< Write Queue spinlock */

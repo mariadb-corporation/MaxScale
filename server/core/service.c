@@ -287,7 +287,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         authenticator_name = port->listener->func.auth_default();
     }
 
-    GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR *)load_module(authenticator_name, MODULE_AUTHENTICATOR);
+    MXS_AUTHENTICATOR *authfuncs = (MXS_AUTHENTICATOR *)load_module(authenticator_name, MODULE_AUTHENTICATOR);
 
     if (authfuncs == NULL)
     {
@@ -297,7 +297,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         return 0;
     }
 
-    memcpy(&port->listener->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
+    memcpy(&port->listener->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
 
     /**
      * Normally, we'd allocate the DCB specific authentication data. As the

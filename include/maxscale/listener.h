@@ -50,7 +50,7 @@ typedef struct servlistener
     char *address;              /**< Address to listen with */
     char *authenticator;        /**< Name of authenticator */
     char *auth_options;         /**< Authenticator options */
-    void *auth_instance;        /**< Authenticator instance created in GWAUTHENTICATOR::initialize() */
+    void *auth_instance;        /**< Authenticator instance created in MXS_AUTHENTICATOR::initialize() */
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
     struct dcb *listener;       /**< The DCB for the listener */
     struct users *users;        /**< The user data for this listener */

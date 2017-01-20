@@ -16,22 +16,11 @@
  * @file authenticator.h
  *
  * The authenticator module interface definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 17/02/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
+
 #include <maxscale/buffer.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
 
 MXS_BEGIN_DECLS
 
@@ -77,7 +66,7 @@ struct servlistener;
  *
  * @see load_module
  */
-typedef struct gw_authenticator
+typedef struct mxs_authenticator
 {
     void* (*initialize)(char **options);
     void* (*create)(void* instance);
@@ -87,7 +76,7 @@ typedef struct gw_authenticator
     void  (*free)(struct dcb *);
     void  (*destroy)(void *);
     int   (*loadusers)(struct servlistener *);
-} GWAUTHENTICATOR;
+} MXS_AUTHENTICATOR;
 
 /** Return values for extract and authenticate entry points */
 #define MXS_AUTH_SUCCEEDED 0 /**< Authentication was successful */
@@ -127,11 +116,11 @@ typedef enum
 } mxs_auth_state_t;
 
 /**
- * The GWAUTHENTICATOR version data. The following should be updated whenever
- * the GWAUTHENTICATOR structure is changed. See the rules defined in modinfo.h
+ * The MXS_AUTHENTICATOR version data. The following should be updated whenever
+ * the MXS_AUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define GWAUTHENTICATOR_VERSION      {1, 1, 0}
+#define MXS_AUTHENTICATOR_VERSION      {1, 1, 0}
 
 
 bool authenticator_init(void **instance, const char *authenticator, const char *options);

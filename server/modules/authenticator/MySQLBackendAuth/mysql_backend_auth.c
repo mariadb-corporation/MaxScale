@@ -160,7 +160,7 @@ static bool auth_backend_ssl(DCB *dcb)
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static GWAUTHENTICATOR MyObject =
+    static MXS_AUTHENTICATOR MyObject =
     {
         NULL,                      /* No initialize entry point */
         auth_backend_create,       /* Create authenticator */
@@ -176,7 +176,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_AUTHENTICATOR,
         MXS_MODULE_GA,
-        GWAUTHENTICATOR_VERSION,
+        MXS_AUTHENTICATOR_VERSION,
         "The MySQL MaxScale to backend server authenticator",
         "V1.0.0",
         &MyObject,

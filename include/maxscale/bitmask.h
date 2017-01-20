@@ -14,20 +14,12 @@
 
 /**
  * @file bitmask.h An implementation of an arbitrarily long bitmask
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 28/06/13     Mark Riddoch    Initial implementation
- * 17/10/15     Martin Brampton Add bitmask_render_readable
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
-#include <maxscale/spinlock.h>
+
 #include <maxscale/limits.h>
+#include <maxscale/spinlock.h>
 
 MXS_BEGIN_DECLS
 
@@ -43,18 +35,18 @@ typedef struct
 {
     SPINLOCK lock;                        /**< Lock to protect the bitmask */
     unsigned char bits[MXS_BITMASK_SIZE]; /**< The bits themselves */
-} GWBITMASK;
+} MXS_BITMASK;
 
-#define GWBITMASK_INIT {SPINLOCK_INIT}
+#define MXS_BITMASK_INIT {SPINLOCK_INIT}
 
-extern void bitmask_init(GWBITMASK *);
-extern void bitmask_free(GWBITMASK *);
-extern int  bitmask_set(GWBITMASK *, int);
-extern int  bitmask_clear(GWBITMASK *, int);
-extern int  bitmask_clear_without_spinlock(GWBITMASK *, int);
-extern int  bitmask_isset(GWBITMASK *, int);
-extern int  bitmask_isallclear(GWBITMASK *);
-extern void bitmask_copy(GWBITMASK *, GWBITMASK *);
-extern char *bitmask_render_readable(GWBITMASK *);
+void bitmask_init(MXS_BITMASK *);
+void bitmask_free(MXS_BITMASK *);
+int  bitmask_set(MXS_BITMASK *, int);
+int  bitmask_clear(MXS_BITMASK *, int);
+int  bitmask_clear_without_spinlock(MXS_BITMASK *, int);
+int  bitmask_isset(MXS_BITMASK *, int);
+int  bitmask_isallclear(MXS_BITMASK *);
+void bitmask_copy(MXS_BITMASK *, MXS_BITMASK *);
+char *bitmask_render_readable(MXS_BITMASK *);
 
 MXS_END_DECLS

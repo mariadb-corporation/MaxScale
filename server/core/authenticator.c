@@ -38,7 +38,7 @@ bool authenticator_init(void** dest, const char *authenticator, const char *opti
 {
     bool rval = true;
     void *instance = NULL;
-    GWAUTHENTICATOR *func = (GWAUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
+    MXS_AUTHENTICATOR *func = (MXS_AUTHENTICATOR*)load_module(authenticator, MODULE_AUTHENTICATOR);
 
     if (func == NULL)
     {

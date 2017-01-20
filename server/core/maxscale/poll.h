@@ -58,7 +58,7 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-GWBITMASK       *poll_bitmask();
+MXS_BITMASK     *poll_bitmask();
 int             poll_get_stat(POLL_STAT stat);
 RESULTSET       *eventTimesGetList();
 

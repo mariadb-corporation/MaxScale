@@ -19,7 +19,7 @@
 /**
  * @file bitmask.c  Implementation of bitmask operations for the gateway
  *
- * GWBITMASK is a fixed size bitmask with space for 256 bits.
+ * MXS_BITMASK is a fixed size bitmask with space for 256 bits.
  *
  * @verbatim
  * Revision History
@@ -34,8 +34,8 @@
  * @endverbatim
  */
 
-static int bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit);
-static int bitmask_count_bits_set(GWBITMASK *bitmask);
+static int bitmask_isset_without_spinlock(MXS_BITMASK *bitmask, int bit);
+static int bitmask_count_bits_set(MXS_BITMASK *bitmask);
 
 static const unsigned char bitmapclear[8] =
 {
@@ -52,7 +52,7 @@ static const unsigned char bitmapset[8] =
  * @param bitmask       Pointer the bitmask
  */
 void
-bitmask_init(GWBITMASK *bitmask)
+bitmask_init(MXS_BITMASK *bitmask)
 {
     spinlock_init(&bitmask->lock);
     memset(bitmask->bits, 0, MXS_BITMASK_SIZE);
@@ -64,7 +64,7 @@ bitmask_init(GWBITMASK *bitmask)
  * @param bitmask
  */
 void
-bitmask_free(GWBITMASK *bitmask)
+bitmask_free(MXS_BITMASK *bitmask)
 {
 }
 
@@ -78,7 +78,7 @@ bitmask_free(GWBITMASK *bitmask)
  *                      the maximum length of the bitmask.
  */
 int
-bitmask_set(GWBITMASK *bitmask, int bit)
+bitmask_set(MXS_BITMASK *bitmask, int bit)
 {
     ss_dassert(bit >= 0);
 
@@ -116,7 +116,7 @@ bitmask_set(GWBITMASK *bitmask, int bit)
  * @return int          1 if the bitmask is all clear after the operation, else 0.
  */
 int
-bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
+bitmask_clear_without_spinlock(MXS_BITMASK *bitmask, int bit)
 {
     ss_dassert(bit >= 0);
 
@@ -151,7 +151,7 @@ bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
  * @return int          1 if the bitmask is all clear after the operation, else 0
  */
 int
-bitmask_clear(GWBITMASK *bitmask, int bit)
+bitmask_clear(MXS_BITMASK *bitmask, int bit)
 {
     int result;
 
@@ -171,7 +171,7 @@ bitmask_clear(GWBITMASK *bitmask, int bit)
  * @param bit           Bit to test
  */
 int
-bitmask_isset(GWBITMASK *bitmask, int bit)
+bitmask_isset(MXS_BITMASK *bitmask, int bit)
 {
     int result;
 
@@ -192,7 +192,7 @@ bitmask_isset(GWBITMASK *bitmask, int bit)
  * @param bit           Bit to test
  */
 static int
-bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
+bitmask_isset_without_spinlock(MXS_BITMASK *bitmask, int bit)
 {
     ss_dassert(bit >= 0);
 
@@ -221,7 +221,7 @@ bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
  * @return              Non-zero if the bitmask has no bits set
  */
 int
-bitmask_isallclear(GWBITMASK *bitmask)
+bitmask_isallclear(MXS_BITMASK *bitmask)
 {
     unsigned char *ptr = bitmask->bits;
     int result = 1;
@@ -247,7 +247,7 @@ bitmask_isallclear(GWBITMASK *bitmask)
  * @param src   Bitmap to copy
  */
 void
-bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
+bitmask_copy(MXS_BITMASK *dest, MXS_BITMASK *src)
 {
     spinlock_acquire(&src->lock);
     spinlock_acquire(&dest->lock);
@@ -266,7 +266,7 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
  * @return pointer to the newly allocated string, or null if no memory
  */
 char *
-bitmask_render_readable(GWBITMASK *bitmask)
+bitmask_render_readable(MXS_BITMASK *bitmask)
 {
     static const char empty[] = "No bits are set";
     char *result;
@@ -311,7 +311,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
  * @return int          Number of set bits
  */
 static int
-bitmask_count_bits_set(GWBITMASK *bitmask)
+bitmask_count_bits_set(MXS_BITMASK *bitmask)
 {
     static const unsigned char oneBits[] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
     unsigned char partresults;

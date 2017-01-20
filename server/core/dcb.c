@@ -699,7 +699,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                 server->authenticator : dcb->func.auth_default ?
                                 dcb->func.auth_default() : "NullAuthDeny";
 
-    GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR*)load_module(authenticator,
+    MXS_AUTHENTICATOR *authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator,
                                                                MODULE_AUTHENTICATOR);
     if (authfuncs == NULL)
     {
@@ -709,7 +709,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
         return NULL;
     }
 
-    memcpy(&dcb->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
+    memcpy(&dcb->authfunc, authfuncs, sizeof(MXS_AUTHENTICATOR));
 
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
@@ -2959,7 +2959,7 @@ dcb_accept(DCB *listener)
         else
         {
             const char *authenticator_name = "NullAuthDeny";
-            GWAUTHENTICATOR *authfuncs;
+            MXS_AUTHENTICATOR *authfuncs;
 
             client_dcb->service = listener->session->service;
             client_dcb->session = session_set_dummy(client_dcb);
@@ -2999,10 +2999,10 @@ dcb_accept(DCB *listener)
             {
                 authenticator_name = client_dcb->func.auth_default();
             }
-            if ((authfuncs = (GWAUTHENTICATOR *)load_module(authenticator_name,
+            if ((authfuncs = (MXS_AUTHENTICATOR *)load_module(authenticator_name,
                                                             MODULE_AUTHENTICATOR)) == NULL)
             {
-                if ((authfuncs = (GWAUTHENTICATOR *)load_module("NullAuthDeny",
+                if ((authfuncs = (MXS_AUTHENTICATOR *)load_module("NullAuthDeny",
                                                                 MODULE_AUTHENTICATOR)) == NULL)
                 {
                     MXS_ERROR("Failed to load authenticator module for %s, free dcb %p\n",
@@ -3012,7 +3012,7 @@ dcb_accept(DCB *listener)
                     return NULL;
                 }
             }
-            memcpy(&(client_dcb->authfunc), authfuncs, sizeof(GWAUTHENTICATOR));
+            memcpy(&(client_dcb->authfunc), authfuncs, sizeof(MXS_AUTHENTICATOR));
 
             /** Allocate DCB specific authentication data */
             if (client_dcb->authfunc.create &&
