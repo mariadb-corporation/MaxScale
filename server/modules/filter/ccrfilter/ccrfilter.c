@@ -341,11 +341,18 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
             queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
             my_session->hints_left--;
             my_instance->stats.n_add_count++;
+            MXS_INFO("%d queries left", my_instance->time);
         }
-        else if (difftime(now, my_session->last_modification) < my_instance->time)
+        else if (my_instance->time)
         {
-            queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
-            my_instance->stats.n_add_time++;
+            double dt = difftime(now, my_session->last_modification);
+
+            if (dt < my_instance->time)
+            {
+                queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
+                my_instance->stats.n_add_time++;
+                MXS_INFO("%.0f seconds left", dt);
+            }
         }
     }
 
