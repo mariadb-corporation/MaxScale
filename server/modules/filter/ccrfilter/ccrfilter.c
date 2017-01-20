@@ -94,6 +94,14 @@ typedef struct
     time_t         last_modification; /*< Time of the last data modifying operation */
 } CCR_SESSION;
 
+static const MXS_ENUM_VALUE option_values[] =
+{
+    {"ignorecase", REG_ICASE},
+    {"case",       0},
+    {"extended",   REG_EXTENDED},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -136,6 +144,13 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"time", MXS_MODULE_PARAM_COUNT, CCR_DEFAULT_TIME},
             {"match", MXS_MODULE_PARAM_STRING},
             {"ignore", MXS_MODULE_PARAM_STRING},
+            {
+             "options",
+             MXS_MODULE_PARAM_ENUM,
+             "ignorecase",
+             MXS_MODULE_OPT_NONE,
+             option_values
+            },
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -156,46 +171,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    CCR_INSTANCE *my_instance;
-    int i;
-    int cflags = REG_ICASE;
+    CCR_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE));
 
-    if ((my_instance = MXS_CALLOC(1, sizeof(CCR_INSTANCE))) != NULL)
+    if (my_instance)
     {
         my_instance->count = config_get_integer(params, "count");
-        my_instance->time = config_get_integer(params, "count");
+        my_instance->time = config_get_integer(params, "time");
         my_instance->stats.n_add_count = 0;
         my_instance->stats.n_add_time = 0;
         my_instance->stats.n_modified = 0;
-        my_instance->match = NULL;
-        my_instance->nomatch = NULL;
 
-        if (options)
-        {
-            for (i = 0; options[i]; i++)
-            {
-                if (!strcasecmp(options[i], "ignorecase"))
-                {
-                    cflags |= REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "case"))
-                {
-                    cflags &= ~REG_ICASE;
-                }
-                else if (!strcasecmp(options[i], "extended"))
-                {
-                    cflags |= REG_EXTENDED;
-                }
-                else
-                {
-                    MXS_ERROR("unsupported option '%s'.", options[i]);
-                }
-            }
-        }
+        int cflags = config_get_enum(params, "options", option_values);
 
-        const char *match = config_get_string(params, "match");
-
-        if (*match && (my_instance->match = MXS_STRDUP(match)))
+        if ((my_instance->match = config_copy_string(params, "match")))
         {
             if (regcomp(&my_instance->re, my_instance->match, cflags))
             {
@@ -203,9 +191,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             }
         }
 
-        const char *ignore = config_get_string(params, "ignore");
-
-        if (*ignore && (my_instance->nomatch = MXS_STRDUP(ignore)))
+        if ((my_instance->nomatch = config_copy_string(params, "ignore")))
         {
             if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
             {
@@ -228,7 +214,6 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     CCR_SESSION  *my_session = MXS_MALLOC(sizeof(CCR_SESSION));
 
     if (my_session)
@@ -376,7 +361,6 @@ static void
 diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
-    CCR_SESSION  *my_session = (CCR_SESSION *)fsession;
 
     dcb_printf(dcb, "Configuration:\n\tCount: %d\n", my_instance->count);
     dcb_printf(dcb, "\tTime: %d seconds\n", my_instance->time);
