@@ -9,7 +9,7 @@ if (JANSSON_FOUND)
   target_link_libraries(masking maxscale-common jansson)
   set_target_properties(masking PROPERTIES VERSION "1.0.0")
   set_target_properties(masking PROPERTIES LINK_FLAGS -Wl,-z,defs)
-  install_module(masking experimental)
+  install_module(masking core)
 
   if(BUILD_TESTS)
     add_subdirectory(test)
