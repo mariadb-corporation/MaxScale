@@ -23,6 +23,7 @@
 #include <regex.h>
 #include <maxscale/hint.h>
 #include <maxscale/alloc.h>
+#include <maxscale/utils.h>
 
 /**
  * @file namedserverfilter.c - a very simple regular expression based filter
@@ -51,17 +52,31 @@ static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF 
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 static uint64_t getCapabilities(void);
 
+typedef struct source_host
+{
+    const char *address;
+    struct sockaddr_in ipv4;
+    int netmask;
+} REGEXHINT_SOURCE_HOST;
+
 /**
  * Instance structure
  */
 typedef struct
 {
-    char *source; /* Source address to restrict matches */
+    REGEXHINT_SOURCE_HOST *source; /* Source address to restrict matches */
     char *user; /* User name to restrict matches */
     char *match; /* Regular expression to match */
     char *server; /* Server to route to */
     regex_t re; /* Compiled regex text */
 } REGEXHINT_INSTANCE;
+
+static bool validate_ip_address(const char *);
+static int check_source_host(REGEXHINT_INSTANCE *,
+                             const char *,
+                             const struct sockaddr_in *);
+static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
+static void free_instance(REGEXHINT_INSTANCE *);
 
 /**
  * The session structuee for this regex filter
@@ -151,16 +166,30 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 {
-    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_MALLOC(sizeof(REGEXHINT_INSTANCE));
+    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_CALLOC(1, sizeof(REGEXHINT_INSTANCE));
 
     if (my_instance)
     {
+        REGEXHINT_SOURCE_HOST *source = NULL;
+        const char *cfg_param = config_get_string(params, "source");
+        if (*cfg_param)
+        {
+            my_instance->source = set_source_address(cfg_param);
+            if (!my_instance->source)
+            {
+                MXS_ERROR("Failure setting 'source' from %s",
+                          cfg_param);
+
+                free_instance(my_instance);
+                my_instance = NULL;
+                return (MXS_FILTER *)my_instance;
+            }
+        }
+
         my_instance->match = MXS_STRDUP_A(config_get_string(params, "match"));
         my_instance->server = MXS_STRDUP_A(config_get_string(params, "server"));
-        my_instance->source = config_copy_string(params, "source");
         my_instance->user = config_copy_string(params, "user");
         bool error = false;
-
         int cflags = config_get_enum(params, "options", option_values);
 
         if (regcomp(&my_instance->re, my_instance->match, cflags))
@@ -173,15 +202,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
 
         if (error)
         {
-            if (my_instance->match)
-            {
-                regfree(&my_instance->re);
-                MXS_FREE(my_instance->match);
-            }
-            MXS_FREE(my_instance->server);
-            MXS_FREE(my_instance->source);
-            MXS_FREE(my_instance->user);
-            MXS_FREE(my_instance);
+            free_instance(my_instance);
             my_instance = NULL;
         }
     }
@@ -208,15 +229,18 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
         my_session->n_diverted = 0;
         my_session->n_undiverted = 0;
         my_session->active = 1;
-        if (my_instance->source
-            && (remote = session_get_remote(session)) != NULL)
+
+        /* Check client IP against 'source' host option */
+        if (my_instance->source &&
+            my_instance->source->address &&
+            (remote = session_get_remote(session)) != NULL)
         {
-            if (strcmp(remote, my_instance->source))
-            {
-                my_session->active = 0;
-            }
+            my_session->active = check_source_host(my_instance,
+                                                   remote,
+                                                   &session->client_dcb->ipv4);
         }
 
+        /* Check client user against 'user' option */
         if (my_instance->user && (user = session_get_user(session))
             && strcmp(user, my_instance->user))
         {
@@ -339,7 +363,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
     {
         dcb_printf(dcb,
                    "\t\tReplacement limited to connections from     %s\n",
-                   my_instance->source);
+                   my_instance->source->address);
     }
     if (my_instance->user)
     {
@@ -357,4 +381,229 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 static uint64_t getCapabilities(void)
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
+}
+
+/**
+ * Validate IP address string againt three dots
+ * and last char not being a dot.
+ *
+ * Match any, '%' or '%.%.%.%', is not allowed
+ *
+ */
+static bool validate_ip_address(const char *host)
+{
+    int n_dots = 0;
+
+    /**
+     * Match any is not allowed
+     * Start with dot not allowed
+     * Host len can't be greater than INET_ADDRSTRLEN
+     */
+    if (*host == '%' ||
+        *host == '.' ||
+        strlen(host) > INET_ADDRSTRLEN)
+    {
+        return false;
+    }
+
+    /* Check each byte */
+    while (*host != '\0')
+    {
+        if (!isdigit(*host) && *host != '.' && *host != '%')
+        {
+            return false;
+        }
+
+        /* Dot found */
+        if (*host == '.')
+        {
+            n_dots++;
+        }
+
+        host++;
+    }
+
+    /* Check IPv4 max number of dots and last char */
+    if (n_dots == 3 && (*(host - 1) != '.'))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
+ * Check whether the client IP
+ * matches the configured 'source' host
+ * which can have up to three % wildcards
+ *
+ * @param instance    The filter instance
+ * @param remote      The clientIP
+ * @param ipv4        The client IPv4 struct
+ * @return            1 for match, 0 otherwise
+ */
+static int check_source_host(REGEXHINT_INSTANCE *instance,
+                             const char *remote,
+                             const struct sockaddr_in *ipv4)
+{
+    int ret = 0;
+    struct sockaddr_in check_ipv4;
+
+    memcpy(&check_ipv4, ipv4, sizeof(check_ipv4));
+
+    switch (instance->source->netmask)
+    {
+    case 32:
+        ret = strcmp(instance->source->address, remote) == 0 ? 1 : 0;
+        break;
+    case 24:
+        /* Class C check */
+        check_ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+        break;
+    case 16:
+        /* Class B check */
+        check_ipv4.sin_addr.s_addr &= 0x0000FFFF;
+        break;
+    case 8:
+        /* Class A check */
+        check_ipv4.sin_addr.s_addr &= 0x000000FF;
+        break;
+    default:
+        break;
+    }
+
+    ret = (instance->source->netmask < 32) ?
+          (check_ipv4.sin_addr.s_addr == instance->source->ipv4.sin_addr.s_addr) :
+          ret;
+
+    if (ret)
+    {
+        MXS_INFO("Client IP %s matches host source %s%s",
+                 remote,
+                 instance->source->netmask < 32 ? "with wildcards " : "",
+                 instance->source->address);
+    }
+
+    return ret;
+}
+
+/**
+ * Set the 'source' option into a proper struct
+ *
+ * Input IP, which could have wildcards %, is checked
+ * and the netmask 32/24/16/8 is added.
+ *
+ * In case of errors the 'address' field of
+ * struct REGEXHINT_SOURCE_HOST is set to NULL
+ *
+ * @param input_host    The config source parameter
+ * @return              The filled struct with netmask
+ *
+ */
+static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
+{
+    int netmask = 32;
+    int bytes = 0;
+    int found_wildcard = 0;
+    struct sockaddr_in serv_addr;
+    REGEXHINT_SOURCE_HOST *source_host = MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
+
+    if (!input_host || !source_host)
+    {
+        return NULL;
+    }
+
+    if(!validate_ip_address(input_host))
+    {
+        MXS_WARNING("The given 'source' parameter source=%s"
+                    " is not a valid IP address: it will not be used.",
+                    input_host);
+
+        source_host->address = NULL;
+        return source_host;
+    }
+
+    source_host->address = input_host;
+
+    /* If no wildcards don't check it, set netmask to 32 and return */
+    if (!strchr(input_host, '%'))
+    {
+        source_host->netmask = netmask;
+        return source_host;
+    }
+
+    char format_host[strlen(input_host) + 1];
+    char *p = (char *)input_host;
+    char *out = format_host;
+
+    while (*p && bytes <= 3)
+    {
+        if (*p == '.')
+        {
+            bytes++;
+        }
+
+        if (*p == '%')
+        {
+            found_wildcard = 1;
+            *out = bytes == 3 ? '1' : '0';
+            netmask -= 8;
+
+            out++;
+            p++;
+        }
+        else
+        {
+           *out++ = *p++;
+        }
+    }
+
+    *out ='\0';
+    source_host->netmask = netmask;
+
+    /* fill IPv4 data struct */
+    if (setipaddress(&source_host->ipv4.sin_addr, format_host) && strlen(format_host))
+    {
+
+        /* if netmask < 32 there are % wildcards */
+        if (source_host->netmask < 32)
+        {
+            /* let's zero the last IP byte: a.b.c.0 we may have set above to 1*/
+            source_host->ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+        }
+
+        MXS_INFO("Input %s is valid with netmask %d\n",
+                 source_host->address,
+                 source_host->netmask);
+    }
+    else
+    {
+        MXS_WARNING("Found invalid IP address for parameter 'source=%s',"
+                    " it will not be used.",
+                    input_host);
+        source_host->address = NULL;
+    }
+
+    return (REGEXHINT_SOURCE_HOST *)source_host;
+}
+
+/**
+ * Free allocated memory
+ *
+ * @param instance    The filter instance
+ */
+static void free_instance(REGEXHINT_INSTANCE *instance)
+{
+    if (instance->match)
+    {
+        regfree(&instance->re);
+        MXS_FREE(instance->match);
+    }
+
+    MXS_FREE(instance->server);
+    MXS_FREE(instance->source);
+    MXS_FREE(instance->user);
+    MXS_FREE(instance);
 }
