@@ -22,11 +22,6 @@
 
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
-#include <maxscale/externcmd.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/resultset.h>
-#include <maxscale/secrets.h>
 #include <maxscale/server.h>
 
 MXS_BEGIN_DECLS

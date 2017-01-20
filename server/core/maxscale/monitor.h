@@ -38,13 +38,13 @@ typedef enum
     MONITOR_WRITE_TIMEOUT   = 2
 } monitor_timeouts_t;
 
-extern MXS_MONITOR *monitor_alloc(char *, char *);
-extern void monitor_free(MXS_MONITOR *);
+MXS_MONITOR *monitor_alloc(char *, char *);
+void monitor_free(MXS_MONITOR *);
 
 void monitorStart(MXS_MONITOR *, void*);
 void monitorStop(MXS_MONITOR *);
-extern void monitorStopAll();
-extern void monitorStartAll();
+void monitorStopAll();
+void monitorStartAll();
 
 MXS_MONITOR *monitor_find(const char *);
 
@@ -54,14 +54,14 @@ void monitorShowAll(DCB *);
 void monitorList(DCB *);
 RESULTSET *monitorGetList();
 
-extern bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
-extern void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
-extern void monitorAddUser(MXS_MONITOR *, char *, char *);
-extern void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params);
-extern bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
+bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
+void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
+void monitorAddUser(MXS_MONITOR *, char *, char *);
+void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params);
+bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 
-extern void monitorSetInterval (MXS_MONITOR *, unsigned long);
-extern bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
+void monitorSetInterval (MXS_MONITOR *, unsigned long);
+bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 
 /**
  * @brief Serialize the servers of a monitor to a file

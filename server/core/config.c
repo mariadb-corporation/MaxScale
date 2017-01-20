@@ -45,8 +45,10 @@
  * @endverbatim
  */
 #include <maxscale/config.h>
+
 #include <ctype.h>
 #include <ftw.h>
+#include <fcntl.h>
 #include <glob.h>
 #include <net/if.h>
 #include <stdio.h>
@@ -54,6 +56,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <ini.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/limits.h>
