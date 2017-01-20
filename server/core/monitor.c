@@ -827,7 +827,8 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
 
     if (prev == present)
     {
-        /* No change in the bits we're interested in */
+        /* This should never happen */
+        ss_dassert(false);
         return UNDEFINED_EVENT;
     }
 
@@ -895,6 +896,8 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
                (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
                NEW_NDB_EVENT;
     default:
+        /* This should never happen */
+        ss_dassert(false);
         return UNDEFINED_EVENT;
     }
 }
