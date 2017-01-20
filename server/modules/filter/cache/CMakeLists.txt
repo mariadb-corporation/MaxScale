@@ -20,7 +20,7 @@ if (JANSSON_FOUND)
   target_link_libraries(cache maxscale-common jansson)
   set_target_properties(cache PROPERTIES VERSION "1.0.0")
   set_target_properties(cache PROPERTIES LINK_FLAGS -Wl,-z,defs)
-  install_module(cache experimental)
+  install_module(cache core)
 
   add_subdirectory(storage)
 
