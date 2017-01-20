@@ -12,7 +12,7 @@
  */
 
 /**
- * @file gw_ssl.c  -  SSL generic functions
+ * @file ssl.c  -  SSL generic functions
  *
  * SSL is intended to be available in conjunction with a variety of protocols
  * on either the client or server side.
@@ -45,7 +45,7 @@
  *
  * @param dcb Request handler DCB connected to the client
  * @param is_capable Indicates if the client can handle SSL
- * @return 0 if ok, >0 if a problem - see return codes defined in gw_ssl.h
+ * @return 0 if ok, >0 if a problem - see return codes defined in ssl.h
  */
 int ssl_authenticate_client(DCB *dcb, bool is_capable)
 {

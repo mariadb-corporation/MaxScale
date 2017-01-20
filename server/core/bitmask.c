@@ -17,7 +17,7 @@
 #include <maxscale/alloc.h>
 
 /**
- * @file gwbitmask.c  Implementation of bitmask operations for the gateway
+ * @file bitmask.c  Implementation of bitmask operations for the gateway
  *
  * GWBITMASK is a fixed size bitmask with space for 256 bits.
  *

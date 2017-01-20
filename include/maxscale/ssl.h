@@ -13,7 +13,7 @@
  */
 
 /**
- * @file gw_ssl.h
+ * @file ssl.h
  *
  * The SSL definitions for MaxScale
  *

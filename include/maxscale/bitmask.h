@@ -13,7 +13,7 @@
  */
 
 /**
- * @file gwbitmask.h An implementation of an arbitrarily long bitmask
+ * @file bitmask.h An implementation of an arbitrarily long bitmask
  *
  * @verbatim
  * Revision History
