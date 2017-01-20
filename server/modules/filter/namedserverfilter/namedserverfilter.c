@@ -506,7 +506,6 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
 {
     int netmask = 32;
     int bytes = 0;
-    int found_wildcard = 0;
     struct sockaddr_in serv_addr;
     REGEXHINT_SOURCE_HOST *source_host = MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
 
@@ -547,7 +546,6 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
 
         if (*p == '%')
         {
-            found_wildcard = 1;
             *out = bytes == 3 ? '1' : '0';
             netmask -= 8;
 
