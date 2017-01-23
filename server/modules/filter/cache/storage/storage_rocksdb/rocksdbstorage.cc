@@ -47,41 +47,6 @@ const size_t ROCKSDB_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
 const size_t ROCKSDB_N_LOW_THREADS = 2;
 const size_t ROCKSDB_N_HIGH_THREADS = 1;
 
-struct StorageRocksDBVersion
-{
-    uint8_t major;
-    uint8_t minor;
-    uint8_t correction;
-};
-
-const uint8_t STORAGE_ROCKSDB_MAJOR = 0;
-const uint8_t STORAGE_ROCKSDB_MINOR = 1;
-const uint8_t STORAGE_ROCKSDB_CORRECTION = 0;
-
-const StorageRocksDBVersion STORAGE_ROCKSDB_VERSION =
-{
-    STORAGE_ROCKSDB_MAJOR,
-    STORAGE_ROCKSDB_MINOR,
-    STORAGE_ROCKSDB_CORRECTION
-};
-
-string toString(const StorageRocksDBVersion& version)
-{
-    string rv;
-
-    rv += "{ ";
-    rv += std::to_string(version.major);
-    rv += ", ";
-    rv += std::to_string(version.minor);
-    rv += ", ";
-    rv += std::to_string(version.correction);
-    rv += " }";
-
-    return rv;
-}
-
-const char STORAGE_ROCKSDB_VERSION_KEY[] = "MaxScale_Storage_RocksDB_Version";
-
 /**
  * Deletes a path, irrespective of whether it represents a file, a directory
  * or a directory hierarchy. If the path does not exist, then the path is
@@ -324,28 +289,11 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
 
             rocksdb::DBWithTTL* pDb;
             rocksdb::Status status;
-            rocksdb::Slice key(STORAGE_ROCKSDB_VERSION_KEY);
 
             status = rocksdb::DBWithTTL::Open(options, path, &pDb, config.hard_ttl);
 
             if (status.ok())
             {
-                MXS_NOTICE("Database \"%s\" created, storing version %s into it.",
-                           path.c_str(), toString(STORAGE_ROCKSDB_VERSION).c_str());
-
-                rocksdb::Slice value(reinterpret_cast<const char*>(&STORAGE_ROCKSDB_VERSION),
-                                     sizeof(STORAGE_ROCKSDB_VERSION));
-
-                status = pDb->Put(Write_options(), key, value);
-
-                if (!status.ok())
-                {
-                    MXS_ERROR("Could not store version information to created RocksDB database \"%s\". "
-                              "You may need to delete the database and retry. RocksDB error: \"%s\"",
-                              path.c_str(),
-                              status.ToString().c_str());
-                }
-
                 unique_ptr<rocksdb::DBWithTTL> sDb(pDb);
 
                 sStorage = unique_ptr<RocksDBStorage>(new RocksDBStorage(zName, config, path, sDb));
@@ -360,6 +308,10 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
                     MXS_ERROR("Is an other MaxScale process running?");
                 }
             }
+        }
+        else
+        {
+            MXS_ERROR("Could not delete old storage at %s.", path.c_str());
         }
     }
 
