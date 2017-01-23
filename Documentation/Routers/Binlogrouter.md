@@ -140,10 +140,11 @@ a slave by MariaDB MaxScale when that slave is lagging behind the master. In
 this situation the slave is said to be in "catchup mode", this parameter is
 designed to both prevent flooding of that slave and also to prevent threads
 within MariaDB MaxScale spending disproportionate amounts of time with slaves
-that are lagging behind the master. The burst size can be defined in Kb, Mb or
-Gb by adding the qualifier K, M or G to the number given. The default value of
-burstsize is 1Mb and will be used if burstsize is not given in the router
-options.
+that are lagging behind the master. The burst size can be provided as specified
+[here](../Getting-Started/Configuration-Guide.md#sizes), except that IEC
+binary prefixes can be used as suffixes only from MaxScale 2.1 onwards.
+The default value is `1M`, which will be used if `burstsize` is not provided in
+the router options.
 
 ### `mariadb10-compatibility`
 
