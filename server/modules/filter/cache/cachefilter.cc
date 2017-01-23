@@ -153,7 +153,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "hard_ttl",
                 MXS_MODULE_PARAM_COUNT,
-                CACHE_DEFAULT_MAX_RESULTSET_SIZE
+                CACHE_DEFAULT_HARD_TTL
             },
             {
                 "soft_ttl",
@@ -167,7 +167,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 "max_resultset_size",
-                MXS_MODULE_PARAM_COUNT,
+                MXS_MODULE_PARAM_SIZE,
                 CACHE_DEFAULT_MAX_RESULTSET_SIZE
             },
             {
@@ -177,7 +177,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 "max_size",
-                MXS_MODULE_PARAM_COUNT,
+                MXS_MODULE_PARAM_SIZE,
                 CACHE_DEFAULT_MAX_SIZE
             },
             {
@@ -285,11 +285,11 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
     config.debug = config_get_integer(ppParams, "debug");
     config.hard_ttl = config_get_integer(ppParams, "hard_ttl");
     config.soft_ttl = config_get_integer(ppParams, "soft_ttl");
-    config.max_size = config_get_integer(ppParams, "max_size");
+    config.max_size = config_get_size(ppParams, "max_size");
     config.max_count = config_get_integer(ppParams, "max_count");
     config.storage = MXS_STRDUP(config_get_string(ppParams, "storage"));
     config.max_resultset_rows = config_get_integer(ppParams, "max_resultset_rows");
-    config.max_resultset_size = config_get_integer(ppParams, "max_resultset_size");
+    config.max_resultset_size = config_get_size(ppParams, "max_resultset_size");
     config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
                                                                             "cached_data",
                                                                             cached_data_values));
@@ -366,12 +366,26 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
             config.soft_ttl = config.hard_ttl;
         }
 
-        if (config.max_size < config.max_resultset_size)
+        if (config.max_resultset_size == 0)
         {
-            MXS_ERROR("The value of 'max_size' must be at least as larged as that "
-                      "of 'max_resultset_size'.");
+            if (config.max_size != 0)
+            {
+                // If a specific size has been configured for 'max_size' but 'max_resultset_size'
+                // has not been specifically set, then we silently set it to the same as 'max_size'.
+                config.max_resultset_size = config.max_size;
+            }
+        }
+        else
+        {
+            ss_dassert(config.max_resultset_size != 0);
 
-            error = true;
+            if ((config.max_size != 0) && (config.max_resultset_size > config.max_size))
+            {
+                MXS_WARNING("The value of 'max_resultset_size' %ld should not be larger than "
+                            "the value of 'max_size' %ld. Adjusting the value of 'max_resultset_size' "
+                            "down to %ld.", config.max_resultset_size, config.max_size, config.max_size);
+                config.max_resultset_size = config.max_size;
+            }
         }
     }
 

@@ -113,13 +113,16 @@ The default value is `0`, which means no limit.
 
 #### `max_resultset_size`
 
-Specifies the maximum size a resultset can have, measured in kibibytes,
-in order to be stored in the cache. A resultset larger than this, will
-not be stored.
+Specifies the maximum size of a resultset, for it to be stored in the cache.
+A resultset larger than this, will not be stored. The size can be specified
+as described [here](../Getting-Started/Configuration-Guide.md#sizes).
 ```
-max_resultset_size=128
+max_resultset_size=128Ki
 ```
 The default value is `0`, which means no limit.
+
+Note that the value of `max_resultset_size` should not be larger than the
+value of `max_size`.
 
 #### `max_count`
 
@@ -137,18 +140,16 @@ The default value is `0`, which means no limit.
 
 #### `max_size`
 
-The maximum size - expressed in kibibytes - the cache may occupy. If the limit
-has been reached and a new item should be stored, then some older item(s) will
-be evicted to make space.
-
-Note that the value of `max_size` must be at least as large as the value of
-`max_resultset_size`.
+The maximum size the cache may occupy. If the limit has been reached and a new
+item should be stored, then some older item(s) will be evicted to make space.
+The size can be specified as described
+[here](../Getting-Started/Configuration-Guide.md#sizes).
 
 Note that if `cached_data` is `thread_specific` then this limit will be
 applied to each cache _separately_. That is, if a thread specific cache
 is used, then the total size is #threads * the value of `max_size`.
 ```
-max_size=1000
+max_size=100Mi
 ```
 The default value is `0`, which means no limit.
 
