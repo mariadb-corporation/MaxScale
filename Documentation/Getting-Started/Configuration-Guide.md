@@ -81,6 +81,32 @@ The values of the parameter that are not on the first line need to have at
 least one whitespace character before them in order for them to be recognized
 as a part of the multi-line parameter.
 
+### Sizes
+
+Where _specifically noted_, a number denoting a size can be suffixed by a subset of
+the IEC binary prefixes or the SI prefixes. In the former case the number will be
+interpreted as a certain multiple of 1024 and in the latter case as a certain multiple
+of 1000. The supported IEC binary suffixes are `Ki`, `Mi`, `Gi` and `Ti` and the
+supported SI suffixes are `k`, `M`, `G` and `T`. In both cases, the matching is
+case insensitive.
+
+For instance, the following entries
+```
+max_size=1099511628000
+max_size=1073741824Ki
+max_size=1048576Mi
+max_size=1024Gi
+max_size=1Ti
+```
+are equivalent, as are the following
+```
+max_size=1000000000000
+max_size=1000000000k
+max_size=1000000M
+max_size=1000G
+max_size=1T
+```
+
 ### Global Settings
 
 The global settings, in a section named `[MaxScale]`, allow various parameters
