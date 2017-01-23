@@ -28,14 +28,16 @@
 #define MXS_MODULE_NAME "CDCPlainAuth"
 
 #include <maxscale/authenticator.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <cdc.h>
 #include <maxscale/alloc.h>
-#include <maxscale/paths.h>
+#include <maxscale/modulecmd.h>
 #include <maxscale/modutil.h>
+#include <maxscale/paths.h>
+#include <maxscale/secrets.h>
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
-#include <maxscale/modulecmd.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30
