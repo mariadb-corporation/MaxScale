@@ -74,3 +74,8 @@ Client side GSSAPI authentication is only supported when the backend
 connections use GSSAPI authentication.
 
 See the [Limitations](../About/Limitations.md) document for more details.
+
+## Building the module
+
+The GSSAPI authenticator modules require the GSSAPI and the SQLite3 development
+libraries (krb5-devel and sqlite-devel on CentOS 7).
