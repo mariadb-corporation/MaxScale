@@ -52,6 +52,15 @@ static SPINLOCK monLock = SPINLOCK_INIT;
 
 static void monitor_server_free_all(MXS_MONITOR_SERVERS *servers);
 
+/** Server type specific bits */
+static unsigned int server_type_bits = SERVER_MASTER | SERVER_SLAVE |
+                                       SERVER_JOINED | SERVER_NDB;
+
+/** All server bits */
+static unsigned int all_server_bits = SERVER_RUNNING |  SERVER_MAINT |
+                                      SERVER_MASTER | SERVER_SLAVE |
+                                      SERVER_JOINED | SERVER_NDB;
+
 /**
  * Allocate a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
@@ -806,8 +815,7 @@ monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit)
  * @param   node                The monitor server data for a particular server
  * @result  monitor_event_t     A monitor event (enum)
  */
-mxs_monitor_event_t
-mon_get_event_type(MXS_MONITOR_SERVERS* node)
+static mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node)
 {
     typedef enum
     {
@@ -820,10 +828,8 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
 
     general_event_type event_type = UNSUPPORTED_EVENT;
 
-    unsigned int prev = node->mon_prev_status
-                        & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
-    unsigned int present = node->server->status
-                           & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
+    unsigned int prev = node->mon_prev_status & all_server_bits;
+    unsigned int present = node->server->status & all_server_bits;
 
     if (prev == present)
     {
@@ -839,8 +845,11 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
         {
             event_type = UP_EVENT;
         }
-        /* Otherwise, was not running and still is not running */
-        /* - this is not a recognised event */
+        else
+        {
+            /* Otherwise, was not running and still is not running. This should never happen. */
+            ss_dassert(false);
+        }
     }
     else
     {
@@ -858,7 +867,7 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
 
             /* Was running and still is */
             if ((!prev_bits || !present_bits || prev_bits == present_bits) &&
-                prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
+                (prev & server_type_bits))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -871,35 +880,50 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
         }
     }
 
+    mxs_monitor_event_t rval = UNDEFINED_EVENT;
+
     switch (event_type)
     {
     case UP_EVENT:
-        return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+        rval = (present & SERVER_MASTER) ? MASTER_UP_EVENT :
                (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
                (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
                (present & SERVER_NDB) ? NDB_UP_EVENT :
                SERVER_UP_EVENT;
+        break;
+
     case DOWN_EVENT:
-        return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+        rval = (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
                (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
                (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
                (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
                SERVER_DOWN_EVENT;
+        break;
+
     case LOSS_EVENT:
-        return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+        rval = (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
                (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
                (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-               LOST_NDB_EVENT;
+               (prev & SERVER_NDB) ? LOST_NDB_EVENT :
+               UNDEFINED_EVENT;
+        break;
+
     case NEW_EVENT:
-        return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+        rval = (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
                (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
                (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-               NEW_NDB_EVENT;
+               (present & SERVER_NDB) ? NEW_NDB_EVENT :
+               UNDEFINED_EVENT;
+        break;
+
     default:
         /* This should never happen */
         ss_dassert(false);
-        return UNDEFINED_EVENT;
+        break;
     }
+
+    ss_dassert(rval != UNDEFINED_EVENT);
+    return rval;
 }
 
 /*
@@ -907,8 +931,7 @@ mon_get_event_type(MXS_MONITOR_SERVERS* node)
  * @param   node    The monitor server data whose event is wanted
  * @result  string  The name of the monitor event for the server
  */
-const char*
-mon_get_event_name(MXS_MONITOR_SERVERS* node)
+static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 {
     mxs_monitor_event_t event = mon_get_event_type(node);
 
@@ -963,12 +986,9 @@ bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
     /* Previous status is -1 if not yet set */
     if (mon_srv->mon_prev_status != -1)
     {
-        unsigned int relevant_bits = SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE |
-                                     SERVER_JOINED | SERVER_NDB | SERVER_MAINT |
-                                     SERVER_SLAVE_OF_EXTERNAL_MASTER | SERVER_RELAY_MASTER;
 
-        unsigned int old_status = mon_srv->mon_prev_status & relevant_bits;
-        unsigned int new_status = mon_srv->server->status & relevant_bits;
+        unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
+        unsigned int new_status = mon_srv->server->status & all_server_bits;
 
         /**
          * The state has changed if the relevant state bits are not the same and

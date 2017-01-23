@@ -63,9 +63,6 @@ extern bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 extern void monitorSetInterval (MXS_MONITOR *, unsigned long);
 extern bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 
-mxs_monitor_event_t mon_get_event_type(MXS_MONITOR_SERVERS* node);
-const char* mon_get_event_name(MXS_MONITOR_SERVERS* node);
-
 /**
  * @brief Serialize the servers of a monitor to a file
  *
