@@ -957,7 +957,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
     {
     case 'T':
     case 't':
-        if (*(end + 1) == 'i')
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
         {
             size *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
         }
@@ -969,7 +969,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
 
     case 'G':
     case 'g':
-        if (*(end + 1) == 'i')
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
         {
             size *= 1024ULL * 1024ULL * 1024ULL;
         }
@@ -981,7 +981,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
 
     case 'M':
     case 'm':
-        if (*(end + 1) == 'i')
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
         {
             size *= 1024ULL * 1024ULL;
         }
@@ -993,7 +993,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
 
     case 'K':
     case 'k':
-        if (*(end + 1) == 'i')
+        if ((*(end + 1) == 'i') || (*(end + 1) == 'I'))
         {
             size *= 1024ULL;
         }
