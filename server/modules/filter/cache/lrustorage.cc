@@ -542,9 +542,6 @@ cache_result_t LRUStorage::get_new_node(const CACHE_KEY& key,
     {
         if (new_size > max_size_)
         {
-            MXS_NOTICE("New size %lu > max size %lu. Removing least recently used.",
-                       new_size, max_size_);
-
             pnode = vacate_lru(value_size);
         }
         else if (stats_.items == max_count_)
