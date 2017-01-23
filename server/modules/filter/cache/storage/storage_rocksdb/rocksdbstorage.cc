@@ -288,6 +288,8 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
 {
     unique_ptr<RocksDBStorage> sStorage;
 
+    bool ok = true;
+
     if (mkdir(storageDirectory.c_str(), S_IRWXU) == 0)
     {
         MXS_NOTICE("Created storage directory %s.", storageDirectory.c_str());
@@ -298,8 +300,10 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
         MXS_ERROR("Failed to create storage directory %s: %s",
                   storageDirectory.c_str(),
                   strerror_r(errno, errbuf, sizeof(errbuf)));
+        ok = false;
     }
-    else
+
+    if (ok)
     {
         string path(storageDirectory + "/" + zName);
 
