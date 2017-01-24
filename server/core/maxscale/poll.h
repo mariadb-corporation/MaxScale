@@ -18,7 +18,6 @@
 
 #include <maxscale/poll.h>
 
-#include <maxscale/bitmask.h>
 #include <maxscale/resultset.h>
 
 MXS_BEGIN_DECLS
@@ -58,7 +57,6 @@ void            dShowThreads(DCB *dcb);
 void            dShowEventQ(DCB *dcb);
 void            dShowEventStats(DCB *dcb);
 
-MXS_BITMASK     *poll_bitmask();
 int             poll_get_stat(POLL_STAT stat);
 RESULTSET       *eventTimesGetList();
 

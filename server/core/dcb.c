@@ -79,6 +79,7 @@
 #include <maxscale/router.h>
 #include <maxscale/poll.h>
 #include <maxscale/atomic.h>
+#include <maxscale/limits.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/listener.h>
@@ -208,7 +209,6 @@ static void
 dcb_initialize(void *dcb)
 {
     *(DCB *)dcb = dcb_initialized;
-    bitmask_init(&((DCB *)dcb)->memdata.bitmask);
 }
 
 /**
@@ -441,7 +441,6 @@ dcb_free_all_memory(DCB *dcb)
     {
         SSL_free(dcb->ssl);
     }
-    bitmask_free(&dcb->memdata.bitmask);
 
     /* We never free the actual DCB, it is available for reuse*/
     MXS_FREE(dcb);
@@ -1901,15 +1900,6 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     {
         dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
         MXS_FREE(rolename);
-    }
-    if (!bitmask_isallclear(&dcb->memdata.bitmask))
-    {
-        char *bitmasktext = bitmask_render_readable(&dcb->memdata.bitmask);
-        if (bitmasktext)
-        {
-            dcb_printf(pdcb, "\tBitMask:                %s\n", bitmasktext);
-            MXS_FREE(bitmasktext);
-        }
     }
     dcb_printf(pdcb, "\tStatistics:\n");
     dcb_printf(pdcb, "\t\tNo. of Reads:             %d\n", dcb->stats.n_reads);

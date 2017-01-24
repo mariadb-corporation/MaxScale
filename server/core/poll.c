@@ -26,7 +26,6 @@
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
-#include <maxscale/bitmask.h>
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/housekeeper.h>
@@ -105,7 +104,6 @@ static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
 static fake_event_t **fake_events; /*< Thread-specific fake event queue */
 static SPINLOCK      *fake_event_lock;
 static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
-static MXS_BITMASK poll_mask;
 
 /** Poll cross-thread messaging variables */
 static volatile int     *poll_msg;
@@ -273,7 +271,6 @@ poll_init()
 
     memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
-    bitmask_init(&poll_mask);
     thread_data = (THREAD_DATA *)MXS_MALLOC(n_threads * sizeof(THREAD_DATA));
     if (thread_data)
     {
@@ -676,8 +673,6 @@ poll_waitevents(void *arg)
     thread_id = (intptr_t)arg;
     int poll_spins = 0;
 
-    /** Add this thread to the bitmask of running polling threads */
-    bitmask_set(&poll_mask, thread_id);
     if (thread_data)
     {
         thread_data[thread_id].state = THREAD_IDLE;
@@ -849,7 +844,6 @@ poll_waitevents(void *arg)
             {
                 thread_data[thread_id].state = THREAD_STOPPED;
             }
-            bitmask_clear(&poll_mask, thread_id);
             return;
         }
         if (thread_data)
@@ -1188,17 +1182,6 @@ void
 poll_shutdown()
 {
     do_shutdown = 1;
-}
-
-/**
- * Return the bitmask of polling threads
- *
- * @return The bitmask of the running polling threads
- */
-MXS_BITMASK *
-poll_bitmask()
-{
-    return &poll_mask;
 }
 
 /**

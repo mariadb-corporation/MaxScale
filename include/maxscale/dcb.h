@@ -52,7 +52,6 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
-#include <maxscale/bitmask.h>
 #include <netinet/in.h>
 
 MXS_BEGIN_DECLS
@@ -130,11 +129,10 @@ typedef struct dcbstats
  */
 typedef struct
 {
-    MXS_BITMASK     bitmask;        /*< The bitmask of threads */
     struct dcb      *next;          /*< Next pointer for the zombie list */
 } DCBMM;
 
-#define DCBMM_INIT {MXS_BITMASK_INIT}
+#define DCBMM_INIT { NULL }
 
 /* DCB states */
 typedef enum
