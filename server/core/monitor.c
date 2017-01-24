@@ -35,7 +35,6 @@
 
 #include <maxscale/alloc.h>
 #include <mysqld_error.h>
-#include <maxscale/externcmd.h>
 #include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/mysql_utils.h>
@@ -44,6 +43,7 @@
 #include <maxscale/spinlock.h>
 
 #include "maxscale/config.h"
+#include "maxscale/externcmd.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
 

@@ -18,7 +18,6 @@
 
 #include <maxscale/cdefs.h>
 
-#include <maxscale/filter.h>
 #include <maxscale/monitor.h>
 #include <maxscale/server.h>
 #include <maxscale/service.h>

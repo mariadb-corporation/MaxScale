@@ -11,9 +11,17 @@
  * Public License.
  */
 
-#include <maxscale/externcmd.h>
+#include "maxscale/externcmd.h"
+
 #include <ctype.h>
+#include <errno.h>
+#include <string.h>
+
 #include <maxscale/alloc.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/pcre2.h>
+
+
 
 /**
  * Tokenize a string into arguments suitable for a execvp call.

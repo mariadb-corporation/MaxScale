@@ -10,17 +10,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include "maxscale/config_runtime.h"
 
 #include <strings.h>
+
 #include <maxscale/atomic.h>
-#include <maxscale/config_runtime.h>
 #include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
 
 #include "maxscale/config.h"
-#include "maxscale/service.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
+#include "maxscale/service.h"
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 

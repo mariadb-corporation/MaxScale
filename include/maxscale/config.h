@@ -13,25 +13,16 @@
  */
 
 /**
- * @file config.h The configuration handling elements
+ * @file include/maxscale/config.h The configuration handling elements
  *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 21/06/13     Mark Riddoch            Initial implementation
- * 07/05/14     Massimiliano Pinto      Added version_string to global configuration
- * 23/05/14     Massimiliano Pinto      Added id to global configuration
- * 17/10/14     Mark Riddoch            Added poll tuning configuration parameters
- * 05/03/15     Massimiliano Pinto      Added sysname, release, sha1_mac to gateway struct
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
+
 #include <limits.h>
 #include <sys/utsname.h>
 #include <openssl/sha.h>
+
 #include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
 

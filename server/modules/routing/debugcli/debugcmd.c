@@ -46,6 +46,7 @@
  *
  * @endverbatim
  */
+#include <maxscale/cdefs.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,10 +72,10 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/listmanager.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/config_runtime.h>
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>
 
+#include "../../../core/maxscale/config_runtime.h"
 #include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/monitor.h"
 #include "../../../core/maxscale/session.h"

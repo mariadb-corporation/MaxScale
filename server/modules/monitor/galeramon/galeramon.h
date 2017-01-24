@@ -31,7 +31,6 @@
 #include <string.h>
 #include <maxscale/monitor.h>
 #include <maxscale/spinlock.h>
-#include <maxscale/externcmd.h>
 #include <maxscale/thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>

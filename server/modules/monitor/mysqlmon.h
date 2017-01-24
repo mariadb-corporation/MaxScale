@@ -48,7 +48,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
-#include <maxscale/externcmd.h>
 #include <maxscale/hashtable.h>
 
 MXS_BEGIN_DECLS

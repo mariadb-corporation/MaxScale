@@ -28,7 +28,6 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
-#include <maxscale/externcmd.h>
 
 /**
  * @file mmmon.h - The Multi-Master monitor

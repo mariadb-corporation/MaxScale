@@ -13,11 +13,8 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <unistd.h>
-#include <string.h>
-#include <errno.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/pcre2.h>
 
 MXS_BEGIN_DECLS
 
