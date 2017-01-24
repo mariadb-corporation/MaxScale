@@ -1520,7 +1520,14 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                         }
                         else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
                         {
-                            session_set_trx_state(session, SESSION_TRX_ENDING);
+                            mxs_session_trx_state_t trx_state = session_get_trx_state(session);
+
+                            /** Remove the active transaction bit and set the end
+                             * of transaction bit */
+                            trx_state &= ~SESSION_TRX_ACTIVE_BIT;
+                            trx_state |= SESSION_TRX_ENDING_BIT;
+
+                            session_set_trx_state(session, trx_state);
 
                             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
                             {
