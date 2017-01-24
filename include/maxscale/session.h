@@ -48,10 +48,11 @@ typedef enum
 
 typedef enum
 {
-    SESSION_TRX_INACTIVE_BIT   = 1, /* 0b0001 */
-    SESSION_TRX_ACTIVE_BIT     = 2, /* 0b0010 */
-    SESSION_TRX_READ_ONLY_BIT  = 4, /* 0b0100 */
-    SESSION_TRX_READ_WRITE_BIT = 8, /* 0b1000 */
+    SESSION_TRX_INACTIVE_BIT   = 0x01, /* 0b00001 */
+    SESSION_TRX_ACTIVE_BIT     = 0x02, /* 0b00010 */
+    SESSION_TRX_READ_ONLY_BIT  = 0x04, /* 0b00100 */
+    SESSION_TRX_READ_WRITE_BIT = 0x08, /* 0b01000 */
+    SESSION_TRX_ENDING_BIT     = 0x10, /* 0b10000*/
 } session_trx_state_bit_t;
 
 typedef enum
@@ -63,7 +64,8 @@ typedef enum
     /*< An explicit READ ONLY transaction is active. */
     SESSION_TRX_READ_ONLY   = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_ONLY_BIT),
     /*< An explicit READ WRITE transaction is active. */
-    SESSION_TRX_READ_WRITE  = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT)
+    SESSION_TRX_READ_WRITE  = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT),
+    SESSION_TRX_ENDING      = SESSION_TRX_ENDING_BIT,
 } mxs_session_trx_state_t;
 
 /**
@@ -243,6 +245,21 @@ static inline bool session_trx_is_read_only(const MXS_SESSION* ses)
 static inline bool session_trx_is_read_write(const MXS_SESSION* ses)
 {
     return ses->trx_state == SESSION_TRX_READ_WRITE;
+}
+
+/**
+ * Tells whether a  transaction is ending.
+ *
+ * @see session_get_trx_state
+ *
+ * @note The return value is valid only if either a router or a filter
+ *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
+ *
+ * @return True if a transaction that was active is ending either via COMMIT or ROLLBACK.
+ */
+static inline bool session_trx_is_ending(const MXS_SESSION* ses)
+{
+    return ses->trx_state == SESSION_TRX_ENDING;
 }
 
 /**

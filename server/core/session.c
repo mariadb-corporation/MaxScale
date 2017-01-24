@@ -897,6 +897,8 @@ const char* session_trx_state_to_string(mxs_session_trx_state_t state)
         return "SESSION_TRX_READ_ONLY";
     case SESSION_TRX_READ_WRITE:
         return "SESSION_TRX_READ_WRITE";
+    case SESSION_TRX_ENDING:
+        return "SESSION_TRX_ENDING";
     }
 
     MXS_ERROR("Unknown session_trx_state_t value: %d", (int)state);

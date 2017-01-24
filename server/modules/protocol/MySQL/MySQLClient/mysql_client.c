@@ -1483,6 +1483,11 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                 {
                     uint8_t *data = GWBUF_DATA(packetbuf);
 
+                    if (session_trx_is_ending(session))
+                    {
+                        session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                    }
+
                     if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
                     {
                         uint32_t type = qc_get_type_mask(packetbuf);
@@ -1515,7 +1520,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
                         }
                         else if ((type & QUERY_TYPE_COMMIT) || (type & QUERY_TYPE_ROLLBACK))
                         {
-                            session_set_trx_state(session, SESSION_TRX_INACTIVE);
+                            session_set_trx_state(session, SESSION_TRX_ENDING);
 
                             if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
                             {
