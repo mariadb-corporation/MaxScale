@@ -66,9 +66,9 @@ typedef enum
     /*< An explicit READ WRITE transaction is active. */
     SESSION_TRX_READ_WRITE        = (SESSION_TRX_ACTIVE_BIT | SESSION_TRX_READ_WRITE_BIT),
     /*< An explicit READ ONLY transaction is ending. */
-    SESSION_TRX_READ_ONLY_ENDING  = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_ONLY_BIT),
+    SESSION_TRX_READ_ONLY_ENDING  = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_ONLY),
     /*< An explicit READ WRITE transaction is ending. */
-    SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE_BIT),
+    SESSION_TRX_READ_WRITE_ENDING = (SESSION_TRX_ENDING_BIT | SESSION_TRX_READ_WRITE),
 } mxs_session_trx_state_t;
 
 /**
@@ -231,7 +231,7 @@ mxs_session_trx_state_t session_set_trx_state(MXS_SESSION* ses, mxs_session_trx_
  */
 static inline bool session_trx_is_read_only(const MXS_SESSION* ses)
 {
-    return ses->trx_state == SESSION_TRX_READ_ONLY;
+    return ses->trx_state == SESSION_TRX_READ_ONLY || ses->trx_state == SESSION_TRX_READ_ONLY_ENDING;
 }
 
 /**
@@ -247,7 +247,7 @@ static inline bool session_trx_is_read_only(const MXS_SESSION* ses)
  */
 static inline bool session_trx_is_read_write(const MXS_SESSION* ses)
 {
-    return ses->trx_state == SESSION_TRX_READ_WRITE;
+    return ses->trx_state == SESSION_TRX_READ_WRITE || ses->trx_state == SESSION_TRX_READ_WRITE_ENDING;
 }
 
 /**
@@ -263,38 +263,6 @@ static inline bool session_trx_is_read_write(const MXS_SESSION* ses)
 static inline bool session_trx_is_ending(const MXS_SESSION* ses)
 {
     return ses->trx_state & SESSION_TRX_ENDING_BIT;
-}
-
-/**
- * Tells whether a read-only transaction is ending.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction that was active is ending either via COMMIT or
- * ROLLBACK and it was a read-only transaction.
- */
-static inline bool session_read_only_trx_is_ending(const MXS_SESSION* ses)
-{
-    return ses->trx_state == SESSION_TRX_READ_ONLY_ENDING;
-}
-
-/**
- * Tells whether a read-write transaction is ending.
- *
- * @see session_get_trx_state
- *
- * @note The return value is valid only if either a router or a filter
- *       has declared that it needs RCAP_TYPE_TRANSACTION_TRACKING.
- *
- * @return True if a transaction that was active is ending either via COMMIT or
- * ROLLBACK and it was a read-write transaction.
- */
-static inline bool session_read_write_trx_is_ending(const MXS_SESSION* ses)
-{
-    return ses->trx_state == SESSION_TRX_READ_WRITE_ENDING;
 }
 
 /**
