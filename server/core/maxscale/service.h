@@ -127,7 +127,7 @@ void  service_update(SERVICE *service, char *router, char *user, char *auth);
  * @param service Service where the parameters are added
  * @param param Parameters to add
  */
-void service_add_parameters(SERVICE *service, const CONFIG_PARAMETER *param);
+void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
 
 /**
  * Internal debugging diagnostics

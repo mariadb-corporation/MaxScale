@@ -109,4 +109,11 @@ typedef enum router_capability
                                              users when the service is started */
 } router_capability_t;
 
+typedef enum
+{
+    TYPE_UNDEFINED = 0,
+    TYPE_MASTER,
+    TYPE_ALL
+} target_t;
+
 MXS_END_DECLS

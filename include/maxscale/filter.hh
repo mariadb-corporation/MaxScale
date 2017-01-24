@@ -203,7 +203,7 @@ template<class FilterType, class FilterSessionType>
 class Filter
 {
 public:
-    static MXS_FILTER* createInstance(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+    static MXS_FILTER* createInstance(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
     {
         FilterType* pFilter = NULL;
 

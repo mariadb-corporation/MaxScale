@@ -101,7 +101,7 @@ static SERVICE  *allServices = NULL;
 static int find_type(typelib_t* tl, const char* needle, int maxlen);
 
 static void service_add_qualified_param(SERVICE*          svc,
-                                        CONFIG_PARAMETER* param);
+                                        MXS_CONFIG_PARAMETER* param);
 static void service_internal_restart(void *data);
 static void service_queue_check(void *data);
 static void service_calculate_weights(SERVICE *service);
@@ -1660,11 +1660,11 @@ int service_refresh_users(SERVICE *service)
     return ret;
 }
 
-void service_add_parameters(SERVICE *service, const CONFIG_PARAMETER *param)
+void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param)
 {
     while (param)
     {
-        CONFIG_PARAMETER *new_param = config_clone_param(param);
+        MXS_CONFIG_PARAMETER *new_param = config_clone_param(param);
         new_param->next = service->svc_config_param;
         service->svc_config_param = new_param;
         param = param->next;
@@ -1711,7 +1711,7 @@ static int find_type(typelib_t*  tl,
  * Add qualified config parameter to SERVICE struct.
  */
 static void service_add_qualified_param(SERVICE*          svc,
-                                        CONFIG_PARAMETER* param)
+                                        MXS_CONFIG_PARAMETER* param)
 {
     spinlock_acquire(&svc->spin);
 
@@ -1722,12 +1722,12 @@ static void service_add_qualified_param(SERVICE*          svc,
     }
     else
     {
-        CONFIG_PARAMETER* p = svc->svc_config_param;
-        CONFIG_PARAMETER* prev = NULL;
+        MXS_CONFIG_PARAMETER* p = svc->svc_config_param;
+        MXS_CONFIG_PARAMETER* prev = NULL;
 
         while (true)
         {
-            CONFIG_PARAMETER* old;
+            MXS_CONFIG_PARAMETER* old;
 
             /** Replace existing parameter in the list, free old */
             if (strncasecmp(param->name,

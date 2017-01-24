@@ -77,7 +77,7 @@ static const int default_sql_size = 4 * 1024;
 /*
  * The filter entry points
  */
-static  MXS_FILTER  *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
+static  MXS_FILTER  *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
 static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -196,7 +196,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return The instance data for this new instance
  */
 static MXS_FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     TPM_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(TPM_INSTANCE));
 

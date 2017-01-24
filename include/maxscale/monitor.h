@@ -54,7 +54,7 @@ typedef struct mxs_monitor MXS_MONITOR;
  */
 typedef struct mxs_monitor_object
 {
-    void *(*startMonitor)(MXS_MONITOR *monitor, const CONFIG_PARAMETER *params);
+    void *(*startMonitor)(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER *params);
     void (*stopMonitor)(MXS_MONITOR *monitor);
     void (*diagnostics)(DCB *, const MXS_MONITOR *);
 } MXS_MONITOR_OBJECT;
@@ -150,7 +150,7 @@ struct mxs_monitor
     char user[MAX_MONITOR_USER_LEN]; /*< Monitor username */
     char password[MAX_MONITOR_PASSWORD_LEN]; /*< Monitor password */
     SPINLOCK lock;
-    CONFIG_PARAMETER* parameters; /*< configuration parameters */
+    MXS_CONFIG_PARAMETER* parameters; /*< configuration parameters */
     MXS_MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
     monitor_state_t state;        /**< The state of the monitor */
     int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */

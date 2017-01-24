@@ -428,7 +428,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
 
             if (value[0])
             {
-                CONFIG_PARAMETER p = {.name = key, .value = value};
+                MXS_CONFIG_PARAMETER p = {.name = key, .value = value};
                 monitorAddParameters(monitor, &p);
             }
 

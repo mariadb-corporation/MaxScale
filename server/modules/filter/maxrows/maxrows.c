@@ -46,7 +46,7 @@
 #include <maxscale/debug.h>
 #include "maxrows.h"
 
-static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
 static void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata);
@@ -171,7 +171,7 @@ static int handle_expecting_nothing(MAXROWS_SESSION_DATA *csdata);
 static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata);
 static int handle_rows(MAXROWS_SESSION_DATA *csdata);
 static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
-static bool process_params(char **options, CONFIG_PARAMETER *params, MAXROWS_CONFIG* config);
+static bool process_params(char **options, MXS_CONFIG_PARAMETER *params, MAXROWS_CONFIG* config);
 
 static int send_upstream(MAXROWS_SESSION_DATA *csdata);
 static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
@@ -188,7 +188,7 @@ static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     MAXROWS_INSTANCE *cinstance = MXS_CALLOC(1, sizeof(MAXROWS_INSTANCE));
 

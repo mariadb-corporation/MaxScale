@@ -384,7 +384,7 @@ sigfatal_handler(int i)
         _exit(1);
     }
     fatal_handling = 1;
-    GATEWAY_CONF* cnf = config_get_global_options();
+    MXS_CONFIG* cnf = config_get_global_options();
     fprintf(stderr, "\n\nMaxScale " MAXSCALE_VERSION " received fatal signal %d\n", i);
 
     MXS_ALERT("Fatal: MaxScale " MAXSCALE_VERSION " received fatal signal %d. Attempting backtrace.", i);
@@ -1291,7 +1291,7 @@ int main(int argc, char **argv)
     bool config_check = false;
     bool to_stdout = false;
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
-    GATEWAY_CONF* cnf = NULL;
+    MXS_CONFIG* cnf = NULL;
     int numlocks = 0;
 
     *syslog_enabled = 1;
@@ -2392,7 +2392,7 @@ void set_log_augmentation(const char* value)
  */
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value)
 {
-    GATEWAY_CONF* cnf = config_get_global_options();
+    MXS_CONFIG* cnf = config_get_global_options();
     char *tmp;
     /** These are read from the configuration file. These will not override
      * command line parameters but will override default values. */

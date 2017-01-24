@@ -155,7 +155,7 @@ typedef struct service
     SERVICE_STATS stats;               /**< The service statistics */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */
-    CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
+    MXS_CONFIG_PARAMETER* svc_config_param;/**<  list of config params and values */
     int svc_config_version;            /**<  Version number of configuration */
     bool svc_do_shutdown;              /**< tells the service to exit loops etc. */
     bool users_from_all;               /**< Load users from one server or all of them */

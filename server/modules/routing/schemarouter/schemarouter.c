@@ -652,8 +652,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static ROUTER* createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE* router;
-    CONFIG_PARAMETER* conf;
-    CONFIG_PARAMETER* param;
+    MXS_CONFIG_PARAMETER* conf;
+    MXS_CONFIG_PARAMETER* param;
 
     if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {

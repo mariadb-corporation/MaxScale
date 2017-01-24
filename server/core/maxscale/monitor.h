@@ -57,7 +57,7 @@ RESULTSET *monitorGetList();
 bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
 void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
 void monitorAddUser(MXS_MONITOR *, char *, char *);
-void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params);
+void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
 bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 
 void monitorSetInterval (MXS_MONITOR *, unsigned long);

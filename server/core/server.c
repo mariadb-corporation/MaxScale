@@ -124,7 +124,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->status = SERVER_RUNNING;
     server->status_pending = SERVER_RUNNING;
     server->node_id = -1;
-    server->rlag = -2;
+    server->rlag = MAX_RLAG_UNDEFINED;
     server->master_id = -1;
     server->depth = -1;
     server->parameters = NULL;

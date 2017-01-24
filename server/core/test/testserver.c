@@ -120,7 +120,7 @@ bool test_load_config(const char *input, SERVER *server)
         if (config_load_single_file(input, &dcontext, &ccontext))
         {
             CONFIG_CONTEXT *obj = ccontext.next;
-            CONFIG_PARAMETER *param = obj->parameters;
+            MXS_CONFIG_PARAMETER *param = obj->parameters;
 
             TEST(strcmp(obj->object, server->unique_name) == 0, "Server names differ");
             TEST(strcmp(server->name, config_get_param(param, "address")->value) == 0, "Server addresses differ");

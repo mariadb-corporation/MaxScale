@@ -86,7 +86,7 @@ static int hktask_id = 0;
 /*
  * The filter entry points
  */
-static MXS_FILTER *createInstance(const char *name, char **options, CONFIG_PARAMETER *);
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *);
 static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
 static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
@@ -519,7 +519,7 @@ char** parse_optstr(const char* str, const char* tok, int* szstore)
  * @return The instance data for this new instance
  */
 static MXS_FILTER *
-createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
+createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
     MQ_INSTANCE *my_instance = MXS_CALLOC(1, sizeof(MQ_INSTANCE));
 
@@ -574,7 +574,7 @@ createInstance(const char *name, char **options, CONFIG_PARAMETER *params)
             MXS_ABORT_IF_NULL(my_instance->obj_trg);
         }
 
-        CONFIG_PARAMETER *p = config_get_param(params, "logging_source_user");
+        MXS_CONFIG_PARAMETER *p = config_get_param(params, "logging_source_user");
 
         if (p && my_instance->src_trg)
         {

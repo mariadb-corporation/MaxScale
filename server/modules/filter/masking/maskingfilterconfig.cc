@@ -77,21 +77,21 @@ const char* MaskingFilterConfig::warn_type_mismatch_default = config_value_never
 
 //static
 MaskingFilterConfig::large_payload_t
-MaskingFilterConfig::get_large_payload(const CONFIG_PARAMETER* pParams)
+MaskingFilterConfig::get_large_payload(const MXS_CONFIG_PARAMETER* pParams)
 {
     int value = config_get_enum(pParams, large_payload_name, large_payload_values);
     return static_cast<large_payload_t>(value);
 }
 
 //static
-std::string MaskingFilterConfig::get_rules(const CONFIG_PARAMETER* pParams)
+std::string MaskingFilterConfig::get_rules(const MXS_CONFIG_PARAMETER* pParams)
 {
     return config_get_string(pParams, rules_name);
 }
 
 //static
 MaskingFilterConfig::warn_type_mismatch_t
-MaskingFilterConfig::get_warn_type_mismatch(const CONFIG_PARAMETER* pParams)
+MaskingFilterConfig::get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams)
 {
     int value = config_get_enum(pParams, warn_type_mismatch_name, warn_type_mismatch_values);
     return static_cast<warn_type_mismatch_t>(value);

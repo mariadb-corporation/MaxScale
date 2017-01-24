@@ -677,7 +677,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 
     char *user = monitor->user;
     char *dpasswd = decryptPassword(monitor->password);
-    GATEWAY_CONF* cnf = config_get_global_options();
+    MXS_CONFIG* cnf = config_get_global_options();
     bool rval = false;
 
     for (MXS_MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
@@ -744,11 +744,11 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
  * @param monitor Monitor
  * @param params Config parameters
  */
-void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params)
+void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params)
 {
     while (params)
     {
-        CONFIG_PARAMETER* clone = config_clone_param(params);
+        MXS_CONFIG_PARAMETER* clone = config_clone_param(params);
         if (clone)
         {
             clone->next = monitor->parameters;
@@ -760,9 +760,9 @@ void monitorAddParameters(MXS_MONITOR *monitor, CONFIG_PARAMETER *params)
 
 bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key)
 {
-    CONFIG_PARAMETER *prev = NULL;
+    MXS_CONFIG_PARAMETER *prev = NULL;
 
-    for (CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
+    for (MXS_CONFIG_PARAMETER *p = monitor->parameters; p; p = p->next)
     {
         if (strcmp(p->name, key) == 0)
         {

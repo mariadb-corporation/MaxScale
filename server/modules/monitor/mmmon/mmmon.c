@@ -47,7 +47,7 @@ MXS_MODULE info =
 };
 /*lint +e14 */
 
-static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *);
+static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
@@ -117,7 +117,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     MM_MONITOR *handle = mon->handle;
 

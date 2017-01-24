@@ -42,7 +42,7 @@ public:
     static const MXS_ENUM_VALUE warn_type_mismatch_values[];
     static const char*          warn_type_mismatch_default;
 
-    MaskingFilterConfig(const char* zName, const CONFIG_PARAMETER* pParams)
+    MaskingFilterConfig(const char* zName, const MXS_CONFIG_PARAMETER* pParams)
         : m_name(zName)
         , m_large_payload(get_large_payload(pParams))
         , m_rules(get_rules(pParams))
@@ -84,9 +84,9 @@ public:
         m_warn_type_mismatch = w;
     }
 
-    static large_payload_t get_large_payload(const CONFIG_PARAMETER* pParams);
-    static std::string get_rules(const CONFIG_PARAMETER* pParams);
-    static warn_type_mismatch_t get_warn_type_mismatch(const CONFIG_PARAMETER* pParams);
+    static large_payload_t get_large_payload(const MXS_CONFIG_PARAMETER* pParams);
+    static std::string get_rules(const MXS_CONFIG_PARAMETER* pParams);
+    static warn_type_mismatch_t get_warn_type_mismatch(const MXS_CONFIG_PARAMETER* pParams);
 
 private:
     std::string          m_name;

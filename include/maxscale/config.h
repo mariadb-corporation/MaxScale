@@ -20,41 +20,14 @@
 #include <maxscale/cdefs.h>
 
 #include <limits.h>
-#include <sys/utsname.h>
 #include <openssl/sha.h>
+#include <sys/utsname.h>
 
-#include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
 
 MXS_BEGIN_DECLS
 
-#define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
-#define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
 #define _RELEASE_STR_LENGTH     256     /**< release len */
-#define DEFAULT_NTHREADS        1 /**< Default number of polling threads */
-/**
- * Maximum length for configuration parameter value.
- */
-enum
-{
-    MAX_PARAM_LEN = 256
-};
-
-/** TODO: Remove this from the core and move it inside readwritesplit */
-typedef enum
-{
-    TYPE_UNDEFINED = 0,
-    TYPE_MASTER,
-    TYPE_ALL
-} target_t;
-
-enum
-{
-    MAX_RLAG_NOT_AVAILABLE = -1,
-    MAX_RLAG_UNDEFINED = -2
-};
-
-#define PARAM_IS_TYPE(p,t) ((p) & (t))
 
 /**
  * The config parameter
@@ -64,7 +37,7 @@ typedef struct config_parameter
     char                    *name;          /**< The name of the parameter */
     char                    *value;         /**< The value of the parameter */
     struct config_parameter *next;          /**< Next pointer in the linked list */
-} CONFIG_PARAMETER;
+} MXS_CONFIG_PARAMETER;
 
 /**
  * The config context structure, used to build the configuration
@@ -73,7 +46,7 @@ typedef struct config_parameter
 typedef struct config_context
 {
     char                  *object;     /**< The name of the object being configured */
-    CONFIG_PARAMETER      *parameters; /**< The list of parameter values */
+    MXS_CONFIG_PARAMETER  *parameters; /**< The list of parameter values */
     void                  *element;    /**< The element created from the data */
     bool                   was_persisted; /**< True if this object was persisted */
     struct config_context *next;       /**< Next pointer in the linked list */
@@ -102,14 +75,14 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
-} GATEWAY_CONF;
+} MXS_CONFIG;
 
 /**
  * @brief Get global MaxScale configuration
  *
  * @return The global configuration
  */
-GATEWAY_CONF* config_get_global_options();
+MXS_CONFIG* config_get_global_options();
 
 /**
  * @brief Get a configuration parameter
@@ -118,7 +91,7 @@ GATEWAY_CONF* config_get_global_options();
  * @param name Name of parameter to get
  * @return The parameter or NULL if the parameter was not found
  */
-CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name);
+MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name);
 
 /**
  * @brief Helper function for checking SSL parameters
@@ -157,7 +130,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
  *
  * @return The value as a boolean or false if none was found
  */
-bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
+bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get an integer value
@@ -169,7 +142,7 @@ bool config_get_bool(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return The integer value of the parameter or 0 if no parameter was found
  */
-int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
+int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a size in bytes
@@ -185,7 +158,7 @@ int config_get_integer(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return Number of bytes or 0 if no parameter was found
  */
-uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key);
+uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a string value
@@ -195,7 +168,7 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key);
  *
  * @return The raw string value or an empty string if no parameter was found
  */
-const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
+const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a enumeration value
@@ -210,7 +183,8 @@ const char* config_get_string(const CONFIG_PARAMETER *params, const char *key);
  * detected. If -1 is used, config_get_param() should be used to detect whether
  * the parameter exists
  */
-int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *values);
+int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key,
+                    const MXS_ENUM_VALUE *values);
 
 /**
  * @brief Get a service value
@@ -220,7 +194,7 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
  *
  * @return Pointer to configured service
  */
-struct service* config_get_service(const CONFIG_PARAMETER *params, const char *key);
+struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get a server value
@@ -230,7 +204,7 @@ struct service* config_get_service(const CONFIG_PARAMETER *params, const char *k
  *
  * @return Pointer to configured server
  */
-struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key);
+struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Get copy of parameter value if it is defined
@@ -246,7 +220,7 @@ struct server* config_get_server(const CONFIG_PARAMETER *params, const char *key
  * @note The use of this function should be avoided after startup as the function
  * will abort the process if memory allocation fails.
  */
-char* config_copy_string(const CONFIG_PARAMETER *params, const char *key);
+char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
  * @brief Convert string truth value
@@ -264,7 +238,7 @@ int config_truth_value(const char *value);
 /**
  * @brief Get worker thread count
  *
- * @return Number of worker theads
+ * @return Number of worker threads
  */
 int config_threadcount(void);
 

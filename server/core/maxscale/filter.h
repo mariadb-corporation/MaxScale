@@ -30,7 +30,7 @@ struct mxs_filter_def
     char *name;                   /**< The Filter name */
     char *module;                 /**< The module to load */
     char **options;               /**< The options set for this filter */
-    CONFIG_PARAMETER *parameters; /**< The filter parameters */
+    MXS_CONFIG_PARAMETER *parameters; /**< The filter parameters */
     MXS_FILTER* filter;           /**< The runtime filter */
     MXS_FILTER_OBJECT *obj;       /**< The "MODULE_OBJECT" for the filter */
     SPINLOCK spin;                /**< Spinlock to protect the filter definition */

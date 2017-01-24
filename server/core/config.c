@@ -86,9 +86,9 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT *);
 static bool process_config_update(CONFIG_CONTEXT *);
-static char *config_get_value(CONFIG_PARAMETER *, const char *);
-static char *config_get_password(CONFIG_PARAMETER *);
-static const char* config_get_value_string(const CONFIG_PARAMETER *params, const char *name);
+static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
+static char *config_get_password(MXS_CONFIG_PARAMETER *);
+static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name);
 static int handle_global_item(const char *, const char *);
 static int handle_feedback_item(const char *, const char *);
 static void global_defaults();
@@ -107,10 +107,10 @@ int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
-static const char    *config_file = NULL;
-static GATEWAY_CONF  gateway;
+static const char *config_file = NULL;
+static MXS_CONFIG gateway;
 static FEEDBACK_CONF feedback;
-char                 *version_string = NULL;
+char *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
 static const char *service_params[] =
@@ -865,7 +865,7 @@ process_config_context(CONFIG_CONTEXT *context)
  * @return the parameter value or NULL if not found
  */
 static char *
-config_get_value(CONFIG_PARAMETER *params, const char *name)
+config_get_value(MXS_CONFIG_PARAMETER *params, const char *name)
 {
     while (params)
     {
@@ -890,7 +890,7 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
  * @return the parameter value or NULL if not found
  */
 static char *
-config_get_password(CONFIG_PARAMETER *params)
+config_get_password(MXS_CONFIG_PARAMETER *params)
 {
     char *password = config_get_value(params, "password");
     char *passwd = config_get_value(params, "passwd");
@@ -910,7 +910,7 @@ config_get_password(CONFIG_PARAMETER *params)
  * @param name          The parameter to return
  * @return the parameter value or null string if not found
  */
-static const char* config_get_value_string(const CONFIG_PARAMETER *params, const char *name)
+static const char* config_get_value_string(const MXS_CONFIG_PARAMETER *params, const char *name)
 {
     while (params)
     {
@@ -924,7 +924,7 @@ static const char* config_get_value_string(const CONFIG_PARAMETER *params, const
     return "";
 }
 
-CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name)
+MXS_CONFIG_PARAMETER* config_get_param(MXS_CONFIG_PARAMETER* params, const char* name)
 {
     while (params)
     {
@@ -938,19 +938,19 @@ CONFIG_PARAMETER* config_get_param(CONFIG_PARAMETER* params, const char* name)
     return NULL;
 }
 
-bool config_get_bool(const CONFIG_PARAMETER *params, const char *key)
+bool config_get_bool(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     return *value ? config_truth_value(value) : false;
 }
 
-int config_get_integer(const CONFIG_PARAMETER *params, const char *key)
+int config_get_integer(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     return *value ? strtol(value, NULL, 10) : 0;
 }
 
-uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
+uint64_t config_get_size(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     char *end;
@@ -1013,12 +1013,12 @@ uint64_t config_get_size(const CONFIG_PARAMETER *params, const char *key)
     return size;
 }
 
-const char* config_get_string(const CONFIG_PARAMETER *params, const char *key)
+const char* config_get_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     return config_get_value_string(params, key);
 }
 
-int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *enum_values)
+int config_get_enum(const MXS_CONFIG_PARAMETER *params, const char *key, const MXS_ENUM_VALUE *enum_values)
 {
     const char *value = config_get_value_string(params, key);
     char tmp_val[strlen(value) + 1];
@@ -1046,19 +1046,19 @@ int config_get_enum(const CONFIG_PARAMETER *params, const char *key, const MXS_E
     return found ? rv : -1;
 }
 
-SERVICE* config_get_service(const CONFIG_PARAMETER *params, const char *key)
+SERVICE* config_get_service(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     return service_find(value);
 }
 
-SERVER* config_get_server(const CONFIG_PARAMETER *params, const char *key)
+SERVER* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
     return server_find_by_unique_name(value);
 }
 
-char* config_copy_string(const CONFIG_PARAMETER *params, const char *key)
+char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
 
@@ -1072,9 +1072,9 @@ char* config_copy_string(const CONFIG_PARAMETER *params, const char *key)
     return rval;
 }
 
-CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
+MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 {
-    CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(CONFIG_PARAMETER));
+    MXS_CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
 
     if (p2)
     {
@@ -1090,13 +1090,13 @@ CONFIG_PARAMETER* config_clone_param(const CONFIG_PARAMETER* param)
  * Free a configuration parameter
  * @param p1 Parameter to free
  */
-void config_parameter_free(CONFIG_PARAMETER* p1)
+void config_parameter_free(MXS_CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
         MXS_FREE(p1->name);
         MXS_FREE(p1->value);
-        CONFIG_PARAMETER* p2 = p1->next;
+        MXS_CONFIG_PARAMETER* p2 = p1->next;
         MXS_FREE(p1);
         p1 = p2;
     }
@@ -1809,7 +1809,7 @@ process_config_update(CONFIG_CONTEXT *context)
  * @return True if at least one of the required parameters is missing
  */
 static bool missing_required_parameters(const MXS_MODULE_PARAM *mod_params,
-                                        CONFIG_PARAMETER *params)
+                                        MXS_CONFIG_PARAMETER *params)
 {
     bool rval = false;
 
@@ -1848,7 +1848,7 @@ static bool is_path_parameter(const MXS_MODULE_PARAM *params, const char *name)
     return rval;
 }
 
-static void process_path_parameter(CONFIG_PARAMETER *param)
+static void process_path_parameter(MXS_CONFIG_PARAMETER *param)
 {
     if (*param->value != '/')
     {
@@ -1913,7 +1913,7 @@ check_config_objects(CONFIG_CONTEXT *context)
 
         if (param_set != NULL)
         {
-            CONFIG_PARAMETER *params = obj->parameters;
+            MXS_CONFIG_PARAMETER *params = obj->parameters;
             while (params)
             {
                 int found = 0;
@@ -2265,7 +2265,7 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
     bool rval = false;
     char *my_key = MXS_STRDUP(key);
     char *my_value = MXS_STRDUP(value);
-    CONFIG_PARAMETER* param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
+    MXS_CONFIG_PARAMETER* param = (MXS_CONFIG_PARAMETER *)MXS_MALLOC(sizeof(*param));
 
     if (my_key && my_value && param)
     {
@@ -2287,7 +2287,7 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
 {
-    CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
     ss_dassert(param);
     int paramlen = strlen(param->value) + strlen(value) + 2;
     char tmp[paramlen];
@@ -2309,7 +2309,7 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     return rval;
 }
 
-GATEWAY_CONF* config_get_global_options()
+MXS_CONFIG* config_get_global_options()
 {
     return &gateway;
 }
@@ -2542,7 +2542,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
     SERVICE* service = (SERVICE*) obj->element;
     int error_count = 0;
-    CONFIG_PARAMETER* param;
+    MXS_CONFIG_PARAMETER* param;
 
     char *retry = config_get_value(obj->parameters, "retry_on_failure");
     if (retry)
@@ -2767,7 +2767,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
             }
         }
 
-        CONFIG_PARAMETER *params = obj->parameters;
+        MXS_CONFIG_PARAMETER *params = obj->parameters;
 
         server->server_ssl = make_ssl_structure(obj, false, &error_count);
         if (server->server_ssl && listener_init_SSL(server->server_ssl) != 0)
@@ -3128,7 +3128,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 error_count++;
             }
 
-            for (CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
+            for (MXS_CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
             {
                 filter_add_parameter(obj->element, p->name, p->value);
             }
@@ -3151,7 +3151,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
 
 bool config_have_required_ssl_params(CONFIG_CONTEXT *obj)
 {
-    CONFIG_PARAMETER *param = obj->parameters;
+    MXS_CONFIG_PARAMETER *param = obj->parameters;
 
     return config_get_param(param, "ssl") &&
            config_get_param(param, "ssl_key") &&

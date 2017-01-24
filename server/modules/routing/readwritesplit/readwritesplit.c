@@ -261,7 +261,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
      * failure is detected */
     router->rwsplit_config.master_failure_mode = RW_FAIL_INSTANTLY;
 
-    CONFIG_PARAMETER *params = service->svc_config_param;
+    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
     router->rwsplit_config.use_sql_variables_in = config_get_enum(params, "use_sql_variables_in",
                                                                   use_sql_variables_in_values);

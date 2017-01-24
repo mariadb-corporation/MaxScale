@@ -16,10 +16,23 @@
  * @file core/maxscale/config.h - The private config interface
  */
 
-#include <maxscale/cdefs.h>
 #include <maxscale/config.h>
 
+#include <maxscale/ssl.h>
+
 MXS_BEGIN_DECLS
+
+#define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
+#define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
+#define DEFAULT_NTHREADS        1       /**< Default number of polling threads */
+
+/**
+ * Maximum length for configuration parameter value.
+ */
+enum
+{
+    MAX_PARAM_LEN = 256
+};
 
 /**
  * @brief Generate default module parameters
@@ -31,10 +44,10 @@ MXS_BEGIN_DECLS
  */
 void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params);
 
-char*               config_clean_string_list(const char* str);
-CONFIG_PARAMETER*   config_clone_param(const CONFIG_PARAMETER* param);
-bool                config_load(const char *);
-void                config_parameter_free(CONFIG_PARAMETER* p1);
+char*                 config_clean_string_list(const char* str);
+MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param);
+bool                  config_load(const char *);
+void                  config_parameter_free(MXS_CONFIG_PARAMETER* p1);
 
 /**
  * @brief Creates an empty configuration context

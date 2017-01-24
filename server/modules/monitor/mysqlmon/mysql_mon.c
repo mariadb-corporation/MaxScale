@@ -74,7 +74,7 @@
 
 static void monitorMain(void *);
 
-static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER*);
+static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *getServerByNodeId(MXS_MONITOR_SERVERS *, long);
@@ -241,7 +241,7 @@ bool init_server_info(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *database)
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MXS_MONITOR *monitor, const CONFIG_PARAMETER* params)
+startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*) monitor->handle;
 
@@ -1452,7 +1452,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
     {
         MXS_ERROR( "Error checking for replication_heartbeat in Master server"
                    ": %s", mysql_error(database->con));
-        database->server->rlag = -1;
+        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
     }
 
     result = mysql_store_result(database->con);
@@ -1481,7 +1481,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
             MXS_ERROR("Error creating maxscale_schema.replication_heartbeat "
                       "table in Master server: %s", mysql_error(database->con));
 
-            database->server->rlag = -1;
+            database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
         }
     }
 
@@ -1512,7 +1512,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
     if (mysql_query(database->con, heartbeat_insert_query))
     {
 
-        database->server->rlag = -1;
+        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
 
         MXS_ERROR("Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
                   heartbeat_insert_query,
@@ -1530,7 +1530,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *dat
             if (mysql_query(database->con, heartbeat_insert_query))
             {
 
-                database->server->rlag = -1;
+                database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
 
                 MXS_ERROR("Error inserting into "
                           "maxscale_schema.replication_heartbeat table: [%s], %s",
@@ -1595,7 +1595,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 
         while ((row = mysql_fetch_row(result)))
         {
-            int rlag = -1;
+            int rlag = MAX_RLAG_NOT_AVAILABLE;
             time_t slave_read;
 
             rows_found = 1;
@@ -1625,7 +1625,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
             }
             else
             {
-                database->server->rlag = -1;
+                database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
             }
 
             MXS_DEBUG("Slave %s:%i has %i seconds lag",
@@ -1635,7 +1635,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
         }
         if (!rows_found)
         {
-            database->server->rlag = -1;
+            database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
             database->server->node_ts = 0;
         }
 
@@ -1643,7 +1643,7 @@ static void set_slave_heartbeat(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
     }
     else
     {
-        database->server->rlag = -1;
+        database->server->rlag = MAX_RLAG_NOT_AVAILABLE;
         database->server->node_ts = 0;
 
         if (handle->master->server->node_id < 0)

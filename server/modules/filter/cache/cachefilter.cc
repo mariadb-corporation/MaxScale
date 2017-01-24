@@ -218,7 +218,7 @@ CacheFilter::~CacheFilter()
 }
 
 // static
-CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, CONFIG_PARAMETER* ppParams)
+CacheFilter* CacheFilter::create(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
 {
     CacheFilter* pFilter = new CacheFilter;
 
@@ -278,7 +278,7 @@ uint64_t CacheFilter::getCapabilities()
 }
 
 // static
-bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
+bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParams, CACHE_CONFIG& config)
 {
     bool error = false;
 
@@ -309,7 +309,7 @@ bool CacheFilter::process_params(char **pzOptions, CONFIG_PARAMETER *ppParams, C
 
     config.rules = config_copy_string(ppParams, "rules");
 
-    const CONFIG_PARAMETER *pParam = config_get_param(ppParams, "storage_options");
+    const MXS_CONFIG_PARAMETER *pParam = config_get_param(ppParams, "storage_options");
 
     if (pParam)
     {

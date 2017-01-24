@@ -99,6 +99,12 @@ typedef struct server
 #endif
 } SERVER;
 
+enum
+{
+    MAX_RLAG_NOT_AVAILABLE = -1,
+    MAX_RLAG_UNDEFINED = -2
+};
+
 /**
  * Status bits in the server->status member.
  *

@@ -318,7 +318,7 @@ createInstance(SERVICE *service, char **options)
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
 
-    CONFIG_PARAMETER *params = service->svc_config_param;
+    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
     inst->low_water = config_get_integer(params, "lowwater");
     inst->high_water = config_get_integer(params, "highwater");

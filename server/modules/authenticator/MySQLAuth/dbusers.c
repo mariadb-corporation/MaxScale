@@ -2173,7 +2173,7 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 {
     int rc;
 
-    GATEWAY_CONF* cnf = config_get_global_options();
+    MXS_CONFIG* cnf = config_get_global_options();
 
     if ((rc = mysql_options(handle, MYSQL_OPT_READ_TIMEOUT,
                             (void *) &cnf->auth_read_timeout)))
@@ -2530,7 +2530,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         return false;
     }
 
-    GATEWAY_CONF* cnf = config_get_global_options();
+    MXS_CONFIG* cnf = config_get_global_options();
     mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
     mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
     mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);

@@ -398,7 +398,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_count = 0;
     inst->binlogdir = NULL;
 
-    CONFIG_PARAMETER *params = service->svc_config_param;
+    MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
     inst->avrodir = MXS_STRDUP_A(config_get_string(params, "avrodir"));
     inst->fileroot = MXS_STRDUP_A(config_get_string(params, "filestem"));
@@ -406,7 +406,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_target = config_get_integer(params, "group_trx");
     int first_file = config_get_integer(params, "start_index");
 
-    CONFIG_PARAMETER *param = config_get_param(params, "source");
+    MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
     bool err = false;
 
     if (param)

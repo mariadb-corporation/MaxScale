@@ -47,7 +47,7 @@ static void monitorMain(void *);
 /** Log a warning when a bad 'wsrep_local_index' is found */
 static bool warn_erange_on_local_index = true;
 
-static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *params);
+static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR*);
@@ -124,7 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     GALERA_MONITOR *handle = mon->handle;
     if (handle != NULL)

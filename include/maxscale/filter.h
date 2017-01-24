@@ -68,7 +68,7 @@ typedef void *MXS_FILTER_SESSION;
  */
 typedef struct mxs_filter_object
 {
-    MXS_FILTER *(*createInstance)(const char *name, char **options, CONFIG_PARAMETER *params);
+    MXS_FILTER *(*createInstance)(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
     MXS_FILTER_SESSION *(*newSession)(MXS_FILTER *instance, MXS_SESSION *session);
     void     (*closeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
     void     (*freeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);

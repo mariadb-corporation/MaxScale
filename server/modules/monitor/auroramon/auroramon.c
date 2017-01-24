@@ -184,7 +184,7 @@ static void auroramon_free(AURORA_MONITOR *handle)
  * @return Monitor handle
  */
 static void *
-startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     AURORA_MONITOR *handle = mon->handle;
 

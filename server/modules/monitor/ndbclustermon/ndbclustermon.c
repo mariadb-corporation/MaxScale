@@ -39,7 +39,7 @@ static void monitorMain(void *);
 
 /*lint +e14 */
 
-static void *startMonitor(MXS_MONITOR *, const CONFIG_PARAMETER *params);
+static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
 bool isNdbEvent(mxs_monitor_event_t event);
@@ -107,7 +107,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(MXS_MONITOR *mon, const CONFIG_PARAMETER *params)
+startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     MYSQL_MONITOR *handle = mon->handle;
     bool have_events = false, script_error = false;
