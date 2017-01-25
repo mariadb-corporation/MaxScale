@@ -1449,7 +1449,7 @@ static void handleError(ROUTER *instance, void *router_session,
                                   " closing session",
                                   problem_dcb->server->unique_name);
 
-                        rses->forced_node == NULL;
+                        rses->forced_node = NULL;
                         *succp = false;
                         break;
                     }
