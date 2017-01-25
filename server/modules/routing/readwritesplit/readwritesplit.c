@@ -1437,6 +1437,23 @@ static void handleError(ROUTER *instance, void *router_session,
                 }
                 else if (bref)
                 {
+                    /** Check whether problem_dcb is same as dcb of rses->forced_node
+                     * and within READ ONLY transaction:
+                     * if true reset rses->forced_node and close session
+                     */
+                    if (rses->forced_node &&
+                        (rses->forced_node->bref_dcb == problem_dcb &&
+                         session_trx_is_read_only(problem_dcb->session)))
+                    {
+                        MXS_ERROR("forced_node SLAVE %s in opened READ ONLY transaction has failed:"
+                                  " closing session",
+                                  problem_dcb->server->unique_name);
+
+                        rses->forced_node == NULL;
+                        *succp = false;
+                        break;
+                    }
+
                     /** We should reconnect only if we find a backend for this
                      * DCB. If this DCB is an older DCB that has been closed,
                      * we can ignore it. */
