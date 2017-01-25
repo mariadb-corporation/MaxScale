@@ -70,11 +70,12 @@
 #include <maxscale/version.h>
 
 #include "maxscale/config.h"
+#include "maxscale/maxscale.h"
 #include "maxscale/modules.h"
 #include "maxscale/monitor.h"
+#include "maxscale/poll.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
-#include "maxscale/poll.h"
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1

@@ -75,10 +75,11 @@
 #include <maxscale/log_manager.h>
 
 #include "../../../core/maxscale/config_runtime.h"
+#include "../../../core/maxscale/maxscale.h"
 #include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/monitor.h"
-#include "../../../core/maxscale/session.h"
 #include "../../../core/maxscale/poll.h"
+#include "../../../core/maxscale/session.h"
 
 #define MAXARGS 12
 

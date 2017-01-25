@@ -44,6 +44,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/version.h>
 
+#include "../../../core/maxscale/maxscale.h"
 #include "../../../core/maxscale/modules.h"
 #include "../../../core/maxscale/monitor.h"
 #include "../../../core/maxscale/poll.h"

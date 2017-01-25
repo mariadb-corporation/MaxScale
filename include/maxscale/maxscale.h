@@ -13,45 +13,34 @@
  */
 
 /**
- * @file maxscale.h
- *
- * Some general definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date     Who             Description
- * 05/02/14 Mark Riddoch    Initial implementation
- *
- * @endverbatim
- */
+ * @file include/maxscale/maxscale.h Some general definitions for MaxScale
+*/
 
 #include <maxscale/cdefs.h>
+
 #include <time.h>
 
 MXS_BEGIN_DECLS
 
 /* Exit status for MaxScale */
-#define MAXSCALE_SHUTDOWN       0   /* Good shutdown */
-#define MAXSCALE_BADCONFIG      1   /* Configuration fiel error */
+#define MAXSCALE_SHUTDOWN       0   /* Normal shutdown */
+#define MAXSCALE_BADCONFIG      1   /* Configuration file error */
 #define MAXSCALE_NOLIBRARY      2   /* No embedded library found */
-#define MAXSCALE_NOSERVICES     3   /* No servics are running */
-#define MAXSCALE_ALREADYRUNNING 4   /* MaxScale is already runing */
+#define MAXSCALE_NOSERVICES     3   /* No services could be started */
+#define MAXSCALE_ALREADYRUNNING 4   /* MaxScale is already running */
 #define MAXSCALE_BADARG         5   /* Bad command line argument */
 #define MAXSCALE_INTERNALERROR  6   /* Internal error, see error log */
 
-void maxscale_reset_starttime(void);
+/**
+ * Return the time when MaxScale was started.
+ */
 time_t maxscale_started(void);
-int maxscale_uptime(void);
 
 /**
- * Initiate shutdown of MaxScale.
+ * Return the time MaxScale has been running.
  *
- * This functions informs all threads that they should stop the
- * processing and exit.
- *
- * @return How many times maxscale_shutdown() has been called.
+ * @return The uptime in seconds.
  */
-int maxscale_shutdown(void);
+int maxscale_uptime(void);
 
 MXS_END_DECLS
