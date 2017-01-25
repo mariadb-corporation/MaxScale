@@ -70,7 +70,6 @@
 #include <maxscale/adminusers.h>
 #include <debugcli.h>
 #include <maxscale/housekeeper.h>
-#include <maxscale/listmanager.h>
 #include <maxscale/maxscale.h>
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>

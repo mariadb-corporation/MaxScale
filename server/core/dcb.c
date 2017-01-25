@@ -379,8 +379,6 @@ void
 dcb_free_all_memory(DCB *dcb)
 {
     DCB_CALLBACK *cb_dcb;
-    // TODO: Uncomment once listmanager code is in use
-    //ss_dassert(dcb->entry_is_in_use);
 
     if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
     {
@@ -1842,12 +1840,6 @@ void printAllDCBs()
 void
 dprintOneDCB(DCB *pdcb, DCB *dcb)
 {
-    /* TODO: Uncomment once listmanager code is in use
-        if (false == dcb->entry_is_in_use)
-        {
-            return;
-        }
-    */
     dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
     dcb_printf(pdcb, "\tDCB state:          %s\n",
                gw_dcb_state2string(dcb->state));

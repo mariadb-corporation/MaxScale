@@ -60,7 +60,6 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/alloc.h>
-#include <maxscale/listmanager.h>
 
 #define MYSQL_COM_QUIT                  0x01
 #define MYSQL_COM_INITDB                0x02
