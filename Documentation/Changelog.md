@@ -8,6 +8,7 @@
 * Client side SSL works.
 
 For more details, please refer to
+* [MaxScale 1.4.5 Release Notes](Release-Notes/MaxScale-1.4.5-Release-Notes.md)
 * [MaxScale 1.4.4 Release Notes](Release-Notes/MaxScale-1.4.4-Release-Notes.md)
 * [MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
 * [MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)

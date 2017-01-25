@@ -19,6 +19,8 @@ report at [Jira](https://jira.mariadb.org).
 
 [Here is a list of bugs fixed since the release of MaxScale 1.4.4.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%201.4.5)
 
+* [MXS-1082](https://jira.mariadb.org/browse/MXS-1082): Block prepared statements
+
 ## Known Issues and Limitations
 
 There are some limitations and known issues within this version of MaxScale.
