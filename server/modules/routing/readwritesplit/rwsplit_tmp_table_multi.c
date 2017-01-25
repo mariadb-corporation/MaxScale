@@ -380,6 +380,7 @@ determine_query_type(GWBUF *querybuf, int packet_type, bool non_empty_packet)
         case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
         case MYSQL_COM_PING:        /*< 0e all servers are pinged */
         case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+        case MYSQL_COM_SET_OPTION:  /*< 1b send options to all servers */
             qtype = QUERY_TYPE_SESSION_WRITE;
             break;
 
