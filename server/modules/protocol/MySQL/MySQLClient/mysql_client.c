@@ -896,9 +896,6 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
      * we need to make sure that a complete SQL packet is read before continuing */
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_INPUT))
     {
-        uint8_t* data;
-        int packet_size;
-
         if (nbytes_read < 3 || nbytes_read <
             (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
         {
@@ -909,6 +906,29 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         }
         gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
     }
+
+    /**
+     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
+     *
+     * The option is stored as a two byte integer with the values 0 for disabling
+     * multi-statements and 1 for enabling it.
+     */
+    MySQLProtocol *proto = dcb->protocol;
+    uint8_t opt;
+
+    if (proto->current_command == MYSQL_COM_SET_OPTION &&
+        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
+    {
+        if (opt)
+        {
+            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+        else
+        {
+            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+    }
+
     return gw_read_finish_processing(dcb, read_buffer, capabilities);
 }
 
