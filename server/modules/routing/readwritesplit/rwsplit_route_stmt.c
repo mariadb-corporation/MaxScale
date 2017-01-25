@@ -138,6 +138,13 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         else if (TARGET_IS_MASTER(route_target))
         {
             succp = handle_master_is_target(inst, rses, &target_dcb);
+
+            if (!rses->rses_config.strict_multi_stmt &&
+                rses->forced_node == rses->rses_master_ref)
+            {
+                /** Reset the forced node as we're in relaxed multi-statement mode */
+                rses->forced_node = NULL;
+            }
         }
 
         if (target_dcb && succp) /*< Have DCB of the target backend */
@@ -707,8 +714,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
     route_target_t target = TARGET_UNDEFINED;
 
-    if (rses->rses_config.strict_multi_stmt && rses->forced_node &&
-        rses->forced_node == rses->rses_master_ref)
+    if (rses->forced_node && rses->forced_node == rses->rses_master_ref)
     {
         target = TARGET_MASTER;
     }
