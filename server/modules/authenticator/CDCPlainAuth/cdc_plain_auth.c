@@ -107,7 +107,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
 
         if (fd != -1)
         {
-            if (write(fd, final_data, sizeof(final_data)) != sizeof(final_data))
+            if (write(fd, final_data, sizeof(final_data)) == sizeof(final_data))
             {
                 MXS_NOTICE("Added user '%s' to service '%s'", user, service->name);
                 rval = true;
