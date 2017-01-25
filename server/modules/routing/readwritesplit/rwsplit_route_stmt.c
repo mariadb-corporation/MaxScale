@@ -492,6 +492,19 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
     }
     backend_ref = rses->rses_backend_ref;
 
+    /** Check whether using rses->forced_node as target SLAVE */
+    if (rses->forced_node &&
+        session_trx_is_read_only(rses->client_dcb->session))
+    {
+        *p_dcb = rses->forced_node->bref_dcb;
+        succp = true;
+
+        MXS_DEBUG("force_node found in READ ONLY transaction: use slave %s",
+                  (*p_dcb)->server->unique_name);
+
+        goto return_succp;
+    }
+
     /** get root master from available servers */
     master_bref = get_root_master_bref(rses);
 
@@ -620,6 +633,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 }
             }
         } /*<  for */
+
         /** Assign selected DCB's pointer value */
         if (candidate_bref != NULL)
         {
@@ -784,6 +798,11 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
             target = TARGET_MASTER;
         }
     }
+    else if (session_trx_is_read_only(rses->client_dcb->session))
+    {
+        /* Force TARGET_SLAVE for READ ONLY tranaction (active or ending) */
+        target = TARGET_SLAVE;
+    }
     else
     {
         ss_dassert(trx_active || load_active ||
@@ -812,6 +831,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
                    qc_query_is_type(qtype, QUERY_TYPE_EXEC_STMT) ||
                    qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
                    qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT));
+
         target = TARGET_MASTER;
     }
 
@@ -1215,6 +1235,19 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     sescmd_cursor_t *scur;
 
     bref = get_bref_from_dcb(rses, target_dcb);
+
+    /**
+     * If the transaction is READ ONLY set forced_node to bref
+     * That SLAVE backend will be used until COMMIT is seen
+     */
+    if (!rses->forced_node &&
+        session_trx_is_read_only(rses->client_dcb->session))
+    {
+        rses->forced_node = bref;
+        MXS_DEBUG("Setting forced_node SLAVE to %s within an opened READ ONLY transaction\n",
+                  target_dcb->server->unique_name);
+    }
+
     scur = &bref->bref_sescmd_cur;
 
     ss_dassert(target_dcb != NULL);
@@ -1249,6 +1282,17 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
         bref = get_bref_from_dcb(rses, target_dcb);
         bref_set_state(bref, BREF_QUERY_ACTIVE);
         bref_set_state(bref, BREF_WAITING_RESULT);
+
+        /**
+         * If a READ ONLYtransaction is ending set forced_node to NULL
+         */
+        if (rses->forced_node &&
+            session_trx_is_read_only(rses->client_dcb->session) &&
+            session_trx_is_ending(rses->client_dcb->session))
+        {
+            MXS_DEBUG("An opened READ ONLY transaction ends: forced_node is set to NULL");
+            rses->forced_node = NULL;
+        }
         return true;
     }
     else
