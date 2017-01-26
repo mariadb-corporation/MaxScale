@@ -16,10 +16,31 @@
 #include <string.h>
 #include <log_manager.h>
 
-
 static bool maxavro_read_sync(FILE *file, uint8_t* sync)
 {
-    return fread(sync, 1, SYNC_MARKER_SIZE, file) == SYNC_MARKER_SIZE;
+    bool rval = true;
+
+    if (fread(sync, 1, SYNC_MARKER_SIZE, file) != SYNC_MARKER_SIZE)
+    {
+        rval = false;
+
+        if (ferror(file))
+        {
+            char err[STRERROR_BUFLEN];
+            MXS_ERROR("Failed to read file sync marker: %d, %s", errno,
+                      strerror_r(errno, err, sizeof(err)));
+        }
+        else if (feof(file))
+        {
+            MXS_ERROR("Short read when reading file sync marker.");
+        }
+        else
+        {
+            MXS_ERROR("Unspecified error when reading file sync marker.");
+        }
+    }
+
+    return rval;
 }
 
 bool maxavro_verify_block(MAXAVRO_FILE *file)
@@ -72,12 +93,24 @@ bool maxavro_read_datablock_start(MAXAVRO_FILE* file)
 
     if (rval)
     {
-        file->block_size = bytes;
-        file->records_in_block = records;
-        file->records_read_from_block = 0;
-        file->data_start_pos = ftell(file->file);
-        ss_dassert(file->data_start_pos > file->block_start_pos);
-        file->metadata_read = true;
+        long pos = ftell(file->file);
+
+        if (pos == -1)
+        {
+            rval = false;
+            char err[STRERROR_BUFLEN];
+            MXS_ERROR("Failed to read datablock start: %d, %s", errno,
+                      strerror_r(errno, err, sizeof(err)));
+        }
+        else
+        {
+            file->block_size = bytes;
+            file->records_in_block = records;
+            file->records_read_from_block = 0;
+            file->data_start_pos = pos;
+            ss_dassert(file->data_start_pos > file->block_start_pos);
+            file->metadata_read = true;
+        }
     }
     else if (maxavro_get_error(file) != MAXAVRO_ERR_NONE)
     {
@@ -153,34 +186,46 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
         return NULL;
     }
 
-    MAXAVRO_FILE* avrofile = calloc(1, sizeof(MAXAVRO_FILE));
+    bool error = false;
 
-    if (avrofile)
+    MAXAVRO_FILE* avrofile = calloc(1, sizeof(MAXAVRO_FILE));
+    char *my_filename = strdup(filename);
+    char *schema = read_schema(avrofile);
+
+    if (avrofile && my_filename && schema)
     {
         avrofile->file = file;
-        avrofile->filename = strdup(filename);
-        char *schema = read_schema(avrofile);
-        avrofile->schema = schema ? maxavro_schema_alloc(schema) : NULL;
+        avrofile->filename = my_filename;
+        avrofile->schema = maxavro_schema_alloc(schema);
         avrofile->last_error = MAXAVRO_ERR_NONE;
 
-        if (!schema || !avrofile->schema ||
-            !maxavro_read_sync(file, avrofile->sync) ||
-            !maxavro_read_datablock_start(avrofile))
+        if (avrofile->schema &&
+            maxavro_read_sync(file, avrofile->sync) &&
+            maxavro_read_datablock_start(avrofile))
+        {
+            avrofile->header_end_pos = avrofile->block_start_pos;
+        }
+        else
         {
             MXS_ERROR("Failed to initialize avrofile.");
-            free(avrofile->schema);
-            free(avrofile);
-            avrofile = NULL;
+            maxavro_schema_free(avrofile->schema);
+            error = true;
         }
-        avrofile->header_end_pos = avrofile->block_start_pos;
-        free(schema);
     }
     else
     {
+        error = true;
+    }
+
+    if (error)
+    {
         fclose(file);
         free(avrofile);
+        free(my_filename);
         avrofile = NULL;
     }
+
+    free(schema);
 
     return avrofile;
 }
@@ -248,19 +293,43 @@ void maxavro_file_close(MAXAVRO_FILE *file)
 GWBUF* maxavro_file_binary_header(MAXAVRO_FILE *file)
 {
     long pos = file->header_end_pos;
-    fseek(file->file, 0, SEEK_SET);
-    GWBUF *rval = gwbuf_alloc(pos);
-    if (rval)
+    GWBUF *rval = NULL;
+
+    if (fseek(file->file, 0, SEEK_SET) == 0)
     {
-        if (fread(GWBUF_DATA(rval), 1, pos, file->file) != pos)
+        if ((rval = gwbuf_alloc(pos)))
         {
-            gwbuf_free(rval);
-            rval = NULL;
+            if (fread(GWBUF_DATA(rval), 1, pos, file->file) != pos)
+            {
+                if (ferror(file->file))
+                {
+                    char err[STRERROR_BUFLEN];
+                    MXS_ERROR("Failed to read binary header: %d, %s", errno,
+                              strerror_r(errno, err, sizeof(err)));
+                }
+                else if (feof(file->file))
+                {
+                    MXS_ERROR("Short read when reading binary header.");
+                }
+                else
+                {
+                    MXS_ERROR("Unspecified error when reading binary header.");
+                }
+                gwbuf_free(rval);
+                rval = NULL;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Memory allocation failed when allocating %ld bytes.", pos);
         }
     }
     else
     {
-        MXS_ERROR("Memory allocation failed when allocating %ld bytes.", pos);
+        char err[STRERROR_BUFLEN];
+        MXS_ERROR("Failed to read binary header: %d, %s", errno,
+                  strerror_r(errno, err, sizeof(err)));
     }
+
     return rval;
 }

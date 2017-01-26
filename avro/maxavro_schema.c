@@ -120,6 +120,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
     if (rval)
     {
+        bool error = false;
         json_error_t err;
         json_t *schema = json_loads(json, 0, &err);
 
@@ -139,7 +140,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
                     char *key;
                     json_t *value_obj;
 
-                    if (json_unpack(object, "{s:s s:o}", "name", &key, "type", &value_obj) == 0)
+                    if (object && json_unpack(object, "{s:s s:o}", "name", &key, "type", &value_obj) == 0)
                     {
                         rval->fields[i].name = strdup(key);
                         rval->fields[i].type = unpack_to_type(value_obj, &rval->fields[i]);
@@ -147,26 +148,41 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
                     else
                     {
                         MXS_ERROR("Failed to unpack JSON Object \"name\": %s", json);
+                        error = true;
+
+                        for (int j = 0; j < i; j++)
+                        {
+                            free(rval->fields[j].name);
+                        }
+                        break;
                     }
                 }
             }
             else
             {
                 MXS_ERROR("Failed to unpack JSON Object \"fields\": %s", json);
+                error = true;
             }
-
 
             json_decref(schema);
         }
         else
         {
             MXS_ERROR("Failed to read JSON schema: %s", json);
+            error = true;
+        }
+
+        if (error)
+        {
+            free(rval);
+            rval = NULL;
         }
     }
     else
     {
         MXS_ERROR("Memory allocation failed.");
     }
+
     return rval;
 }
 
