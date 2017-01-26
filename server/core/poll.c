@@ -44,11 +44,7 @@
 #define         PROFILE_POLL    0
 
 #if PROFILE_POLL
-#include <rdtsc.h>
-#include <memlog.h>
-
 extern unsigned long hkheartbeat;
-MEMLOG  *plog;
 #endif
 
 int number_poll_spins;
@@ -320,10 +316,6 @@ poll_init()
 
     number_poll_spins = config_nbpolls();
     max_poll_sleep = config_pollsleep();
-
-#if PROFILE_POLL
-    plog = memlog_create("EventQueueWaitTime", ML_LONG, 10000);
-#endif
 }
 
 int poll_add_dcb(DCB *dcb)
@@ -909,9 +901,6 @@ process_pollq(int thread_id, struct epoll_event *event)
     uint32_t ev = event->events;
     DCB *dcb = event->data.ptr;
     ss_dassert(dcb->thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
-#if PROFILE_POLL
-    memlog_log(plog, hkheartbeat - dcb->evq.inserted);
-#endif
 
     /** Calculate event queue statistics */
     uint64_t started = hkheartbeat;

@@ -60,7 +60,6 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/maxscale.h>
-#include <maxscale/memlog.h>
 #include <maxscale/paths.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
@@ -2049,7 +2048,6 @@ int maxscale_shutdown()
         service_shutdown();
         poll_shutdown();
         hkshutdown();
-        memlog_flush_all();
         log_flush_shutdown();
     }
 

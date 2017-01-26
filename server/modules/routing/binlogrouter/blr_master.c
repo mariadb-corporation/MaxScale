@@ -76,7 +76,6 @@
 
 #include <maxscale/log_manager.h>
 
-#include <maxscale/rdtsc.h>
 #include <maxscale/thread.h>
 
 /* Temporary requirement for auth data */

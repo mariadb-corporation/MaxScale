@@ -50,7 +50,6 @@
 #include <maxscale/buffer.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <maxscale/memlog.h>
 #include <maxscale/thread.h>
 #include <zlib.h>
 #include <maxscale/protocol/mysql.h>
