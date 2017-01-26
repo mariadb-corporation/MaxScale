@@ -72,6 +72,7 @@ int index_query_cb(void *data, int rows, char** values, char** names)
 void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 {
     MAXAVRO_FILE *file = maxavro_file_open(filename);
+
     if (file)
     {
         char *name = strrchr(filename, '/');
@@ -164,6 +165,10 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
         }
 
         maxavro_file_close(file);
+    }
+    else
+    {
+        MXS_ERROR("Failed to open file '%s' when generating file index.", filename);
     }
 }
 
