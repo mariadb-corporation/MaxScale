@@ -184,7 +184,8 @@ typedef enum skygw_chk_t
                                         ((p) == MYSQL_COM_QUIT ? "COM_QUIT" : \
                                          ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" : \
                                           ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" : \
-                                           "UNKNOWN MYSQL PACKET TYPE"))))))))))))))))))
+                                           ((p) == MYSQL_COM_SET_OPTION ? "MYSQL_COM_SET_OPTION" : \
+                                            "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
 
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
