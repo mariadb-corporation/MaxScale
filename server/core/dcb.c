@@ -96,6 +96,7 @@
 
 #include "maxscale/session.h"
 #include "maxscale/modules.h"
+#include "maxscale/queuemanager.h"
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized = DCB_INIT;

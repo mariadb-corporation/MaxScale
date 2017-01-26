@@ -68,8 +68,9 @@
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
-#include "maxscale/service.h"
 #include "maxscale/modules.h"
+#include "maxscale/queuemanager.h"
+#include "maxscale/service.h"
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000

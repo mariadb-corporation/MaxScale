@@ -25,19 +25,24 @@
  *
  * @endverbatim
  */
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <maxscale/queuemanager.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <maxscale/alloc.h>
-#include <maxscale/spinlock.h>
-#include <maxscale/log_manager.h>
-#include <maxscale/hk_heartbeat.h>
 #include <maxscale/debug.h>
+#include <maxscale/hk_heartbeat.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/spinlock.h>
+
+#include "maxscale/queuemanager.h"
 
 #if defined(SS_DEBUG)
 int debug_check_fail = 0;
 #endif /* SS_DEBUG */
+
+static inline int mxs_queue_count(QUEUE_CONFIG*);
 
 /**
  * @brief Allocate a new queue
@@ -215,4 +220,10 @@ bool mxs_dequeue_if_expired(QUEUE_CONFIG *queue_config, QUEUE_ENTRY *result)
         spinlock_release(&queue_config->queue_lock);
     }
     return (found != NULL);
+}
+
+static inline int mxs_queue_count(QUEUE_CONFIG *queue_config)
+{
+    int count = queue_config->end - queue_config->start;
+    return count < 0 ? (count + queue_config->queue_limit + 1) : count;
 }
