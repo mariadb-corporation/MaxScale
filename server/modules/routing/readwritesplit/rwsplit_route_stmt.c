@@ -711,7 +711,7 @@ route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
 {
     bool trx_active = session_trx_is_active(rses->client_dcb->session);
     bool load_active = rses->rses_load_active;
-    target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
+    mxs_target_t use_sql_variables_in = rses->rses_config.use_sql_variables_in;
     route_target_t target = TARGET_UNDEFINED;
 
     if (rses->forced_node && rses->forced_node == rses->rses_master_ref)

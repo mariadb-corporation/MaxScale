@@ -13,41 +13,34 @@
  */
 
 /**
- * @file router.h -  The query router interface mechanisms
- *
- * Revision History
- *
- * Date         Who                 Description
- * 14/06/2013   Mark Riddoch        Initial implementation
- * 26/06/2013   Mark Riddoch        Addition of router options and the diagnostic entry point
- * 15/07/2013   Massimiliano Pinto  Added clientReply entry point
- * 16/07/2013   Massimiliano Pinto  Added router commands values
- * 22/10/2013   Massimiliano Pinto  Added router errorReply entry point
- * 27/10/2015   Martin Brampton     Add RCAP_TYPE_NO_RSESSION
- * 08/11/2016   Massimiliano Pinto  Add destroyInstance() entry point
- *
+ * @file router.h - The query router public interface definition
  */
 
 #include <maxscale/cdefs.h>
+
+#include <stdint.h>
+
+#include <maxscale/buffer.h>
 #include <maxscale/routing.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
-#include <maxscale/buffer.h>
-#include <stdint.h>
 
 MXS_BEGIN_DECLS
 
 /**
- * The ROUTER handle points to module specific data, so the best we can do
- * is to make it a void * externally.
+ * MXS_ROUTER is an opaque type representing a particular router instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c createInstance function of a router module and subsequently
+ * passing it back to the API functions of the router.
  */
-typedef void *ROUTER;
+typedef void *MXS_ROUTER;
 
 typedef enum error_action
 {
     ERRACT_NEW_CONNECTION = 0x001,
     ERRACT_REPLY_CLIENT   = 0x002
-} error_action_t;
+} mxs_error_action_t;
 
 /**
  * @verbatim
@@ -57,41 +50,45 @@ typedef enum error_action
  *  createInstance  Called by the service to create a new instance of the query router
  *  newSession      Called to create a new user session within the query router
  *  closeSession    Called when a session is closed
+ *  freeSession     Called when a session is freed
  *  routeQuery      Called on each query that requires routing
  *  diagnostics     Called to force the router to print diagnostic output
  *  clientReply     Called to reply to client the data from one or all backends
- *  errorReply      Called to reply to client errors with optional closeSession or make a request for
- *                  a new backend connection
+ *  handleError     Called to reply to client errors with optional closeSession
+ *                  or make a request for a new backend connection
+ *  getCapabilities Called to obtain the capabilities of the router
+ *  destroyInstance Called for destroying a router instance
  *
  * @endverbatim
  *
  * @see load_module
  */
-typedef struct router_object
+typedef struct mxs_router_object
 {
-    ROUTER  *(*createInstance)(SERVICE *service, char **options);
-    void    *(*newSession)(ROUTER *instance, MXS_SESSION *session);
-    void     (*closeSession)(ROUTER *instance, void *router_session);
-    void     (*freeSession)(ROUTER *instance, void *router_session);
-    int32_t  (*routeQuery)(ROUTER *instance, void *router_session, GWBUF *queue);
-    void     (*diagnostics)(ROUTER *instance, DCB *dcb);
-    void     (*clientReply)(ROUTER* instance, void* router_session, GWBUF* queue, DCB *backend_dcb);
-    void     (*handleError)(ROUTER*        instance,
+    MXS_ROUTER *(*createInstance)(SERVICE *service, char **options);
+    void    *(*newSession)(MXS_ROUTER *instance, MXS_SESSION *session);
+    void     (*closeSession)(MXS_ROUTER *instance, void *router_session);
+    void     (*freeSession)(MXS_ROUTER *instance, void *router_session);
+    int32_t  (*routeQuery)(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
+    void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
+    void     (*clientReply)(MXS_ROUTER* instance, void* router_session, GWBUF* queue,
+                            DCB *backend_dcb);
+    void     (*handleError)(MXS_ROUTER*    instance,
                             void*          router_session,
                             GWBUF*         errmsgbuf,
                             DCB*           backend_dcb,
-                            error_action_t action,
+                            mxs_error_action_t action,
                             bool*          succp);
     uint64_t (*getCapabilities)(void);
-    void     (*destroyInstance)(ROUTER *instance);
-} ROUTER_OBJECT;
+    void     (*destroyInstance)(MXS_ROUTER *instance);
+} MXS_ROUTER_OBJECT;
 
 /**
  * The router module API version. Any change that changes the router API
  * must update these versions numbers in accordance with the rules in
  * modinfo.h.
  */
-#define ROUTER_VERSION  { 2, 0, 0 }
+#define MXS_ROUTER_VERSION  { 2, 0, 0 }
 
 /**
  * Specifies capabilities specific for routers. Common capabilities
@@ -107,13 +104,13 @@ typedef enum router_capability
     RCAP_TYPE_NO_RSESSION   = 0x00010000, /**< Router does not use router sessions */
     RCAP_TYPE_NO_USERS_INIT = 0x00020000, /**< Prevent the loading of authenticator
                                              users when the service is started */
-} router_capability_t;
+} mxs_router_capability_t;
 
 typedef enum
 {
     TYPE_UNDEFINED = 0,
     TYPE_MASTER,
     TYPE_ALL
-} target_t;
+} mxs_target_t;
 
 MXS_END_DECLS

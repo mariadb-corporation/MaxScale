@@ -68,17 +68,17 @@
  * The functions that implement the router module API
  */
 
-static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, MXS_SESSION *session);
-static void closeSession(ROUTER *instance, void *session);
-static void freeSession(ROUTER *instance, void *session);
-static int routeQuery(ROUTER *instance, void *session, GWBUF *queue);
-static void diagnostics(ROUTER *instance, DCB *dcb);
-static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
+static MXS_ROUTER *createInstance(SERVICE *service, char **options);
+static void *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, void *session);
+static void freeSession(MXS_ROUTER *instance, void *session);
+static int routeQuery(MXS_ROUTER *instance, void *session, GWBUF *queue);
+static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-static void handleError(ROUTER *instance, void *router_session,
+static void handleError(MXS_ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *backend_dcb,
-                        error_action_t action, bool *succp);
+                        mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(void);
 
 /*
@@ -142,7 +142,7 @@ static const MXS_ENUM_VALUE master_failure_mode_values[] =
  */
 MXS_MODULE *MXS_CREATE_MODULE()
 {
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -158,7 +158,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
 
     static MXS_MODULE info =
     {
-        MXS_MODULE_API_ROUTER, MXS_MODULE_GA, ROUTER_VERSION,
+        MXS_MODULE_API_ROUTER, MXS_MODULE_GA, MXS_ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
         &MyObject,
@@ -241,7 +241,7 @@ static bool handle_max_slaves(ROUTER_INSTANCE *router, const char *str)
  * @param options   The options for this query router
  * @return NULL in failure, pointer to router in success.
  */
-static ROUTER *createInstance(SERVICE *service, char **options)
+static MXS_ROUTER *createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *router;
 
@@ -293,7 +293,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         router->rwsplit_config.max_sescmd_history = 0;
     }
 
-    return (ROUTER *)router;
+    return (MXS_ROUTER *)router;
 }
 
 /**
@@ -313,7 +313,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
  * @param session   The MaxScale session (generic connection data)
  * @return Session specific data for this session, i.e. a router session
  */
-static void *newSession(ROUTER *router_inst, MXS_SESSION *session)
+static void *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_inst;
     ROUTER_CLIENT_SES *client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
@@ -404,7 +404,7 @@ static void *newSession(ROUTER *router_inst, MXS_SESSION *session)
  * @param instance  The router instance data
  * @param session   The router session being closed
  */
-static void closeSession(ROUTER *instance, void *router_session)
+static void closeSession(MXS_ROUTER *instance, void *router_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
     CHK_CLIENT_RSES(router_cli_ses);
@@ -480,7 +480,7 @@ static void closeSession(ROUTER *instance, void *router_session)
  * @param router_client_session Client session
  *
  */
-static void freeSession(ROUTER *router_instance, void *router_client_session)
+static void freeSession(MXS_ROUTER *router_instance, void *router_client_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
 
@@ -553,7 +553,7 @@ void close_failed_bref(backend_ref_t *bref, bool fatal)
  * @param querybuf       Buffer containing the query
  * @return 1 on success, 0 on error
  */
-static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
+static int routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *querybuf)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *) router_session;
@@ -590,7 +590,7 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static void diagnostics(ROUTER *instance, DCB *dcb)
+static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     char *weightby;
@@ -644,7 +644,7 @@ static void diagnostics(ROUTER *instance, DCB *dcb)
  * @param   backend_dcb The backend DCB
  * @param   queue       The GWBUF with reply data
  */
-static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
+static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *writebuf,
                         DCB *backend_dcb)
 {
     DCB *client_dcb;
@@ -1330,9 +1330,9 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
-static void handleError(ROUTER *instance, void *router_session,
+static void handleError(MXS_ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *problem_dcb,
-                        error_action_t action, bool *succp)
+                        mxs_error_action_t action, bool *succp)
 {
     MXS_SESSION *session;
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;

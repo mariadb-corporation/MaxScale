@@ -1122,8 +1122,8 @@ static int gw_error_backend_event(DCB *dcb)
 {
     MXS_SESSION* session;
     void* rsession;
-    ROUTER_OBJECT* router;
-    ROUTER* router_instance;
+    MXS_ROUTER_OBJECT* router;
+    MXS_ROUTER* router_instance;
     GWBUF* errbuf;
     bool succp;
     mxs_session_state_t ses_state;
@@ -1249,8 +1249,8 @@ static int gw_backend_hangup(DCB *dcb)
 {
     MXS_SESSION* session;
     void* rsession;
-    ROUTER_OBJECT* router;
-    ROUTER* router_instance;
+    MXS_ROUTER_OBJECT* router;
+    MXS_ROUTER* router_instance;
     bool succp;
     GWBUF* errbuf;
     mxs_session_state_t ses_state;
@@ -1453,8 +1453,8 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
     {
         MXS_SESSION *session = dcb->session;
         CHK_SESSION(session);
-        ROUTER_OBJECT *router = session->service->router;
-        ROUTER *router_instance = session->service->router_instance;
+        MXS_ROUTER_OBJECT *router = session->service->router;
+        MXS_ROUTER *router_instance = session->service->router_instance;
         void *rsession = session->router_session;
         bool succp = false;
         GWBUF* errbuf = mysql_create_custom_error(

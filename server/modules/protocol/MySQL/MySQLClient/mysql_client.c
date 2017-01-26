@@ -1337,7 +1337,7 @@ static int
 gw_client_close(DCB *dcb)
 {
     MXS_SESSION* session;
-    ROUTER_OBJECT* router;
+    MXS_ROUTER_OBJECT* router;
     void* router_instance;
 #if defined(SS_DEBUG)
     MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;

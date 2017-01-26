@@ -226,7 +226,7 @@ typedef struct rwsplit_config_st
     int               max_slave_connections; /**< Maximum number of slaves for each connection*/
     select_criteria_t slave_selection_criteria; /**< The slave selection criteria */
     int               max_slave_replication_lag; /**< Maximum replication lag */
-    target_t          use_sql_variables_in; /**< Whether to send user variables
+    mxs_target_t      use_sql_variables_in; /**< Whether to send user variables
                                                 * to master or all nodes */
     int               max_sescmd_history; /**< Maximum amount of session commands to store */
     bool              disable_sescmd_history; /**< Disable session command history */

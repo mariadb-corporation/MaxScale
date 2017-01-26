@@ -89,16 +89,16 @@
 #include <maxscale/modutil.h>
 
 /* The router entry points */
-static ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(ROUTER *instance, MXS_SESSION *session);
-static void closeSession(ROUTER *instance, void *router_session);
-static void freeSession(ROUTER *instance, void *router_session);
-static int routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
-static void diagnostics(ROUTER *instance, DCB *dcb);
-static void clientReply(ROUTER *instance, void *router_session, GWBUF *queue,
+static MXS_ROUTER *createInstance(SERVICE *service, char **options);
+static void *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, void *router_session);
+static void freeSession(MXS_ROUTER *instance, void *router_session);
+static int routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
+static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, error_action_t action, bool *succp);
+static void handleError(MXS_ROUTER *instance, void *router_session, GWBUF *errbuf,
+                        DCB *problem_dcb, mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(void);
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
@@ -122,7 +122,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&instlock);
     instances = NULL;
 
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -140,7 +140,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
-        ROUTER_VERSION,
+        MXS_ROUTER_VERSION,
         "A connection based router to load balance based on connections",
         "V1.1.0",
         &MyObject,
@@ -173,7 +173,7 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
  *
  * @return The instance data for this new instance
  */
-static ROUTER *
+static MXS_ROUTER *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
@@ -257,7 +257,7 @@ createInstance(SERVICE *service, char **options)
     instances = inst;
     spinlock_release(&instlock);
 
-    return (ROUTER *) inst;
+    return (MXS_ROUTER *) inst;
 }
 
 /**
@@ -268,7 +268,7 @@ createInstance(SERVICE *service, char **options)
  * @return Session specific data for this session
  */
 static void *
-newSession(ROUTER *instance, MXS_SESSION *session)
+newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *client_rses;
@@ -465,7 +465,7 @@ newSession(ROUTER *instance, MXS_SESSION *session)
  * @details (write detailed description here)
  *
  */
-static void freeSession(ROUTER* router_instance, void* router_client_ses)
+static void freeSession(MXS_ROUTER* router_instance, void* router_client_ses)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_client_ses;
@@ -484,7 +484,7 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
  * @param router_session    The session being closed
  */
 static void
-closeSession(ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, void *router_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
     DCB* backend_dcb;
@@ -552,7 +552,7 @@ static void log_closed_session(mysql_server_cmd_t mysql_command, bool is_closed,
  * @return if succeed 1, otherwise 0
  */
 static int
-routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
@@ -631,7 +631,7 @@ return_rc:
  * @param dcb       DCB to send diagnostics to
  */
 static void
-diagnostics(ROUTER *router, DCB *dcb)
+diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
     char *weightby;
@@ -671,7 +671,7 @@ diagnostics(ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static void
-clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ss_dassert(backend_dcb->session->client_dcb != NULL);
     MXS_SESSION_ROUTE_REPLY(backend_dcb->session, queue);
@@ -690,8 +690,8 @@ clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_d
  * @param   succp       Result of action: true if router can continue
  *
  */
-static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
-                        DCB *problem_dcb, error_action_t action, bool *succp)
+static void handleError(MXS_ROUTER *instance, void *router_session, GWBUF *errbuf,
+                        DCB *problem_dcb, mxs_error_action_t action, bool *succp)
 
 {
     DCB *client_dcb;
@@ -851,7 +851,7 @@ static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession
     MXS_SESSION* session = dcb->session;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*) routersession;
     SERVICE* service = session->service;
-    ROUTER* router = (ROUTER *) service->router;
+    MXS_ROUTER* router = (MXS_ROUTER *) service->router;
 
     if (NULL == dcb->session->router_session && DCB_REASON_ERROR != reason)
     {

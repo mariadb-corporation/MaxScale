@@ -88,22 +88,22 @@
 #include <maxscale/alloc.h>
 
 /* The router entry points */
-static  ROUTER  *createInstance(SERVICE *service, char **options);
+static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
-static  void    *newSession(ROUTER *instance, MXS_SESSION *session);
-static  void    closeSession(ROUTER *instance, void *router_session);
-static  void    freeSession(ROUTER *instance, void *router_session);
-static  int     routeQuery(ROUTER *instance, void *router_session, GWBUF *queue);
-static  void    diagnostics(ROUTER *instance, DCB *dcb);
-static  void    clientReply(ROUTER  *instance,
+static  void    *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static  void    closeSession(MXS_ROUTER *instance, void *router_session);
+static  void    freeSession(MXS_ROUTER *instance, void *router_session);
+static  int     routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
+static  void    diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  void    clientReply(MXS_ROUTER  *instance,
                             void    *router_session,
                             GWBUF   *queue,
                             DCB     *backend_dcb);
-static  void    errorReply(ROUTER  *instance,
+static  void    errorReply(MXS_ROUTER  *instance,
                            void    *router_session,
                            GWBUF   *message,
                            DCB     *backend_dcb,
-                           error_action_t     action,
+                           mxs_error_action_t     action,
                            bool    *succp);
 
 static uint64_t getCapabilities(void);
@@ -114,7 +114,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
-static void destroyInstance(ROUTER *instance);
+static void destroyInstance(MXS_ROUTER *instance);
 bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
@@ -151,7 +151,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&instlock);
     instances = NULL;
 
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -169,7 +169,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_GA,
-        ROUTER_VERSION,
+        MXS_ROUTER_VERSION,
         "Binlogrouter",
         "V2.1.0",
         &MyObject,
@@ -221,7 +221,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return The instance data for this new instance
  */
-static  ROUTER  *
+static  MXS_ROUTER  *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE *inst;
@@ -893,7 +893,7 @@ createInstance(SERVICE *service, char **options)
                 MXS_ERROR("The replication from master cannot be started"
                           " due to errors in current binlog file");
                 /* Don't start replication, just return */
-                return (ROUTER *)inst;
+                return (MXS_ROUTER *)inst;
             }
         }
 
@@ -915,14 +915,14 @@ createInstance(SERVICE *service, char **options)
             inst->m_errmsg = mxs_strdup("HY000 Binlog encryption is Off but binlog file has "
                                         "the START_ENCRYPTION_EVENT");
 
-            return (ROUTER *)inst;
+            return (MXS_ROUTER *)inst;
         }
 
         /* Start replication from master server */
         blr_start_master(inst);
     }
 
-    return (ROUTER *)inst;
+    return (MXS_ROUTER *)inst;
 }
 
 static void
@@ -961,7 +961,7 @@ free_instance(ROUTER_INSTANCE *instance)
  * @return Session specific data for this session
  */
 static void *
-newSession(ROUTER *instance, MXS_SESSION *session)
+newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave;
@@ -1029,7 +1029,7 @@ newSession(ROUTER *instance, MXS_SESSION *session)
  * @param router_cli_ses    The particular session to free
  *
  */
-static void freeSession(ROUTER* router_instance,
+static void freeSession(MXS_ROUTER* router_instance,
                         void*   router_client_ses)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
@@ -1098,7 +1098,7 @@ static void freeSession(ROUTER* router_instance,
  * @param router_session    The session being closed
  */
 static void
-closeSession(ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, void *router_session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1184,7 +1184,7 @@ closeSession(ROUTER *instance, void *router_session)
  * @return The number of bytes sent
  */
 static int
-routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1240,7 +1240,7 @@ spin_reporter(void *dcb, char *desc, int value)
  * @param dcb       DCB to send diagnostics to
  */
 static void
-diagnostics(ROUTER *router, DCB *dcb)
+diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
     ROUTER_SLAVE *session;
@@ -1683,7 +1683,7 @@ diagnostics(ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static  void
-clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
 
@@ -1728,11 +1728,11 @@ extract_message(GWBUF *errpkt)
  *
  */
 static void
-errorReply(ROUTER *instance,
+errorReply(MXS_ROUTER *instance,
            void *router_session,
            GWBUF *message,
            DCB *backend_dcb,
-           error_action_t action,
+           mxs_error_action_t action,
            bool *succp)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
@@ -2436,7 +2436,7 @@ blr_free_ssl_data(ROUTER_INSTANCE *inst)
  * @param service   The service this router instance belongs to
  */
 static void
-destroyInstance(ROUTER *instance)
+destroyInstance(MXS_ROUTER *instance)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
 

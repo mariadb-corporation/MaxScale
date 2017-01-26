@@ -57,23 +57,23 @@
  * @endverbatim
  */
 
-static ROUTER* createInstance(SERVICE *service, char **options);
-static void*   newSession(ROUTER *instance, MXS_SESSION *session);
-static void    closeSession(ROUTER *instance, void *session);
-static void    freeSession(ROUTER *instance, void *session);
-static int     routeQuery(ROUTER *instance, void *session, GWBUF *queue);
-static void    diagnostic(ROUTER *instance, DCB *dcb);
+static MXS_ROUTER* createInstance(SERVICE *service, char **options);
+static void*   newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void    closeSession(MXS_ROUTER *instance, void *session);
+static void    freeSession(MXS_ROUTER *instance, void *session);
+static int     routeQuery(MXS_ROUTER *instance, void *session, GWBUF *queue);
+static void    diagnostic(MXS_ROUTER *instance, DCB *dcb);
 
-static void clientReply(ROUTER* instance,
+static void clientReply(MXS_ROUTER* instance,
                         void*   router_session,
                         GWBUF*  queue,
                         DCB*    backend_dcb);
 
-static void handleError(ROUTER*        instance,
+static void handleError(MXS_ROUTER*    instance,
                         void*          router_session,
                         GWBUF*         errmsgbuf,
                         DCB*           backend_dcb,
-                        error_action_t action,
+                        mxs_error_action_t action,
                         bool*          succp);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
@@ -599,7 +599,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     spinlock_init(&instlock);
     instances = NULL;
 
-    static ROUTER_OBJECT MyObject =
+    static MXS_ROUTER_OBJECT MyObject =
     {
         createInstance,
         newSession,
@@ -617,7 +617,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         MXS_MODULE_API_ROUTER,
         MXS_MODULE_BETA_RELEASE,
-        ROUTER_VERSION,
+        MXS_ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",
         &MyObject,
@@ -649,7 +649,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
  *
  * @return NULL in failure, pointer to router in success.
  */
-static ROUTER* createInstance(SERVICE *service, char **options)
+static MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE* router;
     MXS_CONFIG_PARAMETER* conf;
@@ -815,7 +815,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
         router = NULL;
     }
 
-    return (ROUTER *)router;
+    return (MXS_ROUTER *)router;
 }
 
 /**
@@ -847,7 +847,7 @@ enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* 
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static void* newSession(ROUTER* router_inst, MXS_SESSION* session)
+static void* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
 {
     backend_ref_t* backend_ref; /*< array of backend references (DCB, BACKEND, cursor) */
     ROUTER_CLIENT_SES* client_rses = NULL;
@@ -1044,7 +1044,7 @@ static void* newSession(ROUTER* router_inst, MXS_SESSION* session)
  * @param instance      The router instance data
  * @param session       The session being closed
  */
-static void closeSession(ROUTER* instance, void* router_session)
+static void closeSession(MXS_ROUTER* instance, void* router_session)
 {
     ROUTER_CLIENT_SES* router_cli_ses;
     ROUTER_INSTANCE* inst;
@@ -1139,7 +1139,7 @@ static void closeSession(ROUTER* instance, void* router_session)
     }
 }
 
-static void freeSession(ROUTER* router_instance, void* router_client_session)
+static void freeSession(MXS_ROUTER* router_instance, void* router_client_session)
 {
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
 
@@ -1280,7 +1280,7 @@ static route_target_t get_shard_route_target(qc_query_type_t qtype,
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(ROUTER* instance,
+void check_drop_tmp_table(MXS_ROUTER* instance,
                           void* router_session,
                           GWBUF* querybuf,
                           qc_query_type_t type)
@@ -1334,7 +1334,7 @@ void check_drop_tmp_table(ROUTER* instance,
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-qc_query_type_t is_read_tmp_table(ROUTER* instance,
+qc_query_type_t is_read_tmp_table(MXS_ROUTER* instance,
                                   void* router_session,
                                   GWBUF* querybuf,
                                   qc_query_type_t type)
@@ -1411,7 +1411,7 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_create_tmp_table(ROUTER* instance,
+void check_create_tmp_table(MXS_ROUTER* instance,
                             void* router_session,
                             GWBUF* querybuf,
                             qc_query_type_t type)
@@ -1615,7 +1615,7 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
  * an error message is sent to the client.
  *
  */
-static int routeQuery(ROUTER* instance,
+static int routeQuery(MXS_ROUTER* instance,
                       void* router_session,
                       GWBUF* qbuf)
 {
@@ -2180,7 +2180,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
  * @param       instance        The router instance
  * @param       dcb             The DCB for diagnostic output
  */
-static void diagnostic(ROUTER *instance, DCB *dcb)
+static void diagnostic(MXS_ROUTER *instance, DCB *dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int i = 0;
@@ -2241,7 +2241,7 @@ static void diagnostic(ROUTER *instance, DCB *dcb)
  * @param       backend_dcb     The backend DCB
  * @param       queue           The GWBUF with reply data
  */
-static void clientReply(ROUTER* instance,
+static void clientReply(MXS_ROUTER* instance,
                         void* router_session,
                         GWBUF* buffer,
                         DCB* backend_dcb)
@@ -3559,11 +3559,11 @@ return_succp:
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
-static void handleError(ROUTER*        instance,
+static void handleError(MXS_ROUTER*    instance,
                         void*          router_session,
                         GWBUF*         errmsgbuf,
                         DCB*           problem_dcb,
-                        error_action_t action,
+                        mxs_error_action_t action,
                         bool*          succp)
 {
     MXS_SESSION* session;

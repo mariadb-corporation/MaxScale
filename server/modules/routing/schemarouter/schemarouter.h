@@ -283,7 +283,7 @@ typedef struct schemarouter_config_st
 {
     int               rw_max_slave_conn_percent;
     int               rw_max_slave_conn_count;
-    target_t          rw_use_sql_variables_in;
+    mxs_target_t      rw_use_sql_variables_in;
     int max_sescmd_hist;
     bool disable_sescmd_hist;
     time_t last_refresh; /*< Last time the database list was refreshed */

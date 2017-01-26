@@ -524,7 +524,7 @@ static void
 closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
     TEE_SESSION *my_session = (TEE_SESSION *) session;
-    ROUTER_OBJECT *router;
+    MXS_ROUTER_OBJECT *router;
     void *router_instance, *rsession;
     MXS_SESSION *bsession;
 #ifdef SS_DEBUG

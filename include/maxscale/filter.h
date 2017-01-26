@@ -47,7 +47,7 @@ typedef void *MXS_FILTER_SESSION;
 
 /**
  * @verbatim
- * The "module object" structure for a query router module
+ * The "module object" structure for a filter module
  *
  * The entry points are:
  *      createInstance   Called by the service to create a new instance of the filter
