@@ -910,8 +910,8 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
     /**
      * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
      *
-     * The option is stored as a two byte integer with the values 0 for disabling
-     * multi-statements and 1 for enabling it.
+     * The option is stored as a two byte integer with the values 0 for enabling
+     * multi-statements and 1 for disabling it.
      */
     MySQLProtocol *proto = dcb->protocol;
     uint8_t opt;
