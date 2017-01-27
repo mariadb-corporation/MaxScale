@@ -1931,7 +1931,7 @@ check_config_objects(CONFIG_CONTEXT *context)
                     if (mod == NULL ||
                         !config_param_is_valid(mod->parameters, params->name, params->value, context))
                     {
-                        MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
+                        MXS_ERROR("Unexpected parameter '%s' or parameter value for object '%s' of type '%s'.",
                                   params->name, obj->object, type);
                         rval = false;
                     }
@@ -3329,8 +3329,8 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                     case 'm':
                     case 'K':
                     case 'k':
-                        if (*endptr == '\0' ||
-                            (*endptr == 'i' && *(endptr + 1) == '\0'))
+                        if (*(endptr + 1) == '\0' ||
+                            ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I') && *(endptr + 2) == '\0'))
                         {
                             valid = true;
                         }
