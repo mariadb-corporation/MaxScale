@@ -152,7 +152,8 @@ add_test_executable(readconnrouter_slave.cpp readconnrouter_slave replication)
 add_test_executable(rwsplit_conn_num.cpp rwsplit_conn_num repl_lgc)
 add_test_executable(rw_galera_select_insert.cpp rw_galera_select_insert galera)
 add_test_executable(rwsplit_connect.cpp rwsplit_connect replication)
-add_test_executable(rw_select_insert.cpp rw_select_insert replication)
+# disabled as an know issue
+#add_test_executable(rw_select_insert.cpp rw_select_insert replication)
 add_test_executable(server_weight.cpp server_weight galera.weight)
 add_test_executable(slave_failover.cpp slave_failover replication.one_slave)
 add_test_executable(kill_master.cpp kill_master replication)
@@ -209,7 +210,8 @@ add_test_executable(bug673.cpp bug673 bug673)
 
 # Tee-filter related, fails:  query got stuck, log says  error  : Slave server 'server2': response differs from master's response. Closing connection due to inconsistent session state.
 # ReadConn router in master mode with TEE filter
-add_test_executable(bug670.cpp bug670 bug670)
+# disabled as an know issue
+#add_test_executable(bug670.cpp bug670 bug670)
 
 # FAKE_CODE assert, sending 'fail clientfd' maxadmin command (should it be removed from Maxscale?)
 #add_test_executable(bug539.cpp bug539 bug539)
@@ -245,7 +247,8 @@ set_tests_properties(mxs47 PROPERTIES TIMEOUT 3600)
 add_test_executable(sharding.cpp sharding sharding)
 add_test_executable(schemarouter_duplicate_db.cpp schemarouter_duplicate_db schemarouter_duplicate_db)
 add_test_executable(fwf.cpp fwf fwf)
-add_test_executable(fwf2.cpp fwf2 fwf)
+# disabled as an know issue
+#add_test_executable(fwf2.cpp fwf2 fwf)
 add_test_executable(mxs118.cpp mxs118 mxs118)
 add_test_executable(mxs127.cpp mxs127 mxs127)
 add_test_executable(session_limits.cpp session_limits session_limits)
@@ -275,8 +278,9 @@ add_test_executable(setup_binlog.cpp setup_binlog setup_binlog)
 set_tests_properties(setup_binlog PROPERTIES TIMEOUT 3600)
 add_test_script(bug648 bug648)
 set_tests_properties(bug648 PROPERTIES TIMEOUT 3600)
-add_test_executable(sysbench_kill_slave.cpp sysbench_kill_slave replication)
-set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
+# disabled as an know issue
+#add_test_executable(sysbench_kill_slave.cpp sysbench_kill_slave replication)
+#set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 #set_tests_properties(config_reload config_reload_stress reload_server reload_service PROPERTIES LABELS "CONFIG_RELOAD")
 add_test_executable(pers_01.cpp pers_01 pers_01)
 add_test_executable(pers_02.cpp pers_02 pers_01)
@@ -284,7 +288,8 @@ add_test_script(mxs361 mxs361)
 add_test_executable(mxs431.cpp mxs431 sharding)
 # curretly does 'USE test' in every session, should be removed when 'no all backens are authentificated' issue is resolved
 add_test_executable(open_close_connections.cpp open_close_connections replication)
-add_test_script(open_close_connections_ssl ssl)
+# disabled as an know issue
+#add_test_script(open_close_connections_ssl ssl)
 add_test_executable(galera_priority.cpp galera_priority galera_priority)
 add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548)
 #add_test_executable_notest(mxs559_block_master.cpp mxs559_block_master mxs559)
@@ -312,8 +317,10 @@ add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication)
-add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
-add_test_script(mxs37_table_privilege_galera galera)
+# disabled as an know issue
+#add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
+# disabled as an know issue
+#add_test_script(mxs37_table_privilege_galera galera)
 
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication)
 set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
@@ -325,11 +332,13 @@ set_tests_properties(max_connections PROPERTIES TIMEOUT 3600)
 add_test_executable(lots_of_rows.cpp lots_of_rows galera)
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication)
 add_test_executable(test_hints.cpp test_hints hints2)
-add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
+# disabled as an know issue
+#add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
 #add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication)
 #add_test_executable(mxs722.cpp mxs722 replication)
 
-add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe)
+# disabled as an know issue
+#add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog_tx_safe)
 add_test_executable(ses_bigmem.cpp ses_bigmem no_ses_cmd_store)
 
 add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync)
@@ -342,11 +351,14 @@ set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES TIMEOUT 3600)
 set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
 
 add_test_executable(stale_slaves.cpp stale_slaves replication)
-add_test_executable(rwsplit_readonly.cpp rwsplit_readonly rwsplit_readonly)
-add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_readonly)
-set_tests_properties(rwsplit_readonly_stress PROPERTIES TIMEOUT 3600)
+# disabled as an know issue
+#add_test_executable(rwsplit_readonly.cpp rwsplit_readonly rwsplit_readonly)
+# disabled as an know issue
+#add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_readonly)
+#set_tests_properties(rwsplit_readonly_stress PROPERTIES TIMEOUT 3600)
 
-add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication)
+# disabled as an know issue
+#add_test_executable(mxs621_unreadable_cnf.cpp mxs621_unreadable_cnf replication)
 #add_test_executable(mxs720_line_with_no_equal.cpp mxs720_line_with_no_equal mxs720_line_with_no_equal)
 #add_test_executable(mxs720_wierd_line.cpp mxs720_wierd_line mxs720_wierd_line)
 
@@ -382,8 +394,10 @@ add_test_script(mxs791_galera.sh galera)
 
 # Python based tests
 add_test_script(mxs585.py replication)
-add_test_script(mxs598.py ssl)
-add_test_script(maxinfo.py maxinfo)
+# disabled as an know issue
+#add_test_script(mxs598.py ssl)
+# disabled as an know issue
+#add_test_script(maxinfo.py maxinfo)
 
 # Label some tests as HEAVY to exclude them from quick test on every push
 set_tests_properties(binlog_semisync PROPERTIES LABELS "HEAVY")
@@ -395,7 +409,7 @@ set_tests_properties(sql_queries_pers10 PROPERTIES LABELS "HEAVY")
 set_tests_properties(bug519 PROPERTIES LABELS "HEAVY")
 set_tests_properties(crash_out_of_files PROPERTIES LABELS "HEAVY")
 set_tests_properties(crash_out_of_files_galera PROPERTIES LABELS "HEAVY")
-set_tests_properties(sysbench_kill_slave PROPERTIES LABELS "HEAVY")
+#set_tests_properties(sysbench_kill_slave PROPERTIES LABELS "HEAVY")
 set_tests_properties(load_balancing_pers1 PROPERTIES LABELS "HEAVY")
 set_tests_properties(load_balancing_pers10 PROPERTIES LABELS "HEAVY")
 set_tests_properties(load_balancing_galera_pers1 PROPERTIES LABELS "HEAVY")
@@ -404,14 +418,18 @@ set_tests_properties(different_size_binlog PROPERTIES LABELS "HEAVY")
 set_tests_properties(different_size_rwsplit PROPERTIES LABELS "HEAVY")
 set_tests_properties(max_connections PROPERTIES LABELS "HEAVY")
 set_tests_properties(lots_of_rows PROPERTIES LABELS "HEAVY")
-set_tests_properties(binlog_change_master PROPERTIES LABELS "HEAVY")
-set_tests_properties(rwsplit_readonly_stress PROPERTIES LABELS "HEAVY")
+#set_tests_properties(binlog_change_master PROPERTIES LABELS "HEAVY")
+#set_tests_properties(rwsplit_readonly_stress PROPERTIES LABELS "HEAVY")
 #set_tests_properties(mxs657_restart PROPERTIES LABELS "HEAVY")
 
-medium_weight_tests(mxs564_big_dump rw_select_insert ssl sql_queries
+medium_weight_tests(mxs564_big_dump 
+  #rw_select_insert 
+  ssl sql_queries
   mariadb_tests_hartmut_galera.sh bug648 longblob mariadb_tests_hartmut.sh
   fwf_syntax mm bug509 script fwf setup_binlog run_session_hang.sh 
-  max_connections binlog_change_master binlog_semisync_txs0_ss0 ssl_load)
+  max_connections 
+  #binlog_change_master 
+  binlog_semisync_txs0_ss0 ssl_load)
 
 light_weight_tests(
   bug359
@@ -428,13 +446,13 @@ light_weight_tests(
   galera_priority
   kill_master
   load_balancing
-  maxinfo.py
+#  maxinfo.py
   maxscale_process_user
   mxs118
   mxs127
   mxs244_prepared_stmt_loop
   mxs314
-  mxs37_table_privilege
+#  mxs37_table_privilege
   mxs47
   mxs791.sh
   namedserverfilter

@@ -9,7 +9,7 @@ import java.io.File;
  */
 public class MaxScaleConfiguration {
     
-    private static final String TEST_DIR = "/home/turenko/max/test-1.4.4/maxscale-system-test";
+    private static final String TEST_DIR = "/home/turenko/max/maxscale-system-test";
     private static final String CONFIG_COMMAND = TEST_DIR + "/configure_maxscale.sh";
     private static final int DEFAULT_SLEEP = 10;
     public MaxScaleConfiguration(String test) throws Exception
