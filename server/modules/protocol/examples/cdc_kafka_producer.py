@@ -36,7 +36,7 @@ producer = KafkaProducer(bootstrap_servers=[opts.kafka_broker])
 
 while True:
    try:
-      buf = sys.stdin.read(128)
+      buf = sys.stdin.readline()
 
       if len(buf) == 0:
          break
