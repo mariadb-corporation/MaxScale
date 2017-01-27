@@ -141,12 +141,17 @@ converted to text-form, which requires a reverse DNS lookup. Please see
 
 ## New Features
 
-### Dynamic server configuration
+### Dynamic configuration
+
+MaxScale 2.1 supports dynamic configuration of servers, monitors and
+listeners. A set of new commands were added to maxadmin. See output of
+`maxadmin help` and `maxadmin help { create | destroy | alter | add | remove }`
+for more details.
+
+#### Dynamic server configuration
 
 MaxScale can now change the servers of a service or a monitor at run-time. New
-servers can also be created and they will persisted even after a restart. The
-following new commands were added to maxadmin, see output of `maxadmin help
-<command>` for more details.
+servers can also be created and they will persisted even after a restart.
 
 - `create server`: Creates a new server
 - `destroy server`: Destroys a created server
@@ -157,6 +162,32 @@ following new commands were added to maxadmin, see output of `maxadmin help
 
 With these new features, you can start MaxScale without the servers and define
 them later.
+
+#### Dynamic listener configuration
+
+New listeners for services can be created and destroyed at runtime. This allows
+the services to adapt to changes in client traffic.
+
+- `create listener`: Create a new listener
+- `destroy listener`: Destroy a created listener. The listener will stop
+  handling client requests and will be removed after the next restart of
+  MaxScale.
+
+In addition to these commands, individual listeners can now be stopped and started.
+
+- `shutdown listener`: Stop a listener
+- `restart listener`: Restart a listener
+
+#### Dynamic monitor configuration
+
+New monitors can be created, modified and destroyed at runtime. This allows new
+clusters to be added into MaxScale by defining new monitors for them. The
+monitor parameters can also be changed at runtime making them more adaptive and
+allowing runtime tuning of parameters.
+
+- `create monitor`: Create a new monitor
+- `destroy monitor`: Destroy a created monitor
+- `alter monitor`: Alter monitor parameters
 
 ### Monitors as server sources for services
 
@@ -174,15 +205,16 @@ commands. They allow the modules to expand beyound the capabilities of the
 module API. Currently, only MaxAdmin implements an interface to the module
 commands.
 
-All registered module commands can be shown with `maxadmin list functions` and
-they can be executed with `maxadmin call function <domain> <name> ARGS...` where
+All registered module commands can be shown with `maxadmin list commands` and
+they can be executed with `maxadmin call command <domain> <name> ARGS...` where
 _<domain>_ is the domain where the module registered the function and _<name>_
-is the name of the function. _ARGS_ is a function specific list of arguments.
+is the name of the function. _ARGS_ is a command specific list of arguments.
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for more details.
 
-In the 2.1 release of MaxScale, the [_dbfwfilter_}(../Filters/Database-Firewall-Filter.md)
-and [_avrorouter_](../Routers/Avrorouter.md) implement module commands.
+In the 2.1 release of MaxScale, the [_dbfwfilter_}(../Filters/Database-Firewall-Filter.md),
+[_avrorouter_](../Routers/Avrorouter.md), [_cache_](../Filters/Cache.md) and
+[_masking_](../Filters/Masking.md) modules implement module commands.
 
 ### Amazon RDS Aurora monitor
 
