@@ -17,7 +17,7 @@ if (ROCKSDB_BUILT)
     storage_rocksdb.cc
     )
   add_dependencies(storage_rocksdb RocksDB)
-  target_link_libraries(storage_rocksdb maxscale-common jansson ${ROCKSDB_LIB} ${ROCKSDB_LINK_LIBS})
+  target_link_libraries(storage_rocksdb maxscale-common ${JANSSON_LIBRARIES} ${ROCKSDB_LIB} ${ROCKSDB_LINK_LIBS})
   set_target_properties(storage_rocksdb PROPERTIES VERSION "1.0.0")
   set_target_properties(storage_rocksdb PROPERTIES LINK_FLAGS -Wl,-z,defs)
   install_module(storage_rocksdb experimental)

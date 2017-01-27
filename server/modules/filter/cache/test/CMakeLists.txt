@@ -10,7 +10,7 @@ add_library(cachetester
   )
 
 add_executable(testrules testrules.cc ../rules.cc)
-target_link_libraries(testrules maxscale-common jansson)
+target_link_libraries(testrules maxscale-common ${JANSSON_LIBRARIES})
 
 add_executable(testkeygeneration
   testkeygeneration.cc

@@ -62,6 +62,12 @@ if(NOT MARIADB_CONNECTOR_FOUND)
   include(cmake/BuildMariaDBConnector.cmake)
 endif()
 
+if(NOT JANSSON_FOUND)
+  message(STATUS "Building Jansson from source.")
+  include(cmake/BuildJansson.cmake)
+  include_directories(${JANSSON_INCLUDE_DIR})
+endif()
+
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 
