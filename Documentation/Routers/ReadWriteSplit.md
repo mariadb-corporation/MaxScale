@@ -110,7 +110,18 @@ When a limitation is set, it effectively creates a cap on the session's memory c
 
 ### `disable_sescmd_history`
 
-**`disable_sescmd_history`** disables the session command history. This way no history is stored and if a slave server fails, the router will not try to replace the failed slave. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption. The session command history is enabled by default.
+This option disables the session command history. This way no history is stored
+and if a slave server fails, the router will not try to replace the failed
+slave. Disabling session command history will allow long-lived connections
+without causing a constant growth in the memory consumption.
+
+This option is only intended to be enabled if the value of
+`max_slave_connections` is lowered below the default value. This will allow a
+failed slave to be replaced with a standby slave server.
+
+In versions 2.0 and older, the session command history is enabled by
+default. Starting with version 2.1, the session command history is disabled by
+default.
 
 ```
 # Disable the session command history

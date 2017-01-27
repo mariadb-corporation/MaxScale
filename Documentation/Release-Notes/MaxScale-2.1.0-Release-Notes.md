@@ -22,6 +22,13 @@ Please see the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md#configuration)
 for details.
 
+### Readwritesplit `disable_sescmd_history` option
+
+The default value for `disable_sescmd_history` is now true. This new default
+value will prevent the excessive memory use of long-lived connections. In
+addition to this, it was not optimal to enable this option while the default
+value for `max_slave_connections` was 100%, effectively making it useless.
+
 ### Module configurations
 
 MaxScale 2.1 introduces a new directory for module configurations. This new
