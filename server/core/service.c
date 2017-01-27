@@ -1488,7 +1488,7 @@ dListServices(DCB *dcb)
                 }
                 else
                 {
-                    dcb_printf(dcb, ", %s ", server_ref->server->unique_name);
+                    dcb_printf(dcb, ", %s", server_ref->server->unique_name);
                 }
                 first = false;
             }
