@@ -589,6 +589,42 @@ filters=counter | QLA
 The requests pass through the filters from left to right in the order defined in
 the configuration parameter.
 
+#### `monitor`
+
+The monitor parameter tells the service which cluster of servers to use. The
+value of the option is the name of a monitor object. This removes the redundant
+definition of servers in both services and monitors.
+
+If both the `monitor` and `servers` parameters are defined, only the `monitor`
+parameter will be used.
+
+Only one cluster can be defined for a service. Multi-cluster setups should use
+the `servers` parameter to list the servers that the service should use.
+
+Here is an excerpt from an example configuration with a service that defines the
+cluster parameter.
+
+```
+[db-cluster-1-monitor]
+type=monitor
+module=mysqlmon
+servers=server1,server2,server3
+user=maxuser
+passwd=maxpwd
+monitor_interval=1000
+
+[my-readwrite-service]
+type=service
+router=readwritesplit
+monitor=db-cluster-1-monitor
+user=maxuser
+passwd=maxpwd
+```
+
+The _db-cluster-1-monitor_ cluster consists of three servers monitored by a
+_mysqlmon_ monitor module. The _my-readwrite-service_ uses this monitor as the
+source for servers.
+
 #### `servers`
 
 The servers parameter in a service definition provides a comma separated list of

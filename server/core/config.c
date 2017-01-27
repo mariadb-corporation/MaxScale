@@ -119,6 +119,7 @@ static const char *service_params[] =
     "router",
     "router_options",
     "servers",
+    "monitor",
     "user",
     "passwd", // DEPRECATE: See config_get_password.
     "password",
@@ -2800,16 +2801,45 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
     int error_count = 0;
     char *filters = config_get_value(obj->parameters, "filters");
     char *servers = config_get_value(obj->parameters, "servers");
+    char *monitor = config_get_value(obj->parameters, "monitor");
     char *roptions = config_get_value(obj->parameters, "router_options");
-    char *router = config_get_value(obj->parameters, "router");
     SERVICE *service = obj->element;
 
     if (service)
     {
+        if (monitor)
+        {
+            if (servers)
+            {
+                MXS_WARNING("Both `monitor` and `servers` are defined. Only the "
+                            "value of `monitor` will be used.");
+            }
+
+            /** `monitor` takes priority over `servers` */
+            servers = NULL;
+
+            for (CONFIG_CONTEXT *ctx = context; ctx; ctx = ctx->next)
+            {
+                if (strcmp(ctx->object, monitor) == 0)
+                {
+                    servers = config_get_value(ctx->parameters, "servers");
+                    break;
+                }
+            }
+
+            if (servers == NULL)
+            {
+                MXS_ERROR("Unable to find monitor '%s'.", monitor);
+                error_count++;
+            }
+        }
+
         if (servers)
         {
+            char srv_list[strlen(servers) + 1];
+            strcpy(srv_list, servers);
             char *lasts;
-            char *s = strtok_r(servers, ",", &lasts);
+            char *s = strtok_r(srv_list, ",", &lasts);
             while (s)
             {
                 CONFIG_CONTEXT *obj1 = context;
@@ -2820,6 +2850,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                     {
                         found = 1;
                         serviceAddBackend(service, obj1->element);
+                        break;
                     }
                     obj1 = obj1->next;
                 }

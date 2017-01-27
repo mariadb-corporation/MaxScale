@@ -158,6 +158,15 @@ following new commands were added to maxadmin, see output of `maxadmin help
 With these new features, you can start MaxScale without the servers and define
 them later.
 
+### Monitors as server sources for services
+
+Services now accept a `monitor` parameter which can be used to point a service
+to a cluster of servers that are monitored by a monitor. The value of the
+`monitor` parameter should be the name of a monitor in the configuration name.
+
+For more details, refer to the [Configuration
+Guide](../Getting-Started/Configuration-Guide.md#cluster) section on clusters.
+
 ### Module commands
 
 Introduced in MaxScale 2.1, the module commands are special, module-specific
