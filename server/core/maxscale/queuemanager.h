@@ -31,7 +31,7 @@ typedef struct queue_entry
 #endif /* SS_DEBUG */
 } QUEUE_ENTRY;
 
-typedef struct queue_config
+struct queue_config
 {
     int             queue_limit;
     int             start;
@@ -43,7 +43,7 @@ typedef struct queue_config
 #if defined(SS_DEBUG)
     long            sequence_number;
 #endif /* SS_DEBUG */
-} QUEUE_CONFIG;
+};
 
 QUEUE_CONFIG *mxs_queue_alloc(int limit, int timeout);
 void mxs_queue_free(QUEUE_CONFIG *queue_config);
