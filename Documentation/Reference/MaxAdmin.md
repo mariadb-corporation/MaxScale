@@ -1425,6 +1425,33 @@ until the next restart.
 Usage: destroy monitor NAME
 ```
 
+## Other Modules
+
+Modules can implement custom commands called _module commands_. These are
+intended to allow modules to perform very specific tasks.
+
+To list all module commands, execute `list commands` in maxadmin. This shows all
+commands that the modules have exposed. It also explains what they do and what
+sort of arguments they take.
+
+If no module commands are registered, no output will be generated. Refer to the
+module specific documentation for more details about module commands.
+
+To call a module commands, execute `call command <domain> <command>` in
+maxadmin. The _<domain>_ is the name of the module and _<command>_ is the
+command that should be called. The commands take a variable amount of arguments
+which are explained in the output of `list commands`.
+
+An example of this is the `dbfwfilter` module that implements a rule reloading
+mechanism as a module command. This command takes a filter name as a parameter.
+
+```
+maxadmin call command dbfwfilter rules/reload my-firewall-filter /home/user/rules.txt
+```
+
+Here the name of the filter is _my-firewall-filter_ and the optional rule file
+path is `/home/user/rules.txt`.
+
 # Tuning MariaDB MaxScale
 
 The way that MariaDB MaxScale does it’s polling is that each of the polling

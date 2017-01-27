@@ -5,16 +5,18 @@ commands. They allow the modules to expand beyond the capabilities of the
 module API. Currently, only MaxAdmin implements an interface to the module
 commands.
 
-All registered module commands can be shown with `maxadmin list functions` and
-they can be executed with `maxadmin call function <domain> <name> ARGS...` where
-_<domain>_ is the domain where the module registered the function and _<name>_
-is the name of the function. _ARGS_ is a function specific list of arguments.
+All registered module commands can be shown with `maxadmin list commands` and
+they can be executed with `maxadmin call command <domain> <name> ARGS...` where
+_<domain>_ is the domain where the module registered the command and _<name>_
+is the name of the command. _ARGS_ is a function specific list of arguments.
 
 ## Developer reference
 
 The module command API is defined in the _modulecmd.h_ header. It consists of
 various functions to register and call module commands. Read the function
 documentation in the header for more details.
+
+**Note:** The domain should match the name of the module.
 
 The following example registers the module command _my_command_ in the _my_module_ domain.
 
