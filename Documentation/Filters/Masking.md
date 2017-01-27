@@ -16,9 +16,9 @@ the query is a specific one. That is, when making the query
 ```
 instead of getting the real result, as in
 ```
-+-------+------------+
-+ name  | ssn        |
-+-------+------------+
++-------+-------------+
++ name  | ssn         |
++-------+-------------+
 | Alice | 721-07-4426 |
 | Bob   | 435-22-3267 |
 ...
@@ -53,7 +53,7 @@ columns in where-clauses.
 ## Limitations
 
 The masking filter can _only_ be used for masking columns of the following
-types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, 'BLOB', TINYBLOB`,
+types: `BINARY`, `VARBINARY`, `CHAR`, `VARCHAR`, `BLOB`, `TINYBLOB`,
 `MEDIUMBLOB`, `LONGBLOB`, `TEXT`, `TINYTEXT`, `MEDIUMTEXT`, `LONGTEXT`,
 `ENUM` and `SET`. If the type of the column is something else, then no
 masking will be performed.
