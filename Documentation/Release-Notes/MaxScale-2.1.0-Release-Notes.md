@@ -206,9 +206,9 @@ module API. Currently, only MaxAdmin implements an interface to the module
 commands.
 
 All registered module commands can be shown with `maxadmin list commands` and
-they can be executed with `maxadmin call command <domain> <name> ARGS...` where
-_<domain>_ is the domain where the module registered the function and _<name>_
-is the name of the function. _ARGS_ is a command specific list of arguments.
+they can be executed with `maxadmin call command <module> <name> ARGS...` where
+_<module>_ is the name of the module and _<name>_ is the name of the
+command. _ARGS_ is a command specific list of arguments.
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for more details.
 

@@ -414,10 +414,10 @@ struct subcommand listoptions[] =
     {
         "commands", 0, 2, dListCommands,
         "List registered commands",
-        "Usage list commands [DOMAIN] [COMMAND]\n\n"
+        "Usage list commands [MODULE] [COMMAND]\n\n"
         "Parameters:\n"
-        "DOMAIN  Regular expressions for filtering module domains\n"
-        "COMMAND Regular expressions for filtering module commands\n",
+        "MODULE  Regular expressions for filtering module names\n"
+        "COMMAND Regular expressions for filtering module command names\n",
         {ARG_TYPE_STRING, ARG_TYPE_STRING}
     },
     { EMPTY_OPTION}

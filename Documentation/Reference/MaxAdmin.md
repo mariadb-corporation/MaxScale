@@ -409,10 +409,10 @@ List the status of the polling threads in MaxScale
 
 'commands' - List registered commands
 
-Usage list commands [DOMAIN] [COMMAND]
+Usage list commands [MODULE] [COMMAND]
 Parameters:
-DOMAIN  Regular expressions for filtering module domains
-COMMAND Regular expressions for filtering module commands
+MODULE  Regular expressions for filtering module names
+COMMAND Regular expressions for filtering module command names
 
 MaxScale>
 ```
@@ -1437,8 +1437,8 @@ sort of arguments they take.
 If no module commands are registered, no output will be generated. Refer to the
 module specific documentation for more details about module commands.
 
-To call a module commands, execute `call command <domain> <command>` in
-maxadmin. The _<domain>_ is the name of the module and _<command>_ is the
+To call a module commands, execute `call command <module> <command>` in
+maxadmin. The _<module>_ is the name of the module and _<command>_ is the
 command that should be called. The commands take a variable amount of arguments
 which are explained in the output of `list commands`.
 
