@@ -739,7 +739,7 @@ get_all_users(SERV_LISTENER *listener, USERS *users)
         return -1;
     }
 
-    dpwd = decryptPassword(service_passwd);
+    dpwd = decrypt_password(service_passwd);
     final_data = (char*) MXS_MALLOC(sizeof(char));
     MXS_ABORT_IF_NULL(final_data);
     *final_data = '\0';
@@ -1236,7 +1236,7 @@ get_users(SERV_LISTENER *listener, USERS *users)
      * to try
      */
     server = service->dbref;
-    dpwd = decryptPassword(service_passwd);
+    dpwd = decrypt_password(service_passwd);
 
     /* Select a server with Master bit, if available */
     while (server != NULL && !(server->server->status & SERVER_MASTER))
@@ -2685,7 +2685,7 @@ bool check_service_permissions(SERVICE* service)
         return false;
     }
 
-    char *dpasswd = decryptPassword(password);
+    char *dpasswd = decrypt_password(password);
     bool rval = false;
 
     for (SERVER_REF *server = service->dbref; server; server = server->next)

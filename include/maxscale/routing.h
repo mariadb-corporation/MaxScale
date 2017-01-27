@@ -43,7 +43,7 @@ typedef enum routing_capability
     /** Result sets are delivered in one buffer; implies RCAP_TYPE_STMT_OUTPUT. */
     RCAP_TYPE_RESULTSET_OUTPUT      = 0x0050, /* 0b0000000001110000 */
 
-} routing_capability_t;
+} mxs_routing_capability_t;
 
 #define RCAP_TYPE_NONE 0
 

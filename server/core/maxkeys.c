@@ -22,9 +22,11 @@
  *
  * @endverbatim
  */
+#include "maxscale/secrets.h"
+
 #include <getopt.h>
 #include <stdio.h>
-#include <maxscale/secrets.h>
+
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
 
@@ -93,7 +95,7 @@ int main(int argc, char **argv)
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
-    if (secrets_writeKeys(directory) != 0)
+    if (secrets_write_keys(directory) != 0)
     {
         fprintf(stderr, "Failed to create the .secrets file.\n");
         rval = EXIT_FAILURE;

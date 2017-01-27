@@ -13,48 +13,15 @@
  */
 
 /**
- * @file secrets.h
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23/06/2013   Massimiliano Pinto      Initial implementation
- *
- * @endverbatim
+ * @file include/maxscale/secrets.h - MaxScale config file password decryption
  */
 
 #include <maxscale/cdefs.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <openssl/aes.h>
 
 MXS_BEGIN_DECLS
 
-#define MAXSCALE_KEYLEN 32
-#define MAXSCALE_IV_LEN 16
-
-/**
- * The key structure held in the secrets file
- */
-typedef struct maxkeys
-{
-    unsigned char enckey[MAXSCALE_KEYLEN];
-    unsigned char initvector[MAXSCALE_IV_LEN];
-} MAXKEYS;
-
-enum
-{
-    MXS_PASSWORD_MAXLEN = 79
-};
-
-extern int  secrets_writeKeys(const char *directory);
-extern char *decryptPassword(const char *);
-extern char *encryptPassword(const char*, const char *);
+char *decrypt_password(const char *);
 
 MXS_END_DECLS

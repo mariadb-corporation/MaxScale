@@ -547,7 +547,7 @@ int gssapi_auth_load_users(SERV_LISTENER *listener)
     int rval = MXS_AUTH_LOADUSERS_ERROR;
     GSSAPI_INSTANCE *inst = (GSSAPI_INSTANCE*)listener->auth_instance;
 
-    if (serviceGetUser(listener->service, &user, &pw) && (pw = decryptPassword(pw)))
+    if (serviceGetUser(listener->service, &user, &pw) && (pw = decrypt_password(pw)))
     {
         for (SERVER_REF *servers = listener->service->dbref; servers; servers = servers->next)
         {

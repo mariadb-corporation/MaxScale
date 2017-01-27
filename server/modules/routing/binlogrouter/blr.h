@@ -46,12 +46,15 @@
 #define MXS_MODULE_NAME "binlogrouter"
 
 #include <maxscale/cdefs.h>
+
+#include <stdint.h>
+#include <openssl/aes.h>
+#include <pthread.h>
+#include <zlib.h>
+
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
-#include <pthread.h>
-#include <stdint.h>
 #include <maxscale/thread.h>
-#include <zlib.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
 

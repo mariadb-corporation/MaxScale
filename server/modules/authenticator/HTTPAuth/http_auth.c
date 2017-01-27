@@ -103,7 +103,7 @@ http_auth_authenticate(DCB *dcb)
     HTTP_AUTH *ses = (HTTP_AUTH*)dcb->data;
     char *user, *pw;
     serviceGetUser(dcb->service, &user, &pw);
-    pw = decryptPassword(pw);
+    pw = decrypt_password(pw);
 
     if (ses && strcmp(ses->user, user) == 0 && strcmp(ses->pw, pw) == 0)
     {

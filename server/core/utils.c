@@ -29,12 +29,17 @@
  */
 
 #include <maxscale/utils.h>
-#include <arpa/inet.h>
+
+#include <fcntl.h>
 #include <netdb.h>
 #include <regex.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
+
 #include <openssl/sha.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>

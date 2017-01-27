@@ -436,7 +436,7 @@ cdc_set_service_user(SERV_LISTENER *listener)
         return 1;
     }
 
-    dpwd = decryptPassword(service->credentials.authdata);
+    dpwd = decrypt_password(service->credentials.authdata);
 
     if (!dpwd)
     {

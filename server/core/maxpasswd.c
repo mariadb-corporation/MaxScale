@@ -22,10 +22,17 @@
  *
  * @endverbatim
  */
+
+#include <maxscale/cdefs.h>
+
 #include <stdio.h>
+#include <errno.h>
+#include <sys/stat.h>
+
 #include <maxscale/paths.h>
 #include <maxscale/log_manager.h>
-#include <maxscale/secrets.h>
+
+#include "maxscale/secrets.h"
 
 struct option options[] =
 {
@@ -162,7 +169,7 @@ int main(int argc, char **argv)
 
     int rval = EXIT_SUCCESS;
 
-    char* enc = encryptPassword(path, used_password);
+    char* enc = encrypt_password(path, used_password);
     if (enc)
     {
         printf("%s\n", enc);

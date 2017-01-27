@@ -12,13 +12,20 @@
  */
 
 #include <maxscale/secrets.h>
-#include <time.h>
-#include <maxscale/log_manager.h>
+
 #include <ctype.h>
-#include <maxscale/protocol/mysql.h>
-#include <maxscale/paths.h>
-#include <maxscale/random_jkiss.h>
+#include <time.h>
+#include <sys/stat.h>
+
+#include <openssl/aes.h>
+
 #include <maxscale/alloc.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/paths.h>
+#include <maxscale/protocol/mysql.h>
+#include <maxscale/random_jkiss.h>
+
+#include "maxscale/secrets.h"
 
 /**
  * Generate a random printable character
@@ -245,7 +252,7 @@ secrets_readKeys(const char* path)
  * @param dir The directory where the ".secrets" file should be created.
  * @return 0 on success and 1 on failure
  */
-int secrets_writeKeys(const char *dir)
+int secrets_write_keys(const char *dir)
 {
     int fd, randfd;
     unsigned int randval;
@@ -345,7 +352,7 @@ int secrets_writeKeys(const char *dir)
  * @return  The decrypted password or NULL if allocation failure.
  */
 char *
-decryptPassword(const char *crypt)
+decrypt_password(const char *crypt)
 {
     MAXKEYS *keys;
     AES_KEY aeskey;
@@ -398,7 +405,7 @@ decryptPassword(const char *crypt)
  * @return  The encrypted password
  */
 char *
-encryptPassword(const char* path, const char *password)
+encrypt_password(const char* path, const char *password)
 {
     MAXKEYS *keys;
     AES_KEY aeskey;

@@ -45,16 +45,16 @@ MXS_BEGIN_DECLS
 
 typedef struct
 {
-    int feedback_enable;        /**< Enable/Disable Notification feedback */
-    char    *feedback_url;          /**< URL to which the data is sent */
-    char    *feedback_user_info;        /**< User info included in the feedback data sent */
-    int feedback_timeout;       /**< An attempt to write/read the data times out and fails after this many seconds */
-    int feedback_connect_timeout;   /**< An attempt to send the data times out and fails after this many seconds */
-    int feedback_last_action;       /**< Holds the feedback last send action status */
-    int     feedback_frequency;             /*< Frequency of the housekeeper task */
-    char    *release_info;          /**< Operating system Release name */
-    char    *sysname;           /**< Operating system name */
-    uint8_t *mac_sha1;          /**< First available MAC address*/
+    int feedback_enable;         /**< Enable/Disable Notification feedback */
+    char *feedback_url;          /**< URL to which the data is sent */
+    char *feedback_user_info;    /**< User info included in the feedback data sent */
+    int feedback_timeout;        /**< An attempt to write/read the data times out and fails after this many seconds */
+    int feedback_connect_timeout;/**< An attempt to send the data times out and fails after this many seconds */
+    int feedback_last_action;    /**< Holds the feedback last send action status */
+    int feedback_frequency;      /*< Frequency of the housekeeper task */
+    char *release_info;          /**< Operating system Release name */
+    char *sysname;               /**< Operating system name */
+    uint8_t *mac_sha1;           /**< First available MAC address*/
 } FEEDBACK_CONF;
 
 extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);

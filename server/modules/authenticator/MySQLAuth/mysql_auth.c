@@ -836,7 +836,7 @@ static bool add_service_user(SERV_LISTENER *port)
 
     if (serviceGetUser(port->service, &user, &pw))
     {
-        pw = decryptPassword(pw);
+        pw = decrypt_password(pw);
 
         if (pw)
         {

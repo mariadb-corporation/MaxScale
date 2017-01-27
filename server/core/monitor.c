@@ -29,6 +29,7 @@
  */
 #include <maxscale/monitor.h>
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -676,7 +677,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
     }
 
     char *user = monitor->user;
-    char *dpasswd = decryptPassword(monitor->password);
+    char *dpasswd = decrypt_password(monitor->password);
     MXS_CONFIG* cnf = config_get_global_options();
     bool rval = false;
 
@@ -1169,7 +1170,7 @@ mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
             passwd = database->server->monpw;
         }
 
-        char *dpwd = decryptPassword(passwd);
+        char *dpwd = decrypt_password(passwd);
 
         mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
         mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
