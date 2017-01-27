@@ -190,25 +190,35 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
 
     MAXAVRO_FILE* avrofile = calloc(1, sizeof(MAXAVRO_FILE));
     char *my_filename = strdup(filename);
-    char *schema = read_schema(avrofile);
 
-    if (avrofile && my_filename && schema)
+    if (avrofile && my_filename)
     {
         avrofile->file = file;
         avrofile->filename = my_filename;
-        avrofile->schema = maxavro_schema_alloc(schema);
         avrofile->last_error = MAXAVRO_ERR_NONE;
 
-        if (avrofile->schema &&
-            maxavro_read_sync(file, avrofile->sync) &&
-            maxavro_read_datablock_start(avrofile))
+        char *schema = read_schema(avrofile);
+
+        if (schema)
         {
-            avrofile->header_end_pos = avrofile->block_start_pos;
+            avrofile->schema = maxavro_schema_alloc(schema);
+
+            if (avrofile->schema &&
+                maxavro_read_sync(file, avrofile->sync) &&
+                maxavro_read_datablock_start(avrofile))
+            {
+                avrofile->header_end_pos = avrofile->block_start_pos;
+            }
+            else
+            {
+                MXS_ERROR("Failed to initialize avrofile.");
+                maxavro_schema_free(avrofile->schema);
+                error = true;
+            }
+            free(schema);
         }
         else
         {
-            MXS_ERROR("Failed to initialize avrofile.");
-            maxavro_schema_free(avrofile->schema);
             error = true;
         }
     }
@@ -224,8 +234,6 @@ MAXAVRO_FILE* maxavro_file_open(const char* filename)
         free(my_filename);
         avrofile = NULL;
     }
-
-    free(schema);
 
     return avrofile;
 }
