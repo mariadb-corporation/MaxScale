@@ -110,6 +110,55 @@ typedef enum select_criteria
     LAST_CRITERIA               /*< not used except for an index */
 } select_criteria_t;
 
+static inline const char* select_criteria_to_str(select_criteria_t type)
+{
+    switch (type)
+    {
+    case LEAST_GLOBAL_CONNECTIONS:
+        return "LEAST_GLOBAL_CONNECTIONS";
+
+    case LEAST_ROUTER_CONNECTIONS:
+        return "LEAST_ROUTER_CONNECTIONS";
+
+    case LEAST_BEHIND_MASTER:
+        return "LEAST_BEHIND_MASTER";
+
+    case LEAST_CURRENT_OPERATIONS:
+        return "LEAST_CURRENT_OPERATIONS";
+
+    default:
+        return "UNDEFINED_CRITERIA";
+    }
+}
+
+/**
+ * Controls how master failure is handled
+ */
+enum failure_mode
+{
+    RW_FAIL_INSTANTLY, /**< Close the connection as soon as the master is lost */
+    RW_FAIL_ON_WRITE, /**< Close the connection when the first write is received */
+    RW_ERROR_ON_WRITE /**< Don't close the connection but send an error for writes */
+};
+
+static inline const char* failure_mode_to_str(enum failure_mode type)
+{
+    switch (type)
+    {
+    case RW_FAIL_INSTANTLY:
+        return "fail_instantly";
+
+    case RW_FAIL_ON_WRITE:
+        return "fail_on_write";
+
+    case RW_ERROR_ON_WRITE:
+        return "error_on_write";
+
+    default:
+        ss_dassert(false);
+        return "UNDEFINED_MODE";
+    }
+}
 
 /** default values for rwsplit configuration parameters */
 #define CONFIG_MAX_SLAVE_CONN 1
@@ -208,16 +257,6 @@ typedef struct backend_ref_st
 #endif
     int closed_at; /** DEBUG: Line number where this backend reference was closed */
 } backend_ref_t;
-
-/**
- * Controls how master failure is handled
- */
-enum failure_mode
-{
-    RW_FAIL_INSTANTLY, /**< Close the connection as soon as the master is lost */
-    RW_FAIL_ON_WRITE, /**< Close the connection when the first write is received */
-    RW_ERROR_ON_WRITE /**< Don't close the connection but send an error for writes */
-};
 
 typedef struct rwsplit_config_st
 {

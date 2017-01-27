@@ -113,4 +113,26 @@ typedef enum
     TYPE_ALL
 } mxs_target_t;
 
+/**
+ * @brief Convert mxs_target_t to a string
+ *
+ * @param target Target to convert
+ *
+ * @return Target type as string
+ */
+static inline const char* mxs_target_to_str(mxs_target_t target)
+{
+    switch (target)
+    {
+    case TYPE_MASTER:
+        return "master";
+
+    case TYPE_ALL:
+        return "all";
+
+    default:
+        return "UNDEFINED";
+    }
+}
+
 MXS_END_DECLS

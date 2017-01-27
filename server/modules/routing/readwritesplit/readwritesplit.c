@@ -596,6 +596,27 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
     char *weightby;
     double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
 
+    dcb_printf(dcb, "\n");
+    dcb_printf(dcb, "\tuse_sql_variables_in:      %s\n",
+               mxs_target_to_str(router->rwsplit_config.use_sql_variables_in));
+    dcb_printf(dcb, "\tslave_selection_criteria:  %s\n",
+               select_criteria_to_str(router->rwsplit_config.slave_selection_criteria));
+    dcb_printf(dcb, "\tmaster_failure_mode:       %s\n",
+               failure_mode_to_str(router->rwsplit_config.master_failure_mode));
+    dcb_printf(dcb, "\tmax_slave_replication_lag: %d\n",
+               router->rwsplit_config.max_slave_replication_lag);
+    dcb_printf(dcb, "\tretry_failed_reads:        %s\n",
+               router->rwsplit_config.retry_failed_reads ? "true" : "false");
+    dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
+               router->rwsplit_config.strict_multi_stmt ? "true" : "false");
+    dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
+               router->rwsplit_config.disable_sescmd_history ? "true" : "false");
+    dcb_printf(dcb, "\tmax_sescmd_history:        %d\n",
+               router->rwsplit_config.max_sescmd_history);
+    dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
+               router->rwsplit_config.master_accept_reads ? "true" : "false");
+    dcb_printf(dcb, "\n");
+
     if (router->stats.n_queries > 0)
     {
         master_pct = ((double)router->stats.n_master / (double)router->stats.n_queries) * 100.0;
