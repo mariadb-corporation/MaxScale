@@ -1454,7 +1454,7 @@ path is `/home/user/rules.txt`.
 
 # Tuning MariaDB MaxScale
 
-The way that MariaDB MaxScale does it’s polling is that each of the polling
+The way that MariaDB MaxScale does its polling is that each of the polling
 threads, as defined by the threads parameter in the configuration file, will
 call epoll_wait to obtain the events that are to be processed. The events are
 then added to a queue for execution. Any thread can read from this queue, not
