@@ -245,6 +245,42 @@ allows authentication to always succedd in MaxScale. This option offloads the
 actual authentication to the backend server and it can be used to implement a
 secure version of a wildcard user.
 
+### Consistent Critical Reads
+
+MaxScale 2.1 comes with a new filter module, _ccrfilter_, which allows critical
+reads to be routed to master after inserts. This will make reads after inserts
+consistent while still allowing read scaling.
+
+For more information, refer to the [CCRFilter](../Filters/CCRFilter.md)
+documentation.
+
+### Database Cache
+
+A new filter module, _cache_, allows MaxScale to cache the results of SELECT
+statements. This improves the performance of read-heavy workloads by reducing
+the work the backend databases have to perform.
+
+For more information, refer to the [Cache](../Filters/Cache.md) documentation.
+
+### Result set masking
+
+The new _masking_ filter can mask sensitive information from result sets. This
+is commonly done to hide sensitive information while still allowing the database
+to efficiently process the actual data.
+
+For more information, refer to the [Masking](../Filters/Masking.md)
+documentation.
+
+### Result set limiting
+
+The newly added _maxrows_ filter can restrict the maximum size of a returned
+result set. This can be used to reduce the negative effects of unexpectedly
+large result sets. It can also be used to improve security by preventing access
+to large sets of data with a single query.
+
+For more information, refer to the [Maxrows](../Filters/Maxrows.md)
+documentation.
+
 ## Bug fixes
 
 [Here is a list of bugs fixed since the release of MaxScale 2.0.X.](https://jira.mariadb.org/browse/MXS-739?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.0.0)
