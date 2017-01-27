@@ -109,7 +109,7 @@ int main(int argc, char **argv)
             serviceAddRouterOption(service, s);
             s = strtok_r(NULL, ",", &lasts);
         }
-        set_libdir(MXS_STRDUP_A("../../../authenticator/"));
+        set_libdir(MXS_STRDUP_A("../../../authenticator/MySQLBackendAuth/"));
         server = server_alloc("binlog_router_master_host", "_none_", 3306,
                               "MySQLBackend", "MySQLBackendAuth", NULL);
         if (server == NULL)
