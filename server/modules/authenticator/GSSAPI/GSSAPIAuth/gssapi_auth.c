@@ -20,10 +20,8 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/sqlite3.h>
 #include "../gssapi_auth.h"
-
-/** Default timeout is one minute */
-#define MXS_SQLITE_BUSY_TIMEOUT 60000
 
 /**
  * MySQL queries for retrieving the list of users

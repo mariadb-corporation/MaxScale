@@ -25,3 +25,6 @@
 #if SQLITE_VERSION_NUMBER < 3007014
 #define sqlite3_close_v2 sqlite3_close
 #endif
+
+/** Default timeout is one minute */
+#define MXS_SQLITE_BUSY_TIMEOUT 60000

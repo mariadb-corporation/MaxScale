@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <mysql.h>
+#include <netdb.h>
 
 #include <maxscale/dcb.h>
 #include <maxscale/service.h>
@@ -120,6 +121,15 @@
 #define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
 MaxScale authentication will proceed without including database permissions. \
 See earlier error messages for user '%s' for more information."
+
+#define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
+    FROM mysql.user AS u LEFT JOIN mysql.db AS d \
+    ON (u.user = d.user AND u.host = d.host) %s \
+    UNION \
+    SELECT u.user, u.host, t.db, u.select_priv, u.%s \
+    FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
+    ON (u.user = t.user AND u.host = t.host) %s\
+    ORDER BY user"
 
 static int add_databases(SERV_LISTENER *listener, MYSQL *con);
 static int add_wildcard_users(USERS *users, char* name, char* host,
@@ -213,6 +223,22 @@ static char* get_usercount_query(const char* server_version, bool include_root, 
     ss_dassert(nchars < MAX_QUERY_STR_LEN);
     (void) nchars;
     return buffer;
+}
+
+static char* get_new_users_query(const char *server_version, bool include_root)
+{
+    const char* password = strstr(server_version, "5.7.") ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    const char *with_root = include_root ? "user.user NOT IN ('root')" : "";
+
+    size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
+    char *rval = MXS_MALLOC(n_bytes + 1);
+
+    if (rval)
+    {
+        snprintf(rval, n_bytes + 1, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
+    }
+
+    return rval;
 }
 
 /**
@@ -1172,6 +1198,207 @@ cleanup:
     return total_users;
 }
 
+static bool check_password(const char *output,
+                           uint8_t *token, size_t token_len,
+                           uint8_t *scramble, size_t scramble_len)
+{
+    uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
+    size_t stored_token_len = sizeof(stored_token);
+
+    if (*output)
+    {
+        /** Convert the hexadecimal string to binary */
+        gw_hex2bin(stored_token, output, strlen(output));
+    }
+
+    /**
+     * The client authentication token is made up of:
+     *
+     * XOR( SHA1(real_password), SHA1( CONCAT( scramble, <value of mysql.user.password> ) ) )
+     *
+     * Since we know the scramble and the value stored in mysql.user.password,
+     * we can extract the SHA1 of the real password by doing a XOR of the client
+     * authentication token with the SHA1 of the scramble concatenated with the
+     * value of mysql.user.password.
+     *
+     * Once we have the SHA1 of the original password,  we can create the SHA1
+     * of this hash and compare the value with the one stored in the backend
+     * database. If the values match, the user has sent the right password.
+     */
+
+    /** First, calculate the SHA1 of the scramble and the hash stored in the database */
+    uint8_t step1[SHA_DIGEST_LENGTH];
+    gw_sha1_2_str(scramble, scramble_len, stored_token, stored_token_len, step1);
+
+    /** Next, extract the SHA1 of the real password by XOR'ing it with
+     * the output of the previous calculation */
+    uint8_t step2[SHA_DIGEST_LENGTH];
+    gw_str_xor(step2, token, step1, token_len);
+
+    /** Finally, calculate the SHA1 of the hashed real password */
+    uint8_t final_step[SHA_DIGEST_LENGTH];
+    gw_sha1_str(step2, SHA_DIGEST_LENGTH, final_step);
+
+    /** If the two values match, the client has sent the correct password */
+    return memcmp(final_step, stored_token, stored_token_len) == 0;
+}
+
+/** Used to detect empty result sets */
+struct user_query_result
+{
+    bool ok;
+    char output[SHA_DIGEST_LENGTH * 2 + 1];
+};
+
+/** @brief Callback for sqlite3_exec() */
+static int auth_cb(void *data, int columns, char** rows, char** row_names)
+{
+    struct user_query_result *res = (struct user_query_result*)data;
+    strcpy(res->output, rows[0] ? rows[0] : "");
+    res->ok = true;
+    return 0;
+}
+
+/**
+ * @brief Verify the user has access to the database
+ *
+ * @param auth Authenticator session
+ * @param dcb Client DCB
+ * @param session MySQL session
+ * @param pw Client password
+ *
+ * @return True if the user has access to the database
+ */
+bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
+{
+    size_t len = sizeof(mysqlauth_validation_query) + strlen(session->user) * 2 +
+                 strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
+    char sql[len + 1];
+    bool rval = false;
+    char *err;
+
+    /**
+     * Try authentication twice; first time with the current users, second
+     * time with fresh users
+     */
+    for (int i = 0; i < 2 && !rval; i++)
+    {
+        sprintf(sql, mysqlauth_validation_query, session->user, dcb->remote,
+                session->db, session->db);
+
+        struct user_query_result res = {};
+
+        if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to execute auth query: %s", err);
+            sqlite3_free(err);
+            rval = false;
+        }
+
+        if (!res.ok)
+        {
+            /** Try authentication with the hostname */
+            char client_hostname[MYSQL_HOST_MAXLEN];
+            wildcard_domain_match(dcb->remote, client_hostname);
+            sprintf(sql, mysqlauth_validation_query, session->user, client_hostname,
+                    session->db, session->db);
+
+            if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
+            {
+                MXS_ERROR("Failed to execute auth query: %s", err);
+                sqlite3_free(err);
+                rval = false;
+            }
+        }
+
+        if (res.ok)
+        {
+            /** Found a matching row */
+            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+            rval = check_password(res.output, session->auth_token, session->auth_token_len,
+                                  proto->scramble, sizeof(proto->scramble));
+        }
+
+        if (!rval && i == 0)
+        {
+            service_refresh_users(dcb->service);
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Delete all users
+ *
+ * @param handle SQLite handle
+ */
+static void delete_mysql_users(sqlite3 *handle)
+{
+    char *err;
+
+    if (sqlite3_exec(handle, delete_query, NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to delete old users: %s", err);
+        sqlite3_free(err);
+    }
+}
+
+/**
+ * @brief Add new MySQL user to the internal user database
+ *
+ * @param handle Database handle
+ * @param user   Username
+ * @param host   Host
+ * @param db     Database
+ * @param anydb  Global access to databases
+ */
+static void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
+                           const char *db, bool anydb, const char *pw)
+{
+    size_t dblen = db && *db ? strlen(db) + 2 : sizeof(null_token); /** +2 for single quotes */
+    char dbstr[dblen + 1];
+
+    if (db && *db)
+    {
+        sprintf(dbstr, "'%s'", db);
+    }
+    else
+    {
+        strcpy(dbstr, null_token);
+    }
+
+    size_t pwlen = pw && *pw ? strlen(pw) + 2 : sizeof(null_token); /** +2 for single quotes */
+    char pwstr[pwlen + 1];
+
+    if (pw && *pw)
+    {
+        if (*pw == '*')
+        {
+            pw++;
+        }
+        sprintf(pwstr, "'%s'", pw);
+    }
+    else
+    {
+        strcpy(pwstr, null_token);
+    }
+
+    size_t len = sizeof(insert_sql_pattern) + strlen(user) + strlen(host) + dblen + pwlen + 1;
+
+    char insert_sql[len + 1];
+    sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0", pwstr);
+
+    char *err;
+    if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to insert user: %s", err);
+        sqlite3_free(err);
+    }
+
+    MXS_INFO("Added user: %s", insert_sql);
+}
+
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
  * environment.
@@ -1618,6 +1845,37 @@ get_users(SERV_LISTENER *listener, USERS *users)
 
     MXS_FREE(users_data);
     mysql_free_result(result);
+
+    /** Testing new users query */
+    char *query = get_new_users_query(server->server->server_string, service->enable_root);
+
+    if (query)
+    {
+        if (mysql_query(con, query) == 0)
+        {
+            MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+            delete_mysql_users(instance->handle);
+
+            if ((result = mysql_store_result(con)))
+            {
+                while ((row = mysql_fetch_row(result)))
+                {
+                    add_mysql_user(instance->handle, row[0], row[1], row[2],
+                                   row[3] && strcmp(row[3], "Y") == 0,
+                                   row[4]);
+                }
+
+                mysql_free_result(result);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to load users: %s", mysql_error(con));
+        }
+
+        MXS_FREE(query);
+    }
+
     mysql_close(con);
 
     return total_users;
@@ -2752,4 +3010,54 @@ static void merge_netmask(char *host)
         MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
                   "Merge incomplete: %s", host);
     }
+}
+
+/**
+ * @brief Check if an ip matches a wildcard hostname.
+ *
+ * One of the parameters should be an IP-address without wildcards, the other a
+ * hostname with wildcards. The hostname corresponding to the ip-address will be
+ * looked up and compared to the hostname with wildcard(s). Any error in the
+ * parameters or looking up the hostname will result in a false match.
+ *
+ * @param ip-address or a hostname with wildcard(s)
+ * @param ip-address or a hostname with wildcard(s)
+ * @return True if the host represented by the IP matches the wildcard string
+ */
+static bool wildcard_domain_match(const char *ip_address, char *client_hostname)
+{
+    /* Looks like the parameters are valid. First, convert the client IP string
+     * to binary form. This is somewhat silly, since just a while ago we had the
+     * binary address but had to zero it. dbusers.c should be refactored to fix this.
+     */
+    struct sockaddr_in bin_address;
+    bin_address.sin_family = AF_INET;
+    if (inet_pton(bin_address.sin_family, ip_address, &(bin_address.sin_addr)) != 1)
+    {
+        MXS_ERROR("Could not convert to binary ip-address: '%s'.", ip_address);
+        return false;
+    }
+
+    /* Try to lookup the domain name of the given IP-address. This is a slow
+     * i/o-operation, which will stall the entire thread. TODO: cache results
+     * if this feature is used often.
+     */
+    MXS_DEBUG("Resolving '%s'", ip_address);
+    int lookup_result = getnameinfo((struct sockaddr*)&bin_address,
+                                    sizeof(struct sockaddr_in),
+                                    client_hostname, sizeof(client_hostname),
+                                    NULL, 0, // No need for the port
+                                    NI_NAMEREQD); // Text address only
+
+    if (lookup_result != 0)
+    {
+        MXS_ERROR("Client hostname lookup failed, getnameinfo() returned: '%s'.",
+                  gai_strerror(lookup_result));
+    }
+    else
+    {
+        MXS_DEBUG("IP-lookup success, hostname is: '%s'", client_hostname);
+    }
+
+    return false;
 }
