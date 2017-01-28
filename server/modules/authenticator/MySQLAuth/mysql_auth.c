@@ -128,7 +128,8 @@ static void* mysql_auth_init(char **options)
 
         char *err;
 
-        if (sqlite3_exec(instance->handle, create_sql, NULL, NULL, &err) != SQLITE_OK)
+        if (sqlite3_exec(instance->handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+            sqlite3_exec(instance->handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK)
         {
             MXS_ERROR("Failed to create database: %s", err);
             sqlite3_free(err);
@@ -263,9 +264,6 @@ mysql_auth_authenticate(DCB *dcb)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user, client_data->db);
-
-        auth_ret = combined_auth_check(dcb, client_data->auth_token, client_data->auth_token_len,
-                                       protocol, client_data->user, client_data->client_sha1, client_data->db);
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
 

@@ -44,25 +44,43 @@ static const char DBUSERS_FILE[] = "dbusers";
 #define MYSQLAUTH_DATABASE_NAME "file:mysqlauth.db?mode=memory&cache=shared"
 
 /** The table name where we store the users */
-#define MYSQLAUTH_TABLE_NAME    "mysqlauth_users"
+#define MYSQLAUTH_USERS_TABLE_NAME    "mysqlauth_users"
 
-/** CREATE TABLE statement for the in-memory table */
-static const char create_sql[] =
-    "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_TABLE_NAME
+/** The table name where we store the users */
+#define MYSQLAUTH_DATABASES_TABLE_NAME    "mysqlauth_databases"
+
+/** CREATE TABLE statement for the in-memory users table */
+static const char users_create_sql[] =
+    "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_USERS_TABLE_NAME
     "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, password text)";
 
-/** The query that is executed when a user is authenticated */
-static const char mysqlauth_validation_query[] =
-    "SELECT password FROM " MYSQLAUTH_TABLE_NAME
+/** CREATE TABLE statement for the in-memory databases table */
+static const char databases_create_sql[] =
+    "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_DATABASES_TABLE_NAME "(db varchar(255))";
+
+/** Query that checks if there's a grant for the user being authenticated */
+static const char mysqlauth_validate_user_query[] =
+    "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
     " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
     " LIMIT 1";
 
+/** Query that checks that the database exists */
+static const char mysqlauth_validate_database_query[] =
+    "SELECT * FROM " MYSQLAUTH_DATABASES_TABLE_NAME " WHERE db = '%s' LIMIT 1";
+
 /** Delete query used to clean up the database before loading new users */
-static const char delete_query[] = "DELETE FROM " MYSQLAUTH_TABLE_NAME;
+static const char delete_users_query[] = "DELETE FROM " MYSQLAUTH_USERS_TABLE_NAME;
+
+/** Delete query used to clean up the database before loading new users */
+static const char delete_databases_query[] = "DELETE FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
 
 /** The insert query template which adds users to the mysqlauth_users table */
-static const char insert_sql_pattern[] =
-    "INSERT INTO " MYSQLAUTH_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+static const char insert_user_query[] =
+    "INSERT INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+
+/** The insert query template which adds the databases to the table */
+static const char insert_database_query[] =
+    "INSERT INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
