@@ -878,8 +878,9 @@ static bool add_service_user(SERV_LISTENER *port)
 
             if (newpw)
             {
-                add_mysql_users_with_host_ipv4(port->users, user, "%", newpw, "Y", "");
-                add_mysql_users_with_host_ipv4(port->users, user, "localhost", newpw, "Y", "");
+                MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
+                add_mysql_user(inst->handle, user, "%", newpw, "Y", "");
+                add_mysql_user(inst->handle, user, "localhost", newpw, "Y", "");
                 MXS_FREE(newpw);
                 rval = true;
             }
@@ -937,7 +938,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
         strcat(path, DBUSERS_FILE);
 
-        if ((loaded = dbusers_load(port->users, path)) == -1)
+        if (!dbusers_load(instance->handle, path))
         {
             MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
             rc = MXS_AUTH_LOADUSERS_ERROR;
@@ -963,7 +964,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         if (mxs_mkdir_all(path, 0777))
         {
             strcat(path, DBUSERS_FILE);
-            dbusers_save(port->users, path);
+            dbusers_save(instance->handle, path);
             MXS_INFO("[%s] Storing cached credential information at '%s'.", service->name, path);
         }
     }
