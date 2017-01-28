@@ -25,24 +25,15 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "MySQLAuth"
+#include "mysql_auth.h"
 
-#include <mysql_auth.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
-#include "dbusers.h"
 #include <maxscale/paths.h>
 #include <maxscale/secrets.h>
 #include <maxscale/utils.h>
-
-typedef struct mysql_auth
-{
-    char *cache_dir;          /**< Custom cache directory location */
-    bool inject_service_user; /**< Inject the service user into the list of users */
-    bool skip_auth;           /**< Authentication will always be successful */
-} MYSQL_AUTH;
 
 static void* mysql_auth_init(char **options);
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
@@ -65,6 +56,9 @@ static int mysql_auth_set_client_data(
     MySQLProtocol *protocol,
     GWBUF         *buffer);
 
+int mysql_auth_reauthenticate(DCB *dcb, const char *user,
+                              uint8_t *token, size_t token_len,
+                              uint8_t *scramble, size_t scramble_len);
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -84,7 +78,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         mysql_auth_authenticate,          /* Authenticate user credentials */
         mysql_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                             /* No destroy entry point */
-        mysql_auth_load_users             /* Load users from backend databases */
+        mysql_auth_load_users,            /* Load users from backend databases */
+        mysql_auth_reauthenticate         /* Handle COM_CHANGE_USER */
     };
 
     static MXS_MODULE info =
@@ -437,7 +432,7 @@ mysql_auth_is_client_ssl_capable(DCB *dcb)
  * @return 1 if user is not found or 0 if the user exists
  *
  */
-int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, DCB *dcb)
+int gw_find_mysql_user_password_sha1(const char *username, uint8_t *gateway_password, DCB *dcb)
 {
     MYSQL_session *client_data = (MYSQL_session *) dcb->data;
     SERVICE *service = (SERVICE *) dcb->service;
@@ -445,7 +440,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
     struct sockaddr_in *client = (struct sockaddr_in *) &dcb->ipv4;
 
     MYSQL_USER_HOST key = {};
-    key.user = username;
+    key.user = (char*)username;
     memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
     key.netmask = 32;
     key.resource = client_data->db;
@@ -603,7 +598,7 @@ gw_check_mysql_scramble_data(DCB *dcb,
                              unsigned int token_len,
                              uint8_t *mxs_scramble,
                              unsigned int scramble_len,
-                             char *username,
+                             const char *username,
                              uint8_t *stage1_hash)
 {
     uint8_t step1[GW_MYSQL_SCRAMBLE_SIZE] = "";
@@ -945,4 +940,13 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     }
 
     return rc;
+}
+
+int mysql_auth_reauthenticate(DCB *dcb, const char *user,
+                              uint8_t *token, size_t token_len,
+                              uint8_t *scramble, size_t scramble_len)
+{
+    MYSQL_session *client_data = (MYSQL_session *)dcb->data;
+    return gw_check_mysql_scramble_data(dcb, token, token_len, scramble, scramble_len,
+                                        user, client_data->client_sha1);
 }

@@ -23,7 +23,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/protocol.h>
-#include <mysql_auth.h>
 
 /*
  * MySQL Protocol module for handling the protocol between the gateway
@@ -1580,11 +1579,20 @@ static int gw_change_user(DCB *backend,
      * Decode the token and check the password.
      * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
      */
-    auth_ret = gw_check_mysql_scramble_data(backend->session->client_dcb,
+    DCB *dcb = backend->session->client_dcb;
+
+    if (dcb->authfunc.reauthenticate == NULL)
+    {
+        /** Authenticator does not support reauthentication */
+        rv = 0;
+        goto retblock;
+    }
+
+    auth_ret = dcb->authfunc.reauthenticate(dcb, username,
                                             auth_token, auth_token_len,
                                             client_protocol->scramble,
-                                            sizeof(client_protocol->scramble),
-                                            username, client_sha1);
+                                            sizeof(client_protocol->scramble));
+
     strcpy(current_session->db, current_database);
     spinlock_release(&in_session->ses_lock);
 
@@ -1596,22 +1604,18 @@ static int gw_change_user(DCB *backend,
             /* Note: if no auth client authentication will fail */
             spinlock_acquire(&in_session->ses_lock);
             *current_session->db = 0;
-            auth_ret = gw_check_mysql_scramble_data(
-                           backend->session->client_dcb,
-                           auth_token, auth_token_len,
-                           client_protocol->scramble,
-                           sizeof(client_protocol->scramble),
-                           username, client_sha1);
+
+            auth_ret = dcb->authfunc.reauthenticate(dcb, username,
+                                                    auth_token, auth_token_len,
+                                                    client_protocol->scramble,
+                                                    sizeof(client_protocol->scramble));
+
             strcpy(current_session->db, current_database);
             spinlock_release(&in_session->ses_lock);
         }
     }
 
-    /* let's free the auth_token now */
-    if (auth_token)
-    {
-        MXS_FREE(auth_token);
-    }
+    MXS_FREE(auth_token);
 
     if (auth_ret != 0)
     {

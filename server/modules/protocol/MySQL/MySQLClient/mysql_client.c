@@ -52,7 +52,6 @@
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
-#include <mysql_auth.h>
 #include <maxscale/ssl.h>
 #include <maxscale/poll.h>
 #include <maxscale/modinfo.h>
