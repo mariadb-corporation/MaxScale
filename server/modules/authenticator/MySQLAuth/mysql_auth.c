@@ -41,6 +41,8 @@ static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
 static void mysql_auth_free_client_data(DCB *dcb);
 static int mysql_auth_load_users(SERV_LISTENER *port);
+static void *mysql_auth_create(void *instance);
+static void mysql_auth_destroy(void *data);
 
 static int combined_auth_check(
     DCB             *dcb,
@@ -72,12 +74,12 @@ MXS_MODULE* MXS_CREATE_MODULE()
     static MXS_AUTHENTICATOR MyObject =
     {
         mysql_auth_init,                  /* Initialize the authenticator */
-        NULL,                             /* No create entry point */
+        mysql_auth_create,                /* Create entry point */
         mysql_auth_set_protocol_data,     /* Extract data into structure   */
         mysql_auth_is_client_ssl_capable, /* Check if client supports SSL  */
         mysql_auth_authenticate,          /* Authenticate user credentials */
         mysql_auth_free_client_data,      /* Free the client data held in DCB */
-        NULL,                             /* No destroy entry point */
+        mysql_auth_destroy,               /* Destroy entry point */
         mysql_auth_load_users,            /* Load users from backend databases */
         mysql_auth_reauthenticate         /* Handle COM_CHANGE_USER */
     };
@@ -116,6 +118,24 @@ static void* mysql_auth_init(char **options)
         instance->cache_dir = NULL;
         instance->inject_service_user = true;
         instance->skip_auth = false;
+
+        if (sqlite3_open_v2(MYSQLAUTH_DATABASE_NAME, &instance->handle, db_flags, NULL) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to open SQLite3 handle.");
+            MXS_FREE(instance);
+            return NULL;
+        }
+
+        char *err;
+
+        if (sqlite3_exec(instance->handle, create_sql, NULL, NULL, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to create database: %s", err);
+            sqlite3_free(err);
+            sqlite3_close_v2(instance->handle);
+            MXS_FREE(instance);
+            return NULL;
+        }
 
         for (int i = 0; options[i]; i++)
         {
@@ -165,6 +185,37 @@ static void* mysql_auth_init(char **options)
     return instance;
 }
 
+static void* mysql_auth_create(void *instance)
+{
+    mysql_auth_t *rval = MXS_MALLOC(sizeof(*rval));
+
+    if (rval)
+    {
+        if (sqlite3_open_v2(MYSQLAUTH_DATABASE_NAME, &rval->handle, db_flags, NULL) == SQLITE_OK)
+        {
+            sqlite3_busy_timeout(rval->handle, MXS_SQLITE_BUSY_TIMEOUT);
+        }
+        else
+        {
+            MXS_ERROR("Failed to open SQLite3 handle.");
+            MXS_FREE(rval);
+            rval = NULL;
+        }
+    }
+
+    return rval;
+}
+
+static void mysql_auth_destroy(void *data)
+{
+    mysql_auth_t *auth = (mysql_auth_t*)data;
+    if (auth)
+    {
+        sqlite3_close_v2(auth->handle);
+        MXS_FREE(auth);
+    }
+}
+
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -183,7 +234,7 @@ mysql_auth_authenticate(DCB *dcb)
 {
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     MYSQL_session *client_data = (MYSQL_session *)dcb->data;
-    int auth_ret;
+    int auth_ret = MXS_AUTH_FAILED;
 
     /**
      * We record the SSL status before and after the authentication. This allows
@@ -199,24 +250,16 @@ mysql_auth_authenticate(DCB *dcb)
     {
         auth_ret = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MXS_AUTH_FAILED_SSL : MXS_AUTH_FAILED;
     }
-
     else if (!health_after)
     {
         auth_ret = MXS_AUTH_SSL_INCOMPLETE;
     }
-
     else if (!health_before && health_after)
     {
         auth_ret = MXS_AUTH_SSL_INCOMPLETE;
         poll_add_epollin_event_to_dcb(dcb, NULL);
     }
-
-    else if (0 == strlen(client_data->user))
-    {
-        auth_ret = MXS_AUTH_FAILED;
-    }
-
-    else
+    else if (*client_data->user)
     {
         MXS_DEBUG("Receiving connection from '%s' to database '%s'.",
                   client_data->user, client_data->db);
@@ -226,17 +269,15 @@ mysql_auth_authenticate(DCB *dcb)
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
 
-        /* On failed authentication try to load user table from backend database */
-        /* Success for service_refresh_users returns 0 */
-        if (MXS_AUTH_SUCCEEDED != auth_ret && !instance->skip_auth &&
-            0 == service_refresh_users(dcb->service))
+        bool is_ok = validate_mysql_user(instance->handle, dcb, client_data);
+
+        if (!is_ok && !instance->skip_auth && service_refresh_users(dcb->service) == 0)
         {
-            auth_ret = combined_auth_check(dcb, client_data->auth_token, client_data->auth_token_len, protocol,
-                                           client_data->user, client_data->client_sha1, client_data->db);
+            is_ok = validate_mysql_user(instance->handle, dcb, client_data);
         }
 
         /* on successful authentication, set user into dcb field */
-        if (MXS_AUTH_SUCCEEDED == auth_ret || instance->skip_auth)
+        if (is_ok || instance->skip_auth)
         {
             auth_ret = MXS_AUTH_SUCCEEDED;
             dcb->user = MXS_STRDUP_A(client_data->user);

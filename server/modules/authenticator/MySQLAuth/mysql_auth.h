@@ -41,7 +41,7 @@ MXS_BEGIN_DECLS
 static const char DBUSERS_DIR[] = "cache";
 static const char DBUSERS_FILE[] = "dbusers";
 
-#define MYSQLAUTH_DATABASE_NAME "file:mysqlauth.db"
+#define MYSQLAUTH_DATABASE_NAME "file:mysqlauth.db?mode=memory&cache=shared"
 
 /** The table name where we store the users */
 #define MYSQLAUTH_TABLE_NAME    "mysqlauth_users"
@@ -52,10 +52,10 @@ static const char create_sql[] =
     "(user varchar(255), host varchar(255), db varchar(255), anydb boolean, password text)";
 
 /** The query that is executed when a user is authenticated */
-static const char mysqlauth_auth_query[] =
-    "SELECT * FROM " MYSQLAUTH_TABLE_NAME
+static const char mysqlauth_validation_query[] =
+    "SELECT password FROM " MYSQLAUTH_TABLE_NAME
     " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
-    " AND ('%s' = '%s') LIMIT 1";
+    " LIMIT 1";
 
 /** Delete query used to clean up the database before loading new users */
 static const char delete_query[] = "DELETE FROM " MYSQLAUTH_TABLE_NAME;
@@ -121,5 +121,6 @@ int gw_find_mysql_user_password_sha1(
     const char *username,
     uint8_t *gateway_password,
     DCB *dcb);
+bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session);
 
 MXS_END_DECLS
