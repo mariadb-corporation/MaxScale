@@ -39,7 +39,7 @@ MXS_BEGIN_DECLS
 
 /** Cache directory and file names */
 static const char DBUSERS_DIR[] = "cache";
-static const char DBUSERS_FILE[] = "dbusers";
+static const char DBUSERS_FILE[] = "dbusers.db";
 
 #define MYSQLAUTH_DATABASE_NAME "file:mysqlauth.db?mode=memory&cache=shared"
 
@@ -76,11 +76,17 @@ static const char delete_databases_query[] = "DELETE FROM " MYSQLAUTH_DATABASES_
 
 /** The insert query template which adds users to the mysqlauth_users table */
 static const char insert_user_query[] =
-    "INSERT INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
+    "INSERT OR REPLACE INTO " MYSQLAUTH_USERS_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
 /** The insert query template which adds the databases to the table */
 static const char insert_database_query[] =
-    "INSERT INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
+    "INSERT OR REPLACE INTO " MYSQLAUTH_DATABASES_TABLE_NAME " VALUES ('%s')";
+
+static const char dump_users_query[] =
+    "SELECT user, host, db, anydb, password FROM " MYSQLAUTH_USERS_TABLE_NAME;
+
+static const char dump_databases_query[] =
+    "SELECT db FROM " MYSQLAUTH_DATABASES_TABLE_NAME;
 
 /** Used for NULL value creation in the INSERT query */
 static const char null_token[] = "NULL";
@@ -117,11 +123,14 @@ typedef struct mysql_user_host_key
     char hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
 
+void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
+                    const char *db, bool anydb, const char *pw);
+
 extern int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
                                           char *passwd, const char *anydb, const char *db);
 extern bool check_service_permissions(SERVICE* service);
-extern int dbusers_load(USERS *, const char *filename);
-extern int dbusers_save(USERS *, const char *filename);
+extern bool dbusers_load(sqlite3 *handle, const char *filename);
+extern bool dbusers_save(sqlite3 *src, const char *filename);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);

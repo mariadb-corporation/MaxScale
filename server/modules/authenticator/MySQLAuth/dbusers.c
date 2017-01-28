@@ -128,8 +128,7 @@ See earlier error messages for user '%s' for more information."
     UNION \
     SELECT u.user, u.host, t.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
-    ON (u.user = t.user AND u.host = t.host) %s\
-    ORDER BY user"
+    ON (u.user = t.user AND u.host = t.host) %s"
 
 static int add_databases(SERV_LISTENER *listener, MYSQL *con);
 static int add_wildcard_users(USERS *users, char* name, char* host,
@@ -228,7 +227,7 @@ static char* get_usercount_query(const char* server_version, bool include_root, 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
     const char* password = strstr(server_version, "5.7.") ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    const char *with_root = include_root ? "user.user NOT IN ('root')" : "";
+    const char *with_root = include_root ? "WHERE u.user NOT IN ('root')" : "";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
     char *rval = MXS_MALLOC(n_bytes + 1);
@@ -1374,8 +1373,8 @@ static void delete_mysql_users(sqlite3 *handle)
  * @param db     Database
  * @param anydb  Global access to databases
  */
-static void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
-                           const char *db, bool anydb, const char *pw)
+void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
+                    const char *db, bool anydb, const char *pw)
 {
     size_t dblen = db && *db ? strlen(db) + 2 : sizeof(null_token); /** +2 for single quotes */
     char dbstr[dblen + 1];
@@ -2688,30 +2687,106 @@ dbusers_valueread(int fd)
     return (void *) value;
 }
 
-/**
- * Save the dbusers data to a hashtable file
- *
- * @param users     The hashtable that stores the user data
- * @param filename  The filename to save the data in
- * @return      The number of entries saved
- */
-int
-dbusers_save(USERS *users, const char *filename)
+int dump_user_cb(void *data, int fields, char **row, char **field_names)
 {
-    return hashtable_save(users->data, filename, dbusers_keywrite, dbusers_valuewrite);
+    sqlite3 *handle = (sqlite3*)data;
+    add_mysql_user(handle, row[0], row[1], row[2], row[3] && strcmp(row[3], "1"), row[4]);
+    return 0;
+}
+
+int dump_database_cb(void *data, int fields, char **row, char **field_names)
+{
+    sqlite3 *handle = (sqlite3*)data;
+    add_database(handle, row[0]);
+    return 0;
+}
+
+static bool transfer_table_contents(sqlite3 *src, sqlite3 *dest)
+{
+    bool rval = true;
+    char *err;
+
+    /** Make sure the tables exist in both databases */
+    if (sqlite3_exec(src, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(dest, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(src, databases_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(dest, databases_create_sql, NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to create tables: %s", err);
+        sqlite3_free(err);
+        rval = false;
+    }
+
+    if (sqlite3_exec(dest, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to start transaction: %s", err);
+        sqlite3_free(err);
+        rval = false;
+    }
+
+    /** Replace the data */
+    if (sqlite3_exec(src, dump_users_query, dump_user_cb, dest, &err) != SQLITE_OK ||
+        sqlite3_exec(src, dump_databases_query, dump_database_cb, dest, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to load database contents: %s", err);
+        sqlite3_free(err);
+        rval = false;
+    }
+
+    if (sqlite3_exec(dest, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to commit transaction: %s", err);
+        sqlite3_free(err);
+        rval = false;
+    }
+
+    return rval;
 }
 
 /**
- * Load the dbusers data from a saved hashtable file
+ * Load users from persisted database
  *
- * @param users     The hashtable that stores the user data
- * @param filename  The filename to laod the data from
- * @return      The number of entries loaded
+ * @param dest Open SQLite handle where contents are loaded
+ *
+ * @return True on success
  */
-int
-dbusers_load(USERS *users, const char *filename)
+bool dbusers_load(sqlite3 *dest, const char *filename)
 {
-    return hashtable_load(users->data, filename, dbusers_keyread, dbusers_valueread);
+    sqlite3 *src;
+
+    if (sqlite3_open_v2(filename, &src, db_flags, NULL) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to open persisted SQLite3 database.");
+        return false;
+    }
+
+    bool rval = transfer_table_contents(src, dest);
+    sqlite3_close_v2(src);
+
+    return rval;
+}
+
+/**
+ * Save users to persisted database
+ *
+ * @param dest Open SQLite handle where contents are stored
+ *
+ * @return True on success
+ */
+bool dbusers_save(sqlite3 *src, const char *filename)
+{
+    sqlite3 *dest;
+
+    if (sqlite3_open_v2(filename, &dest, db_flags, NULL) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to open persisted SQLite3 database.");
+        return -1;
+    }
+
+    bool rval = transfer_table_contents(src, dest);
+    sqlite3_close_v2(dest);
+
+    return rval;
 }
 
 /**
@@ -2861,11 +2936,12 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
         server_set_version_string(server, server_string);
     }
 
-    char query[MAX_QUERY_STR_LEN];
+    const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
     const char* query_pw = strstr(server->server_string, "5.7.") ?
-                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    char query[strlen(template) + strlen(query_pw) + 1];
     bool rval = true;
-    snprintf(query, sizeof(query), "SELECT user, host, %s, Select_priv FROM mysql.user limit 1", query_pw);
+    sprintf(query, template, query_pw);
 
     if (mysql_query(mysql, query) != 0)
     {
