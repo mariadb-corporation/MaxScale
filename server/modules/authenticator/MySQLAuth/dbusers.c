@@ -12,27 +12,7 @@
  */
 
 /**
- * @file dbusers.c  - Loading MySQL users from a MySQL backend server, this needs
- * libmysqlclient.so and header files
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 24/06/2013   Massimiliano Pinto  Initial implementation
- * 08/08/2013   Massimiliano Pinto  Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
- * 06/02/2014   Massimiliano Pinto  Mysql user root selected based on configuration flag
- * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table
- *                                  based on a checksum
- * 28/02/2014   Massimiliano Pinto  Added Mysql user@host authentication
- * 29/09/2014   Massimiliano Pinto  Added Mysql user@host authentication with wildcard in IPv4 hosts:
- *                                  x.y.z.%, x.y.%.%, x.%.%.%
- * 03/10/14     Massimiliano Pinto  Added netmask to user@host authentication for wildcard in IPv4 hosts
- * 13/10/14     Massimiliano Pinto  Added (user@host)@db authentication
- * 04/12/14     Massimiliano Pinto  Added support for IPv$ wildcard hosts: a.%, a.%.% and a.b.%
- * 25/05/16     Massimiliano Pinto  Removed log message for duplicate entry while adding an user
- *
- * @endverbatim
+ * Loading MySQL users from a MySQL backend server
  */
 
 #include "mysql_auth.h"
@@ -55,72 +35,11 @@
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
 
-/** User count without databases */
-#define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
-
 /** Normal password column name */
 #define MYSQL_PASSWORD "password"
 
 /** MySQL 5.7 password column name */
 #define MYSQL57_PASSWORD "authentication_string"
-
-/**
- * Query template which resolves user grants and access to databases at the table level
- *
- * The first two parameters for this template should be the 'password' column name.
- * The third parameter is either an empty string the the contents of USERS_QUERY_NO_ROOT
- * if the root user is not included. These three parameters are then repeated in the same
- * order for the remaining parameters. For an example on how it is used see get_users_db_query()
- */
-#define MYSQL_USERS_DB_QUERY_TEMPLATE \
-    "SELECT  DISTINCT \
-    user.user AS user, \
-    user.host AS host, \
-    user.%s AS password, \
-    concat(user.user,user.host,user.%s, \
-           user.Select_priv, COALESCE(db.db, '')) AS userdata, \
-    user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM \
-    mysql.user LEFT JOIN \
-    mysql.db ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL AND user.user <> '' %s \
-    UNION \
-    SELECT  DISTINCT \
-    user.user AS user, \
-    user.host AS host, \
-    user.%s AS password, \
-    concat(user.user,user.host,user.%s, \
-           user.Select_priv, COALESCE(tp.db, '')) AS userdata, \
-    user.Select_priv AS anydb, \
-    tp.db as db FROM \
-    mysql.tables_priv AS tp LEFT JOIN \
-    mysql.user ON user.user=tp.user AND user.host=tp.host \
-    WHERE user.user IS NOT NULL AND user.user <> '' %s"
-
-#define MYSQL_USERS_QUERY_TEMPLATE "SELECT \
-    user, host, %s, concat(user, host, %s, Select_priv) AS userdata, \
-    Select_priv AS anydb FROM mysql.user WHERE user.user IS NOT NULL AND user.user <> ''"
-
-/** User count query split into two parts. This way the actual query used to
- * fetch the users can be inserted as a subquery between the START and END
- * portions of them. */
-#define MYSQL_USERS_COUNT_TEMPLATE_START "SELECT COUNT(1) AS nusers_db FROM ("
-#define MYSQL_USERS_COUNT_TEMPLATE_END ") AS tbl_count"
-
-/** The maximum possible length of the query */
-#define MAX_QUERY_STR_LEN strlen(MYSQL_USERS_COUNT_TEMPLATE_START MYSQL_USERS_COUNT_TEMPLATE_END \
-    MYSQL_USERS_DB_QUERY_TEMPLATE) + strlen(USERS_QUERY_NO_ROOT) * 2 + strlen(MYSQL57_PASSWORD) * 4 + 1
-
-#define LOAD_MYSQL_DATABASE_NAMES "SELECT * \
-    FROM ( (SELECT COUNT(1) AS ndbs \
-    FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, \
-    (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES \
-    WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \'\\'\',\'\')=CURRENT_USER()) AS tbl2)"
-
-#define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
-MaxScale authentication will proceed without including database permissions. \
-See earlier error messages for user '%s' for more information."
 
 #define NEW_LOAD_DBUSERS_QUERY "SELECT u.user, u.host, d.db, u.select_priv, u.%s \
     FROM mysql.user AS u LEFT JOIN mysql.db AS d \
@@ -158,71 +77,6 @@ static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key);
 static void uh_keyfree(MYSQL_USER_HOST* key);
 static int wildcard_db_grant(char* str);
 static void merge_netmask(char *host);
-
-/**
- * Get the user data query with databases
- *
- * @param server_version Server version string
- * @param include_root Include root user
- * @param buffer Destination where the query is written. Must be at least
- * MAX_QUERY_STR_LEN bytes long
- * @return Users query with databases included
- */
-static char* get_users_db_query(const char* server_version, bool include_root, char* buffer)
-{
-    const char* password = strstr(server_version, "5.7.") ?
-                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
-
-    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_DB_QUERY_TEMPLATE,
-                          password, password, include_root ? "" : USERS_QUERY_NO_ROOT,
-                          password, password, include_root ? "" : USERS_QUERY_NO_ROOT);
-    ss_dassert(nchars < MAX_QUERY_STR_LEN);
-    (void) nchars;
-    return buffer;
-}
-
-/**
- * Get the user data query
- *
- * @param server_version Server version string
- * @param include_root Include root user
- * @param buffer Destination where the query is written. Must be at least
- * MAX_QUERY_STR_LEN bytes long
- * @return Users query
- */
-static char* get_users_query(const char* server_version, bool include_root, char* buffer)
-{
-    const char* password = strstr(server_version, "5.7.") ?
-                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
-
-    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_QUERY_TEMPLATE "%s",
-                          password, password, include_root ? "" : USERS_QUERY_NO_ROOT);
-    ss_dassert(nchars < MAX_QUERY_STR_LEN);
-    (void) nchars;
-    return buffer;
-}
-
-/**
- * Get the user count query
- *
- * @param server_version Server version string
- * @param buffer Destination where the query is written. Must be at least
- * MAX_QUERY_STR_LEN bytes long
- * @return User count query
- * */
-static char* get_usercount_query(const char* server_version, bool include_root, char* buffer)
-{
-    const char* password = strstr(server_version, "5.7.") ?
-                           MYSQL57_PASSWORD : MYSQL_PASSWORD;
-
-    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_COUNT_TEMPLATE_START
-                          MYSQL_USERS_DB_QUERY_TEMPLATE MYSQL_USERS_COUNT_TEMPLATE_END,
-                          password, password, include_root ? "" : USERS_QUERY_NO_ROOT,
-                          password, password, include_root ? "" : USERS_QUERY_NO_ROOT);
-    ss_dassert(nchars < MAX_QUERY_STR_LEN);
-    (void) nchars;
-    return buffer;
-}
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
@@ -281,9 +135,6 @@ replace_mysql_users(SERV_LISTENER *listener)
 
     spinlock_acquire(&listener->lock);
 
-    /** TODO: Make the listener resource a part of the USERS struct */
-    HASHTABLE *oldresources = listener->resources;
-
     /* load users and grants from the backend database */
     int i = get_users(listener, newusers);
 
@@ -294,7 +145,6 @@ replace_mysql_users(SERV_LISTENER *listener)
         {
             /* Restore old users and resources */
             users_free(newusers);
-            listener->resources = oldresources;
         }
         else
         {
@@ -313,9 +163,6 @@ replace_mysql_users(SERV_LISTENER *listener)
     listener->users = newusers;
 
     spinlock_release(&listener->lock);
-
-    /* free old resources */
-    resource_free(oldresources);
 
     if (oldusers)
     {
@@ -498,708 +345,8 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
     return ret;
 }
 
-/**
- * Add the database specific grants from mysql.db table into the service resources hashtable
- * environment.
- *
- * @param service   The current service
- * @param users     The users table into which to load the users
- * @return          -1 on any error or the number of users inserted (0 means no users at all)
- */
-static int
-add_databases(SERV_LISTENER *listener, MYSQL *con)
-{
-    SERVICE *service = listener->service;
-    MYSQL_ROW row;
-    MYSQL_RES *result = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-    int ndbs = 0;
-
-    char *get_showdbs_priv_query = LOAD_MYSQL_DATABASE_NAMES;
-
-    serviceGetUser(service, &service_user, &service_passwd);
-
-    if (service_user == NULL || service_passwd == NULL)
-    {
-        return -1;
-    }
-
-    if (mysql_query(con, get_showdbs_priv_query))
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error: %s.",
-                  service->name,
-                  mysql_error(con));
-        return -1;
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error: %s.",
-                  service->name,
-                  mysql_error(con));
-        return -1;
-    }
-
-    /* Result has only one row */
-    row = mysql_fetch_row(result);
-
-    if (row)
-    {
-        ndbs = atoi(row[0]);
-    }
-    else
-    {
-        ndbs = 0;
-
-        MXS_ERROR("Failed to retrieve database names: %s", mysql_error(con));
-        MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
-    }
-
-    /* free resut set */
-    mysql_free_result(result);
-
-    if (!ndbs)
-    {
-        /* return if no db names are available */
-        return 0;
-    }
-
-    if (mysql_query(con, "SHOW DATABASES"))
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error: %s.",
-                  service->name,
-                  mysql_error(con));
-
-        return -1;
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error: %s.",
-                  service->name,
-                  mysql_error(con));
-
-        return -1;
-    }
-
-    /* insert key and value "" */
-    while ((row = mysql_fetch_row(result)))
-    {
-        if (resource_add(listener->resources, row[0], ""))
-        {
-            MXS_DEBUG("%s: Adding database %s to the resouce hash.", service->name, row[0]);
-        }
-    }
-
-    mysql_free_result(result);
-
-    return ndbs;
-}
-
-/**
- * Load the database specific grants from mysql.db table into the service resources hashtable
- * environment.
- *
- * @param service   The current service
- * @param users     The users table into which to load the users
- * @return          -1 on any error or the number of users inserted (0 means no users at all)
- */
-static int
-get_databases(SERV_LISTENER *listener, MYSQL *con)
-{
-    SERVICE *service = listener->service;
-    MYSQL_ROW row;
-    MYSQL_RES *result = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-    int ndbs = 0;
-
-    char *get_showdbs_priv_query = LOAD_MYSQL_DATABASE_NAMES;
-
-    serviceGetUser(service, &service_user, &service_passwd);
-
-    if (service_user == NULL || service_passwd == NULL)
-    {
-        return -1;
-    }
-
-    if (mysql_query(con, get_showdbs_priv_query))
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error when querying database privileges: %s.",
-                  service->name,
-                  mysql_error(con));
-        return -1;
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error when storing result set of database privilege query: %s.",
-                  service->name,
-                  mysql_error(con));
-        return -1;
-    }
-
-    /* Result has only one row */
-    row = mysql_fetch_row(result);
-
-    if (row)
-    {
-        ndbs = atoi(row[0]);
-    }
-    else
-    {
-        ndbs = 0;
-
-        MXS_ERROR("Failed to retrieve database names: %s", mysql_error(con));
-        MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
-    }
-
-    /* free resut set */
-    mysql_free_result(result);
-
-    if (!ndbs)
-    {
-        /* return if no db names are available */
-        return 0;
-    }
-
-    if (mysql_query(con, "SHOW DATABASES"))
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error when executing SHOW DATABASES query: %s.",
-                  service->name,
-                  mysql_error(con));
-
-        return -1;
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading database names for service %s encountered "
-                  "error when storing the result set: %s.",
-                  service->name,
-                  mysql_error(con));
-
-        return -1;
-    }
-
-    /* Now populate service->resources hashatable with db names */
-    listener->resources = resource_alloc();
-
-    /* insert key and value "" */
-    while ((row = mysql_fetch_row(result)))
-    {
-        MXS_DEBUG("%s: Adding database %s to the resouce hash.", service->name, row[0]);
-        resource_add(listener->resources, row[0], "");
-    }
-
-    mysql_free_result(result);
-
-    return ndbs;
-}
-
-/**
- * Load the user/passwd from mysql.user table into the service users' hashtable
- * environment from all the backend servers.
- *
- * @param service   The current service
- * @param users     The users table into which to load the users
- * @return          -1 on any error or the number of users inserted
- */
-static int
-get_all_users(SERV_LISTENER *listener, USERS *users)
-{
-    SERVICE *service = listener->service;
-    MYSQL *con = NULL;
-    MYSQL_ROW row;
-    MYSQL_RES *result = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-    char *dpwd = NULL;
-    int total_users = 0;
-    SERVER_REF *server;
-    const char *userquery;
-    char *tmp;
-    unsigned char hash[SHA_DIGEST_LENGTH] = "";
-    char *users_data = NULL;
-    char *final_data = NULL;
-    char dbnm[MYSQL_DATABASE_MAXLEN + 1];
-    int nusers = -1;
-    int users_data_row_len = MYSQL_USER_MAXLEN + MYSQL_HOST_MAXLEN +
-                             MYSQL_PASSWORD_LEN + sizeof(char) + MYSQL_DATABASE_MAXLEN;
-    int dbnames = 0;
-    int db_grants = 0;
-    bool anon_user = false;
-
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        ss_dassert(service_passwd == NULL || service_user == NULL);
-        return -1;
-    }
-
-    if (service->svc_do_shutdown)
-    {
-        return -1;
-    }
-
-    dpwd = decrypt_password(service_passwd);
-    final_data = (char*) MXS_MALLOC(sizeof(char));
-    MXS_ABORT_IF_NULL(final_data);
-    *final_data = '\0';
-
-    /**
-     * Attempt to connect to one of the databases database or until we run
-     * out of databases
-     * to try
-     */
-    server = service->dbref;
-
-    if (server == NULL)
-    {
-        goto cleanup;
-    }
-
-    listener->resources = resource_alloc();
-
-    while (server != NULL)
-    {
-        while (!service->svc_do_shutdown && server != NULL)
-        {
-            con = gw_mysql_init();
-            if (con)
-            {
-                if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
-                {
-                    MXS_ERROR("Failure loading users data from backend "
-                              "[%s:%i] for service [%s]. MySQL error %i, %s",
-                              server->server->name, server->server->port,
-                              service->name, mysql_errno(con), mysql_error(con));
-                    mysql_close(con);
-                }
-                else
-                {
-                    /** Successfully connected to a server */
-                    break;
-                }
-            }
-            else
-            {
-                server = NULL;
-                break;
-            }
-
-            server = server->next;
-        }
-
-        if (server == NULL)
-        {
-            MXS_ERROR("Unable to get user data from backend database "
-                      "for service [%s]. Missing server information.",
-                      service->name);
-            goto cleanup;
-        }
-
-        add_databases(listener, con);
-        mysql_close(con);
-        server = server->next;
-    }
-
-    server = service->dbref;
-
-    while (server != NULL)
-    {
-        while (!service->svc_do_shutdown && server != NULL)
-        {
-            con = gw_mysql_init();
-            if (con)
-            {
-                if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
-                {
-                    MXS_ERROR("Failure loading users data from backend "
-                              "[%s:%i] for service [%s]. MySQL error %i, %s",
-                              server->server->name, server->server->port,
-                              service->name, mysql_errno(con), mysql_error(con));
-                    mysql_close(con);
-                }
-                else
-                {
-                    /** Successfully connected to a server */
-                    break;
-                }
-            }
-            else
-            {
-                server = NULL;
-                break;
-            }
-
-            server = server->next;
-        }
-
-        if (server == NULL)
-        {
-            MXS_ERROR("Unable to get user data from backend database "
-                      "for service [%s]. Missing server information.",
-                      service->name);
-            goto cleanup;
-        }
-
-        if (server->server->server_string == NULL)
-        {
-            const char *server_string = mysql_get_server_info(con);
-            if (!server_set_version_string(server->server, server_string))
-            {
-                mysql_close(con);
-                goto cleanup;
-            }
-        }
-
-        char querybuffer[MAX_QUERY_STR_LEN];
-        /** Count users. Start with users and db grants for users */
-        const char *usercount = get_usercount_query(server->server->server_string,
-                                                    service->enable_root, querybuffer);
-        if (mysql_query(con, usercount))
-        {
-            if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
-            {
-                /* This is an error we cannot handle, return */
-                MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                          service->name,
-                          mysql_error(con));
-                mysql_close(con);
-                goto cleanup;
-            }
-            else
-            {
-                /*
-                 * We have got ER_TABLEACCESS_DENIED_ERROR
-                 * try counting users from mysql.user without DB names.
-                 */
-                if (mysql_query(con, MYSQL_USERS_COUNT))
-                {
-                    MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                              service->name,
-                              mysql_error(con));
-                    mysql_close(con);
-                    goto cleanup;
-                }
-            }
-        }
-
-        result = mysql_store_result(con);
-
-        if (result == NULL)
-        {
-            MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                      service->name,
-                      mysql_error(con));
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        row = mysql_fetch_row(result);
-
-        nusers = atoi(row[0]);
-
-        mysql_free_result(result);
-
-        if (!nusers)
-        {
-            MXS_ERROR("Counting users for service %s returned 0.", service->name);
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        userquery = get_users_db_query(server->server->server_string,
-                                       service->enable_root, querybuffer);
-
-        /* send first the query that fetches users and db grants */
-        if (mysql_query(con, userquery))
-        {
-            /*
-             * An error occurred executing the query
-             *
-             * Check mysql_errno() against ER_TABLEACCESS_DENIED_ERROR)
-             */
-
-            if (1142 != mysql_errno(con))
-            {
-                /* This is an error we cannot handle, return */
-
-                MXS_ERROR("Loading users with dbnames for service [%s] encountered "
-                          "error: [%s], MySQL errno %i",
-                          service->name,
-                          mysql_error(con),
-                          mysql_errno(con));
-
-                mysql_close(con);
-
-                goto cleanup;
-            }
-            else
-            {
-                /*
-                 * We have got ER_TABLEACCESS_DENIED_ERROR
-                 * try loading users from mysql.user without DB names.
-                 */
-
-                MXS_ERROR("Failed to retrieve users: %s", mysql_error(con));
-                MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
-
-                userquery = get_users_query(server->server->server_string,
-                                            service->enable_root, querybuffer);
-
-                if (mysql_query(con, userquery))
-                {
-                    MXS_ERROR("Loading users for service [%s] encountered "
-                              "error: [%s], code %i",
-                              service->name,
-                              mysql_error(con),
-                              mysql_errno(con));
-
-                    mysql_close(con);
-
-                    goto cleanup;
-                }
-
-                /* users successfully loaded but without db grants */
-
-                MXS_NOTICE("Loading users from [mysql.user] without access to [mysql.db] for "
-                           "service [%s]. MaxScale Authentication with DBname on connect "
-                           "will not consider database grants.",
-                           service->name);
-            }
-        }
-        else
-        {
-            /*
-             * users successfully loaded with db grants.
-             */
-            MXS_DEBUG("[%s] Loading users with db grants.", service->name);
-            db_grants = 1;
-        }
-
-        result = mysql_store_result(con);
-
-        if (result == NULL)
-        {
-            MXS_ERROR("Loading users for service %s encountered error: %s.",
-                      service->name,
-                      mysql_error(con));
-
-            mysql_free_result(result);
-            mysql_close(con);
-
-            goto cleanup;
-        }
-
-        users_data = (char *) MXS_CALLOC(nusers, (users_data_row_len * sizeof(char)) + 1);
-
-        if (users_data == NULL)
-        {
-            mysql_free_result(result);
-            mysql_close(con);
-
-            goto cleanup;
-        }
-
-        while ((row = mysql_fetch_row(result)))
-        {
-
-            /**
-             * Up to six fields could be returned.
-             * user,host,passwd,concat(),anydb,db
-             * passwd+1 (escaping the first byte that is '*')
-             */
-
-            int rc = 0;
-            char *password = NULL;
-
-            /** If the username is empty, the backend server still has anonymous
-             * user in it. This will mean that localhost addresses do not match
-             * the wildcard host '%' */
-            if (strlen(row[0]) == 0)
-            {
-                anon_user = true;
-                continue;
-            }
-
-            if (row[2] != NULL)
-            {
-                /* detect mysql_old_password (pre 4.1 protocol) */
-                if (strlen(row[2]) == 16)
-                {
-                    MXS_ERROR("%s: The user %s@%s has on old password in the "
-                              "backend database. MaxScale does not support these "
-                              "old passwords. This user will not be able to connect "
-                              "via MaxScale. Update the users password to correct "
-                              "this.",
-                              service->name,
-                              row[0],
-                              row[1]);
-                    continue;
-                }
-
-                if (strlen(row[2]) > 1)
-                {
-                    password = row[2] + 1;
-                }
-                else
-                {
-                    password = row[2];
-                }
-            }
-
-            /*
-             * add user@host and DB global priv and specificsa grant (if possible)
-             */
-            bool havedb = false;
-
-            if (db_grants)
-            {
-                /* we have dbgrants, store them */
-                if (row[5])
-                {
-                    unsigned long *rowlen = mysql_fetch_lengths(result);
-                    memcpy(dbnm, row[5], rowlen[5]);
-                    memset(dbnm + rowlen[5], 0, 1);
-                    havedb = true;
-                    if (service->strip_db_esc)
-                    {
-                        strip_escape_chars(dbnm);
-                        MXS_DEBUG("[%s]: %s -> %s",
-                                  service->name,
-                                  row[5],
-                                  dbnm);
-                    }
-                }
-
-                rc = add_mysql_users_with_host_ipv4(users, row[0], row[1],
-                                                    password, row[4],
-                                                    havedb ? dbnm : NULL);
-
-                MXS_DEBUG("%s: Adding user:%s host:%s anydb:%s db:%s.",
-                          service->name, row[0], row[1], row[4],
-                          havedb ? dbnm : NULL);
-            }
-            else
-            {
-                /* we don't have dbgrants, simply set ANY DB for the user */
-                rc = add_mysql_users_with_host_ipv4(users, row[0], row[1],
-                                                    password, "Y", NULL);
-            }
-
-            if (rc == 1)
-            {
-                if (db_grants)
-                {
-                    char dbgrant[MYSQL_DATABASE_MAXLEN + 1] = "";
-                    if (row[4] != NULL)
-                    {
-                        if (strcmp(row[4], "Y") == 0)
-                        {
-                            strcpy(dbgrant, "ANY");
-                        }
-                        else if (row[5])
-                        {
-                            strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
-                            dbgrant[MYSQL_DATABASE_MAXLEN] = 0;
-                        }
-                    }
-
-                    if (!strlen(dbgrant))
-                    {
-                        strcpy(dbgrant, "no db");
-                    }
-
-                    /* Log the user being added with its db grants */
-                    MXS_INFO("%s: User %s@%s for database %s added to service user table.",
-                             service->name, row[0], row[1], dbgrant);
-                }
-                else
-                {
-                    /* Log the user being added (without db grants) */
-                    MXS_INFO("%s: User %s@%s added to service user table.",
-                             service->name, row[0], row[1]);
-                }
-
-                /* Append data in the memory area for SHA1 digest */
-                strncat(users_data, row[3], users_data_row_len);
-                total_users++;
-            }
-            else
-            {
-                /** Log errors and not the duplicate user */
-                if (service->log_auth_warnings && rc != -1)
-                {
-                    MXS_WARNING("Failed to add user %s@%s for service [%s]."
-                                " This user will be unavailable via MaxScale.",
-                                row[0], row[1], service->name);
-                }
-            }
-        }
-
-        mysql_free_result(result);
-        mysql_close(con);
-
-        if ((tmp = MXS_REALLOC(final_data, (strlen(final_data) + strlen(users_data)
-                                            + 1) * sizeof(char))) == NULL)
-        {
-            MXS_FREE(users_data);
-            goto cleanup;
-        }
-
-        final_data = tmp;
-
-        strcat(final_data, users_data);
-        MXS_FREE(users_data);
-
-        if (service->users_from_all)
-        {
-            server = server->next;
-        }
-        else
-        {
-            server = NULL;
-        }
-    }
-
-    /* compute SHA1 digest for users' data */
-    SHA1((const unsigned char *) final_data, strlen(final_data), hash);
-
-    memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-
-    /** Set the parameter if it is not configured by the user */
-    if (service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
-    {
-        service->localhost_match_wildcard_host = anon_user ? 0 : 1;
-    }
-cleanup:
-
-    MXS_FREE(dpwd);
-    MXS_FREE(final_data);
-
-    return total_users;
-}
-
-static bool check_password(const char *output,
-                           uint8_t *token, size_t token_len,
-                           uint8_t *scramble, size_t scramble_len)
+static bool check_password(const char *output, uint8_t *token, size_t token_len,
+                           uint8_t *scramble, size_t scramble_len, uint8_t *phase2_scramble)
 {
     uint8_t stored_token[SHA_DIGEST_LENGTH] = {};
     size_t stored_token_len = sizeof(stored_token);
@@ -1234,6 +381,10 @@ static bool check_password(const char *output,
     uint8_t step2[SHA_DIGEST_LENGTH];
     gw_str_xor(step2, token, step1, token_len);
 
+    /** The phase 2 scramble needs to be copied to the shared data structure as it
+     * is required when the backend authentication is done. */
+    memcpy(phase2_scramble, step2, SHA_DIGEST_LENGTH);
+
     /** Finally, calculate the SHA1 of the hashed real password */
     uint8_t final_step[SHA_DIGEST_LENGTH];
     gw_sha1_str(step2, SHA_DIGEST_LENGTH, final_step);
@@ -1242,6 +393,7 @@ static bool check_password(const char *output,
     return memcmp(final_step, stored_token, stored_token_len) == 0;
 }
 
+/** Callback for check_database() */
 static int database_cb(void *data, int columns, char** rows, char** row_names)
 {
     bool *rval = (bool*)data;
@@ -1251,18 +403,24 @@ static int database_cb(void *data, int columns, char** rows, char** row_names)
 
 static bool check_database(sqlite3 *handle, const char *database)
 {
-    size_t len = sizeof(mysqlauth_validate_database_query) + strlen(database) + 1;
-    char sql[len];
+    bool rval = true;
 
-    sprintf(sql, mysqlauth_validate_database_query, database);
-    bool rval = false;
-    char *err;
-
-    if (sqlite3_exec(handle, sql, database_cb, &rval, &err) != SQLITE_OK)
+    if (*database)
     {
-        MXS_ERROR("Failed to execute auth query: %s", err);
-        sqlite3_free(err);
         rval = false;
+        size_t len = sizeof(mysqlauth_validate_database_query) + strlen(database) + 1;
+        char sql[len];
+
+        sprintf(sql, mysqlauth_validate_database_query, database);
+
+        char *err;
+
+        if (sqlite3_exec(handle, sql, database_cb, &rval, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to execute auth query: %s", err);
+            sqlite3_free(err);
+            rval = false;
+        }
     }
 
     return rval;
@@ -1333,11 +491,18 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
 
     if (res.ok)
     {
+        if (session->auth_token_len)
+        {
+            /** If authentication fails, this will trigger the right
+             * error message with `Using password : YES` */
+            session->client_sha1[0] = '_';
+        }
+
         /** Found a matching row */
         MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
 
         if (check_password(res.output, session->auth_token, session->auth_token_len,
-                           proto->scramble, sizeof(proto->scramble)))
+                           proto->scramble, sizeof(proto->scramble), session->client_sha1))
         {
             /** Password is OK, check that the database exists */
             rval = check_database(handle, session->db);
@@ -1432,506 +597,6 @@ static void add_database(sqlite3 *handle, const char *db)
         MXS_ERROR("Failed to insert database: %s", err);
         sqlite3_free(err);
     }
-}
-
-/**
- * Load the user/passwd form mysql.user table into the service users' hashtable
- * environment.
- *
- * @param service   The current service
- * @param users     The users table into which to load the users
- * @return          -1 on any error or the number of users inserted
- */
-static int
-get_users(SERV_LISTENER *listener, USERS *users)
-{
-    SERVICE *service = listener->service;
-    MYSQL *con = NULL;
-    MYSQL_ROW row;
-    MYSQL_RES *result = NULL;
-    char *service_user = NULL;
-    char *service_passwd = NULL;
-    char *dpwd;
-    int total_users = 0;
-    SERVER_REF *server;
-    const char *userquery;
-    unsigned char hash[SHA_DIGEST_LENGTH] = "";
-    char *users_data = NULL;
-    int nusers = 0;
-    int users_data_row_len = MYSQL_USER_MAXLEN +
-                             MYSQL_HOST_MAXLEN +
-                             MYSQL_PASSWORD_LEN +
-                             sizeof(char) +
-                             MYSQL_DATABASE_MAXLEN;
-    int db_grants = 0;
-    char dbnm[MYSQL_DATABASE_MAXLEN + 1];
-    bool anon_user = false;
-
-    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
-    {
-        ss_dassert(service_passwd == NULL || service_user == NULL);
-        return -1;
-    }
-
-    if (service->users_from_all)
-    {
-        return get_all_users(listener, users);
-    }
-
-    con = gw_mysql_init();
-
-    if (!con)
-    {
-        return -1;
-    }
-
-    /**
-     * Attempt to connect to one of the databases database or until we run
-     * out of databases
-     * to try
-     */
-    server = service->dbref;
-    dpwd = decrypt_password(service_passwd);
-
-    /* Select a server with Master bit, if available */
-    while (server != NULL && !(server->server->status & SERVER_MASTER))
-    {
-        server = server->next;
-    }
-
-    if (service->svc_do_shutdown)
-    {
-        MXS_FREE(dpwd);
-        mysql_close(con);
-        return -1;
-    }
-
-    /* Try loading data from master server */
-    if (server != NULL &&
-        (mxs_mysql_real_connect(con, server->server, service_user, dpwd) != NULL))
-    {
-        MXS_DEBUG("Loading data from backend database with "
-                  "Master role [%s:%i] for service [%s]",
-                  server->server->name,
-                  server->server->port,
-                  service->name);
-    }
-    else
-    {
-        mysql_close(con);
-        /* load data from other servers via loop */
-        server = service->dbref;
-
-        while (!service->svc_do_shutdown && server != NULL)
-        {
-            con = gw_mysql_init();
-            if (con)
-            {
-                if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
-                {
-                    MXS_ERROR("Failure loading users data from backend "
-                              "[%s:%i] for service [%s]. MySQL error %i, %s",
-                              server->server->name, server->server->port,
-                              service->name, mysql_errno(con), mysql_error(con));
-                    mysql_close(con);
-                }
-                else
-                {
-                    /** Successfully connected to a server */
-                    break;
-                }
-            }
-            else
-            {
-                server = NULL;
-                break;
-            }
-
-            server = server->next;
-        }
-
-        if (service->svc_do_shutdown)
-        {
-            MXS_FREE(dpwd);
-            mysql_close(con);
-            return -1;
-        }
-
-        if (server != NULL)
-        {
-            MXS_DEBUG("Loading data from backend database [%s:%i] for service [%s]",
-                      server->server->name, server->server->port, service->name);
-        }
-    }
-
-    MXS_FREE(dpwd);
-
-    if (server == NULL)
-    {
-        MXS_ERROR("Unable to get user data from backend database for service [%s]."
-                  " Failed to connect to any of the backend databases.", service->name);
-        return -1;
-    }
-
-    if (server->server->server_string == NULL)
-    {
-        const char *server_string = mysql_get_server_info(con);
-        if (!server_set_version_string(server->server, server_string))
-        {
-            mysql_close(con);
-            return -1;
-        }
-    }
-
-    char querybuffer[MAX_QUERY_STR_LEN];
-    const char *usercount = get_usercount_query(server->server->server_string,
-                                                service->enable_root, querybuffer);
-    /** Count users. Start with users and db grants for users */
-    if (mysql_query(con, usercount))
-    {
-        if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
-        {
-            /* This is an error we cannot handle, return */
-            MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                      service->name, mysql_error(con));
-            mysql_close(con);
-            return -1;
-        }
-        else
-        {
-            /*
-             * We have got ER_TABLEACCESS_DENIED_ERROR
-             * try counting users from mysql.user without DB names.
-             */
-            if (mysql_query(con, MYSQL_USERS_COUNT))
-            {
-                MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                          service->name, mysql_error(con));
-                mysql_close(con);
-                return -1;
-            }
-        }
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading users for service [%s] encountered error: [%s].",
-                  service->name, mysql_error(con));
-        mysql_close(con);
-        return -1;
-    }
-
-    row = mysql_fetch_row(result);
-
-    nusers = atoi(row[0]);
-
-    mysql_free_result(result);
-
-    if (!nusers)
-    {
-        MXS_ERROR("Counting users for service %s returned 0.", service->name);
-        mysql_close(con);
-        return -1;
-    }
-
-    userquery = get_users_db_query(server->server->server_string,
-                                   service->enable_root, querybuffer);
-    /* send first the query that fetches users and db grants */
-    if (mysql_query(con, userquery))
-    {
-        /*
-         * An error occurred executing the query
-         *
-         * Check mysql_errno() against ER_TABLEACCESS_DENIED_ERROR)
-         */
-
-        if (1142 != mysql_errno(con))
-        {
-            /* This is an error we cannot handle, return */
-
-            MXS_ERROR("Loading users with dbnames for service [%s] encountered "
-                      "error: [%s], MySQL errno %i", service->name,
-                      mysql_error(con), mysql_errno(con));
-
-            mysql_close(con);
-            return -1;
-        }
-        else
-        {
-            /*
-             * We have got ER_TABLEACCESS_DENIED_ERROR
-             * try loading users from mysql.user without DB names.
-            */
-            MXS_ERROR("Failed to retrieve users: %s", mysql_error(con));
-            MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
-
-            userquery = get_users_query(server->server->server_string,
-                                        service->enable_root, querybuffer);
-
-            if (mysql_query(con, userquery))
-            {
-                MXS_ERROR("Loading users for service [%s] encountered error: "
-                          "[%s], code %i", service->name, mysql_error(con),
-                          mysql_errno(con));
-
-                mysql_close(con);
-                return -1;
-            }
-
-            /* users successfully loaded but without db grants */
-
-            MXS_NOTICE("Loading users from [mysql.user] without access to [mysql.db] for "
-                       "service [%s]. MaxScale Authentication with DBname on connect "
-                       "will not consider database grants.", service->name);
-        }
-    }
-    else
-    {
-        /** Users successfully loaded with database  grants */
-        db_grants = 1;
-    }
-
-    result = mysql_store_result(con);
-
-    if (result == NULL)
-    {
-        MXS_ERROR("Loading users for service %s encountered error: %s.",
-                  service->name, mysql_error(con));
-
-        mysql_free_result(result);
-        mysql_close(con);
-        return -1;
-    }
-
-    users_data = (char *) MXS_CALLOC(nusers, (users_data_row_len * sizeof(char)) + 1);
-
-    if (users_data == NULL)
-    {
-        mysql_free_result(result);
-        mysql_close(con);
-        return -1;
-    }
-
-    if (db_grants)
-    {
-        /* load all mysql database names */
-        ss_debug(int dbnames = ) get_databases(listener, con);
-        MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
-                  dbnames, service->name);
-    }
-    else
-    {
-        listener->resources = NULL;
-    }
-
-    while ((row = mysql_fetch_row(result)))
-    {
-
-        /**
-         * Up to six fields could be returned.
-         * user,host,passwd,concat(),anydb,db
-         * passwd+1 (escaping the first byte that is '*')
-         */
-
-        int rc = 0;
-        char *password = NULL;
-
-        /** If the username is empty, the backend server still has anonymous
-         * user in it. This will mean that localhost addresses do not match
-         * the wildcard host '%' */
-        if (strlen(row[0]) == 0)
-        {
-            anon_user = true;
-            continue;
-        }
-
-        if (row[2] != NULL)
-        {
-            /* detect mysql_old_password (pre 4.1 protocol) */
-            if (strlen(row[2]) == 16)
-            {
-                MXS_ERROR("%s: The user %s@%s has on old password in the "
-                          "backend database. MaxScale does not support these "
-                          "old passwords. This user will not be able to connect "
-                          "via MaxScale. Update the users password to correct "
-                          "this.", service->name, row[0], row[1]);
-                continue;
-            }
-
-            if (strlen(row[2]) > 1)
-            {
-                password = row[2] + 1;
-            }
-            else
-            {
-                password = row[2];
-            }
-        }
-
-        /*
-         * add user@host and DB global priv and specificsa grant (if possible)
-         */
-        if (db_grants)
-        {
-            bool havedb = false;
-            /* we have dbgrants, store them */
-            if (row[5])
-            {
-                unsigned long *rowlen = mysql_fetch_lengths(result);
-                memcpy(dbnm, row[5], rowlen[5]);
-                memset(dbnm + rowlen[5], 0, 1);
-                havedb = true;
-                if (service->strip_db_esc)
-                {
-                    strip_escape_chars(dbnm);
-                    MXS_DEBUG("[%s]: %s -> %s", service->name, row[5], dbnm);
-                }
-            }
-
-            if (havedb && wildcard_db_grant(row[5]))
-            {
-                /** Use ANYDB for wildcard grants */
-                rc = add_mysql_users_with_host_ipv4(users, row[0], row[1],
-                                                    password, "Y", NULL);
-            }
-            else
-            {
-                rc = add_mysql_users_with_host_ipv4(users, row[0], row[1],
-                                                    password, row[4],
-                                                    havedb ? dbnm : NULL);
-            }
-
-        }
-        else
-        {
-            /* we don't have dbgrants, simply set ANY DB for the user */
-            rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password,
-                                                "Y", NULL);
-        }
-
-        if (rc == 1)
-        {
-            if (db_grants)
-            {
-                char dbgrant[MYSQL_DATABASE_MAXLEN + 1] = "";
-                if (row[4] != NULL)
-                {
-                    if (strcmp(row[4], "Y") == 0)
-                    {
-                        strcpy(dbgrant, "ANY");
-                    }
-                    else if (row[5])
-                    {
-                        strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
-                        dbgrant[MYSQL_DATABASE_MAXLEN] = 0;
-                    }
-                }
-
-                if (!strlen(dbgrant))
-                {
-                    strcpy(dbgrant, "no db");
-                }
-
-                /* Log the user being added with its db grants */
-                MXS_INFO("%s: User %s@%s for database %s added to "
-                         "service user table.",
-                         service->name,
-                         row[0],
-                         row[1],
-                         dbgrant);
-            }
-            else
-            {
-                /* Log the user being added (without db grants) */
-                MXS_INFO("%s: User %s@%s added to service user table.",
-                         service->name,
-                         row[0],
-                         row[1]);
-            }
-
-            /* Append data in the memory area for SHA1 digest */
-            strncat(users_data, row[3], users_data_row_len);
-            total_users++;
-        }
-        else
-        {
-            /** Log errors and not the duplicate user */
-            if (service->log_auth_warnings && rc != -1)
-            {
-                MXS_WARNING("Failed to add user %s@%s for"
-                            " service [%s]. This user will be unavailable"
-                            " via MaxScale.", row[0], row[1], service->name);
-            }
-        }
-    }
-
-    /* compute SHA1 digest for users' data */
-    SHA1((const unsigned char *) users_data, strlen(users_data), hash);
-
-    memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-
-    /** Set the parameter if it is not configured by the user */
-    if (service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
-    {
-        service->localhost_match_wildcard_host = anon_user ? 0 : 1;
-    }
-
-    MXS_FREE(users_data);
-    mysql_free_result(result);
-
-    /** Testing new users query */
-    char *query = get_new_users_query(server->server->server_string, service->enable_root);
-    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
-
-    if (query)
-    {
-        if (mysql_query(con, query) == 0)
-        {
-            delete_mysql_users(instance->handle);
-
-            if ((result = mysql_store_result(con)))
-            {
-                while ((row = mysql_fetch_row(result)))
-                {
-                    add_mysql_user(instance->handle, row[0], row[1], row[2],
-                                   row[3] && strcmp(row[3], "Y") == 0,
-                                   row[4]);
-                }
-
-                mysql_free_result(result);
-            }
-        }
-        else
-        {
-            MXS_ERROR("Failed to load users: %s", mysql_error(con));
-        }
-
-        MXS_FREE(query);
-    }
-
-    /** Load the list of databases */
-    if (mysql_query(con, "SHOW DATABASES") == 0)
-    {
-        if ((result = mysql_store_result(con)))
-        {
-            while ((row = mysql_fetch_row(result)))
-            {
-                add_database(instance->handle, row[0]);
-            }
-
-            mysql_free_result(result);
-        }
-    }
-    else
-    {
-        MXS_ERROR("Failed to load list of databases: %s", mysql_error(con));
-    }
-
-    mysql_close(con);
-
-    return total_users;
 }
 
 /**
@@ -2938,7 +1603,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
     const char *template = "SELECT user, host, %s, Select_priv FROM mysql.user limit 1";
     const char* query_pw = strstr(server->server_string, "5.7.") ?
-        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+    MYSQL57_PASSWORD : MYSQL_PASSWORD;
     char query[strlen(template) + strlen(query_pw) + 1];
     bool rval = true;
     sprintf(query, template, query_pw);
@@ -3190,4 +1855,164 @@ static bool wildcard_domain_match(const char *ip_address, char *client_hostname)
     }
 
     return false;
+}
+
+int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV_LISTENER *listener)
+{
+
+    if (server->server->server_string == NULL)
+    {
+        const char *server_string = mysql_get_server_info(con);
+        if (!server_set_version_string(server->server, server_string))
+        {
+            return -1;
+        }
+    }
+
+    /** Testing new users query */
+    char *query = get_new_users_query(server->server->server_string, service->enable_root);
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    bool anon_user = false;
+    int users = 0;
+
+    if (query)
+    {
+        if (mysql_query(con, query) == 0)
+        {
+            MYSQL_RES *result = mysql_store_result(con);
+
+            if (result)
+            {
+                MYSQL_ROW row;
+                while ((row = mysql_fetch_row(result)))
+                {
+                    if (service->strip_db_esc)
+                    {
+                        strip_escape_chars(row[2]);
+                    }
+
+                    add_mysql_user(instance->handle, row[0], row[1], row[2],
+                                   row[3] && strcmp(row[3], "Y") == 0, row[4]);
+                    users++;
+
+                    if (row[0] && *row[0] == '\0')
+                    {
+                        /** Empty username is used for the anonymous user. This means
+                         that localhost does not match wildcard host. */
+                        anon_user = true;
+                    }
+                }
+
+                mysql_free_result(result);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to load users: %s", mysql_error(con));
+        }
+
+        MXS_FREE(query);
+    }
+
+    /** Set the parameter if it is not configured by the user */
+    if (service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
+    {
+        service->localhost_match_wildcard_host = anon_user ? 0 : 1;
+    }
+
+    /** Load the list of databases */
+    if (mysql_query(con, "SHOW DATABASES") == 0)
+    {
+        MYSQL_RES *result = mysql_store_result(con);
+        if (result)
+        {
+            MYSQL_ROW row;
+            while ((row = mysql_fetch_row(result)))
+            {
+                add_database(instance->handle, row[0]);
+            }
+
+            mysql_free_result(result);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to load list of databases: %s", mysql_error(con));
+    }
+
+    return users;
+}
+
+/**
+ * Load the user/passwd form mysql.user table into the service users' hashtable
+ * environment.
+ *
+ * @param service   The current service
+ * @param users     The users table into which to load the users
+ * @return          -1 on any error or the number of users inserted
+ */
+static int get_users(SERV_LISTENER *listener, USERS *users)
+{
+    MYSQL *con = gw_mysql_init();
+    char *service_user = NULL;
+    char *service_passwd = NULL;
+    SERVICE *service = listener->service;
+
+    if (con == NULL || serviceGetUser(service, &service_user, &service_passwd) == 0)
+    {
+        return -1;
+    }
+
+    char *dpwd = decrypt_password(service_passwd);
+
+    if (dpwd == NULL)
+    {
+        return -1;
+    }
+
+    SERVER_REF *server = service->dbref;
+    int total_users = -1;
+
+    for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
+    {
+        con = gw_mysql_init();
+        if (con)
+        {
+            if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
+            {
+                MXS_ERROR("Failure loading users data from backend "
+                          "[%s:%i] for service [%s]. MySQL error %i, %s",
+                          server->server->name, server->server->port,
+                          service->name, mysql_errno(con), mysql_error(con));
+                mysql_close(con);
+            }
+            else
+            {
+                /** Successfully connected to a server */
+                int users = get_users_from_server(con, server, service, listener);
+
+                if (users > total_users)
+                {
+                    total_users = users;
+                }
+
+                mysql_close(con);
+
+                if (!service->users_from_all)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    MXS_FREE(dpwd);
+
+    if (server == NULL)
+    {
+        MXS_ERROR("Unable to get user data from backend database for service [%s]."
+                  " Failed to connect to any of the backend databases.", service->name);
+    }
+
+    return total_users;
 }
