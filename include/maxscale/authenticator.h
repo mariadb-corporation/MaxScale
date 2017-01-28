@@ -76,6 +76,12 @@ typedef struct mxs_authenticator
     void  (*free)(struct dcb *);
     void  (*destroy)(void *);
     int   (*loadusers)(struct servlistener *);
+
+    /** This entry point was added to avoid calling authenticator functions
+     * directly when a COM_CHANGE_USER command is executed. */
+    int (*reauthenticate)(struct dcb *, const char *user,
+                          uint8_t *token, size_t token_len,
+                          uint8_t *scramble, size_t scramble_len);
 } MXS_AUTHENTICATOR;
 
 /** Return values for extract and authenticate entry points */
