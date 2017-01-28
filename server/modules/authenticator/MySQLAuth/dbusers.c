@@ -1243,6 +1243,32 @@ static bool check_password(const char *output,
     return memcmp(final_step, stored_token, stored_token_len) == 0;
 }
 
+static int database_cb(void *data, int columns, char** rows, char** row_names)
+{
+    bool *rval = (bool*)data;
+    *rval = true;
+    return 0;
+}
+
+static bool check_database(sqlite3 *handle, const char *database)
+{
+    size_t len = sizeof(mysqlauth_validate_database_query) + strlen(database) + 1;
+    char sql[len];
+
+    sprintf(sql, mysqlauth_validate_database_query, database);
+    bool rval = false;
+    char *err;
+
+    if (sqlite3_exec(handle, sql, database_cb, &rval, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to execute auth query: %s", err);
+        sqlite3_free(err);
+        rval = false;
+    }
+
+    return rval;
+}
+
 /** Used to detect empty result sets */
 struct user_query_result
 {
@@ -1271,57 +1297,51 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
  */
 bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
 {
-    size_t len = sizeof(mysqlauth_validation_query) + strlen(session->user) * 2 +
+    size_t len = sizeof(mysqlauth_validate_user_query) + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
     char sql[len + 1];
     bool rval = false;
     char *err;
 
-    /**
-     * Try authentication twice; first time with the current users, second
-     * time with fresh users
-     */
-    for (int i = 0; i < 2 && !rval; i++)
-    {
-        sprintf(sql, mysqlauth_validation_query, session->user, dcb->remote,
-                session->db, session->db);
+    sprintf(sql, mysqlauth_validate_user_query, session->user, dcb->remote,
+            session->db, session->db);
 
-        struct user_query_result res = {};
+    struct user_query_result res = {};
+
+    if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to execute auth query: %s", err);
+        sqlite3_free(err);
+    }
+
+    if (!res.ok)
+    {
+        /**
+         * Try authentication with the hostname instead of the IP. We do this only
+         * as a last resort so we avoid the high cost of the DNS lookup.
+         */
+        char client_hostname[MYSQL_HOST_MAXLEN];
+        wildcard_domain_match(dcb->remote, client_hostname);
+        sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
+                session->db, session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
             MXS_ERROR("Failed to execute auth query: %s", err);
             sqlite3_free(err);
-            rval = false;
         }
+    }
 
-        if (!res.ok)
+    if (res.ok)
+    {
+        /** Found a matching row */
+        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+        if (check_password(res.output, session->auth_token, session->auth_token_len,
+                           proto->scramble, sizeof(proto->scramble)))
         {
-            /** Try authentication with the hostname */
-            char client_hostname[MYSQL_HOST_MAXLEN];
-            wildcard_domain_match(dcb->remote, client_hostname);
-            sprintf(sql, mysqlauth_validation_query, session->user, client_hostname,
-                    session->db, session->db);
-
-            if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
-            {
-                MXS_ERROR("Failed to execute auth query: %s", err);
-                sqlite3_free(err);
-                rval = false;
-            }
-        }
-
-        if (res.ok)
-        {
-            /** Found a matching row */
-            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-            rval = check_password(res.output, session->auth_token, session->auth_token_len,
-                                  proto->scramble, sizeof(proto->scramble));
-        }
-
-        if (!rval && i == 0)
-        {
-            service_refresh_users(dcb->service);
+            /** Password is OK, check that the database exists */
+            rval = check_database(handle, session->db);
         }
     }
 
@@ -1337,7 +1357,8 @@ static void delete_mysql_users(sqlite3 *handle)
 {
     char *err;
 
-    if (sqlite3_exec(handle, delete_query, NULL, NULL, &err) != SQLITE_OK)
+    if (sqlite3_exec(handle, delete_users_query, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(handle, delete_databases_query, NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to delete old users: %s", err);
         sqlite3_free(err);
@@ -1384,10 +1405,10 @@ static void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
         strcpy(pwstr, null_token);
     }
 
-    size_t len = sizeof(insert_sql_pattern) + strlen(user) + strlen(host) + dblen + pwlen + 1;
+    size_t len = sizeof(insert_user_query) + strlen(user) + strlen(host) + dblen + pwlen + 1;
 
     char insert_sql[len + 1];
-    sprintf(insert_sql, insert_sql_pattern, user, host, dbstr, anydb ? "1" : "0", pwstr);
+    sprintf(insert_sql, insert_user_query, user, host, dbstr, anydb ? "1" : "0", pwstr);
 
     char *err;
     if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
@@ -1397,6 +1418,21 @@ static void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
     }
 
     MXS_INFO("Added user: %s", insert_sql);
+}
+
+static void add_database(sqlite3 *handle, const char *db)
+{
+    size_t len = sizeof(insert_database_query) + strlen(db) + 1;
+    char insert_sql[len + 1];
+
+    sprintf(insert_sql, insert_database_query, db);
+
+    char *err;
+    if (sqlite3_exec(handle, insert_sql, NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to insert database: %s", err);
+        sqlite3_free(err);
+    }
 }
 
 /**
@@ -1848,12 +1884,12 @@ get_users(SERV_LISTENER *listener, USERS *users)
 
     /** Testing new users query */
     char *query = get_new_users_query(server->server->server_string, service->enable_root);
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
 
     if (query)
     {
         if (mysql_query(con, query) == 0)
         {
-            MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
             delete_mysql_users(instance->handle);
 
             if ((result = mysql_store_result(con)))
@@ -1874,6 +1910,24 @@ get_users(SERV_LISTENER *listener, USERS *users)
         }
 
         MXS_FREE(query);
+    }
+
+    /** Load the list of databases */
+    if (mysql_query(con, "SHOW DATABASES") == 0)
+    {
+        if ((result = mysql_store_result(con)))
+        {
+            while ((row = mysql_fetch_row(result)))
+            {
+                add_database(instance->handle, row[0]);
+            }
+
+            mysql_free_result(result);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to load list of databases: %s", mysql_error(con));
     }
 
     mysql_close(con);
