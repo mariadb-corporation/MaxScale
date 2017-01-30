@@ -1953,12 +1953,11 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
  */
 static int get_users(SERV_LISTENER *listener, USERS *users)
 {
-    MYSQL *con = gw_mysql_init();
     char *service_user = NULL;
     char *service_passwd = NULL;
     SERVICE *service = listener->service;
 
-    if (con == NULL || serviceGetUser(service, &service_user, &service_passwd) == 0)
+    if (serviceGetUser(service, &service_user, &service_passwd) == 0)
     {
         return -1;
     }
@@ -1975,7 +1974,7 @@ static int get_users(SERV_LISTENER *listener, USERS *users)
 
     for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
     {
-        con = gw_mysql_init();
+        MYSQL *con = gw_mysql_init();
         if (con)
         {
             if (mxs_mysql_real_connect(con, server->server, service_user, dpwd) == NULL)
