@@ -318,7 +318,16 @@ void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
 
     if (pw && *pw)
     {
-        if (*pw == '*')
+        if (strlen(pw) == 16)
+        {
+            MXS_ERROR("The user %s@%s has on old password in the "
+                      "backend database. MaxScale does not support these "
+                      "old passwords. This user will not be able to connect "
+                      "via MaxScale. Update the users password to correct "
+                      "this.", user, host);
+            return;
+        }
+        else if (*pw == '*')
         {
             pw++;
         }
