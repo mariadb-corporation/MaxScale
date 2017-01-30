@@ -4540,7 +4540,7 @@ blr_get_parsed_command_value(char *input)
     char *word;
     char *value = NULL;
 
-    if (strlen(input))
+    if (input && strlen(input))
     {
         value = strdup(input);
     }
