@@ -59,7 +59,7 @@ USERS* mysql_users_alloc();
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
     const char* password = strstr(server_version, "5.7.") ? MYSQL57_PASSWORD : MYSQL_PASSWORD;
-    const char *with_root = include_root ? "WHERE u.user NOT IN ('root')" : "";
+    const char *with_root = include_root ? "" : "WHERE u.user NOT IN ('root')";
 
     size_t n_bytes = snprintf(NULL, 0, NEW_LOAD_DBUSERS_QUERY, password, with_root, password, with_root);
     char *rval = MXS_MALLOC(n_bytes + 1);
