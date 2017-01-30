@@ -747,6 +747,18 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.binlog_vars = buf;
         blr_cache_response(router, "binlog_vars", buf);
 
+        buf = blr_make_query(router->master, "select @@lower_case_table_names");
+        router->master_state = BLRM_LOWER_CASE_TABLES;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_LOWER_CASE_TABLES:
+        if (router->saved_master.lower_case_tables)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.lower_case_tables);
+        }
+        router->saved_master.lower_case_tables = buf;
+        blr_cache_response(router, "lower_case_tables", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
