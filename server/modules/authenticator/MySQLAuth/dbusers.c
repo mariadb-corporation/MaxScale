@@ -445,14 +445,16 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
 /**
  * @brief Verify the user has access to the database
  *
- * @param auth Authenticator session
- * @param dcb Client DCB
- * @param session MySQL session
- * @param pw Client password
+ * @param handle       SQLite handle to MySQLAuth user database
+ * @param dcb          Client DCB
+ * @param session      Shared MySQL session
+ * @param scramble     The scramble sent to the client in the initial handshake
+ * @param scramble_len Length of @c scramble
  *
  * @return True if the user has access to the database
  */
-bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
+bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
+                         uint8_t *scramble, size_t scramble_len)
 {
     size_t len = sizeof(mysqlauth_validate_user_query) + strlen(session->user) * 2 +
                  strlen(session->db) * 2 + MYSQL_HOST_MAXLEN + session->auth_token_len * 4 + 1;
@@ -491,6 +493,7 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
 
     if (res.ok)
     {
+        /** Found a matching row */
         if (session->auth_token_len)
         {
             /** If authentication fails, this will trigger the right
@@ -498,11 +501,8 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session)
             session->client_sha1[0] = '_';
         }
 
-        /** Found a matching row */
-        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-
         if (check_password(res.output, session->auth_token, session->auth_token_len,
-                           proto->scramble, sizeof(proto->scramble), session->client_sha1))
+                           scramble, scramble_len, session->client_sha1))
         {
             /** Password is OK, check that the database exists */
             rval = check_database(handle, session->db);
