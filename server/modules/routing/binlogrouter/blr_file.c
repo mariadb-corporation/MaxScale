@@ -2300,6 +2300,7 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
     router->saved_master.server_vars = blr_cache_read_response(router, "server_vars");
     router->saved_master.results_charset = blr_cache_read_response(router, "results_charset");
     router->saved_master.sql_mode = blr_cache_read_response(router, "sql_mode");
+    router->saved_master.log_bin = blr_cache_read_response(router, "log_bin");
 }
 
 /**

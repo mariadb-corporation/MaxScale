@@ -497,6 +497,7 @@ typedef struct
     GWBUF           *server_vars;       /*< MySQL Connector master server variables */
     GWBUF           *results_charset;   /*< SET character_set_results = NULL */
     GWBUF           *sql_mode;          /*< SET sql_mode='...' */
+    GWBUF           *log_bin;           /*< SHOW VARIABLES LIKE 'log_bin' */
     uint8_t         *fde_event;         /*< Format Description Event */
     int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -675,14 +676,15 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SELECTHOSTNAME     0x0014
 #define BLRM_MAP                0x0015
 #define BLRM_SERVER_VARS        0x0016
-#define BLRM_REGISTER           0x0017
-#define BLRM_CHECK_SEMISYNC     0x0018
-#define BLRM_REQUEST_SEMISYNC   0x0019
-#define BLRM_REQUEST_BINLOGDUMP 0x001a
-#define BLRM_BINLOGDUMP         0x001B
-#define BLRM_SLAVE_STOPPED      0x001C
+#define BLRM_LOG_BIN            0x0017
+#define BLRM_REGISTER           0x0018
+#define BLRM_CHECK_SEMISYNC     0x0019
+#define BLRM_REQUEST_SEMISYNC   0x001A
+#define BLRM_REQUEST_BINLOGDUMP 0x001B
+#define BLRM_BINLOGDUMP         0x001C
+#define BLRM_SLAVE_STOPPED      0x001D
 
-#define BLRM_MAXSTATE           0x001C
+#define BLRM_MAXSTATE           0x001D
 
 static char *blrm_states[] =
 {
@@ -709,6 +711,7 @@ static char *blrm_states[] =
     "select @@hostname",
     "select @@max_allowed_packet",
     "Query server variables",
+    "Query log_bin variable",
     "Register slave",
     "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication",

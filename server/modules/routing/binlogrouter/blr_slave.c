@@ -354,6 +354,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     static const char mysql_connector_results_charset_query[] = "SET character_set_results = NULL";
     static const char mysql_connector_sql_mode_query[] = "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'";
     static const char maxwell_server_id_query[] = "SELECT @@server_id as server_id";
+    static const char maxwell_log_bin_query[] = "SHOW VARIABLES LIKE 'log_bin'";
+
 
     qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
@@ -436,6 +438,16 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         sprintf(server_id, "%d", router->masterid);
         MXS_FREE(query_text);
         return blr_slave_send_var_value(router, slave, "server_id", server_id, BLR_TYPE_STRING);
+    }
+    else if (strcmp(query_text, maxwell_log_bin_query) == 0)
+    {
+        int rc = blr_slave_replay(router, slave, router->saved_master.log_bin);
+        if (rc >= 0)
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
+        MXS_ERROR("Error sending log_bin query response");
     }
     else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {

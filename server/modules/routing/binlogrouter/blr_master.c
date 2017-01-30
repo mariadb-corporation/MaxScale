@@ -735,6 +735,18 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.server_vars = buf;
         blr_cache_response(router, "server_vars", buf);
 
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'log_bin'");
+        router->master_state = BLRM_LOG_BIN;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_LOG_BIN:
+        if (router->saved_master.log_bin)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.log_bin);
+        }
+        router->saved_master.log_bin = buf;
+        blr_cache_response(router, "log_bin", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
