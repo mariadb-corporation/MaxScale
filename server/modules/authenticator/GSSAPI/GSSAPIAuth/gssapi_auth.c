@@ -66,7 +66,12 @@ static const char gssapi_auth_query[] =
 /** Delete query used to clean up the database before loading new users */
 static const char delete_query[] = "DELETE FROM " GSSAPI_TABLE_NAME;
 
-/** The insert query template which adds users to the gssapi_users table */
+/**
+ * The insert query template which adds users to the gssapi_users table.
+ *
+ * Note that the last two values are strings that can be NULL and thus they have
+ * no quoted around them. The quotes for strings are added in add_gssapi_user().
+ */
 static const char insert_sql_pattern[] =
     "INSERT INTO " GSSAPI_TABLE_NAME " VALUES ('%s', '%s', %s, %s, %s)";
 
