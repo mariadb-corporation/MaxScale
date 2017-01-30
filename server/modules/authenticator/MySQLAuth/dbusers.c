@@ -282,8 +282,9 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
  *
  * @param handle SQLite handle
  */
-static void delete_mysql_users(sqlite3 *handle)
+static bool delete_mysql_users(sqlite3 *handle)
 {
+    bool rval = true;
     char *err;
 
     if (sqlite3_exec(handle, delete_users_query, NULL, NULL, &err) != SQLITE_OK ||
@@ -291,7 +292,10 @@ static void delete_mysql_users(sqlite3 *handle)
     {
         MXS_ERROR("Failed to delete old users: %s", err);
         sqlite3_free(err);
+        rval = false;
     }
+
+    return rval;
 }
 
 void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
@@ -568,30 +572,45 @@ static bool transfer_table_contents(sqlite3 *src, sqlite3 *dest)
         sqlite3_free(err);
         rval = false;
     }
-
-    if (sqlite3_exec(dest, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
+    else if (sqlite3_exec(dest, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
     {
         MXS_ERROR("Failed to start transaction: %s", err);
         sqlite3_free(err);
         rval = false;
     }
-
-    /** Replace the data */
-    if (sqlite3_exec(src, dump_users_query, dump_user_cb, dest, &err) != SQLITE_OK ||
-        sqlite3_exec(src, dump_databases_query, dump_database_cb, dest, &err) != SQLITE_OK)
+    else
     {
-        MXS_ERROR("Failed to load database contents: %s", err);
-        sqlite3_free(err);
-        rval = false;
+        /** Transaction is open */
+        if (!delete_mysql_users(dest))
+        {
+            rval = false;
+        }
+        else if (sqlite3_exec(src, dump_users_query, dump_user_cb, dest, &err) != SQLITE_OK ||
+                 sqlite3_exec(src, dump_databases_query, dump_database_cb, dest, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to load database contents: %s", err);
+            sqlite3_free(err);
+            rval = false;
+        }
+        if (rval)
+        {
+            if (sqlite3_exec(dest, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
+            {
+                MXS_ERROR("Failed to commit transaction: %s", err);
+                sqlite3_free(err);
+                rval = false;
+            }
+        }
+        else
+        {
+            if (sqlite3_exec(dest, "ROLLBACK", NULL, NULL, &err) != SQLITE_OK)
+            {
+                MXS_ERROR("Failed to rollback transaction: %s", err);
+                sqlite3_free(err);
+                rval = false;
+            }
+        }
     }
-
-    if (sqlite3_exec(dest, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to commit transaction: %s", err);
-        sqlite3_free(err);
-        rval = false;
-    }
-
     return rval;
 }
 
