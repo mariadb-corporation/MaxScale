@@ -282,6 +282,46 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     return 0;
 }
 
+/*
+ * Return a pointer to where the actual SQL query starts, skipping initial
+ * comments and whitespace characters, if there are any.
+ */
+const char *
+blr_skip_leading_sql_comments(const char *sql_query)
+{
+    const char *p = sql_query;
+
+    while (*p) {
+        if (*p == '/' && p[1] == '*')
+        {
+            ++p; // skip '/'
+            ++p; // skip '*'
+            while (*p)
+            {
+                if (*p == '*' && p[1] == '/')
+                {
+                    ++p; // skip '*'
+                    ++p; // skip '/'
+                    break;
+                }
+                else
+                {
+                    ++p;
+                }
+            }
+        }
+        else if (isspace(*p))
+        {
+            ++p;
+        }
+        else
+        {
+            return p;
+        }
+    }
+    return p;
+}
+
 /**
  * Handle a query from the slave. This is expected to be one of the "standard"
  * queries we expect as part of the registraton process. Most of these can
@@ -350,6 +390,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     char *ptr;
     extern char *strcasestr();
     bool unexpected = true;
+    static const char mysql_connector_server_variables_query[] = "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout";
 
     qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
@@ -396,7 +437,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
      * own interaction with the real master. We simply replay these saved responses
      * to the slave.
      */
-    if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
+    if (strcmp(blr_skip_leading_sql_comments(query_text), mysql_connector_server_variables_query) == 0)
+    {
+        int rc = blr_slave_replay(router, slave, router->saved_master.server_vars);
+        if (rc >= 0)
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
+        MXS_ERROR("Error sending mysql-connector-j server variables");
+    }
+    else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {
         MXS_ERROR("%s: Incomplete query.", router->service->name);
     }

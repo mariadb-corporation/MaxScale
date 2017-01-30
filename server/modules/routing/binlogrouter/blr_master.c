@@ -714,6 +714,20 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         router->saved_master.map = buf;
         blr_cache_response(router, "map", buf);
+
+        // Query for Server Variables
+        buf = blr_make_query(router->master, "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout");
+        router->master_state = BLRM_SERVER_VARS;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_SERVER_VARS:
+        if (router->saved_master.server_vars)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.server_vars);
+        }
+        router->saved_master.server_vars = buf;
+        blr_cache_response(router, "server_vars", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
