@@ -2174,6 +2174,26 @@ USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
     return user;
 }
 
+static bool command_is_mandatory(GWBUF *buffer)
+{
+    uint8_t cmd = *(((uint8_t*)GWBUF_DATA(buffer)) + 4);
+
+    switch (cmd)
+    {
+    case MYSQL_COM_QUIT:
+    case MYSQL_COM_PING:
+    case MYSQL_COM_CHANGE_USER:
+    case MYSQL_COM_SET_OPTION:
+    case MYSQL_COM_FIELD_LIST:
+    case MYSQL_COM_PROCESS_KILL:
+    case MYSQL_COM_PROCESS_INFO:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -2223,7 +2243,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     else
     {
         USER *user = find_user_data(my_instance->htable, dcb->user, dcb->remote);
-        bool query_ok = false;
+        bool query_ok = command_is_mandatory(queue);
 
         if (user)
         {

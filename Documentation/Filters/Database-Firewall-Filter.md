@@ -32,7 +32,21 @@ Absolute path to a file with the rule definitions in it. The file should be read
 
 #### `action`
 
-This parameter is optional and determines what action is taken when a query matches a rule. The value can be either `allow`, which allows all matching queries to proceed but blocks those that don't match, or `block`, which blocks all matching queries, or `ignore` which allows all queries to proceed.
+This parameter is optional and determines what action is taken when a query
+matches a rule. The value can be either `allow`, which allows all matching
+queries to proceed but blocks those that don't match, or `block`, which blocks
+all matching queries, or `ignore` which allows all queries to proceed.
+
+The following statement types will always be allowed through when `action` is
+set to `allow`:
+
+ - COM_QUIT: Client closes connection
+ - COM_PING: Server is pinged
+ - COM_CHANGE_USER: The user is changed for an active connection
+ - COM_SET_OPTION: Client multi-statements are being configured
+ - COM_FIELD_LIST: Alias for the `SHOW TABLES;` query
+ - COM_PROCESS_KILL: Alias for `KILL <id>;` query
+ - COM_PROCESS_INFO: Alias for `SHOW PROCESSLIST;`
 
 You can have both blacklist and whitelist functionality by configuring one filter
 with `action=allow` and another one with `action=block`. You can then use
