@@ -20,13 +20,18 @@ For any problems you encounter, please submit a bug report at
   them. This affects _wildcard_, _columns_, _on_queries_ and _no_where_clause_
   type rules which previously ignored prepared statements.
 
-- The MariaDB Connector-C was upgraded to version 2.3.2.
+- The dbfwfilter now allows COM_PING and other commands though when
+  `action=allow`. See [../Filters/Database-Firewall-Filter.md](documentation)
+  for more details.
+
+- The MariaDB Connector-C was upgraded to a preliminary release of version 2.3.3 (fixes MXS-951).
 
 ## Bug fixes
 
 [Here](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20%3D%202.0.4)
 is a list of bugs fixed since the release of MaxScale 2.0.3.
 
+* [MXS-1111](https://jira.mariadb.org/browse/MXS-1111): Request Ping not allowed
 * [MXS-1082](https://jira.mariadb.org/browse/MXS-1082): Block prepared statements
 * [MXS-1080](https://jira.mariadb.org/browse/MXS-1080): Readwritesplit (documentation of max_slave_replication_lag)
 * [MXS-951](https://jira.mariadb.org/browse/MXS-951): Using utf8mb4 on galera hosts stops maxscale connections
