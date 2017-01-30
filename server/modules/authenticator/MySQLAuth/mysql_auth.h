@@ -123,31 +123,70 @@ typedef struct mysql_user_host_key
     char hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
 
+/**
+ * @brief Add new MySQL user to the internal user database
+ *
+ * @param handle Database handle
+ * @param user   Username
+ * @param host   Host
+ * @param db     Database
+ * @param anydb  Global access to databases
+ */
 void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
                     const char *db, bool anydb, const char *pw);
 
-extern int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
-                                          char *passwd, const char *anydb, const char *db);
-extern bool check_service_permissions(SERVICE* service);
-extern bool dbusers_load(sqlite3 *handle, const char *filename);
-extern bool dbusers_save(sqlite3 *src, const char *filename);
-extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
-extern USERS *mysql_users_alloc();
-extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
-extern int replace_mysql_users(SERV_LISTENER *listener);
+/**
+ * @brief Check if the service user has all required permissions to operate properly.
+ *
+ * This checks for SELECT permissions on mysql.user, mysql.db and mysql.tables_priv
+ * tables and for SHOW DATABASES permissions. If permissions are not adequate,
+ * an error message is logged and the service is not started.
+ *
+ * @param service Service to inspect
+ *
+ * @return True if service permissions are correct on at least one server, false
+ * if permissions are missing or if an error occurred.
+ */
+bool check_service_permissions(SERVICE* service);
 
-int gw_check_mysql_scramble_data(DCB *dcb,
-                                 uint8_t *token,
-                                 unsigned int token_len,
-                                 uint8_t *scramble,
-                                 unsigned int scramble_len,
-                                 const char *username,
-                                 uint8_t *stage1_hash);
-int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret);
-int gw_find_mysql_user_password_sha1(
-    const char *username,
-    uint8_t *gateway_password,
-    DCB *dcb);
+/**
+ * Load users from persisted database
+ *
+ * @param dest Open SQLite handle where contents are loaded
+ *
+ * @return True on success
+ */
+bool dbusers_load(sqlite3 *handle, const char *filename);
+
+/**
+ * Save users to persisted database
+ *
+ * @param dest Open SQLite handle where contents are stored
+ *
+ * @return True on success
+ */
+bool dbusers_save(sqlite3 *src, const char *filename);
+
+/**
+ * Reload and replace the currently loaded database users
+ *
+ * @param service   The current service
+ *
+ * @return -1 on any error or the number of users inserted (0 means no users at all)
+ */
+int replace_mysql_users(SERV_LISTENER *listener);
+
+/**
+ * @brief Verify the user has access to the database
+ *
+ * @param handle       SQLite handle to MySQLAuth user database
+ * @param dcb          Client DCB
+ * @param session      Shared MySQL session
+ * @param scramble     The scramble sent to the client in the initial handshake
+ * @param scramble_len Length of @c scramble
+ *
+ * @return True if the user has access to the database
+ */
 bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
                          uint8_t *scramble, size_t scramble_len);
 
