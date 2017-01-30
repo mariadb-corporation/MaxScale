@@ -49,34 +49,12 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) %s"
 
-static int add_databases(SERV_LISTENER *listener, MYSQL *con);
-static int add_wildcard_users(USERS *users, char* name, char* host,
-                              char* password, char* anydb, char* db, HASHTABLE* hash);
-static void *dbusers_keyread(int fd);
-static int dbusers_keywrite(int fd, void *key);
-static void *dbusers_valueread(int fd);
-static int dbusers_valuewrite(int fd, void *value);
-static int get_all_users(SERV_LISTENER *listener, USERS *users);
-static int get_databases(SERV_LISTENER *listener, MYSQL *users);
 static int get_users(SERV_LISTENER *listener, USERS *users);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
-static bool host_has_singlechar_wildcard(const char *host);
-static bool host_matches_singlechar_wildcard(const char* user, const char* wild);
-static bool is_ipaddress(const char* host);
 static char *mysql_format_user_entry(void *data);
-static char *mysql_format_user_entry(void *data);
-static int normalize_hostname(const char *input_host, char *output_host);
-static int resource_add(HASHTABLE *, char *, char *);
-static HASHTABLE *resource_alloc();
-static void *resource_fetch(HASHTABLE *, char *);
-static void resource_free(HASHTABLE *resource);
-static int uh_cmpfun(const void* v1, const void* v2);
-static int uh_hfun(const void* key);
-static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key);
-static void uh_keyfree(MYSQL_USER_HOST* key);
-static int wildcard_db_grant(char* str);
-static void merge_netmask(char *host);
+static bool get_hostname(const char *ip_address, char *client_hostname);
+USERS* mysql_users_alloc();
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
@@ -94,37 +72,7 @@ static char* get_new_users_query(const char *server_version, bool include_root)
     return rval;
 }
 
-/**
- * Check if the IP address of the user matches the one in the grant. This assumes
- * that the grant has one or more single-character wildcards in it.
- * @param userhost User host address
- * @param wildcardhost Host address in the grant
- * @return True if the host address matches
- */
-static bool host_matches_singlechar_wildcard(const char* user, const char* wild)
-{
-    while (*user != '\0' && *wild != '\0')
-    {
-        if (*user != *wild && *wild != '_')
-        {
-            return false;
-        }
-        user++;
-        wild++;
-    }
-    return true;
-}
-
-/**
- * Replace the user/passwd form mysql.user table into the service users' hashtable
- * environment.
- * The replacement is succesful only if the users' table checksums differ
- *
- * @param service   The current service
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
- */
-int
-replace_mysql_users(SERV_LISTENER *listener)
+int replace_mysql_users(SERV_LISTENER *listener)
 {
     USERS *newusers = mysql_users_alloc();
 
@@ -171,178 +119,6 @@ replace_mysql_users(SERV_LISTENER *listener)
     }
 
     return i;
-}
-
-/**
- * Check if the IP address is a valid MySQL IP address. The IP address can contain
- * single or multi-character wildcards as used by MySQL.
- * @param host IP address to check
- * @return True if the address is a valid, MySQL type IP address
- */
-static bool is_ipaddress(const char* host)
-{
-    while (*host != '\0')
-    {
-        if (!isdigit(*host) && *host != '.' && *host != '_' && *host != '%')
-        {
-            return false;
-        }
-        host++;
-    }
-    return true;
-}
-
-/**
- * Check if an IP address has single-character wildcards. A single-character
- * wildcard is represented by an underscore in the MySQL hostnames.
- * @param host Hostname to check
- * @return True if the hostname is a valid IP address with a single character wildcard
- */
-static bool host_has_singlechar_wildcard(const char *host)
-{
-    const char* chrptr = host;
-    bool retval = false;
-
-    while (*chrptr != '\0')
-    {
-        if (!isdigit(*chrptr) && *chrptr != '.')
-        {
-            if (*chrptr == '_')
-            {
-                retval = true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        chrptr++;
-    }
-    return retval;
-}
-
-/**
- * Add a new MySQL user with host, password and netmask into the service users table
- *
- * The netmask values are:
- * 0 for any, 32 for single IPv4
- * 24 for a class C from a.b.c.%, 16 for a Class B from a.b.%.% and 8 for a Class A from a.%.%.%
- *
- * @param users         The users table
- * @param user          The user name
- * @param host          The host to add, with possible wildcards
- * @param passwd        The sha1(sha1(passoword)) to add
- * @return              1 on success, 0 on failure and -1 on duplicate user
- */
-
-int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
-                                   char *passwd, const char *anydb, const char *db)
-{
-    struct sockaddr_in serv_addr;
-    MYSQL_USER_HOST key;
-    char ret_ip[400] = "";
-    int ret = 0;
-
-    if (users == NULL || user == NULL || host == NULL)
-    {
-        return ret;
-    }
-
-    /* prepare the user@host data struct */
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    memset(&key, 0, sizeof(key));
-
-    /* set user */
-    key.user = MXS_STRDUP(user);
-
-    if (key.user == NULL)
-    {
-        return ret;
-    }
-
-    /* for anydb == Y key.resource is '\0' as set by memset */
-    if (anydb == NULL)
-    {
-        key.resource = NULL;
-    }
-    else
-    {
-        if (strcmp(anydb, "N") == 0)
-        {
-            if (db != NULL)
-            {
-                key.resource = MXS_STRDUP(db);
-                MXS_ABORT_IF_NULL(key.resource);
-            }
-            else
-            {
-                key.resource = NULL;
-            }
-        }
-        else
-        {
-            key.resource = MXS_STRDUP("");
-            MXS_ABORT_IF_NULL(key.resource);
-        }
-    }
-
-    /* handle ANY, Class C,B,A */
-
-    /* ANY */
-    if (strcmp(host, "%") == 0)
-    {
-        strcpy(ret_ip, "0.0.0.0");
-        key.netmask = 0;
-    }
-    else if ((strnlen(host, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN) &&
-             /** The host is an ip-address and has a '_'-wildcard but not '%'
-              * (combination of both is invalid). */
-             (is_ipaddress(host) && host_has_singlechar_wildcard(host)))
-    {
-        strcpy(key.hostname, host);
-        strcpy(ret_ip, "0.0.0.0");
-        key.netmask = 0;
-    }
-    else
-    {
-        /* hostname without % wildcards has netmask = 32 */
-        key.netmask = normalize_hostname(host, ret_ip);
-
-        if (key.netmask == -1)
-        {
-            MXS_ERROR("strdup() failed in normalize_hostname for %s@%s", user, host);
-        }
-    }
-
-    /* fill IPv4 data struct */
-    if (setipaddress(&serv_addr.sin_addr, ret_ip) && strlen(ret_ip))
-    {
-
-        /* copy IPv4 data into key.ipv4 */
-        memcpy(&key.ipv4, &serv_addr, sizeof(serv_addr));
-
-        /* if netmask < 32 there are % wildcards */
-        if (key.netmask < 32)
-        {
-            /* let's zero the last IP byte: a.b.c.0 we may have set above to 1*/
-            key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
-        }
-
-        /* add user@host as key and passwd as value in the MySQL users hash table */
-        if (mysql_users_add(users, &key, passwd))
-        {
-            ret = 1;
-        }
-        else if (key.user)
-        {
-            ret = -1;
-        }
-    }
-
-    MXS_FREE(key.user);
-    MXS_FREE(key.resource);
-
-    return ret;
 }
 
 static bool check_password(const char *output, uint8_t *token, size_t token_len,
@@ -442,17 +218,6 @@ static int auth_cb(void *data, int columns, char** rows, char** row_names)
     return 0;
 }
 
-/**
- * @brief Verify the user has access to the database
- *
- * @param handle       SQLite handle to MySQLAuth user database
- * @param dcb          Client DCB
- * @param session      Shared MySQL session
- * @param scramble     The scramble sent to the client in the initial handshake
- * @param scramble_len Length of @c scramble
- *
- * @return True if the user has access to the database
- */
 bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
                          uint8_t *scramble, size_t scramble_len)
 {
@@ -480,7 +245,7 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
          * as a last resort so we avoid the high cost of the DNS lookup.
          */
         char client_hostname[MYSQL_HOST_MAXLEN];
-        wildcard_domain_match(dcb->remote, client_hostname);
+        get_hostname(dcb->remote, client_hostname);
         sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
                 client_hostname, session->db, session->db);
 
@@ -529,15 +294,6 @@ static void delete_mysql_users(sqlite3 *handle)
     }
 }
 
-/**
- * @brief Add new MySQL user to the internal user database
- *
- * @param handle Database handle
- * @param user   Username
- * @param host   Host
- * @param db     Database
- * @param anydb  Global access to databases
- */
 void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
                     const char *db, bool anydb, const char *pw)
 {
@@ -604,8 +360,7 @@ static void add_database(sqlite3 *handle, const char *db)
  *
  *  @return The users table
  */
-USERS *
-mysql_users_alloc()
+USERS* mysql_users_alloc()
 {
     USERS *rval;
 
@@ -614,8 +369,12 @@ mysql_users_alloc()
         return NULL;
     }
 
-    if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, uh_hfun,
-                                      uh_cmpfun)) == NULL)
+    // TODO: Refactor the `show dbusers` functionality
+    /** This prevents a crash when dbusers are queried through maxadmin */
+    rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE,
+                                 hashtable_item_strhash, hashtable_item_strcmp);
+
+    if (rval->data == NULL)
     {
         MXS_FREE(rval);
         return NULL;
@@ -624,234 +383,7 @@ mysql_users_alloc()
     /* set the MySQL user@host print routine for the debug interface */
     rval->usersCustomUserFormat = mysql_format_user_entry;
 
-    /* the key is handled by uh_keydup/uh_keyfree.
-     * the value is a (char *): it's handled by strdup/free
-     */
-    hashtable_memory_fns(rval->data,
-                         (HASHCOPYFN) uh_keydup, hashtable_item_strdup,
-                         (HASHFREEFN) uh_keyfree, hashtable_item_free);
-
     return rval;
-}
-
-/**
- * Add a new MySQL user to the user table. The user name must be unique
- *
- * @param users     The users table
- * @param user      The user name
- * @param auth      The authentication data
- * @return          The number of users added to the table
- */
-int
-mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth)
-{
-    int add;
-
-    if (key == NULL || key->user == NULL)
-    {
-        return 0;
-    }
-
-    atomic_add(&users->stats.n_adds, 1);
-    add = hashtable_add(users->data, key, auth);
-    atomic_add(&users->stats.n_entries, add);
-
-    return add;
-}
-
-/**
- * Fetch the authentication data for a particular user from the users table
- *
- * @param users The MySQL users table
- * @param key   The key with user@host
- * @return  The authentication data or NULL on error
- */
-char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key)
-{
-    if (key == NULL)
-    {
-        return NULL;
-    }
-    atomic_add(&users->stats.n_fetches, 1);
-    return hashtable_fetch(users->data, key);
-}
-
-/**
- * The hash function we use for storing MySQL users as: users@hosts.
- * Currently only IPv4 addresses are supported
- *
- * @param key   The key value, i.e. username@host (IPv4)
- * @return      The hash key
- */
-
-static int uh_hfun(const void* key)
-{
-    const MYSQL_USER_HOST *hu = (const MYSQL_USER_HOST *) key;
-
-    if (key == NULL || hu == NULL || hu->user == NULL)
-    {
-        return 0;
-    }
-    else
-    {
-        return (*hu->user + * (hu->user + 1) +
-                (unsigned int) (hu->ipv4.sin_addr.s_addr & 0xFF000000 / (256 * 256 * 256)));
-    }
-}
-
-/**
- * The compare function we use for compare MySQL users as: users@hosts.
- * Currently only IPv4 addresses are supported
- *
- * @param key1  The key value, i.e. username@host (IPv4)
- * @param key2  The key value, i.e. username@host (IPv4)
- * @return      The compare value
- */
-
-static int uh_cmpfun(const void* v1, const void* v2)
-{
-    const MYSQL_USER_HOST *hu1 = (const MYSQL_USER_HOST *) v1;
-    const MYSQL_USER_HOST *hu2 = (const MYSQL_USER_HOST *) v2;
-
-    if (v1 == NULL || v2 == NULL)
-    {
-        return 0;
-    }
-
-    if (hu1->user == NULL || hu2->user == NULL)
-    {
-        return 0;
-    }
-
-    /** If the stored user has the unmodified address stored, that means we were not able
-     * to resolve it at the time we loaded the users. We need to check if the
-     * address contains wildcards and if the user's address matches that. */
-
-    const bool wildcard_host = strlen(hu2->hostname) > 0 && strlen(hu1->hostname) > 0;
-
-    if ((strcmp(hu1->user, hu2->user) == 0) &&
-        /** Check for wildcard hostnames */
-        ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
-         /** If no wildcard hostname is stored, check for network address. */
-         (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) &&
-          (hu1->netmask >= hu2->netmask))))
-    {
-        /* if no database name was passed, auth is ok */
-        if (hu1->resource == NULL || (hu1->resource && !strlen(hu1->resource)))
-        {
-            return 0;
-        }
-        else
-        {
-            /* (1) check for no database grants at all and deny auth */
-            if (hu2->resource == NULL)
-            {
-                return 1;
-            }
-            /* (2) check for ANY database grant and allow auth */
-            if (!strlen(hu2->resource))
-            {
-                return 0;
-            }
-            /* (3) check for database name specific grant and allow auth */
-            if (hu1->resource && hu2->resource && strcmp(hu1->resource,
-                                                         hu2->resource) == 0)
-            {
-                return 0;
-            }
-
-            if (hu2->resource && strlen(hu2->resource) && strchr(hu2->resource, '%') != NULL)
-            {
-                regex_t re;
-                char db[MYSQL_DATABASE_MAXLEN * 2 + 1];
-                strcpy(db, hu2->resource);
-                int len = strlen(db);
-                char* ptr = strrchr(db, '%');
-
-                if (ptr == NULL)
-                {
-                    return 1;
-                }
-
-                while (ptr)
-                {
-                    memmove(ptr + 1, ptr, (len - (ptr - db)) + 1);
-                    *ptr = '.';
-                    *(ptr + 1) = '*';
-                    len = strlen(db);
-                    ptr = strrchr(db, '%');
-                }
-
-                if ((regcomp(&re, db, REG_ICASE | REG_NOSUB)))
-                {
-                    return 1;
-                }
-
-                if (regexec(&re, hu1->resource, 0, NULL, 0) == 0)
-                {
-                    regfree(&re);
-                    return 0;
-                }
-                regfree(&re);
-            }
-
-            /* no matches, deny auth */
-            return 1;
-        }
-    }
-    else
-    {
-        return 1;
-    }
-}
-
-/**
- *The key dup function we use for duplicate the users@hosts.
- *
- * @param key   The key value, i.e. username@host ip4/ip6 data
- */
-
-static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key)
-{
-    if ((key == NULL) || (key->user == NULL))
-    {
-        return NULL;
-    }
-
-    MYSQL_USER_HOST *rval = (MYSQL_USER_HOST *) MXS_CALLOC(1, sizeof(MYSQL_USER_HOST));
-    char* user = MXS_STRDUP(key->user);
-    char* resource = key->resource ? MXS_STRDUP(key->resource) : NULL;
-
-    if (!user || !rval || (key->resource && !resource))
-    {
-        MXS_FREE(rval);
-        MXS_FREE(user);
-        MXS_FREE(resource);
-        return NULL;
-    }
-
-    rval->user = user;
-    rval->ipv4 = key->ipv4;
-    rval->netmask = key->netmask;
-    rval->resource = resource;
-    strcpy(rval->hostname, key->hostname);
-
-    return (void *) rval;
-}
-
-/**
- * The key free function we use for freeing the users@hosts data
- *
- * @param key   The key value, i.e. username@host ip4 data
- */
-static void uh_keyfree(MYSQL_USER_HOST* key)
-{
-    if (key)
-    {
-        MXS_FREE(key->user);
-        MXS_FREE(key->resource);
-        MXS_FREE(key);
-    }
 }
 
 /**
@@ -923,165 +455,6 @@ static char *mysql_format_user_entry(void *data)
     }
 
     return mysql_user;
-}
-
-/**
- * Remove the resources table
- *
- * @param resources The resources table to remove
- */
-static void
-resource_free(HASHTABLE *resources)
-{
-    if (resources)
-    {
-        hashtable_free(resources);
-    }
-}
-
-/**
- * Allocate a MySQL database names table
- *
- * @return  The database names table
- */
-static HASHTABLE *
-resource_alloc()
-{
-    HASHTABLE *resources;
-
-    if ((resources = hashtable_alloc(10, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
-    {
-        return NULL;
-    }
-
-    hashtable_memory_fns(resources,
-                         hashtable_item_strdup, hashtable_item_strdup,
-                         hashtable_item_free, hashtable_item_free);
-
-    return resources;
-}
-
-/**
- * Add a new MySQL database name to the resources table. The resource name must
- * be unique.
- * @param resources The resources table
- * @param key       The resource name
- * @param value     The value for resource (not used)
- * @return          The number of resources dded to the table
- */
-static int
-resource_add(HASHTABLE *resources, char *key, char *value)
-{
-    return hashtable_add(resources, key, value);
-}
-
-/**
- * Fetch a particular database name from the resources table
- *
- * @param resources The MySQL database names table
- * @param key       The database name to fetch
- * @return          The database esists or NULL if not found
- */
-static void *
-resource_fetch(HASHTABLE *resources, char *key)
-{
-    return hashtable_fetch(resources, key);
-}
-
-/**
- * Normalize hostname with % wildcards to a valid IP string.
- *
- * Valid input values:
- * a.b.c.d, a.b.c.%, a.b.%.%, a.%.%.%
- * Short formats a.% and a.%.% are both converted to a.%.%.%
- * Short format a.b.% is converted to a.b.%.%
- *
- * Last host byte is set to 1, avoiding setipadress() failure
- *
- * @param input_host    The hostname with possible % wildcards
- * @param output_host   The normalized hostname (buffer must be preallocated)
- * @return              The calculated netmask or -1 on failure
- */
-static int normalize_hostname(const char *input_host, char *output_host)
-{
-    int netmask, bytes, bits = 0, found_wildcard = 0;
-    char *p, *lasts, *tmp;
-    int useorig = 0;
-
-    output_host[0] = 0;
-    bytes = 0;
-
-    tmp = MXS_STRDUP(input_host);
-
-    if (tmp == NULL)
-    {
-        return -1;
-    }
-    /* Handle hosts with netmasks (e.g. "123.321.123.0/255.255.255.0") by
-     * replacing the zeros with '%'.
-     */
-    merge_netmask(tmp);
-
-    p = strtok_r(tmp, ".", &lasts);
-    while (p != NULL)
-    {
-
-        if (strcmp(p, "%"))
-        {
-            if (!isdigit(*p))
-            {
-                useorig = 1;
-            }
-
-            strcat(output_host, p);
-            bits += 8;
-        }
-        else if (bytes == 3)
-        {
-            found_wildcard = 1;
-            strcat(output_host, "1");
-        }
-        else
-        {
-            found_wildcard = 1;
-            strcat(output_host, "0");
-        }
-        bytes++;
-        p = strtok_r(NULL, ".", &lasts);
-        if (p)
-        {
-            strcat(output_host, ".");
-        }
-    }
-    if (found_wildcard)
-    {
-        netmask = bits;
-        while (bytes++ < 4)
-        {
-            if (bytes == 4)
-            {
-                strcat(output_host, ".1");
-            }
-            else
-            {
-                strcat(output_host, ".0");
-            }
-        }
-    }
-    else
-    {
-        netmask = 32;
-    }
-
-    if (useorig == 1)
-    {
-        netmask = 32;
-        strcpy(output_host, input_host);
-    }
-
-    MXS_FREE(tmp);
-
-    return netmask;
 }
 
 /**
@@ -1166,192 +539,6 @@ retblock:
     return rc;
 }
 
-/*
- * Serialise a key for the dbusers hashtable to a file
- *
- * @param fd    File descriptor to write to
- * @param key   The key to write
- * @return      0 on error, 1 if the key was written
- */
-static int
-dbusers_keywrite(int fd, void *key)
-{
-    MYSQL_USER_HOST *dbkey = (MYSQL_USER_HOST *) key;
-    int tmp;
-
-    tmp = strlen(dbkey->user);
-    if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
-    {
-        return 0;
-    }
-    if (write(fd, dbkey->user, tmp) != tmp)
-    {
-        return 0;
-    }
-    if (write(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
-    {
-        return 0;
-    }
-    if (write(fd, &dbkey->netmask, sizeof(dbkey->netmask)) != sizeof(dbkey->netmask))
-    {
-        return 0;
-    }
-    if (dbkey->resource)
-    {
-        tmp = strlen(dbkey->resource);
-        if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
-        {
-            return 0;
-        }
-        if (write(fd, dbkey->resource, tmp) != tmp)
-        {
-            return 0;
-        }
-    }
-    else // NULL is valid, so represent with a length of -1
-    {
-        tmp = -1;
-        if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
-        {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-/**
- * Serialise a value for the dbusers hashtable to a file
- *
- * @param fd    File descriptor to write to
- * @param value The value to write
- * @return      0 on error, 1 if the value was written
- */
-static int
-dbusers_valuewrite(int fd, void *value)
-{
-    int tmp;
-
-    tmp = strlen(value);
-    if (write(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
-    {
-        return 0;
-    }
-    if (write(fd, value, tmp) != tmp)
-    {
-        return 0;
-    }
-    return 1;
-}
-
-/**
- * Unserialise a key for the dbusers hashtable from a file
- *
- * @param fd    File descriptor to read from
- * @return      Pointer to the new key or NULL on error
- */
-static void *
-dbusers_keyread(int fd)
-{
-    MYSQL_USER_HOST *dbkey;
-
-    if ((dbkey = (MYSQL_USER_HOST *) MXS_MALLOC(sizeof(MYSQL_USER_HOST))) == NULL)
-    {
-        return NULL;
-    }
-
-    *dbkey->hostname = '\0';
-
-    int user_size;
-    if (read(fd, &user_size, sizeof(user_size)) != sizeof(user_size))
-    {
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-    if ((dbkey->user = (char *) MXS_MALLOC(user_size + 1)) == NULL)
-    {
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-    if (read(fd, dbkey->user, user_size) != user_size)
-    {
-        MXS_FREE(dbkey->user);
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-    dbkey->user[user_size] = 0; // NULL Terminate
-    if (read(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
-    {
-        MXS_FREE(dbkey->user);
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-    if (read(fd, &dbkey->netmask, sizeof(dbkey->netmask)) != sizeof(dbkey->netmask))
-    {
-        MXS_FREE(dbkey->user);
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-
-    int res_size;
-    if (read(fd, &res_size, sizeof(res_size)) != sizeof(res_size))
-    {
-        MXS_FREE(dbkey->user);
-        MXS_FREE(dbkey);
-        return NULL;
-    }
-    else if (res_size != -1)
-    {
-        if ((dbkey->resource = (char *) MXS_MALLOC(res_size + 1)) == NULL)
-        {
-            MXS_FREE(dbkey->user);
-            MXS_FREE(dbkey);
-            return NULL;
-        }
-        if (read(fd, dbkey->resource, res_size) != res_size)
-        {
-            MXS_FREE(dbkey->resource);
-            MXS_FREE(dbkey->user);
-            MXS_FREE(dbkey);
-            return NULL;
-        }
-        dbkey->resource[res_size] = 0; // NULL Terminate
-    }
-    else // NULL is valid, so represent with a length of -1
-    {
-        dbkey->resource = NULL;
-    }
-    return (void *) dbkey;
-}
-
-/**
- * Unserialise a value for the dbusers hashtable from a file
- *
- * @param fd    File descriptor to read from
- * @return      Return the new value data or NULL on error
- */
-static void *
-dbusers_valueread(int fd)
-{
-    char *value;
-    int tmp;
-
-    if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
-    {
-        return NULL;
-    }
-    if ((value = (char *) MXS_MALLOC(tmp + 1)) == NULL)
-    {
-        return NULL;
-    }
-    if (read(fd, value, tmp) != tmp)
-    {
-        MXS_FREE(value);
-        return NULL;
-    }
-    value[tmp] = 0;
-    return (void *) value;
-}
-
 int dump_user_cb(void *data, int fields, char **row, char **field_names)
 {
     sqlite3 *handle = (sqlite3*)data;
@@ -1408,13 +595,6 @@ static bool transfer_table_contents(sqlite3 *src, sqlite3 *dest)
     return rval;
 }
 
-/**
- * Load users from persisted database
- *
- * @param dest Open SQLite handle where contents are loaded
- *
- * @return True on success
- */
 bool dbusers_load(sqlite3 *dest, const char *filename)
 {
     sqlite3 *src;
@@ -1431,13 +611,6 @@ bool dbusers_load(sqlite3 *dest, const char *filename)
     return rval;
 }
 
-/**
- * Save users to persisted database
- *
- * @param dest Open SQLite handle where contents are stored
- *
- * @return True on success
- */
 bool dbusers_save(sqlite3 *src, const char *filename)
 {
     sqlite3 *dest;
@@ -1450,105 +623,6 @@ bool dbusers_save(sqlite3 *src, const char *filename)
 
     bool rval = transfer_table_contents(src, dest);
     sqlite3_close_v2(dest);
-
-    return rval;
-}
-
-/**
- * Check if the database name contains a wildcard character
- * @param str Database grant
- * @return 1 if the name contains the '%' wildcard character, 0 if it does not
- */
-static int wildcard_db_grant(char* str)
-{
-    char* ptr = str;
-
-    while (ptr && *ptr != '\0')
-    {
-        if (*ptr == '%')
-        {
-            return 1;
-        }
-        ptr++;
-    }
-
-    return 0;
-}
-
-/**
- *
- * @param users Pointer to USERS struct
- * @param name Username of the client
- * @param host Host address of the client
- * @param password Client password
- * @param anydb If the user has access to all databases
- * @param db Database, in wildcard form
- * @param hash Hashtable with all database names
- * @return number of unique grants generated from wildcard database name
- */
-static int add_wildcard_users(USERS *users, char* name, char* host, char* password,
-                              char* anydb, char* db, HASHTABLE* hash)
-{
-    HASHITERATOR* iter;
-    HASHTABLE* ht = hash;
-    char *restr, *ptr, *value;
-    int len, err, rval = 0;
-    char errbuf[1024];
-    regex_t re;
-
-    if (db == NULL || hash == NULL)
-    {
-        return 0;
-    }
-
-    if ((restr = MXS_MALLOC(sizeof(char) * strlen(db) * 2)) == NULL)
-    {
-        return 0;
-    }
-
-    strcpy(restr, db);
-
-    len = strlen(restr);
-    ptr = strchr(restr, '%');
-
-    if (ptr == NULL)
-    {
-        MXS_FREE(restr);
-        return 0;
-    }
-
-    while (ptr)
-    {
-        memmove(ptr + 1, ptr, (len - (ptr - restr)) + 1);
-        *ptr++ = '.';
-        *ptr = '*';
-        len = strlen(restr);
-        ptr = strchr(restr, '%');
-    }
-
-    if ((err = regcomp(&re, restr, REG_ICASE | REG_NOSUB)))
-    {
-        regerror(err, &re, errbuf, 1024);
-        MXS_ERROR("Failed to compile regex when resolving wildcard database grants: %s",
-                  errbuf);
-        MXS_FREE(restr);
-        return 0;
-    }
-
-    iter = hashtable_iterator(ht);
-
-    while (iter && (value = hashtable_next(iter)))
-    {
-        if (regexec(&re, value, 0, NULL, 0) == 0)
-        {
-            rval += add_mysql_users_with_host_ipv4(users, name, host, password,
-                                                   anydb, value);
-        }
-    }
-
-    hashtable_iterator_free(iter);
-    regfree(&re);
-    MXS_FREE(restr);
 
     return rval;
 }
@@ -1699,17 +773,6 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     return rval;
 }
 
-/**
- * @brief Check if the service user has all required permissions to operate properly.
- *
- * This checks for SELECT permissions on mysql.user, mysql.db and mysql.tables_priv
- * tables and for SHOW DATABASES permissions. If permissions are not adequate,
- * an error message is logged and the service is not started.
- *
- * @param service Service to inspect
- * @return True if service permissions are correct on at least one server, false
- * if permissions are missing or if an error occurred.
- */
 bool check_service_permissions(SERVICE* service)
 {
     if (is_internal_service(service->routerModule) ||
@@ -1745,81 +808,16 @@ bool check_service_permissions(SERVICE* service)
 }
 
 /**
- * If the hostname is of form a.b.c.d/e.f.g.h where e-h is 255 or 0, replace
- * the zeros in the first part with '%' and remove the second part. This does
- * not yet support netmasks completely, but should be sufficient for most
- * situations. In case of error, the hostname may end in an invalid state, which
- * will cause an error later on.
+ * @brief Get client hostname
  *
- * @param host  The hostname, which is modified in-place. If merging is unsuccessful,
- *              it may end up garbled.
+ * Queries the DNS server for the client's hostname.
+ *
+ * @param ip_address      Client IP address
+ * @param client_hostname Output buffer for hostname
+ *
+ * @return True if the hostname query was successful
  */
-static void merge_netmask(char *host)
-{
-    char *delimiter_loc = strchr(host, '/');
-    if (delimiter_loc == NULL)
-    {
-        return; // Nothing to do
-    }
-    /* If anything goes wrong, we put the '/' back in to ensure the hostname
-     * cannot be used.
-     */
-    *delimiter_loc = '\0';
-
-    char *ip_token_loc = host;
-    char *mask_token_loc = delimiter_loc + 1; // This is at minimum a \0
-
-    while (ip_token_loc && mask_token_loc)
-    {
-        if (strncmp(mask_token_loc, "255", 3) == 0)
-        {
-            // Skip
-        }
-        else if (*mask_token_loc == '0' && *ip_token_loc == '0')
-        {
-            *ip_token_loc = '%';
-        }
-        else
-        {
-            /* Any other combination is considered invalid. This may leave the
-             * hostname in a partially modified state.
-             * TODO: handle more cases
-             */
-            *delimiter_loc = '/';
-            MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
-                      "Merge incomplete: %s", host);
-            return;
-        }
-
-        ip_token_loc = strchr(ip_token_loc, '.');
-        mask_token_loc = strchr(mask_token_loc, '.');
-        if (ip_token_loc && mask_token_loc)
-        {
-            ip_token_loc++;
-            mask_token_loc++;
-        }
-    }
-    if (ip_token_loc || mask_token_loc)
-    {
-        *delimiter_loc = '/';
-        MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
-                  "Merge incomplete: %s", host);
-    }
-}
-
-/**
- * @brief Check if an ip matches a wildcard hostname.
- *
- * One of the parameters should be an IP-address without wildcards, the other a
- * hostname with wildcards. The hostname corresponding to the ip-address will be
- * looked up and compared to the hostname with wildcard(s). Any error in the
- * parameters or looking up the hostname will result in a false match.
- *
- * @param ip-address or a hostname with wildcard(s)
- * @param ip-address or a hostname with wildcard(s)
- * @return True if the host represented by the IP matches the wildcard string
- */
-static bool wildcard_domain_match(const char *ip_address, char *client_hostname)
+static bool get_hostname(const char *ip_address, char *client_hostname)
 {
     /* Looks like the parameters are valid. First, convert the client IP string
      * to binary form. This is somewhat silly, since just a while ago we had the
