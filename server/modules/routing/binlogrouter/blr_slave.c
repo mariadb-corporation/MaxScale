@@ -391,6 +391,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     extern char *strcasestr();
     bool unexpected = true;
     static const char mysql_connector_server_variables_query[] = "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout";
+    static const char mysql_connector_results_charset_query[] = "SET character_set_results = NULL";
 
     qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
@@ -446,6 +447,11 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             return 1;
         }
         MXS_ERROR("Error sending mysql-connector-j server variables");
+    }
+    else if (router->maxwell_compat && strcmp(query_text, mysql_connector_results_charset_query) == 0)
+    {
+        MXS_FREE(query_text);
+        return blr_slave_send_ok(router, slave);
     }
     else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {
