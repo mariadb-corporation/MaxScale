@@ -500,6 +500,7 @@ typedef struct
     GWBUF           *log_bin;           /*< SHOW VARIABLES LIKE 'log_bin' */
     GWBUF           *binlog_format;     /*< SHOW VARIABLES LIKE 'binlog_format' */
     GWBUF           *binlog_row_image;  /*< SHOW VARIABLES LIKE 'binlog_row_image' */
+    GWBUF           *lower_case_tables; /*< select @@lower_case_table_names */
     uint8_t         *fde_event;         /*< Format Description Event */
     int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -681,14 +682,15 @@ typedef struct binlog_encryption_ctx
 #define BLRM_LOG_BIN            0x0017
 #define BLRM_BINLOG_FORMAT      0x0018
 #define BLRM_BINLOG_ROW_IMAGE   0x0019
-#define BLRM_REGISTER           0x001A
-#define BLRM_CHECK_SEMISYNC     0x001B
-#define BLRM_REQUEST_SEMISYNC   0x001C
-#define BLRM_REQUEST_BINLOGDUMP 0x001D
-#define BLRM_BINLOGDUMP         0x001E
-#define BLRM_SLAVE_STOPPED      0x001F
+#define BLRM_LOWER_CASE_TABLES  0x001A
+#define BLRM_REGISTER           0x001B
+#define BLRM_CHECK_SEMISYNC     0x001C
+#define BLRM_REQUEST_SEMISYNC   0x001D
+#define BLRM_REQUEST_BINLOGDUMP 0x001E
+#define BLRM_BINLOGDUMP         0x001F
+#define BLRM_SLAVE_STOPPED      0x0020
 
-#define BLRM_MAXSTATE           0x001F
+#define BLRM_MAXSTATE           0x0020
 
 static char *blrm_states[] =
 {
@@ -718,6 +720,7 @@ static char *blrm_states[] =
     "Query log_bin variable",
     "Query binlog_format variable",
     "Query binlog_row_image variable",
+    "Query @@lower_case_table_names",
     "Register slave",
     "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication",

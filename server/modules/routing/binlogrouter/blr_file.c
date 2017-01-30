@@ -2303,6 +2303,7 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
     router->saved_master.log_bin = blr_cache_read_response(router, "log_bin");
     router->saved_master.binlog_format = blr_cache_read_response(router, "binlog_format");
     router->saved_master.binlog_row_image = blr_cache_read_response(router, "binlog_row_image");
+    router->saved_master.lower_case_tables = blr_cache_read_response(router, "lower_case_tables");
 }
 
 /**
