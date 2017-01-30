@@ -654,6 +654,13 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     case BLRM_RESULTS_CHARSET:
         gwbuf_free(buf);
 
+        buf = blr_make_query(router->master, "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'");
+        router->master_state = BLRM_SQL_MODE;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_SQL_MODE:
+        gwbuf_free(buf);
+
         buf = blr_make_query(router->master, "SELECT 1");
         router->master_state = BLRM_SELECT1;
         router->master->func.write(router->master, buf);
