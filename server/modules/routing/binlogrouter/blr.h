@@ -496,6 +496,7 @@ typedef struct
     GWBUF           *mariadb10;         /*< set @mariadb_slave_capability */
     GWBUF           *server_vars;       /*< MySQL Connector master server variables */
     GWBUF           *results_charset;   /*< SET character_set_results = NULL */
+    GWBUF           *sql_mode;          /*< SET sql_mode='...' */
     uint8_t         *fde_event;         /*< Format Description Event */
     int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -667,20 +668,21 @@ typedef struct binlog_encryption_ctx
 #define BLRM_LATIN1             0x000D
 #define BLRM_UTF8               0x000E
 #define BLRM_RESULTS_CHARSET    0x000F
-#define BLRM_SELECT1            0x0010
-#define BLRM_SELECTVER          0x0011
-#define BLRM_SELECTVERCOM       0x0012
-#define BLRM_SELECTHOSTNAME     0x0013
-#define BLRM_MAP                0x0014
-#define BLRM_SERVER_VARS        0x0015
-#define BLRM_REGISTER           0x0016
-#define BLRM_CHECK_SEMISYNC     0x0017
-#define BLRM_REQUEST_SEMISYNC   0x0018
-#define BLRM_REQUEST_BINLOGDUMP 0x0019
-#define BLRM_BINLOGDUMP         0x001A
-#define BLRM_SLAVE_STOPPED      0x001B
+#define BLRM_SQL_MODE           0x0010
+#define BLRM_SELECT1            0x0011
+#define BLRM_SELECTVER          0x0012
+#define BLRM_SELECTVERCOM       0x0013
+#define BLRM_SELECTHOSTNAME     0x0014
+#define BLRM_MAP                0x0015
+#define BLRM_SERVER_VARS        0x0016
+#define BLRM_REGISTER           0x0017
+#define BLRM_CHECK_SEMISYNC     0x0018
+#define BLRM_REQUEST_SEMISYNC   0x0019
+#define BLRM_REQUEST_BINLOGDUMP 0x001a
+#define BLRM_BINLOGDUMP         0x001B
+#define BLRM_SLAVE_STOPPED      0x001C
 
-#define BLRM_MAXSTATE           0x001B
+#define BLRM_MAXSTATE           0x001C
 
 static char *blrm_states[] =
 {
@@ -700,6 +702,7 @@ static char *blrm_states[] =
     "Set Names latin1",
     "Set Names utf8",
     "Set results charset null",
+    "Set sql_mode",
     "select 1",
     "select version()",
     "select @@version_comment",
