@@ -498,6 +498,8 @@ typedef struct
     GWBUF           *results_charset;   /*< SET character_set_results = NULL */
     GWBUF           *sql_mode;          /*< SET sql_mode='...' */
     GWBUF           *log_bin;           /*< SHOW VARIABLES LIKE 'log_bin' */
+    GWBUF           *binlog_format;     /*< SHOW VARIABLES LIKE 'binlog_format' */
+    GWBUF           *binlog_row_image;  /*< SHOW VARIABLES LIKE 'binlog_row_image' */
     uint8_t         *fde_event;         /*< Format Description Event */
     int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -677,14 +679,16 @@ typedef struct binlog_encryption_ctx
 #define BLRM_MAP                0x0015
 #define BLRM_SERVER_VARS        0x0016
 #define BLRM_LOG_BIN            0x0017
-#define BLRM_REGISTER           0x0018
-#define BLRM_CHECK_SEMISYNC     0x0019
-#define BLRM_REQUEST_SEMISYNC   0x001A
-#define BLRM_REQUEST_BINLOGDUMP 0x001B
-#define BLRM_BINLOGDUMP         0x001C
-#define BLRM_SLAVE_STOPPED      0x001D
+#define BLRM_BINLOG_FORMAT      0x0018
+#define BLRM_BINLOG_ROW_IMAGE   0x0019
+#define BLRM_REGISTER           0x001A
+#define BLRM_CHECK_SEMISYNC     0x001B
+#define BLRM_REQUEST_SEMISYNC   0x001C
+#define BLRM_REQUEST_BINLOGDUMP 0x001D
+#define BLRM_BINLOGDUMP         0x001E
+#define BLRM_SLAVE_STOPPED      0x001F
 
-#define BLRM_MAXSTATE           0x001D
+#define BLRM_MAXSTATE           0x001F
 
 static char *blrm_states[] =
 {
@@ -712,6 +716,8 @@ static char *blrm_states[] =
     "select @@max_allowed_packet",
     "Query server variables",
     "Query log_bin variable",
+    "Query binlog_format variable",
+    "Query binlog_row_image variable",
     "Register slave",
     "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication",

@@ -747,6 +747,30 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.log_bin = buf;
         blr_cache_response(router, "log_bin", buf);
 
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'binlog_format'");
+        router->master_state = BLRM_BINLOG_FORMAT;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_FORMAT:
+        if (router->saved_master.binlog_format)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_format);
+        }
+        router->saved_master.binlog_format = buf;
+        blr_cache_response(router, "binlog_format", buf);
+
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'binlog_row_image'");
+        router->master_state = BLRM_BINLOG_ROW_IMAGE;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_ROW_IMAGE:
+        if (router->saved_master.binlog_row_image)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_row_image);
+        }
+        router->saved_master.binlog_row_image = buf;
+        blr_cache_response(router, "binlog_row_image", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
