@@ -61,7 +61,7 @@ static const char databases_create_sql[] =
 /** Query that checks if there's a grant for the user being authenticated */
 static const char mysqlauth_validate_user_query[] =
     "SELECT password FROM " MYSQLAUTH_USERS_TABLE_NAME
-    " WHERE user = '%s' AND '%s' LIKE host AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
+    " WHERE user = '%s' AND ( '%s' = host OR '%s' LIKE host) AND (anydb = '1' OR '%s' = '' OR '%s' LIKE db)"
     " LIMIT 1";
 
 /** Query that checks that the database exists */
