@@ -15,6 +15,9 @@ will be changed in forthcoming releases.
 * Resultsets of prepared statements are **not** cached. This will be changed
 in forthcoming releases.
 
+* Data from the cache will be used and the cache will be populated **only** if
+no transaction or an explicitly _read-only_ transaction is in progress.
+
 ## Configuration
 
 The cache is simple to add to any existing service. However, some experimentation
