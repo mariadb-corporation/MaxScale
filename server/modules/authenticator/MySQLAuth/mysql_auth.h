@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
+#include <maxscale/authenticator.h>
 #include <maxscale/dcb.h>
 #include <maxscale/buffer.h>
 #include <maxscale/service.h>
@@ -185,9 +186,9 @@ int replace_mysql_users(SERV_LISTENER *listener);
  * @param scramble     The scramble sent to the client in the initial handshake
  * @param scramble_len Length of @c scramble
  *
- * @return True if the user has access to the database
+ * @return MXS_AUTH_SUCCEEDED if the user has access to the database
  */
-bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
+int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
                          uint8_t *scramble, size_t scramble_len);
 
 MXS_END_DECLS
