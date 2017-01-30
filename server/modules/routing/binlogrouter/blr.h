@@ -494,6 +494,7 @@ typedef struct
     GWBUF           *selecthostname;/*< select @@hostname */
     GWBUF           *map;           /*< select @@max_allowed_packet */
     GWBUF           *mariadb10;     /*< set @mariadb_slave_capability */
+    GWBUF           *server_vars;   /*< MySQL Connector master server variables */
     uint8_t         *fde_event;     /*< Format Description Event */
     int             fde_len;        /*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -669,14 +670,15 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SELECTVERCOM       0x0011
 #define BLRM_SELECTHOSTNAME     0x0012
 #define BLRM_MAP                0x0013
-#define BLRM_REGISTER           0x0014
-#define BLRM_CHECK_SEMISYNC     0x0015
-#define BLRM_REQUEST_SEMISYNC   0x0016
-#define BLRM_REQUEST_BINLOGDUMP 0x0017
-#define BLRM_BINLOGDUMP         0x0018
-#define BLRM_SLAVE_STOPPED      0x0019
+#define BLRM_SERVER_VARS        0x0014
+#define BLRM_REGISTER           0x0015
+#define BLRM_CHECK_SEMISYNC     0x0016
+#define BLRM_REQUEST_SEMISYNC   0x0017
+#define BLRM_REQUEST_BINLOGDUMP 0x0018
+#define BLRM_BINLOGDUMP         0x0019
+#define BLRM_SLAVE_STOPPED      0x001A
 
-#define BLRM_MAXSTATE           0x0019
+#define BLRM_MAXSTATE           0x001A
 
 static char *blrm_states[] =
 {
@@ -685,7 +687,7 @@ static char *blrm_states[] =
     "binlog checksum rerieval", "Set MariaDB slave capability", "GTID Mode retrieval",
     "Master UUID retrieval", "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
     "select version()", "select @@version_comment", "select @@hostname",
-    "select @@max_allowed_packet", "Register slave", "Semi-Sync Support retrivial",
+    "select @@max_allowed_packet", "Query server variables", "Register slave", "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication", "Request Binlog Dump", "Binlog Dump", "Slave stopped"
 };
 
