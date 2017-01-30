@@ -463,7 +463,7 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
     char *err;
 
     sprintf(sql, mysqlauth_validate_user_query, session->user, dcb->remote,
-            session->db, session->db);
+            dcb->remote, session->db, session->db);
 
     struct user_query_result res = {};
 
@@ -482,7 +482,7 @@ bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
         char client_hostname[MYSQL_HOST_MAXLEN];
         wildcard_domain_match(dcb->remote, client_hostname);
         sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
-                session->db, session->db);
+                client_hostname, session->db, session->db);
 
         if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
         {
