@@ -676,14 +676,16 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SELECTHOSTNAME     0x0014
 #define BLRM_MAP                0x0015
 #define BLRM_SERVER_VARS        0x0016
-#define BLRM_REGISTER           0x0017
-#define BLRM_CHECK_SEMISYNC     0x0018
-#define BLRM_REQUEST_SEMISYNC   0x0019
-#define BLRM_REQUEST_BINLOGDUMP 0x001a
-#define BLRM_BINLOGDUMP         0x001B
-#define BLRM_SLAVE_STOPPED      0x001C
+#define BLRM_BINLOG_VARS        0x0017
+#define BLRM_LOWER_CASE_TABLES  0x0018
+#define BLRM_REGISTER           0x0019
+#define BLRM_CHECK_SEMISYNC     0x001A
+#define BLRM_REQUEST_SEMISYNC   0x001B
+#define BLRM_REQUEST_BINLOGDUMP 0x001C
+#define BLRM_BINLOGDUMP         0x001D
+#define BLRM_SLAVE_STOPPED      0x001E
 
-#define BLRM_MAXSTATE           0x001C
+#define BLRM_MAXSTATE           0x001E
 
 static char *blrm_states[] =
 {
@@ -710,6 +712,8 @@ static char *blrm_states[] =
     "select @@hostname",
     "select @@max_allowed_packet",
     "Query server variables",
+    "Query binlog variables",
+    "Query @@lower_case_table_names",
     "Register slave",
     "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication",

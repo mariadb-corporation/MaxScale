@@ -735,6 +735,18 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.server_vars = buf;
         blr_cache_response(router, "server_vars", buf);
 
+        buf = blr_make_query(router->master, "SELECT IF(@@global.log_bin, 'ON', 'OFF'), @@global.binlog_format, @@global.binlog_row_image");
+        router->master_state = BLRM_BINLOG_VARS;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_VARS:
+        if (router->saved_master.binlog_vars)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_vars);
+        }
+        router->saved_master.binlog_vars = buf;
+        blr_cache_response(router, "binlog_vars", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
