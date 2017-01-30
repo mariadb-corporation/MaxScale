@@ -80,8 +80,9 @@ typedef struct mxs_authenticator
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */
     int (*reauthenticate)(struct dcb *, const char *user,
-                          uint8_t *token, size_t token_len,
-                          uint8_t *scramble, size_t scramble_len);
+                          uint8_t *token, size_t token_len, /**< Client auth token */
+                          uint8_t *scramble, size_t scramble_len, /**< Scramble sent by MaxScale to client */
+                          uint8_t *output, size_t output_len); /**< Hashed client password used by backend protocols */
 } MXS_AUTHENTICATOR;
 
 /** Return values for extract and authenticate entry points */

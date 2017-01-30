@@ -1537,7 +1537,8 @@ static int gw_change_user(DCB *backend,
     auth_ret = dcb->authfunc.reauthenticate(dcb, username,
                                             auth_token, auth_token_len,
                                             client_protocol->scramble,
-                                            sizeof(client_protocol->scramble));
+                                            sizeof(client_protocol->scramble),
+                                            client_sha1, sizeof(client_sha1));
 
     strcpy(current_session->db, current_database);
 
@@ -1552,7 +1553,8 @@ static int gw_change_user(DCB *backend,
             auth_ret = dcb->authfunc.reauthenticate(dcb, username,
                                                     auth_token, auth_token_len,
                                                     client_protocol->scramble,
-                                                    sizeof(client_protocol->scramble));
+                                                    sizeof(client_protocol->scramble),
+                                                    client_sha1, sizeof(client_sha1));
 
             strcpy(current_session->db, current_database);
         }

@@ -60,7 +60,8 @@ static int mysql_auth_set_client_data(
 
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
-                              uint8_t *scramble, size_t scramble_len);
+                              uint8_t *scramble, size_t scramble_len,
+                              uint8_t *output_token, size_t output_token_len);
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -267,11 +268,13 @@ mysql_auth_authenticate(DCB *dcb)
 
         MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
 
-        bool is_ok = validate_mysql_user(instance->handle, dcb, client_data);
+        bool is_ok = validate_mysql_user(instance->handle, dcb, client_data,
+                                         protocol->scramble, sizeof(protocol->scramble));
 
         if (!is_ok && !instance->skip_auth && service_refresh_users(dcb->service) == 0)
         {
-            is_ok = validate_mysql_user(instance->handle, dcb, client_data);
+            is_ok = validate_mysql_user(instance->handle, dcb, client_data,
+                                        protocol->scramble, sizeof(protocol->scramble));
         }
 
         /* on successful authentication, set user into dcb field */
@@ -888,9 +891,25 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
-                              uint8_t *scramble, size_t scramble_len)
+                              uint8_t *scramble, size_t scramble_len,
+                              uint8_t *output_token, size_t output_token_len)
 {
     MYSQL_session *client_data = (MYSQL_session *)dcb->data;
-    return gw_check_mysql_scramble_data(dcb, token, token_len, scramble, scramble_len,
-                                        user, client_data->client_sha1);
+    MYSQL_session temp;
+    int rval = 1;
+
+    memcpy(&temp, client_data, sizeof(*client_data));
+    strcpy(temp.user, user);
+    temp.auth_token = token;
+    temp.auth_token_len = token_len;
+
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)dcb->listener->auth_instance;
+
+    if (validate_mysql_user(instance->handle, dcb, &temp, scramble, scramble_len))
+    {
+        memcpy(output_token, temp.client_sha1, output_token_len);
+        rval = 0;
+    }
+
+    return rval;
 }

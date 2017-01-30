@@ -148,6 +148,7 @@ int gw_find_mysql_user_password_sha1(
     const char *username,
     uint8_t *gateway_password,
     DCB *dcb);
-bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session);
+bool validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
+                         uint8_t *scramble, size_t scramble_len);
 
 MXS_END_DECLS
