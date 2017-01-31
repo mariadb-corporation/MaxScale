@@ -32,7 +32,7 @@ This feature is disabled by default.
 This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set.
 Please note max_slave_replication_lag must be greater than monitor interval.
 
-This option only affects Master-Slave cluster. Galera clusters do not have a
+This option only affects Master-Slave clusters. Galera clusters do not have a
 concept of slave lag even if the application of write sets might have lag.
 
 
