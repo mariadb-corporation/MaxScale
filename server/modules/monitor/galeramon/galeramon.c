@@ -248,12 +248,12 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 
         database->server->node_id = -1;
 
+        server_transfer_status(database->server, &temp_server);
+
         if (mon_status_changed(database) && mon_print_fail_status(database))
         {
             mon_log_connect_error(database, rval);
         }
-
-        server_transfer_status(database->server, &temp_server);
 
         return;
     }
