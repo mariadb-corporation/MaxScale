@@ -80,7 +80,7 @@ private:
             , deletes(0)
         {}
 
-        void fill(json_t* pbject) const;
+        void fill(json_t* pObject) const;
 
         uint64_t size;       /*< The total size of the stored values. */
         uint64_t items;      /*< The number of stored items. */

@@ -21,7 +21,7 @@ InMemoryStorageMT::InMemoryStorageMT(const std::string& name,
                                      const CACHE_STORAGE_CONFIG& config)
     : InMemoryStorage(name, config)
 {
-    spinlock_init(&lock_);
+    spinlock_init(&m_lock);
 }
 
 InMemoryStorageMT::~InMemoryStorageMT()
@@ -37,28 +37,28 @@ auto_ptr<InMemoryStorageMT> InMemoryStorageMT::Create(const std::string& name,
 
 cache_result_t InMemoryStorageMT::get_info(uint32_t what, json_t** ppInfo) const
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return do_get_info(what, ppInfo);
 }
 
 cache_result_t InMemoryStorageMT::get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult)
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return do_get_value(key, flags, ppResult);
 }
 
 cache_result_t InMemoryStorageMT::put_value(const CACHE_KEY& key, const GWBUF& value)
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return do_put_value(key, value);
 }
 
 cache_result_t InMemoryStorageMT::del_value(const CACHE_KEY& key)
 {
-    SpinLockGuard guard(lock_);
+    SpinLockGuard guard(m_lock);
 
     return do_del_value(key);
 }

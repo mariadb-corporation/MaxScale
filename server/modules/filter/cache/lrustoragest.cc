@@ -14,8 +14,8 @@
 #define MXS_MODULE_NAME "cache"
 #include "lrustoragest.hh"
 
-LRUStorageST::LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
-    : LRUStorage(config, pstorage)
+LRUStorageST::LRUStorageST(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
+    : LRUStorage(config, pStorage)
 {
     MXS_NOTICE("Created single threaded LRU storage.");
 }
@@ -24,11 +24,11 @@ LRUStorageST::~LRUStorageST()
 {
 }
 
-LRUStorageST* LRUStorageST::create(const CACHE_STORAGE_CONFIG& config, Storage* pstorage)
+LRUStorageST* LRUStorageST::create(const CACHE_STORAGE_CONFIG& config, Storage* pStorage)
 {
     LRUStorageST* plru_storage = NULL;
 
-    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageST(config, pstorage));
+    MXS_EXCEPTION_GUARD(plru_storage = new LRUStorageST(config, pStorage));
 
     return plru_storage;
 }
@@ -41,14 +41,14 @@ cache_result_t LRUStorageST::get_info(uint32_t what,
 
 cache_result_t LRUStorageST::get_value(const CACHE_KEY& key,
                                        uint32_t flags,
-                                       GWBUF** ppvalue) const
+                                       GWBUF** ppValue) const
 {
-    return LRUStorage::do_get_value(key, flags, ppvalue);
+    return LRUStorage::do_get_value(key, flags, ppValue);
 }
 
-cache_result_t LRUStorageST::put_value(const CACHE_KEY& key, const GWBUF* pvalue)
+cache_result_t LRUStorageST::put_value(const CACHE_KEY& key, const GWBUF* pValue)
 {
-    return LRUStorage::do_put_value(key, pvalue);
+    return LRUStorage::do_put_value(key, pValue);
 }
 
 cache_result_t LRUStorageST::del_value(const CACHE_KEY& key)

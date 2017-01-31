@@ -359,59 +359,59 @@ bool cache_rules_should_use(CACHE_RULES *self, const MXS_SESSION *session)
 }
 
 
-CacheRules::CacheRules(CACHE_RULES* prules)
-    : prules_(prules)
+CacheRules::CacheRules(CACHE_RULES* pRules)
+    : m_pRules(pRules)
 {
 }
 
 CacheRules::~CacheRules()
 {
-    cache_rules_free(prules_);
+    cache_rules_free(m_pRules);
 }
 
 // static
 CacheRules* CacheRules::create(uint32_t debug)
 {
-    CacheRules* pthis = NULL;
+    CacheRules* pThis = NULL;
 
-    CACHE_RULES* prules = cache_rules_create(debug);
+    CACHE_RULES* pRules = cache_rules_create(debug);
 
-    if (prules)
+    if (pRules)
     {
-        pthis = new (std::nothrow) CacheRules(prules);
+        pThis = new (std::nothrow) CacheRules(pRules);
     }
 
-    return pthis;
+    return pThis;
 }
 
 // static
-CacheRules* CacheRules::load(const char *zpath, uint32_t debug)
+CacheRules* CacheRules::load(const char *zPath, uint32_t debug)
 {
-    CacheRules* pthis = NULL;
+    CacheRules* pThis = NULL;
 
-    CACHE_RULES* prules = cache_rules_load(zpath, debug);
+    CACHE_RULES* pRules = cache_rules_load(zPath, debug);
 
-    if (prules)
+    if (pRules)
     {
-        pthis = new (std::nothrow) CacheRules(prules);
+        pThis = new (std::nothrow) CacheRules(pRules);
     }
 
-    return pthis;
+    return pThis;
 }
 
 const json_t* CacheRules::json() const
 {
-    return prules_->root;
+    return m_pRules->root;
 }
 
-bool CacheRules::should_store(const char* zdefault_db, const GWBUF* pquery) const
+bool CacheRules::should_store(const char* zDefault_db, const GWBUF* pQuery) const
 {
-    return cache_rules_should_store(prules_, zdefault_db, pquery);
+    return cache_rules_should_store(m_pRules, zDefault_db, pQuery);
 }
 
-bool CacheRules::should_use(const MXS_SESSION* psession) const
+bool CacheRules::should_use(const MXS_SESSION* pSession) const
 {
-    return cache_rules_should_use(prules_, psession);
+    return cache_rules_should_use(m_pRules, pSession);
 }
 
 /*

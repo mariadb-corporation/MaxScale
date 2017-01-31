@@ -26,7 +26,7 @@ CacheMT::CacheMT(const std::string&  name,
                  Storage*            pStorage)
     : CacheSimple(name, pConfig, sRules, sFactory, pStorage)
 {
-    spinlock_init(&m_lockPending);
+    spinlock_init(&m_lock_pending);
 
     MXS_NOTICE("Created multi threaded cache.");
 }
@@ -57,21 +57,21 @@ CacheMT* CacheMT::Create(const std::string& name, const CACHE_CONFIG* pConfig)
 
 json_t* CacheMT::get_info(uint32_t flags) const
 {
-    SpinLockGuard guard(m_lockPending);
+    SpinLockGuard guard(m_lock_pending);
 
     return CacheSimple::do_get_info(flags);
 }
 
 bool CacheMT::must_refresh(const CACHE_KEY& key, const CacheFilterSession* pSession)
 {
-    SpinLockGuard guard(m_lockPending);
+    SpinLockGuard guard(m_lock_pending);
 
     return do_must_refresh(key, pSession);
 }
 
 void CacheMT::refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession)
 {
-    SpinLockGuard guard(m_lockPending);
+    SpinLockGuard guard(m_lock_pending);
 
     do_refreshed(key, pSession);
 }

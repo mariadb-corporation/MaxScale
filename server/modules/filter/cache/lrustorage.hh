@@ -31,12 +31,12 @@ public:
     /**
      * @see Storage::get_key
      */
-    cache_result_t get_key(const char* zDefaultDb,
+    cache_result_t get_key(const char* zDefault_db,
                            const GWBUF* pQuery,
                            CACHE_KEY* pKey) const;
 
 protected:
-    LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pstorage);
+    LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pStorage);
 
     /**
      * @see Storage::get_info
@@ -112,10 +112,10 @@ private:
     {
     public:
         Node()
-            : pkey_(NULL)
-            , size_(0)
-            , pnext_(NULL)
-            , pprev_(NULL)
+            : m_pKey(NULL)
+            , m_size(0)
+            , m_pNext(NULL)
+            , m_pPrev(NULL)
         {}
         ~Node()
         {
@@ -124,19 +124,19 @@ private:
 
         const CACHE_KEY* key() const
         {
-            return pkey_;
+            return m_pKey;
         }
         size_t size() const
         {
-            return size_;
+            return m_size;
         }
         Node* next() const
         {
-            return pnext_;
+            return m_pNext;
         }
         Node* prev() const
         {
-            return pprev_;
+            return m_pPrev;
         }
 
         /**
@@ -145,29 +145,29 @@ private:
          * @param  pnode  The node in front of which this should be moved.
          * @return This node.
          */
-        Node* prepend(Node* pnode)
+        Node* prepend(Node* pNode)
         {
-            if (pnode && (pnode != this))
+            if (pNode && (pNode != this))
             {
-                if (pprev_)
+                if (m_pPrev)
                 {
-                    pprev_->pnext_ = pnext_;
+                    m_pPrev->m_pNext = m_pNext;
                 }
 
-                if (pnext_)
+                if (m_pNext)
                 {
-                    pnext_->pprev_ = pprev_;
+                    m_pNext->m_pPrev = m_pPrev;
                 }
 
-                if (pnode->pprev_)
+                if (pNode->m_pPrev)
                 {
-                    pnode->pprev_->pnext_ = this;
+                    pNode->m_pPrev->m_pNext = this;
                 }
 
-                pprev_ = pnode->pprev_;
-                pnext_ = pnode;
+                m_pPrev = pNode->m_pPrev;
+                m_pNext = pNode;
 
-                pnode->pprev_ = this;
+                pNode->m_pPrev = this;
             }
 
             return this;
@@ -180,52 +180,52 @@ private:
          */
         Node* remove()
         {
-            if (pprev_)
+            if (m_pPrev)
             {
-                pprev_->pnext_ = pnext_;
+                m_pPrev->m_pNext = m_pNext;
             }
 
-            if (pnext_)
+            if (m_pNext)
             {
-                pnext_->pprev_ = pprev_;
+                m_pNext->m_pPrev = m_pPrev;
             }
 
-            Node* pnode = (pprev_ ? pprev_ : pnext_);
+            Node* pNode = (m_pPrev ? m_pPrev : m_pNext);
 
-            pprev_ = NULL;
-            pnext_ = NULL;
+            m_pPrev = NULL;
+            m_pNext = NULL;
 
-            return pnode;
+            return pNode;
         }
 
         void reset(const CACHE_KEY* pkey = NULL, size_t size = 0)
         {
-            pkey_ = pkey;
-            size_ = size;
+            m_pKey = pkey;
+            m_size = size;
         }
 
     private:
-        const CACHE_KEY* pkey_;  /*< Points at the key stored in nodes_by_key_ below. */
-        size_t           size_;  /*< The size of the data referred to by pkey_. */
-        Node*            pnext_; /*< The next node in the LRU list. */
-        Node*            pprev_; /*< The previous node in the LRU list. */
+        const CACHE_KEY* m_pKey;  /*< Points at the key stored in nodes_by_key_ below. */
+        size_t           m_size;  /*< The size of the data referred to by m_pKey. */
+        Node*            m_pNext; /*< The next node in the LRU list. */
+        Node*            m_pPrev; /*< The previous node in the LRU list. */
     };
 
     typedef std::tr1::unordered_map<CACHE_KEY, Node*> NodesByKey;
 
     Node* vacate_lru();
     Node* vacate_lru(size_t space);
-    bool free_node_data(Node* pnode);
-    void free_node(Node* pnode) const;
+    bool free_node_data(Node* pNode);
+    void free_node(Node* pNode) const;
     void free_node(NodesByKey::iterator& i) const;
-    void remove_node(Node* pnode) const;
-    void move_to_head(Node* pnode) const;
+    void remove_node(Node* pNode) const;
+    void move_to_head(Node* pNode) const;
 
-    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppnode);
+    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppNode);
     cache_result_t get_new_node(const CACHE_KEY& key,
-                                const GWBUF* pvalue,
+                                const GWBUF* pValue,
                                 NodesByKey::iterator* pI,
-                                Node** ppnode);
+                                Node** ppNode);
 
 private:
     struct Stats
@@ -240,7 +240,7 @@ private:
             , evictions(0)
         {}
 
-        void fill(json_t* pbject) const;
+        void fill(json_t* pObject) const;
 
         uint64_t size;       /*< The total size of the stored values. */
         uint64_t items;      /*< The number of stored items. */
@@ -251,12 +251,12 @@ private:
         uint64_t evictions;  /*< How many times an item has been evicted from the cache. */
     };
 
-    const CACHE_STORAGE_CONFIG config_;       /*< The configuration. */
-    Storage*                   pstorage_;     /*< The actual storage. */
-    const uint64_t             max_count_;    /*< The maximum number of items in the LRU list, */
-    const uint64_t             max_size_;     /*< The maximum size of all cached items. */
-    mutable Stats              stats_;        /*< Cache statistics. */
-    mutable NodesByKey         nodes_by_key_; /*< Mapping from cache keys to corresponding Node. */
-    mutable Node*              phead_;        /*< The node at the LRU list. */
-    mutable Node*              ptail_;        /*< The node at bottom of the LRU list.*/
+    const CACHE_STORAGE_CONFIG m_config;       /*< The configuration. */
+    Storage*                   m_pStorage;     /*< The actual storage. */
+    const uint64_t             m_max_count;    /*< The maximum number of items in the LRU list, */
+    const uint64_t             m_max_size;     /*< The maximum size of all cached items. */
+    mutable Stats              m_stats;        /*< Cache statistics. */
+    mutable NodesByKey         m_nodes_by_key; /*< Mapping from cache keys to corresponding Node. */
+    mutable Node*              m_pHead;        /*< The node at the LRU list. */
+    mutable Node*              m_pTail;        /*< The node at bottom of the LRU list.*/
 };

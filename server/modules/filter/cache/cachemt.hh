@@ -46,5 +46,5 @@ private:
     CacheMT& operator = (const CacheMT&);
 
 private:
-    mutable SPINLOCK m_lockPending; // Lock used for protecting 'pending'.
+    mutable SPINLOCK m_lock_pending; // Lock used for protecting 'pending'.
 };

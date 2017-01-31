@@ -180,7 +180,7 @@ public:
      *
      * @return The corresponding rules object, or NULL in case of error.
      */
-    static CacheRules* load(const char *zpath, uint32_t debug);
+    static CacheRules* load(const char *zPath, uint32_t debug);
 
     /**
      * Returns the json rules object.
@@ -200,7 +200,7 @@ public:
      *
      * @return True, if the results should be stored.
      */
-    bool should_store(const char* zdefault_db, const GWBUF* pquery) const;
+    bool should_store(const char* zDefault_db, const GWBUF* pQuery) const;
 
     /**
      * Returns boolean indicating whether the cache should be used, that is consulted.
@@ -209,16 +209,16 @@ public:
      *
      * @return True, if the cache should be used.
      */
-    bool should_use(const MXS_SESSION* psession) const;
+    bool should_use(const MXS_SESSION* pSession) const;
 
 private:
-    CacheRules(CACHE_RULES* prules);
+    CacheRules(CACHE_RULES* pRules);
 
     CacheRules(const CacheRules&);
     CacheRules& operator = (const CacheRules&);
 
 private:
-    CACHE_RULES* prules_;
+    CACHE_RULES* m_pRules;
 };
 
 #endif

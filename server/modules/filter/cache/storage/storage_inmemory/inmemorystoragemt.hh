@@ -40,5 +40,5 @@ private:
     InMemoryStorageMT& operator = (const InMemoryStorageMT&);
 
 private:
-    mutable SPINLOCK lock_;
+    mutable SPINLOCK m_lock;
 };
