@@ -229,6 +229,12 @@ and routed. Here is a list of the current limitations.
   the query will be routed to the first available server. This possibly
   returns an error about database rights instead of a missing database.
 
+* The preparation of a prepared statement is routed to all servers. The
+  execution of a prepared statement is routed to the first available server or
+  to the server pointed by a routing hint attached to the query. As text
+  protocol prepared statements are relatively rare, prepared statements can't be
+  considered as supported in schemarouter
+
 ## Avrorouter limitations (avrorouter)
 
 The avrorouter does not support the following data types and conversions.
