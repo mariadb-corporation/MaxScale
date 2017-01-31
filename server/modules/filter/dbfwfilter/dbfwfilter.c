@@ -2174,11 +2174,9 @@ USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
     return user;
 }
 
-static bool command_is_mandatory(GWBUF *buffer)
+static bool command_is_mandatory(const GWBUF *buffer)
 {
-    uint8_t cmd = *(((uint8_t*)GWBUF_DATA(buffer)) + 4);
-
-    switch (cmd)
+    switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
     {
     case MYSQL_COM_QUIT:
     case MYSQL_COM_PING:
