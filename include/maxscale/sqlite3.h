@@ -12,14 +12,14 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-#include <sqlite3.h>
-
 /**
  * @file sqlite3.h
  *
  * Common SQLite defines
  */
+
+#include <maxscale/cdefs.h>
+#include <sqlite3.h>
 
 /** SQLite3 version 3.7.14 introduced the new v2 close interface */
 #if SQLITE_VERSION_NUMBER < 3007014

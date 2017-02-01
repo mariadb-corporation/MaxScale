@@ -12,15 +12,15 @@
  * Public License.
  */
 
-#include <maxscale/cdefs.h>
-
-MXS_BEGIN_DECLS
-
 /**
- * @file lmits.h
+ * @file limits.h
  *
  * This file contains defines for hard limits of MaxScale.
  */
+
+#include <maxscale/cdefs.h>
+
+MXS_BEGIN_DECLS
 
 
 /**
