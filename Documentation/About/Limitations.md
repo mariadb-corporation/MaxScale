@@ -231,9 +231,8 @@ and routed. Here is a list of the current limitations.
 
 * The preparation of a prepared statement is routed to all servers. The
   execution of a prepared statement is routed to the first available server or
-  to the server pointed by a routing hint attached to the query. As text
-  protocol prepared statements are relatively rare, prepared statements can't be
-  considered as supported in schemarouter
+  to the server pointed by a routing hint attached to the query. In practice
+  this means that prepared statements aren't supported by the schemarouter.
 
 ## Avrorouter limitations (avrorouter)
 
