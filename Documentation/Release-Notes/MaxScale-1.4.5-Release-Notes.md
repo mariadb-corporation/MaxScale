@@ -1,5 +1,5 @@
 
-# MariaDB MaxScale 1.4.5 Release Notes
+# MariaDB MaxScale 1.4.5 Release Notes -- 2017-02-01
 
 Release 1.4.5 is a GA release.
 
