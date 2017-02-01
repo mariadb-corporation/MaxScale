@@ -23,6 +23,7 @@
 #include <maxscale/authenticator.h>
 #include <maxscale/ssl.h>
 #include <maxscale/modinfo.h>
+#include <maxscale/poll_core.h>
 #include <netinet/in.h>
 
 MXS_BEGIN_DECLS
@@ -184,6 +185,7 @@ typedef enum
  */
 typedef struct dcb
 {
+    MXS_POLL_DATA   poll;
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
@@ -228,7 +230,6 @@ typedef struct dcb
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
     struct
     {
-        int id; /**< The owning thread's ID */
         struct dcb *next; /**< Next DCB in owning thread's list */
         struct dcb *tail; /**< Last DCB in owning thread's list */
     } thread;

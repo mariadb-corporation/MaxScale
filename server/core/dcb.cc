@@ -277,7 +277,7 @@ dcb_clone(DCB *orig)
         clonedcb->ssl_state = orig->ssl_state;
         clonedcb->remote = remote;
         clonedcb->user = user;
-        clonedcb->thread.id = orig->thread.id;
+        clonedcb->poll.thread.id = orig->poll.thread.id;
         clonedcb->protocol = orig->protocol;
 
         clonedcb->func.write = dcb_null_write;
@@ -619,7 +619,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     {
         MXS_DEBUG("%lu [dcb_connect] Looking for persistent connection DCB "
                   "user %s protocol %s\n", pthread_self(), user, protocol);
-        dcb = server_get_persistent(server, user, protocol, session->client_dcb->thread.id);
+        dcb = server_get_persistent(server, user, protocol, session->client_dcb->poll.thread.id);
         if (dcb)
         {
             /**
@@ -1428,7 +1428,7 @@ dcb_close(DCB *dcb)
         /*<
          * Add closing dcb to the top of the list, setting zombie marker
          */
-        int owner = dcb->thread.id;
+        int owner = dcb->poll.thread.id;
         dcb->dcb_is_zombie = true;
         dcb->memdata.next = zombies[owner];
         zombies[owner] = dcb;
@@ -1462,7 +1462,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
-        && dcb_persistent_clean_count(dcb, dcb->thread.id, false) < dcb->server->persistpoolmax
+        && dcb_persistent_clean_count(dcb, dcb->poll.thread.id, false) < dcb->server->persistpoolmax
         && dcb->server->stats.n_persistent < dcb->server->persistpoolmax)
     {
         DCB_CALLBACK *loopcallback;
@@ -1492,8 +1492,8 @@ dcb_maybe_add_persistent(DCB *dcb)
             MXS_FREE(loopcallback);
         }
 
-        dcb->nextpersistent = dcb->server->persistent[dcb->thread.id];
-        dcb->server->persistent[dcb->thread.id] = dcb;
+        dcb->nextpersistent = dcb->server->persistent[dcb->poll.thread.id];
+        dcb->server->persistent[dcb->poll.thread.id] = dcb;
         atomic_add(&dcb->server->stats.n_persistent, 1);
         atomic_add(&dcb->server->stats.n_current, -1);
         return true;
@@ -3035,20 +3035,20 @@ void dcb_add_to_list(DCB *dcb)
          * as that part is done in the final zombie processing.
          */
 
-        spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
+        spinlock_acquire(&all_dcbs_lock[dcb->poll.thread.id]);
 
-        if (all_dcbs[dcb->thread.id] == NULL)
+        if (all_dcbs[dcb->poll.thread.id] == NULL)
         {
-            all_dcbs[dcb->thread.id] = dcb;
-            all_dcbs[dcb->thread.id]->thread.tail = dcb;
+            all_dcbs[dcb->poll.thread.id] = dcb;
+            all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
         }
         else
         {
-            all_dcbs[dcb->thread.id]->thread.tail->thread.next = dcb;
-            all_dcbs[dcb->thread.id]->thread.tail = dcb;
+            all_dcbs[dcb->poll.thread.id]->thread.tail->thread.next = dcb;
+            all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
         }
 
-        spinlock_release(&all_dcbs_lock[dcb->thread.id]);
+        spinlock_release(&all_dcbs_lock[dcb->poll.thread.id]);
     }
 }
 
@@ -3059,30 +3059,30 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    spinlock_acquire(&all_dcbs_lock[dcb->thread.id]);
+    spinlock_acquire(&all_dcbs_lock[dcb->poll.thread.id]);
 
-    if (dcb == all_dcbs[dcb->thread.id])
+    if (dcb == all_dcbs[dcb->poll.thread.id])
     {
-        DCB *tail = all_dcbs[dcb->thread.id]->thread.tail;
-        all_dcbs[dcb->thread.id] = all_dcbs[dcb->thread.id]->thread.next;
+        DCB *tail = all_dcbs[dcb->poll.thread.id]->thread.tail;
+        all_dcbs[dcb->poll.thread.id] = all_dcbs[dcb->poll.thread.id]->thread.next;
 
-        if (all_dcbs[dcb->thread.id])
+        if (all_dcbs[dcb->poll.thread.id])
         {
-            all_dcbs[dcb->thread.id]->thread.tail = tail;
+            all_dcbs[dcb->poll.thread.id]->thread.tail = tail;
         }
     }
     else
     {
-        DCB *current = all_dcbs[dcb->thread.id]->thread.next;
-        DCB *prev = all_dcbs[dcb->thread.id];
+        DCB *current = all_dcbs[dcb->poll.thread.id]->thread.next;
+        DCB *prev = all_dcbs[dcb->poll.thread.id];
 
         while (current)
         {
             if (current == dcb)
             {
-                if (current == all_dcbs[dcb->thread.id]->thread.tail)
+                if (current == all_dcbs[dcb->poll.thread.id]->thread.tail)
                 {
-                    all_dcbs[dcb->thread.id]->thread.tail = prev;
+                    all_dcbs[dcb->poll.thread.id]->thread.tail = prev;
                 }
                 prev->thread.next = current->thread.next;
                 break;
@@ -3097,7 +3097,7 @@ static void dcb_remove_from_list(DCB *dcb)
     dcb->thread.next = NULL;
     dcb->thread.tail = NULL;
 
-    spinlock_release(&all_dcbs_lock[dcb->thread.id]);
+    spinlock_release(&all_dcbs_lock[dcb->poll.thread.id]);
 }
 
 /**
