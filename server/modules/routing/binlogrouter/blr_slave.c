@@ -521,7 +521,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             MXS_FREE(query_text);
             return blr_slave_send_timestamp(router, slave);
         }
-        else if (strcasecmp(word, "@master_binlog_checksum") == 0)
+        else if (strcasecmp(word, "@master_binlog_checksum") == 0 || strcasecmp(word, "@@global.binlog_checksum") == 0)
         {
             MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.chksum2);
