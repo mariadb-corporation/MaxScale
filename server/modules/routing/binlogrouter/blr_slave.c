@@ -358,6 +358,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     static const char maxwell_binlog_format_query[] = "SHOW VARIABLES LIKE 'binlog_format'";
     static const char maxwell_binlog_row_image_query[] = "SHOW VARIABLES LIKE 'binlog_row_image'";
     static const char maxwell_lower_case_tables_query[] = "select @@lower_case_table_names";
+    static const char maxwell_binlog_checksum_query[] = "SELECT @@global.binlog_checksum";
 
 
     qtext = (char*)GWBUF_DATA(queue);
@@ -481,6 +482,16 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             return 1;
         }
         MXS_ERROR("Error sending lower_case_tables query response");
+    }
+    else if (strcmp(query_text, maxwell_binlog_checksum_query) == 0)
+    {
+        int rc = blr_slave_replay(router, slave, router->saved_master.binlog_checksum);
+        if (rc >= 0)
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
+        MXS_ERROR("Error sending binlog_checksum query response");
     }
     else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {

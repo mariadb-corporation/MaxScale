@@ -783,6 +783,18 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.lower_case_tables = buf;
         blr_cache_response(router, "lower_case_tables", buf);
 
+        buf = blr_make_query(router->master, "SELECT @@global.binlog_checksum");
+        router->master_state = BLRM_BINLOG_CHECKSUM;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_CHECKSUM:
+        if (router->saved_master.binlog_checksum)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_checksum);
+        }
+        router->saved_master.binlog_checksum = buf;
+        blr_cache_response(router, "binlog_checksum", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
