@@ -14,14 +14,6 @@
 
 /**
  * @file resultset.h The MaxScale generic result set mechanism
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 17/02/15     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

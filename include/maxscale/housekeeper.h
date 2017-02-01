@@ -21,14 +21,6 @@ MXS_BEGIN_DECLS
 
 /**
  * @file housekeeper.h A mechanism to have task run periodically
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 29/08/14     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 typedef enum

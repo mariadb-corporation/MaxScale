@@ -14,7 +14,6 @@
 
 /**
  * @file include/maxscale/config.h The configuration handling elements
- *
  */
 
 #include <maxscale/cdefs.h>

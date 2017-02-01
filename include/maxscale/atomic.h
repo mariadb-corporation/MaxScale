@@ -14,15 +14,6 @@
 
 /**
  * @file atomic.h The atomic operations used within the gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 10/06/13     Mark Riddoch    Initial implementation
- * 23/06/15     Martin Brampton Alternative for C++
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

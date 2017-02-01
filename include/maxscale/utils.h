@@ -14,14 +14,6 @@
 
 /**
  * @file utils.h Utility functions headers
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 22/03/16 Martin Brampton     Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

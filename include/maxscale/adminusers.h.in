@@ -14,14 +14,6 @@
 
 /**
  * @file adminusers.h - Administration users support routines
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 18/07/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

@@ -16,14 +16,6 @@
  * @file notification.h
  *
  * The configuration stuct for notification/feedback service
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 02/03/15 Massimiliano Pinto  Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

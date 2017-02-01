@@ -16,26 +16,6 @@
  * @file service.h
  *
  * The service level definitions within the gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 14/06/13     Mark Riddoch            Initial implementation
- * 18/06/13     Mark Riddoch            Addition of statistics and function
- *                                      prototypes
- * 23/06/13     Mark Riddoch            Added service user and users
- * 06/02/14     Massimiliano Pinto      Added service flag for root user access
- * 25/02/14     Massimiliano Pinto      Added service refresh limit feature
- * 07/05/14     Massimiliano Pinto      Added version_string field to service
- *                                      struct
- * 29/05/14     Mark Riddoch            Filter API mechanism
- * 26/06/14     Mark Riddoch            Added WeightBy support
- * 09/09/14     Massimiliano Pinto      Added service option for localhost authentication
- * 09/10/14     Massimiliano Pinto      Added service resources via hashtable
- * 31/05/16     Martin Brampton         Add fields to support connection throttling
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

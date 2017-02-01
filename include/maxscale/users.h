@@ -15,17 +15,6 @@
 /**
  * @file users.h The functions to manipulate the table of users maintained
  * for each service
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23/06/13     Mark Riddoch            Initial implementation
- * 26/02/14     Massimiliano Pinto      Added checksum to users' table with SHA1
- * 27/02/14     Massimiliano Pinto      Added USERS_HASHTABLE_DEFAULT_SIZE
- * 28/02/14     Massimiliano Pinto      Added usersCustomUserFormat, optional username format routine
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

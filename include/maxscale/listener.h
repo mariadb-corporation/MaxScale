@@ -14,16 +14,6 @@
 
 /**
  * @file listener.h
- *
- * The listener definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 19/01/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

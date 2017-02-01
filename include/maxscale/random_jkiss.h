@@ -12,13 +12,6 @@
  * Public License.
  */
 
-/*
- * File:   random_jkiss.h
- * Author: mbrampton
- *
- * Created on 26 August 2015, 15:34
- */
-
 #include <maxscale/cdefs.h>
 
 MXS_BEGIN_DECLS

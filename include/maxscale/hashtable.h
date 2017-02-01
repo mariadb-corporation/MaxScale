@@ -15,17 +15,6 @@
 /**
  * @file hashtable.h A general purpose hashtable mechanism for use within the
  * gateway
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23/06/2013   Mark Riddoch            Initial implementation
- * 23/07/2013   Mark Riddoch            Addition of iterator mechanism
- * 08/01/2014   Massimiliano Pinto      Added function pointers for key/value copy and free
- *                                      the routine hashtable_memory_fns() changed accordingly
- *
- * @endverbatim
  */
 #include <maxscale/cdefs.h>
 #include <maxscale/debug.h>

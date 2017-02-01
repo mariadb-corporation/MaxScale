@@ -16,13 +16,6 @@
 /**
  * @file pcre2.h - Utility functions for regular expression matching
  * with the bundled PCRE2 library.
- *
- * @verbatim
- * Revision History
- *
- * Date       Who           Description
- * 30-10-2015 Markus Makela Initial implementation
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

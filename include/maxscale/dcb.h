@@ -14,35 +14,6 @@
 
 /**
  * @file dcb.h  The Descriptor Control Block
- *
- * The function pointer table used by descriptors to call relevant functions
- * within the protocol specific code.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 01/06/2013   Mark Riddoch            Initial implementation
- * 11/06/2013   Mark Riddoch            Updated GWPROTOCOL structure with new
- *                                      entry points
- * 18/06/2013   Mark Riddoch            Addition of the listener entry point
- * 02/07/2013   Massimiliano Pinto      Addition of delayqlock, delayq and authlock
- *                                      for handling backend asynchronous protocol connection
- *                                      and a generic lock for backend authentication
- * 12/07/2013   Massimiliano Pinto      Added auth entry point
- * 15/07/2013   Massimiliano Pinto      Added session entry point
- * 16/07/2013   Massimiliano Pinto      Added command type for dcb
- * 07/02/2014   Massimiliano Pinto      Added ipv4 data struct into for dcb
- * 07/05/2014   Mark Riddoch            Addition of callback mechanism
- * 08/05/2014   Mark Riddoch            Addition of writeq high and low watermarks
- * 27/08/2014   Mark Riddoch            Addition of write event queuing
- * 23/09/2014   Mark Riddoch            New poll processing queue
- * 19/06/2015   Martin Brampton         Provision of persistent connections
- * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
- * 01/02/2016   Martin Brampton         Added fields for SSL and authentication
- * 27/06/2016   Martin Brampton         Changed DCB to conform to list manager
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

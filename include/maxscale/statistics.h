@@ -14,14 +14,6 @@
 
 /**
  * @file statistics.h  - Lock-free statistics gathering
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                 Description
- * 21/01/16     Markus Makela       Initial implementation
- * 15/06/16     Martin Brampton     Frequently used functions inlined
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

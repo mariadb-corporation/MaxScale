@@ -14,14 +14,6 @@
 
 /**
  * @file hint.h The generic hint data that may be attached to buffers
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 10/07/14     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>

@@ -16,14 +16,6 @@
  * @file ssl.h
  *
  * The SSL definitions for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 27/01/16     Martin Brampton         Initial implementation
- *
- * @endverbatim
  */
 
 #include <maxscale/cdefs.h>
