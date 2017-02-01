@@ -6,6 +6,8 @@ leverages the speed advantage of LOAD DATA LOCAL INFILE over regular inserts
 while also reducing the overall network traffic by condensing the inserted
 values into CSV.
 
+**Note**: This is an experimental filter module
+
 ## Filter Parameters
 
 This filter has no parameters.
