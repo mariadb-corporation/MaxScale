@@ -774,48 +774,54 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
         char filename[PATH_MAX + 1];
         snprintf(filename, PATH_MAX, "%s/%s", router->avrodir, client->avro_binfile);
 
+        bool ok = true;
+
         spinlock_acquire(&client->file_lock);
-        if (client->file_handle == NULL)
+        if (client->file_handle == NULL &&
+            (client->file_handle = maxavro_file_open(filename)) == NULL)
         {
-            client->file_handle = maxavro_file_open(filename);
+            ok = false;
         }
         spinlock_release(&client->file_lock);
 
-        switch (client->format)
+        if (ok)
         {
-        case AVRO_FORMAT_JSON:
-            /** Currently only JSON format supports seeking to a GTID */
-            if (client->requested_gtid &&
-                seek_to_index_pos(client, client->file_handle) &&
-                seek_to_gtid(client, client->file_handle))
+            switch (client->format)
             {
-                client->requested_gtid = false;
+                case AVRO_FORMAT_JSON:
+                    /** Currently only JSON format supports seeking to a GTID */
+                    if (client->requested_gtid &&
+                        seek_to_index_pos(client, client->file_handle) &&
+                        seek_to_gtid(client, client->file_handle))
+                    {
+                        client->requested_gtid = false;
+                    }
+
+                    read_more = stream_json(client);
+                    break;
+
+                case AVRO_FORMAT_AVRO:
+                    read_more = stream_binary(client);
+                    break;
+
+                default:
+                    MXS_ERROR("Unexpected format: %d", client->format);
+                    break;
             }
 
-            read_more = stream_json(client);
-            break;
 
-        case AVRO_FORMAT_AVRO:
-            read_more = stream_binary(client);
-            break;
+            if (maxavro_get_error(client->file_handle) != MAXAVRO_ERR_NONE)
+            {
+                MXS_ERROR("Reading Avro file failed with error '%s'.",
+                          maxavro_get_error_string(client->file_handle));
+            }
 
-        default:
-            MXS_ERROR("Unexpected format: %d", client->format);
-            break;
+            /* update client struct */
+            memcpy(&client->avro_file, client->file_handle, sizeof(client->avro_file));
+
+            /* may be just use client->avro_file->records_read and remove this var */
+            client->last_sent_pos = client->avro_file.records_read;
         }
-
-
-        if (maxavro_get_error(client->file_handle) != MAXAVRO_ERR_NONE)
-        {
-            MXS_ERROR("Reading Avro file failed with error '%s'.",
-                      maxavro_get_error_string(client->file_handle));
-        }
-
-        /* update client struct */
-        memcpy(&client->avro_file, client->file_handle, sizeof(client->avro_file));
-
-        /* may be just use client->avro_file->records_read and remove this var */
-        client->last_sent_pos = client->avro_file.records_read;
     }
     else
     {

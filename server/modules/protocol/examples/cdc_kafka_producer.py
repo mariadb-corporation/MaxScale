@@ -36,7 +36,7 @@ producer = KafkaProducer(bootstrap_servers=[opts.kafka_broker])
 
 while True:
    try:
-      buf = sys.stdin.read(128)
+      buf = sys.stdin.readline()
 
       if len(buf) == 0:
          break
@@ -48,6 +48,7 @@ while True:
          data = decoder.raw_decode(rbuf.decode('ascii'))
          rbuf = rbuf[data[1]:]
          producer.send(topic=opts.kafka_topic, value=json.dumps(data[0]).encode())
+         producer.flush()
 
    # JSONDecoder will return a ValueError if a partial JSON object is read
    except ValueError as err:
@@ -57,5 +58,3 @@ while True:
    except Exception as ex:
       print(ex)
       break
-
-producer.flush()

@@ -2304,6 +2304,24 @@ DBFW_USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
     return user;
 }
 
+static bool command_is_mandatory(const GWBUF *buffer)
+{
+    switch (MYSQL_GET_COMMAND((uint8_t*)GWBUF_DATA(buffer)))
+    {
+    case MYSQL_COM_QUIT:
+    case MYSQL_COM_PING:
+    case MYSQL_COM_CHANGE_USER:
+    case MYSQL_COM_SET_OPTION:
+    case MYSQL_COM_FIELD_LIST:
+    case MYSQL_COM_PROCESS_KILL:
+    case MYSQL_COM_PROCESS_INFO:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 /**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
@@ -2340,12 +2358,30 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         type = qc_get_type_mask(queue);
     }
 
+    uint32_t type = 0;
+
+    if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
+    {
+        type = qc_get_type(queue);
+    }
+
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
         GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
                                      "multi-statements.");
         gwbuf_free(queue);
         MXS_FREE(my_session->errmsg);
+        my_session->errmsg = NULL;
+        rval = dcb->func.write(dcb, err);
+    }
+    else if (QUERY_IS_TYPE(type, QUERY_TYPE_PREPARE_STMT) ||
+             QUERY_IS_TYPE(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
+             modutil_is_SQL_prepare(queue))
+    {
+        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
+                                     "prepared statements.");
+        gwbuf_free(queue);
+        free(my_session->errmsg);
         my_session->errmsg = NULL;
         rval = dcb->func.write(dcb, err);
     }
