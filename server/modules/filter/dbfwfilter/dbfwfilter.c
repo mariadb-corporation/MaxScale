@@ -2384,7 +2384,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         }
 
         DBFW_USER *user = find_user_data(thr_users, dcb->user, dcb->remote);
-        bool query_ok = false;
+        bool query_ok = command_is_mandatory(queue);
 
         if (user)
         {
