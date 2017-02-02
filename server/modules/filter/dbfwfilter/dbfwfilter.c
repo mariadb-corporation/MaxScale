@@ -2367,17 +2367,6 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
         my_session->errmsg = NULL;
         rval = dcb->func.write(dcb, err);
     }
-    else if (qc_query_is_type(type, QUERY_TYPE_PREPARE_STMT) ||
-             qc_query_is_type(type, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-             modutil_is_SQL_prepare(queue))
-    {
-        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
-                                     "prepared statements.");
-        gwbuf_free(queue);
-        free(my_session->errmsg);
-        my_session->errmsg = NULL;
-        rval = dcb->func.write(dcb, err);
-    }
     else
     {
         GWBUF* analyzed_queue = queue;
