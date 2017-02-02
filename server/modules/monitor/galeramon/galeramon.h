@@ -39,8 +39,25 @@
 #include <maxscale/dcb.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/config.h>
+#include <maxscale/hashtable.h>
 
 MXS_BEGIN_DECLS
+
+typedef struct galera_node_info
+{
+    int          joined;
+    int     local_index;
+    int     local_state;
+    int    cluster_size;
+    char  *cluster_uuid;
+    const SERVER  *node;
+} GALERA_NODE_INFO;
+
+typedef struct galera_cluster_info
+{
+    int   c_size;
+    char *c_uuid;
+} GALERA_CLUSTER_INFO;
 
 /**
  * The handle for an instance of a Galera Monitor module
@@ -63,6 +80,8 @@ typedef struct
     uint64_t events; /*< enabled events */
     bool set_donor_nodes; /**< set the wrep_sst_donor variable with an
                            * ordered list of nodes */
+    HASHTABLE *galera_nodes_info; /**< Contains Galera Cluster variables of all nodes */
+    GALERA_CLUSTER_INFO *cluster_info; /**< Contains Galera cluster info */
 } GALERA_MONITOR;
 
 MXS_END_DECLS
