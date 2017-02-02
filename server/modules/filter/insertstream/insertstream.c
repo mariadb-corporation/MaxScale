@@ -540,12 +540,12 @@ static bool only_implicit_values(GWBUF *buffer)
         /** Skip the closing parenthesis and any whitespace */
         ptr++;
 
-        while (isspace(*ptr) && ptr < (char*)buffer->end)
+        while (ptr < (char*)buffer->end && isspace(*ptr))
         {
             ptr++;
         }
 
-        if (!isalnum(*ptr) && ptr < (char*)buffer->end)
+        if (ptr >= (char*)buffer->end || !isalnum(*ptr))
         {
             /**
              * The first pair of parentheses was followed by a non-alphanumeric
