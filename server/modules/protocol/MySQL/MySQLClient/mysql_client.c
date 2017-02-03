@@ -1362,7 +1362,6 @@ gw_client_close(DCB *dcb)
     if (session != NULL && SESSION_STATE_DUMMY != session->state)
     {
         CHK_SESSION(session);
-        spinlock_acquire(&session->ses_lock);
 
         if (session->state != SESSION_STATE_STOPPING)
         {
@@ -1376,13 +1375,8 @@ gw_client_close(DCB *dcb)
          */
         if (session->router_session != NULL)
         {
-            spinlock_release(&session->ses_lock);
             /** Close router session and all its connections */
             router->closeSession(router_instance, session->router_session);
-        }
-        else
-        {
-            spinlock_release(&session->ses_lock);
         }
     }
     return 1;

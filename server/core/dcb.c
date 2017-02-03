@@ -429,13 +429,13 @@ dcb_free_all_memory(DCB *dcb)
         gwbuf_free(dcb->dcb_fakequeue);
         dcb->dcb_fakequeue = NULL;
     }
-    spinlock_acquire(&dcb->cb_lock);
+
     while ((cb_dcb = dcb->callbacks) != NULL)
     {
         dcb->callbacks = cb_dcb->next;
         MXS_FREE(cb_dcb);
     }
-    spinlock_release(&dcb->cb_lock);
+
     if (dcb->ssl)
     {
         SSL_free(dcb->ssl);
@@ -756,10 +756,6 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
      * Add server pointer to dcb
      */
     dcb->server = server;
-
-    /** Copy status field to DCB */
-    dcb->dcb_server_status = server->status;
-    dcb->dcb_port = server->port;
 
     dcb->was_persistent = false;
 
@@ -1721,13 +1717,13 @@ dcb_maybe_add_persistent(DCB *dcb)
                 session_put_ref(local_session);
             }
         }
-        spinlock_acquire(&dcb->cb_lock);
+
         while ((loopcallback = dcb->callbacks) != NULL)
         {
             dcb->callbacks = loopcallback->next;
             MXS_FREE(loopcallback);
         }
-        spinlock_release(&dcb->cb_lock);
+
         dcb->nextpersistent = dcb->server->persistent[dcb->thread.id];
         dcb->server->persistent[dcb->thread.id] = dcb;
         atomic_add(&dcb->server->stats.n_persistent, 1);
@@ -2070,20 +2066,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
     {
         dcb_printf(pdcb, "\t\tDCB is a clone.\n");
     }
-#if SPINLOCK_PROFILE
-    dcb_printf(pdcb, "\tInitlock Statistics:\n");
-    spinlock_stats(&dcb->dcb_initlock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "\tWrite Queue Lock Statistics:\n");
-    spinlock_stats(&dcb->writeqlock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "\tDelay Queue Lock Statistics:\n");
-    spinlock_stats(&dcb->delayqlock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "\tPollin Lock Statistics:\n");
-    spinlock_stats(&dcb->pollinlock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "\tPollout Lock Statistics:\n");
-    spinlock_stats(&dcb->polloutlock, spin_reporter, pdcb);
-    dcb_printf(pdcb, "\tCallback Lock Statistics:\n");
-    spinlock_stats(&dcb->cb_lock, spin_reporter, pdcb);
-#endif
+
     if (dcb->persistentstart)
     {
         char buff[20];
@@ -2337,8 +2320,8 @@ dcb_add_callback(DCB *dcb,
     ptr->cb = callback;
     ptr->userdata = userdata;
     ptr->next = NULL;
-    spinlock_acquire(&dcb->cb_lock);
     cb = dcb->callbacks;
+
     while (cb)
     {
         if (cb->reason == reason && cb->cb == callback &&
@@ -2346,7 +2329,6 @@ dcb_add_callback(DCB *dcb,
         {
             /* Callback is a duplicate, abandon it */
             MXS_FREE(ptr);
-            spinlock_release(&dcb->cb_lock);
             return 0;
         }
         lastcb = cb;
@@ -2360,7 +2342,7 @@ dcb_add_callback(DCB *dcb,
     {
         lastcb->next = ptr;
     }
-    spinlock_release(&dcb->cb_lock);
+
     return 1;
 }
 
@@ -2384,9 +2366,8 @@ dcb_remove_callback(DCB *dcb,
 {
     DCB_CALLBACK *cb, *pcb = NULL;
     int          rval = 0;
-
-    spinlock_acquire(&dcb->cb_lock);
     cb = dcb->callbacks;
+
     if (cb == NULL)
     {
         rval = 0;
@@ -2407,7 +2388,7 @@ dcb_remove_callback(DCB *dcb,
                 {
                     dcb->callbacks = cb->next;
                 }
-                spinlock_release(&dcb->cb_lock);
+
                 MXS_FREE(cb);
                 rval = 1;
                 break;
@@ -2416,10 +2397,7 @@ dcb_remove_callback(DCB *dcb,
             cb = cb->next;
         }
     }
-    if (!rval)
-    {
-        spinlock_release(&dcb->cb_lock);
-    }
+
     return rval;
 }
 
@@ -2433,22 +2411,19 @@ static void
 dcb_call_callback(DCB *dcb, DCB_REASON reason)
 {
     DCB_CALLBACK *cb, *nextcb;
-
-    spinlock_acquire(&dcb->cb_lock);
     cb = dcb->callbacks;
+
     while (cb)
     {
         if (cb->reason == reason)
         {
             nextcb = cb->next;
-            spinlock_release(&dcb->cb_lock);
 
             MXS_DEBUG("%lu [dcb_call_callback] %s",
                       pthread_self(),
                       STRDCBREASON(reason));
 
             cb->cb(dcb, reason, cb->userdata);
-            spinlock_acquire(&dcb->cb_lock);
             cb = nextcb;
         }
         else
@@ -2456,7 +2431,6 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
             cb = cb->next;
         }
     }
-    spinlock_release(&dcb->cb_lock);
 }
 
 /**
@@ -2488,13 +2462,11 @@ dcb_hangup_foreach(struct server* server)
 
         for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
         {
-            spinlock_acquire(&dcb->dcb_initlock);
             if (dcb->state == DCB_STATE_POLLING && dcb->server &&
                 dcb->server == server)
             {
                 poll_fake_hangup_event(dcb);
             }
-            spinlock_release(&dcb->dcb_initlock);
         }
 
         spinlock_release(&all_dcbs_lock[i]);

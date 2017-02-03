@@ -291,19 +291,14 @@ static void handleError(MXS_ROUTER     *instance,
     {
         backend_dcb->dcb_errhandle_called = true;
     }
-    spinlock_acquire(&session->ses_lock);
+
     sesstate = session->state;
     client_dcb = session->client_dcb;
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
         CHK_DCB(client_dcb);
-        spinlock_release(&session->ses_lock);
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
-    }
-    else
-    {
-        spinlock_release(&session->ses_lock);
     }
 
     /** false because connection is not available anymore */

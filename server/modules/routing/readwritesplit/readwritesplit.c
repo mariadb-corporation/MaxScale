@@ -1535,10 +1535,8 @@ static void handle_error_reply_client(MXS_SESSION *ses, ROUTER_CLIENT_SES *rses,
     DCB *client_dcb;
     backend_ref_t *bref;
 
-    spinlock_acquire(&ses->ses_lock);
     sesstate = ses->state;
     client_dcb = ses->client_dcb;
-    spinlock_release(&ses->ses_lock);
 
     if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
     {

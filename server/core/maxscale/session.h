@@ -25,7 +25,7 @@ MXS_BEGIN_DECLS
 #define MXS_UPSTREAM_INIT {0}
 #define SESSION_FILTER_INIT {0}
 
-#define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, .ses_lock = SPINLOCK_INIT, \
+#define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, \
     .stats = SESSION_STATS_INIT, .head = MXS_DOWNSTREAM_INIT, .tail = MXS_UPSTREAM_INIT, \
     .state = SESSION_STATE_ALLOC, .ses_chk_tail = CHK_NUM_SESSION}
 

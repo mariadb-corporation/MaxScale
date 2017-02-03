@@ -638,9 +638,7 @@ gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
                                               session->router_session,
                                               errbuf, dcb, ERRACT_REPLY_CLIENT, &succp);
 
-        spinlock_acquire(&session->ses_lock);
         session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
         ss_dassert(dcb->dcb_errhandle_called);
     }
     else
@@ -737,9 +735,7 @@ gw_read_and_write(DCB *dcb)
 
         if (!succp)
         {
-            spinlock_acquire(&session->ses_lock);
             session->state = SESSION_STATE_STOPPING;
-            spinlock_release(&session->ses_lock);
         }
         return 0;
     }
@@ -1174,22 +1170,7 @@ static int gw_error_backend_event(DCB *dcb)
                                        0,
                                        "Lost connection to backend server.");
 
-    spinlock_acquire(&session->ses_lock);
     ses_state = session->state;
-    spinlock_release(&session->ses_lock);
-
-    /**
-     * Session might be initialized when DCB already is in the poll set.
-     * Thus hangup can occur in the middle of session initialization.
-     * Only complete and successfully initialized sessions allow for
-     * calling error handler.
-     */
-    while (ses_state == SESSION_STATE_READY)
-    {
-        spinlock_acquire(&session->ses_lock);
-        ses_state = session->state;
-        spinlock_release(&session->ses_lock);
-    }
 
     if (ses_state != SESSION_STATE_ROUTER_READY)
     {
@@ -1226,9 +1207,7 @@ static int gw_error_backend_event(DCB *dcb)
      */
     if (!succp)
     {
-        spinlock_acquire(&session->ses_lock);
         session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
     }
 
 retblock:
@@ -1278,22 +1257,7 @@ static int gw_backend_hangup(DCB *dcb)
                                        0,
                                        "Lost connection to backend server.");
 
-    spinlock_acquire(&session->ses_lock);
     ses_state = session->state;
-    spinlock_release(&session->ses_lock);
-
-    /**
-     * Session might be initialized when DCB already is in the poll set.
-     * Thus hangup can occur in the middle of session initialization.
-     * Only complete and successfully initialized sessions allow for
-     * calling error handler.
-     */
-    while (ses_state == SESSION_STATE_READY)
-    {
-        spinlock_acquire(&session->ses_lock);
-        ses_state = session->state;
-        spinlock_release(&session->ses_lock);
-    }
 
     if (ses_state != SESSION_STATE_ROUTER_READY)
     {
@@ -1331,9 +1295,7 @@ static int gw_backend_hangup(DCB *dcb)
     /** There are no required backends available, close session. */
     if (!succp)
     {
-        spinlock_acquire(&session->ses_lock);
         session->state = SESSION_STATE_STOPPING;
-        spinlock_release(&session->ses_lock);
     }
 
 retblock:
@@ -1372,7 +1334,7 @@ static int gw_backend_close(DCB *dcb)
          * but client's close and adding client's DCB to zombies list is executed
          * only if client's DCB's state does _not_ change in parallel.
          */
-        spinlock_acquire(&session->ses_lock);
+
         /**
          * If session->state is STOPPING, start closing client session.
          * Otherwise only this backend connection is closed.
@@ -1382,19 +1344,9 @@ static int gw_backend_close(DCB *dcb)
         {
             if (session->client_dcb->state == DCB_STATE_POLLING)
             {
-                spinlock_release(&session->ses_lock);
-
                 /** Close client DCB */
                 dcb_close(session->client_dcb);
             }
-            else
-            {
-                spinlock_release(&session->ses_lock);
-            }
-        }
-        else
-        {
-            spinlock_release(&session->ses_lock);
         }
     }
     return 1;
@@ -1472,9 +1424,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 
         if (!succp)
         {
-            spinlock_acquire(&session->ses_lock);
             session->state = SESSION_STATE_STOPPING;
-            spinlock_release(&session->ses_lock);
         }
     }
 
@@ -1565,8 +1515,6 @@ static int gw_change_user(DCB *backend,
         memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
     }
 
-    spinlock_acquire(&in_session->ses_lock);
-
     /* save current_database name */
     strcpy(current_database, current_session->db);
 
@@ -1586,7 +1534,6 @@ static int gw_change_user(DCB *backend,
                                             sizeof(client_protocol->scramble),
                                             username, client_sha1);
     strcpy(current_session->db, current_database);
-    spinlock_release(&in_session->ses_lock);
 
     if (auth_ret != 0)
     {
@@ -1594,7 +1541,6 @@ static int gw_change_user(DCB *backend,
         {
             /* Try authentication again with new repository data */
             /* Note: if no auth client authentication will fail */
-            spinlock_acquire(&in_session->ses_lock);
             *current_session->db = 0;
             auth_ret = gw_check_mysql_scramble_data(
                            backend->session->client_dcb,
@@ -1603,7 +1549,6 @@ static int gw_change_user(DCB *backend,
                            sizeof(client_protocol->scramble),
                            username, client_sha1);
             strcpy(current_session->db, current_database);
-            spinlock_release(&in_session->ses_lock);
         }
     }
 

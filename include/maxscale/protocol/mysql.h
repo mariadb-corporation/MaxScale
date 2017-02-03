@@ -269,7 +269,6 @@ typedef struct
 #endif
     int                    fd;                           /*< The socket descriptor */
     struct dcb*            owner_dcb;                    /*< The DCB of the socket we are running on */
-    SPINLOCK               protocol_lock;                /*< Protocol lock */
     mysql_server_cmd_t     current_command;              /*< Current command being executed */
     server_command_t       protocol_command;             /*< session command list */
     server_command_t*      protocol_cmd_history;         /*< session command history */

@@ -536,7 +536,6 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
         if ((bsession = my_session->branch_session) != NULL)
         {
             CHK_SESSION(bsession);
-            spinlock_acquire(&bsession->ses_lock);
 
             if (bsession->state != SESSION_STATE_STOPPING)
             {
@@ -545,7 +544,6 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
             router = bsession->service->router;
             router_instance = bsession->service->router_instance;
             rsession = bsession->router_session;
-            spinlock_release(&bsession->ses_lock);
 
             /** Close router session and all its connections */
             router->closeSession(router_instance, rsession);
