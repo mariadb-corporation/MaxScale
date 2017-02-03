@@ -225,7 +225,7 @@ int MySQLSendHandshake(DCB* dcb)
     uint8_t mysql_server_language = 8;
     uint8_t mysql_server_status[2];
     uint8_t mysql_scramble_len = 21;
-    uint8_t mysql_filler_ten[10];
+    uint8_t mysql_filler_ten[10] = {};
     /* uint8_t mysql_last_byte = 0x00; not needed */
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
     char *version_string;
@@ -239,12 +239,14 @@ int MySQLSendHandshake(DCB* dcb)
 
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF *buf;
+    bool is_maria = false;
 
     /* get the version string from service property if available*/
     if (dcb->service->version_string != NULL)
     {
         version_string = dcb->service->version_string;
         len_version_string = strlen(version_string);
+        is_maria = strstr(version_string, "10.2.");
     }
     else
     {
@@ -257,9 +259,15 @@ int MySQLSendHandshake(DCB* dcb)
     // copy back to the caller
     memcpy(protocol->scramble, server_scramble, GW_MYSQL_SCRAMBLE_SIZE);
 
-    // fill the handshake packet
-
-    memset(mysql_filler_ten, 0x00, sizeof(mysql_filler_ten));
+    if (is_maria)
+    {
+        /**
+         * The new 10.2 capability flags are stored in the last 4 bytes of the
+         * 10 byte filler block.
+         */
+        uint32_t new_flags = MXS_MARIA_CAP_STMT_BULK_OPERATIONS;
+        memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
+    }
 
     // thread id, now put thePID
     id_num = getpid() + dcb->fd;
@@ -325,11 +333,19 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_handshake_payload++;
 
     // write server capabilities part one
-    mysql_server_capabilities_one[0] = GW_MYSQL_SERVER_CAPABILITIES_BYTE1;
-    mysql_server_capabilities_one[1] = GW_MYSQL_SERVER_CAPABILITIES_BYTE2;
+    mysql_server_capabilities_one[0] = (uint8_t)GW_MYSQL_CAPABILITIES_SERVER;
+    mysql_server_capabilities_one[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 8);
 
+    // Check that we match the old values
+    ss_dassert(mysql_server_capabilities_one[0] = 0xff);
+    ss_dassert(mysql_server_capabilities_one[1] = 0xf7);
 
-    mysql_server_capabilities_one[0] &= ~(int)GW_MYSQL_CAPABILITIES_COMPRESS;
+    if (is_maria)
+    {
+        /** A MariaDB 10.2 server doesn't send the CLIENT_MYSQL capability
+         * to signal that it supports extended capabilities */
+        mysql_server_capabilities_one[0] &= ~(uint8_t)GW_MYSQL_CAPABILITIES_CLIENT_MYSQL;
+    }
 
     if (ssl_required_by_dcb(dcb))
     {
@@ -350,8 +366,13 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_status);
 
     //write server capabilities part two
-    mysql_server_capabilities_two[0] = 15;
-    mysql_server_capabilities_two[1] = 128;
+    mysql_server_capabilities_two[0] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 16);
+    mysql_server_capabilities_two[1] = (uint8_t)(GW_MYSQL_CAPABILITIES_SERVER >> 24);
+
+    // Check that we match the old values
+    ss_dassert(mysql_server_capabilities_two[0] == 15);
+    /** NOTE: pre-2.1 versions sent the fourth byte of the capabilities as
+     the value 128 even though there's no such capability. */
 
     memcpy(mysql_handshake_payload, mysql_server_capabilities_two, sizeof(mysql_server_capabilities_two));
     mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_two);
@@ -531,6 +552,13 @@ static void store_client_information(DCB *dcb, GWBUF *buffer)
 
     proto->client_capabilities = gw_mysql_get_byte4(data + MYSQL_CLIENT_CAP_OFFSET);
     proto->charset = data[MYSQL_CHARSET_OFFSET];
+
+    /** MariaDB 10.2 compatible clients don't set the first bit to signal that
+     * there are extra capabilities stored in the last 4 bytes of the 23 byte filler. */
+    if ((proto->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT_MYSQL) == 0)
+    {
+        proto->extra_capabilities = gw_mysql_get_byte4(data + MARIADB_CAP_OFFSET);
+    }
 
     if (len > MYSQL_AUTH_PACKET_BASE_SIZE)
     {
