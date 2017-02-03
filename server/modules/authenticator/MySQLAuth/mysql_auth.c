@@ -557,16 +557,19 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
                   port->name, port->address ? port->address : "0.0.0.0", port->port);
 
-        strcat(path, DBUSERS_FILE);
+        if (mxs_mkdir_all(path, S_IRWXU))
+        {
+            strcat(path, DBUSERS_FILE);
 
-        if (!dbusers_load(instance->handle, path))
-        {
-            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
-            rc = MXS_AUTH_LOADUSERS_ERROR;
-        }
-        else
-        {
-            MXS_WARNING("[%s] Using cached credential information from '%s'.", service->name, path);
+            if (!dbusers_load(instance->handle, path))
+            {
+                MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
+                rc = MXS_AUTH_LOADUSERS_ERROR;
+            }
+            else
+            {
+                MXS_WARNING("[%s] Using cached credential information from '%s'.", service->name, path);
+            }
         }
 
         if (instance->inject_service_user)
