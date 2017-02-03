@@ -5,18 +5,61 @@ The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-_Note that the cache is still experimental._
+_Note that the cache is still experimental and that non-backward compatible
+changes may be made._
 
 ## Limitations
 
-* Currently there is **no** cache invalidation, apart from _time-to-live_. This
-will be changed in forthcoming releases.
+All of these limitations may be addressed in forthcoming releases.
 
-* Resultsets of prepared statements are **not** cached. This will be changed
-in forthcoming releases.
+### Invalidation
+Currently there is **no** cache invalidation, apart from _time-to-live_.
 
-* Data from the cache will be used and the cache will be populated **only** if
-no transaction or an explicitly _read-only_ transaction is in progress.
+### Prepared Statements
+Resultsets of prepared statements are **not** cached.
+
+### Transactions
+The cache will be used and populated **only** if there is _no_ on-going
+transaction or if an on-going transaction is _explicitly_ read-only (that is,
+`START TRANSACTION READ ONLY`).
+
+### Variables
+The cache key is effectively the entire _SELECT_ statement. However, the
+value of any variables used in the select is **not** considered. For instance,
+if a variable is used in the _WHERE_ clause of the select, a subsequent
+identical select will return the wrong result, if the value of the variable
+has been changed in between.
+```
+MySQL [testdb]> create table tbl (a int, b int);
+MySQL [testdb]> insert into tbl values (1, 2), (3, 4);
+
+MySQL [testdb]> set @var=2;
+MySQL [testdb]> select a from tbl where b=@var;
++------+
+| a    |
++------+
+|    1 |
++------+
+
+MySQL [testdb]> set @var=4;
+MySQL [testdb]> select a from tbl where b=@var;
++------+
+| a    |
++------+
+|    1 |
++------+
+```
+In the second case, the correct answer would have been `3` and not `1`.
+
+### Security
+
+The cache is **not** aware of grants.
+
+The implication is that unless the cache has been explicitly configured
+who the caching should apply to, the presence of the cache may provide
+a user with access to data he should not have access to.
+
+Please read the section [Security](#security-1) for more detailed information.
 
 ## Configuration
 
@@ -67,6 +110,7 @@ argument. For instance:
 ```
 storage=storage_inmemory
 ```
+See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
 
@@ -464,6 +508,85 @@ regardless of what host the `admin` user comes from.
     ]
 }
 ```
+# Security
+
+As the cache is not aware of grants, unless the cache has been explicitly
+configured who the caching should apply to, the presence of the cache
+may provide a user with access to data he should not have access to.
+
+Suppose there is a table ``access`` that the user _alice_ has access to,
+but the user _bob_ does not. If _bob_ tries to access the table, he will
+get an error as reply:
+```
+MySQL [testdb]> select * from access;
+ERROR 1142 (42000): SELECT command denied to user 'bob'@'localhost' for table 'access'
+```
+If we now setup caching for the table, using the simplest possible rules
+file, _bob_ will get access to data from the table, provided he executes
+a select identical with one _alice_ has executed.
+
+For instance, suppose the rules look as follows:
+```
+{
+    "store": [
+        {
+            "attribute": "table",
+            "op": "=",
+            "value": "access"
+        }
+    ]
+}
+```
+If _alice_ now queries the table, she will get the result, which also will
+be cached:
+```
+MySQL [testdb]> select * from access;
++------+------+
+| a    | b    |
++------+------+
+|   47 |   11 |
++------+------+
+```
+If _bob_ now executes the very same query, and the result is still in the
+cache, it will be returned to him.
+```
+MySQL [testdb]> select current_user();
++----------------+
+| current_user() |
++----------------+
+| bob@127.0.0.1  |
++----------------+
+1 row in set (0.00 sec)
+
+MySQL [testdb]> select * from access;
++------+------+
+| a    | b    |
++------+------+
+|   47 |   11 |
++------+------+
+```
+That can be prevented, by explicitly declaring in the rules that the caching
+should be applied to _alice_ only.
+```
+{
+    "store": [
+        {
+            "attribute": "table",
+            "op": "=",
+            "value": "access"
+        }
+    ],
+    "use": [
+        {
+            "attribute": "user",
+            "op": "=",
+            "value": "'alice'@'%'"
+        }
+    ]
+}
+```
+With these rules in place, _bob_ is again denied access, since queries
+targeting the table `access` will in his case not be served from the cache.
 
 # Storage
 
@@ -471,6 +594,9 @@ regardless of what host the `admin` user comes from.
 
 This simple storage module uses the standard memory allocator for storing
 the cached data.
+```
+storage=storage_inmemory
+```
 
 ## `storage_rocksdb`
 
@@ -479,6 +605,9 @@ directory where the RocksDB database will be created is by default created
 into the _MaxScale cache_ directory, which usually is not on a RAM disk. For
 maximum performance, you may want to explicitly place the RocksDB database
 on a RAM disk.
+```
+storage=storage_rocksdb
+```
 
 ### Parameters
 
