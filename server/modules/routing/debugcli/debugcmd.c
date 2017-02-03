@@ -135,12 +135,6 @@ struct subcommand showoptions[] =
     },
 #endif
     {
-        "dcblist", 0, 0, dprintDCBList,
-        "Show DCB statistics",
-        "Show statistics for the list of all DCBs(descriptor control blocks)",
-        {0}
-    },
-    {
         "dcbs", 0, 0, dprintAllDCBs,
         "Show all DCBs",
         "Show all descriptor control blocks (network connections)",
@@ -157,12 +151,6 @@ struct subcommand showoptions[] =
         "epoll", 0, 0, dprintPollStats,
         "Show the poll statistics",
         "Show the epoll polling system statistics",
-        {0, 0, 0}
-    },
-    {
-        "eventq", 0, 0, dShowEventQ,
-        "Show event queue",
-        "Show the queue of events waiting to be processed",
         {0, 0, 0}
     },
     {
@@ -254,12 +242,6 @@ struct subcommand showoptions[] =
         "Show session details",
         "Show a single session in MaxScale, e.g. show session 5",
         {ARG_TYPE_SESSION, 0, 0}
-    },
-    {
-        "sessionlist", 0, 0, dprintSessionList,
-        "Show session list statistics",
-        "Show statistics for the list of all sessions",
-        {0, 0, 0}
     },
     {
         "sessions", 0, 0, dprintAllSessions,

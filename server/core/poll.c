@@ -1523,17 +1523,6 @@ void poll_fake_hangup_event(DCB *dcb)
 }
 
 /**
- * Print the event queue contents
- *
- * @param pdcb          The DCB to print the event queue to
- */
-void
-dShowEventQ(DCB *pdcb)
-{
-}
-
-
-/**
  * Print the event queue statistics
  *
  * @param pdcb          The DCB to print the event queue to

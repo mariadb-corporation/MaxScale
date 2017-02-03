@@ -1915,16 +1915,6 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     }
 }
 
-/*
- * @brief Print DCB list statistics
- *
- * @param       pdcb    DCB to print results to
- */
-void
-dprintDCBList(DCB *pdcb)
-{
-}
-
 /**
  * Diagnostic to print all DCB allocated in the system
  *
