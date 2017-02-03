@@ -500,8 +500,8 @@ static bool add_service_user(SERV_LISTENER *port)
             if (newpw)
             {
                 MYSQL_AUTH *inst = (MYSQL_AUTH*)port->auth_instance;
-                add_mysql_user(inst->handle, user, "%", newpw, "Y", "");
-                add_mysql_user(inst->handle, user, "localhost", newpw, "Y", "");
+                add_mysql_user(inst->handle, user, "%", "", "Y", newpw);
+                add_mysql_user(inst->handle, user, "localhost", "", "Y", newpw);
                 MXS_FREE(newpw);
                 rval = true;
             }
