@@ -1,4 +1,7 @@
-add_subdirectory(CDCPlainAuth)
+if(BUILD_CDC)
+  add_subdirectory(CDCPlainAuth)
+endif()
+
 add_subdirectory(GSSAPI)
 add_subdirectory(HTTPAuth)
 add_subdirectory(MaxAdminAuth)
@@ -6,11 +9,4 @@ add_subdirectory(MySQLAuth)
 add_subdirectory(MySQLBackendAuth)
 add_subdirectory(NullAuthAllow)
 add_subdirectory(NullAuthDeny)
-
-# if(BUILD_TESTS)
-#   add_library(testprotocol SHARED testprotocol.c)
-#   set_target_properties(testprotocol PROPERTIES VERSION "1.0.0")
-#   target_link_libraries(testprotocol maxscale-common)
-#   install_module(testprotocol core)
-# endif()
 
