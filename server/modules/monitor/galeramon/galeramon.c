@@ -133,7 +133,6 @@ static void *
 startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 {
     GALERA_MONITOR *handle = mon->handle;
-    GALERA_CLUSTER_INFO *cluster_info;
     if (handle != NULL)
     {
         handle->shutdown = 0;
@@ -142,13 +141,11 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
     else
     {
         handle = (GALERA_MONITOR *) MXS_MALLOC(sizeof(GALERA_MONITOR));
-        cluster_info = MXS_MALLOC(sizeof(GALERA_CLUSTER_INFO));
         HASHTABLE *nodes_info = hashtable_alloc(MAX_NUM_SLAVES, hashtable_item_strhash, hashtable_item_strcmp);
 
-        if (!handle || !nodes_info || !cluster_info)
+        if (!handle || !nodes_info)
         {
             hashtable_free(nodes_info);
-            MXS_FREE(cluster_info);
             MXS_FREE(handle);
             return NULL;
         }
@@ -166,9 +163,8 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
 
         /* Initialise cluster nodes hash and Cluster info */
         handle->galera_nodes_info = nodes_info;
-        cluster_info->c_size = 0;
-        cluster_info->c_uuid = NULL;
-        handle->cluster_info = cluster_info;
+        handle->cluster_info.c_size = 0;
+        handle->cluster_info.c_uuid = NULL;
 
         spinlock_init(&handle->lock);
     }
@@ -192,7 +188,6 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
         hashtable_free(handle->galera_nodes_info);
         MXS_FREE(handle->script);
-        MXS_FREE(handle->cluster_info);
         MXS_FREE(handle);
         return NULL;
     }
@@ -235,10 +230,10 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
                handle->disableMasterRoleSetting ? "on" : "off");
     dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (handle->set_donor_nodes == 1) ? "on" : "off");
-    if (handle->cluster_info->c_uuid)
+    if (handle->cluster_info.c_uuid)
     {
-        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", handle->cluster_info->c_uuid);
-        dcb_printf(dcb, "Galera Cluster size:\t%d\n", handle->cluster_info->c_size);
+        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", handle->cluster_info.c_uuid);
+        dcb_printf(dcb, "Galera Cluster size:\t%d\n", handle->cluster_info.c_size);
     }
     else
     {
@@ -438,8 +433,10 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
                   MXS_DEBUG("Added %s to galera_nodes_info",
                             database->server->unique_name);
             }
+            /* Free the info.cluster_uuid as it's been added to the table */
+            MXS_FREE(info.cluster_uuid);
         }
-              
+
         MXS_DEBUG("Server %s: local_state %d, local_index %d, UUID %s, size %d, possible member %d",
                   database->server->unique_name,
                   info.local_state,
@@ -469,7 +466,6 @@ monitorMain(void *arg)
     int is_cluster = 0;
     int log_no_members = 1;
     mxs_monitor_event_t evtype;
-    int log_uuid_change = 1;
 
     spinlock_acquire(&mon->lock);
     handle = (GALERA_MONITOR *) mon->handle;
@@ -1157,9 +1153,9 @@ static void set_galera_cluster(MXS_MONITOR *mon)
     if (ret || (!ret && n_nodes != 1))
     {
         /* Set the new cluster_uuid */
-        MXS_FREE(handle->cluster_info->c_uuid);
-        handle->cluster_info->c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
-        handle->cluster_info->c_size = cluster_size;
+        MXS_FREE(handle->cluster_info.c_uuid);
+        handle->cluster_info.c_uuid = ret ? MXS_STRDUP(cluster_uuid) : NULL;
+        handle->cluster_info.c_size = cluster_size;
     }
 
     /**
@@ -1182,8 +1178,8 @@ static void set_cluster_members(MXS_MONITOR *mon)
     GALERA_MONITOR *handle = mon->handle;
     GALERA_NODE_INFO *value;
     MXS_MONITOR_SERVERS *ptr;
-    char *c_uuid = handle->cluster_info->c_uuid;
-    int c_size = handle->cluster_info->c_size;
+    char *c_uuid = handle->cluster_info.c_uuid;
+    int c_size = handle->cluster_info.c_size;
 
     ptr = mon->databases;
     while (ptr)
@@ -1191,7 +1187,7 @@ static void set_cluster_members(MXS_MONITOR *mon)
         /* Fetch cluster info for this server, if any */
         value = hashtable_fetch(handle->galera_nodes_info, ptr->server->unique_name);
 
-        if (value && handle->cluster_info->c_uuid)
+        if (value && handle->cluster_info.c_uuid)
         {
             /* Check whether this server is a candidate member */
             if (!SERVER_IN_MAINT(ptr->server) &&
@@ -1248,8 +1244,8 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
                                 const int candidate_size)
 {
     bool ret = false;
-    char *c_uuid = handle->cluster_info->c_uuid;
-    int c_size = handle->cluster_info->c_size;
+    char *c_uuid = handle->cluster_info.c_uuid;
+    int c_size = handle->cluster_info.c_size;
 
     /**
      * Decide whether we have a cluster
@@ -1276,7 +1272,7 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
             ret = true;
         }
 
-        /* Log change if no previous UUID was set */ 
+        /* Log change if no previous UUID was set */
         if (c_uuid == NULL)
         {
             if (ret)
@@ -1288,7 +1284,7 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
         {
             if (strcmp(c_uuid, candidate_uuid) && c_size != 1)
             {
-                /* This error should be ogged once */
+                /* This error should be logged once */
                 MXS_ERROR("%s and its UUID %s is different from previous set one %s: aborting",
                           msg,
                           candidate_uuid,
@@ -1296,9 +1292,9 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
             }
         }
     }
-    else     
+    else
     {
-        int min_cluster_size = ((int)(n_nodes / 2 ) + 1);
+        int min_cluster_size = (n_nodes / 2) + 1;
 
         /* Return true if there are enough members */
         if (candidate_size >= min_cluster_size)

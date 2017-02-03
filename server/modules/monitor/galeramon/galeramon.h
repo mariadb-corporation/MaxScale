@@ -43,20 +43,34 @@
 
 MXS_BEGIN_DECLS
 
+/**
+ *  Galera Variables and server reference for each
+ *  monitored node that could be part of cluster.
+ *
+ *  This struct is added to the HASHTABLE *galera_nodes_info
+ */
 typedef struct galera_node_info
 {
-    int          joined;
-    int     local_index;
-    int     local_state;
-    int    cluster_size;
-    char  *cluster_uuid;
-    const SERVER  *node;
+    int          joined; /**< The node claims to be "Synced" */
+    int     local_index; /**< wsrep_local_index Galera variable:
+                           * the node index vlaue in the cluster */
+    int     local_state; /**< wsrep_local_state Galera variable:
+                           * the node state in the cluster */
+    int    cluster_size; /**< wsrep_cluster_size Galera variable:
+                           * the cluster size the node sees */
+    char  *cluster_uuid; /**< wsrep_cluster_uuid Galera variable:
+                           * the cluster UUID the node sees */
+    const SERVER  *node; /**< The reference to nodes' SERVER struct */
 } GALERA_NODE_INFO;
 
+/**
+ * Information of the current detected
+ * Galera Cluster
+ */
 typedef struct galera_cluster_info
 {
-    int   c_size;
-    char *c_uuid;
+    int   c_size; /**< How many nodes in the cluster */
+    char *c_uuid; /**< The Cluster UUID */
 } GALERA_CLUSTER_INFO;
 
 /**
@@ -81,7 +95,7 @@ typedef struct
     bool set_donor_nodes; /**< set the wrep_sst_donor variable with an
                            * ordered list of nodes */
     HASHTABLE *galera_nodes_info; /**< Contains Galera Cluster variables of all nodes */
-    GALERA_CLUSTER_INFO *cluster_info; /**< Contains Galera cluster info */
+    GALERA_CLUSTER_INFO cluster_info; /**< Contains Galera cluster info */
 } GALERA_MONITOR;
 
 MXS_END_DECLS
