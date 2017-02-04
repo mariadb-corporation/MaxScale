@@ -588,7 +588,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     else
     {
         /* Users loaded successfully, save authentication data to file cache */
-        if (mxs_mkdir_all(path, 0777))
+        if (mxs_mkdir_all(path, S_IRWXU))
         {
             strcat(path, DBUSERS_FILE);
             dbusers_save(instance->handle, path);
