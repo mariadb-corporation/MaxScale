@@ -49,12 +49,11 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) %s"
 
-static int get_users(SERV_LISTENER *listener, USERS *users);
+static int get_users(SERV_LISTENER *listener);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
 static bool get_hostname(const char *ip_address, char *client_hostname);
-USERS* mysql_users_alloc();
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
@@ -74,50 +73,9 @@ static char* get_new_users_query(const char *server_version, bool include_root)
 
 int replace_mysql_users(SERV_LISTENER *listener)
 {
-    USERS *newusers = mysql_users_alloc();
-
-    if (newusers == NULL)
-    {
-        return -1;
-    }
-
     spinlock_acquire(&listener->lock);
-
-    /* load users and grants from the backend database */
-    int i = get_users(listener, newusers);
-
-    if (i <= 0)
-    {
-        /** Failed to load users */
-        if (listener->users)
-        {
-            /* Restore old users and resources */
-            users_free(newusers);
-        }
-        else
-        {
-            /* No users allocated, use the empty new one */
-            listener->users = newusers;
-        }
-        spinlock_release(&listener->lock);
-        return i;
-    }
-
-    /** TODO: Figure out a way to create a checksum function in the backend server
-     * so that we can avoid querying the complete list of users every time we
-     * need to refresh the users */
-    MXS_DEBUG("%lu [replace_mysql_users] users' tables replaced", pthread_self());
-    USERS *oldusers = listener->users;
-    listener->users = newusers;
-
+    int i = get_users(listener);
     spinlock_release(&listener->lock);
-
-    if (oldusers)
-    {
-        /* free the old table */
-        users_free(oldusers);
-    }
-
     return i;
 }
 
@@ -373,108 +331,6 @@ static void add_database(sqlite3 *handle, const char *db)
         MXS_ERROR("Failed to insert database: %s", err);
         sqlite3_free(err);
     }
-}
-
-/**
- * Allocate a new MySQL users table for mysql specific users@host as key
- *
- *  @return The users table
- */
-USERS* mysql_users_alloc()
-{
-    USERS *rval;
-
-    if ((rval = MXS_CALLOC(1, sizeof(USERS))) == NULL)
-    {
-        return NULL;
-    }
-
-    // TODO: Refactor the `show dbusers` functionality
-    /** This prevents a crash when dbusers are queried through maxadmin */
-    rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE,
-                                 hashtable_item_strhash, hashtable_item_strcmp);
-
-    if (rval->data == NULL)
-    {
-        MXS_FREE(rval);
-        return NULL;
-    }
-
-    /* set the MySQL user@host print routine for the debug interface */
-    rval->usersCustomUserFormat = mysql_format_user_entry;
-
-    return rval;
-}
-
-/**
- * Format the mysql user as user@host
- * The returned memory must be freed by the caller
- *
- *  @param data     Input data
- *  @return         the MySQL user@host
- */
-static char *mysql_format_user_entry(void *data)
-{
-    MYSQL_USER_HOST *entry;
-    char *mysql_user;
-    /* the returned user string is "USER" + "@" + "HOST" + '\0' */
-    int mysql_user_len = MYSQL_USER_MAXLEN + 1 + INET_ADDRSTRLEN + 10 +
-                         MYSQL_USER_MAXLEN + 1;
-
-    if (data == NULL)
-    {
-        return NULL;
-    }
-
-    entry = (MYSQL_USER_HOST *) data;
-
-    mysql_user = (char *) MXS_CALLOC(mysql_user_len, sizeof(char));
-
-    if (mysql_user == NULL)
-    {
-        return NULL;
-    }
-
-    /* format user@host based on wildcards */
-
-    if (entry->ipv4.sin_addr.s_addr == INADDR_ANY && entry->netmask == 0)
-    {
-        snprintf(mysql_user, mysql_user_len - 1, "%s@%%", entry->user);
-    }
-    else if ((entry->ipv4.sin_addr.s_addr & 0xFF000000) == 0 && entry->netmask == 24)
-    {
-        snprintf(mysql_user, mysql_user_len - 1, "%s@%i.%i.%i.%%", entry->user,
-                 entry->ipv4.sin_addr.s_addr & 0x000000FF,
-                 (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256),
-                 (entry->ipv4.sin_addr.s_addr & 0x00FF0000) / (256 * 256));
-    }
-    else if ((entry->ipv4.sin_addr.s_addr & 0xFFFF0000) == 0 && entry->netmask == 16)
-    {
-        snprintf(mysql_user, mysql_user_len - 1, "%s@%i.%i.%%.%%", entry->user,
-                 entry->ipv4.sin_addr.s_addr & 0x000000FF,
-                 (entry->ipv4.sin_addr.s_addr & 0x0000FF00) / (256));
-    }
-    else if ((entry->ipv4.sin_addr.s_addr & 0xFFFFFF00) == 0 && entry->netmask == 8)
-    {
-        snprintf(mysql_user, mysql_user_len - 1, "%s@%i.%%.%%.%%", entry->user,
-                 entry->ipv4.sin_addr.s_addr & 0x000000FF);
-    }
-    else if (entry->netmask == 32)
-    {
-        strcpy(mysql_user, entry->user);
-        strcat(mysql_user, "@");
-        inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user + strlen(mysql_user),
-                  INET_ADDRSTRLEN);
-    }
-    else
-    {
-        snprintf(mysql_user, MYSQL_USER_MAXLEN - 5, "Err: %s", entry->user);
-        strcat(mysql_user, "@");
-        inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user + strlen(mysql_user),
-                  INET_ADDRSTRLEN);
-    }
-
-    return mysql_user;
 }
 
 /**
@@ -984,7 +840,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(SERV_LISTENER *listener, USERS *users)
+static int get_users(SERV_LISTENER *listener)
 {
     char *service_user = NULL;
     char *service_passwd = NULL;

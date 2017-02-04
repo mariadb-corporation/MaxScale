@@ -141,10 +141,17 @@ struct subcommand showoptions[] =
         {0}
     },
     {
-        "dbusers", 1, 1, dcb_usersPrint,
-        "Show user statistics",
+        "dbusers", 1, 1, service_print_users,
+        "[deprecated] Show user statistics",
         "Show statistics and user names for a service's user table.\n"
         "\t\tExample : show dbusers <service name>",
+        {ARG_TYPE_SERVICE, 0, 0}
+    },
+    {
+        "authenticators", 1, 1, service_print_users,
+        "Show authenticator diagnostics",
+        "Show authenticator diagnostics for a service.\n"
+        "\t\tExample : show authenticators <service name>",
         {ARG_TYPE_SERVICE, 0, 0}
     },
     {

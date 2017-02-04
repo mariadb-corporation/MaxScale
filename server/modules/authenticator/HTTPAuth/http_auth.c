@@ -66,7 +66,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         http_auth_authenticate,          /* Authenticate user credentials */
         http_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                            /* No destroy entry point */
-        users_default_loadusers          /* Load generic users */
+        users_default_loadusers,         /* Load generic users */
+        users_default_diagnostic,        /* Default user diagnostic */
+        NULL                             /* No user reauthentication */
     };
 
     static MXS_MODULE info =

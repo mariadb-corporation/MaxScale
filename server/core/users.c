@@ -33,13 +33,7 @@
  * @endverbatim
  */
 
-/**
- * Allocate a new users table
- *
- * @return The users table
- */
-USERS *
-users_alloc()
+USERS *users_alloc()
 {
     USERS *rval;
 
@@ -63,13 +57,7 @@ users_alloc()
     return rval;
 }
 
-/**
- * Remove the users table
- *
- * @param users The users table to remove
- */
-void
-users_free(USERS *users)
+void users_free(USERS *users)
 {
     if (users)
     {
@@ -78,16 +66,7 @@ users_free(USERS *users)
     }
 }
 
-/**
- * Add a new user to the user table. The user name must be unique
- *
- * @param users         The users table
- * @param user          The user name
- * @param auth          The authentication data
- * @return      The number of users added to the table
- */
-int
-users_add(USERS *users, const char *user, const char *auth)
+int users_add(USERS *users, const char *user, const char *auth)
 {
     int add;
 
@@ -97,15 +76,7 @@ users_add(USERS *users, const char *user, const char *auth)
     return add;
 }
 
-/**
- * Delete a user from the user table.
- *
- * @param users         The users table
- * @param user          The user name
- * @return      The number of users deleted from the table
- */
-int
-users_delete(USERS *users, const char *user)
+int users_delete(USERS *users, const char *user)
 {
     int del;
 
@@ -115,32 +86,14 @@ users_delete(USERS *users, const char *user)
     return del;
 }
 
-/**
- * Fetch the authentication data for a particular user from the users table
- *
- * @param users         The users table
- * @param user          The user name
- * @return      The authentication data or NULL on error
- */
-const char
-*users_fetch(USERS *users, const char *user)
+const char *users_fetch(USERS *users, const char *user)
 {
     atomic_add(&users->stats.n_fetches, 1);
     // TODO: Returning data from the hashtable is not threadsafe.
     return hashtable_fetch(users->data, (char*)user);
 }
 
-/**
- * Change the password data associated with a user in the users
- * table.
- *
- * @param users         The users table
- * @param user          The user name
- * @param auth          The new authentication details
- * @return Number of users updated
- */
-int
-users_update(USERS *users, const char *user, const char *auth)
+int users_update(USERS *users, const char *user, const char *auth)
 {
     if (hashtable_delete(users->data, (char*)user) == 0)
     {
@@ -149,81 +102,41 @@ users_update(USERS *users, const char *user, const char *auth)
     return hashtable_add(users->data, (char*)user, (char*)auth);
 }
 
-/**
- * Print details of the users storage mechanism
- *
- * @param users         The users table
- */
-void
-usersPrint(const USERS *users)
+
+void usersPrint(const USERS *users)
 {
     printf("Users table data\n");
     hashtable_stats(users->data);
 }
 
-/**
- * Print details of the users storage mechanism to a DCB
- *
- * @param dcb           DCB to print to
- * @param users         The users table
- */
-void
-dcb_usersPrint(DCB *dcb, const SERVICE *service)
+void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port)
 {
-    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    if (port->users && port->users->data)
     {
-        if (port->users && port->users->data)
-        {
-            HASHITERATOR *iter = hashtable_iterator(port->users->data);
+        HASHITERATOR *iter = hashtable_iterator(port->users->data);
 
-            if (iter)
+        if (iter)
+        {
+            dcb_printf(dcb, "User names: ");
+            char *sep = "";
+            void *user;
+
+            while ((user = hashtable_next(iter)) != NULL)
             {
-                dcb_printf(dcb, "User names: ");
-                char *sep = "";
-                void *user;
-
-                if (port->users->usersCustomUserFormat != NULL)
-                {
-                    while ((user = hashtable_next(iter)) != NULL)
-                    {
-                        char *custom_user = port->users->usersCustomUserFormat(user);
-                        if (custom_user)
-                        {
-                            dcb_printf(dcb, "%s%s", sep, custom_user);
-                            MXS_FREE(custom_user);
-                            sep = ", ";
-                        }
-                    }
-                }
-                else
-                {
-                    while ((user = hashtable_next(iter)) != NULL)
-                    {
-                        dcb_printf(dcb, "%s%s", sep, (char *)user);
-                        sep = ", ";
-                    }
-                }
-
-                hashtable_iterator_free(iter);
+                dcb_printf(dcb, "%s%s", sep, (char *)user);
+                sep = ", ";
             }
-        }
-        else
-        {
-            dcb_printf(dcb, "Users table is empty\n");
+
+            dcb_printf(dcb, "\n");
+            hashtable_iterator_free(iter);
         }
     }
-
-    dcb_printf(dcb, "\n");
+    else
+    {
+        dcb_printf(dcb, "Users table is empty\n");
+    }
 }
 
-/**
- * @brief Default user loading function
- *
- * A generic key-value user table is allocated for the service.
- *
- * @param port Listener configuration
- * @return Always AUTH_LOADUSERS_OK
- */
 int users_default_loadusers(SERV_LISTENER *port)
 {
     users_free(port->users);

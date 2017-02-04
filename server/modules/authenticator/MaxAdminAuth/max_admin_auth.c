@@ -60,7 +60,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         max_admin_auth_authenticate,          /* Authenticate user credentials */
         max_admin_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                                 /* No destroy entry point */
-        users_default_loadusers               /* Load generic users */
+        users_default_loadusers,              /* Load generic users */
+        users_default_diagnostic,             /* Default user diagnostic */
+        NULL                                  /* No user reauthentication */
     };
 
     static MXS_MODULE info =

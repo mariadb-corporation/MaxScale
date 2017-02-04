@@ -169,7 +169,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         auth_backend_authenticate, /* Authenticate user credentials */
         NULL,                      /* The shared data is freed by the client DCB */
         auth_backend_destroy,      /* Destroy authenticator */
-        NULL                       /* We don't need to load users */
+        NULL,                      /* We don't need to load users */
+        NULL,                      /* No diagnostic */
+        NULL                       /* No user reauthentication */
     };
 
     static MXS_MODULE info =

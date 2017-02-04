@@ -167,7 +167,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_auth_authenticate,          /* Authenticate user credentials */
         cdc_auth_free_client_data,      /* Free the client data held in DCB */
         NULL,                           /* No destroy entry point */
-        cdc_replace_users               /* Load CDC users */
+        cdc_replace_users,              /* Load CDC users */
+        users_default_diagnostic,       /* Default diagnostic */
+        NULL                            /* No user reauthentication */
     };
 
     static MXS_MODULE info =
@@ -484,11 +486,6 @@ cdc_read_users(USERS *users, char *usersfile)
     char *user_passwd;
     /* user maxlen ':' password hash  '\n' '\0' */
     char read_buffer[CDC_USER_MAXLEN + 1 + SHA_DIGEST_LENGTH + 1 + 1];
-    char *all_users_data = NULL;
-    struct  stat    statb;
-    int fd;
-    int filelen = 0;
-    unsigned char hash[SHA_DIGEST_LENGTH] = "";
 
     int max_line_size = sizeof(read_buffer) - 1;
 
@@ -497,27 +494,11 @@ cdc_read_users(USERS *users, char *usersfile)
         return -1;
     }
 
-    fd = fileno(fp);
-
-    if (fstat(fd, &statb) == 0)
-    {
-        filelen = statb.st_size;
-    }
-
-    if ((all_users_data = MXS_MALLOC(filelen + 1)) == NULL)
-    {
-        return -1;
-    }
-
-    *all_users_data = '\0';
-
     while (!feof(fp))
     {
         if (fgets(read_buffer, max_line_size, fp) != NULL)
         {
             char *tmp_ptr = read_buffer;
-            /* append data for hash */
-            strcat(all_users_data, read_buffer);
 
             if ((tmp_ptr = strchr(read_buffer, ':')) != NULL)
             {
@@ -536,13 +517,6 @@ cdc_read_users(USERS *users, char *usersfile)
             }
         }
     }
-
-    /* compute SHA1 digest for users' data */
-    SHA1((const unsigned char *) all_users_data, strlen(all_users_data), hash);
-
-    memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-
-    MXS_FREE(all_users_data);
 
     fclose(fp);
 

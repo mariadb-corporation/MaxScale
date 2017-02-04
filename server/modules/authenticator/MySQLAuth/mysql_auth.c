@@ -58,6 +58,8 @@ static int mysql_auth_set_client_data(
     MySQLProtocol *protocol,
     GWBUF         *buffer);
 
+void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port);
+
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
                               uint8_t *scramble, size_t scramble_len,
@@ -82,6 +84,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         mysql_auth_free_client_data,      /* Free the client data held in DCB */
         mysql_auth_destroy,               /* Destroy entry point */
         mysql_auth_load_users,            /* Load users from backend databases */
+        mysql_auth_diagnostic,
         mysql_auth_reauthenticate         /* Handle COM_CHANGE_USER */
     };
 
@@ -630,4 +633,29 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
     }
 
     return rval;
+
+}
+
+int diag_cb(void *data, int columns, char **row, char **field_names)
+{
+    DCB *dcb = (DCB*)data;
+    dcb_printf(dcb, "%s@%s ", row[0], row[1]);
+    return 0;
+}
+
+void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
+{
+    dcb_printf(dcb, "User names: ");
+
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+    char *err;
+
+    if (sqlite3_exec(instance->handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+                     diag_cb, dcb, &err) != SQLITE_OK)
+    {
+        dcb_printf(dcb, "Failed to print users: %s\n", err);
+        MXS_ERROR("Failed to print users: %s", err);
+        sqlite3_free(err);
+    }
+    dcb_printf(dcb, "\n");
 }
