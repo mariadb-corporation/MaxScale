@@ -60,6 +60,11 @@ struct servlistener;
  *                      entry point.
  *
  *      loadusers       Load or update authenticator user data
+ *
+ *      diagnostic      Print diagnostic output to a DCB
+ *
+ *      reauthenticate  Reauthenticate a user
+ *
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -76,6 +81,7 @@ typedef struct mxs_authenticator
     void  (*free)(struct dcb *);
     void  (*destroy)(void *);
     int   (*loadusers)(struct servlistener *);
+    void  (*diagnostic)(struct dcb*, struct servlistener *);
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */

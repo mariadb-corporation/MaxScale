@@ -2283,3 +2283,14 @@ bool service_serialize_servers(const SERVICE *service)
 
     return rval;
 }
+
+void service_print_users(DCB *dcb, const SERVICE *service)
+{
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    {
+        if (port->listener && port->listener->authfunc.diagnostic)
+        {
+            port->listener->authfunc.diagnostic(dcb, port);
+        }
+    }
+}
