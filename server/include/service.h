@@ -100,7 +100,7 @@ typedef struct server_ref_t
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
 /** Value of service timeout if timeout checks are disabled */
-#define SERVICE_NO_SESSION_TIMEOUT LONG_MAX
+#define SERVICE_NO_SESSION_TIMEOUT 0
 
 /**
  * Parameters that are automatically detected but can also be configured by the
@@ -149,7 +149,7 @@ typedef struct service
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     FILTER_DEF **filters;              /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
-    long conn_idle_timeout;            /**< Session timeout in seconds */
+    uint64_t conn_idle_timeout;        /**< Session timeout in seconds */
     char *weightby;
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /*< If starting of the service should be retried later */

@@ -1025,7 +1025,9 @@ void process_idle_sessions()
             while (all_session)
             {
                 if (all_session->ses_is_in_use &&
-                    all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
+                    all_session->service && all_session->client_dcb &&
+                    all_session->client_dcb->state == DCB_STATE_POLLING &&
+                    all_session->service->conn_idle_timeout &&
                     hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
                 {
                     dcb_close(all_session->client_dcb);
