@@ -745,7 +745,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 router->trx_count >= router->trx_target)
             {
                 update_used_tables(router);
-                avro_flush_all_tables(router, false);
+                avro_flush_all_tables(router, AVROROUTER_SYNC);
                 avro_save_conversion_state(router);
                 notify_all_clients(router);
                 total_rows += router->row_count;
