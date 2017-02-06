@@ -257,7 +257,7 @@ For more information on how to use these scripts, see the output of `cdc.py -h` 
 
 To build the avrorouter from source, you will need the [Avro C](https://avro.apache.org/docs/current/api/c/)
 library, liblzma, [the Jansson library](http://www.digip.org/jansson/) and sqlite3 development headers. When
-configuring MaxScale with CMake, you will need to add `-DBUILD_AVRO=Y
+configuring MaxScale with CMake, you will need to add `-DBUILD_CDC=Y
 -DBUILD_CDC=Y` to build the avrorouter and the CDC protocol module.
 
 For more details about building MaxScale from source, please refer to the

@@ -1,4 +1,4 @@
-if(BUILD_AVRO)
+if(BUILD_CDC)
   add_subdirectory(avrorouter)
 endif()
 if(BUILD_BINLOG)

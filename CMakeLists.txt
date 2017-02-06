@@ -188,7 +188,7 @@ include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 include_directories(${CURL_INCLUDE_DIRS})
 
-if (BUILD_AVRO)
+if (BUILD_CDC)
   include_directories(avro)
   add_subdirectory(avro)
 endif()
