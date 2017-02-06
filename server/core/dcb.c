@@ -1915,28 +1915,31 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     }
 }
 
+static bool dprint_all_dcbs_cb(DCB *dcb, void *data)
+{
+    DCB *pdcb = (DCB*)data;
+    dprintOneDCB(pdcb, dcb);
+    return true;
+}
+
 /**
  * Diagnostic to print all DCB allocated in the system
  *
  * @param       pdcb    DCB to print results to
  */
-void
-dprintAllDCBs(DCB *pdcb)
+void dprintAllDCBs(DCB *pdcb)
 {
+    dcb_foreach(dprint_all_dcbs_cb, pdcb);
+}
 
-    int nthr = config_threadcount();
-
-    for (int i = 0; i < nthr; i++)
-    {
-        spinlock_acquire(&all_dcbs_lock[i]);
-
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
-        {
-            dprintOneDCB(pdcb, dcb);
-        }
-
-        spinlock_release(&all_dcbs_lock[i]);
-    }
+static bool dlist_dcbs_cb(DCB *dcb, void *data)
+{
+    DCB *pdcb = (DCB*)data;
+    dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
+               dcb, gw_dcb_state2string(dcb->state),
+               ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
+               (dcb->remote ? dcb->remote : ""));
+    return true;
 }
 
 /**
@@ -1952,24 +1955,24 @@ dListDCBs(DCB *pdcb)
     dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n",
                "DCB", "State", "Service", "Remote");
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
+    dcb_foreach(dlist_dcbs_cb, pdcb);
+    dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
+}
 
-    int nthr = config_threadcount();
+static bool dlist_clients_cb(DCB *dcb, void *data)
+{
+    DCB *pdcb = (DCB*)data;
 
-    for (int i = 0; i < nthr; i++)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
-        spinlock_acquire(&all_dcbs_lock[i]);
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
-        {
-            dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
-                       dcb, gw_dcb_state2string(dcb->state),
-                       ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
-                       (dcb->remote ? dcb->remote : ""));
-        }
-
-        spinlock_release(&all_dcbs_lock[i]);
+        dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
+                   (dcb->remote ? dcb->remote : ""),
+                   dcb, (dcb->session->service ?
+                         dcb->session->service->name : ""),
+                   dcb->session);
     }
 
-    dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
+    return true;
 }
 
 /**
@@ -1985,27 +1988,7 @@ dListClients(DCB *pdcb)
     dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n",
                "Client", "DCB", "Service", "Session");
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
-
-    int nthr = config_threadcount();
-
-    for (int i = 0; i < nthr; i++)
-    {
-        spinlock_acquire(&all_dcbs_lock[i]);
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
-        {
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
-            {
-                dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
-                           (dcb->remote ? dcb->remote : ""),
-                           dcb, (dcb->session->service ?
-                                 dcb->session->service->name : ""),
-                           dcb->session);
-            }
-        }
-
-        spinlock_release(&all_dcbs_lock[i]);
-    }
-
+    dcb_foreach(dlist_clients_cb, pdcb);
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
 }
 
