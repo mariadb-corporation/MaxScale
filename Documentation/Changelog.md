@@ -2,13 +2,16 @@
 
 ## MariaDB MaxScale 2.1
 * Hierarchical configuration files are now supported.
-* Logging is now performed in a way compatible with logrotate(8)
+* Logging is now performed in a way compatible with logrotate(8).
 * Persistent connections are reset upon resuse.
-* Galera monitor now consistently chooses the same node as master
+* Galera monitor now consistently chooses the same node as master.
+* Galera Monitor can set the preferred donor nodes list.
 * The configuration can now be altered dynamically and the changes are persisted.
-* There is now a monitor for Amazon Aurora clusters
+* There is now a monitor for Amazon Aurora clusters.
 * MySQL Monitor now has a multi-master mode.
 * MySQL Monitor now has a failover mode.
+* Named Server Filter now supports wildcards for source option.
+* Binlog Server can now be configured to encrypt binlog files.
 * New filters, _cache, _ccrfilter_, _masking_, and _maxrows_ are introduced.
 
 For more details, please refer to:
