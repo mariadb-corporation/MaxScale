@@ -132,6 +132,12 @@ For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.
 MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate
 with VIM-mode start MaxAdmin with option -i.
 
+### Named Server Filter
+The source option can now handle wildcards such as:
+192.168.%.%
+
+For more details, read the [Named Server Filter documentation](../Filters/Named-Server-Filter.md).
+
 ## New Features
 
 ### Dynamic configuration
@@ -273,6 +279,16 @@ to large sets of data with a single query.
 
 For more information, refer to the [Maxrows](../Filters/Maxrows.md)
 documentation.
+
+### Galeramon Monitor new option
+The `set_donor_nodes` option allows the setting of _global variable_ _wsrep_sst_donor_  with a list the preferred donor nodes (among slave ones).
+
+For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.md).
+
+### Binlog Server encrypted binlogs
+The binlog server can optionally encrypt the events received from the master server: the setup requires MariaDB 10.1 master (with Encryption active) and the `mariadb10-compatibility=1` option set.
+
+For more details, read the [Binlogrouter documentation](../Routers/Binlogrouter.md).
 
 ## Bug fixes
 
