@@ -1,5 +1,19 @@
 #Changelog
 
+## MariaDB MaxScale 2.1
+* Hierarchical configuration files are now supported.
+* Logging is now performed in a way compatible with logrotate(8)
+* Persistent connections are reset upon resuse.
+* Galera monitor now consistently chooses the same node as master
+* The configuration can now be altered dynamically and the changes are persisted.
+* There is now a monitor for Amazon Aurora clusters
+* MySQL Monitor now has a multi-master mode.
+* MySQL Monitor now has a failover mode.
+* New filters, _cache, _ccrfilter_, _masking_, and _maxrows_ are introduced.
+
+For more details, please refer to:
+* [MariaDB MaxScale 2.1.0 Release Notes](Release-Notes/MaxScale-2.1.0-Release-Notes.md)
+
 ## MariaDB MaxScale 2.0
 * MariaDB MaxScale is licensed under MariaDB BSL.
 * SSL can be used in the communication between MariaDB MaxScale and the backend servers.

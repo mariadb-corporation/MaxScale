@@ -3,7 +3,7 @@
 Release 2.1.0 is a Beta release.
 
 This document describes the changes in release 2.1.0, when compared to
-release 2.0.X.
+release 2.0.4.
 
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
@@ -71,8 +71,8 @@ MaxScale to rotate the the log file.
 This behaviour is now compatible with logrotate(8).
 
 Further, if MaxScale is configured to use shared memory for the log file,
-the file is created into the directory "/dev/shm/maxscale". Earlier the
-log file was created into the directory "/dev/shm/maxscale.PID", where PID
+the file is created into the directory `/dev/shm/maxscale`. Earlier the
+log file was created into the directory `/dev/shm/maxscale.PID`, where PID
 was the pid of the MaxScale process.
 
 In addition, there is now a mechanism that prevents the flooding of the log, in
@@ -131,13 +131,6 @@ For more details, read the [Galeramon documentation](../Monitors/Galera-Monitor.
 
 MaxAdmin now defaults to Emacs editing mode instead of VIM. To activate
 with VIM-mode start MaxAdmin with option -i.
-
-### Support for text wildcards in hostnames
-
-Wildcards in text-form hostnames in the mysql.user-table of the backend
-database are now supported. For matching, the client IP-address must be
-converted to text-form, which requires a reverse DNS lookup. Please see
-[Limitations](../About/Limitations.md) for more information.
 
 ## New Features
 
@@ -283,8 +276,34 @@ documentation.
 
 ## Bug fixes
 
-[Here is a list of bugs fixed since the release of MaxScale 2.0.X.](https://jira.mariadb.org/browse/MXS-739?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.0.0)
+[Here is a list of bugs fixed since the release of MaxScale 2.0.4.](https://jira.mariadb.org/browse/MXS-951?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.1.0%20AND%20fixVersion%20!%3D%202.0.1%20AND%20fixVersion%20!%3D%202.0.2%20AND%20fixVersion%20!%3D%202.0.3%20AND%20fixVersion%20!%3D%202.0.4)
 
+* [MXS-1025](https://jira.mariadb.org/browse/MXS-1025) qc_sqlite always reports " Statement was parsed, but not classified"
+* [MXS-977](https://jira.mariadb.org/browse/MXS-977) MaxAdmin show monitor output missing formatting
+* [MXS-951](https://jira.mariadb.org/browse/MXS-951) Using utf8mb4 on galera hosts stops maxscale connections
+* [MXS-889](https://jira.mariadb.org/browse/MXS-889) "Ungrade Test" Jenkins job fails with CeentOS/RHEL 5 and SLES11
+* [MXS-887](https://jira.mariadb.org/browse/MXS-887) create_env Jenkin job fails
+* [MXS-873](https://jira.mariadb.org/browse/MXS-873) Changing server status via maxadmin is not atomic
+* [MXS-832](https://jira.mariadb.org/browse/MXS-832) Problem with Regex filter as readconnroute doesn't wait for complete packets
+* [MXS-831](https://jira.mariadb.org/browse/MXS-831) new_master event not triggered by galeramon
+* [MXS-828](https://jira.mariadb.org/browse/MXS-828) Remove "Syslog logging is disabled." to stdout when starting without syslog
+* [MXS-825](https://jira.mariadb.org/browse/MXS-825) --execdir option does not work
+* [MXS-805](https://jira.mariadb.org/browse/MXS-805) Server weights don't work with LEAST_BEHIND_MASTER
+* [MXS-804](https://jira.mariadb.org/browse/MXS-804) Grants for user@IP/Netmask doesn't work
+* [MXS-799](https://jira.mariadb.org/browse/MXS-799) fatal signal 11 when socket could not be opened
+* [MXS-769](https://jira.mariadb.org/browse/MXS-769) Malloc return value must be checked.
+* [MXS-711](https://jira.mariadb.org/browse/MXS-711) All service ports use the same user data
+* [MXS-650](https://jira.mariadb.org/browse/MXS-650) Connection attempt w/o SSL to SSL service gives confusing error
+* [MXS-626](https://jira.mariadb.org/browse/MXS-626) Don't log anything to maxlog until it is known whether that is wanted.
+* [MXS-590](https://jira.mariadb.org/browse/MXS-590) MaxScale doesn't log an error when .secrets file is not owned by current user
+* [MXS-586](https://jira.mariadb.org/browse/MXS-586) Tee filter hangs when using range
+* [MXS-576](https://jira.mariadb.org/browse/MXS-576) Maxscale does not generate warning/error if incorrect values is set for persistpoolmax
+* [MXS-397](https://jira.mariadb.org/browse/MXS-397) Unsafe handling of dcb_readqueue
+* [MXS-390](https://jira.mariadb.org/browse/MXS-390) Lack of checks of dynamic memory allocation
+* [MXS-350](https://jira.mariadb.org/browse/MXS-350) Return value of realloc must not be assigned to provided pointer.
+* [MXS-348](https://jira.mariadb.org/browse/MXS-348) Incorrect use of strncat
+* [MXS-253](https://jira.mariadb.org/browse/MXS-253) Use of strncpy is dangerous
+* [MXS-126](https://jira.mariadb.org/browse/MXS-126) debug assert in TEE filter test
 
 ## Known Issues and Limitations
 
