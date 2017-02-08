@@ -1931,8 +1931,9 @@ check_config_objects(CONFIG_CONTEXT *context)
                     if (mod == NULL ||
                         !config_param_is_valid(mod->parameters, params->name, params->value, context))
                     {
-                        MXS_ERROR("Unexpected parameter '%s' or parameter value for object '%s' of type '%s'.",
-                                  params->name, obj->object, type);
+                        MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s', "
+                                  "or '%s' is an invalid value for parameter '%s'.",
+                                  params->name, obj->object, type, params->value, params->name);
                         rval = false;
                     }
                     else if (is_path_parameter(mod->parameters, params->name))
