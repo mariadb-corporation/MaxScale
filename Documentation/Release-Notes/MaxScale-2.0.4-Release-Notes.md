@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.0.4 Release Notes
+# MariaDB MaxScale 2.0.4 Release Notes -- 2017-02-01
 
 Release 2.0.4 is a GA release.
 

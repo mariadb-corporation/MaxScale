@@ -68,7 +68,12 @@ bool avro_open_binlog(const char *binlogdir, const char *file, int *dest)
 
     if ((fd = open(path, O_RDONLY)) == -1)
     {
-        MXS_ERROR("Failed to open binlog file %s.", path);
+        if (errno != ENOENT)
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to open binlog file %s: %d, %s", path, errno,
+                      strerror_r(errno, err, sizeof(err)));
+        }
         return false;
     }
 
@@ -745,7 +750,7 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 router->trx_count >= router->trx_target)
             {
                 update_used_tables(router);
-                avro_flush_all_tables(router, false);
+                avro_flush_all_tables(router, AVROROUTER_SYNC);
                 avro_save_conversion_state(router);
                 notify_all_clients(router);
                 total_rows += router->row_count;

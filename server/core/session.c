@@ -460,16 +460,6 @@ printAllSessions()
     dcb_foreach(printAllSessions_cb, NULL);
 }
 
-/*
- * @brief Print session list statistics
- *
- * @param       pdcb    DCB to print results to
- */
-void
-dprintSessionList(DCB *pdcb)
-{
-}
-
 /** Callback for dprintAllSessions */
 bool dprintAllSessions_cb(DCB *dcb, void *data)
 {

@@ -404,9 +404,8 @@ int CacheFilterSession::handle_expecting_response()
         switch ((int)MYSQL_GET_COMMAND(header))
         {
         case MYSQL_REPLY_OK:
-        case MYSQL_REPLY_ERR:
             store_result();
-
+        case MYSQL_REPLY_ERR:
             rv = send_upstream();
             m_state = CACHE_IGNORING_RESPONSE;
             break;

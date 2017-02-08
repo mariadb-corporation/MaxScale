@@ -597,7 +597,7 @@ spin_reporter(void *dcb, char *desc, int value)
 }
 
 /**
- * Diagnostic to print all DCBs in persistent pool for a server
+ * Diagnostic to print number of DCBs in persistent pool for a server
  *
  * @param       pdcb    DCB to print results to
  * @param       server  SERVER for which DCBs are to be printed
@@ -605,22 +605,7 @@ spin_reporter(void *dcb, char *desc, int value)
 void
 dprintPersistentDCBs(DCB *pdcb, const SERVER *server)
 {
-    DCB *dcb;
-    int nthr = config_threadcount();
-
-    for (int i = 0; i < nthr; i++)
-    {
-#if SPINLOCK_PROFILE
-        dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
-        spinlock_stats(&server->persistlock, spin_reporter, pdcb);
-#endif
-        dcb = server->persistent[i];
-        while (dcb)
-        {
-            dprintOneDCB(pdcb, dcb);
-            dcb = dcb->nextpersistent;
-        }
-    }
+    dcb_printf(pdcb, "Number of persistent DCBs: %d\n", server->stats.n_persistent);
 }
 
 /**

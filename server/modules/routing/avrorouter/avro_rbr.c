@@ -272,7 +272,6 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     /** There should always be a table map event prior to a row event.
      * TODO: Make the active_maps dynamic */
     TABLE_MAP *map = router->active_maps[table_id % sizeof(router->active_maps)];
-    ss_dassert(map);
 
     if (map)
     {
