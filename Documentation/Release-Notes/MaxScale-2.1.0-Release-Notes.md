@@ -271,6 +271,17 @@ to large sets of data with a single query.
 For more information, refer to the [Maxrows](../Filters/Maxrows.md)
 documentation.
 
+### Insert stream filter
+
+The _insertstream_ filter converts bulk inserts into CSV data streams that are
+consumed by the backend server via the LOAD DATA LOCAL INFILE mechanism. This
+leverages the speed advantage of LOAD DATA LOCAL INFILE over regular inserts
+while also reducing the overall network traffic by condensing the inserted
+values into CSV.
+
+For more information, refer to the [Insert Stream Filter](../Filters/Insert-Stream-Filter.md)
+documentation.
+
 ### Galeramon Monitor new option
 The `set_donor_nodes` option allows the setting of _global variable_ _wsrep_sst_donor_  with a list the preferred donor nodes (among slave ones).
 

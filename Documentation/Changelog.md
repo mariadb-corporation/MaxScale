@@ -12,7 +12,7 @@
 * MySQL Monitor now has a failover mode.
 * Named Server Filter now supports wildcards for source option.
 * Binlog Server can now be configured to encrypt binlog files.
-* New filters, _cache, _ccrfilter_, _masking_, and _maxrows_ are introduced.
+* New filters, _cache_, _ccrfilter_, _insertstream_, _masking_, and _maxrows_ are introduced.
 
 For more details, please refer to:
 * [MariaDB MaxScale 2.1.0 Release Notes](Release-Notes/MaxScale-2.1.0-Release-Notes.md)
