@@ -70,7 +70,7 @@ bool avro_open_binlog(const char *binlogdir, const char *file, int *dest)
     {
         if (errno != ENOENT)
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open binlog file %s: %d, %s", path, errno,
                       strerror_r(errno, err, sizeof(err)));
         }
