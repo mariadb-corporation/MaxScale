@@ -70,3 +70,16 @@ Default is `0`. To log everything, give `debug` a value of `3`.
 ```
 debug=2
 ```
+
+## Example Configuration
+
+Here is an example of filter configuration where the max number of returned
+rows is 10000 and max allowed resultset size is 256KB
+
+```
+[MaxRows]
+type=filter
+module=maxrows
+max_resultset_rows=10000
+max_resultset_size=256000
+```
