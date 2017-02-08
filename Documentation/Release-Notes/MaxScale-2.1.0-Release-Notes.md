@@ -188,15 +188,6 @@ allowing runtime tuning of parameters.
 - `destroy monitor`: Destroy a created monitor
 - `alter monitor`: Alter monitor parameters
 
-### Monitors as server sources for services
-
-Services now accept a `monitor` parameter which can be used to point a service
-to a cluster of servers that are monitored by a monitor. The value of the
-`monitor` parameter should be the name of a monitor in the configuration name.
-
-For more details, refer to the [Configuration
-Guide](../Getting-Started/Configuration-Guide.md#cluster) section on clusters.
-
 ### Module commands
 
 Introduced in MaxScale 2.1, the module commands are special, module-specific

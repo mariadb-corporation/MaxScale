@@ -231,5 +231,7 @@ executed in separate parts.
 query will be routed to the first available server. This possibly returns an
 error about database rights instead of a missing database.
 
-* As text protocol prepared statements are relatively rare, prepared statements
-are not supported in schemarouter.
+* The preparation of a prepared statement is routed to all servers. The
+execution of a prepared statement is routed to the first available server or to
+the server pointed by a routing hint attached to the query. In practice this
+means that prepared statements aren't supported by the schemarouter.
