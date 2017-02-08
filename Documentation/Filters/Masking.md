@@ -1,5 +1,7 @@
 # Masking
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 With the _masking_ filter it is possible to obfuscate the returned
 value of a particular column.
