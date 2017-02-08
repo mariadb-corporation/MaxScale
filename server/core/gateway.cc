@@ -67,6 +67,7 @@
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/random_jkiss.h>
 
 #include "maxscale/config.h"
 #include "maxscale/maxscale.h"
@@ -1665,6 +1666,9 @@ int main(int argc, char **argv)
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
+
+    /** Initialize the random number generator */
+    random_jkiss_init();
 
     if (!utils_init())
     {
