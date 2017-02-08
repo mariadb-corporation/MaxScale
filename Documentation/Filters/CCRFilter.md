@@ -70,3 +70,24 @@ An optional parameter that can be used to control which statements don't trigger
 the statement re-routing. This does the opposite of the _match_ parameter. The
 parameter value is a regular expression that is used to match against the SQL
 text. Only non-SELECT statements are inspected.
+
+## Example Configuration
+
+Here is a minimal filter configuration for the CCRFilter which should solve most
+problems with critical reads after writes.
+
+```
+[CCRFilter]
+type=filter
+module=ccrfilter
+time=5
+```
+
+This configuration will force all read queries after a write to the master for 5
+seconds, preventing read scaling until the modifications have been replicated to
+the slaves.
+
+For best performance, the value of _time_ should be slightly greater than the
+actual replication lag between the master and its slaves. If the number of
+critical read statements is known, the _count_ parameter could be used to
+control the number reads that are sent to the master.
