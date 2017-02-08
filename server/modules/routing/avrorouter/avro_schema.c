@@ -479,7 +479,15 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     if (ptr > start)
     {
         /** Valid identifier */
-        snprintf(dest, size, "%.*s", (int)(ptr - start), start);
+        size_t bytes = ptr - start;
+
+        if (bt)
+        {
+            bytes--;
+        }
+
+        memcpy(dest, start, bytes);
+        dest[bytes] = '\0';
 
         make_valid_avro_identifier(dest);
         ptr = next_field_definition(ptr);

@@ -3502,7 +3502,9 @@ void dcb_process_idle_sessions(int thr)
             {
                 MXS_SESSION *session = dcb->session;
 
-                if (session->service && session->client_dcb && session->client_dcb->state == DCB_STATE_POLLING &&
+                if (session->service && session->client_dcb &&
+                    session->client_dcb->state == DCB_STATE_POLLING &&
+                    session->service->conn_idle_timeout &&
                     hkheartbeat - session->client_dcb->last_read > session->service->conn_idle_timeout * 10)
                 {
                     poll_fake_hangup_event(dcb);
