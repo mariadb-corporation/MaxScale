@@ -290,7 +290,7 @@ static void unpack_datetime2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
     dest->tm_min = (time >> 6) % (1 << 6);
     dest->tm_hour = time >> 12;
     dest->tm_mday = date % (1 << 5);
-    dest->tm_mon = yearmonth % 13;
+    dest->tm_mon = (yearmonth % 13) - 1;
 
     /** struct tm stores the year as: Year - 1900 */
     dest->tm_year = (yearmonth / 13) - 1900;
@@ -347,7 +347,7 @@ static void unpack_date(uint8_t *ptr, struct tm *dest)
     uint64_t val = ptr[0] + (ptr[1] << 8) + (ptr[2] << 16);
     memset(dest, 0, sizeof(struct tm));
     dest->tm_mday = val & 31;
-    dest->tm_mon = (val >> 5) & 15;
+    dest->tm_mon = ((val >> 5) & 15) - 1;
     dest->tm_year = (val >> 9) - 1900;
 }
 
