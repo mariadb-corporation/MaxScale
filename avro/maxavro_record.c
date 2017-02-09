@@ -49,9 +49,11 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         case MAXAVRO_TYPE_LONG:
         {
             uint64_t val = 0;
-            maxavro_read_integer(file, &val);
-            json_int_t jsonint = val;
-            value = json_pack("I", jsonint);
+            if (maxavro_read_integer(file, &val))
+            {
+                json_int_t jsonint = val;
+                value = json_pack("I", jsonint);
+            }
         }
         break;
 
@@ -74,11 +76,23 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
         break;
 
         case MAXAVRO_TYPE_FLOAT:
+        {
+            float f = 0;
+            if (maxavro_read_float(file, &f))
+            {
+                double d = f;
+                value = json_pack("f", d);
+            }
+        }
+
+            break;
         case MAXAVRO_TYPE_DOUBLE:
         {
             double d = 0;
-            maxavro_read_double(file, &d);
-            value = json_pack("f",  d);
+            if (maxavro_read_double(file, &d))
+            {
+                value = json_pack("f", d);
+            }
         }
         break;
 
