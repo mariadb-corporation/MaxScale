@@ -552,8 +552,10 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         router->saved_master.mariadb10 = buf;
         blr_cache_response(router, "mariadb10", buf);
-        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_UUID'");
-        router->master_state = BLRM_MUUID;
+
+        // Skip SERVER_UUID fetch and SET slave UUID (MySQL 5.6/7 only)
+        buf = blr_make_query(router->master, "SET NAMES latin1");
+        router->master_state = BLRM_LATIN1;
         router->master->func.write(router->master, buf);
         break;
     case BLRM_GTIDMODE:
