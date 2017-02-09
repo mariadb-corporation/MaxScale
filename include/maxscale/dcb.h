@@ -190,7 +190,6 @@ typedef struct dcb
     bool            draining_flag;  /**< Set while write queue is drained */
     bool            drain_called_while_busy; /**< Set as described */
     dcb_role_t      dcb_role;
-    SPINLOCK        dcb_initlock;
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
@@ -207,32 +206,20 @@ typedef struct dcb
     struct servlistener *listener;  /**< For a client DCB, the listener data */
     MXS_PROTOCOL    func;           /**< The protocol functions for this descriptor */
     MXS_AUTHENTICATOR authfunc;     /**< The authenticator functions for this descriptor */
-
     int             writeqlen;      /**< Current number of byes in the write queue */
-    SPINLOCK        writeqlock;     /**< Write Queue spinlock */
     GWBUF           *writeq;        /**< Write Data Queue */
-    SPINLOCK        delayqlock;     /**< Delay Backend Write Queue spinlock */
     GWBUF           *delayq;        /**< Delay Backend Write Data Queue */
     GWBUF           *dcb_readqueue; /**< read queue for storing incomplete reads */
     GWBUF           *dcb_fakequeue; /**< Fake event queue for generated events */
 
     DCBSTATS        stats;          /**< DCB related statistics */
-    unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
     time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
     struct service  *service;       /**< The related service */
     void            *data;          /**< Specific client data, shared between DCBs of this session */
     void            *authenticator_data; /**< The authenticator data for this DCB */
     DCBMM           memdata;        /**< The data related to DCB memory management */
-    SPINLOCK        cb_lock;        /**< The lock for the callbacks linked list */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
-    SPINLOCK        pollinlock;
-    int             pollinbusy;
-    int             readcheck;
-
-    SPINLOCK        polloutlock;
-    int             polloutbusy;
-    int             writecheck;
     long            last_read;      /*< Last time the DCB received data */
     int             high_water;     /**< High water mark */
     int             low_water;      /**< Low water mark */
@@ -242,7 +229,6 @@ typedef struct dcb
     bool            ssl_read_want_write;    /*< Flag */
     bool            ssl_write_want_read;    /*< Flag */
     bool            ssl_write_want_write;    /*< Flag */
-    int             dcb_port;       /**< port of target server */
     bool            was_persistent;  /**< Whether this DCB was in the persistent pool */
     struct
     {
@@ -253,13 +239,11 @@ typedef struct dcb
     skygw_chk_t     dcb_chk_tail;
 } DCB;
 
-#define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, .dcb_initlock = SPINLOCK_INIT, \
+#define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, \
     .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
-    .writeqlock = SPINLOCK_INIT, .delayqlock = SPINLOCK_INIT, \
     .stats = {0}, .memdata = DCBMM_INIT, \
-    .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
-    .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB, \
+    .state = DCB_STATE_ALLOC, .dcb_chk_tail = CHK_NUM_DCB, \
     .authenticator_data = NULL, .thread = {0}}
 
 /**

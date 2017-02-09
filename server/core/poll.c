@@ -337,7 +337,6 @@ int poll_add_dcb(DCB *dcb)
     /*<
      * Choose new state according to the role of dcb.
      */
-    spinlock_acquire(&dcb->dcb_initlock);
     if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER || dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
         new_state = DCB_STATE_POLLING;
@@ -388,7 +387,6 @@ int poll_add_dcb(DCB *dcb)
     }
 
     dcb->thread.id = owner;
-    spinlock_release(&dcb->dcb_initlock);
 
     dcb_add_to_list(dcb);
 
@@ -396,7 +394,6 @@ int poll_add_dcb(DCB *dcb)
 
     if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
     {
-        spinlock_acquire(&dcb->dcb_initlock);
         /** Listeners are added to all epoll instances */
         int nthr = config_threadcount();
 
@@ -413,7 +410,6 @@ int poll_add_dcb(DCB *dcb)
                 break;
             }
         }
-        spinlock_release(&dcb->dcb_initlock);
     }
     else
     {
@@ -448,12 +444,10 @@ int poll_remove_dcb(DCB *dcb)
     struct  epoll_event ev;
     CHK_DCB(dcb);
 
-    spinlock_acquire(&dcb->dcb_initlock);
     /*< It is possible that dcb has already been removed from the set */
     if (dcb->state == DCB_STATE_NOPOLLING ||
         dcb->state == DCB_STATE_ZOMBIE)
     {
-        spinlock_release(&dcb->dcb_initlock);
         return 0;
     }
     if (DCB_STATE_POLLING != dcb->state
@@ -478,7 +472,6 @@ int poll_remove_dcb(DCB *dcb)
      * DCB_STATE_NOPOLLING.
      */
     dcbfd = dcb->fd;
-    spinlock_release(&dcb->dcb_initlock);
 
     if (dcbfd > 0)
     {
@@ -486,7 +479,6 @@ int poll_remove_dcb(DCB *dcb)
 
         if (dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER)
         {
-            spinlock_acquire(&dcb->dcb_initlock);
             /** Listeners are added to all epoll instances */
             int nthr = config_threadcount();
 
@@ -502,7 +494,6 @@ int poll_remove_dcb(DCB *dcb)
                     ss_dassert(error_num);
                 }
             }
-            spinlock_release(&dcb->dcb_initlock);
         }
         else
         {
@@ -925,15 +916,12 @@ process_pollq(int thread_id, struct epoll_event *event)
         thread_data[thread_id].event = ev;
     }
 
-    ss_debug(spinlock_acquire(&dcb->dcb_initlock));
-    ss_dassert(dcb->state != DCB_STATE_ALLOC);
     /* It isn't obvious that this is impossible */
     /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
     if (DCB_STATE_DISCONNECTED == dcb->state)
     {
         return 0;
     }
-    ss_debug(spinlock_release(&dcb->dcb_initlock));
 
     MXS_DEBUG("%lu [poll_waitevents] event %d dcb %p "
               "role %s",
@@ -1059,11 +1047,10 @@ process_pollq(int thread_id, struct epoll_event *event)
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         ts_stats_increment(pollStats.n_hup, thread_id);
-        spinlock_acquire(&dcb->dcb_initlock);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
             dcb->flags |= DCBF_HUNG;
-            spinlock_release(&dcb->dcb_initlock);
+
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -1073,10 +1060,6 @@ process_pollq(int thread_id, struct epoll_event *event)
             {
                 dcb->func.hangup(dcb);
             }
-        }
-        else
-        {
-            spinlock_release(&dcb->dcb_initlock);
         }
     }
 
@@ -1094,11 +1077,11 @@ process_pollq(int thread_id, struct epoll_event *event)
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         ts_stats_increment(pollStats.n_hup, thread_id);
-        spinlock_acquire(&dcb->dcb_initlock);
+
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
             dcb->flags |= DCBF_HUNG;
-            spinlock_release(&dcb->dcb_initlock);
+
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -1108,10 +1091,6 @@ process_pollq(int thread_id, struct epoll_event *event)
             {
                 dcb->func.hangup(dcb);
             }
-        }
-        else
-        {
-            spinlock_release(&dcb->dcb_initlock);
         }
     }
 #endif

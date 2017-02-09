@@ -126,7 +126,6 @@ typedef struct mxs_upstream
 typedef struct session
 {
     skygw_chk_t             ses_chk_top;
-    SPINLOCK                ses_lock;
     mxs_session_state_t     state;            /*< Current descriptor state */
     size_t                  ses_id;           /*< Unique session identifier */
     int                     enabled_log_priorities; /*< Bitfield of enabled syslog priorities */

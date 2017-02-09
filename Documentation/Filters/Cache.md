@@ -1,5 +1,7 @@
 # Cache
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
@@ -7,6 +9,11 @@ without the queries being routed to any server.
 
 _Note that the cache is still experimental and that non-backward compatible
 changes may be made._
+
+Note that installing the cache causes all statements to be parsed. The
+implication of that is that unless statements _already_ need to be parsed,
+e.g. due to the presence of another filter or the chosen router, then adding
+the cache will not necessarily improve the performance, but may decrease it.
 
 ## Limitations
 
@@ -638,4 +645,45 @@ The value is a boolean and the default is `false`.
 
 ```
 storage_options=collect_statistics=true
+```
+
+# Example
+
+In the following we define a cache _MyCache_ that uses the cache storage module
+`storage_inmemory` and whose _soft ttl_ is `30` seconds and whose _hard ttl_ is
+`45` seconds. The cached data is shared between all threads and the maximum size
+of the cached data is `50` mebibytes. The rules for the cache are in the file
+`cache_rules.json`.
+
+### Configuration
+```
+[MyCache]
+type=filter
+module=cache
+storage=storage_inmemory
+soft_ttl=30
+hard_ttl=45
+cached_data=shared
+max_size=50Mi
+rules=cache_rules.json
+
+[MyService]
+type=service
+...
+filters=MyCache
+```
+
+### `cache_rules.json`
+The rules specify that the data of the table `sbtest` should be cached.
+
+```
+{
+    "store": [
+        {
+            "attribute": "table",
+            "op": "=",
+            "value": "sbtest"
+        }
+    ]
+}
 ```

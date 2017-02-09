@@ -860,8 +860,6 @@ static void* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
     bool using_db = false;
     bool have_db = false;
 
-    spinlock_acquire(&session->ses_lock);
-
     /* To enable connecting directly to a sharded database we first need
      * to disable it for the client DCB's protocol so that we can connect to them*/
     if (protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
@@ -879,8 +877,6 @@ static void* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
     {
         MXS_INFO("Client'%s' connecting with empty database.", data->user);
     }
-
-    spinlock_release(&session->ses_lock);
 
     client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
@@ -3647,10 +3643,8 @@ static void handle_error_reply_client(MXS_SESSION*       ses,
     DCB* client_dcb;
     backend_ref_t*  bref;
 
-    spinlock_acquire(&ses->ses_lock);
     sesstate = ses->state;
     client_dcb = ses->client_dcb;
-    spinlock_release(&ses->ses_lock);
 
     /**
      * If bref exists, mark it closed

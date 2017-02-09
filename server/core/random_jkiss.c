@@ -31,7 +31,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/random_jkiss.h>
 
 /* Public domain code for JKISS RNG - Comment header added */
@@ -41,8 +40,6 @@
  */
 static unsigned int x = 123456789, y = 987654321, z = 43219876, c = 6543217; /* Seed variables */
 static bool init = false;
-
-static SPINLOCK random_jkiss_spinlock = SPINLOCK_INIT;
 
 static unsigned int random_jkiss_devrand(void);
 static void random_init_jkiss(void);
@@ -60,14 +57,11 @@ random_jkiss(void)
     unsigned long long t;
     unsigned int result;
 
-    spinlock_acquire(&random_jkiss_spinlock);
     if (!init)
     {
         /* Must set init first because initialisation calls this function */
         init = true;
-        spinlock_release(&random_jkiss_spinlock);
         random_init_jkiss();
-        spinlock_acquire(&random_jkiss_spinlock);
     }
     x = 314527869 * x + 1234567;
     y ^= y << 5;
@@ -77,7 +71,6 @@ random_jkiss(void)
     c = t >> 32;
     z = t;
     result = x + y + z;
-    spinlock_release(&random_jkiss_spinlock);
     return result;
 }
 
@@ -120,7 +113,6 @@ random_init_jkiss(void)
 {
     int newrand, i;
 
-    spinlock_acquire(&random_jkiss_spinlock);
     if ((newrand = random_jkiss_devrand()) != 0)
     {
         x = newrand;
@@ -140,7 +132,6 @@ random_init_jkiss(void)
     {
         c = newrand % 698769068 + 1; /* Should be less than 698769069 */
     }
-    spinlock_release(&random_jkiss_spinlock);
 
     /* "Warm up" our random number generator */
     for (i = 0; i < 100; i++)

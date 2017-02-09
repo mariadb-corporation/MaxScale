@@ -132,27 +132,21 @@ void mysql_protocol_done(DCB* dcb)
 
     p = (MySQLProtocol *)dcb->protocol;
 
-    spinlock_acquire(&p->protocol_lock);
-
-    if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
+    if (p->protocol_state == MYSQL_PROTOCOL_ACTIVE)
     {
-        goto retblock;
+        scmd = p->protocol_cmd_history;
+
+        while (scmd != NULL)
+        {
+            scmd2 = scmd->scom_next;
+            MXS_FREE(scmd);
+            scmd = scmd2;
+        }
+
+        gwbuf_free(p->stored_query);
+
+        p->protocol_state = MYSQL_PROTOCOL_DONE;
     }
-    scmd = p->protocol_cmd_history;
-
-    while (scmd != NULL)
-    {
-        scmd2 = scmd->scom_next;
-        MXS_FREE(scmd);
-        scmd = scmd2;
-    }
-
-    gwbuf_free(p->stored_query);
-
-    p->protocol_state = MYSQL_PROTOCOL_DONE;
-
-retblock:
-    spinlock_release(&p->protocol_lock);
 }
 
 /**
@@ -660,8 +654,6 @@ void protocol_archive_srv_command(MySQLProtocol* p)
 
     CHK_PROTOCOL(p);
 
-    spinlock_acquire(&p->protocol_lock);
-
     if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
     {
         goto retblock;
@@ -710,7 +702,6 @@ void protocol_archive_srv_command(MySQLProtocol* p)
     }
 
 retblock:
-    spinlock_release(&p->protocol_lock);
     CHK_PROTOCOL(p);
 }
 
@@ -725,11 +716,10 @@ void protocol_add_srv_command(MySQLProtocol*     p,
 #if defined(EXTRA_SS_DEBUG)
     server_command_t* c;
 #endif
-    spinlock_acquire(&p->protocol_lock);
 
     if (p->protocol_state != MYSQL_PROTOCOL_ACTIVE)
     {
-        goto retblock;
+        return;
     }
     /** this is the only server command in protocol */
     if (p->protocol_command.scom_cmd == MYSQL_COM_UNDEFINED)
@@ -758,8 +748,6 @@ void protocol_add_srv_command(MySQLProtocol*     p,
         c = c->scom_next;
     }
 #endif
-retblock:
-    spinlock_release(&p->protocol_lock);
 }
 
 
@@ -772,7 +760,7 @@ retblock:
 void protocol_remove_srv_command(MySQLProtocol* p)
 {
     server_command_t* s;
-    spinlock_acquire(&p->protocol_lock);
+
     s = &p->protocol_command;
 #if defined(EXTRA_SS_DEBUG)
     MXS_INFO("Removed command %s from fd %d.",
@@ -788,8 +776,6 @@ void protocol_remove_srv_command(MySQLProtocol* p)
         p->protocol_command = *(s->scom_next);
         MXS_FREE(s->scom_next);
     }
-
-    spinlock_release(&p->protocol_lock);
 }
 
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,
@@ -889,10 +875,8 @@ bool protocol_get_response_status(MySQLProtocol* p,
 
     CHK_PROTOCOL(p);
 
-    spinlock_acquire(&p->protocol_lock);
     *npackets = p->protocol_command.scom_nresponse_packets;
     *nbytes   = (ssize_t)p->protocol_command.scom_nbytes_to_read;
-    spinlock_release(&p->protocol_lock);
 
     if (*npackets < 0 && *nbytes == 0)
     {
@@ -912,14 +896,10 @@ void protocol_set_response_status(MySQLProtocol* p,
 {
     CHK_PROTOCOL(p);
 
-    spinlock_acquire(&p->protocol_lock);
-
     p->protocol_command.scom_nbytes_to_read = nbytes;
     ss_dassert(p->protocol_command.scom_nbytes_to_read >= 0);
 
     p->protocol_command.scom_nresponse_packets = npackets_left;
-
-    spinlock_release(&p->protocol_lock);
 }
 
 char* create_auth_failed_msg(GWBUF*readbuf,

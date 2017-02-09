@@ -82,7 +82,6 @@
 #include <maxscale/atomic.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
-#include <maxscale/spinlock.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/protocol/mysql.h>
@@ -105,9 +104,6 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF *get_root_master(SERVER_REF *servers);
 static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
 
-static SPINLOCK instlock;
-static ROUTER_INSTANCE *instances;
-
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -119,8 +115,6 @@ static ROUTER_INSTANCE *instances;
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     MXS_NOTICE("Initialise readconnroute router module.");
-    spinlock_init(&instlock);
-    instances = NULL;
 
     static MXS_ROUTER_OBJECT MyObject =
     {
@@ -252,10 +246,6 @@ createInstance(SERVICE *service, char **options)
      * insert this router instance into the linked list of routers
      * that have been created with this module.
      */
-    spinlock_acquire(&instlock);
-    inst->next = instances;
-    instances = inst;
-    spinlock_release(&instlock);
 
     return (MXS_ROUTER *) inst;
 }
@@ -710,19 +700,15 @@ static void handleError(MXS_ROUTER *instance, void *router_session, GWBUF *errbu
     {
         problem_dcb->dcb_errhandle_called = true;
     }
-    spinlock_acquire(&session->ses_lock);
+
     sesstate = session->state;
     client_dcb = session->client_dcb;
 
     if (sesstate == SESSION_STATE_ROUTER_READY)
     {
         CHK_DCB(client_dcb);
-        spinlock_release(&session->ses_lock);
+
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
-    }
-    else
-    {
-        spinlock_release(&session->ses_lock);
     }
 
     if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)

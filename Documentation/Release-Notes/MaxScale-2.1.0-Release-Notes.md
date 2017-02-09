@@ -10,6 +10,38 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### `router_options` to Parameters
+
+The `router_options` values can also be given as parameters to the service for
+the _readwritesplit_, _schemarouter_ and _binlogrouter_ modules.
+
+What this means is that in MaxScale 2.1 the following _readwritesplit_
+configration.
+
+```
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1
+user=maxuser
+passwd=maxpwd
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS,max_sescmd_history=10,disable_sescmd_history=false
+```
+
+Can also be written in the following form.
+
+```
+[RW Split Router]
+type=service
+router=readwritesplit
+servers=server1
+user=maxuser
+passwd=maxpwd
+slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+max_sescmd_history=10
+disable_sescmd_history=false
+```
+
 ### Configuration Files
 
 From 2.1.0 onwards MariaDB MaxScale supports hierarchical configuration
@@ -269,6 +301,17 @@ large result sets. It can also be used to improve security by preventing access
 to large sets of data with a single query.
 
 For more information, refer to the [Maxrows](../Filters/Maxrows.md)
+documentation.
+
+### Insert stream filter
+
+The _insertstream_ filter converts bulk inserts into CSV data streams that are
+consumed by the backend server via the LOAD DATA LOCAL INFILE mechanism. This
+leverages the speed advantage of LOAD DATA LOCAL INFILE over regular inserts
+while also reducing the overall network traffic by condensing the inserted
+values into CSV.
+
+For more information, refer to the [Insert Stream Filter](../Filters/Insert-Stream-Filter.md)
 documentation.
 
 ### Galeramon Monitor new option

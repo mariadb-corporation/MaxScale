@@ -1,5 +1,7 @@
 # Maxrows
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 The maxrows filter is capable of restricting the amount of rows that a SELECT,
  a prepared statement or stored procedure could return to the client application.
@@ -67,4 +69,17 @@ Default is `0`. To log everything, give `debug` a value of `3`.
 
 ```
 debug=2
+```
+
+## Example Configuration
+
+Here is an example of filter configuration where the max number of returned
+rows is 10000 and max allowed resultset size is 256KB
+
+```
+[MaxRows]
+type=filter
+module=maxrows
+max_resultset_rows=10000
+max_resultset_size=256000
 ```

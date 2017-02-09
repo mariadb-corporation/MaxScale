@@ -1,5 +1,7 @@
 # Masking
 
+This filter was introduced in MariaDB MaxScale 2.1.
+
 ## Overview
 With the _masking_ filter it is possible to obfuscate the returned
 value of a particular column.
@@ -302,3 +304,47 @@ MaxScale> call command masking reload MyMaskingFilter
 ```
 `MyMaskingFilter` refers to a particular filter section in the
 MariaDB MaxScale configuration file.
+
+# Example
+
+In the following we configure a masking filter _MyMasking_ that should always log a
+warning if a masking rule matches a column that is of a type that cannot be masked,
+and that should abort the client connection if a resultset package is larger than
+16MB. The rules for the masking filter are in the file `masking_rules.json`.
+
+### Configuration
+```
+[MyMasking]
+type=filter
+module=masking
+warn_type_mismatch=always
+large_payload=abort
+rules=masking_rules.json
+
+[MyService]
+type=service
+...
+filters=MyMasking
+```
+
+### `masking_rules.json`
+
+The rules specify that the data of a column whose name is `ssn`, should
+be replaced with the string _012345-ABCD_. If the length of the data is
+not exactly the same as the length of the replacement value, then the
+data should be replaced with as many _X_ characters as needed.
+```
+{
+    "rules": [
+        {
+            "replace": {
+                "column": "ssn"
+            },
+            "with": {
+                "value": "012345-ABCD",
+                "fill": "X"
+            }
+        }
+    ]
+}
+```

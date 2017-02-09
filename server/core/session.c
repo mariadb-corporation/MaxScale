@@ -230,7 +230,6 @@ session_set_dummy(DCB *client_dcb)
     session->ses_chk_top = CHK_NUM_SESSION;
     session->ses_chk_tail = CHK_NUM_SESSION;
     session->ses_is_child = false;
-    spinlock_init(&session->ses_lock);
     session->service = NULL;
     session->client_dcb = NULL;
     session->n_filters = 0;
@@ -285,20 +284,17 @@ void session_disable_log_priority(MXS_SESSION* session, int priority)
 bool
 session_link_dcb(MXS_SESSION *session, DCB *dcb)
 {
-    spinlock_acquire(&session->ses_lock);
     ss_info_dassert(session->state != SESSION_STATE_FREE,
                     "If session->state is SESSION_STATE_FREE then this attempt to "
                     "access freed memory block.");
     if (session->state == SESSION_STATE_FREE)
     {
-        spinlock_release(&session->ses_lock);
         return false;
     }
     atomic_add(&session->refcount, 1);
     dcb->session = session;
     /** Move this DCB under the same thread */
     dcb->thread.id = session->client_dcb->thread.id;
-    spinlock_release(&session->ses_lock);
     return true;
 }
 
