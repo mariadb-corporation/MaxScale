@@ -637,6 +637,32 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         router->saved_master.utf8 = buf;
         blr_cache_response(router, "utf8", buf);
+
+        buf = blr_make_query(router->master, "SET character_set_results = NULL");
+        router->master_state = BLRM_RESULTS_CHARSET;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_RESULTS_CHARSET:
+        // Response to  "SET character_set_results = NULL" query
+        if (router->saved_master.results_charset)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.results_charset);
+        }
+        router->saved_master.results_charset = buf;
+        blr_cache_response(router, "results_charset", buf);
+
+        buf = blr_make_query(router->master, "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'");
+        router->master_state = BLRM_SQL_MODE;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_SQL_MODE:
+        if (router->saved_master.sql_mode)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.sql_mode);
+        }
+        router->saved_master.sql_mode = buf;
+        blr_cache_response(router, "sql_mode", buf);
+
         buf = blr_make_query(router->master, "SELECT 1");
         router->master_state = BLRM_SELECT1;
         router->master->func.write(router->master, buf);
@@ -697,6 +723,80 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         router->saved_master.map = buf;
         blr_cache_response(router, "map", buf);
+
+        // Query for Server Variables
+        buf = blr_make_query(router->master, "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout");
+        router->master_state = BLRM_SERVER_VARS;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_SERVER_VARS:
+        if (router->saved_master.server_vars)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.server_vars);
+        }
+        router->saved_master.server_vars = buf;
+        blr_cache_response(router, "server_vars", buf);
+
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'log_bin'");
+        router->master_state = BLRM_LOG_BIN;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_LOG_BIN:
+        if (router->saved_master.log_bin)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.log_bin);
+        }
+        router->saved_master.log_bin = buf;
+        blr_cache_response(router, "log_bin", buf);
+
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'binlog_format'");
+        router->master_state = BLRM_BINLOG_FORMAT;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_FORMAT:
+        if (router->saved_master.binlog_format)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_format);
+        }
+        router->saved_master.binlog_format = buf;
+        blr_cache_response(router, "binlog_format", buf);
+
+        buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'binlog_row_image'");
+        router->master_state = BLRM_BINLOG_ROW_IMAGE;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_ROW_IMAGE:
+        if (router->saved_master.binlog_row_image)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_row_image);
+        }
+        router->saved_master.binlog_row_image = buf;
+        blr_cache_response(router, "binlog_row_image", buf);
+
+        buf = blr_make_query(router->master, "select @@lower_case_table_names");
+        router->master_state = BLRM_LOWER_CASE_TABLES;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_LOWER_CASE_TABLES:
+        if (router->saved_master.lower_case_tables)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.lower_case_tables);
+        }
+        router->saved_master.lower_case_tables = buf;
+        blr_cache_response(router, "lower_case_tables", buf);
+
+        buf = blr_make_query(router->master, "SELECT @@global.binlog_checksum");
+        router->master_state = BLRM_BINLOG_CHECKSUM;
+        router->master->func.write(router->master, buf);
+        break;
+    case BLRM_BINLOG_CHECKSUM:
+        if (router->saved_master.binlog_checksum)
+        {
+            GWBUF_CONSUME_ALL(router->saved_master.binlog_checksum);
+        }
+        router->saved_master.binlog_checksum = buf;
+        blr_cache_response(router, "binlog_checksum", buf);
+
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);

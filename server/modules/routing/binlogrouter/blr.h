@@ -479,23 +479,31 @@ typedef struct
  */
 typedef struct
 {
-    GWBUF           *server_id;     /*< Master server id */
-    GWBUF           *heartbeat;     /*< Heartbeat period */
-    GWBUF           *chksum1;       /*< Binlog checksum 1st response */
-    GWBUF           *chksum2;       /*< Binlog checksum 2nd response */
-    GWBUF           *gtid_mode;     /*< GTID Mode response */
-    GWBUF           *uuid;          /*< Master UUID */
-    GWBUF           *setslaveuuid;  /*< Set Slave UUID */
-    GWBUF           *setnames;      /*< Set NAMES latin1 */
-    GWBUF           *utf8;          /*< Set NAMES utf8 */
-    GWBUF           *select1;       /*< select 1 */
-    GWBUF           *selectver;     /*< select version() */
-    GWBUF           *selectvercom;  /*< select @@version_comment */
-    GWBUF           *selecthostname;/*< select @@hostname */
-    GWBUF           *map;           /*< select @@max_allowed_packet */
-    GWBUF           *mariadb10;     /*< set @mariadb_slave_capability */
-    uint8_t         *fde_event;     /*< Format Description Event */
-    int             fde_len;        /*< Length of fde_event */
+    GWBUF           *server_id;         /*< Master server id */
+    GWBUF           *heartbeat;         /*< Heartbeat period */
+    GWBUF           *chksum1;           /*< Binlog checksum 1st response */
+    GWBUF           *chksum2;           /*< Binlog checksum 2nd response */
+    GWBUF           *gtid_mode;         /*< GTID Mode response */
+    GWBUF           *uuid;              /*< Master UUID */
+    GWBUF           *setslaveuuid;      /*< Set Slave UUID */
+    GWBUF           *setnames;          /*< Set NAMES latin1 */
+    GWBUF           *utf8;              /*< Set NAMES utf8 */
+    GWBUF           *select1;           /*< select 1 */
+    GWBUF           *selectver;         /*< select version() */
+    GWBUF           *selectvercom;      /*< select @@version_comment */
+    GWBUF           *selecthostname;    /*< select @@hostname */
+    GWBUF           *map;               /*< select @@max_allowed_packet */
+    GWBUF           *mariadb10;         /*< set @mariadb_slave_capability */
+    GWBUF           *server_vars;       /*< MySQL Connector master server variables */
+    GWBUF           *results_charset;   /*< SET character_set_results = NULL */
+    GWBUF           *sql_mode;          /*< SET sql_mode='...' */
+    GWBUF           *log_bin;           /*< SHOW VARIABLES LIKE 'log_bin' */
+    GWBUF           *binlog_format;     /*< SHOW VARIABLES LIKE 'binlog_format' */
+    GWBUF           *binlog_row_image;  /*< SHOW VARIABLES LIKE 'binlog_row_image' */
+    GWBUF           *lower_case_tables; /*< select @@lower_case_table_names */
+    GWBUF           *binlog_checksum;   /*< select @@binlog_checksum */
+    uint8_t         *fde_event;         /*< Format Description Event */
+    int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
 
 /**
@@ -664,29 +672,64 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SUUID              0x000C
 #define BLRM_LATIN1             0x000D
 #define BLRM_UTF8               0x000E
-#define BLRM_SELECT1            0x000F
-#define BLRM_SELECTVER          0x0010
-#define BLRM_SELECTVERCOM       0x0011
-#define BLRM_SELECTHOSTNAME     0x0012
-#define BLRM_MAP                0x0013
-#define BLRM_REGISTER           0x0014
-#define BLRM_CHECK_SEMISYNC     0x0015
-#define BLRM_REQUEST_SEMISYNC   0x0016
-#define BLRM_REQUEST_BINLOGDUMP 0x0017
-#define BLRM_BINLOGDUMP         0x0018
-#define BLRM_SLAVE_STOPPED      0x0019
+#define BLRM_RESULTS_CHARSET    0x000F
+#define BLRM_SQL_MODE           0x0010
+#define BLRM_SELECT1            0x0011
+#define BLRM_SELECTVER          0x0012
+#define BLRM_SELECTVERCOM       0x0013
+#define BLRM_SELECTHOSTNAME     0x0014
+#define BLRM_MAP                0x0015
+#define BLRM_SERVER_VARS        0x0016
+#define BLRM_LOG_BIN            0x0017
+#define BLRM_BINLOG_FORMAT      0x0018
+#define BLRM_BINLOG_ROW_IMAGE   0x0019
+#define BLRM_LOWER_CASE_TABLES  0x001A
+#define BLRM_BINLOG_CHECKSUM    0x001B
+#define BLRM_REGISTER           0x001C
+#define BLRM_CHECK_SEMISYNC     0x001D
+#define BLRM_REQUEST_SEMISYNC   0x001E
+#define BLRM_REQUEST_BINLOGDUMP 0x001F
+#define BLRM_BINLOGDUMP         0x0020
+#define BLRM_SLAVE_STOPPED      0x0021
 
-#define BLRM_MAXSTATE           0x0019
+#define BLRM_MAXSTATE           0x0021
 
 static char *blrm_states[] =
 {
-    "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
-    "Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
-    "binlog checksum rerieval", "Set MariaDB slave capability", "GTID Mode retrieval",
-    "Master UUID retrieval", "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
-    "select version()", "select @@version_comment", "select @@hostname",
-    "select @@max_allowed_packet", "Register slave", "Semi-Sync Support retrivial",
-    "Request Semi-Sync Replication", "Request Binlog Dump", "Binlog Dump", "Slave stopped"
+    "Unconfigured",
+    "Unconnected",
+    "Connecting",
+    "Authenticated",
+    "Timestamp retrieval",
+    "Server ID retrieval",
+    "HeartBeat Period setup",
+    "binlog checksum config",
+    "binlog checksum rerieval",
+    "Set MariaDB slave capability",
+    "GTID Mode retrieval",
+    "Master UUID retrieval",
+    "Set Slave UUID",
+    "Set Names latin1",
+    "Set Names utf8",
+    "Set results charset null",
+    "Set sql_mode",
+    "select 1",
+    "select version()",
+    "select @@version_comment",
+    "select @@hostname",
+    "select @@max_allowed_packet",
+    "Query server variables",
+    "Query log_bin variable",
+    "Query binlog_format variable",
+    "Query binlog_row_image variable",
+    "Query @@lower_case_table_names",
+    "Query @@global.binlog_checksum",
+    "Register slave",
+    "Semi-Sync Support retrivial",
+    "Request Semi-Sync Replication",
+    "Request Binlog Dump",
+    "Binlog Dump",
+    "Slave stopped"
 };
 
 #define BLRS_CREATED            0x0000
