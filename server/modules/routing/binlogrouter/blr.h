@@ -528,6 +528,7 @@ typedef struct router_instance
     char                    *fileroot;      /*< Root of binlog filename */
     bool                    master_chksum;  /*< Does the master provide checksums */
     bool                    mariadb10_compat; /*< MariaDB 10.0 compatibility */
+    bool                    maxwell_compat; /*< Zendesk's Maxwell compatibility */
     char                    *master_uuid;   /*< Set UUID of the master, sent to slaves */
     DCB                     *master;        /*< DCB for master connection */
     DCB                     *client;        /*< DCB for dummy client */

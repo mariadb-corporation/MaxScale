@@ -637,6 +637,23 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         router->saved_master.utf8 = buf;
         blr_cache_response(router, "utf8", buf);
+
+	if (router->maxwell_compat)
+	{
+            buf = blr_make_query(router->master, "SET character_set_results = NULL");
+            router->master_state = BLRM_RESULTS_CHARSET;
+            router->master->func.write(router->master, buf);
+	}
+        else
+        {
+            buf = blr_make_query(router->master, "SELECT 1");
+            router->master_state = BLRM_SELECT1;
+            router->master->func.write(router->master, buf);
+        }
+        break;
+    case BLRM_RESULTS_CHARSET:
+        gwbuf_free(buf);
+
         buf = blr_make_query(router->master, "SELECT 1");
         router->master_state = BLRM_SELECT1;
         router->master->func.write(router->master, buf);
