@@ -42,8 +42,6 @@ MXS_BEGIN_DECLS
 static const char DBUSERS_DIR[] = "cache";
 static const char DBUSERS_FILE[] = "dbusers.db";
 
-#define MYSQLAUTH_DATABASE_NAME "file:mysqlauth.db?mode=memory&cache=shared"
-
 /** The table name where we store the users */
 #define MYSQLAUTH_USERS_TABLE_NAME    "mysqlauth_users"
 
@@ -58,6 +56,9 @@ static const char users_create_sql[] =
 /** CREATE TABLE statement for the in-memory databases table */
 static const char databases_create_sql[] =
     "CREATE TABLE IF NOT EXISTS " MYSQLAUTH_DATABASES_TABLE_NAME "(db varchar(255))";
+
+/** PRAGMA configuration options for SQLite */
+static const char pragma_sql[] = "PRAGMA JOURNAL_MODE=MEMORY";
 
 /** Query that checks if there's a grant for the user being authenticated */
 static const char mysqlauth_validate_user_query[] =
@@ -95,7 +96,6 @@ static const char null_token[] = "NULL";
 /** Flags for sqlite3_open_v2() */
 static int db_flags = SQLITE_OPEN_READWRITE |
                       SQLITE_OPEN_CREATE |
-                      SQLITE_OPEN_URI |
                       SQLITE_OPEN_SHAREDCACHE;
 
 typedef struct mysql_auth

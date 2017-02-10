@@ -106,6 +106,66 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
+static void get_database_path(SERV_LISTENER *port, char *dest)
+{
+    MYSQL_AUTH *instance = port->auth_instance;
+    SERVICE *service = port->service;
+
+    if (instance->cache_dir)
+    {
+        snprintf(dest, sizeof(dest) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
+    }
+    else
+    {
+        sprintf(dest, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+    }
+
+    if (mxs_mkdir_all(dest, S_IRWXU))
+    {
+        strcat(dest, DBUSERS_FILE);
+    }
+}
+
+static bool open_instance_database(const char *path, sqlite3 **handle)
+{
+    if (sqlite3_open_v2(path, handle, db_flags, NULL) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to open SQLite3 handle.");
+        return false;
+    }
+
+    char *err;
+
+    if (sqlite3_exec(*handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(*handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK ||
+        sqlite3_exec(*handle, pragma_sql, NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to create database: %s", err);
+        sqlite3_free(err);
+        sqlite3_close_v2(*handle);
+        return false;
+    }
+
+    return true;
+}
+
+static bool open_client_database(const char *path, sqlite3 **handle)
+{
+    bool rval = false;
+
+    if (sqlite3_open_v2(path, handle, db_flags, NULL) == SQLITE_OK)
+    {
+        sqlite3_busy_timeout(*handle, MXS_SQLITE_BUSY_TIMEOUT);
+        rval = true;
+    }
+    else
+    {
+        MXS_ERROR("Failed to open SQLite3 handle.");
+    }
+
+    return rval;
+}
+
 /**
  * @brief Initialize the authenticator instance
  *
@@ -122,25 +182,7 @@ static void* mysql_auth_init(char **options)
         instance->cache_dir = NULL;
         instance->inject_service_user = true;
         instance->skip_auth = false;
-
-        if (sqlite3_open_v2(MYSQLAUTH_DATABASE_NAME, &instance->handle, db_flags, NULL) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to open SQLite3 handle.");
-            MXS_FREE(instance);
-            return NULL;
-        }
-
-        char *err;
-
-        if (sqlite3_exec(instance->handle, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-            sqlite3_exec(instance->handle, databases_create_sql, NULL, NULL, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to create database: %s", err);
-            sqlite3_free(err);
-            sqlite3_close_v2(instance->handle);
-            MXS_FREE(instance);
-            return NULL;
-        }
+        instance->handle = NULL;
 
         for (int i = 0; options[i]; i++)
         {
@@ -196,16 +238,7 @@ static void* mysql_auth_create(void *instance)
 
     if (rval)
     {
-        if (sqlite3_open_v2(MYSQLAUTH_DATABASE_NAME, &rval->handle, db_flags, NULL) == SQLITE_OK)
-        {
-            sqlite3_busy_timeout(rval->handle, MXS_SQLITE_BUSY_TIMEOUT);
-        }
-        else
-        {
-            MXS_ERROR("Failed to open SQLite3 handle.");
-            MXS_FREE(rval);
-            rval = NULL;
-        }
+        rval->handle = NULL;
     }
 
     return rval;
@@ -336,6 +369,18 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     MySQLProtocol *protocol = NULL;
     MYSQL_session *client_data = NULL;
     int client_auth_packet_size = 0;
+    mysql_auth_t *auth_ses = (mysql_auth_t*)dcb->authenticator_data;
+
+    if (auth_ses->handle == NULL)
+    {
+        char path[PATH_MAX];
+        get_database_path(dcb->listener, path);
+
+        if (!open_client_database(path, &auth_ses->handle))
+        {
+            return MXS_AUTH_FAILED;
+        }
+    }
 
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
@@ -543,37 +588,22 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         return MXS_AUTH_LOADUSERS_FATAL;
     }
 
-    int loaded = replace_mysql_users(port);
-    char path[PATH_MAX];
+    if (instance->handle == NULL)
+    {
+        char path[PATH_MAX];
+        get_database_path(port, path);
+        if (!open_instance_database(path, &instance->handle))
+        {
+            return MXS_AUTH_LOADUSERS_FATAL;
+        }
+    }
 
-    if (instance->cache_dir)
-    {
-        snprintf(path, sizeof(path) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
-    }
-    else
-    {
-        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
-    }
+    int loaded = replace_mysql_users(port);
 
     if (loaded < 0)
     {
         MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
                   port->name, port->address ? port->address : "0.0.0.0", port->port);
-
-        if (mxs_mkdir_all(path, S_IRWXU))
-        {
-            strcat(path, DBUSERS_FILE);
-
-            if (!dbusers_load(instance->handle, path))
-            {
-                MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
-                rc = MXS_AUTH_LOADUSERS_ERROR;
-            }
-            else
-            {
-                MXS_WARNING("[%s] Using cached credential information from '%s'.", service->name, path);
-            }
-        }
 
         if (instance->inject_service_user)
         {
@@ -583,16 +613,6 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
             {
                 MXS_ERROR("[%s] Failed to inject service user.", port->service->name);
             }
-        }
-    }
-    else
-    {
-        /* Users loaded successfully, save authentication data to file cache */
-        if (mxs_mkdir_all(path, S_IRWXU))
-        {
-            strcat(path, DBUSERS_FILE);
-            dbusers_save(instance->handle, path);
-            MXS_INFO("[%s] Storing cached credential information at '%s'.", service->name, path);
         }
     }
 
