@@ -68,17 +68,126 @@ typedef void *MXS_FILTER_SESSION;
  */
 typedef struct mxs_filter_object
 {
+
+    /**
+     * @brief Create a new instance of the filter
+     *
+     * This function is called when a new filter instance is created. The return
+     * value of this function will be passed as the first parameter to the
+     * other API functions.
+     *
+     * @param name    Name of the filter instance
+     * @param options Filter options
+     * @param params  Filter parameters
+     *
+     * @return New filter instance on NULL on error
+     */
     MXS_FILTER *(*createInstance)(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+
+    /**
+     * Called to create a new user session within the filter
+     *
+     * This function is called when a new filter session is created for a client.
+     * The return value of this function will be passed as the second parameter
+     * to the @c routeQuery, @c clientReply, @c closeSession, @c freeSession,
+     * @c setDownstream and @c setUpstream functions.
+     *
+     * @param instance Filter instance
+     * @param session Client SESSION object
+     *
+     * @return New filter session or NULL on error
+     */
     MXS_FILTER_SESSION *(*newSession)(MXS_FILTER *instance, MXS_SESSION *session);
+
+    /**
+     * @brief Called when a session is closed
+     *
+     * The filter should close all objects but not free any memory.
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
     void     (*closeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+
+    /**
+     * @brief Called when a session is freed
+     *
+     * The session should free all allocated memory in this function.
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
     void     (*freeSession)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+
+    /**
+     * @brief Sets the downstream component of the filter pipeline
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
     void     (*setDownstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+
+    /**
+     * @brief Sets the upstream component of the filter pipeline
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     */
     void     (*setUpstream)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *downstream);
+
+    /**
+     * @brief Called on each query that requires routing
+     *
+     * TODO: Document how routeQuery should be used
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     * @param queue    Request from the client
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
+     */
     int32_t  (*routeQuery)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+
+    /**
+     * @brief Called for each reply packet
+     *
+     * TODO: Document how clientReply should be used
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session
+     * @param queue    Response from the server
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
+     */
     int32_t  (*clientReply)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
+     * @param dcb      DCB where the diagnostic information should be written
+     */
     void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+
+    /**
+     * @brief Called to obtain the capabilities of the filter
+     *
+     * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
+     *
+     * @see routing.h
+     */
     uint64_t (*getCapabilities)(void);
+
+    /**
+     * @brief Called for destroying a filter instance
+     *
+     * @param instance Filter instance
+     */
     void     (*destroyInstance)(MXS_FILTER *instance);
+
 } MXS_FILTER_OBJECT;
 
 /**
