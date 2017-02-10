@@ -630,7 +630,6 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         {
             int event_header_length;
             int event_header_ntypes;
-            int n_events;
 
             /** Extract the event header lengths */
             event_header_length = ptr[2 + 50 + 4];
@@ -653,15 +652,10 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 break;
             }
 
-            n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
-
-            if (event_header_ntypes < n_events)
+            uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
+            if (checksum[0] == 1)
             {
-                uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-                if (checksum[0] == 1)
-                {
-                    found_chksum = true;
-                }
+                found_chksum = true;
             }
         }
         /* Decode CLOSE/STOP Event */
