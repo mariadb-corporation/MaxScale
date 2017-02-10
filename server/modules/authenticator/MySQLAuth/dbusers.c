@@ -421,109 +421,6 @@ retblock:
     return rc;
 }
 
-int dump_user_cb(void *data, int fields, char **row, char **field_names)
-{
-    sqlite3 *handle = (sqlite3*)data;
-    add_mysql_user(handle, row[0], row[1], row[2], row[3] && strcmp(row[3], "1"), row[4]);
-    return 0;
-}
-
-int dump_database_cb(void *data, int fields, char **row, char **field_names)
-{
-    sqlite3 *handle = (sqlite3*)data;
-    add_database(handle, row[0]);
-    return 0;
-}
-
-static bool transfer_table_contents(sqlite3 *src, sqlite3 *dest)
-{
-    bool rval = true;
-    char *err;
-
-    /** Make sure the tables exist in both databases */
-    if (sqlite3_exec(src, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(dest, users_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(src, databases_create_sql, NULL, NULL, &err) != SQLITE_OK ||
-        sqlite3_exec(dest, databases_create_sql, NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to create tables: %s", err);
-        sqlite3_free(err);
-        rval = false;
-    }
-    else if (sqlite3_exec(dest, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to start transaction: %s", err);
-        sqlite3_free(err);
-        rval = false;
-    }
-    else
-    {
-        /** Transaction is open */
-        if (!delete_mysql_users(dest))
-        {
-            rval = false;
-        }
-        else if (sqlite3_exec(src, dump_users_query, dump_user_cb, dest, &err) != SQLITE_OK ||
-                 sqlite3_exec(src, dump_databases_query, dump_database_cb, dest, &err) != SQLITE_OK)
-        {
-            MXS_ERROR("Failed to load database contents: %s", err);
-            sqlite3_free(err);
-            rval = false;
-        }
-        if (rval)
-        {
-            if (sqlite3_exec(dest, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
-            {
-                MXS_ERROR("Failed to commit transaction: %s", err);
-                sqlite3_free(err);
-                rval = false;
-            }
-        }
-        else
-        {
-            if (sqlite3_exec(dest, "ROLLBACK", NULL, NULL, &err) != SQLITE_OK)
-            {
-                MXS_ERROR("Failed to rollback transaction: %s", err);
-                sqlite3_free(err);
-                rval = false;
-            }
-        }
-    }
-    return rval;
-}
-
-bool dbusers_load(sqlite3 *dest, const char *filename)
-{
-    sqlite3 *src;
-
-    if (sqlite3_open_v2(filename, &src, db_flags, NULL) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open persisted SQLite3 database.");
-        return false;
-    }
-
-    bool rval = transfer_table_contents(src, dest);
-    sqlite3_close_v2(src);
-
-    return rval;
-}
-
-bool dbusers_save(sqlite3 *src, const char *filename)
-{
-    sqlite3 *dest;
-
-    if (sqlite3_open_v2(filename, &dest, db_flags, NULL) != SQLITE_OK)
-    {
-        MXS_ERROR("Failed to open persisted SQLite3 database.");
-        return -1;
-    }
-
-    bool rval = transfer_table_contents(src, dest);
-    sqlite3_close_v2(dest);
-
-    return rval;
-}
-
 /**
  * @brief Check service permissions on one server
  *
@@ -752,9 +649,28 @@ static bool get_hostname(const char *ip_address, char *client_hostname)
     return false;
 }
 
+void start_sqlite_transaction(sqlite3 *handle)
+{
+    char *err;
+    if (sqlite3_exec(handle, "BEGIN", NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to start transaction: %s", err);
+        sqlite3_free(err);
+    }
+}
+
+void commit_sqlite_transaction(sqlite3 *handle)
+{
+    char *err;
+    if (sqlite3_exec(handle, "COMMIT", NULL, NULL, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to commit transaction: %s", err);
+        sqlite3_free(err);
+    }
+}
+
 int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV_LISTENER *listener)
 {
-
     if (server->server->server_string == NULL)
     {
         const char *server_string = mysql_get_server_info(con);
@@ -764,7 +680,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
         }
     }
 
-    /** Testing new users query */
     char *query = get_new_users_query(server->server->server_string, service->enable_root);
     MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
     bool anon_user = false;
@@ -778,7 +693,12 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
 
             if (result)
             {
+                start_sqlite_transaction(instance->handle);
+
+                /** Delete the old users */
+                delete_mysql_users(instance->handle);
                 MYSQL_ROW row;
+
                 while ((row = mysql_fetch_row(result)))
                 {
                     if (service->strip_db_esc)
@@ -797,6 +717,8 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
                         anon_user = true;
                     }
                 }
+
+                commit_sqlite_transaction(instance->handle);
 
                 mysql_free_result(result);
             }
