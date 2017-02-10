@@ -11,6 +11,7 @@ add_subdirectory(maxinfo)
 add_subdirectory(readconnroute)
 add_subdirectory(readwritesplit)
 add_subdirectory(schemarouter)
+add_subdirectory(roundrobinrouter)
 
 if(BUILD_TESTS)
   add_subdirectory(testroute)
