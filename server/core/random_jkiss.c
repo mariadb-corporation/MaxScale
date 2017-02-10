@@ -104,12 +104,6 @@ void random_jkiss_init(void)
             c = newrand % 698769068 + 1; /* Should be less than 698769069 */
         }
 
-        /* "Warm up" our random number generator */
-        for (i = 0; i < 100; i++)
-        {
-            random_jkiss();
-        }
-
         init = true;
     }
 }
