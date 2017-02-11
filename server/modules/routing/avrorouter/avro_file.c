@@ -886,7 +886,10 @@ void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
     }
 
     /** Update the GTID index */
-    avro_update_index(router);
+    if (flush == AVROROUTER_FLUSH)
+    {
+        avro_update_index(router);
+    }
 }
 
 /**
