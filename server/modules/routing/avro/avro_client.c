@@ -848,12 +848,14 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         if (file)
         {
             int nread;
-            while ((nread = fread(buffer, 1, sizeof(buffer), file)) > 0)
+            while ((nread = fread(buffer, 1, sizeof(buffer) - 1, file)) > 0)
             {
                 while (isspace(buffer[nread - 1]))
                 {
                     nread--;
                 }
+
+                buffer[nread++] = '\n';
 
                 GWBUF * newbuf = gwbuf_alloc_and_load(nread, buffer);
 
