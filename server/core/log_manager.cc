@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <syslog.h>
 #include <maxscale/atomic.h>
+#include <maxscale/platform.h>
 
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.h>
@@ -3010,4 +3011,11 @@ int mxs_log_message(int priority,
     }
 
     return err;
+}
+
+const char* mxs_strerror(int error)
+{
+    static thread_local char errbuf[MXS_STRERROR_BUFLEN];
+
+    return strerror_r(error, errbuf, sizeof(errbuf));
 }
