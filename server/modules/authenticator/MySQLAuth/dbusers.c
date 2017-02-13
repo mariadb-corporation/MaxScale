@@ -160,6 +160,11 @@ static bool check_database(sqlite3 *handle, const char *database)
     return rval;
 }
 
+static bool no_password_required(const char *result, size_t tok_len)
+{
+    return *result == '\0' && tok_len == 0;
+}
+
 /** Used to detect empty result sets */
 struct user_query_result
 {
@@ -218,7 +223,8 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
     {
         /** Found a matching row */
 
-        if (check_password(res.output, session->auth_token, session->auth_token_len,
+        if (no_password_required(res.output, session->auth_token_len) ||
+            check_password(res.output, session->auth_token, session->auth_token_len,
                            scramble, scramble_len, session->client_sha1))
         {
             /** Password is OK, check that the database exists */
