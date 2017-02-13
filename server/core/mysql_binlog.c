@@ -382,7 +382,7 @@ size_t unpack_enum(uint8_t *ptr, uint8_t *metadata, uint8_t *dest)
  * @return Length of the processed field in bytes
  */
 size_t unpack_bit(uint8_t *ptr, uint8_t *null_mask, uint32_t col_count,
-                    uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest)
+                  uint32_t curr_col_index, uint8_t *metadata, uint64_t *dest)
 {
     if (metadata[1])
     {
@@ -568,22 +568,34 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
             val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
             break;
         case 3:
-            val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) | ((uint64_t)ptr[0] << 16);
+            val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) |
+                  ((uint64_t)ptr[0] << 16);
             break;
         case 4:
-            val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+            val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) |
+                  ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
             break;
         case 5:
-            val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) | ((uint64_t)ptr[0] << 32);
+            val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) |
+                  ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) |
+                  ((uint64_t)ptr[0] << 32);
             break;
         case 6:
-            val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) | ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+            val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) |
+                  ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) |
+                  ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
             break;
         case 7:
-            val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) | ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) | ((uint64_t)ptr[0] << 48);
+            val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) |
+                  ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) |
+                  ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) |
+                  ((uint64_t)ptr[0] << 48);
             break;
         case 8:
-            val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) | ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+            val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) |
+                  ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) |
+                  ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) |
+                  ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
             break;
     }
 
