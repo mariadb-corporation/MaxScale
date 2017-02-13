@@ -519,10 +519,9 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             case -1:
                 {
                     char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                    strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-                    MXS_ERROR("Failed to read binlog file %s at position %llu"
-                              " (%s).", router->binlog_name,
-                              pos, err_msg);
+                    MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
+                              router->binlog_name, pos,
+                              strerror_r(errno, err_msg, sizeof(err_msg)));
 
                     if (errno == EBADF)
                         MXS_ERROR("Bad file descriptor in read binlog for file %s"
