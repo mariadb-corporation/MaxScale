@@ -240,7 +240,8 @@ poll_init()
         if ((epoll_fd[i] = epoll_create(MAX_EVENTS)) == -1)
         {
             char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("FATAL: Could not create epoll instance: %s", strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("FATAL: Could not create epoll instance: %s",
+                      strerror_r(errno, errbuf, sizeof(errbuf)));
             exit(-1);
         }
     }
@@ -268,12 +269,14 @@ poll_init()
     memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
     thread_data = (THREAD_DATA *)MXS_MALLOC(n_threads * sizeof(THREAD_DATA));
-    if (thread_data)
+    if (!thread_data)
     {
-        for (int i = 0; i < n_threads; i++)
-        {
-            thread_data[i].state = THREAD_STOPPED;
-        }
+        exit(-1);
+    }
+
+    for (int i = 0; i < n_threads; i++)
+    {
+        thread_data[i].state = THREAD_STOPPED;
     }
 
     if ((pollStats.n_read = ts_stats_alloc()) == NULL ||
@@ -656,10 +659,7 @@ poll_waitevents(void *arg)
     thread_id = (intptr_t)arg;
     int poll_spins = 0;
 
-    if (thread_data)
-    {
-        thread_data[thread_id].state = THREAD_IDLE;
-    }
+    thread_data[thread_id].state = THREAD_IDLE;
 
     while (1)
     {
@@ -671,10 +671,7 @@ poll_waitevents(void *arg)
 #if MUTEX_EPOLL
         simple_mutex_lock(&epoll_wait_mutex, TRUE);
 #endif
-        if (thread_data)
-        {
-            thread_data[thread_id].state = THREAD_POLLING;
-        }
+        thread_data[thread_id].state = THREAD_POLLING;
 
         ts_stats_increment(pollStats.n_polls, thread_id);
         if ((nfds = epoll_wait(epoll_fd[thread_id], events, MAX_EVENTS, 0)) == -1)
@@ -741,13 +738,11 @@ poll_waitevents(void *arg)
                       pthread_self(),
                       nfds);
             ts_stats_increment(pollStats.n_pollev, thread_id);
-            if (thread_data)
-            {
-                thread_data[thread_id].n_fds = nfds;
-                thread_data[thread_id].cur_dcb = NULL;
-                thread_data[thread_id].event = 0;
-                thread_data[thread_id].state = THREAD_PROCESSING;
-            }
+
+            thread_data[thread_id].n_fds = nfds;
+            thread_data[thread_id].cur_dcb = NULL;
+            thread_data[thread_id].event = 0;
+            thread_data[thread_id].state = THREAD_PROCESSING;
 
             pollStats.n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
 
@@ -802,20 +797,14 @@ poll_waitevents(void *arg)
 
         dcb_process_idle_sessions(thread_id);
 
-        if (thread_data)
-        {
-            thread_data[thread_id].state = THREAD_ZPROCESSING;
-        }
+        thread_data[thread_id].state = THREAD_ZPROCESSING;
 
         /** Process closed DCBs */
         dcb_process_zombies(thread_id);
 
         poll_check_message();
 
-        if (thread_data)
-        {
-            thread_data[thread_id].state = THREAD_IDLE;
-        }
+        thread_data[thread_id].state = THREAD_IDLE;
 
         if (do_shutdown)
         {
@@ -823,16 +812,11 @@ poll_waitevents(void *arg)
              * Remove the thread from the bitmask of running
              * polling threads.
              */
-            if (thread_data)
-            {
-                thread_data[thread_id].state = THREAD_STOPPED;
-            }
+            thread_data[thread_id].state = THREAD_STOPPED;
             return;
         }
-        if (thread_data)
-        {
-            thread_data[thread_id].state = THREAD_IDLE;
-        }
+
+        thread_data[thread_id].state = THREAD_IDLE;
     } /*< while(1) */
 }
 
@@ -909,12 +893,10 @@ process_pollq(int thread_id, struct epoll_event *event)
     ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
 
     CHK_DCB(dcb);
-    if (thread_data)
-    {
-        thread_data[thread_id].state = THREAD_PROCESSING;
-        thread_data[thread_id].cur_dcb = dcb;
-        thread_data[thread_id].event = ev;
-    }
+
+    thread_data[thread_id].state = THREAD_PROCESSING;
+    thread_data[thread_id].cur_dcb = dcb;
+    thread_data[thread_id].event = ev;
 
     /* It isn't obvious that this is impossible */
     /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
@@ -1335,10 +1317,6 @@ dShowThreads(DCB *dcb)
     dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
                "1 Minute Average: %.2f\n\n", qavg15, qavg5, qavg1);
 
-    if (thread_data == NULL)
-    {
-        return;
-    }
     dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Running  | Event\n");
     dcb_printf(dcb, "----+------------+--------+------------------+----------+---------------\n");
     for (i = 0; i < n_threads; i++)
