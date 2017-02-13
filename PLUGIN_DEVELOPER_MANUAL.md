@@ -80,11 +80,15 @@ The MariaDB MaxScale configuration file `maxscale.cnf` is parsed by the core. Th
 
 This section explains some general concepts encountered when implementing a module API. Most of this section will apply to most module types. For more detailed information see the module specific section, header files or the doxygen documentation.
 
-Modules with configuration data define an "INSTANCE-object", which is created by the module code in a `createInstance`-function or equivalent. The instance creation function is called during MaxScale startup, usually when creating services. The module instance data is held by the *SERVICE*-structure (or other higher level construct) and given as a parameter when calling functions from the module in question. The instance structure should contain all non-client-specific information required by the functions of the module. The core does not know what the object contains (since it is defined by the module itself), nor will it modify the pointer or the referenced object in any way. In the interface, the instance pointer is defined as `void*`, but in actual module code the pointer should always be cast to the actual instance type.
+Modules with configuration data define an *INSTANCE* object, which is created by the module code in a `createInstance`-function or equivalent. The instance creation function is called during MaxScale startup, usually when creating services. The module instance data is held by the *SERVICE*-structure (or other higher level construct) and given as a parameter when calling functions from the module in question. The instance structure should contain all non-client-specific information required by the functions of the module. The core does not know what the object contains (since it is defined by the module itself), nor will it modify the pointer or the referenced object in any way. In the interface, the instance pointer is defined as `void*`, but in actual module code the pointer should always be cast to the actual instance type.
 
-Modules dealing with client-specific data require a session-object for every client. As with the instance data, the definition of the module session structure is up to the writer. Usually it contains status indicators and any resources required by the client. The module sessionBLABLABLA. MaxScale core has its own `MXS_SESSION`-object which tracks a variety of client related information.  
+Modules dealing with client-specific data require a *SESSION* object for every client. As with the instance data, the definition of the module session structure is up to the writer and MaxScale treats it as an opaque type. Usually the session contains status indicators and any resources required by the client. MaxScale core has its own `MXS_SESSION` object, which tracks a variety of client related information. The `MXS_SESSION` is given as a parameter to module-specific session creation functions and is required for several typical operations such as connecting to backends.
 
+Descriptor control blocks (`DCB`), are generalized I/O descriptor types. DCBs store the file descriptor, state, remote address, username, session, and other data. DCBs are created whenever a new socket is created. Typically this happens when a new client connects or MaxScale connects the client session to backend servers. The module writer should use DCB handling functions provided by the CPI to manage connections instead of calling general networking libraries.
 
+Network data such as client queries and backend replies are held in a rather complicated buffer container type called `GWBUF`. Multiple GWBUFs can form a linked list with type information and properties in each GWBUF-node. Each node includes a pointer to a reference counted shared buffer (`SHARED_BUF`), which finally points to a slice of the actual data. What all this means is that multiple GWBUF-chains can share some parts of data while having some parts private. The construction is meant to minimize the need for data copying. In simple situations there is no need to form a linked list and the buffer acts similar to a handle. Plugin writers should use the CPI to manipulate GWBUFs.
+
+In the next sections, the APIs of module types in MariaDB MaxScale are presented.
 
 #### General module management
 
@@ -95,7 +99,7 @@ int thread_init()
 void thread_finish()
 ```
 
-`process_init` and `process_finish` are called by the module loader right after loading a module and just before unloading a module. Usually, these can be set to null in `MXS_MODULE` unless the module needs some general initializations before creating any instances. `thread_init` and `thread_finish` are thread specific equivalents.
+These four functions are present in all `MXS_MODULE` structs and are not part of the API of any individual module type. `process_init` and `process_finish` are called by the module loader right after loading a module and just before unloading a module. Usually, these can be set to null in `MXS_MODULE` unless the module needs some general initializations before creating any instances. `thread_init` and `thread_finish` are thread specific equivalents.
 
 #### Protocol
 
@@ -115,6 +119,10 @@ char   *(*auth_default)();
 int32_t (*connlimit)(struct dcb *, int limit);
 ```
 
+Protocol modules are laborous to implement due to their low level nature. Each DCB maintains pointers to the correct protocol functions to be used with it, allowing the DCB to be used in a protocol-independent manner.
+
+`read`, `write_ready`, `error` and `hangup` are *epoll* handlers for their respective events. `write` implements writing and is usually called in a router module. `accept` is a listener socker handler. `connect` is used during session creation when connecting to backend servers. `listen` creates a listener socket. `close` closes a DCB created by *accept*, *connect* or *listen*.
+
 #### Authenticator
 
 ```java
@@ -133,18 +141,18 @@ int (*reauthenticate)(struct dcb *, const char *user,
                       uint8_t *output, size_t output_len);
 ```
 
+Authenticators must communicate with the client or the backends and implement authentication. The authenticators can be divided to client and backend modules, although the two types are linked and must be used together. Authenticators are also dependent on the protocol modules.
+
 #### Filter and Router
 
-Filter and router APIs are nearly identical and are presented together.
+Filter and router APIs are nearly identical and are presented together. Since these are the modules most likely to be implemented by outside developers they are discussed in more detail.
 
 ```java
 INSTANCE* createInstance(SERVICE* service, char** options)
 void destroyInstance(INSTANCE* instance)
 ```
 
-`createInstance` should read the `options` and initialize an "instance" object for use with `service`.
-
-`destroyInstance` is called when the service using the module is deallocated. It should free any resources claimed by the instance.
+`createInstance` should read the `options` and initialize an "instance" object for use with `service`. Often, simply saving the configuration values to fields is enough. `destroyInstance` is called when the service using the module is deallocated. It should free any resources claimed by the instance. All sessions created by this instance should be closed before calling the destructor.
 
 ```java
 void* newSession(INSTANCE* instance, MXS_SESSION* session)
@@ -152,7 +160,7 @@ void closeSession(INSTANCE* instance, void* session)
 void freeSession(INSTANCE* instance, void* session)
 ```
 
-These functions manage sessions for filters and routers used by be implemented The `void**` can be  
+These functions manage sessions. `newSession` should allocate a router or filter session attached to the client session represented by `MXS_SESSION session`. MaxScale will pass the returned pointer to all the API entrypoints that process user data.  used by be implemented The `void**` can be.
 
 #### Monitor
 
@@ -161,6 +169,8 @@ void *(*startMonitor)(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER *params);
 void (*stopMonitor)(MXS_MONITOR *monitor);
 void (*diagnostics)(DCB *, const MXS_MONITOR *);
 ```
+
+Monitor modules typically run a repeated monitor routine with a used defined interval. The `MXS_MONITOR` is a standard monitor definition used for all monitors and contains a void pointer for storing module specific data. `startMonitor` should create a new thread for itself using functions in the CPI and have it regularly run a monitor loop. In the beginning of every monitor loop, the monitor should lock the `SERVER`-structures of its servers. This prevents any administrative action from interfering with the monitor during its pass.
 
 ## Core public interface
 
