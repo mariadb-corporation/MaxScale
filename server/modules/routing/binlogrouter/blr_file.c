@@ -1197,8 +1197,12 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
     {
         return;
     }
-    write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf));
-    // TODO: Check result.
+    if (write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf)) == -1)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to write cached response: %d, %s",
+                  errno, strerror_r(errno, err, sizeof(err)));
+    }
 
     close(fd);
 }
@@ -1251,7 +1255,12 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
         close(fd);
         return NULL;
     }
-    read(fd, GWBUF_DATA(buf), statb.st_size);
+    if (read(fd, GWBUF_DATA(buf), statb.st_size) == -1)
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to read cached response: %d, %s",
+                  errno, strerror_r(errno, err, sizeof(err)));
+    }
     close(fd);
     return buf;
 }
@@ -1421,11 +1430,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 break;
             case -1:
                 {
-                    char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                    strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Failed to read binlog file %s at position %llu"
-                              " (%s).", router->binlog_name,
-                              pos, err_msg);
+                              " (%s).", router->binlog_name, pos,
+                              strerror_r(errno, err, sizeof(err)));
 
                     if (errno == EBADF)
                     {
@@ -1533,7 +1541,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         }
         else
         {
-            char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1] = "";
             /* fill replication header struct */
             hdr.timestamp = EXTRACT32(hdbuf);
             hdr.event_type = hdbuf[4];
@@ -1641,12 +1649,12 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         {
             if (n == -1)
             {
-                char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error reading the event at %llu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,
-                          err_msg, hdr.event_size - BINLOG_EVENT_HDR_LEN);
+                          strerror_r(errno, err, sizeof(err)),
+                          hdr.event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
             {
@@ -1709,7 +1717,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
             uint32_t event_size = EXTRACT32(hdbuf + BINLOG_EVENT_LEN_OFFSET);
             uint8_t *decrypt_ptr;
             unsigned long next_pos;
-            char errmsg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
+            char errmsg[BINLOG_ERROR_MSG_LEN + 1] = "";
 
             /**
              * Events are encrypted.

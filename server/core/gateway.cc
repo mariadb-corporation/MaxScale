@@ -304,7 +304,10 @@ static void sigterm_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        {
+            printf("Failed to write shutdown message!\n");
+        }
     }
     else
     {
@@ -320,11 +323,17 @@ sigint_handler(int i)
 
     if (n_shutdowns == 1)
     {
-        write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1);
+        if (write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg) - 1) == -1)
+        {
+            printf("Failed to write shutdown message!\n");
+        }
     }
     else if (n_shutdowns == 2)
     {
-        write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1);
+        if (write(STDERR_FILENO, patience_msg, sizeof(patience_msg) - 1) == -1)
+        {
+            printf("Failed to write shutdown message!\n");
+        }
     }
     else
     {
@@ -2621,7 +2630,10 @@ static int set_user(const char* user)
 void write_child_exit_code(int fd, int code)
 {
     /** Notify the parent process that an error has occurred */
-    write(fd, &code, sizeof (int));
+    if (write(fd, &code, sizeof (int)) == -1)
+    {
+        printf("Failed to write child process message!\n");
+    }
     close(fd);
 }
 

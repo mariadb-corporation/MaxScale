@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/hashtable.h>
@@ -741,7 +742,12 @@ hashtable_save(HASHTABLE *table, const char *filename,
         close(fd);
         return -1;
     }
-    write(fd, &rval, sizeof(rval)); // Write zero counter, will be overrwriten at end
+    if (write(fd, &rval, sizeof(rval)) == -1) // Write zero counter, will be overrwriten at end
+    {
+        char err[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
+                  strerror_r(errno, err, sizeof(err)));
+    }
     if ((iter = hashtable_iterator(table)) != NULL)
     {
         while ((key = hashtable_next(iter)) != NULL)
@@ -766,7 +772,12 @@ hashtable_save(HASHTABLE *table, const char *filename,
     /* Now go back and write the count of entries */
     if (lseek(fd, 7L, SEEK_SET) != -1)
     {
-        write(fd, &rval, sizeof(rval));
+        if (write(fd, &rval, sizeof(rval)) == -1)
+        {
+            char err[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
+                      strerror_r(errno, err, sizeof(err)));
+        }
     }
 
     close(fd);
