@@ -185,6 +185,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"master_version", MXS_MODULE_PARAM_STRING},
             {"master_hostname", MXS_MODULE_PARAM_STRING},
             {"mariadb10-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
+            {"maxwell-compatibility", MXS_MODULE_PARAM_BOOL, "false"},
             {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},
             {"file", MXS_MODULE_PARAM_COUNT, "1"},
             {"transaction_safety", MXS_MODULE_PARAM_BOOL, "false"},
@@ -331,6 +332,7 @@ createInstance(SERVICE *service, char **options)
     inst->heartbeat = config_get_integer(params, "heartbeat");
     inst->ssl_cert_verification_depth = config_get_integer(params, "ssl_cert_verification_depth");
     inst->mariadb10_compat = config_get_bool(params, "mariadb10-compatibility");
+    inst->maxwell_compat = config_get_bool(params, "maxwell-compatibility");
     inst->trx_safe = config_get_bool(params, "transaction_safety");
     inst->set_master_version = config_copy_string(params, "master_version");
     inst->set_master_hostname = config_copy_string(params, "master_hostname");
@@ -485,6 +487,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "mariadb10-compatibility") == 0)
                 {
                     inst->mariadb10_compat = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "maxwell-compatibility") == 0)
+                {
+                    inst->maxwell_compat = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
