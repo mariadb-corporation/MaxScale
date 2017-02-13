@@ -605,12 +605,11 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
     int fbytes = fpart1 * 4 + dig_bytes[fpart2];
 
     /** Remove the sign bit and store it locally */
-    bool signed_int = (ptr[0] & 0x80);
+    bool negative = (ptr[0] & 0x80) == 0;
+    ptr[0] ^= 0x80;
 
-    if (!signed_int)
+    if (negative)
     {
-        ptr[0] |= 0x80;
-
         for (int i = 0; i < ibytes; i++)
         {
             ptr[i] = ~ptr[i];
@@ -625,7 +624,7 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
     int64_t val_i = unpack_bytes(ptr, ibytes);
     int64_t val_f = fbytes ? unpack_bytes(ptr + ibytes, fbytes) : 0;
 
-    if (!signed_int)
+    if (negative)
     {
         val_i = -val_i;
         val_f = -val_f;
