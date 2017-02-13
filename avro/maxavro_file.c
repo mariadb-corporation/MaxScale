@@ -12,6 +12,7 @@
  */
 
 #include "maxavro.h"
+#include "skygw_utils.h"
 #include <errno.h>
 #include <string.h>
 #include <log_manager.h>
@@ -49,11 +50,12 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
     int rc = fread(sync, 1, SYNC_MARKER_SIZE, file->file);
     if (rc != SYNC_MARKER_SIZE)
     {
-        if (rc == -1)
+        if (ferror(file->file))
         {
-            MXS_ERROR("Failed to read file: %d %s", errno, strerror(errno));
+            char err[STRERROR_BUFLEN];
+            MXS_ERROR("Failed to read file: %d %s", errno, strerror_r(errno, err, sizeof(err)));
         }
-        else
+        else if (rc > 0 || !feof(file->file))
         {
             MXS_ERROR("Short read when reading sync marker. Read %d bytes instead of %d",
                       rc, SYNC_MARKER_SIZE);
