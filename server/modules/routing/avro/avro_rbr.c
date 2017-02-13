@@ -391,7 +391,7 @@ void set_numeric_field_value(avro_value_t *field, uint8_t type, uint8_t *metadat
         case TABLE_COL_TYPE_LONGLONG:
         {
             long l = gw_mysql_get_byte8(value);
-            avro_value_set_int(field, l);
+            avro_value_set_long(field, l);
             break;
         }
 
