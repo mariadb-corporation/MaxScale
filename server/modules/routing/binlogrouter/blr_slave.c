@@ -390,9 +390,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     char *ptr;
     extern char *strcasestr();
     bool unexpected = true;
-    static const char mysql_connector_server_variables_query[] = "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout";
     static const char mysql_connector_results_charset_query[] = "SET character_set_results = NULL";
-    static const char mysql_connector_sql_mode_query[] = "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'";
     static const char maxwell_server_id_query[] = "SELECT @@server_id as server_id";
     static const char maxwell_log_bin_query[] = "SHOW VARIABLES LIKE 'log_bin'";
     static const char maxwell_binlog_format_query[] = "SHOW VARIABLES LIKE 'binlog_format'";
@@ -445,7 +443,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
      * own interaction with the real master. We simply replay these saved responses
      * to the slave.
      */
-    if (strcmp(blr_skip_leading_sql_comments(query_text), mysql_connector_server_variables_query) == 0)
+    if (strcmp(blr_skip_leading_sql_comments(query_text), MYSQL_CONNECTOR_SERVER_VARS_QUERY) == 0)
     {
         int rc = blr_slave_replay(router, slave, router->saved_master.server_vars);
         if (rc >= 0)
@@ -460,7 +458,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         MXS_FREE(query_text);
         return blr_slave_send_ok(router, slave);
     }
-    else if (router->maxwell_compat && strcmp(query_text, mysql_connector_sql_mode_query) == 0)
+    else if (router->maxwell_compat && strcmp(query_text, MYSQL_CONNECTOR_SQL_MODE_QUERY) == 0)
     {
         MXS_FREE(query_text);
         return blr_slave_send_ok(router, slave);
