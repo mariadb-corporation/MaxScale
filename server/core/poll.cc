@@ -155,11 +155,11 @@ typedef enum
  */
 typedef struct
 {
-    THREAD_STATE state; /*< Current thread state */
-    int n_fds;          /*< No. of descriptors thread is processing */
-    DCB *cur_dcb;       /*< Current DCB being processed */
-    uint32_t event;     /*< Current event being processed */
-    uint64_t cycle_start; /*< The time when the poll loop was started */
+    THREAD_STATE   state;       /*< Current thread state */
+    int            n_fds;       /*< No. of descriptors thread is processing */
+    MXS_POLL_DATA *cur_data;    /*< Current DCB being processed */
+    uint32_t       event;       /*< Current event being processed */
+    uint64_t       cycle_start; /*< The time when the poll loop was started */
 } THREAD_DATA;
 
 static THREAD_DATA *thread_data = NULL;    /*< Status of each thread */
@@ -811,7 +811,7 @@ poll_waitevents(void *arg)
             ts_stats_increment(pollStats.n_pollev, thread_id);
 
             thread_data[thread_id].n_fds = nfds;
-            thread_data[thread_id].cur_dcb = NULL;
+            thread_data[thread_id].cur_data = NULL;
             thread_data[thread_id].event = 0;
             thread_data[thread_id].state = THREAD_PROCESSING;
 
@@ -854,6 +854,7 @@ poll_waitevents(void *arg)
             ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
+            thread_data[thread_id].cur_data = data;
 
             thread_data[thread_id].event = events[i].events;
             data->handler(data, thread_id, events[i].events);
@@ -954,8 +955,6 @@ process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
     ss_dassert(dcb->poll.thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
     CHK_DCB(dcb);
-
-    thread_data[thread_id].cur_dcb = dcb;
 
     /* It isn't obvious that this is impossible */
     /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
@@ -1389,7 +1388,7 @@ dShowThreads(DCB *dcb)
                        " %2d | %-10s |        |                  |          |\n",
                        i, state);
         }
-        else if (thread_data[i].cur_dcb == NULL)
+        else if (thread_data[i].cur_data == NULL)
         {
             dcb_printf(dcb,
                        " %2d | %-10s | %6d |                  |          |\n",
@@ -1412,7 +1411,7 @@ dShowThreads(DCB *dcb)
             dcb_printf(dcb,
                        " %2d | %-10s | %6d | %-16p | <%3lu00ms | %s\n",
                        i, state, thread_data[i].n_fds,
-                       thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->evq.started,
+                       thread_data[i].cur_data, 1 + hkheartbeat - dcb->evq.started,
                        event_string);
 
             if (from_heap)
