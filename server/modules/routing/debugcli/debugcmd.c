@@ -646,9 +646,9 @@ struct subcommand enableoptions[] =
         "sessionlog-priority",
         2, 2,
         enable_sess_log_priority,
-        "Enable a logging priority for a session",
+        "[Deprecated] Enable a logging priority for a session",
         "Usage: enable sessionlog-priority [err | warning | notice | info | debug] <session id>"
-        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
+        "\t E.g. enable sessionlog-priority info 123.",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
@@ -717,9 +717,9 @@ struct subcommand disableoptions[] =
         "sessionlog-priority",
         2, 2,
         disable_sess_log_priority,
-        "Disable a logging priority for a particular session",
+        "[Deprecated] Disable a logging priority for a particular session",
         "Usage: disable sessionlog-priority [err | warning | notice | info | debug] <session id>"
-        "message | debug] <session id>\t E.g. enable sessionlog-priority info 123",
+        "\t E.g. enable sessionlog-priority info 123",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
@@ -2050,30 +2050,6 @@ struct log_action_entry
     const char* replacement;
 };
 
-bool seslog_cb(DCB *dcb, void *data)
-{
-    bool rval = true;
-    struct log_action_entry *entry = ((void**)data)[0];
-    size_t *id = ((void**)data)[1];
-    bool enable = (bool)((void**)data)[2];
-    MXS_SESSION *session = dcb->session;
-
-    if (session->ses_id == *id)
-    {
-        if (enable)
-        {
-            session_enable_log_priority(session, entry->priority);
-        }
-        else
-        {
-            session_disable_log_priority(session, entry->priority);
-        }
-        rval = false;
-    }
-
-    return rval;
-}
-
 struct log_priority_entry
 {
     const char* name;
@@ -2111,30 +2087,6 @@ static int string_to_priority(const char* name)
     return result ? result->priority : -1;
 }
 
-bool sesprio_cb(DCB *dcb, void *data)
-{
-    bool rval = true;
-    int *priority = ((void**)data)[0];
-    size_t *id = ((void**)data)[1];
-    bool enable = (bool)((void**)data)[2];
-    MXS_SESSION *session = dcb->session;
-
-    if (session->ses_id == *id)
-    {
-        if (enable)
-        {
-            session_enable_log_priority(session, *priority);
-        }
-        else
-        {
-            session_disable_log_priority(session, *priority);
-        }
-        rval = false;
-    }
-
-    return rval;
-}
-
 /**
  * Enables a log priority for a single session
  * @param session The session in question
@@ -2143,22 +2095,7 @@ bool sesprio_cb(DCB *dcb, void *data)
  */
 static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 {
-    int priority = string_to_priority(arg1);
-
-    if (priority != -1)
-    {
-        size_t id = (size_t) strtol(arg2, NULL, 10);
-        void *data[] = {&priority, &id, (void*)true};
-
-        if (dcb_foreach(sesprio_cb, data))
-        {
-            dcb_printf(dcb, "Session not found: %s.\n", arg2);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
-    }
+    MXS_WARNING("'enable sessionlog-priority' is deprecated.");
 }
 
 /**
@@ -2169,22 +2106,7 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
  */
 static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 {
-    int priority = string_to_priority(arg1);
-
-    if (priority != -1)
-    {
-        size_t id = (size_t) strtol(arg2, NULL, 10);
-        void *data[] = {&priority, &id, (void*)false};
-
-        if (dcb_foreach(seslog_cb, data))
-        {
-            dcb_printf(dcb, "Session not found: %s.\n", arg2);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
-    }
+    MXS_WARNING("'disable sessionlog-priority' is deprecated.");
 }
 
 /**
