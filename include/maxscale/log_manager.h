@@ -200,4 +200,21 @@ enum
                                     trailing NULL. If longer, it will be cut. */
 };
 
+/**
+ * Return a thread specific pointer to a string describing the error
+ * code passed as argument. The string is obtained using strerror_r.
+ *
+ * @param error  One of the errno error codes.
+ *
+ * @return Thread specific pointer to string describing the error code.
+ *
+ * @attention The function is thread safe, but not re-entrant. That is,
+ * calling it twice with different error codes between two sequence points
+ * will not work. E.g:
+ *
+ *     printf("EINVAL = %s, EACCESS = %s",
+ *            mxs_strerror(EINVAL), mxs_strerror(EACCESS));
+ */
+const char* mxs_strerror(int error);
+
 MXS_END_DECLS

@@ -44,7 +44,6 @@ typedef struct servlistener
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
     struct dcb *listener;       /**< The DCB for the listener */
     struct users *users;        /**< The user data for this listener */
-    HASHTABLE *resources;       /**< hastable for listener resources, i.e. database names */
     struct service* service;    /**< The service which used by this listener */
     SPINLOCK lock;
     struct  servlistener *next; /**< Next service protocol */

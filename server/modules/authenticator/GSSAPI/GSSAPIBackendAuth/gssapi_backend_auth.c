@@ -276,7 +276,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gssapi_backend_auth_authenticate,   /* Authenticate user credentials */
         NULL,                               /* Client plugin will free shared data */
         gssapi_backend_auth_free,           /* Free authenticator data */
-        NULL                                /* Load users from backend databases */
+        NULL,                               /* Load users from backend databases */
+        NULL,                               /* No diagnostic */
+        NULL                                /* No user reauthentication */
     };
 
     static MXS_MODULE info =

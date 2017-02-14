@@ -248,6 +248,10 @@ enum blr_aes_mode
 #define MARIADB_FL_DDL                 32
 #define MARIADB_FL_STANDALONE           1
 
+/* Maxwell-related SQL queries */
+#define MYSQL_CONNECTOR_SERVER_VARS_QUERY  "SELECT  @@session.auto_increment_increment AS auto_increment_increment, @@character_set_client AS character_set_client, @@character_set_connection AS character_set_connection, @@character_set_results AS character_set_results, @@character_set_server AS character_set_server, @@init_connect AS init_connect, @@interactive_timeout AS interactive_timeout, @@license AS license, @@lower_case_table_names AS lower_case_table_names, @@max_allowed_packet AS max_allowed_packet, @@net_buffer_length AS net_buffer_length, @@net_write_timeout AS net_write_timeout, @@query_cache_size AS query_cache_size, @@query_cache_type AS query_cache_type, @@sql_mode AS sql_mode, @@system_time_zone AS system_time_zone, @@time_zone AS time_zone, @@tx_isolation AS tx_isolation, @@wait_timeout AS wait_timeout"
+#define MYSQL_CONNECTOR_SQL_MODE_QUERY     "SET sql_mode='NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES'"
+
 /* Saved credential file name's tail */
 static const char BLR_DBUSERS_DIR[] = "cache/users";
 static const char BLR_DBUSERS_FILE[] = "dbusers";
@@ -479,23 +483,26 @@ typedef struct
  */
 typedef struct
 {
-    GWBUF           *server_id;     /*< Master server id */
-    GWBUF           *heartbeat;     /*< Heartbeat period */
-    GWBUF           *chksum1;       /*< Binlog checksum 1st response */
-    GWBUF           *chksum2;       /*< Binlog checksum 2nd response */
-    GWBUF           *gtid_mode;     /*< GTID Mode response */
-    GWBUF           *uuid;          /*< Master UUID */
-    GWBUF           *setslaveuuid;  /*< Set Slave UUID */
-    GWBUF           *setnames;      /*< Set NAMES latin1 */
-    GWBUF           *utf8;          /*< Set NAMES utf8 */
-    GWBUF           *select1;       /*< select 1 */
-    GWBUF           *selectver;     /*< select version() */
-    GWBUF           *selectvercom;  /*< select @@version_comment */
-    GWBUF           *selecthostname;/*< select @@hostname */
-    GWBUF           *map;           /*< select @@max_allowed_packet */
-    GWBUF           *mariadb10;     /*< set @mariadb_slave_capability */
-    uint8_t         *fde_event;     /*< Format Description Event */
-    int             fde_len;        /*< Length of fde_event */
+    GWBUF           *server_id;         /*< Master server id */
+    GWBUF           *heartbeat;         /*< Heartbeat period */
+    GWBUF           *chksum1;           /*< Binlog checksum 1st response */
+    GWBUF           *chksum2;           /*< Binlog checksum 2nd response */
+    GWBUF           *gtid_mode;         /*< GTID Mode response */
+    GWBUF           *uuid;              /*< Master UUID */
+    GWBUF           *setslaveuuid;      /*< Set Slave UUID */
+    GWBUF           *setnames;          /*< Set NAMES latin1 */
+    GWBUF           *utf8;              /*< Set NAMES utf8 */
+    GWBUF           *select1;           /*< select 1 */
+    GWBUF           *selectver;         /*< select version() */
+    GWBUF           *selectvercom;      /*< select @@version_comment */
+    GWBUF           *selecthostname;    /*< select @@hostname */
+    GWBUF           *map;               /*< select @@max_allowed_packet */
+    GWBUF           *mariadb10;         /*< set @mariadb_slave_capability */
+    GWBUF           *server_vars;       /*< MySQL Connector master server variables */
+    GWBUF           *binlog_vars;       /*< SELECT @@global.log_bin, @@global.binlog_format, @@global.binlog_row_image; */
+    GWBUF           *lower_case_tables; /*< select @@lower_case_table_names */
+    uint8_t         *fde_event;         /*< Format Description Event */
+    int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
 
 /**
@@ -528,6 +535,7 @@ typedef struct router_instance
     char                    *fileroot;      /*< Root of binlog filename */
     bool                    master_chksum;  /*< Does the master provide checksums */
     bool                    mariadb10_compat; /*< MariaDB 10.0 compatibility */
+    bool                    maxwell_compat; /*< Zendesk's Maxwell compatibility */
     char                    *master_uuid;   /*< Set UUID of the master, sent to slaves */
     DCB                     *master;        /*< DCB for master connection */
     DCB                     *client;        /*< DCB for dummy client */
@@ -664,29 +672,58 @@ typedef struct binlog_encryption_ctx
 #define BLRM_SUUID              0x000C
 #define BLRM_LATIN1             0x000D
 #define BLRM_UTF8               0x000E
-#define BLRM_SELECT1            0x000F
-#define BLRM_SELECTVER          0x0010
-#define BLRM_SELECTVERCOM       0x0011
-#define BLRM_SELECTHOSTNAME     0x0012
-#define BLRM_MAP                0x0013
-#define BLRM_REGISTER           0x0014
-#define BLRM_CHECK_SEMISYNC     0x0015
-#define BLRM_REQUEST_SEMISYNC   0x0016
-#define BLRM_REQUEST_BINLOGDUMP 0x0017
-#define BLRM_BINLOGDUMP         0x0018
-#define BLRM_SLAVE_STOPPED      0x0019
+#define BLRM_RESULTS_CHARSET    0x000F
+#define BLRM_SQL_MODE           0x0010
+#define BLRM_SELECT1            0x0011
+#define BLRM_SELECTVER          0x0012
+#define BLRM_SELECTVERCOM       0x0013
+#define BLRM_SELECTHOSTNAME     0x0014
+#define BLRM_MAP                0x0015
+#define BLRM_SERVER_VARS        0x0016
+#define BLRM_BINLOG_VARS        0x0017
+#define BLRM_LOWER_CASE_TABLES  0x0018
+#define BLRM_REGISTER           0x0019
+#define BLRM_CHECK_SEMISYNC     0x001A
+#define BLRM_REQUEST_SEMISYNC   0x001B
+#define BLRM_REQUEST_BINLOGDUMP 0x001C
+#define BLRM_BINLOGDUMP         0x001D
+#define BLRM_SLAVE_STOPPED      0x001E
 
-#define BLRM_MAXSTATE           0x0019
+#define BLRM_MAXSTATE           0x001E
 
 static char *blrm_states[] =
 {
-    "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
-    "Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
-    "binlog checksum rerieval", "Set MariaDB slave capability", "GTID Mode retrieval",
-    "Master UUID retrieval", "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
-    "select version()", "select @@version_comment", "select @@hostname",
-    "select @@max_allowed_packet", "Register slave", "Semi-Sync Support retrivial",
-    "Request Semi-Sync Replication", "Request Binlog Dump", "Binlog Dump", "Slave stopped"
+    "Unconfigured",
+    "Unconnected",
+    "Connecting",
+    "Authenticated",
+    "Timestamp retrieval",
+    "Server ID retrieval",
+    "HeartBeat Period setup",
+    "binlog checksum config",
+    "binlog checksum rerieval",
+    "Set MariaDB slave capability",
+    "GTID Mode retrieval",
+    "Master UUID retrieval",
+    "Set Slave UUID",
+    "Set Names latin1",
+    "Set Names utf8",
+    "Set results charset null",
+    "Set sql_mode",
+    "select 1",
+    "select version()",
+    "select @@version_comment",
+    "select @@hostname",
+    "select @@max_allowed_packet",
+    "Query server variables",
+    "Query binlog variables",
+    "Query @@lower_case_table_names",
+    "Register slave",
+    "Semi-Sync Support retrivial",
+    "Request Semi-Sync Replication",
+    "Request Binlog Dump",
+    "Binlog Dump",
+    "Slave stopped"
 };
 
 #define BLRS_CREATED            0x0000
@@ -787,6 +824,7 @@ extern const char *blr_get_encryption_algorithm(int);
 extern int blr_check_encryption_algorithm(char *);
 extern const char *blr_encryption_algorithm_list(void);
 extern bool blr_get_encryption_key(ROUTER_INSTANCE *);
+extern const char *blr_skip_leading_sql_comments(const char *);
 
 MXS_END_DECLS
 

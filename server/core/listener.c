@@ -129,7 +129,6 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
     proto->auth_options = my_auth_options;
     proto->ssl = ssl;
     proto->users = NULL;
-    proto->resources = NULL;
     proto->next = NULL;
     proto->auth_instance = auth_instance;
     spinlock_init(&proto->lock);
@@ -146,10 +145,6 @@ void listener_free(SERV_LISTENER* listener)
 {
     if (listener)
     {
-        if (listener->resources)
-        {
-            hashtable_free(listener->resources);
-        }
         if (listener->users)
         {
             users_free(listener->users);

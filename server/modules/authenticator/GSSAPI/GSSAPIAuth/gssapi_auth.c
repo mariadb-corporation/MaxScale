@@ -20,10 +20,8 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/sqlite3.h>
 #include "../gssapi_auth.h"
-
-/** Default timeout is one minute */
-#define MXS_SQLITE_BUSY_TIMEOUT 60000
 
 /**
  * MySQL queries for retrieving the list of users
@@ -666,7 +664,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gssapi_auth_authenticate,        /* Authenticate user credentials */
         gssapi_auth_free_data,           /* Free the client data held in DCB */
         gssapi_auth_free,                /* Free authenticator data */
-        gssapi_auth_load_users           /* Load database users */
+        gssapi_auth_load_users,          /* Load database users */
+        users_default_diagnostic,        /* Default user diagnostic */
+        NULL                             /* No user reauthentication */
     };
 
     static MXS_MODULE info =

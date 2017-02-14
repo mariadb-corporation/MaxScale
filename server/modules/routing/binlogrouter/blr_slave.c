@@ -282,6 +282,46 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     return 0;
 }
 
+/*
+ * Return a pointer to where the actual SQL query starts, skipping initial
+ * comments and whitespace characters, if there are any.
+ */
+const char *
+blr_skip_leading_sql_comments(const char *sql_query)
+{
+    const char *p = sql_query;
+
+    while (*p) {
+        if (*p == '/' && p[1] == '*')
+        {
+            ++p; // skip '/'
+            ++p; // skip '*'
+            while (*p)
+            {
+                if (*p == '*' && p[1] == '/')
+                {
+                    ++p; // skip '*'
+                    ++p; // skip '/'
+                    break;
+                }
+                else
+                {
+                    ++p;
+                }
+            }
+        }
+        else if (isspace(*p))
+        {
+            ++p;
+        }
+        else
+        {
+            return p;
+        }
+    }
+    return p;
+}
+
 /**
  * Handle a query from the slave. This is expected to be one of the "standard"
  * queries we expect as part of the registraton process. Most of these can
@@ -350,6 +390,13 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     char *ptr;
     extern char *strcasestr();
     bool unexpected = true;
+    static const char mysql_connector_results_charset_query[] = "SET character_set_results = NULL";
+    static const char maxwell_server_id_query[] = "SELECT @@server_id as server_id";
+    static const char maxwell_log_bin_query[] = "SHOW VARIABLES LIKE 'log_bin'";
+    static const char maxwell_binlog_format_query[] = "SHOW VARIABLES LIKE 'binlog_format'";
+    static const char maxwell_binlog_row_image_query[] = "SHOW VARIABLES LIKE 'binlog_row_image'";
+    static const char maxwell_lower_case_tables_query[] = "select @@lower_case_table_names";
+
 
     qtext = (char*)GWBUF_DATA(queue);
     query_len = extract_field((uint8_t *)qtext, 24) - 1;
@@ -396,7 +443,68 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
      * own interaction with the real master. We simply replay these saved responses
      * to the slave.
      */
-    if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
+    if (strcmp(blr_skip_leading_sql_comments(query_text), MYSQL_CONNECTOR_SERVER_VARS_QUERY) == 0)
+    {
+        int rc = blr_slave_replay(router, slave, router->saved_master.server_vars);
+        if (rc >= 0)
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
+        MXS_ERROR("Error sending mysql-connector-j server variables");
+    }
+    else if (router->maxwell_compat && strcmp(query_text, mysql_connector_results_charset_query) == 0)
+    {
+        MXS_FREE(query_text);
+        return blr_slave_send_ok(router, slave);
+    }
+    else if (router->maxwell_compat && strcmp(query_text, MYSQL_CONNECTOR_SQL_MODE_QUERY) == 0)
+    {
+        MXS_FREE(query_text);
+        return blr_slave_send_ok(router, slave);
+    }
+    else if (strcmp(query_text, maxwell_server_id_query) == 0)
+    {
+        char server_id[40];
+        sprintf(server_id, "%d", router->masterid);
+        MXS_FREE(query_text);
+        return blr_slave_send_var_value(router, slave, "server_id", server_id, BLR_TYPE_STRING);
+    }
+    else if (strcmp(query_text, maxwell_log_bin_query) == 0)
+    {
+        char *log_bin = blr_extract_column(router->saved_master.binlog_vars, 1);
+        blr_slave_send_var_value(router, slave, "Value", log_bin == NULL ? "" : log_bin, BLR_TYPE_STRING);
+        MXS_FREE(log_bin);
+        MXS_FREE(query_text);
+        return 1;
+    }
+    else if (strcmp(query_text, maxwell_binlog_format_query) == 0)
+    {
+        char *binlog_format = blr_extract_column(router->saved_master.binlog_vars, 2);
+        blr_slave_send_var_value(router, slave, "Value", binlog_format == NULL ? "" : binlog_format, BLR_TYPE_STRING);
+        MXS_FREE(binlog_format);
+        MXS_FREE(query_text);
+        return 1;
+    }
+    else if (strcmp(query_text, maxwell_binlog_row_image_query) == 0)
+    {
+        char *binlog_row_image = blr_extract_column(router->saved_master.binlog_vars, 1);
+        blr_slave_send_var_value(router, slave, "Value", binlog_row_image == NULL ? "" : binlog_row_image, BLR_TYPE_STRING);
+        MXS_FREE(binlog_row_image);
+        MXS_FREE(query_text);
+        return 1;
+    }
+    else if (strcmp(query_text, maxwell_lower_case_tables_query) == 0)
+    {
+        int rc = blr_slave_replay(router, slave, router->saved_master.lower_case_tables);
+        if (rc >= 0)
+        {
+            MXS_FREE(query_text);
+            return 1;
+        }
+        MXS_ERROR("Error sending lower_case_tables query response");
+    }
+    else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {
         MXS_ERROR("%s: Incomplete query.", router->service->name);
     }
@@ -411,7 +519,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             MXS_FREE(query_text);
             return blr_slave_send_timestamp(router, slave);
         }
-        else if (strcasecmp(word, "@master_binlog_checksum") == 0)
+        else if (strcasecmp(word, "@master_binlog_checksum") == 0 || strcasecmp(word, "@@global.binlog_checksum") == 0)
         {
             MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.chksum2);
