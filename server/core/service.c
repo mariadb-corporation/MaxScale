@@ -142,7 +142,7 @@ SERVICE* service_alloc(const char *name, const char *router)
         return NULL;
     }
 
-    service->capabilities = service->router->getCapabilities();
+    service->capabilities = 0;
     service->client_count = 0;
     service->n_dbref = 0;
     service->name = my_name;
@@ -485,6 +485,8 @@ int serviceInitialize(SERVICE *service)
 
     if ((service->router_instance = service->router->createInstance(service, router_options)))
     {
+        service->capabilities |= service->router->getCapabilities(service->router_instance);
+
         if (!config_get_global_options()->config_check)
         {
             listeners = serviceStartAllPorts(service);
@@ -1237,7 +1239,7 @@ serviceSetFilters(SERVICE *service, char *filters)
         {
             if (filter_load(flist[n - 1]))
             {
-                capabilities |= flist[n - 1]->obj->getCapabilities();
+                capabilities |= flist[n - 1]->obj->getCapabilities(flist[n - 1]->filter);
             }
             else
             {

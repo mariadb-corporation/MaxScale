@@ -55,7 +55,7 @@ static void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, MXS_
 static int     routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *queue);
 static int     clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, GWBUF *queue);
 static void    diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /* Global symbols of the Module */
 
@@ -419,7 +419,7 @@ static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dc
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
     return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
 }

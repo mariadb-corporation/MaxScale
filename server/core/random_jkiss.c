@@ -16,14 +16,6 @@
  *
  * See http://www0.cs.ucl.ac.uk/staff/d.jones/GoodPracticeRNG.pdf for discussion of random
  * number generators (RNGs).
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 26/08/15     Martin Brampton Initial implementation
- *
- * @endverbatim
  */
 
 #include <stdbool.h>
@@ -32,6 +24,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <maxscale/random_jkiss.h>
+#include <maxscale/debug.h>
 
 /* Public domain code for JKISS RNG - Comment header added */
 
@@ -41,28 +34,12 @@
 static unsigned int x = 123456789, y = 987654321, z = 43219876, c = 6543217; /* Seed variables */
 static bool init = false;
 
-static unsigned int random_jkiss_devrand(void);
-static void random_init_jkiss(void);
-
-/***
- *
- * Return a pseudo-random number that satisfies major tests for random sequences
- *
- * @return  uint    Random number
- *
- */
-unsigned int
-random_jkiss(void)
+unsigned int random_jkiss(void)
 {
     unsigned long long t;
     unsigned int result;
+    ss_dassert(init);
 
-    if (!init)
-    {
-        /* Must set init first because initialisation calls this function */
-        init = true;
-        random_init_jkiss();
-    }
     x = 314527869 * x + 1234567;
     y ^= y << 5;
     y ^= y >> 7;
@@ -83,8 +60,7 @@ random_jkiss(void)
  * @return  uint    Random number
  *
  */
-static unsigned int
-random_jkiss_devrand(void)
+static unsigned int random_jkiss_devrand(void)
 {
     int fn;
     unsigned int r;
@@ -102,40 +78,32 @@ random_jkiss_devrand(void)
     return r;
 }
 
-/***
- *
- * Initialise the generator using /dev/urandom if available, and warm up
- * with 1000 iterations
- *
- */
-static void
-random_init_jkiss(void)
+void random_jkiss_init(void)
 {
-    int newrand, i;
-
-    if ((newrand = random_jkiss_devrand()) != 0)
+    if (!init)
     {
-        x = newrand;
-    }
+        int newrand, i;
 
-    if ((newrand = random_jkiss_devrand()) != 0)
-    {
-        y = newrand;
-    }
+        if ((newrand = random_jkiss_devrand()) != 0)
+        {
+            x = newrand;
+        }
 
-    if ((newrand = random_jkiss_devrand()) != 0)
-    {
-        z = newrand;
-    }
+        if ((newrand = random_jkiss_devrand()) != 0)
+        {
+            y = newrand;
+        }
 
-    if ((newrand = random_jkiss_devrand()) != 0)
-    {
-        c = newrand % 698769068 + 1; /* Should be less than 698769069 */
-    }
+        if ((newrand = random_jkiss_devrand()) != 0)
+        {
+            z = newrand;
+        }
 
-    /* "Warm up" our random number generator */
-    for (i = 0; i < 100; i++)
-    {
-        random_jkiss();
+        if ((newrand = random_jkiss_devrand()) != 0)
+        {
+            c = newrand % 698769068 + 1; /* Should be less than 698769069 */
+        }
+
+        init = true;
     }
 }

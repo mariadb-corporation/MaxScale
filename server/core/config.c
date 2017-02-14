@@ -2512,9 +2512,6 @@ void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
             if (params[i].default_value &&
                 config_get_param(ctx->parameters, params[i].name) == NULL)
             {
-                ss_dassert(config_param_is_valid(params, params[i].name,
-                                                 params[i].default_value, ctx));
-
                 bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
                 MXS_ABORT_IF_FALSE(rv);
             }

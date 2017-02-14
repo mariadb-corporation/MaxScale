@@ -36,16 +36,6 @@ MXS_ENUM_VALUE capability_values[] =
     { NULL, 0 }
 };
 
-struct unit_variables
-{
-    uint64_t capabilities;
-    bool     capabilities_set;
-} this_unit =
-{
-    0,
-    false
-};
-
 }
 
 //
@@ -81,7 +71,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 // NullFilter
 //
 
-NullFilter::NullFilter(const char* zName)
+NullFilter::NullFilter(const char* zName, uint64_t capabilities)
+    : m_capabilities(capabilities)
 {
     MXS_NOTICE("Null filter [%s] created.", zName);
 }
@@ -97,16 +88,7 @@ NullFilter* NullFilter::create(const char* zName, char**, MXS_CONFIG_PARAMETER* 
 
     uint64_t capabilities = config_get_enum(pParams, CAPABILITIES_PARAM, capability_values);
 
-    if (this_unit.capabilities_set)
-    {
-        MXS_WARNING("The capabilities reported by NullFilter are currently global, "
-                    "and not specific for a particular NullFilter instance.");
-    }
-
-    this_unit.capabilities = capabilities;
-    this_unit.capabilities_set = true;
-
-    return new NullFilter(zName);
+    return new NullFilter(zName, capabilities);
 }
 
 
@@ -121,13 +103,7 @@ void NullFilter::diagnostics(DCB* pDcb)
     dcb_printf(pDcb, "Hello, World!\n");
 }
 
-// static
 uint64_t NullFilter::getCapabilities()
 {
-    if (!this_unit.capabilities_set)
-    {
-        MXS_ERROR("getCapabilities() called before they have been set.");
-    }
-
-    return this_unit.capabilities;
+    return m_capabilities;
 }

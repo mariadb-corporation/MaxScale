@@ -26,11 +26,14 @@ public:
 
     void diagnostics(DCB* pDcb);
 
-    static uint64_t getCapabilities();
+    uint64_t getCapabilities();
 
 private:
-    NullFilter(const char* zName);
+    NullFilter(const char* zName, uint64_t m_capabilities);
 
     NullFilter(const NullFilter&);
     NullFilter& operator = (const NullFilter&);
+
+private:
+    uint64_t m_capabilities;
 };

@@ -38,7 +38,7 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MX
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream);
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_FILTER *instance);
 static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply);
 static bool extract_insert_target(GWBUF *buffer, char* target, int len);
 static GWBUF* create_load_data_command(const char *target);
@@ -517,7 +517,7 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
  *
  * @return Filter capabilities
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
     return RCAP_TYPE_TRANSACTION_TRACKING;
 }

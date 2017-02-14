@@ -260,8 +260,14 @@ static const char* admin_remove_user(USERS *users, const char* fname,
                 /** one step back */
                 MXS_ERROR("Unable to set stream position. ");
             }
-            fgets(line, LINELEN, fp);
-            fputs(line, fp_tmp);
+            if (fgets(line, LINELEN, fp))
+            {
+                fputs(line, fp_tmp);
+            }
+            else
+            {
+                MXS_ERROR("Failed to read line from admin users file");
+            }
         }
 
         if (fgetpos(fp, &rpos) != 0)

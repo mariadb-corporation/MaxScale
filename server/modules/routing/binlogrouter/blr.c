@@ -106,7 +106,7 @@ static  void    errorReply(MXS_ROUTER  *instance,
                            mxs_error_action_t     action,
                            bool    *succp);
 
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
@@ -1906,7 +1906,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 }
 
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT | RCAP_TYPE_RESULTSET_OUTPUT;
 }

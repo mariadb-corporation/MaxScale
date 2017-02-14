@@ -519,10 +519,9 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
             case -1:
                 {
                     char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
-                    strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-                    MXS_ERROR("Failed to read binlog file %s at position %llu"
-                              " (%s).", router->binlog_name,
-                              pos, err_msg);
+                    MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
+                              router->binlog_name, pos,
+                              strerror_r(errno, err_msg, sizeof(err_msg)));
 
                     if (errno == EBADF)
                         MXS_ERROR("Bad file descriptor in read binlog for file %s"
@@ -630,7 +629,6 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
         {
             int event_header_length;
             int event_header_ntypes;
-            int n_events;
 
             /** Extract the event header lengths */
             event_header_length = ptr[2 + 50 + 4];
@@ -653,15 +651,10 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 break;
             }
 
-            n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
-
-            if (event_header_ntypes < n_events)
+            uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
+            if (checksum[0] == 1)
             {
-                uint8_t *checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
-                if (checksum[0] == 1)
-                {
-                    found_chksum = true;
-                }
+                found_chksum = true;
             }
         }
         /* Decode CLOSE/STOP Event */
@@ -892,7 +885,10 @@ void avro_flush_all_tables(AVRO_INSTANCE *router, enum avrorouter_file_op flush)
     }
 
     /** Update the GTID index */
-    avro_update_index(router);
+    if (flush == AVROROUTER_FLUSH)
+    {
+        avro_update_index(router);
+    }
 }
 
 /**

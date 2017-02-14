@@ -3664,7 +3664,12 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                      router->prevbinlog,
                      router->last_safe_pos);
             /* Truncate previous binlog file to last_safe pos */
-            truncate(file, router->last_safe_pos);
+            if (truncate(file, router->last_safe_pos) == -1)
+            {
+                char err[MXS_STRERROR_BUFLEN];
+                MXS_ERROR("Failed to truncate file: %d, %s",
+                          errno, strerror_r(errno, err, sizeof(err)));
+            }
 
             /* Log it */
             MXS_WARNING("A transaction is still opened at pos %lu"

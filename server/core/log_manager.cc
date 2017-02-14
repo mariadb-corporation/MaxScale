@@ -2986,7 +2986,8 @@ int mxs_log_message(int priority,
                         assert(!true);
                     }
 
-                    assert(len == augmentation_len);
+                    (void)len;
+                    ss_dassert(len == augmentation_len);
                 }
 
                 va_start(valist, format);

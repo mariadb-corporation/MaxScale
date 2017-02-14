@@ -70,7 +70,7 @@ static  void    closeSession(MXS_ROUTER *instance, void *router_session);
 static  void    freeSession(MXS_ROUTER *instance, void *router_session);
 static  int     execute(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
 static  void    diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static  uint64_t getCapabilities(void);
+static  uint64_t getCapabilities(MXS_ROUTER* instance);
 static  void    handleError(MXS_ROUTER     *instance,
                             void           *router_session,
                             GWBUF          *errbuf,
@@ -392,7 +392,7 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
  * Not used for the maxinfo router
  */
 static uint64_t
-getCapabilities(void)
+getCapabilities(MXS_ROUTER* instance)
 {
     return 0;
 }

@@ -48,7 +48,7 @@ static  void   closeSession(MXS_ROUTER *instance, void *router_session);
 static  void   freeSession(MXS_ROUTER *instance, void *router_session);
 static  int    execute(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
 static  void   diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static  uint64_t getCapabilities ();
+static  uint64_t getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION *cli);
 
@@ -293,7 +293,7 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
     return; /* Nothing to do currently */
 }
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return 0;
 }

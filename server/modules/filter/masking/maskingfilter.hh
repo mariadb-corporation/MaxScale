@@ -35,7 +35,7 @@ public:
 
     void diagnostics(DCB* pDcb);
 
-    static uint64_t getCapabilities();
+    uint64_t getCapabilities();
 
     void reload(DCB* pOut);
 

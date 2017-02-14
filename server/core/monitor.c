@@ -958,17 +958,23 @@ static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
 static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     char *separator = "";
-    char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    char arr[MAX_SERVER_NAME_LEN + 64]; // Some extra space for port and separator
     dest[0] = '\0';
 
-    while (servers && strlen(dest) < (len - strlen(separator)))
+    while (servers && len)
     {
         if (status == 0 || servers->server->status & status)
         {
-            strncat(dest, separator, len);
+            snprintf(arr, sizeof(arr), "%s%s:%d", separator, servers->server->name,
+                     servers->server->port);
             separator = ",";
-            snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
-            strncat(dest, arr, len - strlen(dest) - 1);
+            int arrlen = strlen(arr);
+
+            if (arrlen < len)
+            {
+                strcat(dest, arr);
+                len -= arrlen;
+            }
         }
         servers = servers->next;
     }

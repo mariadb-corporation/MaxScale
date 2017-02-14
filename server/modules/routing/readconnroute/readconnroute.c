@@ -98,7 +98,7 @@ static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, void *router_session, GWBUF *errbuf,
                         DCB *problem_dcb, mxs_error_action_t action, bool *succp);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF *get_root_master(SERVER_REF *servers);
@@ -785,7 +785,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
     spinlock_release(&rses->rses_lock);
 }
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_NONE;
 }

@@ -994,7 +994,10 @@ bool getPassword(char *passwd, size_t len)
         if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
         {
             printf("Password: ");
-            fgets(passwd, len, stdin);
+            if (fgets(passwd, len, stdin) == NULL)
+            {
+                printf("Failed to read password\n");
+            }
 
             tty_attr.c_lflag = c_lflag;
 

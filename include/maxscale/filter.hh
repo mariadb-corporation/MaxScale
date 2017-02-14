@@ -183,7 +183,7 @@ protected:
  *      MyFilterSession* newSession(MXS_SESSION* pSession);
  *
  *      void diagnostics(DCB* pDcb);
- *      static uint64_t getCapabilities();
+ *      uint64_t getCapabilities();
  * };
  * @endcode
  *
@@ -290,11 +290,13 @@ public:
         }
     }
 
-    static uint64_t getCapabilities(void)
+    static uint64_t getCapabilities(MXS_FILTER* pInstance)
     {
         uint64_t rv = 0;
 
-        MXS_EXCEPTION_GUARD(rv = FilterType::getCapabilities());
+        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+
+        MXS_EXCEPTION_GUARD(rv = pFilter->getCapabilities());
 
         return rv;
     }
