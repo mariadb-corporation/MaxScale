@@ -179,7 +179,7 @@ typedef struct mxs_filter_object
      *
      * @see routing.h
      */
-    uint64_t (*getCapabilities)(void);
+    uint64_t (*getCapabilities)(MXS_FILTER *instance);
 
     /**
      * @brief Called for destroying a filter instance

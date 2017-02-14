@@ -81,7 +81,7 @@ static route_target_t get_shard_route_target(qc_query_type_t qtype,
                                              bool            trx_active,
                                              HINT*           hint);
 
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
@@ -3320,7 +3320,7 @@ static rses_property_t* mysql_sescmd_get_property(mysql_sescmd_t* scmd)
 /**
  * Return RCAP_TYPE_STMT_INPUT.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_STMT_INPUT;
 }

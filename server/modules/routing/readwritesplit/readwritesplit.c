@@ -79,7 +79,7 @@ static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue
 static void handleError(MXS_ROUTER *instance, void *router_session,
                         GWBUF *errmsgbuf, DCB *backend_dcb,
                         mxs_error_action_t action, bool *succp);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_ROUTER* instance);
 
 /*
  * End of the API functions; now the module structure that links to them.
@@ -864,7 +864,7 @@ lock_failed:
  *
  * @return RCAP_TYPE_STMT_INPUT.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING;
 }

@@ -121,7 +121,6 @@ void NullFilter::diagnostics(DCB* pDcb)
     dcb_printf(pDcb, "Hello, World!\n");
 }
 
-// static
 uint64_t NullFilter::getCapabilities()
 {
     if (!this_unit.capabilities_set)

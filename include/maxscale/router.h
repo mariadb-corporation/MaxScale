@@ -79,7 +79,7 @@ typedef struct mxs_router_object
                             DCB*           backend_dcb,
                             mxs_error_action_t action,
                             bool*          succp);
-    uint64_t (*getCapabilities)(void);
+    uint64_t (*getCapabilities)(MXS_ROUTER *instance);
     void     (*destroyInstance)(MXS_ROUTER *instance);
 } MXS_ROUTER_OBJECT;
 

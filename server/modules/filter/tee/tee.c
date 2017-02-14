@@ -107,7 +107,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
  * The instance structure for the TEE filter - this holds the configuration
@@ -753,7 +753,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER* instance)
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }

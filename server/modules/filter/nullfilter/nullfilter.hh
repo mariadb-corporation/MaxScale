@@ -26,7 +26,7 @@ public:
 
     void diagnostics(DCB* pDcb);
 
-    static uint64_t getCapabilities();
+    uint64_t getCapabilities();
 
 private:
     NullFilter(const char* zName);

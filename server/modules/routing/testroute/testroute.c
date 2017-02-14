@@ -22,7 +22,7 @@ static  void   freeSession(MXS_ROUTER *instance, void *session);
 static  int    routeQuery(MXS_ROUTER *instance, void *session, GWBUF *queue);
 static  void   clientReply(MXS_ROUTER *instance, void *session, GWBUF *queue, DCB*);
 static  void   diagnostic(MXS_ROUTER *instance, DCB *dcb);
-static  uint64_t getCapabilities ();
+static  uint64_t getCapabilities(MXS_ROUTER* instance);
 static void    handleError(MXS_ROUTER       *instance,
                            void             *router_session,
                            GWBUF            *errbuf,
@@ -150,7 +150,7 @@ diagnostic(MXS_ROUTER *instance, DCB *dcb)
 {
 }
 
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
     return 0;
 }
