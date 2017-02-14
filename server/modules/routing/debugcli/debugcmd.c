@@ -612,12 +612,8 @@ struct subcommand reloadoptions[] =
     { EMPTY_OPTION }
 };
 
-static void enable_log_action(DCB *, char *);
-static void disable_log_action(DCB *, char *);
 static void enable_log_priority(DCB *, char *);
 static void disable_log_priority(DCB *, char *);
-static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
-static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2);
 static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
 static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2);
 static void enable_service_root(DCB *dcb, SERVICE *service);
@@ -637,14 +633,6 @@ static void disable_account(DCB *, char *user);
 struct subcommand enableoptions[] =
 {
     {
-        "log",
-        1, 1,
-        enable_log_action,
-        "[deprecated] Enable a logging level",
-        "Options 'trace' | 'error' | 'message'. E.g. 'enable log message'.",
-        {ARG_TYPE_STRING, 0, 0}
-    },
-    {
         "log-priority",
         1, 1,
         enable_log_priority,
@@ -653,15 +641,6 @@ struct subcommand enableoptions[] =
         "'err', 'warning', 'notice', 'info' or 'debug'. "
         "E.g.: 'enable log-priority info'.",
         {ARG_TYPE_STRING, 0, 0}
-    },
-    {
-        "sessionlog",
-        2, 2,
-        enable_sess_log_action,
-        "[deprecated] Enable a logging level for a single session",
-        "Usage: enable sessionlog [trace | error | "
-        "message | debug] <session id>\t E.g. enable sessionlog message 123.",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "sessionlog-priority",
@@ -726,15 +705,6 @@ struct subcommand enableoptions[] =
 struct subcommand disableoptions[] =
 {
     {
-        "log",
-        1, 1,
-        disable_log_action,
-        "[deprecated] Disable log for MaxScale",
-        "Options: 'debug' | 'trace' | 'error' | 'message'."
-        "E.g. 'disable log debug'",
-        {ARG_TYPE_STRING, 0, 0}
-    },
-    {
         "log-priority",
         1, 1,
         disable_log_priority,
@@ -742,15 +712,6 @@ struct subcommand disableoptions[] =
         "Options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
         "E.g.: 'disable log-priority info'",
         {ARG_TYPE_STRING, 0, 0}
-    },
-    {
-        "sessionlog",
-        2, 2,
-        disable_sess_log_action,
-        "[deprecated] Disable log options",
-        "Disable Log options for a single session. Usage: disable sessionlog [trace | error | "
-        "message | debug] <session id>\t E.g. disable sessionlog message 123",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         "sessionlog-priority",
@@ -2089,34 +2050,6 @@ struct log_action_entry
     const char* replacement;
 };
 
-static bool get_log_action(const char* name, struct log_action_entry* entryp)
-{
-    static const struct log_action_entry entries[] =
-    {
-        { "debug",   LOG_DEBUG,  "debug" },
-        { "trace",   LOG_INFO,   "info" },
-        { "message", LOG_NOTICE, "notice" },
-    };
-    const int n_entries = sizeof(entries) / sizeof(entries[0]);
-
-    bool found = false;
-    int i = 0;
-
-    while (!found && (i < n_entries))
-    {
-        if (strcmp(name, entries[i].name) == 0)
-        {
-            *entryp = entries[i];
-            found = true;
-        }
-
-        ++i;
-    }
-
-    return found;
-}
-
-
 bool seslog_cb(DCB *dcb, void *data)
 {
     bool rval = true;
@@ -2139,58 +2072,6 @@ bool seslog_cb(DCB *dcb, void *data)
     }
 
     return rval;
-}
-
-/**
- * Enables a log for a single session
- * @param session The session in question
- * @param dcb Client DCB
- * @param type Which log to enable
- */
-static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
-{
-    struct log_action_entry entry;
-
-    if (get_log_action(arg1, &entry))
-    {
-        size_t id = (size_t)strtol(arg2, NULL, 10);
-        void *data[] = {&entry, &id, (void*)true};
-
-        if (dcb_foreach(seslog_cb, data))
-        {
-            dcb_printf(dcb, "Session not found: %s.\n", arg2);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "%s is not supported for enable log.\n", arg1);
-    }
-}
-
-/**
- * Disables a log for a single session
- * @param session The session in question
- * @param dcb Client DCB
- * @param type Which log to disable
- */
-static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
-{
-    struct log_action_entry entry;
-
-    if (get_log_action(arg1, &entry))
-    {
-        size_t id = (size_t)strtol(arg2, NULL, 10);
-        void *data[] = {&entry, &id, (void*)false};
-
-        if (dcb_foreach(seslog_cb, data))
-        {
-            dcb_printf(dcb, "Session not found: %s.\n", arg2);
-        }
-    }
-    else
-    {
-        dcb_printf(dcb, "%s is not supported for enable log.\n", arg1);
-    }
 }
 
 struct log_priority_entry
@@ -2303,48 +2184,6 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
     else
     {
         dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
-    }
-}
-
-/**
- * The log enable action
- */
-static void enable_log_action(DCB *dcb, char *arg1)
-{
-    struct log_action_entry entry;
-
-    if (get_log_action(arg1, &entry))
-    {
-        mxs_log_set_priority_enabled(entry.priority, true);
-
-        dcb_printf(dcb,
-                   "'enable log %s' is accepted but deprecated, use 'enable log-priority %s' instead.\n",
-                   arg1, entry.replacement);
-    }
-    else
-    {
-        dcb_printf(dcb, "'%s' is not supported for enable log.\n", arg1);
-    }
-}
-
-/**
- * The log disable action
- */
-static void disable_log_action(DCB *dcb, char *arg1)
-{
-    struct log_action_entry entry;
-
-    if (get_log_action(arg1, &entry))
-    {
-        mxs_log_set_priority_enabled(entry.priority, false);
-
-        dcb_printf(dcb,
-                   "'disable log %s' is accepted but deprecated, use 'enable log-priority %s' instead.\n",
-                   arg1, entry.replacement);
-    }
-    else
-    {
-        dcb_printf(dcb, "'%s' is not supported for 'disable log'.\n", arg1);
     }
 }
 
