@@ -101,6 +101,12 @@ void thread_finish()
 
 These four functions are present in all `MXS_MODULE` structs and are not part of the API of any individual module type. `process_init` and `process_finish` are called by the module loader right after loading a module and just before unloading a module. Usually, these can be set to null in `MXS_MODULE` unless the module needs some general initializations before creating any instances. `thread_init` and `thread_finish` are thread specific equivalents.
 
+```java
+void diagnostics(INSTANCE *instance, DCB *dcb)
+```
+
+A diagnostics printing routine is present in nearly all module types, although with varying signatures. This entrypoint should print various statistics and status information about the module instance `instance` in string form. The target of the printing is the given DCB, and printing should be implemented by calling `dcb_printf`. The diagnostics function is used by the *MaxInfo* and *MaxAdmin* features.
+
 #### Protocol
 
 ```java
@@ -155,12 +161,37 @@ void destroyInstance(INSTANCE* instance)
 `createInstance` should read the `options` and initialize an "instance" object for use with `service`. Often, simply saving the configuration values to fields is enough. `destroyInstance` is called when the service using the module is deallocated. It should free any resources claimed by the instance. All sessions created by this instance should be closed before calling the destructor.
 
 ```java
-void* newSession(INSTANCE* instance, MXS_SESSION* session)
-void closeSession(INSTANCE* instance, void* session)
-void freeSession(INSTANCE* instance, void* session)
+void* newSession(INSTANCE* instance, MXS_SESSION* mxs_session)
+void closeSession(INSTANCE* instance, SESSION* session)
+void freeSession(INSTANCE* instance, SESSION* session)
 ```
 
-These functions manage sessions. `newSession` should allocate a router or filter session attached to the client session represented by `MXS_SESSION session`. MaxScale will pass the returned pointer to all the API entrypoints that process user data.  used by be implemented The `void**` can be.
+These functions manage sessions. `newSession` should allocate a router or filter session attached to the client session represented by `mxs_session`. MaxScale will pass the returned pointer to all the API entrypoints that process user data. `closeSession` should close connections the session has opened and release any resources specific to the served client. The *SESSION* structure allocated in `newSession` should not be deallocated by `closeSession` but in `freeSession`. Usually these two are called in succession by the core.
+
+```java
+int routeQuery(INSTANCE *instance, SESSION session, GWBUF* queue)
+void clientReply(INSTANCE* instance, SESSION session, GWBUF* queue, DCB *backend_dcb);
+```
+
+These entrypoints are called for client requests which should be routed to backends, and for backend reply packets which should be routed to the client. For some modules, MaxScale is itself the backend.
+
+`routeQuery` is often the most complicated function in a router, as it implements the routing logic. It typically considers the client request `queue`, the router settings in `instance` and the session state in `session` when making a routing decision. For filters, `routeQuery` also typically implements the main logic, although there the routing target is constant. For router modules, `routeQuery` should end in calling `dcb->func.write()`. Filters should directly call `routeQuery` for the next filter or router in the chain.
+
+`clientReply` processes data flowing from backend back to client. For routers, this function is often much simpler than `routeQuey`, since there is only one client to route to. Depending on the router, some packets may not be routed to the client. For example, if a client query was routed to multiple backends, MaxScale will receive multiple replies while the client only expects one. Routers should pass the reply packet to last filter in the chain (reversed order) using the macro `MXS_SESSION_ROUTE_REPLY`. Filters should call the `clientReply` of the previous filter in the chain. There is no need for filters to worry about being the first filter in the chain, as this is handled transparently by the session creation routine.
+
+```java
+void handleError(INSTANCE* instance,SESSION* session, GWBUF* errmsgbuf,
+                 DCB* problem_dcb, mxs_error_action_t action, bool* succp);
+```
+
+This router-only entrypoint is called if `routeQuery` returns an error value of if an error occurs in one of the connections listened to by the session. The steps an error handler typically takes depend on the nature of the `problem_dcb` and the error encountered. If `problem_dcb` is a client socket, then the session is lost and should be closed. The error handler should not do this by itself, and just report the failure by setting `succp` to false. If `problem_dcb` is a backend socket, then the error handler should try to connect to another backend if the routing logic allows. If the error is simply failed authentication on the backend, then it is usually best to send the message directly to the client.
+
+
+```java
+uint64_t getCapabilities(void)
+```
+
+This is a simple getter for router and filter capabilities. The return value is a bitfield resulting from ORring the individual capabilities. `routing.h` lists the allowed capability flags. The most common capability to set is `RCAP_TYPE_STMT_INPUT`, causing the protocol modules (if compatible) to only send complete statements to the filter/router chain.
 
 #### Monitor
 
@@ -174,8 +205,26 @@ Monitor modules typically run a repeated monitor routine with a used defined int
 
 ## Core public interface
 
-## Something??
+One could spend pages explaining the public headers in detail, what to do?
 
 ## Compiling and installing
 
+The requirements for compiling a module are:
+* The public headers (CPI)
+* A compatible compiler, typically GCC (version X??)
+* Libraries required by the public headers
+
+The public header files themselves may include headers from other libraries. These libraries need to be installed and it may be required to point out their location to gcc. Some of the more commonly required libraries are:
+ * *mySQL Connector-C* (mySQL or MariaDB version libmariadb-client-lgpl-dev), used by the mySQL protocol module
+ * *pcre2 regular expressions* (libpcre2-dev), used for example by the header `modutil.h`
+
+After all dependencies are accounted for, the module should compile with a command along the lines of
+```
+gcc -Iinclude/ -I/usr/include/mariadb -shared -fPIC -g -o libmymodule.so mymodule.cpp
+```
+For large modules one may need to set up more complicated compilation, but that is not in the scope of this document.
+
+
 ## Running, testing and profiling?
+
+Is this section needed?
