@@ -126,18 +126,6 @@ static struct
 int mxs_log_enabled_priorities = 0;
 
 /**
- * Thread-specific struct variable for storing current session id and currently
- * enabled log files for the session.
- */
-__thread mxs_log_info_t mxs_log_tls = {0, 0};
-
-/**
- * Global counter for each log file type. It indicates for how many sessions
- * each log type is currently enabled.
- */
-ssize_t mxs_log_session_count[LOG_DEBUG + 1] = {0};
-
-/**
  * BUFSIZ comes from the system. It equals with block size or
  * its multiplication.
  */
@@ -787,22 +775,7 @@ static int logmanager_write_log(int            priority,
 
     /** Length of string that will be written, limited by bufsize */
     size_t safe_str_len;
-    /** Length of session id */
-    size_t sesid_str_len;
-    size_t cmplen = 0;
-    /**
-     * 2 braces, 2 spaces and terminating char
-     * If session id is stored to mxs_log_tls structure, allocate
-     * room for session id too.
-     */
-    if ((priority == LOG_INFO) && (mxs_log_tls.li_sesid != 0))
-    {
-        sesid_str_len = 5 * sizeof(char) + get_decimal_len(mxs_log_tls.li_sesid);
-    }
-    else
-    {
-        sesid_str_len = 0;
-    }
+
     if (do_highprecision)
     {
         timestamp_len = get_timestamp_len_hp();
@@ -811,18 +784,17 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = get_timestamp_len();
     }
-    cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
     bool overflow = false;
     /** Find out how much can be safely written with current block size */
-    if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
+    if (timestamp_len - sizeof(char) + str_len > lf->lf_buf_size)
     {
         safe_str_len = lf->lf_buf_size;
         overflow = true;
     }
     else
     {
-        safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
+        safe_str_len = timestamp_len - sizeof(char) + str_len;
     }
     /**
      * Seek write position and register to block buffer.
@@ -861,7 +833,7 @@ static int logmanager_write_log(int            priority,
     }
     else
     {
-        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
+        wp = (char*)MXS_MALLOC(sizeof(char) * (timestamp_len - sizeof(char) + str_len + 1));
     }
 
     if (wp == NULL)
@@ -889,20 +861,13 @@ static int logmanager_write_log(int            priority,
     {
         timestamp_len = snprint_timestamp(wp, timestamp_len);
     }
-    if (sesid_str_len != 0)
-    {
-        /**
-         * Write session id
-         */
-        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", mxs_log_tls.li_sesid);
-        sesid_str_len -= 1; /*< don't calculate terminating char anymore */
-    }
+
     /**
      * Write next string to overwrite terminating null character
      * of the timestamp string.
      */
-    snprintf(wp + timestamp_len + sesid_str_len,
-             safe_str_len - timestamp_len - sesid_str_len,
+    snprintf(wp + timestamp_len,
+             safe_str_len - timestamp_len,
              "%s",
              str);
 

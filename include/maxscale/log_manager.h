@@ -64,8 +64,6 @@ typedef struct mxs_log_info
 } mxs_log_info_t;
 
 extern int mxs_log_enabled_priorities;
-extern ssize_t mxs_log_session_count[];
-extern __thread mxs_log_info_t mxs_log_tls;
 
 /**
  * Check if specified log type is enabled in general or if it is enabled
@@ -74,9 +72,7 @@ extern __thread mxs_log_info_t mxs_log_tls;
  * @param priority One of the syslog LOG_ERR, LOG_WARNING, etc. constants.
  */
 #define MXS_LOG_PRIORITY_IS_ENABLED(priority) \
-    (((mxs_log_enabled_priorities & (1 << priority)) ||      \
-      (mxs_log_session_count[priority] > 0 && \
-       mxs_log_tls.li_enabled_priorities & (1 << priority))) ? true : false)
+    ((mxs_log_enabled_priorities & (1 << priority)) ? true : false)
 
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].

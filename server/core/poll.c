@@ -938,10 +938,6 @@ process_pollq(int thread_id, struct epoll_event *event)
         if (eno == 0)
         {
             ts_stats_increment(pollStats.n_write, thread_id);
-            /** Read session id to thread's local storage */
-            dcb_get_ses_log_info(dcb,
-                                 &mxs_log_tls.li_sesid,
-                                 &mxs_log_tls.li_enabled_priorities);
 
             if (poll_dcb_session_check(dcb, "write_ready"))
             {
@@ -970,9 +966,6 @@ process_pollq(int thread_id, struct epoll_event *event)
                       pthread_self(),
                       dcb->fd);
             ts_stats_increment(pollStats.n_accept, thread_id);
-            dcb_get_ses_log_info(dcb,
-                                 &mxs_log_tls.li_sesid,
-                                 &mxs_log_tls.li_enabled_priorities);
 
             if (poll_dcb_session_check(dcb, "accept"))
             {
@@ -987,10 +980,6 @@ process_pollq(int thread_id, struct epoll_event *event)
                       dcb,
                       dcb->fd);
             ts_stats_increment(pollStats.n_read, thread_id);
-            /** Read session id to thread's local storage */
-            dcb_get_ses_log_info(dcb,
-                                 &mxs_log_tls.li_sesid,
-                                 &mxs_log_tls.li_enabled_priorities);
 
             if (poll_dcb_session_check(dcb, "read"))
             {
@@ -1023,10 +1012,6 @@ process_pollq(int thread_id, struct epoll_event *event)
                       strerror_r(eno, errbuf, sizeof(errbuf)));
         }
         ts_stats_increment(pollStats.n_error, thread_id);
-        /** Read session id to thread's local storage */
-        dcb_get_ses_log_info(dcb,
-                             &mxs_log_tls.li_sesid,
-                             &mxs_log_tls.li_enabled_priorities);
 
         if (poll_dcb_session_check(dcb, "error"))
         {
@@ -1050,11 +1035,6 @@ process_pollq(int thread_id, struct epoll_event *event)
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
             dcb->flags |= DCBF_HUNG;
-
-            /** Read session id to thread's local storage */
-            dcb_get_ses_log_info(dcb,
-                                 &mxs_log_tls.li_sesid,
-                                 &mxs_log_tls.li_enabled_priorities);
 
             if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
             {
@@ -1082,11 +1062,6 @@ process_pollq(int thread_id, struct epoll_event *event)
         {
             dcb->flags |= DCBF_HUNG;
 
-            /** Read session id to thread's local storage */
-            dcb_get_ses_log_info(dcb,
-                                 &mxs_log_tls.li_sesid,
-                                 &mxs_log_tls.li_enabled_priorities);
-
             if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
             {
                 dcb->func.hangup(dcb);
@@ -1108,9 +1083,6 @@ process_pollq(int thread_id, struct epoll_event *event)
     }
 
     ts_stats_set_max(queueStats.maxexectime, qtime, thread_id);
-
-    /** Reset session id from thread's local storage */
-    mxs_log_tls.li_sesid = 0;
 
     return 1;
 }
