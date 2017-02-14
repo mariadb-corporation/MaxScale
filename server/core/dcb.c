@@ -168,32 +168,6 @@ size_t dcb_get_session_id(
 }
 
 /**
- * Read log info from session through DCB and store values to memory locations
- * passed as parameters.
- *
- * @param dcb                     DCB
- * @param sesid                   location where session id is to be copied
- * @param enabled_log_prioritiess bit field indicating which log types are enabled for the
- * session
- *
- *@return true if call arguments included memory addresses, false if any of the
- *        parameters was NULL.
- */
-bool dcb_get_ses_log_info(
-    DCB     *dcb,
-    size_t  *sesid,
-    int     *enabled_log_priorities)
-{
-    if (sesid && enabled_log_priorities && dcb && dcb->session)
-    {
-        *sesid = dcb->session->ses_id;
-        *enabled_log_priorities = dcb->session->enabled_log_priorities;
-        return true;
-    }
-    return false;
-}
-
-/**
  * @brief Initialize a DCB
  *
  * This routine puts initial values into the fields of the DCB pointed to
@@ -586,10 +560,6 @@ dcb_process_victim_queue(int threadid)
             }
         }
 
-        dcb_get_ses_log_info(dcb,
-                             &mxs_log_tls.li_sesid,
-                             &mxs_log_tls.li_enabled_priorities);
-
         /** Move to the next DCB before freeing the previous one */
         dcblist = dcblist->memdata.next;
 
@@ -600,8 +570,6 @@ dcb_process_victim_queue(int threadid)
         dcb_remove_from_list(dcb);
         dcb_final_free(dcb);
     }
-    /** Reset threads session data */
-    mxs_log_tls.li_sesid = 0;
 }
 
 /**

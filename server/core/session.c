@@ -244,37 +244,6 @@ session_set_dummy(DCB *client_dcb)
 }
 
 /**
- * Enable specified log priority for the current session and increase logger
- * counter.
- * Generic logging setting has precedence over session-specific setting.
- *
- * @param session      session
- * @param priority syslog priority
- */
-void session_enable_log_priority(MXS_SESSION* session, int priority)
-{
-    session->enabled_log_priorities |= (1 << priority);
-    atomic_add((int *)&mxs_log_session_count[priority], 1);
-}
-
-/**
- * Disable specified log priority for the current session and decrease logger
- * counter.
- * Generic logging setting has precedence over session-specific setting.
- *
- * @param session   session
- * @param priority syslog priority
- */
-void session_disable_log_priority(MXS_SESSION* session, int priority)
-{
-    if (session->enabled_log_priorities & (1 << priority))
-    {
-        session->enabled_log_priorities &= ~(1 << priority);
-        atomic_add((int *)&mxs_log_session_count[priority], -1);
-    }
-}
-
-/**
  * Link a session to a DCB.
  *
  * @param session       The session to link with the dcb
@@ -383,9 +352,6 @@ static void session_free(MXS_SESSION *session)
     }
 
     MXS_INFO("Stopped %s client session [%lu]", session->service->name, session->ses_id);
-
-    /** Disable trace and decrease trace logger counter */
-    session_disable_log_priority(session, LOG_INFO);
 
     /** If session doesn't have parent referencing to it, it can be freed */
     if (!session->ses_is_child)

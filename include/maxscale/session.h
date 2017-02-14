@@ -128,7 +128,6 @@ typedef struct session
     skygw_chk_t             ses_chk_top;
     mxs_session_state_t     state;            /*< Current descriptor state */
     size_t                  ses_id;           /*< Unique session identifier */
-    int                     enabled_log_priorities; /*< Bitfield of enabled syslog priorities */
     struct dcb              *client_dcb;      /*< The client connection */
     void                    *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
@@ -171,9 +170,6 @@ MXS_SESSION *session_set_dummy(struct dcb *);
 
 const char *session_get_remote(const MXS_SESSION *);
 const char *session_get_user(const MXS_SESSION *);
-
-void session_enable_log_priority(MXS_SESSION* ses, int priority);
-void session_disable_log_priority(MXS_SESSION* ses, int priority);
 
 /**
  * Convert transaction state to string representation.
