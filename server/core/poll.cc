@@ -838,9 +838,38 @@ poll_waitevents(void *arg)
         /* Process of the queue of waiting requests */
         for (int i = 0; i < nfds; i++)
         {
+            /** Calculate event queue statistics */
+            uint64_t started = hkheartbeat;
+            uint64_t qtime = started - thread_data[thread_id].cycle_start;
+
+            if (qtime > N_QUEUE_TIMES)
+            {
+                queueStats.qtimes[N_QUEUE_TIMES]++;
+            }
+            else
+            {
+                queueStats.qtimes[qtime]++;
+            }
+
+            ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
+
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
 
             data->handler(data, thread_id, events[i].events);
+
+            /** Calculate event execution statistics */
+            qtime = hkheartbeat - started;
+
+            if (qtime > N_QUEUE_TIMES)
+            {
+                queueStats.exectimes[N_QUEUE_TIMES]++;
+            }
+            else
+            {
+                queueStats.exectimes[qtime % N_QUEUE_TIMES]++;
+            }
+
+            ts_stats_set_max(queueStats.maxexectime, qtime, thread_id);
         }
 
         dcb_process_idle_sessions(thread_id);
@@ -922,21 +951,6 @@ static int
 process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
 {
     ss_dassert(dcb->poll.thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
-
-    /** Calculate event queue statistics */
-    uint64_t started = hkheartbeat;
-    uint64_t qtime = started - thread_data[thread_id].cycle_start;
-
-    if (qtime > N_QUEUE_TIMES)
-    {
-        queueStats.qtimes[N_QUEUE_TIMES]++;
-    }
-    else
-    {
-        queueStats.qtimes[qtime]++;
-    }
-
-    ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
 
     CHK_DCB(dcb);
 
@@ -1093,21 +1107,6 @@ process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
         }
     }
 #endif
-
-    /** Calculate event execution statistics */
-    qtime = hkheartbeat - started;
-
-    if (qtime > N_QUEUE_TIMES)
-    {
-        queueStats.exectimes[N_QUEUE_TIMES]++;
-    }
-    else
-    {
-        queueStats.exectimes[qtime % N_QUEUE_TIMES]++;
-    }
-
-    ts_stats_set_max(queueStats.maxexectime, qtime, thread_id);
-
     return 1;
 }
 
