@@ -855,6 +855,7 @@ poll_waitevents(void *arg)
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
 
+            thread_data[thread_id].event = events[i].events;
             data->handler(data, thread_id, events[i].events);
 
             /** Calculate event execution statistics */
@@ -954,9 +955,7 @@ process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
 
     CHK_DCB(dcb);
 
-    thread_data[thread_id].state = THREAD_PROCESSING;
     thread_data[thread_id].cur_dcb = dcb;
-    thread_data[thread_id].event = ev;
 
     /* It isn't obvious that this is impossible */
     /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
