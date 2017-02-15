@@ -68,6 +68,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/random_jkiss.h>
+#include <maxscale/worker.h>
 
 #include "maxscale/config.h"
 #include "maxscale/dcb.h"
@@ -1939,6 +1940,8 @@ int main(int argc, char **argv)
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
+
+    mxs_worker_init();
 
     /* Init MaxScale modules */
     if (!modules_process_init())

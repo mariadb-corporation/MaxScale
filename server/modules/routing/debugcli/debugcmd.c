@@ -73,6 +73,7 @@
 #include <maxscale/maxscale.h>
 #include <maxscale/version.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/worker.h>
 
 #include "../../../core/maxscale/config_runtime.h"
 #include "../../../core/maxscale/maxscale.h"
@@ -927,6 +928,38 @@ static void cmd_AddServer(DCB *dcb, SERVER *server, char *v1, char *v2, char *v3
 }
 
 /**
+ * The subcommands of the ping command.
+ */
+void ping_workers(DCB* dcb)
+{
+    int n_workers = config_threadcount();
+
+    for (int i = 0; i < n_workers; ++i)
+    {
+        MXS_WORKER *worker = mxs_worker_get(i);
+
+        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_PING, 0, NULL))
+        {
+            dcb_printf(dcb, "Posted message to worker %d.\n", i);
+        }
+        else
+        {
+            dcb_printf(dcb, "Could not post message to worker %d: %s\n", i, mxs_strerror(errno));
+        }
+    }
+}
+
+struct subcommand pingoptions[] =
+{
+    {
+        "workers", 0, 0, ping_workers,
+        "Ping Workers",
+        "Ping Workers",
+        {ARG_TYPE_NONE}
+    }
+};
+
+/**
  * The subcommands of the add command
  */
 struct subcommand addoptions[] =
@@ -1654,6 +1687,7 @@ static struct
     { "show",       showoptions },
     { "sync",       syncoptions },
     { "call",       calloptions },
+    { "ping",       pingoptions },
     { NULL,         NULL    }
 };
 

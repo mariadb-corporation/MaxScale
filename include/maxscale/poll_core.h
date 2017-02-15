@@ -17,6 +17,7 @@
  */
 
 #include <maxscale/cdefs.h>
+#include <sys/epoll.h>
 
 typedef enum mxs_poll_action
 {
