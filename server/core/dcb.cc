@@ -72,6 +72,7 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/epoll.h>
 
 #include <maxscale/spinlock.h>
 #include <maxscale/server.h>
@@ -101,6 +102,19 @@
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized;
 
+/** Fake epoll event struct */
+typedef struct fake_event
+{
+    DCB               *dcb;   /*< The DCB where this event was generated */
+    GWBUF             *data;  /*< Fake data, placed in the DCB's read queue */
+    uint32_t           event; /*< The EPOLL event type */
+    struct fake_event *tail;  /*< The last event */
+    struct fake_event *next;  /*< The next event */
+} fake_event_t;
+
+static fake_event_t **fake_events; /*< Thread-specific fake event queue */
+static SPINLOCK      *fake_event_lock;
+
 static  DCB           **all_dcbs;
 static  SPINLOCK       *all_dcbs_lock;
 static  DCB           **zombies;
@@ -124,8 +138,10 @@ void dcb_global_init()
 
     if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
         (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
-        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL)
+        (all_dcbs_lock = (SPINLOCK**)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
+        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL ||
+        (fake_events = (fake_event_t*)MXS_CALLOC(nthreads, sizeof(fake_event_t*))) == NULL ||
+        (fake_event_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);
@@ -135,9 +151,19 @@ void dcb_global_init()
     {
         spinlock_init(&all_dcbs_lock[i]);
     }
+
+    for (int i = 0; i < nthreads; i++)
+    {
+        spinlock_init(&fake_event_lock[i]);
+    }
 }
 
-static void dcb_initialize(void *dcb);
+void dcb_finish()
+{
+    // TODO: Free all resources.
+}
+
+static void dcb_initialize(DCB *dcb);
 static void dcb_final_free(DCB *dcb);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
@@ -165,6 +191,11 @@ static void dcb_add_to_all_list(DCB *dcb);
 static DCB *dcb_find_free();
 static void dcb_remove_from_list(DCB *dcb);
 
+static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events);
+static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t ev);
+static void dcb_process_fake_events(DCB *dcb, int thread_id);
+static bool dcb_session_check(DCB *dcb, const char *);
+
 size_t dcb_get_session_id(
     DCB *dcb)
 {
@@ -175,9 +206,7 @@ size_t dcb_get_session_id(
  * @brief Initialize a DCB
  *
  * This routine puts initial values into the fields of the DCB pointed to
- * by the parameter. The parameter has to be passed as void * because the
- * function can be called by the generic list manager, which does not know
- * the actual type of the list entries it handles.
+ * by the parameter.
  *
  * Most fields can be initialized by the assignment of the static
  * initialized DCB. The exception is the bitmask.
@@ -185,9 +214,11 @@ size_t dcb_get_session_id(
  * @param *dcb    Pointer to the DCB to be initialized
  */
 static void
-dcb_initialize(void *dcb)
+dcb_initialize(DCB *dcb)
 {
-    *(DCB *)dcb = dcb_initialized;
+    *dcb = dcb_initialized;
+
+    dcb->poll.handler = dcb_poll_handler;
 }
 
 /**
@@ -3184,4 +3215,300 @@ int dcb_get_port(const DCB *dcb)
     }
 
     return rval;
+}
+
+static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t events)
+{
+    ss_dassert(dcb->poll.thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
+
+    CHK_DCB(dcb);
+
+    uint32_t rc = MXS_POLL_NOP;
+
+    /* It isn't obvious that this is impossible */
+    /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
+    if (DCB_STATE_DISCONNECTED == dcb->state)
+    {
+        return rc;
+    }
+
+    MXS_DEBUG("%lu [poll_waitevents] event %d dcb %p "
+              "role %s",
+              pthread_self(),
+              events,
+              dcb,
+              STRDCBROLE(dcb->dcb_role));
+
+    if (events & EPOLLOUT)
+    {
+        int eno = 0;
+        eno = gw_getsockerrno(dcb->fd);
+
+        if (eno == 0)
+        {
+            rc |= MXS_POLL_WRITE;
+
+            if (dcb_session_check(dcb, "write_ready"))
+            {
+                dcb->func.write_ready(dcb);
+            }
+        }
+        else
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_DEBUG("%lu [poll_waitevents] "
+                      "EPOLLOUT due %d, %s. "
+                      "dcb %p, fd %i",
+                      pthread_self(),
+                      eno,
+                      strerror_r(eno, errbuf, sizeof(errbuf)),
+                      dcb,
+                      dcb->fd);
+        }
+    }
+    if (events & EPOLLIN)
+    {
+        if (dcb->state == DCB_STATE_LISTENING || dcb->state == DCB_STATE_WAITING)
+        {
+            MXS_DEBUG("%lu [poll_waitevents] "
+                      "Accept in fd %d",
+                      pthread_self(),
+                      dcb->fd);
+            rc |= MXS_POLL_ACCEPT;
+
+            if (dcb_session_check(dcb, "accept"))
+            {
+                dcb->func.accept(dcb);
+            }
+        }
+        else
+        {
+            MXS_DEBUG("%lu [poll_waitevents] "
+                      "Read in dcb %p fd %d",
+                      pthread_self(),
+                      dcb,
+                      dcb->fd);
+            rc |= MXS_POLL_READ;
+
+            if (dcb_session_check(dcb, "read"))
+            {
+                int return_code = 1;
+                /** SSL authentication is still going on, we need to call dcb_accept_SSL
+                 * until it return 1 for success or -1 for error */
+                if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
+                {
+                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
+                                  dcb_accept_SSL(dcb) :
+                                  dcb_connect_SSL(dcb);
+                }
+                if (1 == return_code)
+                {
+                    dcb->func.read(dcb);
+                }
+            }
+        }
+    }
+    if (events & EPOLLERR)
+    {
+        int eno = gw_getsockerrno(dcb->fd);
+        if (eno != 0)
+        {
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_DEBUG("%lu [poll_waitevents] "
+                      "EPOLLERR due %d, %s.",
+                      pthread_self(),
+                      eno,
+                      strerror_r(eno, errbuf, sizeof(errbuf)));
+        }
+        rc |= MXS_POLL_ERROR;
+
+        if (dcb_session_check(dcb, "error"))
+        {
+            dcb->func.error(dcb);
+        }
+    }
+
+    if (events & EPOLLHUP)
+    {
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
+        MXS_DEBUG("%lu [poll_waitevents] "
+                  "EPOLLHUP on dcb %p, fd %d. "
+                  "Errno %d, %s.",
+                  pthread_self(),
+                  dcb,
+                  dcb->fd,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
+        rc |= MXS_POLL_HUP;
+        if ((dcb->flags & DCBF_HUNG) == 0)
+        {
+            dcb->flags |= DCBF_HUNG;
+
+            if (dcb_session_check(dcb, "hangup EPOLLHUP"))
+            {
+                dcb->func.hangup(dcb);
+            }
+        }
+    }
+
+#ifdef EPOLLRDHUP
+    if (events & EPOLLRDHUP)
+    {
+        ss_debug(int eno = gw_getsockerrno(dcb->fd));
+        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
+        MXS_DEBUG("%lu [poll_waitevents] "
+                  "EPOLLRDHUP on dcb %p, fd %d. "
+                  "Errno %d, %s.",
+                  pthread_self(),
+                  dcb,
+                  dcb->fd,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
+        rc |= MXS_POLL_HUP;
+
+        if ((dcb->flags & DCBF_HUNG) == 0)
+        {
+            dcb->flags |= DCBF_HUNG;
+
+            if (dcb_session_check(dcb, "hangup EPOLLRDHUP"))
+            {
+                dcb->func.hangup(dcb);
+            }
+        }
+    }
+#endif
+    return rc;
+}
+
+static void dcb_process_fake_events(DCB *dcb, int thread_id)
+{
+    // Since this loop is now here, it will be processed once per extracted epoll
+    // event and not once per extraction of events, but as this is temporary code
+    // that's ok. Once it'll be possible to send cross-thread messages, the need
+    // for the fake event list will disappear.
+
+    fake_event_t *event = NULL;
+
+    /** It is very likely that the queue is empty so to avoid hitting the
+     * spinlock every time we receive events, we only do a dirty read. Currently,
+     * only the monitors inject fake events from external threads. */
+    if (fake_events[thread_id])
+    {
+        spinlock_acquire(&fake_event_lock[thread_id]);
+        event = fake_events[thread_id];
+        fake_events[thread_id] = NULL;
+        spinlock_release(&fake_event_lock[thread_id]);
+    }
+
+    while (event)
+    {
+        event->dcb->dcb_fakequeue = event->data;
+        dcb_process_poll_events(event->dcb, thread_id, event->event);
+        fake_event_t *tmp = event;
+        event = event->next;
+        MXS_FREE(tmp);
+    }
+}
+
+static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t events)
+{
+    DCB *dcb = (DCB*)data;
+
+    uint32_t rc = dcb_process_poll_events(dcb, thread_id, events);
+
+    dcb_process_fake_events(dcb, thread_id);
+
+    return rc;
+}
+
+static void poll_add_event_to_dcb(DCB*       dcb,
+                                  GWBUF*     buf,
+                                  uint32_t ev)
+{
+    fake_event_t *event = MXS_MALLOC(sizeof(*event));
+
+    if (event)
+    {
+        event->data = buf;
+        event->dcb = dcb;
+        event->event = ev;
+        event->next = NULL;
+        event->tail = event;
+
+        int thr = dcb->poll.thread.id;
+
+        /** It is possible that a housekeeper or a monitor thread inserts a fake
+         * event into the thread's event queue which is why the operation needs
+         * to be protected by a spinlock */
+        spinlock_acquire(&fake_event_lock[thr]);
+
+        if (fake_events[thr])
+        {
+            fake_events[thr]->tail->next = event;
+            fake_events[thr]->tail = event;
+        }
+        else
+        {
+            fake_events[thr] = event;
+        }
+
+        spinlock_release(&fake_event_lock[thr]);
+    }
+}
+
+void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf)
+{
+    uint32_t ev;
+
+    ev = EPOLLIN;
+
+    poll_add_event_to_dcb(dcb, buf, ev);
+}
+
+void poll_fake_write_event(DCB *dcb)
+{
+    poll_add_event_to_dcb(dcb, NULL, EPOLLOUT);
+}
+
+void poll_fake_read_event(DCB *dcb)
+{
+    poll_add_event_to_dcb(dcb, NULL, EPOLLIN);
+}
+
+void poll_fake_hangup_event(DCB *dcb)
+{
+#ifdef EPOLLRDHUP
+    uint32_t ev = EPOLLRDHUP;
+#else
+    uint32_t ev = EPOLLHUP;
+#endif
+    poll_add_event_to_dcb(dcb, NULL, ev);
+}
+
+/**
+ * Check that the DCB has a session link before processing.
+ * If not, log an error.  Processing will be bypassed
+ *
+ * @param   dcb         The DCB to check
+ * @param   function    The name of the function about to be called
+ * @return  bool        Does the DCB have a non-null session link
+ */
+static bool
+dcb_session_check(DCB *dcb, const char *function)
+{
+    if (dcb->session)
+    {
+        return true;
+    }
+    else
+    {
+        MXS_ERROR("%lu [%s] The dcb %p that was about to be processed by %s does not "
+                  "have a non-null session pointer ",
+                  pthread_self(),
+                  __func__,
+                  dcb,
+                  function);
+        return false;
+    }
 }

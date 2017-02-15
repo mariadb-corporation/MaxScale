@@ -84,21 +84,9 @@ int max_poll_sleep;
  */
 #define MUTEX_EPOLL     0
 
-/** Fake epoll event struct */
-typedef struct fake_event
-{
-    DCB               *dcb;   /*< The DCB where this event was generated */
-    GWBUF             *data;  /*< Fake data, placed in the DCB's read queue */
-    uint32_t           event; /*< The EPOLL event type */
-    struct fake_event *tail;  /*< The last event */
-    struct fake_event *next;  /*< The next event */
-} fake_event_t;
-
 thread_local int current_thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
-static fake_event_t **fake_events; /*< Thread-specific fake event queue */
-static SPINLOCK      *fake_event_lock;
 static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 
 /** Poll cross-thread messaging variables */
@@ -111,15 +99,7 @@ static simple_mutex_t epoll_wait_mutex; /*< serializes calls to epoll_wait */
 #endif
 static int n_waiting = 0;    /*< No. of threads in epoll_wait */
 
-static uint32_t process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev);
-static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int wid, uint32_t events);
-
-static void poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, uint32_t ev);
-static bool poll_dcb_session_check(DCB *dcb, const char *);
 static void poll_check_message(void);
-
-DCB *eventq = NULL;
-SPINLOCK pollqlock = SPINLOCK_INIT;
 
 /**
  * Thread load average, this is the average number of descriptors in each
@@ -157,7 +137,7 @@ typedef struct
 {
     THREAD_STATE   state;       /*< Current thread state */
     int            n_fds;       /*< No. of descriptors thread is processing */
-    MXS_POLL_DATA *cur_data;    /*< Current DCB being processed */
+    MXS_POLL_DATA *cur_data;    /*< Current MXS_POLL_DATA being processed */
     uint32_t       event;       /*< Current event being processed */
     uint64_t       cycle_start; /*< The time when the poll loop was started */
 } THREAD_DATA;
@@ -247,24 +227,9 @@ poll_init()
         }
     }
 
-    if ((fake_events = (fake_event_t**)MXS_CALLOC(n_threads, sizeof(fake_event_t*))) == NULL)
-    {
-        exit(-1);
-    }
-
-    if ((fake_event_lock = (SPINLOCK*)MXS_CALLOC(n_threads, sizeof(SPINLOCK))) == NULL)
-    {
-        exit(-1);
-    }
-
     if ((poll_msg = (int*)MXS_CALLOC(n_threads, sizeof(int))) == NULL)
     {
         exit(-1);
-    }
-
-    for (int i = 0; i < n_threads; i++)
-    {
-        spinlock_init(&fake_event_lock[i]);
     }
 
     memset(&pollStats, 0, sizeof(pollStats));
@@ -348,7 +313,7 @@ static int add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 
     ev.events = events;
     ev.data.ptr = data;
-    data->thread.id = 0; // In this case, the dcb will appear to be on the main thread.
+    data->thread.id = 0; // In this case, the data will appear to be on the main thread.
 
     int stored_errno = 0;
     int rc = 0;
@@ -526,7 +491,6 @@ int poll_add_dcb(DCB *dcb)
         worker_id = (unsigned int)atomic_add(&next_epoll_fd, 1) % n_threads;
     }
 
-    dcb->poll.handler = dcb_poll_handler;
     rc = poll_add_fd_to_worker(worker_id, dcb->fd, events, (MXS_POLL_DATA*)dcb);
 
     if (0 == rc)
@@ -953,6 +917,7 @@ poll_set_maxwait(unsigned int maxwait)
 }
 
 /**
+<<<<<<< 26336f2003f9cd9321faa7e0d7c0bc770c82f8c9
  * Process of the queue of DCB's that have outstanding events
  *
  * The first event on the queue will be chosen to be executed by this thread,
@@ -1201,6 +1166,8 @@ poll_dcb_session_check(DCB *dcb, const char *function)
 }
 
 /**
+=======
+>>>>>>> Move DCB specific event handling to dcb.c
  * Shutdown the polling loop
  */
 void
@@ -1488,6 +1455,7 @@ poll_loadav(void *data)
     }
 }
 
+<<<<<<< 6b2042c75fd64c7a8d0fa2fca4c68d02dd0c8a62:server/core/poll.cc
 void poll_add_epollin_event_to_dcb(DCB*   dcb,
                                    GWBUF* buf)
 {
@@ -1554,6 +1522,8 @@ void poll_fake_hangup_event(DCB *dcb)
     poll_add_event_to_dcb(dcb, NULL, ev);
 }
 
+=======
+>>>>>>> Move DCB specific event handling to dcb.c:server/core/poll.c
 /**
  * Print the event queue statistics
  *
