@@ -14,20 +14,23 @@
 
 function print_usage_and_exit
 {
-    echo "update-change-date from to"
+    echo "update-license-url from to"
     echo
-    echo "  from: Old change date, e.g. 2019-01-01"
-    echo "  to  : New change date, e.g. 2019-07-01"
+    echo "  from: Old license, e.g. www.mariadb.com/bsl"
+    echo "  to  : New license, e.g. www.mariadb.com/bsl11"
+    echo
+    echo "For instance: update-license-url www.mariadb.com/bsl www.mariadb.com/bsl11"
 
     exit 1
 }
 
 function run
 {
-    local from="Change Date: "$1
-    local to="Change Date: "$2
+    local from=$1
+    local to=$2
 
-    local files=`find . -type f`
+    #local files=`find . -type f`
+    local files=`git ls-files`
 
     for f in $files
     do
@@ -35,7 +38,7 @@ function run
         if [ $? -eq 0 ]
         then
             echo $f
-            sed -i -e "s/$from/$to/" $f
+            sed -i -e "s@$from@$to@" $f
         fi
     done
 }
@@ -48,9 +51,6 @@ function main
     fi
 
     run $1 $2
-
-    echo
-    echo "Remeber to update LICENSE.TXT as well."
 }
 
 main $*

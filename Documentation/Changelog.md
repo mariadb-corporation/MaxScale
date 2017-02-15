@@ -1,6 +1,7 @@
 #Changelog
 
 ## MariaDB MaxScale 2.1
+* MariaDB MaxScale is licensed under MariaDB BSL 1.1.
 * Hierarchical configuration files are now supported.
 * Logging is now performed in a way compatible with logrotate(8).
 * Persistent connections are reset upon resuse.
