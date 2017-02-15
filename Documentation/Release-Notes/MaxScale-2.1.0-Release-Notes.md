@@ -8,6 +8,13 @@ release 2.0.4.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## License
+
+The license of MaxScale has been changed from MariaDB BSL 1.0 to MariaDB BSL 1.1.
+
+For more information about MariaDB BSL 1.1, please refer to
+[MariaDB BSL11](https://www.mariadb.com/bsl11).
+
 ## Changed Features
 
 ### `router_options` to Parameters
