@@ -18,6 +18,16 @@
 
 #include <maxscale/cdefs.h>
 
+typedef enum mxs_poll_action
+{
+    MXS_POLL_NOP    = 0x00,
+    MXS_POLL_ACCEPT = 0x01,
+    MXS_POLL_READ   = 0x02,
+    MXS_POLL_WRITE  = 0x04,
+    MXS_POLL_HUP    = 0x08,
+    MXS_POLL_ERROR  = 0x10,
+} mxs_poll_action_t;
+
 typedef struct mxs_poll_data
 {
     /** Pointer to function that knows how to handle events for this particular
@@ -26,8 +36,10 @@ typedef struct mxs_poll_data
      * @param data    The `mxs_poll_data` instance that contained this pointer.
      * @param wid     The worker thread id.
      * @param events  The epoll events.
+     *
+     * @return A combination of mxs_poll_action_t enumeration values.
      */
-    void (*handler)(struct mxs_poll_data *data, int wid, uint32_t events);
+    uint32_t (*handler)(struct mxs_poll_data *data, int wid, uint32_t events);
 
     struct
     {
