@@ -76,7 +76,9 @@ typedef struct mxs_poll_data
  *                 data->thread.id: Will be updated by `poll_add_fd_to_worker`.
  *
  * @attention If the descriptor should be added to all workers, then the worker
- * thread id will be 0.
+ *            thread id will be 0.
+ *
+ * @attention The provided file descriptor *must* be non-blocking.
  *
  * @return 0 on success, non-zero on failure.
  */

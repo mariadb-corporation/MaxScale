@@ -291,6 +291,8 @@ static int add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* dat
 {
     ss_dassert((wid >= 0) && (wid <= n_threads));
 
+    events |= EPOLLET;
+
     struct epoll_event ev;
 
     ev.events = events;
@@ -309,6 +311,8 @@ static int add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* dat
 
 static int add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 {
+    events |= EPOLLET;
+
     struct epoll_event ev;
 
     ev.events = events;
