@@ -87,6 +87,9 @@ MXS_BEGIN_DECLS
 #define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
 #define BLR_REPORT_REP_HEADER 0x02
 
+/* MariaDB GTID string len */
+#define GTID_MAX_LEN 42
+
 /**
  * Supported Encryption algorithms
  *
@@ -600,6 +603,7 @@ typedef struct router_instance
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
     void              *encryption_ctx;      /*< Encryption context */
+    char              mariadb_gtid[GTID_MAX_LEN  + 1]; /*< MariaDB 10 GTID string value */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

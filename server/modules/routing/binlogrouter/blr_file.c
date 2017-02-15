@@ -1974,7 +1974,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
         }
 
         /* If MariaDB 10 compatibility:
-         * check for MARIADB10_GTID_EVENT with flags = 0
+         * check for MARIADB10_GTID_EVENT with flags
          * This marks the transaction starts instead of
          * QUERY_EVENT with "BEGIN"
          */
@@ -1992,6 +1992,13 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
                 if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                 {
+                    char mariadb_gtid[GTID_MAX_LEN + 1];
+                    snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                             domainid, hdr.serverid,
+                             n_sequence);
+
+                    strcpy(router->mariadb_gtid, mariadb_gtid);
+
                     if (pending_transaction > 0)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "

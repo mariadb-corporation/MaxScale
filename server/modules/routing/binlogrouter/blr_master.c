@@ -1368,54 +1368,72 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  * Only complete transactions should be sent to sleves
                  */
 
-                /**
-                 * If MariaDB 10 compatibility:
-                 * check for MARIADB10_GTID_EVENT with flags = 0
-                 * This marks the transaction starts instead of
-                 * QUERY_EVENT with "BEGIN"
-                 */
-                if (router->trx_safe)
+                if (router->mariadb10_compat && hdr.event_type == MARIADB10_GTID_EVENT)
                 {
-                    if (router->mariadb10_compat)
-                    {
-                        if (hdr.event_type == MARIADB10_GTID_EVENT)
-                        {
-                            uint64_t n_sequence;
-                            uint32_t domainid;
-                            unsigned int flags;
-                            n_sequence = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, 64);
-                            domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
-                            flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
-
-                            if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
-                            {
-                                spinlock_acquire(&router->binlog_lock);
-
-                                if (router->pending_transaction > 0)
-                                {
-                                    MXS_ERROR("A MariaDB 10 transaction "
-                                              "is already open "
-                                              "@ %lu (GTID %u-%u-%lu) and "
-                                              "a new one starts @ %lu",
-                                              router->binlog_position,
-                                              domainid, hdr.serverid,
-                                              n_sequence,
-                                              router->current_pos);
-
-                                    // An action should be taken here
-                                }
-
-                                router->pending_transaction = BLRM_TRANSACTION_START;
-
-                                spinlock_release(&router->binlog_lock);
-                            }
-                        }
-                    }
-
                     /**
-                     * look for QUERY_EVENT [BEGIN / COMMIT] and XID_EVENT
+                     * If MariaDB 10 compatibility:
+                     * check for MARIADB10_GTID_EVENT with flags:
+                     * this is the TRASACTION START detection.
+                     *
+                     * Save GTID anyway and if trx_safe is set mark the transaction start
                      */
 
+                    uint64_t n_sequence;
+                    uint32_t domainid;
+                    unsigned int flags;
+                    n_sequence = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN, 64);
+                    domainid = extract_field(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8, 32);
+                    flags = *(ptr + MYSQL_HEADER_LEN + 1 + BINLOG_EVENT_HDR_LEN + 8 + 4);
+
+                    if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
+                    {
+                        char mariadb_gtid[GTID_MAX_LEN + 1];
+                        snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                 domainid, hdr.serverid,
+                                 n_sequence);
+
+                        MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
+                                  router->mariadb_gtid,
+                                  router->binlog_name,
+                                  router->binlog_position);
+
+                        spinlock_acquire(&router->binlog_lock);
+
+                        /* Save GTID */
+                        strcpy(router->mariadb_gtid, mariadb_gtid);
+
+                        /**
+                         * Now mark the new open transaction
+                         */
+                        if (router->trx_safe)
+                        {
+                            if (router->pending_transaction > 0)
+                            {
+                                MXS_ERROR("A MariaDB 10 transaction "
+                                          "is already open "
+                                          "@ %lu (GTID %s) and "
+                                          "a new one starts @ %lu",
+                                          router->binlog_position,
+                                          mariadb_gtid,
+                                          router->current_pos);
+                            }
+
+                            router->pending_transaction = BLRM_TRANSACTION_START;
+
+                        }
+
+                        spinlock_release(&router->binlog_lock);
+                    }
+                }
+
+                /**
+                 * If trx_safe is set then look for:
+                 * - QUERY_EVENT: BEGIN | START TRANSACTION | COMMIT
+                 * - XID_EVENT for transactional storage edngines
+                 */
+
+                if (router->trx_safe)
+                {
                     if (hdr.event_type == QUERY_EVENT)
                     {
                         char *statement_sql;
@@ -1444,7 +1462,6 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                           router->binlog_position,
                                           router->current_pos);
 
-                                // An action should be taken here
                             }
 
                             router->pending_transaction = BLRM_TRANSACTION_START;

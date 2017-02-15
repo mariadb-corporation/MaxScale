@@ -315,6 +315,7 @@ createInstance(SERVICE *service, char **options)
     inst->current_pos = 0;
     inst->current_safe_event = 0;
     inst->master_event_state = BLR_EVENT_DONE;
+    inst->mariadb_gtid[0] = '\0';
 
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
@@ -1432,6 +1433,11 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
 
             dcb_printf(dcb, "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
+            if (router_inst->mariadb_gtid[0])
+            {
+                dcb_printf(dcb, "\tLast seen MariaDB GTID:                      %s\n",
+                           router_inst->mariadb_gtid);
+            }
         }
 
         if (router_inst->lastEventTimestamp)

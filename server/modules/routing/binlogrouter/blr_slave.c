@@ -488,7 +488,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     }
     else if (strcmp(query_text, maxwell_binlog_row_image_query) == 0)
     {
-        char *binlog_row_image = blr_extract_column(router->saved_master.binlog_vars, 1);
+        char *binlog_row_image = blr_extract_column(router->saved_master.binlog_vars, 3);
         blr_slave_send_var_value(router, slave, "Value", binlog_row_image == NULL ? "" : binlog_row_image, BLR_TYPE_STRING);
         MXS_FREE(binlog_row_image);
         MXS_FREE(query_text);
@@ -643,6 +643,20 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             MXS_FREE(query_text);
 
             return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
+        }
+        else if ((strcasecmp(word, "@@gtid_current_pos") == 0) || (strcasecmp(word, "@@global.gtid_current_pos") == 0))
+        {
+            char    heading[40]; /* to ensure we match the case in query and response */
+            char mariadb_gtid[GTID_MAX_LEN + 1];
+            strcpy(heading, word);
+            MXS_FREE(query_text);
+
+            /* Safely get router->mariadb_gtid */
+            spinlock_acquire(&router->binlog_lock);
+            strcpy(mariadb_gtid, router->mariadb_gtid);
+            spinlock_release(&router->binlog_lock);
+
+            return blr_slave_send_var_value(router, slave, heading, mariadb_gtid, BLR_TYPE_STRING);
         }
         else if (strcasestr(word, "binlog_gtid_pos"))
         {
