@@ -64,7 +64,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static uint64_t getCapabilities(void);
+static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
  * The module entry point routine. It is this routine that
@@ -668,7 +668,7 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
  *
  * @return The capabilities of the filter.
  */
-static uint64_t getCapabilities(void)
+static uint64_t getCapabilities(MXS_FILTER *instance)
 {
     return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
