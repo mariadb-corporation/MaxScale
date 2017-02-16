@@ -1304,7 +1304,7 @@ blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
  */
 int
 blr_read_events_all_events(ROUTER_INSTANCE *router,
-                           const BINLOG_FILE_FIX *action,
+                           BINLOG_FILE_FIX *action,
                            int debug)
 {
     unsigned long filelen = 0;
@@ -1340,6 +1340,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
     int fde_seen = 0;
     int start_encryption_seen = 0;
     bool fix = action ? action->fix : false;
+    bool replace_trx_events = false;
 
     memset(&first_event, '\0', sizeof(first_event));
     memset(&last_event, '\0', sizeof(last_event));
@@ -1370,9 +1371,13 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             switch (n)
             {
             case 0:
-                MXS_DEBUG("End of binlog file [%s] at %llu.",
-                          router->binlog_name,
-                          pos);
+                if (!(debug & BLR_CHECK_ONLY))
+                {
+                    MXS_DEBUG("End of binlog file [%s] at %llu.",
+                              router->binlog_name,
+                              pos);
+                }
+
                 if (n_transactions)
                 {
                     average_events = (double)((double)total_events / (double)n_transactions) * (1.0);
@@ -1383,7 +1388,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 }
 
                 /* Report Binlog First and Last event */
-                if (pos > 4)
+                if (pos > 4 && !(debug & BLR_CHECK_ONLY))
                 {
                     if (first_event.event_type == 0)
                     {
@@ -1396,7 +1401,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 }
 
                 /* Report Transaction Summary */
-                if (n_transactions != 0)
+                if (!(debug & BLR_CHECK_ONLY) && n_transactions != 0)
                 {
                     char total_label[2] = "";
                     char average_label[2] = "";
@@ -1796,7 +1801,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 buf_t[strlen(buf_t) - 1] = '\0';
             }
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Format Description event FDE @ %llu, size %lu, time %lu (%s)",
                           pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t);
@@ -1837,7 +1842,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             /* Now remove from the calculated number of events the extra 5 bytes */
             n_events -= fde_extra_bytes;
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("       FDE ServerVersion [%50s]", ptr + 2);
 
@@ -1851,7 +1856,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             checksum = ptr + hdr.event_size - event_header_length - fde_extra_bytes;
             check_alg = checksum[0];
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("       FDE Checksum alg desc %i, alg type %s",
                           check_alg,
@@ -1872,8 +1877,11 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         if ((debug & BLR_REPORT_REP_HEADER))
         {
             char *event_desc = blr_get_event_description(router, hdr.event_type);
-            MXS_DEBUG("%8s==== Event Header ====\n%39sEvent time %lu\n%39sEvent Type %u (%s)\n%39sServer Id %lu\n%39sNextPos %lu\n%39sFlags %u",
-                      " ", " ", (unsigned long)hdr.timestamp, " ", hdr.event_type,
+            MXS_DEBUG("%8s==== Event Header ====\n%39sEvent Pos %lu\n%39sEvent time %lu\n%39s"
+                      "Event size %lu\n%39sEvent Type %u (%s)\n%39s"
+                      "Server Id %lu\n%39sNextPos %lu\n%39sFlags %u",
+                      " ", " ", (unsigned long) pos, " ", (unsigned long)hdr.timestamp, " ",
+                      (unsigned long)hdr.event_size, " ", hdr.event_type,
                       event_desc ? event_desc : "NULL", " ",
                       (unsigned long)hdr.serverid, " ", (unsigned long)hdr.next_pos, " ", hdr.flags);
             if (found_chksum)
@@ -1914,7 +1922,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             memcpy(&new_encryption_ctx->binlog_key_version,
                    &ste_event.binlog_key_version, BLRM_KEY_VERSION_LENGTH);
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 /* Hex representation of nonce */
                 gw_bin2hex(nonce_hex, ste_event.nonce, BLRM_NONCE_LENGTH);
@@ -1969,32 +1977,62 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             memcpy(file, ptr + 8, slen);
             file[slen] = 0;
 
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("- Rotate event @ %llu, next file is [%s] @ %lu",
                           pos, file, new_pos);
             }
         }
 
-        /**
-         * Replace event at pos with an IGNORABLE EVENT
-         */
+        /* Find and report Transaction start for event replacing only */
+        if (action->pos > 4 &&
+            action->replace_trx &&
+            pos == action->pos &&
+            pending_transaction)
+        {
+            MXS_NOTICE(">>> Position %lu belongs to a transaction started at pos %lu.",
+                       (unsigned long)pos, (unsigned long)last_known_commit);
+            MXS_NOTICE("This position will be used for replacing all related events.");
 
+            /* Set Transaction start as the stating pos for events replacing */
+            action->pos = last_known_commit;
+
+            /* Free resources */
+            gwbuf_free(result);
+            gwbuf_free(decrypted_event);
+
+            return 0;
+        }
+
+        /**
+         * Replace one event at pos or transaction events from pos:
+         * All events will be replaced by IGNORABLE events
+         */
         if (fix &&
             action->pos > 4 &&
-            pos == action->pos)
+            (pos == action->pos || replace_trx_events))
         {
             char *event_desc = blr_get_event_description(router, hdr.event_type);
 
-            MXS_DEBUG("*** Filling event (%s) at pos %lu with an IGNORABLE EVENT\n",
-                      event_desc ? event_desc : "unknown",
-                      action->pos);
+            if (action->replace_trx && !replace_trx_events)
+            {
+                MXS_NOTICE("=== Replacing all events of Transaction at pos %lu"
+                           " with IGNORABLE EVENT event type",
+                           action->pos);
+            }
 
-            router->last_written = action->pos;
+            MXS_NOTICE("=== Replace event (%s) at pos %lu with an IGNORABLE EVENT\n",
+                       event_desc ? event_desc : "unknown",
+                       (unsigned long)pos);
+
+            router->last_written = pos;
             router->master_chksum = found_chksum;
 
             /* Create and write Ingonrable event into binlog file at action->pos */
             blr_write_special_event(router, pos, hdr.event_size, &hdr, BLRM_IGNORABLE);
+
+            /* Set replace indicator: when COMMIT is seen later, it will be set to false */
+            replace_trx_events = action->replace_trx ? true : false;
         }
 
         /* If MariaDB 10 compatibility:
@@ -2041,8 +2079,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                         transaction_events = 0;
                         event_bytes = 0;
-
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("> MariaDB 10 Transaction (GTID %u-%u-%lu)"
                                       " starts @ pos %llu",
@@ -2098,8 +2135,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                         transaction_events = 0;
                         event_bytes = 0;
-
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("> Transaction starts @ pos %llu", pos);
                         }
@@ -2113,7 +2149,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     {
                         pending_transaction = 3;
 
-                        if (debug)
+                        if (!(debug & BLR_CHECK_ONLY))
                         {
                             MXS_DEBUG("       Transaction @ pos %llu, closing @ %llu",
                                       last_known_commit, pos);
@@ -2138,7 +2174,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             if (pending_transaction > 0)
             {
                 pending_transaction = 2;
-                if (debug)
+
+                if (!(debug & BLR_CHECK_ONLY))
                 {
                     MXS_DEBUG("       Transaction XID @ pos %llu, closing @ %llu",
                               last_known_commit, pos);
@@ -2148,13 +2185,16 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
         if (pending_transaction > 1)
         {
-            if (debug)
+            if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu. %lu events seen",
                           last_known_commit, pos, transaction_events);
             }
             pending_transaction = 0;
             last_known_commit = pos;
+
+            /* Reset the event replacing indicator */
+            replace_trx_events = false;
 
             total_events += transaction_events;
 
@@ -3044,7 +3084,7 @@ const char *blr_get_encryption_algorithm(int algo)
 /**
  * Return the encryption algorithm value
  *
- * @param name   The alogorithm string
+ * @param name   The algorithm string
  * @return       The numeric value or -1 on error
  */
 int blr_check_encryption_algorithm(char *name)

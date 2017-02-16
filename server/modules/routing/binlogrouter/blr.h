@@ -76,17 +76,18 @@ MXS_BEGIN_DECLS
 #define BINLOG_DATA_TRUNCATED       2032
 
 /* Binlog Encryption */
-#define BINLOG_ENC_ALGO_NAME_LEN        13
-#define BINLOG_FLAG_ENCRYPT              1
-#define BINLOG_FLAG_DECRYPT              0
-#define BINLOG_AES_MAX_KEY_LEN          32
-#define BINLOG_MAX_CRYPTO_SCHEME         2
-#define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME 1
-#define BINLOG_MAX_KEYFILE_LINE_LEN     130
+#define BINLOG_ENC_ALGO_NAME_LEN           13
+#define BINLOG_FLAG_ENCRYPT                 1
+#define BINLOG_FLAG_DECRYPT                 0
+#define BINLOG_AES_MAX_KEY_LEN             32
+#define BINLOG_MAX_CRYPTO_SCHEME            2
+#define BINLOG_SYSTEM_DATA_CRYPTO_SCHEME    1
+#define BINLOG_MAX_KEYFILE_LINE_LEN       130
 
 /* Event detail routine */
 #define BLR_REPORT_CHECKSUM_FORMAT "CRC32 0x"
-#define BLR_REPORT_REP_HEADER 0x02
+#define BLR_REPORT_REP_HEADER            0x02
+#define BLR_CHECK_ONLY                   0x04
 
 /* MariaDB GTID string len */
 #define GTID_MAX_LEN 42
@@ -827,7 +828,7 @@ extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-int blr_read_events_all_events(ROUTER_INSTANCE *, const BINLOG_FILE_FIX *, int);
+int blr_read_events_all_events(ROUTER_INSTANCE *, BINLOG_FILE_FIX *, int);
 int blr_save_dbusers(const ROUTER_INSTANCE *router);
 char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);
