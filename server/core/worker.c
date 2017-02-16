@@ -36,15 +36,15 @@ static struct worker_unit
  */
 typedef struct worker_message
 {
-    int     id;   /*< Message id. */
-    int64_t arg1; /*< Message specific first argument. */
-    void*   arg2; /*< Message specific second argument. */
+    int      id;   /*< Message id. */
+    intptr_t arg1; /*< Message specific first argument. */
+    intptr_t arg2; /*< Message specific second argument. */
 } WORKER_MESSAGE;
 
 
 static MXS_WORKER* worker_create(int worker_id);
 static void worker_free(MXS_WORKER* worker);
-static void worker_message_handler(MXS_WORKER* worker, int msg_id, int64_t arg1, void* arg2);
+static void worker_message_handler(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int worker_id, uint32_t events);
 static void worker_thread_main(void* arg);
 
@@ -97,11 +97,11 @@ MXS_WORKER* mxs_worker_get(int worker_id)
     return this_unit.workers[worker_id];
 }
 
-bool mxs_worker_post_message(MXS_WORKER *worker, int id, int64_t arg1, void* arg2)
+bool mxs_worker_post_message(MXS_WORKER *worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
 
-    WORKER_MESSAGE message = { .id = id, .arg1 = arg1, .arg2 = arg2 };
+    WORKER_MESSAGE message = { .id = msg_id, .arg1 = arg1, .arg2 = arg2 };
 
     ssize_t n = write(worker->write_fd, &message, sizeof(message));
 
@@ -142,7 +142,7 @@ void mxs_worker_shutdown(MXS_WORKER* worker)
 
     if (!worker->shutdown_initiated)
     {
-        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_SHUTDOWN, 0, NULL))
+        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_SHUTDOWN, 0, 0))
         {
             worker->shutdown_initiated = true;
         }
@@ -236,7 +236,7 @@ static void worker_free(MXS_WORKER* worker)
  * @param arg1    Message specific first argument.
  * @param arg2    Message specific second argument.
  */
-static void worker_message_handler(MXS_WORKER *worker, int msg_id, int64_t arg1, void* arg2)
+static void worker_message_handler(MXS_WORKER *worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     switch  (msg_id)
     {
@@ -245,13 +245,23 @@ static void worker_message_handler(MXS_WORKER *worker, int msg_id, int64_t arg1,
             ss_dassert(arg1 == 0);
             const char* message = arg2 ? (const char*)arg2 : "Alive and kicking";
             MXS_NOTICE("Worker[%d]: %s.", worker->id, message);
-            MXS_FREE(arg2);
+            MXS_FREE((void*)arg2);
         }
         break;
 
     case MXS_WORKER_MSG_SHUTDOWN:
-        MXS_NOTICE("Worker %d received shutdown message.", worker->id);
-        worker->should_shutdown = true;
+        {
+            MXS_NOTICE("Worker %d received shutdown message.", worker->id);
+            worker->should_shutdown = true;
+        }
+        break;
+
+    case MXS_WORKER_MSG_CALL:
+        {
+            void (*f)(int, void*) = (void (*)(int,void*))arg1;
+
+            f(worker->id, (void*)arg2);
+        }
         break;
 
     default:

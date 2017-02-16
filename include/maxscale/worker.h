@@ -47,7 +47,15 @@ enum mxs_worker_msg_id
      * arg1: 0
      * arg2: NULL
      */
-    MXS_WORKER_MSG_SHUTDOWN
+    MXS_WORKER_MSG_SHUTDOWN,
+
+    /**
+     * Function call message.
+     *
+     * arg1: Pointer to function with the prototype: void (*)(int thread_id, void* arg2);
+     * arg2: Second argument for the function passed in arg1.
+     */
+    MXS_WORKER_MSG_CALL
 };
 
 /**
@@ -88,6 +96,6 @@ static inline int mxs_worker_id(MXS_WORKER* worker)
  *
  * @attention This function is signal safe.
  */
-bool mxs_worker_post_message(MXS_WORKER* worker, int msg_id, int64_t arg1, void* arg2);
+bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
 MXS_END_DECLS

@@ -938,7 +938,7 @@ void ping_workers(DCB* dcb)
     {
         MXS_WORKER *worker = mxs_worker_get(i);
 
-        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_PING, 0, NULL))
+        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_PING, 0, 0))
         {
             dcb_printf(dcb, "Posted message to worker %d.\n", i);
         }
