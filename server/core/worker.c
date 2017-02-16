@@ -108,7 +108,7 @@ bool mxs_worker_post_message(MXS_WORKER *worker, int id, int64_t arg1, void* arg
 
 void mxs_worker_main(MXS_WORKER* worker)
 {
-    poll_waitevents((void*)(intptr_t)worker->id);
+    poll_waitevents(worker);
 }
 
 bool mxs_worker_start(MXS_WORKER* worker)

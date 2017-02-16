@@ -51,6 +51,18 @@ enum mxs_worker_msg_id
 MXS_WORKER* mxs_worker_get(int worker_id);
 
 /**
+ * Return the id of the worker.
+ *
+ * @param worker  A worker.
+ *
+ * @return The id of the worker.
+ */
+static inline int mxs_worker_id(MXS_WORKER* worker)
+{
+    return worker->id;
+}
+
+/**
  * Post a message to a worker.
  *
  * @param worker  The worker to whom the message should be sent.

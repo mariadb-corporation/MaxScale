@@ -22,6 +22,8 @@
 
 MXS_BEGIN_DECLS
 
+struct mxs_worker;
+
 #define MAX_EVENTS 1000
 
 /**
@@ -48,7 +50,7 @@ enum poll_message
 void            poll_init();
 void            poll_shutdown();
 
-void            poll_waitevents(void *);
+void            poll_waitevents(struct mxs_worker *worker);
 void            poll_set_maxwait(unsigned int);
 void            poll_set_nonblocking_polls(unsigned int);
 
