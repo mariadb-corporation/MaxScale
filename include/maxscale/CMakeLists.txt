@@ -23,3 +23,5 @@ file(GLOB GENERATD_HEADERS "${CMAKE_BINARY_DIR}/include/maxscale/*.hh")
 foreach(var ${GENERATD_HEADERS})
   install_header(${var} devel)
 endforeach()
+
+add_subdirectory(protocol)
