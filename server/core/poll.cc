@@ -32,7 +32,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/platform.h>
 #include <maxscale/query_classifier.h>
-#include <maxscale/worker.h>
 #include <maxscale/resultset.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
@@ -41,6 +40,7 @@
 #include <maxscale/utils.h>
 
 #include "maxscale/poll.h"
+#include "maxscale/worker.h"
 
 #define         PROFILE_POLL    0
 
@@ -88,7 +88,6 @@ int max_poll_sleep;
 thread_local int current_thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
-static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 
 /** Poll cross-thread messaging variables */
 static volatile int     *poll_msg;
@@ -565,7 +564,7 @@ poll_waitevents(MXS_WORKER *worker)
 
     thread_data[thread_id].state = THREAD_IDLE;
 
-    while (1)
+    while (!mxs_worker_should_shutdown(worker))
     {
         atomic_add(&n_waiting, 1);
 #if MUTEX_EPOLL
@@ -737,19 +736,9 @@ poll_waitevents(MXS_WORKER *worker)
         poll_check_message();
 
         thread_data[thread_id].state = THREAD_IDLE;
-
-        if (do_shutdown)
-        {
-            /*<
-             * Remove the thread from the bitmask of running
-             * polling threads.
-             */
-            thread_data[thread_id].state = THREAD_STOPPED;
-            return;
-        }
-
-        thread_data[thread_id].state = THREAD_IDLE;
     } /*< while(1) */
+
+    thread_data[thread_id].state = THREAD_STOPPED;
 }
 
 /**
@@ -781,7 +770,6 @@ poll_set_maxwait(unsigned int maxwait)
 }
 
 /**
-<<<<<<< 26336f2003f9cd9321faa7e0d7c0bc770c82f8c9
  * Process of the queue of DCB's that have outstanding events
  *
  * The first event on the queue will be chosen to be executed by this thread,
@@ -1030,8 +1018,6 @@ poll_dcb_session_check(DCB *dcb, const char *function)
 }
 
 /**
-=======
->>>>>>> Move DCB specific event handling to dcb.c
  * Shutdown the polling loop
  */
 void

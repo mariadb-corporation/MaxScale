@@ -48,7 +48,7 @@ enum poll_message
 };
 
 void            poll_init();
-void            poll_shutdown();
+//void          poll_finish(); // TODO: Add this.
 
 void            poll_waitevents(struct mxs_worker *worker);
 void            poll_set_maxwait(unsigned int);

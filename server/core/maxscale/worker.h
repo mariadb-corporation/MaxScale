@@ -59,4 +59,38 @@ bool mxs_worker_start(MXS_WORKER* worker);
  */
 void mxs_worker_join(MXS_WORKER* worker);
 
+/**
+ * Initate shutdown of worker.
+ *
+ * @param worker  The worker that should be shutdown.
+ *
+ * @attention A call to this function will only initiate the shutdowm,
+ *            the worker will not have shut down when the function returns.
+ *
+ * @attention This function is signal safe.
+ */
+void mxs_worker_shutdown(MXS_WORKER* worker);
+
+/**
+ * Initate shutdown of all workers.
+ *
+ * @attention A call to this function will only initiate the shutdowm,
+ *            the workers will not have shut down when the function returns.
+ *
+ * @attention This function is signal safe.
+ */
+void mxs_worker_shutdown_workers();
+
+/**
+ * Query whether worker should shutdown.
+ *
+ * @param worker  The worker in question.
+ *
+ * @return True, if the worker should shut down, false otherwise.
+ */
+static inline bool mxs_worker_should_shutdown(MXS_WORKER* worker)
+{
+    return worker->should_shutdown;
+}
+
 MXS_END_DECLS

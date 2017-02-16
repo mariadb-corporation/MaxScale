@@ -95,7 +95,7 @@ test1()
 
     ss_dfprintf(stderr, "\t..done\nStart wait for events.");
     sleep(10);
-    poll_shutdown();
+    //TODO, fix this for workers: poll_shutdown();
     ss_dfprintf(stderr, "\t..done\nTidy up.");
     dcb_close(dcb);
     ss_dfprintf(stderr, "\t..done\n");

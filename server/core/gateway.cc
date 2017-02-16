@@ -2002,7 +2002,7 @@ int main(int argc, char **argv)
     /*<
      * Start workers. We start from 1, worker 0 will be running in the main thread.
      */
-    for (i = 1; i < n_threads - 1; i++)
+    for (i = 1; i < n_threads; i++)
     {
         MXS_WORKER* worker = mxs_worker_get(i);
         ss_dassert(worker);
@@ -2041,7 +2041,7 @@ int main(int argc, char **argv)
     /*<
      * Wait for worker threads to exit.
      */
-    for (i = 1; i < n_threads - 1; i++)
+    for (i = 1; i < n_threads; i++)
     {
         MXS_WORKER *worker = mxs_worker_get(i);
         ss_dassert(worker);
@@ -2119,7 +2119,7 @@ int maxscale_shutdown()
     if (n == 0)
     {
         service_shutdown();
-        poll_shutdown();
+        mxs_worker_shutdown_workers();
         hkshutdown();
         log_flush_shutdown();
     }

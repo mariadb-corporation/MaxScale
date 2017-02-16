@@ -20,12 +20,14 @@ MXS_BEGIN_DECLS
 
 typedef struct mxs_worker
 {
-    MXS_POLL_DATA poll;     /*< The poll data used by the polling mechanism. */
-    int           id;       /*< The id of the worker. */
-    int           read_fd;  /*< The file descriptor the worked reads from. */
-    int           write_fd; /*< The file descriptor used for sending data to the worker. */
-    THREAD        thread;   /*< The thread handle of the worker. */
-    bool          started;  /*< Whether the thread has been started or not. */
+    MXS_POLL_DATA poll;               /*< The poll data used by the polling mechanism. */
+    int           id;                 /*< The id of the worker. */
+    int           read_fd;            /*< The file descriptor the worked reads from. */
+    int           write_fd;           /*< The file descriptor used for sending data to the worker. */
+    THREAD        thread;             /*< The thread handle of the worker. */
+    bool          started;            /*< Whether the thread has been started or not. */
+    bool          should_shutdown;    /*< Whether shutdown should be performed. */
+    bool          shutdown_initiated; /*< Whether shutdown has been initated. */
 } MXS_WORKER;
 
 enum mxs_worker_msg_id
@@ -37,7 +39,15 @@ enum mxs_worker_msg_id
      * arg2: NULL or pointer to dynamically allocated NULL-terminated string,
      *       to be freed by worker.
      */
-    MXS_WORKER_MSG_PING
+    MXS_WORKER_MSG_PING,
+
+    /**
+     * Shutdown message.
+     *
+     * arg1: 0
+     * arg2: NULL
+     */
+    MXS_WORKER_MSG_SHUTDOWN
 };
 
 /**
@@ -75,6 +85,8 @@ static inline int mxs_worker_id(MXS_WORKER* worker)
  *
  * @attention The return value tells *only* whether the message could be sent,
  *            *not* that it has reached the worker.
+ *
+ * @attention This function is signal safe.
  */
 bool mxs_worker_post_message(MXS_WORKER* worker, int msg_id, int64_t arg1, void* arg2);
 

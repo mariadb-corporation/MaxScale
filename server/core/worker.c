@@ -99,6 +99,8 @@ MXS_WORKER* mxs_worker_get(int worker_id)
 
 bool mxs_worker_post_message(MXS_WORKER *worker, int id, int64_t arg1, void* arg2)
 {
+    // NOTE: No logging here, this function must be signal safe.
+
     WORKER_MESSAGE message = { .id = id, .arg1 = arg1, .arg2 = arg2 };
 
     ssize_t n = write(worker->write_fd, &message, sizeof(message));
@@ -109,6 +111,8 @@ bool mxs_worker_post_message(MXS_WORKER *worker, int id, int64_t arg1, void* arg
 void mxs_worker_main(MXS_WORKER* worker)
 {
     poll_waitevents(worker);
+
+    MXS_NOTICE("Worker %d has shut down.", worker->id);
 }
 
 bool mxs_worker_start(MXS_WORKER* worker)
@@ -125,8 +129,35 @@ void mxs_worker_join(MXS_WORKER* worker)
 {
     if (worker->started)
     {
+        MXS_NOTICE("Waiting for worker %d.", worker->id);
         thread_wait(worker->thread);
+        MXS_NOTICE("Waited for worker %d.", worker->id);
         worker->started = false;
+    }
+}
+
+void mxs_worker_shutdown(MXS_WORKER* worker)
+{
+    // NOTE: No logging here, this function must be signal safe.
+
+    if (!worker->shutdown_initiated)
+    {
+        if (mxs_worker_post_message(worker, MXS_WORKER_MSG_SHUTDOWN, 0, NULL))
+        {
+            worker->shutdown_initiated = true;
+        }
+    }
+}
+
+void mxs_worker_shutdown_workers()
+{
+    // NOTE: No logging here, this function must be signal safe.
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        MXS_WORKER* worker = this_unit.workers[i];
+
+        mxs_worker_shutdown(worker);
     }
 }
 
@@ -218,6 +249,11 @@ static void worker_message_handler(MXS_WORKER *worker, int msg_id, int64_t arg1,
         }
         break;
 
+    case MXS_WORKER_MSG_SHUTDOWN:
+        MXS_NOTICE("Worker %d received shutdown message.", worker->id);
+        worker->should_shutdown = true;
+        break;
+
     default:
         MXS_ERROR("Worker received unknown message %d.", msg_id);
     }
@@ -274,7 +310,7 @@ static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t
                 ss_dassert(!true);
             }
         }
-        while ((n != 0) && (n != 1));
+        while ((n != 0) && (n != -1));
 
         rc = MXS_POLL_READ;
     }
