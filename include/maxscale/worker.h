@@ -14,6 +14,7 @@
 
 #include <maxscale/cdefs.h>
 #include <maxscale/poll.h>
+#include <maxscale/thread.h>
 
 MXS_BEGIN_DECLS
 
@@ -23,6 +24,8 @@ typedef struct mxs_worker
     int           id;       /*< The id of the worker. */
     int           read_fd;  /*< The file descriptor the worked reads from. */
     int           write_fd; /*< The file descriptor used for sending data to the worker. */
+    THREAD        thread;   /*< The thread handle of the worker. */
+    bool          started;  /*< Whether the thread has been started or not. */
 } MXS_WORKER;
 
 enum mxs_worker_msg_id

@@ -19,6 +19,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/log_manager.h>
+#include "maxscale/modules.h"
+#include "maxscale/poll.h"
 
 /**
  * Unit variables.
@@ -44,6 +46,10 @@ static MXS_WORKER* worker_create(int worker_id);
 static void worker_free(MXS_WORKER* worker);
 static void worker_message_handler(MXS_WORKER* worker, int msg_id, int64_t arg1, void* arg2);
 static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int worker_id, uint32_t events);
+static void worker_thread_main(void* arg);
+
+static bool modules_thread_init();
+static void modules_thread_finish();
 
 
 void mxs_worker_init()
@@ -73,6 +79,17 @@ void mxs_worker_init()
     MXS_NOTICE("Workers created!");
 }
 
+void mxs_worker_finish()
+{
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        MXS_WORKER* worker = this_unit.workers[i];
+
+        worker_free(worker);
+        this_unit.workers[i] = NULL;
+    }
+}
+
 MXS_WORKER* mxs_worker_get(int worker_id)
 {
     ss_dassert(worker_id < this_unit.n_workers);
@@ -87,6 +104,30 @@ bool mxs_worker_post_message(MXS_WORKER *worker, int id, int64_t arg1, void* arg
     ssize_t n = write(worker->write_fd, &message, sizeof(message));
 
     return n == sizeof(message) ? true : false;
+}
+
+void mxs_worker_main(MXS_WORKER* worker)
+{
+    poll_waitevents((void*)(intptr_t)worker->id);
+}
+
+bool mxs_worker_start(MXS_WORKER* worker)
+{
+    if (thread_start(&worker->thread, worker_thread_main, worker))
+    {
+        worker->started = true;
+    }
+
+    return worker->started;
+}
+
+void mxs_worker_join(MXS_WORKER* worker)
+{
+    if (worker->started)
+    {
+        thread_wait(worker->thread);
+        worker->started = false;
+    }
 }
 
 /**
@@ -146,6 +187,9 @@ static void worker_free(MXS_WORKER* worker)
 {
     if (worker)
     {
+        ss_dassert(!worker->started);
+
+        poll_remove_fd_from_worker(worker->id, worker->read_fd);
         close(worker->read_fd);
         close(worker->write_fd);
 
@@ -236,4 +280,91 @@ static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int thread_id, uint32_t
     }
 
     return rc;
+}
+
+/**
+ * The entry point of each worker thread.
+ *
+ * @param arg A worker.
+ */
+static void worker_thread_main(void* arg)
+{
+    if (modules_thread_init())
+    {
+        MXS_WORKER *worker = (MXS_WORKER*)arg;
+
+        mxs_worker_main(worker);
+
+        modules_thread_finish();
+    }
+    else
+    {
+        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+    }
+}
+
+/**
+ * Calls thread_init on all loaded modules.
+ *
+ * @return True, if all modules were successfully initialized.
+ */
+static bool modules_thread_init()
+{
+    bool initialized = false;
+
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->thread_init)
+        {
+            int rc = (module->thread_init)();
+
+            if (rc != 0)
+            {
+                break;
+            }
+        }
+    }
+
+    if (module)
+    {
+        // If module is non-NULL it means that the initialization failed for
+        // that module. We now need to call finish on all modules that were
+        // successfully initialized.
+        MXS_MODULE* failed_module = module;
+        i = mxs_module_iterator_get(NULL);
+
+        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
+        {
+            if (module->thread_finish)
+            {
+                (module->thread_finish)();
+            }
+        }
+    }
+    else
+    {
+        initialized = true;
+    }
+
+    return initialized;
+}
+
+/**
+ * Calls thread_finish on all loaded modules.
+ */
+static void modules_thread_finish()
+{
+    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
+    MXS_MODULE* module = NULL;
+
+    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
+    {
+        if (module->thread_finish)
+        {
+            (module->thread_finish)();
+        }
+    }
 }

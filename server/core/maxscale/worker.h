@@ -24,4 +24,39 @@ MXS_BEGIN_DECLS
  */
 void mxs_worker_init();
 
+/**
+ * Finalize the worker mechanism.
+ *
+ * To be called once at process shutdown. This will cause all workers
+ * to be destroyed. When the function is called, no worker should be
+ * running anymore.
+ */
+void mxs_worker_finish();
+
+/**
+ * Main function of worker.
+ *
+ * This worker will run the poll loop, until it is told to shut down.
+ *
+ * @param worker  The worker.
+ */
+void mxs_worker_main(MXS_WORKER* worker);
+
+/**
+ * Start worker in separate thread.
+ *
+ * This function will start a new thread, in which the `mxs_worker_main`
+ * function will be executed.
+ *
+ * @return True if the thread could be started, false otherwise.
+ */
+bool mxs_worker_start(MXS_WORKER* worker);
+
+/**
+ * Waits for the worker to finish.
+ *
+ * @param worker  The worker to wait for.
+ */
+void mxs_worker_join(MXS_WORKER* worker);
+
 MXS_END_DECLS

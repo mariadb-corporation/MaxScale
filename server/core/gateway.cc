@@ -64,7 +64,6 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/server.h>
 #include <maxscale/session.h>
-#include <maxscale/thread.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/random_jkiss.h>
@@ -188,8 +187,6 @@ static bool daemonize();
 static bool sniff_configuration(const char* filepath);
 static bool modules_process_init();
 static void modules_process_finish();
-static bool modules_thread_init();
-static void modules_thread_finish();
 
 /** SSL multi-threading functions and structures */
 
@@ -1300,7 +1297,6 @@ int main(int argc, char **argv)
     int      daemon_pipe[2] = { -1, -1};
     bool     parent_process;
     int      child_status;
-    THREAD*   threads = NULL;   /*< thread list */
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
     THREAD    log_flush_thr;
@@ -1318,6 +1314,7 @@ int main(int argc, char **argv)
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
     MXS_CONFIG* cnf = NULL;
     int numlocks = 0;
+    MXS_WORKER* worker;
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -2001,14 +1998,16 @@ int main(int argc, char **argv)
      * configured as the main thread will also poll.
      */
     n_threads = config_threadcount();
-    threads = (THREAD*)MXS_CALLOC(n_threads, sizeof(THREAD));
+
     /*<
-     * Start server threads.
+     * Start workers. We start from 1, worker 0 will be running in the main thread.
      */
-    for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
+    for (i = 1; i < n_threads - 1; i++)
     {
-        if (thread_start(&threads[thread_id], worker_thread_main,
-                         (void *)(thread_id + 1)) == NULL)
+        MXS_WORKER* worker = mxs_worker_get(i);
+        ss_dassert(worker);
+
+        if (!mxs_worker_start(worker))
         {
             const char* logerr = "Failed to start worker thread.";
             print_log_n_stderr(true, true, logerr, logerr, 0);
@@ -2028,9 +2027,11 @@ int main(int argc, char **argv)
     }
 
     /*<
-     * Serve clients.
+     * Run worker 0 in the main thread.
      */
-    poll_waitevents((void *)0);
+    worker = mxs_worker_get(0);
+    ss_dassert(worker);
+    mxs_worker_main(worker);
 
     /*<
      * Wait for the housekeeper to finish.
@@ -2038,12 +2039,17 @@ int main(int argc, char **argv)
     hkfinish();
 
     /*<
-     * Wait server threads' completion.
+     * Wait for worker threads to exit.
      */
-    for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
+    for (i = 1; i < n_threads - 1; i++)
     {
-        thread_wait(threads[thread_id]);
+        MXS_WORKER *worker = mxs_worker_get(i);
+        ss_dassert(worker);
+
+        mxs_worker_join(worker);
     }
+
+    mxs_worker_finish();
 
     /*<
      * Destroy the router and filter instances of all services.
@@ -2093,10 +2099,6 @@ return_main:
 
     MXS_FREE(cnf_file_arg);
 
-    if (threads)
-    {
-        MXS_FREE(threads);
-    }
     if (cnf_file_path)
     {
         MXS_FREE(cnf_file_path);
@@ -2905,72 +2907,6 @@ static void modules_process_finish()
         if (module->process_finish)
         {
             (module->process_finish)();
-        }
-    }
-}
-
-/**
- * Calls thread_init on all loaded modules.
- *
- * @return True, if all modules were successfully initialized.
- */
-static bool modules_thread_init()
-{
-    bool initialized = false;
-
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
-
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
-    {
-        if (module->thread_init)
-        {
-            int rc = (module->thread_init)();
-
-            if (rc != 0)
-            {
-                break;
-            }
-        }
-    }
-
-    if (module)
-    {
-        // If module is non-NULL it means that the initialization failed for
-        // that module. We now need to call finish on all modules that were
-        // successfully initialized.
-        MXS_MODULE* failed_module = module;
-        i = mxs_module_iterator_get(NULL);
-
-        while ((module = mxs_module_iterator_get_next(&i)) != failed_module)
-        {
-            if (module->thread_finish)
-            {
-                (module->thread_finish)();
-            }
-        }
-    }
-    else
-    {
-        initialized = true;
-    }
-
-    return initialized;
-}
-
-/**
- * Calls thread_finish on all loaded modules.
- */
-static void modules_thread_finish()
-{
-    MXS_MODULE_ITERATOR i = mxs_module_iterator_get(NULL);
-    MXS_MODULE* module = NULL;
-
-    while ((module = mxs_module_iterator_get_next(&i)) != NULL)
-    {
-        if (module->thread_finish)
-        {
-            (module->thread_finish)();
         }
     }
 }
