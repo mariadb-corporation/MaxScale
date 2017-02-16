@@ -111,7 +111,6 @@ static int blr_handler_config(void *userdata, const char *section, const char *n
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
-int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 static void destroyInstance(MXS_ROUTER *instance);
@@ -2304,7 +2303,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router)
      * router->current_pos is the last event found.
      */
 
-    n = blr_read_events_all_events(router, 0, 0);
+    n = blr_read_events_all_events(router, NULL, 0);
 
     MXS_DEBUG("blr_read_events_all_events() ret = %i\n", n);
 

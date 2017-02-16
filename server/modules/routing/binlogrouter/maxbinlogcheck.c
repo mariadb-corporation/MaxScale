@@ -65,11 +65,12 @@ static struct option long_options[] =
     {"header",    no_argument, 0, 'H'},
     {"key_file",  required_argument, 0, 'K'},
     {"aes_algo",  required_argument, 0, 'A'},
+    {"replace",   required_argument, 0, 'R'},
     {"help",      no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "2.1.0";
+char *binlog_check_version = "2.2.0";
 
 int
 maxscale_uptime()
@@ -81,14 +82,14 @@ int main(int argc, char **argv)
 {
     int option_index = 0;
     int debug_out = 0;
-    int fix_file = 0;
     int mariadb10_compat = 0;
     char *key_file = NULL;
     char *aes_algo = NULL;
     int report_header = 0;
     char c;
+    BINLOG_FILE_FIX binlog_file = {0, false, false};
 
-    while ((c = getopt_long(argc, argv, "dVfMHK:A:?", long_options, &option_index)) >= 0)
+    while ((c = getopt_long(argc, argv, "dVfMHK:A:R:?", long_options, &option_index)) >= 0)
     {
         switch (c)
         {
@@ -103,7 +104,7 @@ int main(int argc, char **argv)
             exit(EXIT_SUCCESS);
             break;
         case 'f':
-            fix_file = 1;
+            binlog_file.fix = true;
             break;
         case 'M':
             mariadb10_compat = 1;
@@ -113,6 +114,9 @@ int main(int argc, char **argv)
             break;
         case 'A':
             aes_algo = optarg;
+            break;
+        case 'R':
+            binlog_file.pos = atol(optarg);
             break;
         case '?':
             printUsage(*argv);
@@ -162,7 +166,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    int fd = open(path, fix_file ? O_RDWR : O_RDONLY, 0666);
+    int fd = open(path, binlog_file.fix ? O_RDWR : O_RDONLY, 0666);
     if (fd == -1)
     {
         printf("ERROR: Failed to open binlog file %s: %s.\n",
@@ -203,7 +207,7 @@ int main(int argc, char **argv)
     MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
 
     /* read binary log */
-    int ret = blr_read_events_all_events(inst, fix_file, debug_out | report_header);
+    int ret = blr_read_events_all_events(inst, &binlog_file, debug_out | report_header);
 
     mxs_log_flush_sync();
 
@@ -236,7 +240,7 @@ printUsage(const char *progname)
     printVersion(progname);
 
     printf("The MaxScale binlog check utility.\n\n");
-    printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
+    printf("Usage: %s [-f] [-M] [-d] [-V] [-H] [-K file] [-A algo] [-R pos] [<binlog file>]\n\n", progname);
     printf("  -f|--fix          Fix binlog file, require write permissions (truncate)\n");
     printf("  -d|--debug        Print debug messages\n");
     printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
@@ -244,6 +248,7 @@ printUsage(const char *progname)
     printf("  -K|--key_file     AES Key file for MariaDB 10.1 binlog file decryption\n");
     printf("  -A|--aes_algo     AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)\n");
     printf("  -H|--header       Print content of binlog event header\n");
+    printf("  -R|--replace      Replace the event at pos with an IGNORABLE EVENT\n");
     printf("  -?|--help         Print this help text\n");
 }
 

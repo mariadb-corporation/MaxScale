@@ -73,6 +73,7 @@ MXS_BEGIN_DECLS
 /* BINLOG_EVENT_LEN_OFFSET points to event_size in event_header */
 #define BINLOG_EVENT_LEN_OFFSET     9
 #define BINLOG_FATAL_ERROR_READING  1236
+#define BINLOG_DATA_TRUNCATED       2032
 
 /* Binlog Encryption */
 #define BINLOG_ENC_ALGO_NAME_LEN        13
@@ -639,6 +640,23 @@ typedef struct binlog_encryption_ctx
 } BINLOG_ENCRYPTION_CTX;
 
 /**
+ * Holds information about:
+ * truncating a corrupted file
+ * or replace an event at specified pos
+ * or replace a transaction that start
+ * at specified pos
+ */
+
+typedef struct binlog_pos_fix
+{
+    bool        fix;            /**< Truncate file to last safe pos */
+    uint64_t    pos;            /**< Position of the event to be replaced
+                                 * by an Ignorable Event */
+    bool        replace_trx;    /**< Replace all events belonging to
+                                 * a transaction starting at pos */
+} BINLOG_FILE_FIX;
+
+/**
  * Defines and offsets for binlog encryption
  *
  * BLRM_FDE_EVENT_TYPES_OFFSET is the offset in FDE event content that points to
@@ -809,7 +827,7 @@ extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+int blr_read_events_all_events(ROUTER_INSTANCE *, const BINLOG_FILE_FIX *, int);
 int blr_save_dbusers(const ROUTER_INSTANCE *router);
 char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);

@@ -1297,13 +1297,15 @@ blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
  *
  * Routine detects errors and pending transactions
  *
- * @param router  The router instance
- * @param fix     Whether to fix or not errors
- * @param debug   Whether to enable or not the debug for events
- * @return        0 on success, >0 on failure
+ * @param router    The router instance
+ * @param action    Whether to fix errors or blank events at pos
+ * @param debug     Whether to enable or not the debug for events
+ * @return          0 on success, >0 on failure
  */
 int
-blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
+blr_read_events_all_events(ROUTER_INSTANCE *router,
+                           const BINLOG_FILE_FIX *action,
+                           int debug)
 {
     unsigned long filelen = 0;
     struct stat statb;
@@ -1337,6 +1339,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     BINLOG_EVENT_DESC fde_event;
     int fde_seen = 0;
     int start_encryption_seen = 0;
+    bool fix = action ? action->fix : false;
 
     memset(&first_event, '\0', sizeof(first_event));
     memset(&last_event, '\0', sizeof(last_event));
@@ -1971,6 +1974,27 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 MXS_DEBUG("- Rotate event @ %llu, next file is [%s] @ %lu",
                           pos, file, new_pos);
             }
+        }
+
+        /**
+         * Replace event at pos with an IGNORABLE EVENT
+         */
+
+        if (fix &&
+            action->pos > 4 &&
+            pos == action->pos)
+        {
+            char *event_desc = blr_get_event_description(router, hdr.event_type);
+
+            MXS_DEBUG("*** Filling event (%s) at pos %lu with an IGNORABLE EVENT\n",
+                      event_desc ? event_desc : "unknown",
+                      action->pos);
+
+            router->last_written = action->pos;
+            router->master_chksum = found_chksum;
+
+            /* Create and write Ingonrable event into binlog file at action->pos */
+            blr_write_special_event(router, pos, hdr.event_size, &hdr, BLRM_IGNORABLE);
         }
 
         /* If MariaDB 10 compatibility:
