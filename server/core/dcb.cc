@@ -98,6 +98,7 @@
 #include "maxscale/session.h"
 #include "maxscale/modules.h"
 #include "maxscale/queuemanager.h"
+#include "maxscale/worker.h"
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized;
@@ -2243,6 +2244,18 @@ dcb_isvalid(DCB *dcb)
     return dcb && !dcb->dcb_is_zombie;
 }
 
+static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
+{
+    for (DCB *dcb = all_dcbs[thread_id]; dcb; dcb = dcb->thread.next)
+    {
+        if (dcb->state == DCB_STATE_POLLING && dcb->server &&
+            dcb->server == server)
+        {
+            poll_fake_hangup_event(dcb);
+        }
+    }
+}
+
 /**
  * Call all the callbacks on all DCB's that match the server and the reason given
  *
@@ -2251,24 +2264,10 @@ dcb_isvalid(DCB *dcb)
 void
 dcb_hangup_foreach(struct server* server)
 {
-    int nthr = config_threadcount();
+    intptr_t arg1 = (intptr_t)dcb_hangup_foreach_worker;
+    intptr_t arg2 = (intptr_t)server;
 
-
-    for (int i = 0; i < nthr; i++)
-    {
-        spinlock_acquire(&all_dcbs_lock[i]);
-
-        for (DCB *dcb = all_dcbs[i]; dcb; dcb = dcb->thread.next)
-        {
-            if (dcb->state == DCB_STATE_POLLING && dcb->server &&
-                dcb->server == server)
-            {
-                poll_fake_hangup_event(dcb);
-            }
-        }
-
-        spinlock_release(&all_dcbs_lock[i]);
-    }
+    mxs_worker_broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
 }
 
 /**

@@ -108,6 +108,25 @@ bool mxs_worker_post_message(MXS_WORKER *worker, uint32_t msg_id, intptr_t arg1,
     return n == sizeof(message) ? true : false;
 }
 
+size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
+{
+    // NOTE: No logging here, this function must be signal safe.
+
+    size_t n = 0;
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        MXS_WORKER* worker = this_unit.workers[i];
+
+        if (mxs_worker_post_message(worker, msg_id, arg1, arg2))
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
+
 void mxs_worker_main(MXS_WORKER* worker)
 {
     poll_waitevents(worker);

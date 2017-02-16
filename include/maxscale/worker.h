@@ -98,4 +98,24 @@ static inline int mxs_worker_id(MXS_WORKER* worker)
  */
 bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
+/**
+ * Broadcast a message to all worker.
+ *
+ * @param msg_id  The message id.
+ * @param arg1    Message specific first argument.
+ * @param arg2    Message specific second argument.
+ *
+ * @return The number of messages posted; if less that ne number of workers
+ *         then some postings failed.
+ *
+ * @attention The return value tells *only* whether message could be posted,
+ *            *not* that it has reached the worker.
+ *
+ * @attentsion Exactly the same arguments are passed to all workers. Take that
+ *             into account if the passed data must be freed.
+ *
+ * @attention This function is signal safe.
+ */
+size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
+
 MXS_END_DECLS
