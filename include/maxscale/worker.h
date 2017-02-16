@@ -38,14 +38,6 @@ enum mxs_worker_msg_id
 };
 
 /**
- * Initialize the worker mechanism.
- *
- * To be called once at process startup. This will cause as many workers
- * to be created as the number of threads defined.
- */
-void mxs_worker_init();
-
-/**
  * Return the worker associated with the provided worker id.
  *
  * @param worker_id  A worker id.

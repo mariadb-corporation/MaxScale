@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/worker.h>
+#include "maxscale/worker.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -20,23 +20,31 @@
 #include <maxscale/config.h>
 #include <maxscale/log_manager.h>
 
+/**
+ * Unit variables.
+ */
 static struct worker_unit
 {
     int          n_workers;
     MXS_WORKER** workers;
 } this_unit;
 
+/**
+ * Structure used for sending cross-thread messages.
+ */
 typedef struct worker_message
 {
-    int     id;
-    int64_t arg1;
-    void*   arg2;
+    int     id;   /*< Message id. */
+    int64_t arg1; /*< Message specific first argument. */
+    void*   arg2; /*< Message specific second argument. */
 } WORKER_MESSAGE;
+
 
 static MXS_WORKER* worker_create(int worker_id);
 static void worker_free(MXS_WORKER* worker);
 static void worker_message_handler(MXS_WORKER* worker, int msg_id, int64_t arg1, void* arg2);
 static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int worker_id, uint32_t events);
+
 
 void mxs_worker_init()
 {

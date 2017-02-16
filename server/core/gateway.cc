@@ -68,7 +68,6 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/random_jkiss.h>
-#include <maxscale/worker.h>
 
 #include "maxscale/config.h"
 #include "maxscale/dcb.h"
@@ -78,6 +77,7 @@
 #include "maxscale/poll.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
+#include "maxscale/worker.h"
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
