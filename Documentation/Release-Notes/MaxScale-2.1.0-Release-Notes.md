@@ -1,4 +1,4 @@
-# MariaDB MaxScale 2.1.0 Release Notes
+# MariaDB MaxScale 2.1.0 Release Notes -- 2017-02-16
 
 Release 2.1.0 is a Beta release.
 
