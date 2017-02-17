@@ -317,7 +317,7 @@ static int add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 
     ev.events = events;
     ev.data.ptr = data;
-    data->thread.id = 0; // In this case, the data will appear to be on the main thread.
+    data->thread.id = current_thread_id; // The DCB will appear on the list of the calling thread.
 
     int stored_errno = 0;
     int rc = 0;

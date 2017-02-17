@@ -69,6 +69,22 @@ enum mxs_worker_msg_id
 MXS_WORKER* mxs_worker_get(int worker_id);
 
 /**
+ * Return the worker of the current thread.
+ *
+ * @return The worker instance or NULL if the calling thread is not associated
+ *         with a worker.
+ */
+MXS_WORKER* mxs_worker_get_current();
+
+/**
+ * Return the id of the worker of the current thread.
+ *
+ * @return The worker id or -1 if the calling thread is not associated
+ *         with a worker.
+ */
+int mxs_worker_get_current_id();
+
+/**
  * Return the id of the worker.
  *
  * @param worker  A worker.

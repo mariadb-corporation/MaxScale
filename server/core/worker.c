@@ -19,17 +19,32 @@
 #include <maxscale/alloc.h>
 #include <maxscale/config.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/platform.h>
 #include "maxscale/modules.h"
 #include "maxscale/poll.h"
+
+#define WORKER_ABSENT_ID -1
 
 /**
  * Unit variables.
  */
-static struct worker_unit
+static struct this_unit
 {
-    int          n_workers;
-    MXS_WORKER** workers;
-} this_unit;
+    int              n_workers; // How many workers there are.
+    MXS_WORKER**     workers;   // Array of worker instances.
+} this_unit =
+{
+    0,
+    NULL
+};
+
+static thread_local struct this_thread
+{
+    int current_worker_id; // The worker id of the current thread
+} this_thread =
+{
+    WORKER_ABSENT_ID
+};
 
 /**
  * Structure used for sending cross-thread messages.
@@ -97,6 +112,25 @@ MXS_WORKER* mxs_worker_get(int worker_id)
     return this_unit.workers[worker_id];
 }
 
+MXS_WORKER* mxs_worker_get_current()
+{
+    MXS_WORKER* worker = NULL;
+
+    int worker_id = this_thread.current_worker_id;
+
+    if (worker_id != WORKER_ABSENT_ID)
+    {
+        worker = mxs_worker_get(worker_id);
+    }
+
+    return worker;
+}
+
+int mxs_worker_get_current_id()
+{
+    return this_thread.current_worker_id;
+}
+
 bool mxs_worker_post_message(MXS_WORKER *worker, uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
@@ -129,7 +163,9 @@ size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg
 
 void mxs_worker_main(MXS_WORKER* worker)
 {
+    this_thread.current_worker_id = worker->id;
     poll_waitevents(worker);
+    this_thread.current_worker_id = WORKER_ABSENT_ID;
 
     MXS_NOTICE("Worker %d has shut down.", worker->id);
 }

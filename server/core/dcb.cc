@@ -3054,6 +3054,16 @@ void dcb_append_readqueue(DCB *dcb, GWBUF *buffer)
     dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, buffer);
 }
 
+
+static void dcb_add_to_worker_list(int thread_id, void* data)
+{
+    DCB *dcb = (DCB*)data;
+
+    ss_dassert(thread_id == dcb->poll.thread.id);
+
+    dcb_add_to_list(dcb);
+}
+
 void dcb_add_to_list(DCB *dcb)
 {
     if (dcb->dcb_role != DCB_ROLE_SERVICE_LISTENER ||
@@ -3065,20 +3075,34 @@ void dcb_add_to_list(DCB *dcb)
          * as that part is done in the final zombie processing.
          */
 
-        spinlock_acquire(&all_dcbs_lock[dcb->poll.thread.id]);
+        int worker_id = mxs_worker_get_current_id();
 
-        if (all_dcbs[dcb->poll.thread.id] == NULL)
+        if (worker_id == dcb->poll.thread.id)
         {
-            all_dcbs[dcb->poll.thread.id] = dcb;
-            all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
+            if (all_dcbs[dcb->poll.thread.id] == NULL)
+            {
+                all_dcbs[dcb->poll.thread.id] = dcb;
+                all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
+            }
+            else
+            {
+                all_dcbs[dcb->poll.thread.id]->thread.tail->thread.next = dcb;
+                all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
+            }
         }
         else
         {
-            all_dcbs[dcb->poll.thread.id]->thread.tail->thread.next = dcb;
-            all_dcbs[dcb->poll.thread.id]->thread.tail = dcb;
-        }
+            MXS_WORKER* worker = mxs_worker_get(dcb->poll.thread.id);
+            ss_dassert(worker);
 
-        spinlock_release(&all_dcbs_lock[dcb->poll.thread.id]);
+            intptr_t arg1 = (intptr_t)dcb_add_to_worker_list;
+            intptr_t arg2 = (intptr_t)dcb;
+
+            if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+            {
+                MXS_ERROR("Could not post DCB to worker.");
+            }
+        }
     }
 }
 
@@ -3089,7 +3113,7 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    spinlock_acquire(&all_dcbs_lock[dcb->poll.thread.id]);
+    ss_dassert(mxs_worker_get_current_id() == dcb->poll.thread.id);
 
     if (dcb == all_dcbs[dcb->poll.thread.id])
     {
@@ -3126,8 +3150,6 @@ static void dcb_remove_from_list(DCB *dcb)
      * again, it will be in a clean state. */
     dcb->thread.next = NULL;
     dcb->thread.tail = NULL;
-
-    spinlock_release(&all_dcbs_lock[dcb->poll.thread.id]);
 }
 
 /**
