@@ -127,6 +127,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
             {"failover", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
+            {"failover_recovery", MXS_MODULE_PARAM_BOOL, "false"},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -280,6 +281,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->multimaster = config_get_bool(params, "multimaster");
     handle->failover = config_get_bool(params, "failover");
     handle->failcount = config_get_integer(params, "failcount");
+    handle->failover_recovery = config_get_bool(params, "failover_recovery");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
@@ -1006,9 +1008,10 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
         {
             if (!SERVER_IS_MASTER(db->server) && handle->warn_failover)
             {
-                MXS_WARNING("Failover initiated, server '%s' is now the master. "
-                            "All other servers are set into maintenance mode.",
-                            db->server->unique_name);
+                MXS_WARNING("Failover initiated, server '%s' is now the master.%s",
+                            db->server->unique_name,
+                            handle->failover_recovery ?
+                            "" : " All other servers are set into maintenance mode.");
                 handle->warn_failover = false;
             }
 
@@ -1016,7 +1019,7 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
             monitor_set_pending_status(db, SERVER_MASTER);
             monitor_clear_pending_status(db, SERVER_SLAVE);
         }
-        else
+        else if (!handle->failover_recovery)
         {
             server_set_status_nolock(db->server, SERVER_MAINT);
             monitor_set_pending_status(db, SERVER_MAINT);
