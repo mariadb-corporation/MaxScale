@@ -232,21 +232,28 @@ int MySQLSendHandshake(DCB* dcb)
     int len_version_string = 0;
     int id_num;
 
+    bool is_maria = false;
+
     if (dcb->service->dbref)
     {
         mysql_server_language = dcb->service->dbref->server->charset;
+
+        if (dcb->service->dbref->server->server_string &&
+            strstr(dcb->service->dbref->server->server_string, "10.2."))
+        {
+            /** The backend servers support the extended capabilities */
+            is_maria = true;
+        }
     }
 
     MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     GWBUF *buf;
-    bool is_maria = false;
 
     /* get the version string from service property if available*/
     if (dcb->service->version_string != NULL)
     {
         version_string = dcb->service->version_string;
         len_version_string = strlen(version_string);
-        is_maria = strstr(version_string, "10.2.");
     }
     else
     {
