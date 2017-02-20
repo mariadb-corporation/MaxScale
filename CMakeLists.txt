@@ -162,6 +162,13 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
   endif()
 endif()
 
+# Copy cmake_flags, JENKINS_BUILD_TAG, source and value evironmental variables
+# into cmake variables. These are used by the build system to store information
+# about the packages being built.
+set(MAXSCALE_SOURCE "$ENV{source} $ENV{value}")
+set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
+set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
+
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR}/server/include/gwdirs.h @ONLY)
