@@ -77,6 +77,7 @@ typedef struct
     bool failover; /**< If simple failover is enabled */
     int failcount; /**< How many monitoring cycles servers must be
                                    down before failover is initiated */
+    bool failover_recovery; /**< Allow servers to rejoin the cluster in failover mode */
     bool warn_failover; /**< Log a warning when failover happens */
 } MYSQL_MONITOR;
 

@@ -88,18 +88,22 @@ void avro_index_file(AVRO_INSTANCE *router, const char* filename)
 
             snprintf(sql, sizeof(sql), "SELECT position FROM "INDEX_TABLE_NAME
                      " WHERE filename=\"%s\";", name);
+
             if (sqlite3_exec(router->sqlite_handle, sql, index_query_cb, &pos, &errmsg) != SQLITE_OK)
             {
                 MXS_ERROR("Failed to read last indexed position of file '%s': %s",
                           name, errmsg);
+                sqlite3_free(errmsg);
+                maxavro_file_close(file);
+                return;
             }
-            else if (pos > 0)
+
+            /** Continue from last position */
+            if (pos > 0 && !maxavro_record_set_pos(file, pos))
             {
-                /** Continue from last position */
-                maxavro_record_set_pos(file, pos);
+                maxavro_file_close(file);
+                return;
             }
-            sqlite3_free(errmsg);
-            errmsg = NULL;
 
             gtid_pos_t prev_gtid = {0, 0, 0, 0, 0};
 

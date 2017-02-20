@@ -29,6 +29,7 @@
 
 #include <maxscale/log_manager.h>
 #include <maxscale/paths.h>
+#include <maxscale/random_jkiss.h>
 
 struct option options[] =
 {
@@ -94,6 +95,7 @@ int main(int argc, char **argv)
     }
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
+    random_jkiss_init();
 
     if (secrets_write_keys(directory) != 0)
     {

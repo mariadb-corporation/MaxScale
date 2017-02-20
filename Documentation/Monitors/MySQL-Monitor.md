@@ -164,6 +164,21 @@ can start is `monitor_interval * failcount`. This means that to trigger a
 failover after 10 seconds of master failure with a _monitor_interval_ of 1000
 milliseconds, the value of _failcount_ must be 10.
 
+### `failover_recovery`
+
+Allow recovery after failover. This feature takes a boolean parameter is
+disabled by default.
+
+Normally if a failover has been triggered and the last remaining server is
+chosen as the master, the monitor will set all of the failed servers into
+maintenance mode. When this option is enabled, the failed servers are allowed to
+rejoin the cluster.
+
+This option should be enabled when failover in MaxScale is used in conjunction
+with an external agent that resets the slave status for new master servers. One
+of these agents is the _replication-manager_ which clears the slave
+configuration for each new master and removes the read-only mode.
+
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin when a server goes down.

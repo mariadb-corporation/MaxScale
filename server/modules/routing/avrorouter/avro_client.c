@@ -788,25 +788,25 @@ static bool avro_client_stream_data(AVRO_CLIENT *client)
         {
             switch (client->format)
             {
-                case AVRO_FORMAT_JSON:
-                    /** Currently only JSON format supports seeking to a GTID */
-                    if (client->requested_gtid &&
-                        seek_to_index_pos(client, client->file_handle) &&
-                        seek_to_gtid(client, client->file_handle))
-                    {
-                        client->requested_gtid = false;
-                    }
+            case AVRO_FORMAT_JSON:
+                /** Currently only JSON format supports seeking to a GTID */
+                if (client->requested_gtid &&
+                    seek_to_index_pos(client, client->file_handle) &&
+                    seek_to_gtid(client, client->file_handle))
+                {
+                    client->requested_gtid = false;
+                }
 
-                    read_more = stream_json(client);
-                    break;
+                read_more = stream_json(client);
+                break;
 
-                case AVRO_FORMAT_AVRO:
-                    read_more = stream_binary(client);
-                    break;
+            case AVRO_FORMAT_AVRO:
+                read_more = stream_binary(client);
+                break;
 
-                default:
-                    MXS_ERROR("Unexpected format: %d", client->format);
-                    break;
+            default:
+                MXS_ERROR("Unexpected format: %d", client->format);
+                break;
             }
 
 
@@ -847,12 +847,14 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         if (file)
         {
             int nread;
-            while ((nread = fread(buffer, 1, sizeof(buffer), file)) > 0)
+            while ((nread = fread(buffer, 1, sizeof(buffer) - 1, file)) > 0)
             {
                 while (isspace(buffer[nread - 1]))
                 {
                     nread--;
                 }
+
+                buffer[nread++] = '\n';
 
                 GWBUF * newbuf = gwbuf_alloc_and_load(nread, buffer);
 
