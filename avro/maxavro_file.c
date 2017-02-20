@@ -12,7 +12,6 @@
  */
 
 #include "maxavro.h"
-#include "skygw_utils.h"
 #include <errno.h>
 #include <string.h>
 #include <maxscale/log_manager.h>
@@ -52,7 +51,7 @@ bool maxavro_verify_block(MAXAVRO_FILE *file)
     {
         if (ferror(file->file))
         {
-            char err[STRERROR_BUFLEN];
+            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to read file: %d %s", errno, strerror_r(errno, err, sizeof(err)));
         }
         else if (rc > 0 || !feof(file->file))
