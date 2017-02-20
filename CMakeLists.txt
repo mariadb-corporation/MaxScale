@@ -121,6 +121,12 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
   endif()
 endif()
 
+# Copy cmake_flags, JENKINS_BUILD_TAG, source and value evironmental variables
+# into cmake variables 
+set(MAXSCALE_SOURCE "$ENV{source} $ENV{value}")
+set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
+set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
+
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/version.h.in ${CMAKE_BINARY_DIR}/include/maxscale/version.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/include/maxscale/paths.h.in ${CMAKE_BINARY_DIR}/include/maxscale/paths.h @ONLY)
