@@ -1985,7 +1985,8 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         }
 
         /* Find and report Transaction start for event replacing only */
-        if (action->pos > 4 &&
+        if (action &&
+            action->pos > 4 &&
             action->replace_trx &&
             pos == action->pos &&
             pending_transaction)
