@@ -290,7 +290,7 @@ static void unpack_datetime2(uint8_t *ptr, uint8_t decimals, struct tm *dest)
     dest->tm_min = (time >> 6) % (1 << 6);
     dest->tm_hour = time >> 12;
     dest->tm_mday = date % (1 << 5);
-    dest->tm_mon = yearmonth % 13;
+    dest->tm_mon = (yearmonth % 13) - 1;
 
     /** struct tm stores the year as: Year - 1900 */
     dest->tm_year = (yearmonth / 13) - 1900;
@@ -347,7 +347,7 @@ static void unpack_date(uint8_t *ptr, struct tm *dest)
     uint64_t val = ptr[0] + (ptr[1] << 8) + (ptr[2] << 16);
     memset(dest, 0, sizeof(struct tm));
     dest->tm_mday = val & 31;
-    dest->tm_mon = (val >> 5) & 15;
+    dest->tm_mon = ((val >> 5) & 15) - 1;
     dest->tm_year = (val >> 9) - 1900;
 }
 
@@ -560,34 +560,42 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
 
     switch (bytes)
     {
-    case 1:
-        val = ptr[0];
-        break;
-    case 2:
-        val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
-        break;
-    case 3:
-        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) | ((uint64_t)ptr[0] << 16);
-        break;
-    case 4:
-        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) | ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
-        break;
-    case 5:
-        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) | ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) | ((
-                                                                                                                      uint64_t)ptr[0] << 32);
-        break;
-    case 6:
-        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) | ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) | ((
-                                                                                                                      uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
-        break;
-    case 7:
-        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) | ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) | ((
-                                                                                                                      uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) | ((uint64_t)ptr[0] << 48);
-        break;
-    case 8:
-        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) | ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) | ((
-                                                                                                                      uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) | ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
-        break;
+        case 1:
+            val = ptr[0];
+            break;
+        case 2:
+            val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
+            break;
+        case 3:
+            val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) |
+                  ((uint64_t)ptr[0] << 16);
+            break;
+        case 4:
+            val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) |
+                  ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+            break;
+        case 5:
+            val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) |
+                  ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) |
+                  ((uint64_t)ptr[0] << 32);
+            break;
+        case 6:
+            val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) |
+                  ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) |
+                  ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+            break;
+        case 7:
+            val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) |
+                  ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) |
+                  ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) |
+                  ((uint64_t)ptr[0] << 48);
+            break;
+        case 8:
+            val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) |
+                  ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) |
+                  ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) |
+                  ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+            break;
     }
 
     return val;
@@ -608,12 +616,11 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
     int fbytes = fpart1 * 4 + dig_bytes[fpart2];
 
     /** Remove the sign bit and store it locally */
-    bool signed_int = (ptr[0] & 0x80);
+    bool negative = (ptr[0] & 0x80) == 0;
+    ptr[0] ^= 0x80;
 
-    if (!signed_int)
+    if (negative)
     {
-        ptr[0] |= 0x80;
-
         for (int i = 0; i < ibytes; i++)
         {
             ptr[i] = ~ptr[i];
@@ -628,7 +635,7 @@ size_t unpack_decimal_field(uint8_t *ptr, uint8_t *metadata, double *val_float)
     int64_t val_i = unpack_bytes(ptr, ibytes);
     int64_t val_f = fbytes ? unpack_bytes(ptr + ibytes, fbytes) : 0;
 
-    if (!signed_int)
+    if (negative)
     {
         val_i = -val_i;
         val_f = -val_f;

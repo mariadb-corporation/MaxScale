@@ -352,44 +352,64 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
  */
 void set_numeric_field_value(avro_value_t *field, uint8_t type, uint8_t *metadata, uint8_t *value)
 {
-    int64_t i = 0;
-
     switch (type)
     {
     case TABLE_COL_TYPE_TINY:
-        i = *value;
-        avro_value_set_int(field, i);
-        break;
+        {
+            char c = *value;
+            avro_value_set_int(field, c);
+            break;
+        }
 
     case TABLE_COL_TYPE_SHORT:
-        memcpy(&i, value, 2);
-        avro_value_set_int(field, i);
-        break;
+        {
+            short s =  gw_mysql_get_byte2(value);
+            avro_value_set_int(field, s);
+            break;
+        }
 
     case TABLE_COL_TYPE_INT24:
-        memcpy(&i, value, 3);
-        avro_value_set_int(field, i);
-        break;
+        {
+            int x = gw_mysql_get_byte3(value);
+
+            if (x & 0x800000)
+            {
+                x = -((0xffffff & (~x)) + 1);
+            }
+
+            avro_value_set_int(field, x);
+            break;
+        }
 
     case TABLE_COL_TYPE_LONG:
-        memcpy(&i, value, 4);
-        avro_value_set_int(field, i);
-        break;
+        {
+            int x = gw_mysql_get_byte4(value);
+            avro_value_set_int(field, x);
+            break;
+        }
 
     case TABLE_COL_TYPE_LONGLONG:
-        memcpy(&i, value, 8);
-        avro_value_set_int(field, i);
-        break;
+        {
+            long l = gw_mysql_get_byte8(value);
+            avro_value_set_long(field, l);
+            break;
+        }
 
     case TABLE_COL_TYPE_FLOAT:
-        memcpy(&i, value, 4);
-        avro_value_set_float(field, (float)i);
-        break;
+        {
+            float f = 0;
+            memcpy(&f, value, 4);
+            avro_value_set_float(field, f);
+            break;
+        }
 
     case TABLE_COL_TYPE_DOUBLE:
-        memcpy(&i, value, 8);
-        avro_value_set_float(field, (double)i);
-        break;
+        {
+            double d = 0;
+            memcpy(&d, value, 8);
+            avro_value_set_double(field, d);
+            break;
+        }
 
     default:
         break;

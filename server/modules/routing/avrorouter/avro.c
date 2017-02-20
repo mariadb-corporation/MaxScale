@@ -991,7 +991,8 @@ extract_message(GWBUF *errpkt)
  *
  */
 static void
-errorReply(MXS_ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, mxs_error_action_t action,
+errorReply(MXS_ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb,
+           mxs_error_action_t action,
            bool *succp)
 {
     /** We should never end up here */
