@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "maxavro.h"
+#include "maxavro_internal.h"
 #include <maxscale/log_manager.h>
 #include <errno.h>
 

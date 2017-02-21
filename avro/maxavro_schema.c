@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "maxavro.h"
+#include "maxavro_internal.h"
 #include <jansson.h>
 #include <string.h>
 #include <maxscale/debug.h>
@@ -152,7 +152,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
                         for (int j = 0; j < i; j++)
                         {
-                            free(rval->fields[j].name);
+                            MXS_FREE(rval->fields[j].name);
                         }
                         break;
                     }
@@ -174,7 +174,7 @@ MAXAVRO_SCHEMA* maxavro_schema_alloc(const char* json)
 
         if (error)
         {
-            free(rval);
+            MXS_FREE(rval);
             rval = NULL;
         }
     }
@@ -190,7 +190,7 @@ static void maxavro_schema_field_free(MAXAVRO_SCHEMA_FIELD *field)
 {
     if (field)
     {
-        free(field->name);
+        MXS_FREE(field->name);
         if (field->type == MAXAVRO_TYPE_ENUM)
         {
             json_decref((json_t*)field->extra);
@@ -210,7 +210,7 @@ void maxavro_schema_free(MAXAVRO_SCHEMA* schema)
         {
             maxavro_schema_field_free(&schema->fields[i]);
         }
-        free(schema->fields);
-        free(schema);
+        MXS_FREE(schema->fields);
+        MXS_FREE(schema);
     }
 }

@@ -53,8 +53,8 @@ void maxavro_datablock_free(MAXAVRO_DATABLOCK* block)
 {
     if (block)
     {
-        free(block->buffer);
-        free(block);
+        MXS_FREE(block->buffer);
+        MXS_FREE(block);
     }
 }
 

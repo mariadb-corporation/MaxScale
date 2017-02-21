@@ -615,7 +615,7 @@ static bool stream_json(AVRO_CLIENT *client)
             set_current_gtid(client, row);
             json_decref(row);
         }
-        bytes += file->block_size;
+        bytes += file->buffer_size;
     }
     while (maxavro_next_block(file) && bytes < AVRO_DATA_BURST_SIZE);
 
@@ -639,7 +639,7 @@ static bool stream_binary(AVRO_CLIENT *client)
 
     while (rc > 0 && bytes < AVRO_DATA_BURST_SIZE)
     {
-        bytes += file->block_size;
+        bytes += file->buffer_size;
         if ((buffer = maxavro_record_read_binary(file)))
         {
             rc = dcb->func.write(dcb, buffer);

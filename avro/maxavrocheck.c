@@ -89,7 +89,7 @@ int check_file(const char* filename)
         if (verbose && !dump)
         {
             printf("Block %lu: %lu records, %lu bytes\n", file->blocks_read,
-                   file->records_in_block, file->block_size);
+                   file->records_in_block, file->buffer_size);
         }
     }
     while (num_rows != 0 && maxavro_next_block(file));
