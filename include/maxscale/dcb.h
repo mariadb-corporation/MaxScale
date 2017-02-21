@@ -187,8 +187,6 @@ typedef struct dcb
     skygw_chk_t     dcb_chk_top;
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
-    bool            draining_flag;  /**< Set while write queue is drained */
-    bool            drain_called_while_busy; /**< Set as described */
     dcb_role_t      dcb_role;
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
@@ -221,8 +219,6 @@ typedef struct dcb
     DCBMM           memdata;        /**< The data related to DCB memory management */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
     long            last_read;      /*< Last time the DCB received data */
-    int             high_water;     /**< High water mark */
-    int             low_water;      /**< Low water mark */
     struct server   *server;        /**< The associated backend server */
     SSL*            ssl;            /*< SSL struct for connection */
     bool            ssl_read_want_read;    /*< Flag */
