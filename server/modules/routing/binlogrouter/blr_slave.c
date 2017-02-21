@@ -2289,9 +2289,6 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
         blr_slave_read_ste(router, slave, fde_end_pos);
     }
 
-    slave->dcb->low_water  = router->low_water;
-    slave->dcb->high_water = router->high_water;
-
     dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
 
     slave->state = BLRS_DUMPING;

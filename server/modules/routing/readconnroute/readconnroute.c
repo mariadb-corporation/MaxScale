@@ -423,11 +423,6 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 
     atomic_add(&candidate->connections, 1);
 
-    // TODO: Remove this as it is never called
-    dcb_add_callback(client_rses->backend_dcb,
-                     DCB_REASON_NOT_RESPONDING,
-                     &handle_state_switch,
-                     client_rses);
     inst->stats.n_sessions++;
 
     CHK_CLIENT_RSES(client_rses);

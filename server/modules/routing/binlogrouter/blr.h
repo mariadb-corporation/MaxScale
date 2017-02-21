@@ -574,8 +574,6 @@ typedef struct router_instance
     int               rotating;     /*< Rotation in progress flag */
     BLFILE            *files;       /*< Files used by the slaves */
     SPINLOCK          fileslock;    /*< Lock for the files queue above */
-    unsigned int      low_water;    /*< Low water mark for client DCB */
-    unsigned int      high_water;   /*< High water mark for client DCB */
     unsigned int      short_burst;  /*< Short burst for slave catchup */
     unsigned int      long_burst;   /*< Long burst for slave catchup */
     unsigned long     burst_size;   /*< Maximum size of burst to send */

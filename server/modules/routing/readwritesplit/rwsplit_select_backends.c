@@ -433,9 +433,6 @@ static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execu
 
         if (!execute_history || execute_sescmd_history(bref))
         {
-            /** Add a callback for unresponsive server */
-            dcb_add_callback(bref->bref_dcb, DCB_REASON_NOT_RESPONDING,
-                             &router_handle_state_switch, (void *) bref);
             bref->bref_state = 0;
             bref_set_state(bref, BREF_IN_USE);
             atomic_add(&bref->ref->connections, 1);

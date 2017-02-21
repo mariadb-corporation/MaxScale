@@ -192,8 +192,6 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
             {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"lowwater", MXS_MODULE_PARAM_COUNT, DEF_LOW_WATER},
-            {"highwater", MXS_MODULE_PARAM_COUNT, DEF_HIGH_WATER},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -321,8 +319,6 @@ createInstance(SERVICE *service, char **options)
 
     MXS_CONFIG_PARAMETER *params = service->svc_config_param;
 
-    inst->low_water = config_get_integer(params, "lowwater");
-    inst->high_water = config_get_integer(params, "highwater");
     inst->initbinlog = config_get_integer(params, "file");
 
     inst->short_burst = config_get_integer(params, "shortburst");
@@ -394,8 +390,6 @@ createInstance(SERVICE *service, char **options)
      *  password=
      *  master-id=
      *  filestem=
-     *  lowwater=
-     *  highwater=
      */
     if (options)
     {
@@ -534,14 +528,6 @@ createInstance(SERVICE *service, char **options)
                 {
                     MXS_FREE(inst->encryption.key_management_filename);
                     inst->encryption.key_management_filename = MXS_STRDUP_A(value);
-                }
-                else if (strcmp(options[i], "lowwater") == 0)
-                {
-                    inst->low_water = atoi(value);
-                }
-                else if (strcmp(options[i], "highwater") == 0)
-                {
-                    inst->high_water = atoi(value);
                 }
                 else if (strcmp(options[i], "shortburst") == 0)
                 {

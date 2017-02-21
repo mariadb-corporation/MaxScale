@@ -2772,11 +2772,6 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
                      * of dcb_close.
                      */
                     atomic_add(&b->connections, 1);
-
-                    dcb_add_callback(backend_ref[i].bref_dcb,
-                                     DCB_REASON_NOT_RESPONDING,
-                                     &router_handle_state_switch,
-                                     (void *)&backend_ref[i]);
                 }
                 else
                 {
@@ -3750,15 +3745,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
         succp = true;
         goto return_succp;
     }
-    /**
-     * Remove callback because this DCB won't be used
-     * unless it is reconnected later, and then the callback
-     * is set again.
-     */
-    dcb_remove_callback(backend_dcb,
-                        DCB_REASON_NOT_RESPONDING,
-                        &router_handle_state_switch,
-                        (void *)bref);
 
     /**
      * Try to get replacement slave or at least the minimum
@@ -3814,59 +3800,6 @@ static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses,
     }
     return bref;
 }
-
-/**
- * Calls hang-up function for DCB if it is not both running and in
- * master/slave/joined/ndb role. Called by DCB's callback routine.
- * @param dcb Backend server DCB
- * @param reason The reason this DCB callback was called
- * @param data Data pointer assigned in the add_callback function call
- * @return Always 1
- */
-static int router_handle_state_switch(DCB* dcb,
-                                      DCB_REASON reason,
-                                      void* data)
-{
-    backend_ref_t* bref;
-    int rc = 1;
-    SERVER* srv;
-
-    CHK_DCB(dcb);
-    if (NULL == dcb->session->router_session)
-    {
-        /*
-         * The following processing will fail if there is no router session,
-         * because the "data" parameter will not contain meaningful data,
-         * so we have no choice but to stop here.
-         */
-        return 0;
-    }
-    bref = (backend_ref_t *) data;
-    CHK_BACKEND_REF(bref);
-
-    srv = bref->bref_backend->server;
-
-    if (SERVER_IS_RUNNING(srv))
-    {
-        goto return_rc;
-    }
-
-    switch (reason)
-    {
-    case DCB_REASON_NOT_RESPONDING:
-        atomic_add(&bref->bref_backend->connections, -1);
-        MXS_INFO("server %s not responding", srv->unique_name);
-        dcb->func.hangup(dcb);
-        break;
-
-    default:
-        break;
-    }
-
-return_rc:
-    return rc;
-}
-
 
 static sescmd_cursor_t* backend_ref_get_sescmd_cursor(backend_ref_t* bref)
 {
