@@ -57,6 +57,15 @@ router=avrorouter
 source=replication-router
 ```
 
+### `codec`
+
+The compression codec to use. By default, the avrorouter does not use compression.
+
+This parameter takes one of the following two values; _null_ or
+_deflate_. These are the mandatory compression algorithms required by the
+Avro specification. For more information about the compression types,
+refer to the [Avro specification](https://avro.apache.org/docs/current/spec.html#Required+Codecs).
+
 **Note:** Since the 2.1 version of MaxScale, all of the router options can also
 be defined as parameters.
 

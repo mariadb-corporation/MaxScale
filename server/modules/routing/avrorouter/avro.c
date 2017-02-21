@@ -120,6 +120,15 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
     return rval;
 }
 
+static const MXS_ENUM_VALUE codec_values[] =
+{
+    {"null", MXS_AVRO_CODEC_NULL},
+    {"deflate",  MXS_AVRO_CODEC_DEFLATE},
+// Not yet implemented
+//    {"snappy", MXS_AVRO_CODEC_SNAPPY},
+    {NULL}
+};
+
 /**
  * The module entry point routine. It is this routine that
  * must populate the structure that is referred to as the
@@ -184,6 +193,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
             {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
             {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
+            {"codec", MXS_MODULE_PARAM_ENUM, "null", MXS_MODULE_OPT_ENUM_UNIQUE, codec_values},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -404,6 +414,7 @@ createInstance(SERVICE *service, char **options)
     inst->fileroot = MXS_STRDUP_A(config_get_string(params, "filestem"));
     inst->row_target = config_get_integer(params, "group_rows");
     inst->trx_target = config_get_integer(params, "group_trx");
+    inst->codec = config_get_enum(params, "codec", codec_values);
     int first_file = config_get_integer(params, "start_index");
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");

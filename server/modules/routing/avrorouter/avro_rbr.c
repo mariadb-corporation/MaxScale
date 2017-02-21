@@ -65,6 +65,22 @@ static int get_event_type(uint8_t event)
     }
 }
 
+static const char* codec_to_string(enum mxs_avro_codec_type type)
+{
+    switch (type)
+    {
+        case MXS_AVRO_CODEC_NULL:
+            return "null";
+        case MXS_AVRO_CODEC_DEFLATE:
+            return "deflate";
+        case MXS_AVRO_CODEC_SNAPPY:
+            return "snappy";
+        default:
+            ss_dassert(false);
+            return "null";
+    }
+}
+
 /**
  * @brief Handle a table map event
  *
@@ -105,7 +121,8 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
 
                     /** Close the file and open a new one */
                     hashtable_delete(router->open_tables, table_ident);
-                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema);
+                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema,
+                                                              codec_to_string(router->codec));
 
                     if (avro_table)
                     {
