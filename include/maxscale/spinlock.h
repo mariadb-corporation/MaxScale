@@ -42,7 +42,7 @@ MXS_BEGIN_DECLS
  */
 typedef struct spinlock
 {
-    int lock;         /*< Is the lock held? */
+    volatile int lock;         /*< Is the lock held? */
 #if SPINLOCK_PROFILE
     int spins;        /*< Number of spins on this lock */
     int maxspins;     /*< Max no of spins to acquire lock */
