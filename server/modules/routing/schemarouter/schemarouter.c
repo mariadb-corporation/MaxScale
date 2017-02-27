@@ -58,23 +58,23 @@
  */
 
 static MXS_ROUTER* createInstance(SERVICE *service, char **options);
-static void*   newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static void    closeSession(MXS_ROUTER *instance, void *session);
-static void    freeSession(MXS_ROUTER *instance, void *session);
-static int     routeQuery(MXS_ROUTER *instance, void *session, GWBUF *queue);
-static void    diagnostic(MXS_ROUTER *instance, DCB *dcb);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
+static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
+static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
+static void diagnostic(MXS_ROUTER *instance, DCB *dcb);
 
 static void clientReply(MXS_ROUTER* instance,
-                        void*   router_session,
-                        GWBUF*  queue,
-                        DCB*    backend_dcb);
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* queue,
+                        DCB* backend_dcb);
 
-static void handleError(MXS_ROUTER*    instance,
-                        void*          router_session,
-                        GWBUF*         errmsgbuf,
-                        DCB*           backend_dcb,
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errmsgbuf,
+                        DCB* backend_dcb,
                         mxs_error_action_t action,
-                        bool*          succp);
+                        bool* succp);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_shard_route_target(qc_query_type_t qtype,
@@ -847,7 +847,7 @@ enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* 
  * @param session       The session itself
  * @return Session specific data for this session
  */
-static void* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
 {
     backend_ref_t* backend_ref; /*< array of backend references (DCB, BACKEND, cursor) */
     ROUTER_CLIENT_SES* client_rses = NULL;
@@ -1040,7 +1040,7 @@ static void* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
  * @param instance      The router instance data
  * @param session       The session being closed
  */
-static void closeSession(MXS_ROUTER* instance, void* router_session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
     ROUTER_CLIENT_SES* router_cli_ses;
     ROUTER_INSTANCE* inst;
@@ -1135,7 +1135,7 @@ static void closeSession(MXS_ROUTER* instance, void* router_session)
     }
 }
 
-static void freeSession(MXS_ROUTER* router_instance, void* router_client_session)
+static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_session)
 {
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
 
@@ -1612,7 +1612,7 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
  *
  */
 static int routeQuery(MXS_ROUTER* instance,
-                      void* router_session,
+                      MXS_ROUTER_SESSION* router_session,
                       GWBUF* qbuf)
 {
     qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
@@ -2238,7 +2238,7 @@ static void diagnostic(MXS_ROUTER *instance, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static void clientReply(MXS_ROUTER* instance,
-                        void* router_session,
+                        MXS_ROUTER_SESSION* router_session,
                         GWBUF* buffer,
                         DCB* backend_dcb)
 {
@@ -3555,12 +3555,12 @@ return_succp:
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
-static void handleError(MXS_ROUTER*    instance,
-                        void*          router_session,
-                        GWBUF*         errmsgbuf,
-                        DCB*           problem_dcb,
+static void handleError(MXS_ROUTER* instance,
+                        MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errmsgbuf,
+                        DCB* problem_dcb,
                         mxs_error_action_t action,
-                        bool*          succp)
+                        bool* succp)
 {
     MXS_SESSION* session;
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;

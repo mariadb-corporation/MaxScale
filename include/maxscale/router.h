@@ -80,19 +80,19 @@ typedef enum error_action
 typedef struct mxs_router_object
 {
     MXS_ROUTER *(*createInstance)(SERVICE *service, char **options);
-    void    *(*newSession)(MXS_ROUTER *instance, MXS_SESSION *session);
-    void     (*closeSession)(MXS_ROUTER *instance, void *router_session);
-    void     (*freeSession)(MXS_ROUTER *instance, void *router_session);
-    int32_t  (*routeQuery)(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
+    MXS_ROUTER_SESSION *(*newSession)(MXS_ROUTER *instance, MXS_SESSION *session);
+    void     (*closeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+    void     (*freeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+    int32_t  (*routeQuery)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
     void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
-    void     (*clientReply)(MXS_ROUTER* instance, void* router_session, GWBUF* queue,
+    void     (*clientReply)(MXS_ROUTER* instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                             DCB *backend_dcb);
-    void     (*handleError)(MXS_ROUTER*    instance,
-                            void*          router_session,
-                            GWBUF*         errmsgbuf,
-                            DCB*           backend_dcb,
+    void     (*handleError)(MXS_ROUTER         *instance,
+                            MXS_ROUTER_SESSION *router_session,
+                            GWBUF              *errmsgbuf,
+                            DCB                *backend_dcb,
                             mxs_error_action_t action,
-                            bool*          succp);
+                            bool*              succp);
     uint64_t (*getCapabilities)(MXS_ROUTER *instance);
     void     (*destroyInstance)(MXS_ROUTER *instance);
 } MXS_ROUTER_OBJECT;
