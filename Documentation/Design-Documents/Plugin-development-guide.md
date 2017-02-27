@@ -43,8 +43,8 @@ modules are written in C++.
 
 The *RoundRobinRouter* is a practical example of a simple router plugin. The
 RoundRobinRouter is compiled, installed and ran in [section
-5.1](#hands-on-example:-roundrobinrouter). The source for the router is included
-in the plugin development package.
+5.1](#hands-on-example:-roundrobinrouter). The source for the router is located
+in the `examples`-folder.
 
 ## Module categories
 

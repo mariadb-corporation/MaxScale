@@ -128,6 +128,7 @@ document.
  - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
  - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
+ - [Plugin development guide](Design-Documents/Plugin-development-guide.md)
 
 ## Earlier Release Notes
 
@@ -145,4 +146,3 @@ document.
  - [MariaDB MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
  - [MariaDB MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
  - [MariaDB MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
-

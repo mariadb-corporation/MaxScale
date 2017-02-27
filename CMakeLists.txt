@@ -187,9 +187,11 @@ add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 add_subdirectory(include/maxscale)
-add_subdirectory(Documentation)
 if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
+endif()
+if(BUILD_TESTS)
+  add_subdirectory(examples)
 endif()
 
 # Generate text versions of some documents

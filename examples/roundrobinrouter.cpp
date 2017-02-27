@@ -107,7 +107,7 @@ class RRRouter;
 class RRRouterSession;
 
 /* Each service using this router will have a router object instance. */
-class RRRouter
+class RRRouter : public MXS_ROUTER
 {
 private:
     SERVICE* m_service;            /* Service this router is part of */
@@ -135,7 +135,7 @@ public:
 };
 
 /* Every client connection has a corresponding session. */
-class RRRouterSession
+class RRRouterSession : public MXS_ROUTER_SESSION
 {
 public:
     bool m_closed;              /* true when closeSession is called */
@@ -344,8 +344,8 @@ void RRRouter::client_reply(RRRouterSession* rses, GWBUF* buf, DCB* backend_dcb)
         MXS_NOTICE("Replied to client.\n");
     }
 }
-void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message,
-                           DCB* problem_dcb, mxs_error_action_t action, bool* succp)
+void RRRouter::handle_error(RRRouterSession* rses, GWBUF* message, DCB* problem_dcb,
+                            mxs_error_action_t action, bool* succp)
 {
     /* Don't handle same error twice on same DCB */
     if (problem_dcb->dcb_errhandle_called)
@@ -562,16 +562,16 @@ void RRRouter::decide_target(RRRouterSession* rses, GWBUF* querybuf, DCB*& targe
  * "extern C", but they do need to be callable from  C code.
  */
 static MXS_ROUTER* createInstance(SERVICE* service, char** options);
-static void* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
-static void closeSession(MXS_ROUTER* instance, void* session);
-static void freeSession(MXS_ROUTER* instance, void* session);
-static int routeQuery(MXS_ROUTER* instance, void* session, GWBUF* querybuf);
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session);
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
+static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* querybuf);
 static void diagnostics(MXS_ROUTER* instance, DCB* dcb);
-static void clientReply(MXS_ROUTER* instance, void* router_session, GWBUF* resultbuf,
-                        DCB* backend_dcb);
-static void handleError(MXS_ROUTER* instance, void* router_session,
-                        GWBUF* errmsgbuf, DCB* backend_dcb,
-                        mxs_error_action_t action, bool* succp);
+static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
+                        GWBUF* resultbuf, DCB* backend_dcb);
+static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
+                        GWBUF* errmsgbuf, DCB* backend_dcb, mxs_error_action_t action,
+                        bool* succp);
 static uint64_t getCapabilities(MXS_ROUTER *instance);
 static void     destroyInstance(MXS_ROUTER* instance);
 /* The next two entry points are usually optional. */
@@ -669,7 +669,7 @@ static MXS_ROUTER* createInstance(SERVICE* service, char** options)
     {
         MXS_ERROR("Module command registration failed.");
     }
-    return (MXS_ROUTER*)instance;
+    return instance;
 }
 
 /**
@@ -682,12 +682,12 @@ static MXS_ROUTER* createInstance(SERVICE* service, char** options)
  * @param session   The MaxScale session (generic client connection data)
  * @return          Client specific data for this router
  */
-static void* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
+static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
 {
-    RRRouter* router = (RRRouter*)instance;
+    RRRouter* router = static_cast<RRRouter*>(instance);
     RRRouterSession* rses = NULL;
     MXS_EXCEPTION_GUARD(rses = router->create_session(session));
-    return (void*)rses;
+    return rses;
 }
 /**
  * @brief Close an existing router session for this router instance (API).
@@ -700,9 +700,9 @@ static void* newSession(MXS_ROUTER* instance, MXS_SESSION* session)
  * @param instance  The router object instance
  * @param session   The router session
  */
-static void closeSession(MXS_ROUTER* instance, void* session)
+static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
 {
-    RRRouterSession* rses = (RRRouterSession*)session;
+    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
     MXS_EXCEPTION_GUARD(rses->close());
 }
 
@@ -716,9 +716,9 @@ static void closeSession(MXS_ROUTER* instance, void* session)
  * @param session    Router client session
  *
  */
-static void freeSession(MXS_ROUTER* instance, void* session)
+static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session)
 {
-    RRRouterSession* rses = (RRRouterSession*)session;
+    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
     delete rses;
 }
 
@@ -734,10 +734,10 @@ static void freeSession(MXS_ROUTER* instance, void* session)
  * @param buffer       Buffer containing the query (or command)
  * @return 1 on success, 0 on error
  */
-static int routeQuery(MXS_ROUTER* instance, void* session, GWBUF* buffer)
+static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* buffer)
 {
-    RRRouter* router = (RRRouter*)instance;
-    RRRouterSession* rses = (RRRouterSession*)session;
+    RRRouter* router = static_cast<RRRouter*>(instance);
+    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
     int rval = 0;
     MXS_EXCEPTION_GUARD(rval = router->route_query(rses, buffer));
     return rval;
@@ -754,7 +754,7 @@ static int routeQuery(MXS_ROUTER* instance, void* session, GWBUF* buffer)
  */
 static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
 {
-    RRRouter* router = (RRRouter*)instance;
+    RRRouter* router = static_cast<RRRouter*>(instance);
     dcb_printf(dcb, "\t\tQueries routed successfully: %lu\n", router->m_routing_s);
     dcb_printf(dcb, "\t\tFailed routing attempts:     %lu\n", router->m_routing_f);
     dcb_printf(dcb, "\t\tClient replies routed:       %lu\n", router->m_routing_c);
@@ -772,11 +772,11 @@ static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
  * @param   backend_dcb The backend DCB (data source)
  * @param   queue       The GWBUF with reply data
  */
-static void clientReply(MXS_ROUTER* instance, void* session, GWBUF* queue,
+static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue,
                         DCB* backend_dcb)
 {
-    RRRouter* router = (RRRouter*)instance;
-    RRRouterSession* rses = (RRRouterSession*)session;
+    RRRouter* router = static_cast<RRRouter*>(instance);
+    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
     MXS_EXCEPTION_GUARD(router->client_reply(rses, queue, backend_dcb));
 }
 
@@ -794,12 +794,12 @@ static void clientReply(MXS_ROUTER* instance, void* session, GWBUF* queue,
  * @param       action          The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
  * @param       succp           Output result of action, true if router can continue
  */
-static void handleError(MXS_ROUTER* instance, void* session,
+static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session,
                         GWBUF* message, DCB* problem_dcb,
                         mxs_error_action_t action, bool* succp)
 {
-    RRRouter* router = (RRRouter*)instance;
-    RRRouterSession* rses = (RRRouterSession*)session;
+    RRRouter* router = static_cast<RRRouter*>(instance);
+    RRRouterSession* rses = static_cast<RRRouterSession*>(session);
     MXS_EXCEPTION_GUARD(router->handle_error(rses, message, problem_dcb, action, succp));
 }
 
@@ -832,7 +832,7 @@ static uint64_t getCapabilities(MXS_ROUTER *instance)
  */
 static void destroyInstance(MXS_ROUTER* instance)
 {
-    RRRouter* router = (RRRouter*)instance;
+    RRRouter* router = static_cast<RRRouter*>(instance);
     delete router;
 }
 
