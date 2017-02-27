@@ -94,7 +94,7 @@ typedef struct fake_event
     struct fake_event *next;  /*< The next event */
 } fake_event_t;
 
-thread_local int thread_id; /**< This thread's ID */
+thread_local int current_thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
 static fake_event_t **fake_events; /*< Thread-specific fake event queue */
@@ -653,8 +653,10 @@ poll_waitevents(void *arg)
 {
     struct epoll_event events[MAX_EVENTS];
     int i, nfds, timeout_bias = 1;
-    thread_id = (intptr_t)arg;
+    current_thread_id = (intptr_t)arg;
     int poll_spins = 0;
+
+    int thread_id = current_thread_id;
 
     if (thread_data)
     {
@@ -1635,7 +1637,7 @@ void poll_send_message(enum poll_message msg, void *data)
 
     for (int i = 0; i < nthr; i++)
     {
-        if (i != thread_id)
+        if (i != current_thread_id)
         {
             while (poll_msg[i] & msg)
             {
@@ -1650,6 +1652,8 @@ void poll_send_message(enum poll_message msg, void *data)
 
 static void poll_check_message()
 {
+    int thread_id = current_thread_id;
+
     if (poll_msg[thread_id] & POLL_MSG_CLEAN_PERSISTENT)
     {
         SERVER *server = (SERVER*)poll_msg_data;
