@@ -32,7 +32,11 @@ The commands can be issued, but have no effect.
 
 ## New Features
 
-### Blah
+### Avrorouter `deflate` compression
+
+The Avrorouter now supports the `deflate` compression method. This allows the
+stored Avro format files to be compressed on disk. For more information, refer
+to the [Avrorouter](../Routers/Avrorouter.md) documentation.
 
 ## Bug fixes
 
