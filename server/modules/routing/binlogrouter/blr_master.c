@@ -1393,7 +1393,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                  n_sequence);
 
                         MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
-                                  router->mariadb_gtid,
+                                  mariadb_gtid,
                                   router->binlog_name,
                                   router->binlog_position);
 
