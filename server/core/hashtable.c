@@ -567,10 +567,11 @@ hashtable_read_lock(HASHTABLE *table)
     while (table->writelock)
     {
         spinlock_release(&table->spin);
-        while (table->writelock)
+        while (atomic_add(&table->writelock, 1) != 0)
         {
-            ;
+            atomic_add(&table->writelock, -1);
         }
+        atomic_add(&table->writelock, -1);
         spinlock_acquire(&table->spin);
     }
     atomic_add(&table->n_readers, 1);
@@ -614,10 +615,11 @@ hashtable_write_lock(HASHTABLE *table)
     spinlock_acquire(&table->spin);
     do
     {
-        while (table->n_readers)
+        while (atomic_add(&table->n_readers, 1) != 0)
         {
-            ;
+            atomic_add(&table->n_readers, -1);
         }
+        atomic_add(&table->n_readers, -1);
         available = atomic_add(&table->writelock, 1);
         if (available != 0)
         {
