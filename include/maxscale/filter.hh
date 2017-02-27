@@ -28,7 +28,7 @@ namespace maxscale
  * are virtual. That is by design, as the class will be used in a context where
  * the concrete class is known. That is, there is no need for the virtual mechanism.
  */
-class FilterSession
+class FilterSession : public MXS_FILTER_SESSION
 {
 public:
     /**
@@ -200,7 +200,7 @@ protected:
  * @endcode
  */
 template<class FilterType, class FilterSessionType>
-class Filter
+class Filter : public MXS_FILTER
 {
 public:
     static MXS_FILTER* createInstance(const char* zName, char** pzOptions, MXS_CONFIG_PARAMETER* ppParams)
@@ -209,36 +209,36 @@ public:
 
         MXS_EXCEPTION_GUARD(pFilter = FilterType::create(zName, pzOptions, ppParams));
 
-        return reinterpret_cast<MXS_FILTER*>(pFilter);
+        return pFilter;
     }
 
     static MXS_FILTER_SESSION* newSession(MXS_FILTER* pInstance, MXS_SESSION* pSession)
     {
-        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
-        void* pFilterSession;
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
+        FilterSessionType* pFilterSession;
 
         MXS_EXCEPTION_GUARD(pFilterSession = pFilter->newSession(pSession));
 
-        return reinterpret_cast<MXS_FILTER_SESSION*>(pFilterSession);
+        return pFilterSession;
     }
 
     static void closeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(pFilterSession->close());
     }
 
     static void freeSession(MXS_FILTER*, MXS_FILTER_SESSION* pData)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         MXS_EXCEPTION_GUARD(delete pFilterSession);
     }
 
     static void setDownstream(MXS_FILTER*, MXS_FILTER_SESSION* pData, MXS_DOWNSTREAM* pDownstream)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         typename FilterSessionType::Downstream down(*pDownstream);
 
@@ -247,7 +247,7 @@ public:
 
     static void setUpstream(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, MXS_UPSTREAM* pUpstream)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         typename FilterSessionType::Upstream up(*pUpstream);
 
@@ -256,7 +256,7 @@ public:
 
     static int routeQuery(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         int rv = 0;
         MXS_EXCEPTION_GUARD(rv = pFilterSession->routeQuery(pPacket));
@@ -266,7 +266,7 @@ public:
 
     static int clientReply(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, GWBUF* pPacket)
     {
-        FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+        FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
         int rv = 0;
         MXS_EXCEPTION_GUARD(rv = pFilterSession->clientReply(pPacket));
@@ -278,13 +278,13 @@ public:
     {
         if (pData)
         {
-            FilterSessionType* pFilterSession = reinterpret_cast<FilterSessionType*>(pData);
+            FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
             MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
         }
         else
         {
-            FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+            FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
             MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
         }
@@ -294,7 +294,7 @@ public:
     {
         uint64_t rv = 0;
 
-        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
         MXS_EXCEPTION_GUARD(rv = pFilter->getCapabilities());
 
@@ -303,7 +303,7 @@ public:
 
     static void destroyInstance(MXS_FILTER* pInstance)
     {
-        FilterType* pFilter = reinterpret_cast<FilterType*>(pInstance);
+        FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
         MXS_EXCEPTION_GUARD(delete pFilter);
     }
