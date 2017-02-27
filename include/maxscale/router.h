@@ -34,7 +34,21 @@ MXS_BEGIN_DECLS
  * from the @c createInstance function of a router module and subsequently
  * passing it back to the API functions of the router.
  */
-typedef void *MXS_ROUTER;
+typedef struct mxs_router
+{
+} MXS_ROUTER;
+
+/**
+ * MXS_ROUTER_SESSION is an opaque type representing the session related
+ * data of a particular router instance.
+ *
+ * MaxScale itself does not do anything with it, except for receiving it
+ * from the @c newSession function of a router module and subsequently
+ * passing it back to the API functions of the router.
+ */
+typedef struct mxs_router_session
+{
+} MXS_ROUTER_SESSION;
 
 typedef enum error_action
 {
