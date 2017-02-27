@@ -60,8 +60,6 @@ mysql_sescmd_t *rses_property_get_sescmd(rses_property_t *prop)
     }
 
     CHK_RSES_PROP(prop);
-    ss_dassert(prop->rses_prop_rsession == NULL ||
-               SPINLOCK_IS_LOCKED(&prop->rses_prop_rsession->rses_lock));
 
     sescmd = &prop->rses_prop_data.sescmd;
 
@@ -134,14 +132,9 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                                      backend_ref_t *bref,
                                      bool *reconnect)
 {
-    mysql_sescmd_t *scmd;
-    sescmd_cursor_t *scur;
-    ROUTER_CLIENT_SES *ses;
-
-    scur = &bref->bref_sescmd_cur;
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
-    scmd = sescmd_cursor_get_command(scur);
-    ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
+    sescmd_cursor_t *scur = &bref->bref_sescmd_cur;
+    mysql_sescmd_t *scmd = sescmd_cursor_get_command(scur);
+    ROUTER_CLIENT_SES *ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
     CHK_GWBUF(replybuf);
 
     /**
@@ -273,7 +266,6 @@ mysql_sescmd_t *sescmd_cursor_get_command(sescmd_cursor_t *scur)
 {
     mysql_sescmd_t *scmd;
 
-    ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
     scur->scmd_cur_cmd = rses_property_get_sescmd(*scur->scmd_cur_ptr_property);
 
     CHK_MYSQL_SESCMD(scur->scmd_cur_cmd);
@@ -293,7 +285,6 @@ bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return false;
     }
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
 
     succp = sescmd_cursor->scmd_cur_active;
     return succp;
@@ -303,7 +294,6 @@ bool sescmd_cursor_is_active(sescmd_cursor_t *sescmd_cursor)
 void sescmd_cursor_set_active(sescmd_cursor_t *sescmd_cursor,
                               bool value)
 {
-    ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
     /** avoid calling unnecessarily */
     ss_dassert(sescmd_cursor->scmd_cur_active != value);
     sescmd_cursor->scmd_cur_active = value;
@@ -420,8 +410,6 @@ static bool sescmd_cursor_next(sescmd_cursor_t *scur)
 
     ss_dassert(scur != NULL);
     ss_dassert(*(scur->scmd_cur_ptr_property) != NULL);
-    ss_dassert(SPINLOCK_IS_LOCKED(
-                   &(*(scur->scmd_cur_ptr_property))->rses_prop_rsession->rses_lock));
 
     /** Illegal situation */
     if (scur == NULL || *scur->scmd_cur_ptr_property == NULL ||

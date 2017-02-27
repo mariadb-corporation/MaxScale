@@ -70,16 +70,10 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     /* packet_type is a problem as it is MySQL specific */
     packet_type = determine_packet_type(querybuf, &non_empty_packet);
     qtype = determine_query_type(querybuf, packet_type, non_empty_packet);
+
     if (non_empty_packet)
     {
-        /** This might not be absolutely necessary as some parts of the code
-         * can only be executed by one thread at a time. */
-        if (!rses_begin_locked_router_action(rses))
-        {
-            return false;
-        }
         handle_multi_temp_and_load(rses, querybuf, packet_type, (int *)&qtype);
-        rses_end_locked_router_action(rses);
 
         if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
@@ -116,7 +110,7 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     {
         succp = handle_target_is_all(route_target, inst, rses, querybuf, packet_type, qtype);
     }
-    else if (rses_begin_locked_router_action(rses))
+    else
     {
         /* Now we have a lock on the router session */
         bool store_stmt = false;
@@ -152,12 +146,6 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
             handle_got_target(inst, rses, querybuf, target_dcb, store_stmt);
         }
-        rses_end_locked_router_action(rses);
-    }
-    else
-    {
-        session_lock_failure_handling(querybuf, packet_type, qtype);
-        succp = false;
     }
 
     return succp;
@@ -214,12 +202,6 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
     {
         int rc;
 
-        /** Lock router session */
-        if (!rses_begin_locked_router_action(router_cli_ses))
-        {
-            goto return_succp;
-        }
-
         for (i = 0; i < router_cli_ses->rses_nbackends; i++)
         {
             DCB *dcb = backend_ref[i].bref_dcb;
@@ -244,13 +226,7 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 }
             }
         }
-        rses_end_locked_router_action(router_cli_ses);
         gwbuf_free(querybuf);
-        goto return_succp;
-    }
-    /** Lock router session */
-    if (!rses_begin_locked_router_action(router_cli_ses))
-    {
         goto return_succp;
     }
 
@@ -318,7 +294,6 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
     if ((prop = rses_property_init(RSES_PROP_TYPE_SESCMD)) == NULL)
     {
         MXS_ERROR("Router session property initialization failed");
-        rses_end_locked_router_action(router_cli_ses);
         return false;
     }
 
@@ -328,7 +303,6 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
     if (rses_property_add(router_cli_ses, prop) != 0)
     {
         MXS_ERROR("Session property addition failed.");
-        rses_end_locked_router_action(router_cli_ses);
         return false;
     }
 
@@ -386,9 +360,6 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
     }
 
     atomic_add(&router_cli_ses->rses_nsescmd, 1);
-
-    /** Unlock router session */
-    rses_end_locked_router_action(router_cli_ses);
 
 return_succp:
     /**
@@ -1364,7 +1335,6 @@ int rses_property_add(ROUTER_CLIENT_SES *rses, rses_property_t *prop)
 
     CHK_CLIENT_RSES(rses);
     CHK_RSES_PROP(prop);
-    ss_dassert(SPINLOCK_IS_LOCKED(&rses->rses_lock));
 
     prop->rses_prop_rsession = rses;
     p = rses->rses_properties[prop->rses_prop_type];

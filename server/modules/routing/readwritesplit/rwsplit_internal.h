@@ -56,7 +56,6 @@ bool handle_target_is_all(route_target_t route_target,
                           GWBUF *querybuf, int packet_type, qc_query_type_t qtype);
 int determine_packet_type(GWBUF *querybuf, bool *non_empty_packet);
 void log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype);
-void session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t qtype);
 bool is_packet_a_one_way_message(int packet_type);
 sescmd_cursor_t *backend_ref_get_sescmd_cursor(backend_ref_t *bref);
 bool is_packet_a_query(int packet_type);
@@ -65,8 +64,6 @@ bool send_readonly_error(DCB *dcb);
 /*
  * The following are implemented in readwritesplit.c
  */
-bool rses_begin_locked_router_action(ROUTER_CLIENT_SES *rses);
-void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses);
 void bref_clear_state(backend_ref_t *bref, bref_state_t state);
 void bref_set_state(backend_ref_t *bref, bref_state_t state);
 int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data);
