@@ -8,6 +8,24 @@ release 2.1.0.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## Dropped Features
+
+### MaxAdmin
+
+The following deprecated commands have been removed:
+
+* `enable log [debug|trace|message]`
+* `disable log [debug|trace|message]`
+* `enable sessionlog [debug|trace|message]`
+* `disable sessionlog [debug|trace|message]`
+
+The following commands have been deprecated:
+
+* `enable sessionlog-priority <session-id> [debug|info|notice|warning]`
+* `disable sessionlog-priority <session-id> [debug|info|notice|warning]`
+
+The commands can be issued, but have no effect.
+
 ## New Features
 
 ### Failover Recovery for MySQL Monitor
