@@ -130,15 +130,13 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     case MYSQL_COM_QUERY:
         {
-            // We do not care whether the query was fully parsed or not.
-            // If a query cannot be fully parsed, the worst thing that can
-            // happen is that caching is not used, even though it would be
-            // possible.
-            if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
+            if (!session_trx_is_active(m_pSession) || session_trx_is_read_only(m_pSession))
             {
-                MXS_SESSION *session = m_pSession;
-
-                if (!session_trx_is_active(session) || session_trx_is_read_only(session))
+                // We do not care whether the query was fully parsed or not.
+                // If a query cannot be fully parsed, the worst thing that can
+                // happen is that caching is not used, even though it would be
+                // possible.
+                if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
                 {
                     if (m_pCache->should_store(m_zDefaultDb, pPacket))
                     {
@@ -216,15 +214,15 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                         m_state = CACHE_IGNORING_RESPONSE;
                     }
                 }
-                else
+            }
+            else
+            {
+                if (log_decisions())
                 {
-                    if (log_decisions())
-                    {
-                        MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
-                                   "storing to cache.",
-                                   session_is_autocommit(m_pSession) ? "ON" : "OFF",
-                                   session_trx_state_to_string(session_get_trx_state(m_pSession)));
-                    }
+                    MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
+                               "storing to cache.",
+                               session_is_autocommit(m_pSession) ? "ON" : "OFF",
+                               session_trx_state_to_string(session_get_trx_state(m_pSession)));
                 }
             }
         }
