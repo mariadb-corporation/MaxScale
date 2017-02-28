@@ -289,7 +289,7 @@ createInstance(SERVICE *service, char **options)
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
-    inst->pending_transaction = 0;
+    memset(&inst->pending_transaction, '\0', sizeof(PENDING_TRANSACTION));
     inst->last_safe_pos = 0;
     inst->last_event_pos = 0;
 
@@ -1081,7 +1081,6 @@ static void freeSession(MXS_ROUTER* router_instance,
     MXS_FREE(slave);
 }
 
-
 /**
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
@@ -1341,7 +1340,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                router_inst->current_pos);
     if (router_inst->trx_safe)
     {
-        if (router_inst->pending_transaction)
+        if (router_inst->pending_transaction.state != BLRM_NO_TRANSACTION)
         {
             dcb_printf(dcb, "\tCurrent open transaction pos:                %lu\n",
                        router_inst->binlog_position);
@@ -2472,7 +2471,8 @@ destroyInstance(MXS_ROUTER *instance)
              inst->service->dbref->server->port,
              inst->binlog_name, inst->current_pos, inst->binlog_position);
 
-    if (inst->trx_safe && inst->pending_transaction)
+    if (inst->trx_safe &&
+        inst->pending_transaction.state > BLRM_NO_TRANSACTION)
     {
         MXS_WARNING("%s stopped by shutdown: detected mid-transaction in binlog file %s, "
                     "pos %lu, incomplete transaction starts at pos %lu",

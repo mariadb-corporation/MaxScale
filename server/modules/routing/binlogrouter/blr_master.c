@@ -111,15 +111,6 @@ extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
 
 static int keepalive = 1;
 
-/** Transaction-Safety feature */
-typedef enum
-{
-    BLRM_NO_TRANSACTION, /*< No transaction */
-    BLRM_TRANSACTION_START, /*< A transaction is open*/
-    BLRM_COMMIT_SEEN, /*< Received COMMIT event in the current transaction */
-    BLRM_XID_EVENT_SEEN /*< Received XID event of current transaction */
-} master_transaction_t;
-
 /** Master Semi-Sync capability */
 typedef enum
 {
@@ -1355,7 +1346,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  */
 
                 spinlock_acquire(&router->binlog_lock);
-                if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
+                if (router->trx_safe == 0 ||
+                    (router->trx_safe &&
+                     router->pending_transaction.state == BLRM_NO_TRANSACTION))
                 {
                     /* no pending transaction: set current_pos to binlog_position */
                     router->binlog_position = router->current_pos;
@@ -1368,14 +1361,14 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  * Only complete transactions should be sent to sleves
                  */
 
-                if (router->mariadb10_compat && hdr.event_type == MARIADB10_GTID_EVENT)
+                if (router->mariadb10_compat &&
+                    hdr.event_type == MARIADB10_GTID_EVENT)
                 {
                     /**
                      * If MariaDB 10 compatibility:
                      * check for MARIADB10_GTID_EVENT with flags:
                      * this is the TRASACTION START detection.
                      *
-                     * Save GTID anyway and if trx_safe is set mark the transaction start
                      */
 
                     uint64_t n_sequence;
@@ -1395,7 +1388,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
                                   mariadb_gtid,
                                   router->binlog_name,
-                                  router->binlog_position);
+                                  router->current_pos);
 
                         spinlock_acquire(&router->binlog_lock);
 
@@ -1407,7 +1400,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                          */
                         if (router->trx_safe)
                         {
-                            if (router->pending_transaction > 0)
+                            if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                             {
                                 MXS_ERROR("A MariaDB 10 transaction "
                                           "is already open "
@@ -1418,7 +1411,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                           router->current_pos);
                             }
 
-                            router->pending_transaction = BLRM_TRANSACTION_START;
+                            router->pending_transaction.state = BLRM_TRANSACTION_START;
 
                         }
 
@@ -1455,7 +1448,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         /* Check for BEGIN (it comes for START TRANSACTION too) */
                         if (strncmp(statement_sql, "BEGIN", 5) == 0)
                         {
-                            if (router->pending_transaction > BLRM_NO_TRANSACTION)
+                            if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                             {
                                 MXS_ERROR("A transaction is already open "
                                           "@ %lu and a new one starts @ %lu",
@@ -1464,13 +1457,13 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                             }
 
-                            router->pending_transaction = BLRM_TRANSACTION_START;
+                            router->pending_transaction.state = BLRM_TRANSACTION_START;
                         }
 
                         /* Check for COMMIT in non transactional store engines */
                         if (strncmp(statement_sql, "COMMIT", 6) == 0)
                         {
-                            router->pending_transaction = BLRM_COMMIT_SEEN;
+                            router->pending_transaction.state = BLRM_COMMIT_SEEN;
                         }
 
                         spinlock_release(&router->binlog_lock);
@@ -1483,9 +1476,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     {
                         spinlock_acquire(&router->binlog_lock);
 
-                        if (router->pending_transaction)
+                        if (router->pending_transaction.state >= BLRM_TRANSACTION_START)
                         {
-                            router->pending_transaction = BLRM_XID_EVENT_SEEN;
+                            router->pending_transaction.state = BLRM_XID_EVENT_SEEN;
                         }
                         spinlock_release(&router->binlog_lock);
                     }
@@ -1546,7 +1539,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         router->stats.n_heartbeats++;
 
-                        if (router->pending_transaction)
+                        if (router->pending_transaction.state > BLRM_NO_TRANSACTION)
                         {
                             router->stats.lastReply = time(0);
                         }
@@ -1613,7 +1606,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         spinlock_acquire(&router->binlog_lock);
 
-                        if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
+                        if (router->trx_safe == 0 ||
+                            (router->trx_safe &&
+                             router->pending_transaction.state == BLRM_NO_TRANSACTION))
                         {
                             router->binlog_position = router->current_pos;
                             router->current_safe_event = router->last_event_pos;
@@ -1634,7 +1629,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                              *    router->current_pos
                              */
 
-                            if (router->pending_transaction > BLRM_TRANSACTION_START)
+                            if (router->pending_transaction.state > BLRM_TRANSACTION_START)
                             {
                                 spinlock_release(&router->binlog_lock);
 
@@ -1645,7 +1640,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 spinlock_acquire(&router->binlog_lock);
 
                                 router->binlog_position = router->current_pos;
-                                router->pending_transaction = BLRM_NO_TRANSACTION;
+                                router->pending_transaction.state = BLRM_NO_TRANSACTION;
 
                                 spinlock_release(&router->binlog_lock);
                             }

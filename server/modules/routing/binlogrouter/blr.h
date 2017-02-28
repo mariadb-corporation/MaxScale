@@ -447,8 +447,8 @@ typedef struct router_slave
     blr_thread_role_t lsi_sender_role; /*< Master or slave code sent */
     THREAD            lsi_sender_tid;  /*< Who sent */
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
-    uint32_t          lsi_binlog_pos; /*< What position */
-    void              *encryption_ctx;      /*< Encryption context */
+    uint32_t          lsi_binlog_pos;  /*< What position */
+    void              *encryption_ctx; /*< Encryption context */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -523,6 +523,24 @@ typedef struct binlog_encryption_setup
     uint8_t key_id;
 } BINLOG_ENCRYPTION_SETUP;
 
+/** Transaction States */
+typedef enum
+{
+    BLRM_NO_TRANSACTION,       /*< No transaction */
+    BLRM_TRANSACTION_START,    /*< A transaction is open*/
+    BLRM_COMMIT_SEEN,          /*< Received COMMIT event in the current trx */
+    BLRM_XID_EVENT_SEEN        /*< Received XID event of current transaction */
+} master_transaction_t;
+
+/** Transaction Details */
+typedef struct pending_transaction
+{
+    char gtid[GTID_MAX_LEN + 1];   /** MariaDB 10.x GTID */
+    master_transaction_t state;    /** Transaction state */
+    uint64_t start_pos;            /** The BEGIN pos */
+    uint64_t end_pos;              /** The next_pos in COMMIT event*/
+} PENDING_TRANSACTION;
+
 /**
  * The per instance data for the router.
  */
@@ -552,7 +570,7 @@ typedef struct router_instance
     char                    *binlogdir;     /*< The directory with the binlog files */
     SPINLOCK                binlog_lock;    /*< Lock to control update of the binlog position */
     int                     trx_safe;       /*< Detect and handle partial transactions */
-    int                     pending_transaction; /*< Pending transaction */
+    PENDING_TRANSACTION     pending_transaction; /*< Pending transaction */
     enum blr_event_state    master_event_state; /*< Packet read state */
     REP_HEADER              stored_header; /*< Relication header of the event the master is sending */
     GWBUF                  *stored_event; /*< Buffer where partial events are stored */

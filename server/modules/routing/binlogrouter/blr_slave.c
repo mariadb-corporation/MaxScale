@@ -1185,7 +1185,8 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                         return blr_slave_send_ok(router, slave);
                     }
 
-                    if (router->trx_safe && router->pending_transaction)
+                    if (router->trx_safe &&
+                        router->pending_transaction.state > BLRM_NO_TRANSACTION)
                     {
                         if (strcmp(router->binlog_name, router->prevbinlog) != 0)
                         {
@@ -2163,7 +2164,8 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
         bool force_disconnect = false;
 
         spinlock_acquire(&router->binlog_lock);
-        if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+        if (router->pending_transaction.state > BLRM_NO_TRANSACTION &&
+            strcmp(router->binlog_name, slave->binlogfile) == 0 &&
             (slave->binlog_pos > router->binlog_position))
         {
             force_disconnect = true;
@@ -2413,7 +2415,8 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     do_return = 0;
 
     /* check for a pending transaction and safe position */
-    if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+    if (router->pending_transaction.state > BLRM_NO_TRANSACTION &&
+        strcmp(router->binlog_name, slave->binlogfile) == 0 &&
         (slave->binlog_pos > router->binlog_position))
     {
         do_return = 1;
@@ -3596,7 +3599,8 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->service->dbref->server->port,
                router->binlog_name, router->current_pos, router->binlog_position);
 
-    if (router->trx_safe && router->pending_transaction)
+    if (router->trx_safe &&
+        router->pending_transaction.state > BLRM_NO_TRANSACTION)
     {
         char message[BINLOG_ERROR_MSG_LEN + 1] = "";
         snprintf(message, BINLOG_ERROR_MSG_LEN,
@@ -3650,7 +3654,8 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     /* create a new binlog or just use current one */
     if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name))
     {
-        if (router->trx_safe && router->pending_transaction)
+        if (router->trx_safe &&
+            router->pending_transaction.state > BLRM_NO_TRANSACTION)
         {
             char msg[BINLOG_ERROR_MSG_LEN + 1] = "";
             char file[PATH_MAX + 1] = "";
@@ -3694,7 +3699,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
             spinlock_acquire(&router->lock);
 
-            router->pending_transaction = 0;
+            router->pending_transaction.state = BLRM_NO_TRANSACTION;
             router->last_safe_pos = 0;
             router->master_state = BLRM_UNCONNECTED;
             router->current_pos = 4;

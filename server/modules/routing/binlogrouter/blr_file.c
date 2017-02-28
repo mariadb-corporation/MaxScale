@@ -1317,7 +1317,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
     unsigned long long last_known_commit = 4;
 
     REP_HEADER hdr;
-    int pending_transaction = 0;
+    int pending_transaction = BLRM_NO_TRANSACTION;
     int n;
     int db_name_len;
     uint8_t *ptr;
@@ -1469,7 +1469,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 router->binlog_position = last_known_commit;
                 router->current_safe_event = last_known_commit;
                 router->current_pos = pos;
-                router->pending_transaction = 1;
+                router->pending_transaction.state = BLRM_TRANSACTION_START;
 
                 MXS_ERROR("Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
                           router->binlog_name, router->current_pos, router->binlog_position);
@@ -2062,7 +2062,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                     strcpy(router->mariadb_gtid, mariadb_gtid);
 
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
                                   "Another MariaDB 10 transaction (GTID %u-%u-%lu)"
@@ -2119,7 +2119,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 /* A transaction starts with this event */
                 if (strncmp(statement_sql, "BEGIN", 5) == 0)
                 {
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
                                   "Another transaction was opened at %llu",
@@ -2132,7 +2132,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     }
                     else
                     {
-                        pending_transaction = 1;
+                        pending_transaction = BLRM_TRANSACTION_START;
 
                         transaction_events = 0;
                         event_bytes = 0;
@@ -2146,9 +2146,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 /* Commit received for non transactional tables, i.e. MyISAM */
                 if (strncmp(statement_sql, "COMMIT", 6) == 0)
                 {
-                    if (pending_transaction > 0)
+                    if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
-                        pending_transaction = 3;
+                        pending_transaction = BLRM_COMMIT_SEEN;
 
                         if (!(debug & BLR_CHECK_ONLY))
                         {
@@ -2171,10 +2171,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         if (hdr.event_type == XID_EVENT)
         {
             /* Commit received for a transactional tables, i.e. InnoDB */
-
-            if (pending_transaction > 0)
+            if (pending_transaction > BLRM_NO_TRANSACTION)
             {
-                pending_transaction = 2;
+                pending_transaction = BLRM_XID_EVENT_SEEN;
 
                 if (!(debug & BLR_CHECK_ONLY))
                 {
@@ -2184,14 +2183,14 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             }
         }
 
-        if (pending_transaction > 1)
+        if (pending_transaction > BLRM_TRANSACTION_START)
         {
             if (!(debug & BLR_CHECK_ONLY))
             {
                 MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu. %lu events seen",
                           last_known_commit, pos, transaction_events);
             }
-            pending_transaction = 0;
+            pending_transaction = BLRM_NO_TRANSACTION;
             last_known_commit = pos;
 
             /* Reset the event replacing indicator */
@@ -2306,7 +2305,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         router->binlog_position = last_known_commit;
         router->current_safe_event = last_known_commit;
         router->current_pos = pos;
-        router->pending_transaction = 1;
+        router->pending_transaction.state = BLRM_TRANSACTION_START;
 
         MXS_WARNING("an error has been found. "
                     "Setting safe pos to %lu, current pos %lu",
