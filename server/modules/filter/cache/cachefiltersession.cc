@@ -138,8 +138,7 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
             {
                 MXS_SESSION *session = m_pSession;
 
-                if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
-                    session_trx_is_read_only(session))
+                if (!session_trx_is_active(session) || session_trx_is_read_only(session))
                 {
                     if (m_pCache->should_store(m_zDefaultDb, pPacket))
                     {
