@@ -1031,32 +1031,21 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
  */
 backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 {
-    backend_ref_t *bref;
-    int i = 0;
+    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
     CHK_CLIENT_RSES(rses);
 
-    bref = rses->rses_backend_ref;
-
-    while (i < rses->rses_nbackends)
+    for (int i = 0; i < rses->rses_nbackends; i++)
     {
-        if (bref->bref_dcb == dcb)
+        if (rses->rses_backend_ref[i].bref_dcb == dcb)
         {
-            break;
+            return &rses->rses_backend_ref[i];
         }
-        bref++;
-        i += 1;
-    }
-
-    if (i == rses->rses_nbackends)
-    {
-        bref = NULL;
     }
 
     /** We should always have a valid backend reference */
-    ss_dassert(bref);
-
-    return bref;
+    ss_dassert(false);
+    return NULL;
 }
 
 /**
@@ -1258,10 +1247,9 @@ static void handleError(MXS_ROUTER *instance,
                         mxs_error_action_t action,
                         bool *succp)
 {
-    MXS_SESSION *session;
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
-
+    CHK_CLIENT_RSES(rses);
     CHK_DCB(problem_dcb);
 
     if (rses->rses_closed)
@@ -1287,25 +1275,18 @@ static void handleError(MXS_ROUTER *instance,
     {
         problem_dcb->dcb_errhandle_called = true;
     }
-    session = problem_dcb->session;
 
-    backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
+    MXS_SESSION *session = problem_dcb->session;
+    ss_dassert(session);
 
-    if (session == NULL)
-    {
-        MXS_ERROR("Session of DCB %p is NULL, won't close the DCB.", problem_dcb);
-        ss_dassert(false);
-        *succp = false;
-    }
-    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
+    if (problem_dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
         dcb_close(problem_dcb);
         *succp = false;
     }
     else
     {
-        CHK_SESSION(session);
-        CHK_CLIENT_RSES(rses);
+        backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
 
         switch (action)
         {
