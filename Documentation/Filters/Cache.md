@@ -26,9 +26,18 @@ Currently there is **no** cache invalidation, apart from _time-to-live_.
 Resultsets of prepared statements are **not** cached.
 
 ### Transactions
-The cache will be used and populated **only** if there is _no_ on-going
-transaction or if an on-going transaction is _explicitly_ read-only (that is,
-`START TRANSACTION READ ONLY`).
+The cache will be used and populated in the following circumstances:
+
+* There is _no_ on-going transaction, that is, _autocommit_ is used,
+* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
+  READ ONLY`) active, or
+* there is a transaction active and _no_ statement that modify the database
+  has been performed.
+
+In practice, the last bullet point basically means that if a transaction has
+been started with `BEGIN` or `START TRANSACTION READ WRITE`, then the cache
+will be used and populated until the first `UPDATE`, `INSERT` or `DELETE`
+statement is encountered.
 
 ### Variables
 The cache key is effectively the entire _SELECT_ statement. However, the

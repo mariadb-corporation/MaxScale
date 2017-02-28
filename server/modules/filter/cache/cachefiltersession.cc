@@ -41,6 +41,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
+    , m_is_read_only(true)
 {
     memset(m_key.data, 0, CACHE_KEY_MAXLEN);
 
@@ -130,7 +131,59 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
     case MYSQL_COM_QUERY:
         {
-            if (!session_trx_is_active(m_pSession) || session_trx_is_read_only(m_pSession))
+            bool consult_cache = false;
+
+            uint32_t type_mask = qc_get_type_mask(pPacket);
+
+            if (type_mask & QUERY_TYPE_BEGIN_TRX)
+            {
+                // When a transaction is started, we initially assume it is read-only.
+                m_is_read_only = true;
+            }
+            else if (!(type_mask & QUERY_TYPE_READ))
+            {
+                // Thereafter, if there's any non-read statement we mark it as non-readonly.
+                // Note that the state of m_is_read_only is not consulted if there is no
+                // on-going transaction of if there is an explicitly read-only transaction.
+                m_is_read_only = false;
+            }
+
+            if (!session_trx_is_active(m_pSession))
+            {
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache can be used and stored to, since there is no transaction.");
+                }
+                consult_cache = true;
+            }
+            else if (session_trx_is_read_only(m_pSession))
+            {
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache can be used and stored to since there is an explicitly "
+                               "read-only transaction.");
+                }
+                consult_cache = true;
+            }
+            else if (m_is_read_only)
+            {
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache can be used and stored to, since the current transaction "
+                               "(not explicitly read-only) has so far been read-only.");
+                }
+                consult_cache = true;
+            }
+            else
+            {
+                if (log_decisions())
+                {
+                    MXS_NOTICE("Cache can not be used, since a not explicitly read-only transaction "
+                               "is active and the transaction has executed non-read statements.");
+                }
+            }
+
+            if (consult_cache)
             {
                 // We do not care whether the query was fully parsed or not.
                 // If a query cannot be fully parsed, the worst thing that can
@@ -213,16 +266,6 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
                     {
                         m_state = CACHE_IGNORING_RESPONSE;
                     }
-                }
-            }
-            else
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
-                               "storing to cache.",
-                               session_is_autocommit(m_pSession) ? "ON" : "OFF",
-                               session_trx_state_to_string(session_get_trx_state(m_pSession)));
                 }
             }
         }

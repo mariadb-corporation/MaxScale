@@ -8,6 +8,14 @@ release 2.1.0.
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## Changed Features
+
+### Cache
+
+The cache will now _also_ be used and populated in a transaction that is
+_not_ explicitly read only, but only until the first statement that modifies
+the database is encountered.
+
 ## Dropped Features
 
 ### MaxAdmin
