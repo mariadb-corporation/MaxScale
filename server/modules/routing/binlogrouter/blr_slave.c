@@ -646,15 +646,19 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if ((strcasecmp(word, "@@gtid_current_pos") == 0) || (strcasecmp(word, "@@global.gtid_current_pos") == 0))
         {
-            char    heading[40]; /* to ensure we match the case in query and response */
+            char    heading[40];
             char mariadb_gtid[GTID_MAX_LEN + 1];
+            mariadb_gtid[0] = '\0';
             strcpy(heading, word);
+
             MXS_FREE(query_text);
 
-            /* Safely get router->mariadb_gtid */
-            spinlock_acquire(&router->binlog_lock);
-            strcpy(mariadb_gtid, router->mariadb_gtid);
-            spinlock_release(&router->binlog_lock);
+            if (router->mariadb10_compat)
+            {
+                spinlock_acquire(&router->binlog_lock);
+                strcpy(mariadb_gtid, router->mariadb_gtid);
+                spinlock_release(&router->binlog_lock);
+            }
 
             return blr_slave_send_var_value(router, slave, heading, mariadb_gtid, BLR_TYPE_STRING);
         }
