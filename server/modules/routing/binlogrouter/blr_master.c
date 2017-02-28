@@ -1418,9 +1418,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             strcpy(router->pending_transaction.gtid, mariadb_gtid);
                             router->pending_transaction.start_pos = router->current_pos;
                             router->pending_transaction.end_pos = 0;
-                        }
 
-                        spinlock_release(&router->binlog_lock);
+                            spinlock_release(&router->binlog_lock);
+                        }
                     }
 
                     if (hdr.event_type == QUERY_EVENT)
