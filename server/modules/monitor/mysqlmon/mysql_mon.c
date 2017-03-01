@@ -127,7 +127,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
             {"failover", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
-            {"failover_recovery", MXS_MODULE_PARAM_BOOL, "false"},
+            {"failover_recovery", MXS_MODULE_PARAM_BOOL, "true"},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -973,7 +973,7 @@ bool failover_required(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
             candidates++;
             MYSQL_SERVER_INFO *server_info = hashtable_fetch(handle->server_info, db->server->unique_name);
 
-            if (server_info->read_only || candidates > 1)
+            if (server_info->read_only || server_info->slave_configured || candidates > 1)
             {
                 return false;
             }

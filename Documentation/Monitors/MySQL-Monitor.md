@@ -138,6 +138,7 @@ initiated, the following conditions must have been met:
 - The monitor has repeatedly failed to connect to the failed servers
 - There is only one running server among the monitored servers
 - @@read_only is not enabled on the last running server
+- The last running server is not configured as a slave
 
 When these conditions are met, the monitor assigns the last remaining server the
 master status and puts all other servers into maintenance mode. This is done to
@@ -167,12 +168,12 @@ milliseconds, the value of _failcount_ must be 10.
 ### `failover_recovery`
 
 Allow recovery after failover. This feature takes a boolean parameter is
-disabled by default.
+enabled by default.
 
-Normally if a failover has been triggered and the last remaining server is
-chosen as the master, the monitor will set all of the failed servers into
-maintenance mode. When this option is enabled, the failed servers are allowed to
-rejoin the cluster.
+When this parameter is disabled, if a failover has been triggered and the last
+remaining server is chosen as the master, the monitor will set all of the failed
+servers into maintenance mode. When this option is enabled, the failed servers
+are allowed to rejoin the cluster.
 
 This option should be enabled when failover in MaxScale is used in conjunction
 with an external agent that resets the slave status for new master servers. One
