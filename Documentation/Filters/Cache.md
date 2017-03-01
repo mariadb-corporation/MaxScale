@@ -40,32 +40,8 @@ will be used and populated until the first `UPDATE`, `INSERT` or `DELETE`
 statement is encountered.
 
 ### Variables
-The cache key is effectively the entire _SELECT_ statement. However, the
-value of any variables used in the select is **not** considered. For instance,
-if a variable is used in the _WHERE_ clause of the select, a subsequent
-identical select will return the wrong result, if the value of the variable
-has been changed in between.
-```
-MySQL [testdb]> create table tbl (a int, b int);
-MySQL [testdb]> insert into tbl values (1, 2), (3, 4);
-
-MySQL [testdb]> set @var=2;
-MySQL [testdb]> select a from tbl where b=@var;
-+------+
-| a    |
-+------+
-|    1 |
-+------+
-
-MySQL [testdb]> set @var=4;
-MySQL [testdb]> select a from tbl where b=@var;
-+------+
-| a    |
-+------+
-|    1 |
-+------+
-```
-In the second case, the correct answer would have been `3` and not `1`.
+If user or system variables are used in the _SELECT_ statement, the result
+will not be cached.
 
 ### Security
 

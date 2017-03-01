@@ -707,13 +707,21 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
     if (consult_cache)
     {
-        // We do not care whether the query was fully parsed or not.
-        // If a query cannot be fully parsed, the worst thing that can
-        // happen is that caching is not used, even though it would be
-        // possible.
-        if (qc_get_operation(pPacket) != QUERY_OP_SELECT)
+        if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ) ||
+            qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
         {
             consult_cache = false;
+        }
+        else
+        {
+            // We do not care whether the query was fully parsed or not.
+            // If a query cannot be fully parsed, the worst thing that can
+            // happen is that caching is not used, even though it would be
+            // possible.
+            if (qc_get_operation(pPacket) != QUERY_OP_SELECT)
+            {
+                consult_cache = false;
+            }
         }
     }
 
