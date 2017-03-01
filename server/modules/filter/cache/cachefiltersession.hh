@@ -105,6 +105,8 @@ private:
 
     void store_result();
 
+    bool should_consult_cache(GWBUF* pPacket);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 

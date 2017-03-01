@@ -130,143 +130,82 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MYSQL_COM_QUERY:
+        if (should_consult_cache(pPacket))
         {
-            bool consult_cache = false;
+            if (m_pCache->should_store(m_zDefaultDb, pPacket))
+            {
+                if (m_pCache->should_use(m_pSession))
+                {
+                    GWBUF* pResponse;
+                    cache_result_t result = get_cached_response(pPacket, &pResponse);
 
-            uint32_t type_mask = qc_get_type_mask(pPacket);
-
-            if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
-            {
-                // When a transaction is started, we initially assume it is read-only.
-                m_is_read_only = true;
-            }
-            else if (!qc_query_is_type(type_mask, QUERY_TYPE_READ))
-            {
-                // Thereafter, if there's any non-read statement we mark it as non-readonly.
-                // Note that the state of m_is_read_only is not consulted if there is no
-                // on-going transaction of if there is an explicitly read-only transaction.
-                m_is_read_only = false;
-            }
-
-            if (!session_trx_is_active(m_pSession))
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Cache can be used and stored to, since there is no transaction.");
-                }
-                consult_cache = true;
-            }
-            else if (session_trx_is_read_only(m_pSession))
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Cache can be used and stored to since there is an explicitly "
-                               "read-only transaction.");
-                }
-                consult_cache = true;
-            }
-            else if (m_is_read_only)
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Cache can be used and stored to, since the current transaction "
-                               "(not explicitly read-only) has so far been read-only.");
-                }
-                consult_cache = true;
-            }
-            else
-            {
-                if (log_decisions())
-                {
-                    MXS_NOTICE("Cache can not be used, since a not explicitly read-only transaction "
-                               "is active and the transaction has executed non-read statements.");
-                }
-            }
-
-            if (consult_cache)
-            {
-                // We do not care whether the query was fully parsed or not.
-                // If a query cannot be fully parsed, the worst thing that can
-                // happen is that caching is not used, even though it would be
-                // possible.
-                if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
-                {
-                    if (m_pCache->should_store(m_zDefaultDb, pPacket))
+                    if (CACHE_RESULT_IS_OK(result))
                     {
-                        if (m_pCache->should_use(m_pSession))
+                        if (CACHE_RESULT_IS_STALE(result))
                         {
-                            GWBUF* pResponse;
-                            cache_result_t result = get_cached_response(pPacket, &pResponse);
+                            // The value was found, but it was stale. Now we need to
+                            // figure out whether somebody else is already fetching it.
 
-                            if (CACHE_RESULT_IS_OK(result))
+                            if (m_pCache->must_refresh(m_key, this))
                             {
-                                if (CACHE_RESULT_IS_STALE(result))
+                                // We were the first ones who hit the stale item. It's
+                                // our responsibility now to fetch it.
+                                if (log_decisions())
                                 {
-                                    // The value was found, but it was stale. Now we need to
-                                    // figure out whether somebody else is already fetching it.
-
-                                    if (m_pCache->must_refresh(m_key, this))
-                                    {
-                                        // We were the first ones who hit the stale item. It's
-                                        // our responsibility now to fetch it.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale, fetching fresh from server.");
-                                        }
-
-                                        // As we don't use the response it must be freed.
-                                        gwbuf_free(pResponse);
-
-                                        m_refreshing = true;
-                                        fetch_from_server = true;
-                                    }
-                                    else
-                                    {
-                                        // Somebody is already fetching the new value. So, let's
-                                        // use the stale value. No point in hitting the server twice.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale but returning it, fresh "
-                                                       "data is being fetched already.");
-                                        }
-                                        fetch_from_server = false;
-                                    }
+                                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
                                 }
-                                else
-                                {
-                                    if (log_decisions())
-                                    {
-                                        MXS_NOTICE("Using fresh data from cache.");
-                                    }
-                                    fetch_from_server = false;
-                                }
-                            }
-                            else
-                            {
+
+                                // As we don't use the response it must be freed.
+                                gwbuf_free(pResponse);
+
+                                m_refreshing = true;
                                 fetch_from_server = true;
                             }
-
-                            if (fetch_from_server)
-                            {
-                                m_state = CACHE_EXPECTING_RESPONSE;
-                            }
                             else
                             {
-                                m_state = CACHE_EXPECTING_NOTHING;
-                                gwbuf_free(pPacket);
-                                DCB *dcb = m_pSession->client_dcb;
-
-                                // TODO: This is not ok. Any filters before this filter, will not
-                                // TODO: see this data.
-                                rv = dcb->func.write(dcb, pResponse);
+                                // Somebody is already fetching the new value. So, let's
+                                // use the stale value. No point in hitting the server twice.
+                                if (log_decisions())
+                                {
+                                    MXS_NOTICE("Cache data is stale but returning it, fresh "
+                                               "data is being fetched already.");
+                                }
+                                fetch_from_server = false;
                             }
+                        }
+                        else
+                        {
+                            if (log_decisions())
+                            {
+                                MXS_NOTICE("Using fresh data from cache.");
+                            }
+                            fetch_from_server = false;
                         }
                     }
                     else
                     {
-                        m_state = CACHE_IGNORING_RESPONSE;
+                        fetch_from_server = true;
+                    }
+
+                    if (fetch_from_server)
+                    {
+                        m_state = CACHE_EXPECTING_RESPONSE;
+                    }
+                    else
+                    {
+                        m_state = CACHE_EXPECTING_NOTHING;
+                        gwbuf_free(pPacket);
+                        DCB *dcb = m_pSession->client_dcb;
+
+                        // TODO: This is not ok. Any filters before this filter, will not
+                        // TODO: see this data.
+                        rv = dcb->func.write(dcb, pResponse);
                     }
                 }
+            }
+            else
+            {
+                m_state = CACHE_IGNORING_RESPONSE;
             }
         }
         break;
@@ -703,4 +642,80 @@ void CacheFilterSession::store_result()
         m_pCache->refreshed(m_key, this);
         m_refreshing = false;
     }
+}
+
+/**
+ * Whether the cache should be consulted.
+ *
+ * @param pParam The GWBUF being handled.
+ *
+ * @return True, if the cache should be consulted, false otherwise.
+ */
+bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
+{
+    bool consult_cache = false;
+
+    uint32_t type_mask = qc_get_type_mask(pPacket);
+
+    if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+    {
+        // When a transaction is started, we initially assume it is read-only.
+        m_is_read_only = true;
+    }
+    else if (!qc_query_is_type(type_mask, QUERY_TYPE_READ))
+    {
+        // Thereafter, if there's any non-read statement we mark it as non-readonly.
+        // Note that the state of m_is_read_only is not consulted if there is no
+        // on-going transaction of if there is an explicitly read-only transaction.
+        m_is_read_only = false;
+    }
+
+    if (!session_trx_is_active(m_pSession))
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Cache can be used and stored to, since there is no transaction.");
+        }
+        consult_cache = true;
+    }
+    else if (session_trx_is_read_only(m_pSession))
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Cache can be used and stored to since there is an explicitly "
+                       "read-only transaction.");
+        }
+        consult_cache = true;
+    }
+    else if (m_is_read_only)
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Cache can be used and stored to, since the current transaction "
+                       "(not explicitly read-only) has so far been read-only.");
+        }
+        consult_cache = true;
+    }
+    else
+    {
+        if (log_decisions())
+        {
+            MXS_NOTICE("Cache can not be used, since a not explicitly read-only transaction "
+                       "is active and the transaction has executed non-read statements.");
+        }
+    }
+
+    if (consult_cache)
+    {
+        // We do not care whether the query was fully parsed or not.
+        // If a query cannot be fully parsed, the worst thing that can
+        // happen is that caching is not used, even though it would be
+        // possible.
+        if (qc_get_operation(pPacket) != QUERY_OP_SELECT)
+        {
+            consult_cache = false;
+        }
+    }
+
+    return consult_cache;
 }
