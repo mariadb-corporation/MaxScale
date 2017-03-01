@@ -135,12 +135,12 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
 
             uint32_t type_mask = qc_get_type_mask(pPacket);
 
-            if (type_mask & QUERY_TYPE_BEGIN_TRX)
+            if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
             {
                 // When a transaction is started, we initially assume it is read-only.
                 m_is_read_only = true;
             }
-            else if (!(type_mask & QUERY_TYPE_READ))
+            else if (!qc_query_is_type(type_mask, QUERY_TYPE_READ))
             {
                 // Thereafter, if there's any non-read statement we mark it as non-readonly.
                 // Note that the state of m_is_read_only is not consulted if there is no
