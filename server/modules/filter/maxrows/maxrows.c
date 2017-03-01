@@ -175,7 +175,6 @@ static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
 static bool process_params(char **options, MXS_CONFIG_PARAMETER *params, MAXROWS_CONFIG* config);
 
 static int send_upstream(MAXROWS_SESSION_DATA *csdata);
-static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
 static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata, size_t offset);
 
 /* API BEGIN */
@@ -909,51 +908,15 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
 }
 
 /**
- * Send OK packet data upstream.
- *
- * @param csdata Session data
- *
- * @return Whatever the upstream returns.
- */
-static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
-{
-    /* Note: sequence id is always 01 (4th byte) */
-    uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
-
-    ss_dassert(csdata->res.data != NULL);
-
-    GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
-    if(!packet)
-    {
-        /* Abort clienrt connection */
-        poll_fake_hangup_event(csdata->session->client_dcb);
-        gwbuf_free(csdata->res.data);
-        csdata->res.data = NULL;
-        gwbuf_free(packet);
-        return 0;
-    }
-
-    uint8_t *ptr = GWBUF_DATA(packet);
-    memcpy(ptr, &ok, MYSQL_OK_PACKET_MIN_LEN);
-
-    ss_dassert(csdata->res.data != NULL);
-
-    int rv = csdata->up.clientReply(csdata->up.instance, csdata->up.session, packet);
-    gwbuf_free(csdata->res.data);
-    csdata->res.data = NULL;
-
-    return rv;
-}
-
-/**
- * Send upstream the Respnse Buffer up to columns def in response
+ * Send upstream the Response Buffer up to columns def in response
  * including its EOF of the first result set
  * An EOF packet for empty result set with no MULTI flags is added
  * at the end.
  *
  * @param csdata    Session data
  * @param offset    The offset to server reply pointing to
- * next byte after EOF or column definitions of first result set
+ *                  next byte after column definitions EOF
+ *                  of the first result set.
  *
  * @return Whatever the upstream returns.
  */
@@ -1007,5 +970,5 @@ static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata, size_t offset)
     gwbuf_free(csdata->res.data);
     csdata->res.data = NULL;
 
-   return rv;
+    return rv;
 }
