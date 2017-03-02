@@ -3,12 +3,19 @@
 This filter was introduced in MariaDB MaxScale 2.1.
 
 ## Overview
+_Note that the cache is still experimental and that non-backward compatible
+changes may be made._
+
 The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-_Note that the cache is still experimental and that non-backward compatible
-changes may be made._
+SELECTs using the following functions will not be cached: `BENCHMARK`,
+`CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
+`CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
+`IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
+`MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
+`SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
 
 Note that installing the cache causes all statements to be parsed. The
 implication of that is that unless statements _already_ need to be parsed,
@@ -28,7 +35,7 @@ Resultsets of prepared statements are **not** cached.
 ### Transactions
 The cache will be used and populated in the following circumstances:
 
-* There is _no_ on-going transaction, that is, _autocommit_ is used,
+* There is _no_ explicit transaction active, that is, _autocommit_ is used,
 * there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
   READ ONLY`) active, or
 * there is a transaction active and _no_ statement that modify the database
@@ -44,7 +51,6 @@ If user or system variables are used in the _SELECT_ statement, the result
 will not be cached.
 
 ### Security
-
 The cache is **not** aware of grants.
 
 The implication is that unless the cache has been explicitly configured

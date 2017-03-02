@@ -35,6 +35,108 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 
 }
 
+namespace
+{
+
+const char* NON_CACHEABLE_FUNCTIONS[] =
+{
+    "benchmark",
+    "connection_id",
+    "convert_tz",
+    "curdate",
+    "current_date",
+    "current_timestamp",
+    "curtime",
+    "database",
+    "encrypt",
+    "found_rows",
+    "get_lock",
+    "is_free_lock",
+    "is_used_lock",
+    "last_insert_id",
+    "load_file",
+    "localtime",
+    "localtimestamp",
+    "master_pos_wait",
+    "now",
+    "rand",
+    "release_lock",
+    "session_user",
+    "sleep",
+    "sysdate",
+    "system_user",
+    "unix_timestamp",
+    "user",
+    "uuid",
+    "uuid_short",
+};
+
+const char* NON_CACHEABLE_VARIABLES[] =
+{
+    "current_date",
+    "current_timestamp",
+    "localtime",
+    "localtimestamp",
+};
+
+const size_t N_NON_CACHEABLE_FUNCTIONS = sizeof(NON_CACHEABLE_FUNCTIONS)/sizeof(NON_CACHEABLE_FUNCTIONS[0]);
+const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES)/sizeof(NON_CACHEABLE_VARIABLES[0]);
+
+int compare_name(const void* pLeft, const void* pRight)
+{
+    return strcasecmp((const char*)pLeft, *(const char**)pRight);
+}
+
+inline bool uses_name(const char* zName, const char** pzNames, size_t nNames)
+{
+    return bsearch(zName, pzNames, nNames, sizeof(const char*), compare_name) != NULL;
+}
+
+bool uses_non_cacheable_function(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FUNCTION_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_function_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FUNCTION_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->name, NON_CACHEABLE_FUNCTIONS, N_NON_CACHEABLE_FUNCTIONS);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+bool uses_non_cacheable_variable(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FIELD_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FIELD_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->column, NON_CACHEABLE_VARIABLES, N_NON_CACHEABLE_VARIABLES);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+}
+
+
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
     , m_state(CACHE_EXPECTING_NOTHING)
@@ -718,6 +820,16 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
             {
                 consult_cache = false;
                 zReason = "system variables are read";
+            }
+            else if (uses_non_cacheable_function(pPacket))
+            {
+                consult_cache = false;
+                zReason = "uses non-cacheable function";
+            }
+            else if (uses_non_cacheable_variable(pPacket))
+            {
+                consult_cache = false;
+                zReason = "uses non-cacheable variable";
             }
         }
         else
