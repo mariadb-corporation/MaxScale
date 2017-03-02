@@ -77,9 +77,9 @@ processor cores does not improve the performance, rather is likely to degrade
 it, and can consume resources needlessly.
 
 You can enable automatic configuration of this value by setting the value to
-`auto`. This way MariaDB MaxScale will detect the number of available processors and
-set the amount of threads to be equal to that number. This should only be used
-for systems dedicated for running MariaDB MaxScale.
+`auto`. This way MariaDB MaxScale will detect the number of available processors
+and set the amount of threads to be equal to that number minus one. This should
+only be used for systems dedicated for running MariaDB MaxScale.
 
 ```
 # Valid options are:
