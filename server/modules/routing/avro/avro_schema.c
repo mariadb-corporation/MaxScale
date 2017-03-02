@@ -451,6 +451,10 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     while (*ptr && (isspace(*ptr) || (bt = *ptr == '`')))
     {
         ptr++;
+        if (bt)
+        {
+            break;
+        }
     }
 
     if (strncasecmp(ptr, "constraint", 10) == 0 || strncasecmp(ptr, "index", 5) == 0 ||
@@ -482,11 +486,6 @@ static const char *extract_field_name(const char* ptr, char* dest, size_t size)
     {
         /** Valid identifier */
         size_t bytes = ptr - start;
-
-        if (bt)
-        {
-            bytes--;
-        }
 
         memcpy(dest, start, bytes);
         dest[bytes] = '\0';
