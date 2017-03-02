@@ -15,8 +15,9 @@
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/query_classifier.h>
 #include "storage.hh"
 
 namespace
@@ -657,6 +658,8 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
     uint32_t type_mask = qc_get_type_mask(pPacket);
 
+    const char* zReason = NULL;
+
     if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
     {
         // When a transaction is started, we initially assume it is read-only.
@@ -674,7 +677,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Cache can be used and stored to, since there is no transaction.");
+            zReason = "no transaction";
         }
         consult_cache = true;
     }
@@ -682,8 +685,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Cache can be used and stored to since there is an explicitly "
-                       "read-only transaction.");
+            zReason = "explicitly read-only transaction";
         }
         consult_cache = true;
     }
@@ -691,8 +693,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Cache can be used and stored to, since the current transaction "
-                       "(not explicitly read-only) has so far been read-only.");
+            zReason = "ordinary transaction that has so far been read-only";
         }
         consult_cache = true;
     }
@@ -700,29 +701,57 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         if (log_decisions())
         {
-            MXS_NOTICE("Cache can not be used, since a not explicitly read-only transaction "
-                       "is active and the transaction has executed non-read statements.");
+            zReason = "ordinary transaction with non-read statements";
         }
     }
 
     if (consult_cache)
     {
-        if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ) ||
-            qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+        if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
         {
-            consult_cache = false;
+            if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+            {
+                consult_cache = false;
+                zReason = "user variables are read";
+            }
+            else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+            {
+                consult_cache = false;
+                zReason = "system variables are read";
+            }
         }
         else
         {
-            // We do not care whether the query was fully parsed or not.
-            // If a query cannot be fully parsed, the worst thing that can
-            // happen is that caching is not used, even though it would be
-            // possible.
-            if (qc_get_operation(pPacket) != QUERY_OP_SELECT)
-            {
-                consult_cache = false;
-            }
+            consult_cache = false;
+            zReason = "statement is not SELECT";
         }
+    }
+
+    if (log_decisions())
+    {
+        char* pSql;
+        int length;
+        const int max_length = 40;
+
+        // At this point we know it's a COM_QUERY and that the buffer is contiguous
+        modutil_extract_SQL(pPacket, &pSql, &length);
+
+        const char* zFormat;
+
+        if (length <= max_length)
+        {
+            zFormat = "%s, \"%.*s\", %s.";
+        }
+        else
+        {
+            zFormat = "%s, \"%.*s...\", %s.";
+            length = max_length - 3; // strlen("...");
+        }
+
+        const char* zDecision = (consult_cache ? "CONSULT" : "IGNORE ");
+
+        ss_dassert(zReason);
+        MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
     }
 
     return consult_cache;
