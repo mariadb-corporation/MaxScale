@@ -2277,6 +2277,12 @@ bool pid_file_exists()
 
 static int write_pid_file()
 {
+    if (!mxs_mkdir_all(get_piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+    {
+        MXS_ERROR("Failed to create PID directory.");
+        return 1;
+    }
+
     char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
     char pidstr[STRING_BUFFER_SIZE];
 
