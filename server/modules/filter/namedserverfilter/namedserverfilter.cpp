@@ -11,23 +11,10 @@
  * Public License.
  */
 
-#define MXS_MODULE_NAME "namedserverfilter"
-
-#include <stdio.h>
-#include <maxscale/alloc.h>
-#include <maxscale/filter.h>
-#include <maxscale/modinfo.h>
-#include <maxscale/modutil.h>
-#include <maxscale/log_manager.h>
-#include <string.h>
-#include <regex.h>
-#include <maxscale/hint.h>
-#include <maxscale/alloc.h>
-#include <maxscale/utils.h>
-
 /**
- * @file namedserverfilter.c - a very simple regular expression based filter
- * that routes to a named server if a regular expression match is found.
+ * @file namedserverfilter.cpp - a very simple regular expression based filter
+ * that routes to a named server or server type if a regular expression match
+ * is found.
  * @verbatim
  *
  * A simple regular expression based query routing filter.
@@ -38,19 +25,24 @@
  *      source=<source address to limit filter>
  *      user=<username to limit filter>
  *
- * Date         Who             Description
- * 22/01/2015   Mark Riddoch    Written as example based on regex filter
  * @endverbatim
  */
 
-static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
-static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
-static uint64_t getCapabilities(MXS_FILTER* instance);
+#define MXS_MODULE_NAME "regexhintfilter"
+
+#include <maxscale/cppdefs.hh>
+
+#include <string.h>
+#include <regex.h>
+#include <stdio.h>
+
+#include <maxscale/alloc.h>
+#include <maxscale/filter.h>
+#include <maxscale/hint.h>
+#include <maxscale/log_manager.h>
+#include <maxscale/modinfo.h>
+#include <maxscale/modutil.h>
+#include <maxscale/utils.h>
 
 typedef struct source_host
 {
@@ -71,15 +63,8 @@ typedef struct
     regex_t re; /* Compiled regex text */
 } REGEXHINT_INSTANCE;
 
-static bool validate_ip_address(const char *);
-static int check_source_host(REGEXHINT_INSTANCE *,
-                             const char *,
-                             const struct sockaddr_in *);
-static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
-static void free_instance(REGEXHINT_INSTANCE *);
-
 /**
- * The session structuee for this regex filter
+ * The session structure for this regexhint filter
  */
 typedef struct
 {
@@ -89,6 +74,24 @@ typedef struct
     int active; /* Is filter active */
 } REGEXHINT_SESSION;
 
+/* Api entrypoints */
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static uint64_t getCapabilities(MXS_FILTER* instance);
+/* End entrypoints */
+
+static bool validate_ip_address(const char *);
+static int check_source_host(REGEXHINT_INSTANCE *,
+                             const char *,
+                             const struct sockaddr_in *);
+static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
+static void free_instance(REGEXHINT_INSTANCE *);
+
 static const MXS_ENUM_VALUE option_values[] =
 {
     {"ignorecase", REG_ICASE},
@@ -96,62 +99,6 @@ static const MXS_ENUM_VALUE option_values[] =
     {"extended", REG_EXTENDED},
     {NULL}
 };
-
-/**
- * The module entry point routine. It is this routine that
- * must populate the structure that is referred to as the
- * "module object", this is a structure with the set of
- * external entry points for this module.
- *
- * @return The module object
- */
-MXS_MODULE* MXS_CREATE_MODULE()
-{
-    static MXS_FILTER_OBJECT MyObject =
-    {
-        createInstance,
-        newSession,
-        closeSession,
-        freeSession,
-        setDownstream,
-        NULL, // No Upstream requirement
-        routeQuery,
-        NULL, // No clientReply
-        diagnostic,
-        getCapabilities,
-        NULL, // No destroyInstance
-    };
-
-    static MXS_MODULE info =
-    {
-        MXS_MODULE_API_FILTER,
-        MXS_MODULE_GA,
-        MXS_FILTER_VERSION,
-        "A routing hint filter that uses regular expressions to direct queries",
-        "V1.1.0",
-        &MyObject,
-        NULL, /* Process init. */
-        NULL, /* Process finish. */
-        NULL, /* Thread init. */
-        NULL, /* Thread finish. */
-        {
-            {"match", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"server", MXS_MODULE_PARAM_SERVER, NULL, MXS_MODULE_OPT_REQUIRED},
-            {"source", MXS_MODULE_PARAM_STRING},
-            {"user", MXS_MODULE_PARAM_STRING},
-            {
-                "options",
-                MXS_MODULE_PARAM_ENUM,
-                "ignorecase",
-                MXS_MODULE_OPT_NONE,
-                option_values
-            },
-            {MXS_END_MODULE_PARAMS}
-        }
-    };
-
-    return &info;
-}
 
 /**
  * Create an instance of the filter for a particular service
@@ -166,7 +113,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
 static MXS_FILTER *
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_CALLOC(1, sizeof(REGEXHINT_INSTANCE));
+    REGEXHINT_INSTANCE *my_instance =
+        (REGEXHINT_INSTANCE*)MXS_CALLOC(1, sizeof(REGEXHINT_INSTANCE));
 
     if (my_instance)
     {
@@ -224,7 +172,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
     REGEXHINT_SESSION *my_session;
     const char *remote, *user;
 
-    if ((my_session = MXS_CALLOC(1, sizeof(REGEXHINT_SESSION))) != NULL)
+    if ((my_session = (REGEXHINT_SESSION*)MXS_CALLOC(1, sizeof(REGEXHINT_SESSION))) != NULL)
     {
         my_session->n_diverted = 0;
         my_session->n_undiverted = 0;
@@ -507,14 +455,15 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
     int netmask = 32;
     int bytes = 0;
     struct sockaddr_in serv_addr;
-    REGEXHINT_SOURCE_HOST *source_host = MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
+    REGEXHINT_SOURCE_HOST *source_host =
+        (REGEXHINT_SOURCE_HOST*)MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
 
     if (!input_host || !source_host)
     {
         return NULL;
     }
 
-    if(!validate_ip_address(input_host))
+    if (!validate_ip_address(input_host))
     {
         MXS_WARNING("The given 'source' parameter source=%s"
                     " is not a valid IP address: it will not be used.",
@@ -554,11 +503,11 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
         }
         else
         {
-           *out++ = *p++;
+            *out++ = *p++;
         }
     }
 
-    *out ='\0';
+    *out = '\0';
     source_host->netmask = netmask;
 
     /* fill IPv4 data struct */
@@ -604,4 +553,61 @@ static void free_instance(REGEXHINT_INSTANCE *instance)
     MXS_FREE(instance->source);
     MXS_FREE(instance->user);
     MXS_FREE(instance);
+}
+
+
+/**
+ * The module entry point routine. It is this routine that
+ * must populate the structure that is referred to as the
+ * "module object", this is a structure with the set of
+ * external entry points for this module.
+ *
+ * @return The module object
+ */
+extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+{
+    static MXS_FILTER_OBJECT MyObject =
+    {
+        createInstance,
+        newSession,
+        closeSession,
+        freeSession,
+        setDownstream,
+        NULL, // No Upstream requirement
+        routeQuery,
+        NULL, // No clientReply
+        diagnostic,
+        getCapabilities,
+        NULL, // No destroyInstance
+    };
+
+    static MXS_MODULE info =
+    {
+        MXS_MODULE_API_FILTER,
+        MXS_MODULE_GA,
+        MXS_FILTER_VERSION,
+        "A routing hint filter that uses regular expressions to direct queries",
+        "V1.1.0",
+        &MyObject,
+        NULL, /* Process init. */
+        NULL, /* Process finish. */
+        NULL, /* Thread init. */
+        NULL, /* Thread finish. */
+        {
+            {"match", MXS_MODULE_PARAM_STRING, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"server", MXS_MODULE_PARAM_SERVER, NULL, MXS_MODULE_OPT_REQUIRED},
+            {"source", MXS_MODULE_PARAM_STRING},
+            {"user", MXS_MODULE_PARAM_STRING},
+            {
+                "options",
+                MXS_MODULE_PARAM_ENUM,
+                "ignorecase",
+                MXS_MODULE_OPT_NONE,
+                option_values
+            },
+            {MXS_END_MODULE_PARAMS}
+        }
+    };
+
+    return &info;
 }
