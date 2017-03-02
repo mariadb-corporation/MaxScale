@@ -572,10 +572,22 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
             else if (column_is_variable_string(map->column_types[i]))
             {
                 size_t sz;
-                char *str = lestr_consume(&ptr, &sz);
+                int bytes = metadata[metadata_offset] | metadata[metadata_offset + 1] << 8;
+                if (bytes > 255)
+                {
+                    sz = gw_mysql_get_byte2(ptr);
+                    ptr += 2;
+                }
+                else
+                {
+                    sz = *ptr;
+                    ptr++;
+                }
+
                 char buf[sz + 1];
-                memcpy(buf, str, sz);
+                memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
+                ptr += sz;
                 avro_value_set_string(&field, buf);
                 ss_dassert(ptr < end);
             }
