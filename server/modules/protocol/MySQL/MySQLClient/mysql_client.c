@@ -861,7 +861,12 @@ static bool process_client_commands(DCB* dcb, int bytes_available, GWBUF** buffe
             }
 
             MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-            proto->current_command = cmd;
+            if (dcb->protocol_packet_length - MYSQL_HEADER_LEN != GW_MYSQL_MAX_PACKET_LEN)
+            {
+                /** We're processing the first packet of a command */
+                proto->current_command = cmd;
+            }
+
             dcb->protocol_packet_length = pktlen + MYSQL_HEADER_LEN;
             dcb->protocol_bytes_processed = 0;
         }
