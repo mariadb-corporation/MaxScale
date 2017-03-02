@@ -117,6 +117,8 @@ static void destroyInstance(MXS_ROUTER *instance);
 bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
+static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in);
+static void mariadb_gtid_info_free(MARIADB_GTID_INFO *in);
 
 static void stats_func(void *);
 
@@ -192,6 +194,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
             {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
+            {"mariadb_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -312,7 +315,7 @@ createInstance(SERVICE *service, char **options)
     inst->current_pos = 0;
     inst->current_safe_event = 0;
     inst->master_event_state = BLR_EVENT_DONE;
-    inst->mariadb_gtid[0] = '\0';
+    inst->last_mariadb_gtid[0] = '\0';
 
     strcpy(inst->binlog_name, "");
     strcpy(inst->prevbinlog, "");
@@ -350,6 +353,9 @@ createInstance(SERVICE *service, char **options)
     inst->request_semi_sync = config_get_bool(params, "semisync");
     inst->master_semi_sync = 0;
 
+    /* Enable MariaDB GTID tracking */
+    inst->mariadb_gtid = config_get_bool(params, "mariadb_gtid");
+
     /* Binlog encryption */
     inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
     inst->encryption.encryption_algorithm = config_get_enum(params, "encryption_algorithm", enc_algo_values);
@@ -358,6 +364,10 @@ createInstance(SERVICE *service, char **options)
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
 
+    /* MariaDB GTID repo init val */
+    inst->gtid_repo = NULL;
+
+    /* Set router uuid */
     inst->uuid = config_copy_string(params, "uuid");
 
     if (inst->uuid == NULL)
@@ -507,6 +517,10 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->encryption.enabled = config_truth_value(value);
                 }
+                else if (strcmp(options[i], "mariadb_gtid") == 0)
+                {
+                    inst->mariadb_gtid = config_truth_value(value);
+                }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
                     int ret = blr_check_encryption_algorithm(value);
@@ -624,6 +638,38 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("Service %s, binlog directory is not specified", service->name);
         free_instance(inst);
         return NULL;
+    }
+
+    /* Enable MariaDB GTID repo */
+    if (inst->mariadb10_compat &&
+        inst->mariadb_gtid)
+    {
+        if (!inst->trx_safe)
+        {
+            MXS_ERROR("MariaDB GTID can be enabled only"
+                      " with Transaction Safety feature."
+                      " Please enable it with option 'transaction_safety = on'");
+            free_instance(inst);
+            return NULL;
+        }
+
+        if ((inst->gtid_repo = hashtable_alloc(1000,
+                                               hashtable_item_strhash,
+                                               hashtable_item_strcmp)) == NULL)
+        {
+            MXS_ERROR("Service %s, cannot allocate MariaDB GTID hashtable", service->name);
+            free_instance(inst);
+            return NULL;
+        }
+
+        hashtable_memory_fns(inst->gtid_repo,
+                             hashtable_item_strdup,
+                             (HASHCOPYFN)mariadb_gtid_info_dup,
+                             hashtable_item_free,
+                             (HASHFREEFN)mariadb_gtid_info_free);
+
+        MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
+                   service->name);
     }
 
     if (inst->serverid <= 0)
@@ -1417,10 +1463,12 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
 
             dcb_printf(dcb, "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
-            if (router_inst->mariadb_gtid[0])
+
+            if (router_inst->mariadb_gtid &&
+                router_inst->last_mariadb_gtid[0])
             {
                 dcb_printf(dcb, "\tLast seen MariaDB GTID:                      %s\n",
-                           router_inst->mariadb_gtid);
+                           router_inst->last_mariadb_gtid);
             }
         }
 
@@ -2479,6 +2527,9 @@ destroyInstance(MXS_ROUTER *instance)
                     inst->service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
     }
 
+    /* Free GTID hashtable */
+    hashtable_free(inst->gtid_repo);
+
     spinlock_release(&inst->lock);
 }
 
@@ -2673,4 +2724,41 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
     {
         return 0;
     }
+}
+
+/**
+ * Free routine for GTID repo hashtable
+ *
+ * @param    in    The data to free
+ */
+static void mariadb_gtid_info_free(MARIADB_GTID_INFO *in)
+{
+    if (in)
+    {
+        MXS_FREE(in->gtid);
+        MXS_FREE(in);
+    }
+}
+
+/**
+ * Copy routine for GTID repo hashtable
+ *
+ * @param     in    The data to copy
+ * @return    New allocated value or NULL
+ */
+static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in)
+{
+    MARIADB_GTID_INFO *rval = (MARIADB_GTID_INFO *) MXS_CALLOC(1, sizeof(MARIADB_GTID_INFO));
+    char *gtid = MXS_STRDUP(in->gtid);
+    if (!gtid || !rval)
+    {
+        MXS_FREE(rval);
+        MXS_FREE(gtid);
+        return NULL;
+    }
+    rval->gtid = gtid;
+    rval->start = in-> start;
+    rval->end = in->end;
+
+    return (void *) rval;
 }

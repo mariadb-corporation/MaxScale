@@ -108,6 +108,7 @@ static int blr_get_master_semisync(GWBUF *buf);
 static void blr_terminate_master_replication(ROUTER_INSTANCE *router, uint8_t* ptr, int len);
 void blr_notify_all_slaves(ROUTER_INSTANCE *router);
 extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
+extern int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 
 static int keepalive = 1;
 
@@ -1386,16 +1387,6 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                         {
-                            char mariadb_gtid[GTID_MAX_LEN + 1];
-                            snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
-                                     domainid, hdr.serverid,
-                                     n_sequence);
-
-                            MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
-                                      mariadb_gtid,
-                                      router->binlog_name,
-                                      router->current_pos);
-
                             spinlock_acquire(&router->binlog_lock);
 
                             /**
@@ -1405,17 +1396,35 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             {
                                 MXS_ERROR("A MariaDB 10 transaction "
                                           "is already open "
-                                          "@ %lu (GTID %s) and "
+                                          "@ %lu (GTID %u-%u-%lu) and "
                                           "a new one starts @ %lu",
                                           router->binlog_position,
-                                          mariadb_gtid,
+                                          domainid,
+                                          hdr.serverid,
+                                          n_sequence,
                                           router->current_pos);
                             }
 
                             router->pending_transaction.state = BLRM_TRANSACTION_START;
 
-                            /* Save the pending GTID details */
-                            strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                            /* Handle MariaDB GTID */
+                            if (router->mariadb_gtid)
+                            {
+                                char mariadb_gtid[GTID_MAX_LEN + 1];
+                                snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                         domainid,
+                                         hdr.serverid,
+                                         n_sequence);
+
+                                MXS_DEBUG("MariaDB GTID received: (%s). Current file %s, pos %lu",
+                                          mariadb_gtid,
+                                          router->binlog_name,
+                                          router->current_pos);
+
+                                /* Save the pending GTID value */
+                                strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                            }
+
                             router->pending_transaction.start_pos = router->current_pos;
                             router->pending_transaction.end_pos = 0;
 
@@ -1629,16 +1638,25 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                             if (router->pending_transaction.state > BLRM_TRANSACTION_START)
                             {
-                                /* Update last seen MariaDB GTID */
                                 if (router->mariadb10_compat)
                                 {
-                                    strcpy(router->mariadb_gtid, router->pending_transaction.gtid);
-
-                                    /* The transaction has been saved.
+                                    /**
+                                     * The transaction has been saved.
                                      * this poins to end of binlog:
                                      * i.e. the position of a new event
                                      */
                                     router->pending_transaction.end_pos = router->current_pos;
+
+                                    if (router->mariadb10_compat &&
+                                        router->mariadb_gtid)
+                                    {
+                                        /* Update last seen MariaDB GTID */
+                                        strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
+                                        /**
+                                         * Save MariaDB GTID into repo
+                                         */
+                                        blr_save_mariadb_gtid(router);
+                                    }
                                 }
 
                                 spinlock_release(&router->binlog_lock);

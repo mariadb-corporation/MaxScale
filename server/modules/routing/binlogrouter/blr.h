@@ -541,6 +541,14 @@ typedef struct pending_transaction
     uint64_t end_pos;              /** The next_pos in COMMIT event*/
 } PENDING_TRANSACTION;
 
+/** MariaDB GTID info */
+typedef struct mariadb_gtid_info
+{
+    char *gtid;        /** MariaDB 10.x GTID */
+    uint64_t start;    /** The BEGIN pos */
+    uint64_t end;      /** The next_pos in COMMIT event*/
+} MARIADB_GTID_INFO;
+
 /**
  * The per instance data for the router.
  */
@@ -621,7 +629,11 @@ typedef struct router_instance
     int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
     void              *encryption_ctx;      /*< Encryption context */
-    char              mariadb_gtid[GTID_MAX_LEN  + 1]; /*< MariaDB 10 GTID string value */
+    char              last_mariadb_gtid[GTID_MAX_LEN  + 1]; /*< Last seen MariaDB 10 GTID */
+    bool              mariadb_gtid;         /*< Save received MariaDB GTIDs into repo.
+                                             * This allows MariaDB 10 slave servers
+                                             * connecting with GTID */
+    HASHTABLE         *gtid_repo;           /*< Storage for MariaDB GTIDs */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

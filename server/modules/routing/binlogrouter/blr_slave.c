@@ -653,10 +653,11 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             MXS_FREE(query_text);
 
-            if (router->mariadb10_compat)
+            if (router->mariadb10_compat &&
+                router->mariadb_gtid)
             {
                 spinlock_acquire(&router->binlog_lock);
-                strcpy(mariadb_gtid, router->mariadb_gtid);
+                strcpy(mariadb_gtid, router->last_mariadb_gtid);
                 spinlock_release(&router->binlog_lock);
             }
 

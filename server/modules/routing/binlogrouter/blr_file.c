@@ -172,6 +172,7 @@ static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
 extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
+int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 
 typedef struct binlog_event_desc
 {
@@ -2055,13 +2056,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
 
                 if ((flags & (MARIADB_FL_DDL | MARIADB_FL_STANDALONE)) == 0)
                 {
-                    char mariadb_gtid[GTID_MAX_LEN + 1];
-                    snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
-                             domainid, hdr.serverid,
-                             n_sequence);
-
-                    strcpy(router->mariadb_gtid, mariadb_gtid);
-
                     if (pending_transaction > BLRM_NO_TRANSACTION)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
@@ -2076,7 +2070,21 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     }
                     else
                     {
-                        pending_transaction = 1;
+                        char mariadb_gtid[GTID_MAX_LEN + 1];
+                        snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                                 domainid, hdr.serverid,
+                                 n_sequence);
+
+                        pending_transaction = BLRM_TRANSACTION_START;
+
+                        router->pending_transaction.start_pos = pos;
+                        router->pending_transaction.end_pos = 0;
+
+                        /* Set MariaDB GTID */
+                        if (router->mariadb_gtid)
+                        {
+                            strcpy(router->pending_transaction.gtid, mariadb_gtid);
+                        }
 
                         transaction_events = 0;
                         event_bytes = 0;
@@ -2134,6 +2142,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     {
                         pending_transaction = BLRM_TRANSACTION_START;
 
+                        router->pending_transaction.start_pos = pos;
+                        router->pending_transaction.end_pos = 0;
+
                         transaction_events = 0;
                         event_bytes = 0;
                         if (!(debug & BLR_CHECK_ONLY))
@@ -2190,11 +2201,25 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 MXS_DEBUG("< Transaction @ pos %llu, is now closed @ %llu. %lu events seen",
                           last_known_commit, pos, transaction_events);
             }
+
             pending_transaction = BLRM_NO_TRANSACTION;
+
+            router->pending_transaction.end_pos = hdr.next_pos;
+
             last_known_commit = pos;
 
             /* Reset the event replacing indicator */
             replace_trx_events = false;
+
+            if (router->mariadb10_compat &&
+                router->mariadb_gtid)
+            {
+                /* Update Last Seen MariaDB GTID */
+                strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
+
+                /* Save MariaDB 10 GTID */
+                blr_save_mariadb_gtid(router);
+            }
 
             total_events += transaction_events;
 
@@ -3272,4 +3297,38 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
     {
         *p = tolower(*p);
     }
+}
+
+/**
+ * Save MariaDB GTID found in complete transaction
+ *
+ * @param    inst The router instance
+ * @return   1 on success, 0 otherwise
+ */
+int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
+{
+    MARIADB_GTID_INFO gtid_info;
+
+    gtid_info.gtid = inst->pending_transaction.gtid;
+    gtid_info.start = inst->pending_transaction.start_pos;
+    gtid_info.end = inst->pending_transaction.end_pos;
+
+    /* Save GTID into repo */
+    if (!hashtable_add(inst->gtid_repo,
+                      inst->pending_transaction.gtid,
+                      &gtid_info))
+    {
+         MXS_ERROR("Service %s: error saving mariadb GTID %s into repo",
+                   inst->service->name,
+                   inst->pending_transaction.gtid);
+         return 0;
+    }
+
+    MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu:%lu",
+              gtid_info.gtid,
+              inst->binlog_name,
+              gtid_info.start,
+              gtid_info.end);
+
+    return 1;
 }
