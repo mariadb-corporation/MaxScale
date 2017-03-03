@@ -271,7 +271,6 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
     /** There should always be a table map event prior to a row event.
      * TODO: Make the active_maps dynamic */
     TABLE_MAP *map = router->active_maps[table_id % sizeof(router->active_maps)];
-    ss_dassert(map);
 
     if (map)
     {
@@ -289,10 +288,11 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
+
             while (ptr - start < hdr->event_size - BINLOG_EVENT_HDR_LEN)
             {
                 /** Add the current GTID and timestamp */
-                uint8_t *end = ptr + hdr->event_size;
+                uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
                 int event_type = get_event_type(hdr->event_type);
                 prepare_record(router, hdr, event_type, &record);
                 ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
@@ -597,8 +597,15 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                avro_value_set_bytes(&field, ptr, len);
-                ptr += len;
+                if (len)
+                {
+                    avro_value_set_bytes(&field, ptr, len);
+                    ptr += len;
+                }
+                else
+                {
+                    avro_value_set_null(&field);
+                }
                 ss_dassert(ptr < end);
             }
             else if (column_is_temporal(map->column_types[i]))
