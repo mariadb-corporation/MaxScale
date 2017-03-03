@@ -15,8 +15,9 @@
 #include "cachefiltersession.hh"
 #include <new>
 #include <maxscale/alloc.h>
-#include <maxscale/query_classifier.h>
+#include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
+#include <maxscale/query_classifier.h>
 #include "storage.hh"
 
 namespace
@@ -34,6 +35,108 @@ inline bool cache_max_resultset_size_exceeded(const CACHE_CONFIG& config, uint64
 
 }
 
+namespace
+{
+
+const char* NON_CACHEABLE_FUNCTIONS[] =
+{
+    "benchmark",
+    "connection_id",
+    "convert_tz",
+    "curdate",
+    "current_date",
+    "current_timestamp",
+    "curtime",
+    "database",
+    "encrypt",
+    "found_rows",
+    "get_lock",
+    "is_free_lock",
+    "is_used_lock",
+    "last_insert_id",
+    "load_file",
+    "localtime",
+    "localtimestamp",
+    "master_pos_wait",
+    "now",
+    "rand",
+    "release_lock",
+    "session_user",
+    "sleep",
+    "sysdate",
+    "system_user",
+    "unix_timestamp",
+    "user",
+    "uuid",
+    "uuid_short",
+};
+
+const char* NON_CACHEABLE_VARIABLES[] =
+{
+    "current_date",
+    "current_timestamp",
+    "localtime",
+    "localtimestamp",
+};
+
+const size_t N_NON_CACHEABLE_FUNCTIONS = sizeof(NON_CACHEABLE_FUNCTIONS)/sizeof(NON_CACHEABLE_FUNCTIONS[0]);
+const size_t N_NON_CACHEABLE_VARIABLES = sizeof(NON_CACHEABLE_VARIABLES)/sizeof(NON_CACHEABLE_VARIABLES[0]);
+
+int compare_name(const void* pLeft, const void* pRight)
+{
+    return strcasecmp((const char*)pLeft, *(const char**)pRight);
+}
+
+inline bool uses_name(const char* zName, const char** pzNames, size_t nNames)
+{
+    return bsearch(zName, pzNames, nNames, sizeof(const char*), compare_name) != NULL;
+}
+
+bool uses_non_cacheable_function(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FUNCTION_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_function_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FUNCTION_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->name, NON_CACHEABLE_FUNCTIONS, N_NON_CACHEABLE_FUNCTIONS);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+bool uses_non_cacheable_variable(GWBUF* pPacket)
+{
+    bool rv = false;
+
+    const QC_FIELD_INFO* pInfo;
+    size_t nInfos;
+
+    qc_get_field_info(pPacket, &pInfo, &nInfos);
+
+    const QC_FIELD_INFO* pEnd = pInfo + nInfos;
+
+    while (!rv && (pInfo != pEnd))
+    {
+        rv = uses_name(pInfo->column, NON_CACHEABLE_VARIABLES, N_NON_CACHEABLE_VARIABLES);
+
+        ++pInfo;
+    }
+
+    return rv;
+}
+
+}
+
+
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
     , m_state(CACHE_EXPECTING_NOTHING)
@@ -41,6 +144,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
+    , m_is_read_only(true)
 {
     memset(m_key.data, 0, CACHE_KEY_MAXLEN);
 
@@ -129,104 +233,82 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         break;
 
     case MYSQL_COM_QUERY:
+        if (should_consult_cache(pPacket))
         {
-            // We do not care whether the query was fully parsed or not.
-            // If a query cannot be fully parsed, the worst thing that can
-            // happen is that caching is not used, even though it would be
-            // possible.
-            if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
+            if (m_pCache->should_store(m_zDefaultDb, pPacket))
             {
-                MXS_SESSION *session = m_pSession;
-
-                if ((session_is_autocommit(session) && !session_trx_is_active(session)) ||
-                    session_trx_is_read_only(session))
+                if (m_pCache->should_use(m_pSession))
                 {
-                    if (m_pCache->should_store(m_zDefaultDb, pPacket))
+                    GWBUF* pResponse;
+                    cache_result_t result = get_cached_response(pPacket, &pResponse);
+
+                    if (CACHE_RESULT_IS_OK(result))
                     {
-                        if (m_pCache->should_use(m_pSession))
+                        if (CACHE_RESULT_IS_STALE(result))
                         {
-                            GWBUF* pResponse;
-                            cache_result_t result = get_cached_response(pPacket, &pResponse);
+                            // The value was found, but it was stale. Now we need to
+                            // figure out whether somebody else is already fetching it.
 
-                            if (CACHE_RESULT_IS_OK(result))
+                            if (m_pCache->must_refresh(m_key, this))
                             {
-                                if (CACHE_RESULT_IS_STALE(result))
+                                // We were the first ones who hit the stale item. It's
+                                // our responsibility now to fetch it.
+                                if (log_decisions())
                                 {
-                                    // The value was found, but it was stale. Now we need to
-                                    // figure out whether somebody else is already fetching it.
-
-                                    if (m_pCache->must_refresh(m_key, this))
-                                    {
-                                        // We were the first ones who hit the stale item. It's
-                                        // our responsibility now to fetch it.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale, fetching fresh from server.");
-                                        }
-
-                                        // As we don't use the response it must be freed.
-                                        gwbuf_free(pResponse);
-
-                                        m_refreshing = true;
-                                        fetch_from_server = true;
-                                    }
-                                    else
-                                    {
-                                        // Somebody is already fetching the new value. So, let's
-                                        // use the stale value. No point in hitting the server twice.
-                                        if (log_decisions())
-                                        {
-                                            MXS_NOTICE("Cache data is stale but returning it, fresh "
-                                                       "data is being fetched already.");
-                                        }
-                                        fetch_from_server = false;
-                                    }
+                                    MXS_NOTICE("Cache data is stale, fetching fresh from server.");
                                 }
-                                else
-                                {
-                                    if (log_decisions())
-                                    {
-                                        MXS_NOTICE("Using fresh data from cache.");
-                                    }
-                                    fetch_from_server = false;
-                                }
-                            }
-                            else
-                            {
+
+                                // As we don't use the response it must be freed.
+                                gwbuf_free(pResponse);
+
+                                m_refreshing = true;
                                 fetch_from_server = true;
                             }
-
-                            if (fetch_from_server)
-                            {
-                                m_state = CACHE_EXPECTING_RESPONSE;
-                            }
                             else
                             {
-                                m_state = CACHE_EXPECTING_NOTHING;
-                                gwbuf_free(pPacket);
-                                DCB *dcb = m_pSession->client_dcb;
-
-                                // TODO: This is not ok. Any filters before this filter, will not
-                                // TODO: see this data.
-                                rv = dcb->func.write(dcb, pResponse);
+                                // Somebody is already fetching the new value. So, let's
+                                // use the stale value. No point in hitting the server twice.
+                                if (log_decisions())
+                                {
+                                    MXS_NOTICE("Cache data is stale but returning it, fresh "
+                                               "data is being fetched already.");
+                                }
+                                fetch_from_server = false;
                             }
+                        }
+                        else
+                        {
+                            if (log_decisions())
+                            {
+                                MXS_NOTICE("Using fresh data from cache.");
+                            }
+                            fetch_from_server = false;
                         }
                     }
                     else
                     {
-                        m_state = CACHE_IGNORING_RESPONSE;
+                        fetch_from_server = true;
                     }
-                }
-                else
-                {
-                    if (log_decisions())
+
+                    if (fetch_from_server)
                     {
-                        MXS_NOTICE("autocommit = %s and transaction state %s => Not using or "
-                                   "storing to cache.",
-                                   session_is_autocommit(m_pSession) ? "ON" : "OFF",
-                                   session_trx_state_to_string(session_get_trx_state(m_pSession)));
+                        m_state = CACHE_EXPECTING_RESPONSE;
+                    }
+                    else
+                    {
+                        m_state = CACHE_EXPECTING_NOTHING;
+                        gwbuf_free(pPacket);
+                        DCB *dcb = m_pSession->client_dcb;
+
+                        // TODO: This is not ok. Any filters before this filter, will not
+                        // TODO: see this data.
+                        rv = dcb->func.write(dcb, pResponse);
                     }
                 }
+            }
+            else
+            {
+                m_state = CACHE_IGNORING_RESPONSE;
             }
         }
         break;
@@ -663,4 +745,126 @@ void CacheFilterSession::store_result()
         m_pCache->refreshed(m_key, this);
         m_refreshing = false;
     }
+}
+
+/**
+ * Whether the cache should be consulted.
+ *
+ * @param pParam The GWBUF being handled.
+ *
+ * @return True, if the cache should be consulted, false otherwise.
+ */
+bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
+{
+    bool consult_cache = false;
+
+    uint32_t type_mask = qc_get_type_mask(pPacket);
+
+    const char* zReason = NULL;
+
+    if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
+    {
+        // When a transaction is started, we initially assume it is read-only.
+        m_is_read_only = true;
+    }
+    else if (!qc_query_is_type(type_mask, QUERY_TYPE_READ))
+    {
+        // Thereafter, if there's any non-read statement we mark it as non-readonly.
+        // Note that the state of m_is_read_only is not consulted if there is no
+        // on-going transaction of if there is an explicitly read-only transaction.
+        m_is_read_only = false;
+    }
+
+    if (!session_trx_is_active(m_pSession))
+    {
+        if (log_decisions())
+        {
+            zReason = "no transaction";
+        }
+        consult_cache = true;
+    }
+    else if (session_trx_is_read_only(m_pSession))
+    {
+        if (log_decisions())
+        {
+            zReason = "explicitly read-only transaction";
+        }
+        consult_cache = true;
+    }
+    else if (m_is_read_only)
+    {
+        if (log_decisions())
+        {
+            zReason = "ordinary transaction that has so far been read-only";
+        }
+        consult_cache = true;
+    }
+    else
+    {
+        if (log_decisions())
+        {
+            zReason = "ordinary transaction with non-read statements";
+        }
+    }
+
+    if (consult_cache)
+    {
+        if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
+        {
+            if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+            {
+                consult_cache = false;
+                zReason = "user variables are read";
+            }
+            else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+            {
+                consult_cache = false;
+                zReason = "system variables are read";
+            }
+            else if (uses_non_cacheable_function(pPacket))
+            {
+                consult_cache = false;
+                zReason = "uses non-cacheable function";
+            }
+            else if (uses_non_cacheable_variable(pPacket))
+            {
+                consult_cache = false;
+                zReason = "uses non-cacheable variable";
+            }
+        }
+        else
+        {
+            consult_cache = false;
+            zReason = "statement is not SELECT";
+        }
+    }
+
+    if (log_decisions())
+    {
+        char* pSql;
+        int length;
+        const int max_length = 40;
+
+        // At this point we know it's a COM_QUERY and that the buffer is contiguous
+        modutil_extract_SQL(pPacket, &pSql, &length);
+
+        const char* zFormat;
+
+        if (length <= max_length)
+        {
+            zFormat = "%s, \"%.*s\", %s.";
+        }
+        else
+        {
+            zFormat = "%s, \"%.*s...\", %s.";
+            length = max_length - 3; // strlen("...");
+        }
+
+        const char* zDecision = (consult_cache ? "CONSULT" : "IGNORE ");
+
+        ss_dassert(zReason);
+        MXS_NOTICE(zFormat, zDecision, length, pSql, zReason);
+    }
+
+    return consult_cache;
 }

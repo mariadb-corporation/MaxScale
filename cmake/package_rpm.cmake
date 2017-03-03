@@ -30,6 +30,8 @@ if(TARGET_COMPONENT STREQUAL "core")
 
   # Installing this prevents RPM from deleting the /var/lib/maxscale folder
   install(DIRECTORY DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
+elseif(TARGET_COMPONENT STREQUAL "devel")
+  set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n${DESCRIPTION_TEXT}")
 endif()
 
 if(EXTRA_PACKAGE_DEPENDENCIES)

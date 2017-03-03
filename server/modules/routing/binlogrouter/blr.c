@@ -90,21 +90,21 @@
 /* The router entry points */
 static  MXS_ROUTER  *createInstance(SERVICE *service, char **options);
 static void free_instance(ROUTER_INSTANCE *instance);
-static  void    *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void    closeSession(MXS_ROUTER *instance, void *router_session);
-static  void    freeSession(MXS_ROUTER *instance, void *router_session);
-static  int     routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
-static  void    diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static  void    clientReply(MXS_ROUTER  *instance,
-                            void    *router_session,
-                            GWBUF   *queue,
-                            DCB     *backend_dcb);
-static  void    errorReply(MXS_ROUTER  *instance,
-                           void    *router_session,
-                           GWBUF   *message,
-                           DCB     *backend_dcb,
-                           mxs_error_action_t     action,
-                           bool    *succp);
+static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  void clientReply(MXS_ROUTER *instance,
+                         MXS_ROUTER_SESSION *router_session,
+                         GWBUF *queue,
+                         DCB *backend_dcb);
+static  void errorReply(MXS_ROUTER *instance,
+                        MXS_ROUTER_SESSION *router_session,
+                        GWBUF *message,
+                        DCB *backend_dcb,
+                        mxs_error_action_t action,
+                        bool *succp);
 
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
@@ -952,7 +952,7 @@ free_instance(ROUTER_INSTANCE *instance)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
+static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
@@ -1022,7 +1022,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  *
  */
 static void freeSession(MXS_ROUTER* router_instance,
-                        void*   router_client_ses)
+                        MXS_ROUTER_SESSION* router_client_ses)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_client_ses;
@@ -1090,7 +1090,7 @@ static void freeSession(MXS_ROUTER* router_instance,
  * @param router_session    The session being closed
  */
 static void
-closeSession(MXS_ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1176,7 +1176,7 @@ closeSession(MXS_ROUTER *instance, void *router_session)
  * @return The number of bytes sent
  */
 static int
-routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     ROUTER_SLAVE *slave = (ROUTER_SLAVE *)router_session;
@@ -1680,7 +1680,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static  void
-clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
 
@@ -1726,7 +1726,7 @@ extract_message(GWBUF *errpkt)
  */
 static void
 errorReply(MXS_ROUTER *instance,
-           void *router_session,
+           MXS_ROUTER_SESSION *router_session,
            GWBUF *message,
            DCB *backend_dcb,
            mxs_error_action_t action,

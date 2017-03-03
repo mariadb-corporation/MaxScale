@@ -65,18 +65,18 @@ static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWB
 
 /* The router entry points */
 static  MXS_ROUTER *createInstance(SERVICE *service, char **options);
-static  void    *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void    closeSession(MXS_ROUTER *instance, void *router_session);
-static  void    freeSession(MXS_ROUTER *instance, void *router_session);
-static  int     execute(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
-static  void    diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
 static  uint64_t getCapabilities(MXS_ROUTER* instance);
-static  void    handleError(MXS_ROUTER     *instance,
-                            void           *router_session,
-                            GWBUF          *errbuf,
-                            DCB            *backend_dcb,
-                            mxs_error_action_t action,
-                            bool           *succp);
+static  void handleError(MXS_ROUTER     *instance,
+                         MXS_ROUTER_SESSION  *router_session,
+                         GWBUF          *errbuf,
+                         DCB            *backend_dcb,
+                         mxs_error_action_t action,
+                         bool           *succp);
 
 static SPINLOCK     instlock;
 static INFO_INSTANCE    *instances;
@@ -180,7 +180,7 @@ createInstance(SERVICE *service, char **options)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static  void    *
+static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     INFO_INSTANCE *inst = (INFO_INSTANCE *)instance;
@@ -212,7 +212,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param router_session    The session being closed
  */
 static  void
-closeSession(MXS_ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     INFO_INSTANCE *inst = (INFO_INSTANCE *)instance;
     INFO_SESSION *session = (INFO_SESSION *)router_session;
@@ -249,7 +249,7 @@ closeSession(MXS_ROUTER *instance, void *router_session)
  * @param router_client_session The router session as returned from newSession
  */
 static void freeSession(MXS_ROUTER* router_instance,
-                        void*   router_client_session)
+                        MXS_ROUTER_SESSION* router_client_session)
 {
     MXS_FREE(router_client_session);
     return;
@@ -268,12 +268,12 @@ static void freeSession(MXS_ROUTER* router_instance,
  * @param succp           Result of action: true iff router can continue
  *
  */
-static void handleError(MXS_ROUTER     *instance,
-                        void           *router_session,
-                        GWBUF          *errbuf,
-                        DCB            *backend_dcb,
+static void handleError(MXS_ROUTER         *instance,
+                        MXS_ROUTER_SESSION *router_session,
+                        GWBUF              *errbuf,
+                        DCB                *backend_dcb,
                         mxs_error_action_t action,
-                        bool           *succp)
+                        bool               *succp)
 
 {
     DCB *client_dcb;
@@ -316,7 +316,7 @@ static void handleError(MXS_ROUTER     *instance,
  * @return The number of bytes sent
  */
 static int
-execute(MXS_ROUTER *rinstance, void *router_session, GWBUF *queue)
+execute(MXS_ROUTER *rinstance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     INFO_INSTANCE *instance = (INFO_INSTANCE *)rinstance;
     INFO_SESSION *session = (INFO_SESSION *)router_session;

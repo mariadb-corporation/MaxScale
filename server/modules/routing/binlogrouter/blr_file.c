@@ -2463,6 +2463,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     if (chmod(tmp_file, S_IRUSR | S_IWUSR) < 0)
     {
+        fclose(config_file);
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
                  strerror_r(errno, err_msg, sizeof(err_msg)), errno);
         return 2;

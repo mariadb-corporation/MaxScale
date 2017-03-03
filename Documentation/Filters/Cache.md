@@ -3,12 +3,19 @@
 This filter was introduced in MariaDB MaxScale 2.1.
 
 ## Overview
+_Note that the cache is still experimental and that non-backward compatible
+changes may be made._
+
 The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-_Note that the cache is still experimental and that non-backward compatible
-changes may be made._
+SELECTs using the following functions will not be cached: `BENCHMARK`,
+`CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
+`CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
+`IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
+`MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
+`SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
 
 Note that installing the cache causes all statements to be parsed. The
 implication of that is that unless statements _already_ need to be parsed,
@@ -26,40 +33,24 @@ Currently there is **no** cache invalidation, apart from _time-to-live_.
 Resultsets of prepared statements are **not** cached.
 
 ### Transactions
-The cache will be used and populated **only** if there is _no_ on-going
-transaction or if an on-going transaction is _explicitly_ read-only (that is,
-`START TRANSACTION READ ONLY`).
+The cache will be used and populated in the following circumstances:
+
+* There is _no_ explicit transaction active, that is, _autocommit_ is used,
+* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
+  READ ONLY`) active, or
+* there is a transaction active and _no_ statement that modify the database
+  has been performed.
+
+In practice, the last bullet point basically means that if a transaction has
+been started with `BEGIN` or `START TRANSACTION READ WRITE`, then the cache
+will be used and populated until the first `UPDATE`, `INSERT` or `DELETE`
+statement is encountered.
 
 ### Variables
-The cache key is effectively the entire _SELECT_ statement. However, the
-value of any variables used in the select is **not** considered. For instance,
-if a variable is used in the _WHERE_ clause of the select, a subsequent
-identical select will return the wrong result, if the value of the variable
-has been changed in between.
-```
-MySQL [testdb]> create table tbl (a int, b int);
-MySQL [testdb]> insert into tbl values (1, 2), (3, 4);
-
-MySQL [testdb]> set @var=2;
-MySQL [testdb]> select a from tbl where b=@var;
-+------+
-| a    |
-+------+
-|    1 |
-+------+
-
-MySQL [testdb]> set @var=4;
-MySQL [testdb]> select a from tbl where b=@var;
-+------+
-| a    |
-+------+
-|    1 |
-+------+
-```
-In the second case, the correct answer would have been `3` and not `1`.
+If user or system variables are used in the _SELECT_ statement, the result
+will not be cached.
 
 ### Security
-
 The cache is **not** aware of grants.
 
 The implication is that unless the cache has been explicitly configured

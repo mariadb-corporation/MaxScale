@@ -143,7 +143,7 @@ static struct option long_options[] =
 static bool syslog_configured = false;
 static bool maxlog_configured = false;
 static bool log_to_shm_configured = false;
-static int  last_signal = 0;
+static volatile sig_atomic_t  last_signal = 0;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static void log_flush_shutdown(void);
@@ -381,7 +381,7 @@ sigchld_handler (int i)
     }
 }
 
-int fatal_handling = 0;
+volatile sig_atomic_t fatal_handling = 0;
 
 static int signal_set(int sig, void (*handler)(int));
 
@@ -405,12 +405,12 @@ sigfatal_handler(int i)
 
     {
         void *addrs[128];
-        int n, count = backtrace(addrs, 128);
+        int count = backtrace(addrs, 128);
         char** symbols = backtrace_symbols(addrs, count);
 
         if (symbols)
         {
-            for (n = 0; n < count; n++)
+            for (int n = 0; n < count; n++)
             {
                 MXS_ALERT("  %s\n", symbols[n]);
             }
@@ -2023,6 +2023,9 @@ int main(int argc, char **argv)
     unlock_pidfile();
     unlink_pidfile();
 
+    ERR_free_strings();
+    EVP_cleanup();
+
 return_main:
 
     mxs_log_flush_sync();
@@ -2277,6 +2280,12 @@ bool pid_file_exists()
 
 static int write_pid_file()
 {
+    if (!mxs_mkdir_all(get_piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+    {
+        MXS_ERROR("Failed to create PID directory.");
+        return 1;
+    }
+
     char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
     char pidstr[STRING_BUFFER_SIZE];
 

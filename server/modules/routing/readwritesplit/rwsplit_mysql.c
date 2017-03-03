@@ -287,32 +287,6 @@ handle_target_is_all(route_target_t route_target,
     return result;
 }
 
-/* This is MySQL specific */
-/**
- * @brief Write an error message to the log indicating failure
- *
- * Used when an attempt to lock the router session fails.
- *
- * @param querybuf      Query buffer containing packet
- * @param packet_type   Integer (enum) indicating type of packet
- * @param qtype         Query type
- */
-void
-session_lock_failure_handling(GWBUF *querybuf, int packet_type, qc_query_type_t qtype)
-{
-    if (packet_type != MYSQL_COM_QUIT)
-    {
-        /* NOTE: modutil_get_query is MySQL specific */
-        char *query_str = modutil_get_query(querybuf);
-
-        MXS_ERROR("Can't route %s:%s:\"%s\" to "
-                  "backend server. Router is closed.",
-                  STRPACKETTYPE(packet_type), STRQTYPE(qtype),
-                  (query_str == NULL ? "(empty)" : query_str));
-        MXS_FREE(query_str);
-    }
-}
-
 /*
  * Probably MySQL specific because of modutil function
  */

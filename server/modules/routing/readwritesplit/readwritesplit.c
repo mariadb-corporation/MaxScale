@@ -69,14 +69,14 @@
  */
 
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_ROUTER *instance, void *session);
-static void freeSession(MXS_ROUTER *instance, void *session);
-static int routeQuery(MXS_ROUTER *instance, void *session, GWBUF *queue);
+static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
+static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
+static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue,
+static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-static void handleError(MXS_ROUTER *instance, void *router_session,
+static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
                         GWBUF *errmsgbuf, DCB *backend_dcb,
                         mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
@@ -250,7 +250,6 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
         return NULL;
     }
     router->service = service;
-    spinlock_init(&router->lock);
 
     /*
      * Until we know otherwise assume we have some available slaves.
@@ -313,7 +312,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
  * @param session   The MaxScale session (generic connection data)
  * @return Session specific data for this session, i.e. a router session
  */
-static void *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
+static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)router_inst;
     ROUTER_CLIENT_SES *client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
@@ -331,7 +330,6 @@ static void *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
     client_rses->client_dcb = session->client_dcb;
     client_rses->have_tmp_tables = false;
     client_rses->forced_node = NULL;
-    spinlock_init(&client_rses->rses_lock);
     memcpy(&client_rses->rses_config, &router->rwsplit_config, sizeof(client_rses->rses_config));
 
     int router_nservers = router->service->n_dbref;
@@ -404,12 +402,12 @@ static void *newSession(MXS_ROUTER *router_inst, MXS_SESSION *session)
  * @param instance  The router instance data
  * @param session   The router session being closed
  */
-static void closeSession(MXS_ROUTER *instance, void *router_session)
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
     CHK_CLIENT_RSES(router_cli_ses);
 
-    if (!router_cli_ses->rses_closed && rses_begin_locked_router_action(router_cli_ses))
+    if (!router_cli_ses->rses_closed)
     {
         /**
          * Mark router session as closed. @c rses_closed is checked at the start
@@ -465,8 +463,6 @@ static void closeSession(MXS_ROUTER *instance, void *router_session)
                 }
             }
         }
-
-        rses_end_locked_router_action(router_cli_ses);
     }
 }
 
@@ -480,7 +476,7 @@ static void closeSession(MXS_ROUTER *instance, void *router_session)
  * @param router_client_session Client session
  *
  */
-static void freeSession(MXS_ROUTER *router_instance, void *router_client_session)
+static void freeSession(MXS_ROUTER *router_instance, MXS_ROUTER_SESSION *router_client_session)
 {
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
 
@@ -553,7 +549,7 @@ void close_failed_bref(backend_ref_t *bref, bool fatal)
  * @param querybuf       Buffer containing the query
  * @return 1 on success, 0 on error
  */
-static int routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *querybuf)
+static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *querybuf)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *) router_session;
@@ -665,34 +661,27 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
  * @param   backend_dcb The backend DCB
  * @param   queue       The GWBUF with reply data
  */
-static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *writebuf,
+static void clientReply(MXS_ROUTER *instance,
+                        MXS_ROUTER_SESSION *router_session,
+                        GWBUF *writebuf,
                         DCB *backend_dcb)
 {
-    DCB *client_dcb;
-    ROUTER_INSTANCE *router_inst;
-    ROUTER_CLIENT_SES *router_cli_ses;
-    sescmd_cursor_t *scur = NULL;
-    backend_ref_t *bref;
+    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)instance;
+    DCB *client_dcb = backend_dcb->session->client_dcb;
 
-    router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-    router_inst = (ROUTER_INSTANCE *)instance;
     CHK_CLIENT_RSES(router_cli_ses);
 
     /**
      * Lock router client session for secure read of router session members.
      * Note that this could be done without lock by using version #
      */
-    if (!rses_begin_locked_router_action(router_cli_ses))
+    if (router_cli_ses->rses_closed)
     {
         gwbuf_free(writebuf);
-        goto lock_failed;
+        return;
     }
-    /** Holding lock ensures that router session remains open */
-    ss_dassert(backend_dcb->session != NULL);
-    client_dcb = backend_dcb->session->client_dcb;
 
-    /** Unlock */
-    rses_end_locked_router_action(router_cli_ses);
     /**
      * 1. Check if backend received reply to sescmd.
      * 2. Check sescmd's state whether OK_PACKET has been
@@ -702,32 +691,10 @@ static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *write
      * 3. If reply for this sescmd is sent, lock property cursor
      *    and
      */
-    if (client_dcb == NULL)
-    {
-        gwbuf_free(writebuf);
-        /** Log that client was closed before reply */
-        goto lock_failed;
-    }
-    /** Lock router session */
-    if (!rses_begin_locked_router_action(router_cli_ses))
-    {
-        /** Log to debug that router was closed */
-        goto lock_failed;
-    }
-    bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
 
-#if !defined(FOR_BUG548_FIX_ONLY)
-    /** This makes the issue becoming visible in poll.c */
-    if (bref == NULL)
-    {
-        /** Unlock router session */
-        rses_end_locked_router_action(router_cli_ses);
-        goto lock_failed;
-    }
-#endif
-
+    backend_ref_t *bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
     CHK_BACKEND_REF(bref);
-    scur = &bref->bref_sescmd_cur;
+    sescmd_cursor_t *scur = &bref->bref_sescmd_cur;
 
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
@@ -788,15 +755,7 @@ static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *write
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
-    /** Unlock router session */
-    rses_end_locked_router_action(router_cli_ses);
 
-    /** Lock router session */
-    if (!rses_begin_locked_router_action(router_cli_ses))
-    {
-        /** Log to debug that router was closed */
-        goto lock_failed;
-    }
     /** There is one pending session command to be executed. */
     if (sescmd_cursor_is_active(scur))
     {
@@ -847,11 +806,6 @@ static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *write
         gwbuf_free(bref->bref_pending_cmd);
         bref->bref_pending_cmd = NULL;
     }
-    /** Unlock router session */
-    rses_end_locked_router_action(router_cli_ses);
-
-lock_failed:
-    return;
 }
 
 
@@ -875,64 +829,6 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  * code. Their prototypes are included in rwsplit_internal.h since these
  * functions are not intended for use outside the read write split router.
  */
-
-/**
- * @brief Acquires lock to router client session if it is not closed.
- *
- * Parameters:
- * @param rses - in, use
- *
- *
- * @return true if router session was not closed. If return value is true
- * it means that router is locked, and must be unlocked later. False, if
- * router was closed before lock was acquired.
- *
- */
-bool rses_begin_locked_router_action(ROUTER_CLIENT_SES *rses)
-{
-    bool succp = false;
-
-    if (rses == NULL)
-    {
-        return false;
-    }
-
-    CHK_CLIENT_RSES(rses);
-
-    if (rses->rses_closed)
-    {
-
-        goto return_succp;
-    }
-    spinlock_acquire(&rses->rses_lock);
-    if (rses->rses_closed)
-    {
-        spinlock_release(&rses->rses_lock);
-        goto return_succp;
-    }
-    succp = true;
-
-return_succp:
-    return succp;
-}
-
-/** to be inline'd */
-
-/**
- * @brief Releases router client session lock.
- *
- * Parameters:
- * @param rses - <usage>
- *          <description>
- *
- * @return void
- *
- */
-void rses_end_locked_router_action(ROUTER_CLIENT_SES *rses)
-{
-    CHK_CLIENT_RSES(rses);
-    spinlock_release(&rses->rses_lock);
-}
 
 /*
  * @brief Clear one or more bits in the backend reference state
@@ -1135,28 +1031,21 @@ int rses_get_max_replication_lag(ROUTER_CLIENT_SES *rses)
  */
 backend_ref_t *get_bref_from_dcb(ROUTER_CLIENT_SES *rses, DCB *dcb)
 {
-    backend_ref_t *bref;
-    int i = 0;
+    ss_dassert(dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(dcb);
     CHK_CLIENT_RSES(rses);
 
-    bref = rses->rses_backend_ref;
-
-    while (i < rses->rses_nbackends)
+    for (int i = 0; i < rses->rses_nbackends; i++)
     {
-        if (bref->bref_dcb == dcb)
+        if (rses->rses_backend_ref[i].bref_dcb == dcb)
         {
-            break;
+            return &rses->rses_backend_ref[i];
         }
-        bref++;
-        i += 1;
     }
 
-    if (i == rses->rses_nbackends)
-    {
-        bref = NULL;
-    }
-    return bref;
+    /** We should always have a valid backend reference */
+    ss_dassert(false);
+    return NULL;
 }
 
 /**
@@ -1284,17 +1173,19 @@ static bool rwsplit_process_router_options(ROUTER_INSTANCE *router,
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
-static void handleError(MXS_ROUTER *instance, void *router_session,
-                        GWBUF *errmsgbuf, DCB *problem_dcb,
-                        mxs_error_action_t action, bool *succp)
+static void handleError(MXS_ROUTER *instance,
+                        MXS_ROUTER_SESSION *router_session,
+                        GWBUF *errmsgbuf,
+                        DCB *problem_dcb,
+                        mxs_error_action_t action,
+                        bool *succp)
 {
-    MXS_SESSION *session;
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *)instance;
     ROUTER_CLIENT_SES *rses = (ROUTER_CLIENT_SES *)router_session;
-
+    CHK_CLIENT_RSES(rses);
     CHK_DCB(problem_dcb);
 
-    if (!rses_begin_locked_router_action(rses))
+    if (rses->rses_closed)
     {
         /** Session is already closed */
         problem_dcb->dcb_errhandle_called = true;
@@ -1311,32 +1202,24 @@ static void handleError(MXS_ROUTER *instance, void *router_session,
          * be safe with the code as it stands on 9 Sept 2015 - MNB
          */
         *succp = true;
-        rses_end_locked_router_action(rses);
         return;
     }
     else
     {
         problem_dcb->dcb_errhandle_called = true;
     }
-    session = problem_dcb->session;
 
-    backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
+    MXS_SESSION *session = problem_dcb->session;
+    ss_dassert(session);
 
-    if (session == NULL)
-    {
-        MXS_ERROR("Session of DCB %p is NULL, won't close the DCB.", problem_dcb);
-        ss_dassert(false);
-        *succp = false;
-    }
-    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
+    if (problem_dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
     {
         dcb_close(problem_dcb);
         *succp = false;
     }
     else
     {
-        CHK_SESSION(session);
-        CHK_CLIENT_RSES(rses);
+        backend_ref_t *bref = get_bref_from_dcb(rses, problem_dcb);
 
         switch (action)
         {
@@ -1449,8 +1332,6 @@ static void handleError(MXS_ROUTER *instance, void *router_session,
             break;
         }
     }
-
-    rses_end_locked_router_action(rses);
 }
 
 /**
@@ -1570,7 +1451,6 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
     bool succp;
 
     myrses = *rses;
-    ss_dassert(SPINLOCK_IS_LOCKED(&myrses->rses_lock));
 
     ses = backend_dcb->session;
     CHK_SESSION(ses);

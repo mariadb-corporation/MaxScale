@@ -33,7 +33,9 @@ MXS_BEGIN_DECLS
  * from the @c createInstance function of a filter module and subsequently
  * passing it back to the API functions of the filter.
  */
-typedef void *MXS_FILTER;
+typedef struct mxs_filter
+{
+} MXS_FILTER;
 
 /**
  * MXS_FILTER_SESSION is an opaque type representing the session related
@@ -43,7 +45,9 @@ typedef void *MXS_FILTER;
  * from the @c newSession function of a filter module and subsequently
  * passing it back to the API functions of the filter.
  */
-typedef void *MXS_FILTER_SESSION;
+typedef struct mxs_filter_session
+{
+} MXS_FILTER_SESSION;
 
 /**
  * @verbatim

@@ -147,6 +147,7 @@ typedef struct maxrows_response_state
     size_t n_fields;      /**< How many fields we have received, <= n_totalfields. */
     size_t n_rows;        /**< How many rows we have received. */
     size_t offset;        /**< Where we are in the response buffer. */
+    size_t rows_offset;   /**< Offset to first row in result set */
 } MAXROWS_RESPONSE_STATE;
 
 static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state);
@@ -174,7 +175,7 @@ static int handle_ignoring_response(MAXROWS_SESSION_DATA *csdata);
 static bool process_params(char **options, MXS_CONFIG_PARAMETER *params, MAXROWS_CONFIG* config);
 
 static int send_upstream(MAXROWS_SESSION_DATA *csdata);
-static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata);
+static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata, size_t offset);
 
 /* API BEGIN */
 
@@ -438,6 +439,7 @@ static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state)
     state->n_fields = 0;
     state->n_rows = 0;
     state->offset = 0;
+    state->rows_offset = 0;
 }
 
 /**
@@ -511,6 +513,15 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
             {
             case 0xfe: // EOF, the one after the fields.
                 csdata->res.offset += packetlen;
+
+                /* Now set the offset to the first resultset
+                 * this could be used for empty response handler
+                 */
+                if (!csdata->res.rows_offset)
+                {
+                    csdata->res.rows_offset = csdata->res.offset;
+                }
+
                 csdata->state = MAXROWS_EXPECTING_ROWS;
                 rv = handle_rows(csdata);
                 break;
@@ -599,7 +610,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
 
             if (csdata->discard_resultset)
             {
-                rv = send_ok_upstream(csdata);
+                rv = send_eof_upstream(csdata, csdata->res.rows_offset);
                 csdata->state = MAXROWS_EXPECTING_NOTHING;
             }
             else
@@ -746,7 +757,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 // Send data in buffer or empty resultset
                 if (csdata->discard_resultset)
                 {
-                    rv = send_ok_upstream(csdata);
+                    rv = send_eof_upstream(csdata, csdata->res.rows_offset);
                 }
                 else
                 {
@@ -779,7 +790,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                 if (packetlen < MYSQL_EOF_PACKET_LEN)
                 {
                     MXS_ERROR("EOF packet has size of %lu instead of %d", packetlen, MYSQL_EOF_PACKET_LEN);
-                    rv = send_ok_upstream(csdata);
+                    rv = send_eof_upstream(csdata, csdata->res.rows_offset);
                     csdata->state = MAXROWS_EXPECTING_NOTHING;
                     break;
                 }
@@ -800,7 +811,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
                     // Discard data or send data
                     if (csdata->discard_resultset)
                     {
-                        rv = send_ok_upstream(csdata);
+                        rv = send_eof_upstream(csdata, csdata->res.rows_offset);
                     }
                     else
                     {
@@ -897,23 +908,65 @@ static int send_upstream(MAXROWS_SESSION_DATA *csdata)
 }
 
 /**
- * Send OK packet data upstream.
+ * Send upstream the Response Buffer up to columns def in response
+ * including its EOF of the first result set
+ * An EOF packet for empty result set with no MULTI flags is added
+ * at the end.
  *
- * @param csdata Session data
+ * @param csdata    Session data
+ * @param offset    The offset to server reply pointing to
+ *                  next byte after column definitions EOF
+ *                  of the first result set.
  *
  * @return Whatever the upstream returns.
  */
-static int send_ok_upstream(MAXROWS_SESSION_DATA *csdata)
+static int send_eof_upstream(MAXROWS_SESSION_DATA *csdata, size_t offset)
 {
-    /* Note: sequence id is always 01 (4th byte) */
-    uint8_t ok[MYSQL_OK_PACKET_MIN_LEN] = {07, 00, 00, 01, 00, 00, 00, 02, 00, 00, 00};
-    GWBUF *packet = gwbuf_alloc(MYSQL_OK_PACKET_MIN_LEN);
-    uint8_t *ptr = GWBUF_DATA(packet);
-    memcpy(ptr, &ok, MYSQL_OK_PACKET_MIN_LEN);
+    int rv = -1;
+    /* Sequence byte is #3 */
+    uint8_t eof[MYSQL_EOF_PACKET_LEN] = {05, 00, 00, 01, 0xfe, 00, 00, 02, 00};
+    GWBUF *new_pkt = NULL;
 
     ss_dassert(csdata->res.data != NULL);
 
-    int rv = csdata->up.clientReply(csdata->up.instance, csdata->up.session, packet);
+    /* Data to send + added EOF */
+    uint8_t *new_result = MXS_MALLOC(offset + MYSQL_EOF_PACKET_LEN);
+
+    if (new_result)
+    {
+        /* Get contiguous data from beginning to specified offset */
+        gwbuf_copy_data(csdata->res.data, 0, offset, new_result);
+
+        /* Increment sequence number for the EOF being added for empty resultset:
+         * last one if found in EOF terminating column def
+         */
+        eof[3] = new_result[offset - (MYSQL_EOF_PACKET_LEN - 3)] + 1;
+
+        /* Copy EOF data */
+        memcpy(new_result + offset, &eof, MYSQL_EOF_PACKET_LEN);
+
+        /* Create new packet */
+        new_pkt = gwbuf_alloc_and_load(offset + MYSQL_EOF_PACKET_LEN, new_result);
+
+        /* Free intermediate data */
+        MXS_FREE(new_result);
+
+        if (new_pkt)
+        {
+            /* new_pkt will be freed by write routine */
+            rv = csdata->up.clientReply(csdata->up.instance, csdata->up.session, new_pkt);
+        }
+    }
+
+    /* Abort client connection */
+    if (!(new_result && new_pkt))
+    {
+        /* Abort client connection */
+        poll_fake_hangup_event(csdata->session->client_dcb);
+        rv = 0;
+    }
+
+    /* Free full input buffer */
     gwbuf_free(csdata->res.data);
     csdata->res.data = NULL;
 

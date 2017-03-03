@@ -307,7 +307,6 @@ struct router_client_session
 #if defined(SS_DEBUG)
     skygw_chk_t      rses_chk_top;
 #endif
-    SPINLOCK         rses_lock;      /*< protects rses_deleted */
     bool             rses_closed;    /*< true when closeSession is called */
     rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Properties listed by their type */
     backend_ref_t*   rses_master_ref;
@@ -349,7 +348,6 @@ typedef struct
 typedef struct router_instance
 {
     SERVICE*                service;     /*< Pointer to service */
-    SPINLOCK                lock;        /*< Lock for the instance data */
     rwsplit_config_t        rwsplit_config; /*< expanded config info from SERVICE */
     int                     rwsplit_version; /*< version number for router's config */
     ROUTER_STATS            stats;       /*< Statistics for this router */
