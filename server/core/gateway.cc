@@ -2023,6 +2023,9 @@ int main(int argc, char **argv)
     unlock_pidfile();
     unlink_pidfile();
 
+    ERR_free_strings();
+    EVP_cleanup();
+
 return_main:
 
     mxs_log_flush_sync();
