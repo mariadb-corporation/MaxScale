@@ -12,7 +12,7 @@
  */
 
 /**
- * @file namedserverfilter.cpp - a very simple regular expression based filter
+ * @file namedserverfilter.cc - a very simple regular expression based filter
  * that routes to a named server or server type if a regular expression match
  * is found.
  * @verbatim
@@ -28,12 +28,11 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "regexhintfilter"
+#define MXS_MODULE_NAME "RegexHintFilter"
 
 #include <maxscale/cppdefs.hh>
 
 #include <string.h>
-#include <regex.h>
 #include <stdio.h>
 
 #include <maxscale/alloc.h>
@@ -42,7 +41,14 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
+#include <maxscale/pcre2.hh>
 #include <maxscale/utils.h>
+#include <string>
+
+using std::string;
+
+class RegexHintInst;
+struct RegexHintSess_t;
 
 typedef struct source_host
 {
@@ -54,25 +60,34 @@ typedef struct source_host
 /**
  * Instance structure
  */
-typedef struct
+class RegexHintInst : public MXS_FILTER
 {
+public: // will change to private later
+    string match; /* Regular expression to match */
+    string server; /* Server to route to */
+    string user; /* User name to restrict matches */
+
     REGEXHINT_SOURCE_HOST *source; /* Source address to restrict matches */
-    char *user; /* User name to restrict matches */
-    char *match; /* Regular expression to match */
-    char *server; /* Server to route to */
-    regex_t re; /* Compiled regex text */
-} REGEXHINT_INSTANCE;
+    pcre2_code* re; /* Compiled regex text */
+
+    RegexHintInst(string match, string server, string user, REGEXHINT_SOURCE_HOST* source,
+                  pcre2_code* regex);
+    ~RegexHintInst();
+    RegexHintSess_t* newSession(MXS_SESSION *session);
+    int routeQuery(RegexHintSess_t* session, GWBUF *queue);
+    void diagnostic(RegexHintSess_t* session, DCB *dcb);
+};
 
 /**
  * The session structure for this regexhint filter
  */
-typedef struct
+typedef struct RegexHintSess_t
 {
     MXS_DOWNSTREAM down; /* The downstream filter */
     int n_diverted; /* No. of statements diverted */
     int n_undiverted; /* No. of statements not diverted */
     int active; /* Is filter active */
-} REGEXHINT_SESSION;
+} RegexHintSess;
 
 /* Api entrypoints */
 static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
@@ -86,20 +101,125 @@ static uint64_t getCapabilities(MXS_FILTER* instance);
 /* End entrypoints */
 
 static bool validate_ip_address(const char *);
-static int check_source_host(REGEXHINT_INSTANCE *,
+static int check_source_host(RegexHintInst *,
                              const char *,
                              const struct sockaddr_in *);
 static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
-static void free_instance(REGEXHINT_INSTANCE *);
+static void free_instance(RegexHintInst *);
 
 static const MXS_ENUM_VALUE option_values[] =
 {
-    {"ignorecase", REG_ICASE},
+    {"ignorecase", PCRE2_CASELESS},
     {"case", 0},
-    {"extended", REG_EXTENDED},
+    {"extended", PCRE2_EXTENDED}, // Ignore white space and # comments
     {NULL}
 };
 
+RegexHintInst::RegexHintInst(string match, string server, string user,
+                             REGEXHINT_SOURCE_HOST* source, pcre2_code* regex)
+    :   match(match),
+        server(server),
+        user(user),
+        source(source),
+        re(regex)
+{}
+RegexHintInst::~RegexHintInst()
+{
+    if (re)
+    {
+        pcre2_code_free(re);
+    }
+    if (source)
+    {
+        MXS_FREE(source);
+    }
+}
+
+RegexHintSess_t* RegexHintInst::newSession(MXS_SESSION *session)
+{
+    RegexHintSess *my_session;
+    const char *remote, *user;
+
+    if ((my_session = (RegexHintSess*)MXS_CALLOC(1, sizeof(RegexHintSess))) != NULL)
+    {
+        my_session->n_diverted = 0;
+        my_session->n_undiverted = 0;
+        my_session->active = 1;
+
+        /* Check client IP against 'source' host option */
+        if (this->source && this->source->address &&
+            (remote = session_get_remote(session)) != NULL)
+        {
+            my_session->active =
+                check_source_host(this, remote, &session->client_dcb->ipv4);
+        }
+
+        /* Check client user against 'user' option */
+        if (this->user.length() &&
+            (user = session_get_user(session)) &&
+            strcmp(user, this->user.c_str()))
+        {
+            my_session->active = 0;
+        }
+    }
+    return my_session;
+}
+
+int RegexHintInst::routeQuery(RegexHintSess_t* my_session, GWBUF *queue)
+{
+    char *sql;
+
+    if (modutil_is_SQL(queue) && my_session->active)
+    {
+        if ((sql = modutil_get_SQL(queue)) != NULL)
+        {
+            int result = pcre2_match(this->re, (PCRE2_SPTR)sql,
+                                     0, 0, 0,
+                                     NULL, NULL);
+            if (result == 0)
+            {
+                // Change hint_create_route() to take a const char* to remove copying.
+                char* zServer = MXS_STRDUP_A(this->server.c_str());
+                queue->hint =
+                    hint_create_route(queue->hint, HINT_ROUTE_TO_NAMED_SERVER,
+                                      zServer);
+                my_session->n_diverted++;
+            }
+            else
+            {
+                my_session->n_undiverted++;
+            }
+            MXS_FREE(sql);
+        }
+    }
+    return my_session->down.routeQuery(my_session->down.instance,
+                                       my_session->down.session, queue);
+}
+
+void RegexHintInst::diagnostic(RegexHintSess_t* my_session, DCB *dcb)
+{
+    dcb_printf(dcb, "\t\tMatch and route:           /%s/ -> %s\n",
+               match.c_str(), server.c_str());
+    if (my_session)
+    {
+        dcb_printf(dcb, "\t\tNo. of queries diverted by filter: %d\n",
+                   my_session->n_diverted);
+        dcb_printf(dcb, "\t\tNo. of queries not diverted by filter:     %d\n",
+                   my_session->n_undiverted);
+    }
+    if (source)
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limited to connections from     %s\n",
+                   source->address);
+    }
+    if (user.length())
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limit to user           %s\n",
+                   user.c_str());
+    }
+}
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -110,53 +230,76 @@ static const MXS_ENUM_VALUE option_values[] =
  *
  * @return The instance data for this new instance
  */
-static MXS_FILTER *
+static MXS_FILTER*
 createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 {
-    REGEXHINT_INSTANCE *my_instance =
-        (REGEXHINT_INSTANCE*)MXS_CALLOC(1, sizeof(REGEXHINT_INSTANCE));
+    bool error = false;
 
-    if (my_instance)
+    REGEXHINT_SOURCE_HOST* source = NULL;
+    /* The cfg_param cannot be changed to string because set_source_address doesn't
+       copy the contents. */
+    const char *cfg_param = config_get_string(params, "source");
+    if (*cfg_param)
     {
-        REGEXHINT_SOURCE_HOST *source = NULL;
-        const char *cfg_param = config_get_string(params, "source");
-        if (*cfg_param)
+        source = set_source_address(cfg_param);
+        if (!source)
         {
-            my_instance->source = set_source_address(cfg_param);
-            if (!my_instance->source)
-            {
-                MXS_ERROR("Failure setting 'source' from %s",
-                          cfg_param);
-
-                free_instance(my_instance);
-                my_instance = NULL;
-                return (MXS_FILTER *)my_instance;
-            }
-        }
-
-        my_instance->match = MXS_STRDUP_A(config_get_string(params, "match"));
-        my_instance->server = MXS_STRDUP_A(config_get_string(params, "server"));
-        my_instance->user = config_copy_string(params, "user");
-        bool error = false;
-        int cflags = config_get_enum(params, "options", option_values);
-
-        if (regcomp(&my_instance->re, my_instance->match, cflags))
-        {
-            MXS_ERROR("Invalid regular expression '%s'.", my_instance->match);
-            MXS_FREE(my_instance->match);
-            my_instance->match = NULL;
+            MXS_ERROR("Failure setting 'source' from %s", cfg_param);
             error = true;
-        }
-
-        if (error)
-        {
-            free_instance(my_instance);
-            my_instance = NULL;
         }
     }
 
-    return (MXS_FILTER *) my_instance;
+    string match(config_get_string(params, "match"));
+    string server(config_get_string(params, "server"));
+    string user(config_get_string(params, "user"));
+
+    int cflags = config_get_enum(params, "options", option_values);
+    int errorcode = -1;
+    PCRE2_SIZE error_offset = -1;
+    pcre2_code* regex =
+        pcre2_compile((PCRE2_SPTR) match.c_str(), PCRE2_ZERO_TERMINATED, cflags,
+                      &errorcode, &error_offset, NULL);
+
+    if (!regex)
+    {
+        error = true;
+
+        char errorbuf[100]; //How long should this be??
+        int err_msg_rval = pcre2_get_error_message(errorcode, (PCRE2_UCHAR*)errorbuf,
+                                                   sizeof(errorbuf));
+        MXS_ERROR("Invalid PCRE2 regular expression '%s' at position '%zu'.",
+                  match.c_str(), error_offset);
+        MXS_ERROR("PCRE2 Error message: '%s'.", errorbuf);
+        if (err_msg_rval == PCRE2_ERROR_NOMEMORY)
+        {
+            MXS_ERROR("PCRE2 error buffer was too small to contain the complete"
+                      "message.");
+        }
+    }
+
+    if (error)
+    {
+        if (source)
+        {
+            MXS_FREE(source);
+        }
+        if (regex)
+        {
+            pcre2_code_free(regex);
+        }
+        return NULL;
+    }
+    else
+    {
+        RegexHintInst* instance = NULL;
+        MXS_EXCEPTION_GUARD(instance =
+                                new RegexHintInst(match, server, user, source, regex));
+        return instance;
+    }
+
 }
+
+
 
 /**
  * Associate a new session with this instance of the filter.
@@ -168,34 +311,9 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 static MXS_FILTER_SESSION *
 newSession(MXS_FILTER *instance, MXS_SESSION *session)
 {
-    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE *) instance;
-    REGEXHINT_SESSION *my_session;
-    const char *remote, *user;
-
-    if ((my_session = (REGEXHINT_SESSION*)MXS_CALLOC(1, sizeof(REGEXHINT_SESSION))) != NULL)
-    {
-        my_session->n_diverted = 0;
-        my_session->n_undiverted = 0;
-        my_session->active = 1;
-
-        /* Check client IP against 'source' host option */
-        if (my_instance->source &&
-            my_instance->source->address &&
-            (remote = session_get_remote(session)) != NULL)
-        {
-            my_session->active = check_source_host(my_instance,
-                                                   remote,
-                                                   &session->client_dcb->ipv4);
-        }
-
-        /* Check client user against 'user' option */
-        if (my_instance->user && (user = session_get_user(session))
-            && strcmp(user, my_instance->user))
-        {
-            my_session->active = 0;
-        }
-    }
-
+    RegexHintInst* my_instance = static_cast<RegexHintInst*>(instance);
+    RegexHintSess* my_session = NULL;
+    MXS_EXCEPTION_GUARD(my_session = my_instance->newSession(session));
     return (MXS_FILTER_SESSION*)my_session;
 }
 
@@ -234,7 +352,7 @@ freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 static void
 setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM *downstream)
 {
-    REGEXHINT_SESSION *my_session = (REGEXHINT_SESSION *) session;
+    RegexHintSess *my_session = (RegexHintSess *) session;
     my_session->down = *downstream;
 }
 
@@ -255,30 +373,11 @@ setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_DOWNSTREAM 
 static int
 routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 {
-    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE *) instance;
-    REGEXHINT_SESSION *my_session = (REGEXHINT_SESSION *) session;
-    char *sql;
-
-    if (modutil_is_SQL(queue) && my_session->active)
-    {
-        if ((sql = modutil_get_SQL(queue)) != NULL)
-        {
-            if (regexec(&my_instance->re, sql, 0, NULL, 0) == 0)
-            {
-                queue->hint = hint_create_route(queue->hint,
-                                                HINT_ROUTE_TO_NAMED_SERVER,
-                                                my_instance->server);
-                my_session->n_diverted++;
-            }
-            else
-            {
-                my_session->n_undiverted++;
-            }
-            MXS_FREE(sql);
-        }
-    }
-    return my_session->down.routeQuery(my_session->down.instance,
-                                       my_session->down.session, queue);
+    RegexHintInst *my_instance = static_cast<RegexHintInst*>(instance);
+    RegexHintSess *my_session = (RegexHintSess *) session;
+    int rval = 0;
+    MXS_EXCEPTION_GUARD(rval = my_instance->routeQuery(my_session, queue));
+    return rval;
 }
 
 /**
@@ -295,30 +394,10 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 static void
 diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
-    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE *) instance;
-    REGEXHINT_SESSION *my_session = (REGEXHINT_SESSION *) fsession;
+    RegexHintInst *my_instance = static_cast<RegexHintInst*>(instance);
+    RegexHintSess *my_session = (RegexHintSess *) fsession;
 
-    dcb_printf(dcb, "\t\tMatch and route:           /%s/ -> %s\n",
-               my_instance->match, my_instance->server);
-    if (my_session)
-    {
-        dcb_printf(dcb, "\t\tNo. of queries diverted by filter: %d\n",
-                   my_session->n_diverted);
-        dcb_printf(dcb, "\t\tNo. of queries not diverted by filter:     %d\n",
-                   my_session->n_undiverted);
-    }
-    if (my_instance->source)
-    {
-        dcb_printf(dcb,
-                   "\t\tReplacement limited to connections from     %s\n",
-                   my_instance->source->address);
-    }
-    if (my_instance->user)
-    {
-        dcb_printf(dcb,
-                   "\t\tReplacement limit to user           %s\n",
-                   my_instance->user);
-    }
+
 }
 
 /**
@@ -392,7 +471,7 @@ static bool validate_ip_address(const char *host)
  * @param ipv4        The client IPv4 struct
  * @return            1 for match, 0 otherwise
  */
-static int check_source_host(REGEXHINT_INSTANCE *instance,
+static int check_source_host(RegexHintInst *instance,
                              const char *remote,
                              const struct sockaddr_in *ipv4)
 {
@@ -541,18 +620,9 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
  *
  * @param instance    The filter instance
  */
-static void free_instance(REGEXHINT_INSTANCE *instance)
+static void free_instance(RegexHintInst *instance)
 {
-    if (instance->match)
-    {
-        regfree(&instance->re);
-        MXS_FREE(instance->match);
-    }
-
-    MXS_FREE(instance->server);
-    MXS_FREE(instance->source);
-    MXS_FREE(instance->user);
-    MXS_FREE(instance);
+    MXS_EXCEPTION_GUARD(delete instance);
 }
 
 
