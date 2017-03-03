@@ -130,22 +130,42 @@ new master. Normally this is done by using an external agent of some sort
 [MariaDB Replication Manager](https://github.com/tanji/replication-manager)
 or [MHA](https://code.google.com/p/mysql-master-ha/).
 
-The failover mode in mysqlmon is completely passive in the sense that it does
-not modify the cluster or any servers in it. It labels a slave server as a
-master server when there is only one running server. Before a failover can be
-initiated, the following conditions must have been met:
+When the number of running servers in the cluster drops down to one, MaxScale
+cannot be absolutely certain whether the last remaining server is a master or a
+slave. At this point, MaxScale will try to deduce the type of the server by
+looking at the system variables of the server in question.
 
-- The monitor has repeatedly failed to connect to the failed servers
+By default, MaxScale will only attempt to deduce if the server can be used as a
+slave server (controlled by the `detect_stale_slave` parameter). When the
+`failover` mode is enabled, MaxScale will also attempt to deduce whether the
+server can be used as a master server. This is done by checking that the server
+is not in read-only mode and that it is not configured as a slave.
+
+The failover mode in mysqlmon is completely passive in the sense that it does
+not modify the cluster or any of the servers in it. It only labels the last
+remaining server in a cluster as the master server.
+
+Before a failover can be initiated, the following conditions must have been met:
+
+- Previous attempts to connect to other servers in the cluster have failed,
+  controlled by the `failcount` parameter
+
 - There is only one running server among the monitored servers
-- @@read_only is not enabled on the last running server
+
+- The value of the `@@read_only` system variable is set to `OFF`
+
+In 2.1.1, the following additional condition was added:
+
 - The last running server is not configured as a slave
 
-When these conditions are met, the monitor assigns the last remaining server the
-master status and puts all other servers into maintenance mode. This is done to
-prevent accidental use of the failed servers if they came back online.
+When these conditions are met, the monitor will label the last remaining server
+as a master.
 
-When the failed servers come back up, the maintenance mode needs to be manually
-cleared once replication has been set up.
+If the value of the `failover_recovery` parameter is set to false, the monitor
+sets all other servers into maintenance mode. This is done to prevent accidental
+use of the failed servers if they came back online. If the failed servers come
+back up, the maintenance mode needs to be manually cleared once replication has
+been set up.
 
 **Note**: A failover will cause permanent changes in the data of the promoted
   server. Only use this feature if you know that the slave servers are capable
@@ -156,9 +176,9 @@ cleared once replication has been set up.
 Number of failures that must occur on all failed servers before a failover is
 initiated. The default value is 5 failures.
 
-The monitor will attemt to contact all servers once per monitoring cycle. When
+The monitor will attempt to contact all servers once per monitoring cycle. When
 _failover_ mode is enabled, all of the failed servers must fail _failcount_
-number of connection attemps before a failover is initiated.
+number of connection attempts before a failover is initiated.
 
 The formula for calculating the actual number of milliseconds before failover
 can start is `monitor_interval * failcount`. This means that to trigger a
