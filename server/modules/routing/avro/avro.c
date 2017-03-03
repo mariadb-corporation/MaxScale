@@ -1000,14 +1000,20 @@ void converter_func(void* data)
     while (ok && binlog_end == AVRO_OK)
     {
         uint64_t start_pos = router->current_pos;
+        char binlog_name[BINLOG_FNAMELEN + 1];
+        strcpy(binlog_name, router->binlog_name);
+
         if (avro_open_binlog(router->binlogdir, router->binlog_name, &router->binlog_fd))
         {
             binlog_end = avro_read_all_events(router);
 
-            if (router->current_pos != start_pos)
+            if (router->current_pos != start_pos || strcmp(binlog_name, router->binlog_name) != 0)
             {
                 /** We processed some data, reset the conversion task delay */
                 router->task_delay = 1;
+
+                /** Update the GTID index */
+                avro_update_index(router);
             }
 
             avro_close_binlog(router->binlog_fd);

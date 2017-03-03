@@ -867,9 +867,6 @@ void avro_flush_all_tables(AVRO_INSTANCE *router)
         }
         hashtable_iterator_free(iter);
     }
-
-    /** Update the GTID index */
-    avro_update_index(router);
 }
 
 /**
