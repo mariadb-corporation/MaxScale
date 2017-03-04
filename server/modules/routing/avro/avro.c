@@ -332,6 +332,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_count = 0;
     inst->row_target = AVRO_DEFAULT_BLOCK_ROW_COUNT;
     inst->trx_target = AVRO_DEFAULT_BLOCK_TRX_COUNT;
+    inst->block_size = 0;
     int first_file = 1;
     bool err = false;
 
@@ -401,6 +402,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "start_index") == 0)
                 {
                     first_file = MAX(1, atoi(value));
+                }
+                else if (strcmp(options[i], "block_size") == 0)
+                {
+                    inst->block_size = atoi(value);
                 }
                 else
                 {

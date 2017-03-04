@@ -105,7 +105,7 @@ void avro_close_binlog(int fd)
  * @param filepath Path to the created file
  * @param json_schema The schema of the table in JSON format
  */
-AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
+AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, size_t block_size)
 {
     AVRO_TABLE *table = calloc(1, sizeof(AVRO_TABLE));
     if (table)
@@ -126,7 +126,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
         }
         else
         {
-            rc = avro_file_writer_create(filepath, table->avro_schema, &table->avro_file);
+            rc = avro_file_writer_create_with_codec(filepath, table->avro_schema, &table->avro_file, "null", block_size);
         }
 
         if (rc)
