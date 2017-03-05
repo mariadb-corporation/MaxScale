@@ -1019,36 +1019,11 @@ gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities)
     /* else return_code is still 0 from when it was originally set */
     /* Note that read_buffer has been freed or transferred by this point */
 
-    /** Routing failed */
     if (return_code != 0)
     {
-        bool router_can_continue;
-        GWBUF* errbuf;
-        /**
-         * Create error to be sent to client if session
-         * can't be continued.
-         */
-        errbuf = mysql_create_custom_error(1, 0,
-                                           "Routing failed. Session is closed.");
-        /**
-         * Ensure that there are enough backends
-         * available for router to continue operation.
-         */
-        session->service->router->handleError(session->service->router_instance,
-                                              session->router_session,
-                                              errbuf,
-                                              dcb,
-                                              ERRACT_NEW_CONNECTION,
-                                              &router_can_continue);
-        gwbuf_free(errbuf);
-        /**
-         * If the router cannot continue, close session
-         */
-        if (!router_can_continue)
-        {
-            MXS_ERROR("Routing the query failed. "
-                      "Session will be closed.");
-        }
+        /** Routing failed, close the client connection */
+        dcb_close(dcb);
+        MXS_ERROR("Routing the query failed. Session will be closed.");
     }
 
     if (proto->current_command == MYSQL_COM_QUIT)
