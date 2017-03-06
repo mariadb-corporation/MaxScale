@@ -37,12 +37,13 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
+#include <netinet/tcp.h>
 #include <openssl/sha.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/limits.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/poll.h>
 #include <maxscale/random_jkiss.h>
@@ -895,42 +896,62 @@ void utils_end()
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-int create_network_socket(struct sockaddr_storage *dest, char *host)
+static bool configure_socket(int so)
+{
+    int sndbufsize = MXS_BACKEND_SO_SNDBUF;
+    int rcvbufsize = MXS_BACKEND_SO_RCVBUF;
+    int one = 1;
+
+    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0 ||
+        setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0 ||
+        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    {
+        char errbuf[MXS_STRERROR_BUFLEN];
+        MXS_ERROR("Failed to set socket option: %d, %s.",
+                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        return false;
+    }
+
+    return setnonblocking(so) == 0;
+}
+
+static void set_port(struct sockaddr_storage *addr, uint16_t port)
+{
+    if (addr->ss_family == AF_INET)
+    {
+        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        ip->sin_port = htons(port);
+    }
+    else if (addr->ss_family == AF_INET6)
+    {
+        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        ip->sin6_port = htons(port);
+    }
+    else
+    {
+        MXS_ERROR("Unknown address family: %d", (int)addr->ss_family);
+        ss_dassert(false);
+    }
+}
+
+int open_network_socket(struct sockaddr_storage *dest, char *host, uint16_t port)
 {
 #ifdef __USE_POSIX
     struct addrinfo *ai = NULL, hint = {};
     int so, rc;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
+    hint.ai_flags = AI_ALL;
 
-    if (strcmp(host, "0.0.0.0") == 0 || strcmp(host, "::") == 0)
+    if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
-        /** All interfaces */
-        hint.ai_flags = AI_PASSIVE;
-        if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
-        {
-            MXS_ERROR("Failed to obtain address for host %s, %s",
-                      host,
-                      gai_strerror(rc));
-
-            return -1;
-        }
-    }
-    else
-    {
-        hint.ai_flags = AI_ALL;
-        if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
-        {
-            MXS_ERROR("Failed to obtain address for host %s, %s",
-                      host,
-                      gai_strerror(rc));
-
-            return -1;
-        }
+        MXS_ERROR("Failed to obtain address for host %s, %s",
+                  host, gai_strerror(rc));
+        return -1;
     }
 
-    /* take the first one */
-    if (ai != NULL)
+    /* Take the first one */
+    if (ai)
     {
         so = socket(ai->ai_family, SOCK_STREAM, 0);
 
@@ -943,23 +964,33 @@ int create_network_socket(struct sockaddr_storage *dest, char *host)
         else
         {
             memcpy(dest, ai->ai_addr, ai->ai_addrlen);
-            freeaddrinfo(ai);
+            set_port(dest, port);
+
+            if (!configure_socket(so))
+            {
+                close(so);
+                so = -1;
+            }
         }
+
+        freeaddrinfo(ai);
     }
+
 #else
 #error Only the POSIX networking interface is supported
 #endif
+
     return so;
 }
 
-int parse_bindconfig(const char *config, struct sockaddr_in6 *addr, int *sock_type)
+bool parse_bindconfig(const char *config, struct sockaddr_storage *addr)
 {
     char buf[strlen(config) + 1];
     strcpy(buf, config);
-    *sock_type = strchr(buf, '.')  ? AF_INET : AF_INET6;
 
     char *port = strrchr(buf, '|');
     short pnum;
+
     if (port)
     {
         *port = 0;
@@ -968,35 +999,35 @@ int parse_bindconfig(const char *config, struct sockaddr_in6 *addr, int *sock_ty
     }
     else
     {
+        ss_dassert(false);
         return 0;
     }
 
-    if (!strcmp(buf, "0.0.0.0") || !strcmp(buf, "::"))
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags = AI_ALL;
+    hint.ai_family = AF_UNSPEC;
+    int rc = getaddrinfo(buf, NULL, &hint, &ai);
+
+    if (rc == 0)
     {
-        *sock_type = AF_INET6;
-        addr->sin6_addr = in6addr_any;
+        if (ai)
+        {
+            memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+            set_port(addr, pnum);
+            freeaddrinfo(ai);
+        }
+        else
+        {
+            MXS_ERROR("Failed to find valid network address for '%s'.", config);
+            rc = -1;
+        }
     }
     else
     {
-        if (inet_pton(*sock_type, buf, &addr->sin6_addr) < 1)
-        {
-            struct hostent *hp = gethostbyname(buf);
-
-            if (hp)
-            {
-                inet_pton(*sock_type, hp->h_addr_list[0], &addr->sin6_addr);
-            }
-            else
-            {
-                MXS_ERROR("Failed to lookup host '%s'.", buf);
-                return 0;
-            }
-        }
+        MXS_ERROR("Failed to resolve network address for '%s': %s", config, gai_strerror(rc));
     }
 
-    addr->sin6_family = *sock_type;
-    addr->sin6_port = htons(pnum);
-    return 1;
+    return rc == 0;
 }
 
 /**

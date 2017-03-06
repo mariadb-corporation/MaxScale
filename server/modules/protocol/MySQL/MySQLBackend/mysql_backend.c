@@ -18,7 +18,6 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/utils.h>
-#include <netinet/tcp.h>
 #include <mysqld_error.h>
 #include <maxscale/alloc.h>
 #include <maxscale/modinfo.h>
@@ -275,82 +274,16 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
 {
     struct sockaddr_storage serv_addr = {};
     int rv = -1;
-    int bufsize;
 
     /* prepare for connect */
-    int so = create_network_socket(&serv_addr, host);
+    int so = open_network_socket(&serv_addr, host, port);
 
     if (so < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Establishing connection to backend server %s:%d failed.", host, port);
         return rv;
     }
 
-    /** Configure the destination port */
-    if (serv_addr.ss_family == AF_INET)
-    {
-        struct sockaddr_in *ip = (struct sockaddr_in*)&serv_addr;
-        ip->sin_port = htons(port);
-    }
-    else
-    {
-        ss_dassert(serv_addr.ss_family == AF_INET6);
-        struct sockaddr_in6 *ip = (struct sockaddr_in6*)&serv_addr;
-        ip->sin6_port = htons(port);
-    }
-
-    bufsize = MXS_BACKEND_SO_SNDBUF;
-
-    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        /** Close socket */
-        close_socket(so);
-        return rv;
-    }
-    bufsize = MXS_BACKEND_SO_RCVBUF;
-
-    if (setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        /** Close socket */
-        close_socket(so);
-        return rv;
-    }
-
-    int one = 1;
-    if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        /** Close socket */
-        close_socket(so);
-        return rv;
-    }
-
-    /* set socket to as non-blocking here */
-    setnonblocking(so);
     rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
     if (rv != 0)
@@ -365,7 +298,7 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
             MXS_ERROR("Failed to connect backend server %s:%d due to: %d, %s.",
                       host, port, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             /** Close socket */
-            close_socket(so);
+            close(so);
             return rv;
         }
     }
@@ -1815,21 +1748,6 @@ static bool sescmd_response_complete(DCB* dcb)
         succp = false;
     }
     return succp;
-}
-
-static void inline
-close_socket(int sock)
-{
-    /*< Close newly created socket. */
-    if (close(sock) != 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to close socket %d due %d, %s.",
-                  sock,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-    }
-
 }
 
 /**

@@ -3109,27 +3109,28 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 static int
 dcb_listen_create_socket_inet(const char *config_bind)
 {
-    int listener_socket;
-    struct sockaddr_in6 server_address = {};
-    int one = 1;
-    int sock_type = 0;
+    struct sockaddr_storage server_address = {};
 
-    if (!parse_bindconfig(config_bind, &server_address, &sock_type))
+    if (!parse_bindconfig(config_bind, &server_address))
     {
         MXS_ERROR("Error in parse_bindconfig for [%s]", config_bind);
         return -1;
     }
 
+    /** TODO: Move everything before the `bind` call to utils.c */
+
     /** Create the TCP socket */
-    if ((listener_socket = socket(sock_type, SOCK_STREAM, 0)) < 0)
+    int listener_socket = socket(server_address.ss_family, SOCK_STREAM, 0);
+
+    if (listener_socket < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Can't create socket: %i, %s",
-                  errno,
+        MXS_ERROR("Can't create socket: %d, %s", errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
         return -1;
     }
 
+    int one = 1;
     // socket options
     if (dcb_set_socket_option(listener_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) != 0 ||
         dcb_set_socket_option(listener_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one)) != 0)
