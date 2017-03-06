@@ -12,16 +12,21 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include "hintrouterdefs.hh"
+#include <deque>
 #include <maxscale/router.hh>
+#include "dcb.hh"
 
 class HintRouter;
 
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    HintRouterSession(MXS_SESSION* pSession,
-                      HintRouter*  pRouter);
+    typedef std::deque<Dcb> Backends;
+
+    HintRouterSession(MXS_SESSION*    pSession,
+                      HintRouter*     pRouter,
+                      const Backends& backends);
 
     ~HintRouterSession();
 
@@ -42,4 +47,7 @@ private:
 
 private:
     HintRouter* m_pRouter;
+    Backends    m_backends;
+    size_t      m_surplus_replies;
+
 };

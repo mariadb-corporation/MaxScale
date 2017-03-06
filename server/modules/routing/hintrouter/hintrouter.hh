@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include "hintrouterdefs.hh"
 #include <maxscale/router.hh>
 #include "hintroutersession.hh"
 
