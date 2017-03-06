@@ -53,7 +53,7 @@ static int get_users(SERV_LISTENER *listener);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
-static bool get_hostname(const char *ip_address, char *client_hostname);
+static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
@@ -208,7 +208,8 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
          * as a last resort so we avoid the high cost of the DNS lookup.
          */
         char client_hostname[MYSQL_HOST_MAXLEN];
-        get_hostname(dcb->remote, client_hostname);
+        get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
+
         sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
                 client_hostname, session->db, session->db);
 
@@ -611,30 +612,27 @@ bool check_service_permissions(SERVICE* service)
  *
  * @return True if the hostname query was successful
  */
-static bool get_hostname(const char *ip_address, char *client_hostname)
+static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
 {
-    /* Looks like the parameters are valid. First, convert the client IP string
-     * to binary form. This is somewhat silly, since just a while ago we had the
-     * binary address but had to zero it. dbusers.c should be refactored to fix this.
-     */
-    struct sockaddr_in bin_address;
-    bin_address.sin_family = AF_INET;
-    if (inet_pton(bin_address.sin_family, ip_address, &(bin_address.sin_addr)) != 1)
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags = AI_ALL;
+    int rc;
+
+    if ((rc = getaddrinfo(dcb->remote, NULL, &hint, &ai)) != 0)
     {
-        MXS_ERROR("Could not convert to binary ip-address: '%s'.", ip_address);
+        MXS_ERROR("Failed to obtain address for host %s, %s",
+                  dcb->remote, gai_strerror(rc));
         return false;
     }
 
     /* Try to lookup the domain name of the given IP-address. This is a slow
      * i/o-operation, which will stall the entire thread. TODO: cache results
-     * if this feature is used often.
-     */
-    MXS_DEBUG("Resolving '%s'", ip_address);
-    int lookup_result = getnameinfo((struct sockaddr*)&bin_address,
-                                    sizeof(struct sockaddr_in),
-                                    client_hostname, sizeof(client_hostname),
+     * if this feature is used often. */
+    int lookup_result = getnameinfo(ai->ai_addr, ai->ai_addrlen,
+                                    client_hostname, size,
                                     NULL, 0, // No need for the port
                                     NI_NAMEREQD); // Text address only
+    freeaddrinfo(ai);
 
     if (lookup_result != 0)
     {
@@ -646,7 +644,7 @@ static bool get_hostname(const char *ip_address, char *client_hostname)
         MXS_DEBUG("IP-lookup success, hostname is: '%s'", client_hostname);
     }
 
-    return false;
+    return lookup_result == 0;
 }
 
 void start_sqlite_transaction(sqlite3 *handle)
