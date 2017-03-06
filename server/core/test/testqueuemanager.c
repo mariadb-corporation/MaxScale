@@ -66,6 +66,7 @@ test1()
     int input_counter = 0;
     int output_counter = 0;
 
+    random_jkiss_init();
     hkheartbeat = 0;
 
     queue = mxs_queue_alloc(TEST_QUEUE_SIZE, HEARTBEATS_TO_EXPIRE);
