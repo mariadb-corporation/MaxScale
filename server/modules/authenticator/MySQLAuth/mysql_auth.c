@@ -254,6 +254,30 @@ static void mysql_auth_destroy(void *data)
     }
 }
 
+static bool is_localhost_address(struct sockaddr_storage *addr)
+{
+    bool rval = false;
+
+    if (addr->ss_family == AF_INET)
+    {
+        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        if (ip->sin_addr.s_addr == INADDR_LOOPBACK)
+        {
+            rval = true;
+        }
+    }
+    else if (addr->ss_family == AF_INET6)
+    {
+        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        if (memcmp(&ip->sin6_addr, &in6addr_loopback, sizeof(ip->sin6_addr)) == 0)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -326,6 +350,14 @@ mysql_auth_authenticate(DCB *dcb)
         {
             MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
                         dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
+
+            if (is_localhost_address(&dcb->ip) &&
+                !dcb->service->localhost_match_wildcard_host)
+            {
+                MXS_NOTICE("If you have a wildcard grant that covers this address, "
+                           "try adding 'localhost_match_wildcard_host=true' for "
+                           "service '%s'. ", dcb->service->name);
+            }
         }
 
         /* let's free the auth_token now */
