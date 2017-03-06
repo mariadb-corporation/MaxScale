@@ -74,7 +74,7 @@ typedef struct
 static bool validate_ip_address(const char *);
 static int check_source_host(REGEXHINT_INSTANCE *,
                              const char *,
-                             const struct sockaddr_in *);
+                             const struct sockaddr_storage *);
 static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
 static void free_instance(REGEXHINT_INSTANCE *);
 
@@ -237,7 +237,7 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
         {
             my_session->active = check_source_host(my_instance,
                                                    remote,
-                                                   &session->client_dcb->ipv4);
+                                                   &session->client_dcb->ip);
         }
 
         /* Check client user against 'user' option */
@@ -446,12 +446,12 @@ static bool validate_ip_address(const char *host)
  */
 static int check_source_host(REGEXHINT_INSTANCE *instance,
                              const char *remote,
-                             const struct sockaddr_in *ipv4)
+                             const struct sockaddr_storage *ip)
 {
     int ret = 0;
     struct sockaddr_in check_ipv4;
 
-    memcpy(&check_ipv4, ipv4, sizeof(check_ipv4));
+    memcpy(&check_ipv4, ip, sizeof(check_ipv4));
 
     switch (instance->source->netmask)
     {
@@ -562,7 +562,8 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
     source_host->netmask = netmask;
 
     /* fill IPv4 data struct */
-    if (setipaddress(&source_host->ipv4.sin_addr, format_host) && strlen(format_host))
+    //TODO: Fix this
+    if (false /* setipaddress(&source_host->ipv4.sin_addr, format_host) && strlen(format_host)*/)
     {
 
         /* if netmask < 32 there are % wildcards */

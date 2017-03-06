@@ -271,34 +271,35 @@ return_fd:
  * backend server. In failure, fd == -1 and socket is closed.
  *
  */
-static int
-gw_do_connect_to_backend(char *host, int port, int *fd)
+static int gw_do_connect_to_backend(char *host, int port, int *fd)
 {
-    struct sockaddr_in serv_addr;
-    int rv;
-    int so = 0;
+    struct sockaddr_storage serv_addr = {};
+    int rv = -1;
     int bufsize;
 
-    memset(&serv_addr, 0, sizeof serv_addr);
-    serv_addr.sin_family = (int)AF_INET;
-    so = socket((int)AF_INET, (int)SOCK_STREAM, 0);
+    /* prepare for connect */
+    int so = create_network_socket(&serv_addr, host);
 
     if (so < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Establishing connection to backend server "
-                  "%s:%d failed.\n\t\t             Socket creation failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        goto return_rv;
+        MXS_ERROR("Establishing connection to backend server %s:%d failed.", host, port);
+        return rv;
     }
-    /* prepare for connect */
-    setipaddress(&serv_addr.sin_addr, host);
-    serv_addr.sin_port = htons(port);
+
+    /** Configure the destination port */
+    if (serv_addr.ss_family == AF_INET)
+    {
+        struct sockaddr_in *ip = (struct sockaddr_in*)&serv_addr;
+        ip->sin_port = htons(port);
+    }
+    else
+    {
+        ss_dassert(serv_addr.ss_family == AF_INET6);
+        struct sockaddr_in6 *ip = (struct sockaddr_in6*)&serv_addr;
+        ip->sin6_port = htons(port);
+    }
+
     bufsize = MXS_BACKEND_SO_SNDBUF;
 
     if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
@@ -311,10 +312,9 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
                   port,
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
         /** Close socket */
         close_socket(so);
-        goto return_rv;
+        return rv;
     }
     bufsize = MXS_BACKEND_SO_RCVBUF;
 
@@ -328,10 +328,9 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
                   port,
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
         /** Close socket */
         close_socket(so);
-        goto return_rv;
+        return rv;
     }
 
     int one = 1;
@@ -345,10 +344,9 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
                   port,
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
         /** Close socket */
         close_socket(so);
-        goto return_rv;
+        return rv;
     }
 
     /* set socket to as non-blocking here */
@@ -364,23 +362,19 @@ gw_do_connect_to_backend(char *host, int port, int *fd)
         else
         {
             char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Failed to connect backend server %s:%d, "
-                      "due %d, %s.",
-                      host,
-                      port,
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Failed to connect backend server %s:%d due to: %d, %s.",
+                      host, port, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             /** Close socket */
             close_socket(so);
-            goto return_rv;
+            return rv;
         }
     }
+
     *fd = so;
     MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
               "%s:%d, fd %d.",
               pthread_self(), host, port, so);
 
-return_rv:
     return rv;
 
 }

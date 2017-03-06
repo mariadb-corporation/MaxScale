@@ -197,7 +197,7 @@ typedef struct dcb
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
     char            *user;          /**< User name for connection */
-    struct sockaddr_in ipv4;        /**< remote end IPv4 address */
+    struct sockaddr_storage ip;     /**< remote IPv4/IPv6 address */
     char            *protoname;     /**< Name of the protocol */
     void            *protocol;      /**< The protocol specific state */
     size_t           protocol_packet_length; /**< How long the protocol specific packet is */
@@ -240,7 +240,7 @@ typedef struct dcb
 } DCB;
 
 #define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, \
-    .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
+    .evq = DCBEVENTQ_INIT, .ip = {0}, .func = {0}, .authfunc = {0}, \
     .stats = {0}, .memdata = DCBMM_INIT, \
     .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
     .state = DCB_STATE_ALLOC, .dcb_chk_tail = CHK_NUM_DCB, \
@@ -342,6 +342,14 @@ void dcb_process_idle_sessions(int thr);
  * @return True if all DCBs were iterated, false if the callback returned false
  */
 bool dcb_foreach(bool (*func)(DCB *, void *), void *data);
+
+/**
+ * @brief Return the port number this DCB is connected to
+ *
+ * @param dcb DCB to inspect
+ * @return Port number the DCB is connected to or -1 if information is not available
+ */
+int dcb_get_port(const DCB *dcb);
 
 /**
  * DCB flags values

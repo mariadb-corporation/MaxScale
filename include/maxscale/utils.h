@@ -38,10 +38,28 @@ MXS_BEGIN_DECLS
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
 
-int setnonblocking(int fd);
-int  parse_bindconfig(const char *, struct sockaddr_in *);
-int setipaddress(struct in_addr *, char *);
+/**
+ * Parse the bind configuration data.
+ *
+ * The configuration is passed as string in the `address|port` format.
+ *
+ * @param config        The bind address and port separated by a '|'
+ * @param addr          The sockaddr_in6 in which the data is written
+ * @return              1 on success, 0 on failure
+ */
+int  parse_bindconfig(const char *, struct sockaddr_in6 *, int *);
 
+
+/**
+ * @brief Create a network socket and a socket configuration
+ *
+ * @param dest Pointer to a struct sockaddr_storage where the configuration is stored
+ * @param host The target host for which the socket is created
+ *
+ * @return The opened socket or -1 on failure
+ */int create_network_socket(struct sockaddr_storage *, char *);
+
+int setnonblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
 int gw_generate_random_str(char *output, int len);

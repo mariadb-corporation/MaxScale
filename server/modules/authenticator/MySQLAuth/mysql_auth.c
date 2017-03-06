@@ -325,15 +325,7 @@ mysql_auth_authenticate(DCB *dcb)
         else if (dcb->service->log_auth_warnings)
         {
             MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
-                        dcb->service->name, client_data->user, dcb->remote, ntohs(dcb->ipv4.sin_port));
-            if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
-                !dcb->service->localhost_match_wildcard_host)
-            {
-                MXS_NOTICE("If you have a wildcard grant that covers"
-                           " this address, try adding "
-                           "'localhost_match_wildcard_host=true' for "
-                           "service '%s'. ", dcb->service->name);
-            }
+                        dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
         }
 
         /* let's free the auth_token now */

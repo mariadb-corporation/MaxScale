@@ -2865,25 +2865,30 @@ dcb_accept(DCB *listener)
             if (client_conn.ss_family == AF_UNIX)
             {
                 // client address
+                // Should this be `localhost` like it is in the MariaDB server?
                 client_dcb->remote = MXS_STRDUP_A("localhost_from_socket");
-                // set localhost IP for user authentication
-                (client_dcb->ipv4).sin_addr.s_addr = 0x0100007F;
             }
             else
             {
-                /* client IPv4 in raw data*/
-                memcpy(&client_dcb->ipv4,
-                       (struct sockaddr_in *)&client_conn,
-                       sizeof(struct sockaddr_in));
-                /* client IPv4 in string representation */
-                client_dcb->remote = (char *)MXS_CALLOC(INET_ADDRSTRLEN + 1, sizeof(char));
+                /* client IP in raw data*/
+                memcpy(&client_dcb->ip, &client_conn, sizeof(client_conn));
+                /* client IP in string representation */
+                client_dcb->remote = (char *)MXS_CALLOC(INET6_ADDRSTRLEN + 1, sizeof(char));
 
-                if (client_dcb->remote != NULL)
+                if (client_dcb->remote)
                 {
-                    inet_ntop(AF_INET,
-                              &(client_dcb->ipv4).sin_addr,
-                              client_dcb->remote,
-                              INET_ADDRSTRLEN);
+                    void *ptr;
+                    if (client_dcb->ip.ss_family == AF_INET)
+                    {
+                        ptr = &((struct sockaddr_in*)&client_dcb->ip)->sin_addr;
+                    }
+                    else
+                    {
+                        ptr = &((struct sockaddr_in6*)&client_dcb->ip)->sin6_addr;
+                    }
+
+                    inet_ntop(client_dcb->ip.ss_family, ptr,
+                              client_dcb->remote, INET6_ADDRSTRLEN);
                 }
             }
             memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
@@ -3077,7 +3082,7 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
         return -1;
     }
 
-    MXS_NOTICE("Listening connections at %s with protocol %s", config, protocol_name);
+    MXS_NOTICE("Listening for connections at %s with protocol %s", config, protocol_name);
 
     // assign listener_socket to dcb
     listener->fd = listener_socket;
@@ -3105,18 +3110,18 @@ static int
 dcb_listen_create_socket_inet(const char *config_bind)
 {
     int listener_socket;
-    struct sockaddr_in server_address;
+    struct sockaddr_in6 server_address = {};
     int one = 1;
+    int sock_type = 0;
 
-    memset(&server_address, 0, sizeof(server_address));
-    if (!parse_bindconfig(config_bind, &server_address))
+    if (!parse_bindconfig(config_bind, &server_address, &sock_type))
     {
         MXS_ERROR("Error in parse_bindconfig for [%s]", config_bind);
         return -1;
     }
 
     /** Create the TCP socket */
-    if ((listener_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((listener_socket = socket(sock_type, SOCK_STREAM, 0)) < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't create socket: %i, %s",
@@ -3140,7 +3145,7 @@ dcb_listen_create_socket_inet(const char *config_bind)
         return -1;
     }
 
-    if (bind(listener_socket, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
+    if (bind(listener_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
     {
         char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to bind on '%s': %i, %s",
@@ -3459,4 +3464,26 @@ bool dcb_foreach(bool(*func)(DCB *, void *), void *data)
     }
 
     return more;
+}
+
+int dcb_get_port(const DCB *dcb)
+{
+    int rval = -1;
+
+    if (dcb->ip.ss_family == AF_INET)
+    {
+        struct sockaddr_in* ip = (struct sockaddr_in*)&dcb->ip;
+        rval = ntohs(ip->sin_port);
+    }
+    else if (dcb->ip.ss_family == AF_INET6)
+    {
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)&dcb->ip;
+        rval = ntohs(ip->sin6_port);
+    }
+    else
+    {
+        ss_dassert(dcb->ip.ss_family == AF_UNIX);
+    }
+
+    return rval;
 }

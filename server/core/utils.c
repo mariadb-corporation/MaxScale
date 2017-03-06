@@ -895,113 +895,70 @@ void utils_end()
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-/*
- * Set IP address in socket structure in_addr
- *
- * @param a     Pointer to a struct in_addr into which the address is written
- * @param p     The hostname to lookup
- * @return      1 on success, 0 on failure
- */
-int
-setipaddress(struct in_addr *a, char *p)
+int create_network_socket(struct sockaddr_storage *dest, char *host)
 {
 #ifdef __USE_POSIX
-    struct addrinfo *ai = NULL, hint;
-    int rc;
-    struct sockaddr_in *res_addr;
-    memset(&hint, 0, sizeof (hint));
-
+    struct addrinfo *ai = NULL, hint = {};
+    int so, rc;
     hint.ai_socktype = SOCK_STREAM;
+    hint.ai_family = AF_UNSPEC;
 
-    /*
-     * This is for the listening socket, matching INADDR_ANY only for now.
-     * For future specific addresses bind, a dedicated routine woulbd be better
-     */
-
-    if (strcmp(p, "0.0.0.0") == 0)
+    if (strcmp(host, "0.0.0.0") == 0 || strcmp(host, "::") == 0)
     {
+        /** All interfaces */
         hint.ai_flags = AI_PASSIVE;
-        hint.ai_family = AF_UNSPEC;
-        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
+        if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
         {
             MXS_ERROR("Failed to obtain address for host %s, %s",
-                      p,
+                      host,
                       gai_strerror(rc));
 
-            return 0;
+            return -1;
         }
     }
     else
     {
-        hint.ai_flags = AI_CANONNAME;
-        hint.ai_family = AF_INET;
-
-        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
+        hint.ai_flags = AI_ALL;
+        if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
         {
             MXS_ERROR("Failed to obtain address for host %s, %s",
-                      p,
+                      host,
                       gai_strerror(rc));
 
-            return 0;
+            return -1;
         }
     }
 
     /* take the first one */
     if (ai != NULL)
     {
-        res_addr = (struct sockaddr_in *)(ai->ai_addr);
-        memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
+        so = socket(ai->ai_family, SOCK_STREAM, 0);
 
-        freeaddrinfo(ai);
-
-        return 1;
-    }
-#else
-    struct hostent *h;
-
-    spinlock_acquire(&tmplock);
-    h = gethostbyname(p);
-    spinlock_release(&tmplock);
-
-    if (h == NULL)
-    {
-        if ((a->s_addr = inet_addr(p)) == -1)
+        if (so < 0)
         {
-            MXS_ERROR("gethostbyname failed for [%s]", p);
-
-            return 0;
+            char errbuf[MXS_STRERROR_BUFLEN];
+            MXS_ERROR("Socket creation failed: %d, %s.",
+                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+        else
+        {
+            memcpy(dest, ai->ai_addr, ai->ai_addrlen);
+            freeaddrinfo(ai);
         }
     }
-    else
-    {
-        /* take the first one */
-        memcpy(a, h->h_addr, h->h_length);
-
-        return 1;
-    }
+#else
+#error Only the POSIX networking interface is supported
 #endif
-    return 0;
+    return so;
 }
 
-
-/**
- * Parse the bind config data. This is passed in a string as address:port.
- *
- * The address may be either a . separated IP address or a hostname to
- * lookup. The address 0.0.0.0 is the wildcard address for SOCKADR_ANY.
- * The ':' and port are required.
- *
- * @param config        The bind address and port separated by a ':'
- * @param addr          The sockaddr_in in which the data is written
- * @return              0 on failure
- */
-int
-parse_bindconfig(const char *config, struct sockaddr_in *addr)
+int parse_bindconfig(const char *config, struct sockaddr_in6 *addr, int *sock_type)
 {
     char buf[strlen(config) + 1];
     strcpy(buf, config);
+    *sock_type = strchr(buf, '.')  ? AF_INET : AF_INET6;
 
-    char *port = strrchr(buf, ':');
+    char *port = strrchr(buf, '|');
     short pnum;
     if (port)
     {
@@ -1014,19 +971,20 @@ parse_bindconfig(const char *config, struct sockaddr_in *addr)
         return 0;
     }
 
-    if (!strcmp(buf, "0.0.0.0"))
+    if (!strcmp(buf, "0.0.0.0") || !strcmp(buf, "::"))
     {
-        addr->sin_addr.s_addr = htonl(INADDR_ANY);
+        *sock_type = AF_INET6;
+        addr->sin6_addr = in6addr_any;
     }
     else
     {
-        if (!inet_aton(buf, &addr->sin_addr))
+        if (inet_pton(*sock_type, buf, &addr->sin6_addr) < 1)
         {
             struct hostent *hp = gethostbyname(buf);
 
             if (hp)
             {
-                bcopy(hp->h_addr, &(addr->sin_addr.s_addr), hp->h_length);
+                inet_pton(*sock_type, hp->h_addr_list[0], &addr->sin6_addr);
             }
             else
             {
@@ -1036,8 +994,8 @@ parse_bindconfig(const char *config, struct sockaddr_in *addr)
         }
     }
 
-    addr->sin_family = AF_INET;
-    addr->sin_port = htons(pnum);
+    addr->sin6_family = *sock_type;
+    addr->sin6_port = htons(pnum);
     return 1;
 }
 
