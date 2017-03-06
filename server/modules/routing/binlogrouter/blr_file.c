@@ -172,7 +172,7 @@ static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
 extern void encode_value(unsigned char *data, unsigned int value, int len);
 extern void blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr);
-int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
+bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst);
 
 typedef struct binlog_event_desc
 {
@@ -3303,9 +3303,9 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
  * Save MariaDB GTID found in complete transaction
  *
  * @param    inst The router instance
- * @return   1 on success, 0 otherwise
+ * @return   true on success, false otherwise
  */
-int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
+bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 {
     MARIADB_GTID_INFO gtid_info;
 
@@ -3321,7 +3321,7 @@ int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
          MXS_ERROR("Service %s: error saving mariadb GTID %s into repo",
                    inst->service->name,
                    inst->pending_transaction.gtid);
-         return 0;
+         return false;
     }
 
     MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu:%lu",
@@ -3330,5 +3330,5 @@ int blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
               gtid_info.start,
               gtid_info.end);
 
-    return 1;
+    return true;
 }

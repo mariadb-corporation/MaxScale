@@ -1041,6 +1041,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->heartbeat = 0;
     slave->lastEventReceived = 0;
     slave->encryption_ctx = NULL;
+    slave->mariadb_gtid = NULL;
 
     /**
      * Add this session to the list of active sessions.
@@ -1123,6 +1124,10 @@ static void freeSession(MXS_ROUTER* router_instance,
     if (slave->encryption_ctx)
     {
         MXS_FREE(slave->encryption_ctx);
+    }
+    if (slave->mariadb_gtid)
+    {
+        MXS_FREE(slave->mariadb_gtid);
     }
     MXS_FREE(slave);
 }

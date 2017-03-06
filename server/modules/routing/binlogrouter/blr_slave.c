@@ -333,7 +333,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  * order to support some commands that are useful for monitoring the binlog
  * router.
  *
- * Thirteen select statements are currently supported:
+ * 15 select statements are currently supported:
  *  SELECT UNIX_TIMESTAMP();
  *  SELECT @master_binlog_checksum
  *  SELECT @@GLOBAL.GTID_MODE
@@ -347,8 +347,10 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SELECT @@version
  *  SELECT @@[GLOBAL.]server_uuid
  *  SELECT USER()
+ *  SELECT @@GLOBAL.gtid_domain_id
+ *  SELECT @@[GLOBAL].gtid_current_pos
  *
- * Eight show commands are supported:
+ * 8 show commands are supported:
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
  *  SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
@@ -358,7 +360,7 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
- * Nine set commands are supported:
+ * 12 set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
  *  SET @master_heartbeat_period=...
  *  SET @slave_slave_uuid=...
@@ -368,8 +370,11 @@ blr_skip_leading_sql_comments(const char *sql_query)
  *  SET mariadb_slave_capability=...
  *  SET autocommit=
  *  SET @@session.autocommit=
+ *  SET @slave_connect_state=
+ *  SET @slave_gtid_strict_mode=
+ *  SET @slave_gtid_ignore_duplicates=
  *
- * Four administrative commands are supported:
+ * 4 administrative commands are supported:
  *  STOP SLAVE
  *  START SLAVE
  *  CHANGE MASTER TO
@@ -663,6 +668,21 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             return blr_slave_send_var_value(router, slave, heading, mariadb_gtid, BLR_TYPE_STRING);
         }
+        else if (strcasecmp(word, "@@GLOBAL.gtid_domain_id") == 0)
+        {
+            /* If not mariadb an error message will be returned */
+            if (slave->mariadb10_compat && router->mariadb_gtid)
+            {
+                char heading[40];
+                strcpy(heading, word);
+                MXS_FREE(query_text);
+                return blr_slave_send_var_value(router,
+                                                slave,
+                                                heading,
+                                                "0",
+                                                BLR_TYPE_STRING);
+            }
+        }
         else if (strcasestr(word, "binlog_gtid_pos"))
         {
             unexpected = false;
@@ -934,6 +954,57 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
+        }
+        else if (strstr(word, "@slave_connect_state") != NULL)
+        {
+            /* If not mariadb an error message will be returned */
+            if (slave->mariadb10_compat &&
+                router->mariadb_gtid &&
+                (word = strtok_r(NULL, sep, &brkb)) != NULL)
+            {
+                char heading[GTID_MAX_LEN + 1];
+
+                MXS_DEBUG("Received GTID request '%s' from slave %u",
+                          word,
+                          slave->serverid);
+
+                // TOTO: gtid_strip_chars routine for this
+                strcpy(heading, word + 1);
+                heading[strlen(heading) - 1] = '\0';
+
+                /**
+                 * Set the GTID string, it could be an empty
+                 * in case of a fresh new setup.
+                 */
+                MXS_FREE(slave->mariadb_gtid);
+                slave->mariadb_gtid = MXS_STRDUP(heading);
+
+                MXS_FREE(query_text);
+                return blr_slave_send_ok(router, slave);
+            }
+        }
+        else if (strcasecmp(word, "@slave_gtid_strict_mode") == 0)
+        {
+            /* If not mariadb an error message will be returned */
+            if (slave->mariadb10_compat &&
+                router->mariadb_gtid &&
+                (word = strtok_r(NULL, sep, &brkb)) != NULL)
+            {
+                /* Set strict mode */
+                slave->gtid_strict_mode = atoi(word);
+                MXS_FREE(query_text);
+                return blr_slave_send_ok(router, slave);
+            }
+        }
+        else if (strcasecmp(word, "@slave_gtid_ignore_duplicates") == 0)
+        {
+            /* If not mariadb an error message will be returned */
+            if (slave->mariadb10_compat &&
+                router->mariadb_gtid)
+            {
+                MXS_FREE(query_text);
+                return blr_slave_send_ok(router, slave);
+            }
         }
         else if (strcasecmp(word, "NAMES") == 0)
         {

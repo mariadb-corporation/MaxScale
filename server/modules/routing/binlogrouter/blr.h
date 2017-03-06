@@ -449,6 +449,8 @@ typedef struct router_slave
     char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
     uint32_t          lsi_binlog_pos;  /*< What position */
     void              *encryption_ctx; /*< Encryption context */
+    bool              gtid_strict_mode;/*< MariaDB 10 Slave sets gtid_strict_mode */
+    char              *mariadb_gtid;   /*< MariaDB 10 Slave connects with GTID */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
