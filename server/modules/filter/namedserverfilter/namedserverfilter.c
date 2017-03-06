@@ -24,6 +24,7 @@
 #include <maxscale/hint.h>
 #include <maxscale/alloc.h>
 #include <maxscale/utils.h>
+#include <netdb.h>
 
 /**
  * @file namedserverfilter.c - a very simple regular expression based filter
@@ -54,7 +55,7 @@ static uint64_t getCapabilities(MXS_FILTER* instance);
 
 typedef struct source_host
 {
-    const char *address;
+    char *address;
     struct sockaddr_in ipv4;
     int netmask;
 } REGEXHINT_SOURCE_HOST;
@@ -170,7 +171,6 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
     if (my_instance)
     {
-        REGEXHINT_SOURCE_HOST *source = NULL;
         const char *cfg_param = config_get_string(params, "source");
         if (*cfg_param)
         {
@@ -506,7 +506,6 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
 {
     int netmask = 32;
     int bytes = 0;
-    struct sockaddr_in serv_addr;
     REGEXHINT_SOURCE_HOST *source_host = MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
 
     if (!input_host || !source_host)
@@ -514,17 +513,15 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
         return NULL;
     }
 
-    if(!validate_ip_address(input_host))
+    if (!validate_ip_address(input_host))
     {
-        MXS_WARNING("The given 'source' parameter source=%s"
-                    " is not a valid IP address: it will not be used.",
-                    input_host);
-
-        source_host->address = NULL;
-        return source_host;
+        MXS_WARNING("The given 'source' parameter '%s' is not a valid "
+                    "IPv4 address.", input_host);
+        MXS_FREE(source_host);
+        return NULL;
     }
 
-    source_host->address = input_host;
+    source_host->address = MXS_STRDUP_A(input_host);
 
     /* If no wildcards don't check it, set netmask to 32 and return */
     if (!strchr(input_host, '%'))
@@ -561,10 +558,15 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
     *out ='\0';
     source_host->netmask = netmask;
 
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    int rc = getaddrinfo(input_host, NULL, &hint, &ai);
+
     /* fill IPv4 data struct */
-    //TODO: Fix this
-    if (false /* setipaddress(&source_host->ipv4.sin_addr, format_host) && strlen(format_host)*/)
+    if (rc == 0)
     {
+        ss_dassert(ai->ai_family == AF_INET);
+        memcpy(&source_host->ipv4, ai->ai_addr, ai->ai_addrlen);
 
         /* if netmask < 32 there are % wildcards */
         if (source_host->netmask < 32)
@@ -573,16 +575,16 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
             source_host->ipv4.sin_addr.s_addr &= 0x00FFFFFF;
         }
 
-        MXS_INFO("Input %s is valid with netmask %d\n",
-                 source_host->address,
-                 source_host->netmask);
+        MXS_INFO("Input %s is valid with netmask %d", source_host->address, source_host->netmask);
+        freeaddrinfo(ai);
     }
     else
     {
-        MXS_WARNING("Found invalid IP address for parameter 'source=%s',"
-                    " it will not be used.",
-                    input_host);
-        source_host->address = NULL;
+        MXS_WARNING("Found invalid IP address for parameter 'source=%s': %s",
+                    input_host, gai_strerror(rc));
+        MXS_FREE(source_host->address);
+        MXS_FREE(source_host);
+        return NULL;
     }
 
     return (REGEXHINT_SOURCE_HOST *)source_host;
@@ -604,5 +606,9 @@ static void free_instance(REGEXHINT_INSTANCE *instance)
     MXS_FREE(instance->server);
     MXS_FREE(instance->source);
     MXS_FREE(instance->user);
+    if (instance->source)
+    {
+        MXS_FREE(instance->source->address);
+    }
     MXS_FREE(instance);
 }
