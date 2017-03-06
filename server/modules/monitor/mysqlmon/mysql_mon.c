@@ -125,9 +125,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_stale_slave",  MXS_MODULE_PARAM_BOOL, "true"},
             {"mysql51_replication", MXS_MODULE_PARAM_BOOL, "false"},
             {"multimaster", MXS_MODULE_PARAM_BOOL, "false"},
-            {"failover", MXS_MODULE_PARAM_BOOL, "false"},
+            {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
-            {"failover_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -279,9 +279,9 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->detectStaleSlave = config_get_bool(params, "detect_stale_slave");
     handle->replicationHeartbeat = config_get_bool(params, "detect_replication_lag");
     handle->multimaster = config_get_bool(params, "multimaster");
-    handle->failover = config_get_bool(params, "failover");
+    handle->detect_standalone_master = config_get_bool(params, "detect_standalone_master");
     handle->failcount = config_get_integer(params, "failcount");
-    handle->failover_recovery = config_get_bool(params, "failover_recovery");
+    handle->allow_cluster_recovery = config_get_bool(params, "allow_cluster_recovery");
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
@@ -1010,7 +1010,7 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
             {
                 MXS_WARNING("Failover initiated, server '%s' is now the master.%s",
                             db->server->unique_name,
-                            handle->failover_recovery ?
+                            handle->allow_cluster_recovery ?
                             "" : " All other servers are set into maintenance mode.");
                 handle->warn_failover = false;
             }
@@ -1019,7 +1019,7 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
             monitor_set_pending_status(db, SERVER_MASTER);
             monitor_clear_pending_status(db, SERVER_SLAVE);
         }
-        else if (!handle->failover_recovery)
+        else if (!handle->allow_cluster_recovery)
         {
             server_set_status_nolock(db->server, SERVER_MAINT);
             monitor_set_pending_status(db, SERVER_MAINT);
@@ -1298,7 +1298,7 @@ monitorMain(void *arg)
 
         /** Now that all servers have their status correctly set, we can check
             if we need to do a failover */
-        if (handle->failover)
+        if (handle->detect_standalone_master)
         {
             if (failover_required(handle, mon->databases))
             {
