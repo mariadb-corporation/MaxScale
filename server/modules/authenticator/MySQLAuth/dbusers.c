@@ -270,6 +270,69 @@ static bool delete_mysql_users(sqlite3 *handle)
     return rval;
 }
 
+/**
+ * If the hostname is of form a.b.c.d/e.f.g.h where e-h is 255 or 0, replace
+ * the zeros in the first part with '%' and remove the second part. This does
+ * not yet support netmasks completely, but should be sufficient for most
+ * situations. In case of error, the hostname may end in an invalid state, which
+ * will cause an error later on.
+ *
+ * @param host  The hostname, which is modified in-place. If merging is unsuccessful,
+ *              it may end up garbled.
+ */
+static void merge_netmask(char *host)
+{
+    char *delimiter_loc = strchr(host, '/');
+    if (delimiter_loc == NULL)
+    {
+        return; // Nothing to do
+    }
+    /* If anything goes wrong, we put the '/' back in to ensure the hostname
+     * cannot be used.
+     */
+    *delimiter_loc = '\0';
+
+    char *ip_token_loc = host;
+    char *mask_token_loc = delimiter_loc + 1; // This is at minimum a \0
+
+    while (ip_token_loc && mask_token_loc)
+    {
+        if (strncmp(mask_token_loc, "255", 3) == 0)
+        {
+            // Skip
+        }
+        else if (*mask_token_loc == '0' && *ip_token_loc == '0')
+        {
+            *ip_token_loc = '%';
+        }
+        else
+        {
+            /* Any other combination is considered invalid. This may leave the
+             * hostname in a partially modified state.
+             * TODO: handle more cases
+             */
+            *delimiter_loc = '/';
+            MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
+                    "Merge incomplete: %s", host);
+            return;
+        }
+
+        ip_token_loc = strchr(ip_token_loc, '.');
+        mask_token_loc = strchr(mask_token_loc, '.');
+        if (ip_token_loc && mask_token_loc)
+        {
+            ip_token_loc++;
+            mask_token_loc++;
+        }
+    }
+    if (ip_token_loc || mask_token_loc)
+    {
+        *delimiter_loc = '/';
+        MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
+                "Merge incomplete: %s", host);
+    }
+}
+
 void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
                     const char *db, bool anydb, const char *pw)
 {
@@ -702,6 +765,11 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
                     if (service->strip_db_esc)
                     {
                         strip_escape_chars(row[2]);
+                    }
+
+                    if (strchr(row[1], '/'))
+                    {
+                        merge_netmask(row[1]);
                     }
 
                     add_mysql_user(instance->handle, row[0], row[1], row[2],
