@@ -184,6 +184,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"group_rows", MXS_MODULE_PARAM_COUNT, "1000"},
             {"group_trx", MXS_MODULE_PARAM_COUNT, "1"},
             {"start_index", MXS_MODULE_PARAM_COUNT, "1"},
+            {"block_size", MXS_MODULE_PARAM_COUNT, "0"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -405,6 +406,7 @@ createInstance(SERVICE *service, char **options)
     inst->row_target = config_get_integer(params, "group_rows");
     inst->trx_target = config_get_integer(params, "group_trx");
     int first_file = config_get_integer(params, "start_index");
+    inst->block_size = config_get_integer(params, "block_size");
 
     MXS_CONFIG_PARAMETER *param = config_get_param(params, "source");
     bool err = false;
@@ -478,6 +480,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "start_index") == 0)
                 {
                     first_file = MXS_MAX(1, atoi(value));
+                }
+                else if (strcmp(options[i], "block_size") == 0)
+                {
+                    inst->block_size = atoi(value);
                 }
                 else
                 {
@@ -1054,14 +1060,20 @@ void converter_func(void* data)
     while (!router->service->svc_do_shutdown && ok && binlog_end == AVRO_OK)
     {
         uint64_t start_pos = router->current_pos;
+        char binlog_name[BINLOG_FNAMELEN + 1];
+        strcpy(binlog_name, router->binlog_name);
+
         if (avro_open_binlog(router->binlogdir, router->binlog_name, &router->binlog_fd))
         {
             binlog_end = avro_read_all_events(router);
 
-            if (router->current_pos != start_pos)
+            if (router->current_pos != start_pos || strcmp(binlog_name, router->binlog_name) != 0)
             {
                 /** We processed some data, reset the conversion task delay */
                 router->task_delay = 1;
+
+                /** Update the GTID index */
+                avro_update_index(router);
             }
 
             avro_close_binlog(router->binlog_fd);

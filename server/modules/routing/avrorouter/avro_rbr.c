@@ -105,7 +105,7 @@ bool handle_table_map_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr
 
                     /** Close the file and open a new one */
                     hashtable_delete(router->open_tables, table_ident);
-                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema);
+                    AVRO_TABLE *avro_table = avro_table_alloc(filepath, json_schema, router->block_size);
 
                     if (avro_table)
                     {
@@ -289,14 +289,19 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
              * beforehand so we must continue processing them until we reach the end
              * of the event. */
             int rows = 0;
+
             while (ptr - start < hdr->event_size - BINLOG_EVENT_HDR_LEN)
             {
                 /** Add the current GTID and timestamp */
-                uint8_t *end = ptr + hdr->event_size;
+                uint8_t *end = ptr + hdr->event_size - BINLOG_EVENT_HDR_LEN;
                 int event_type = get_event_type(hdr->event_type);
                 prepare_record(router, hdr, event_type, &record);
                 ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
-                avro_file_writer_append_value(table->avro_file, &record);
+                if (avro_file_writer_append_value(table->avro_file, &record))
+                {
+                    MXS_ERROR("Failed to write value at position %ld: %s",
+                              router->current_pos, avro_strerror());
+                }
 
                 /** Update rows events have the before and after images of the
                  * affected rows so we'll process them as another record with
@@ -305,7 +310,11 @@ bool handle_row_event(AVRO_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
                 {
                     prepare_record(router, hdr, UPDATE_EVENT_AFTER, &record);
                     ptr = process_row_event_data(map, create, &record, ptr, col_present, end);
-                    avro_file_writer_append_value(table->avro_file, &record);
+                    if (avro_file_writer_append_value(table->avro_file, &record))
+                    {
+                        MXS_ERROR("Failed to write value at position %ld: %s",
+                                  router->current_pos, avro_strerror());
+                    }
                 }
 
                 rows++;
@@ -501,14 +510,23 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
     for (long i = 0; i < map->columns && npresent < ncolumns; i++)
     {
         ss_dassert(create->columns == map->columns);
-        avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
+        ss_dassert(rc == 0);
 
         if (bit_is_set(columns_present, ncolumns, i))
         {
             npresent++;
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
-                avro_value_set_null(&field);
+                if (column_is_blob(map->column_types[i]))
+                {
+                    uint8_t nullvalue = 0;
+                    avro_value_set_bytes(&field, &nullvalue, 1);
+                }
+                else
+                {
+                    avro_value_set_null(&field);
+                }
             }
             else if (column_is_fixed_string(map->column_types[i]))
             {
@@ -597,8 +615,16 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                avro_value_set_bytes(&field, ptr, len);
-                ptr += len;
+                if (len)
+                {
+                    avro_value_set_bytes(&field, ptr, len);
+                    ptr += len;
+                }
+                else
+                {
+                    uint8_t nullvalue = 0;
+                    avro_value_set_bytes(&field, &nullvalue, 1);
+                }
                 ss_dassert(ptr < end);
             }
             else if (column_is_temporal(map->column_types[i]))

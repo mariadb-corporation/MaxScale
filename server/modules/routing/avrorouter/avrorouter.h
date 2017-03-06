@@ -274,6 +274,7 @@ typedef struct avro_instance
     uint64_t        row_count; /*< Row events processed */
     uint64_t        row_target; /*< Minimum about of row events that will trigger
                                  * a flush of all tables */
+    uint64_t        block_size; /**< Avro datablock size */
     struct avro_instance  *next;
 } AVRO_INSTANCE;
 
@@ -291,7 +292,7 @@ extern void avro_client_rotate(AVRO_INSTANCE *router, AVRO_CLIENT *client, uint8
 extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router);
-extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema);
+extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, size_t block_size);
 extern void avro_table_free(AVRO_TABLE *table);
 extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);

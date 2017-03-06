@@ -97,6 +97,7 @@ const char* column_type_to_string(uint8_t type)
     case TABLE_COL_TYPE_GEOMETRY:
         return "GEOMETRY";
     default:
+        ss_dassert(false);
         break;
     }
     return "UNKNOWN";
@@ -215,7 +216,6 @@ static void unpack_year(uint8_t *ptr, struct tm *dest)
     dest->tm_year = *ptr;
 }
 
-#ifdef USE_OLD_DATETIME
 /**
  * @brief Unpack a DATETIME
  *
@@ -224,8 +224,10 @@ static void unpack_year(uint8_t *ptr, struct tm *dest)
  * @param val Value read from the binary log
  * @param dest Pointer where the unpacked value is stored
  */
-static void unpack_datetime(uint8_t *ptr, uint8_t decimals, struct tm *dest)
+static void unpack_datetime(uint8_t *ptr, struct tm *dest)
 {
+    uint64_t val = 0;
+    memcpy(&val, ptr, sizeof(val));
     uint32_t second = val - ((val / 100) * 100);
     val /= 100;
     uint32_t minute = val - ((val / 100) * 100);
@@ -240,13 +242,12 @@ static void unpack_datetime(uint8_t *ptr, uint8_t decimals, struct tm *dest)
 
     memset(dest, 0, sizeof(struct tm));
     dest->tm_year = year - 1900;
-    dest->tm_mon = month;
+    dest->tm_mon = month - 1;
     dest->tm_mday = day;
     dest->tm_hour = hour;
     dest->tm_min = minute;
     dest->tm_sec = second;
 }
-#endif
 
 /**
  * Unpack a 5 byte reverse byte order value
@@ -412,6 +413,8 @@ static size_t temporal_field_size(uint8_t type, uint8_t decimals)
         return 3 + ((decimals + 1) / 2);
 
     case TABLE_COL_TYPE_DATETIME:
+        return 8;
+
     case TABLE_COL_TYPE_TIMESTAMP:
         return 4;
 
@@ -447,8 +450,7 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, stru
         break;
 
     case TABLE_COL_TYPE_DATETIME:
-        // This is not used with MariaDB RBR
-        //unpack_datetime(ptr, *metadata, tm);
+        unpack_datetime(ptr, tm);
         break;
 
     case TABLE_COL_TYPE_DATETIME2:
@@ -466,6 +468,10 @@ size_t unpack_temporal_value(uint8_t type, uint8_t *ptr, uint8_t *metadata, stru
     case TABLE_COL_TYPE_TIMESTAMP:
     case TABLE_COL_TYPE_TIMESTAMP2:
         unpack_timestamp(ptr, *metadata, tm);
+        break;
+
+    default:
+        ss_dassert(false);
         break;
     }
     return temporal_field_size(type, *metadata);
@@ -560,42 +566,46 @@ static uint64_t unpack_bytes(uint8_t *ptr, size_t bytes)
 
     switch (bytes)
     {
-        case 1:
-            val = ptr[0];
-            break;
-        case 2:
-            val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
-            break;
-        case 3:
-            val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) |
-                  ((uint64_t)ptr[0] << 16);
-            break;
-        case 4:
-            val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) |
-                  ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
-            break;
-        case 5:
-            val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) |
-                  ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) |
-                  ((uint64_t)ptr[0] << 32);
-            break;
-        case 6:
-            val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) |
-                  ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) |
-                  ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
-            break;
-        case 7:
-            val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) |
-                  ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) |
-                  ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) |
-                  ((uint64_t)ptr[0] << 48);
-            break;
-        case 8:
-            val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) |
-                  ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) |
-                  ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) |
-                  ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
-            break;
+    case 1:
+        val = ptr[0];
+        break;
+    case 2:
+        val = ptr[1] | ((uint64_t)(ptr[0]) << 8);
+        break;
+    case 3:
+        val = (uint64_t)ptr[2] | ((uint64_t)ptr[1] << 8) |
+              ((uint64_t)ptr[0] << 16);
+        break;
+    case 4:
+        val = (uint64_t)ptr[3] | ((uint64_t)ptr[2] << 8) |
+              ((uint64_t)ptr[1] << 16) | ((uint64_t)ptr[0] << 24);
+        break;
+    case 5:
+        val = (uint64_t)ptr[4] | ((uint64_t)ptr[3] << 8) |
+              ((uint64_t)ptr[2] << 16) | ((uint64_t)ptr[1] << 24) |
+              ((uint64_t)ptr[0] << 32);
+        break;
+    case 6:
+        val = (uint64_t)ptr[5] | ((uint64_t)ptr[4] << 8) |
+              ((uint64_t)ptr[3] << 16) | ((uint64_t)ptr[2] << 24) |
+              ((uint64_t)ptr[1] << 32) | ((uint64_t)ptr[0] << 40);
+        break;
+    case 7:
+        val = (uint64_t)ptr[6] | ((uint64_t)ptr[5] << 8) |
+              ((uint64_t)ptr[4] << 16) | ((uint64_t)ptr[3] << 24) |
+              ((uint64_t)ptr[2] << 32) | ((uint64_t)ptr[1] << 40) |
+              ((uint64_t)ptr[0] << 48);
+        break;
+    case 8:
+        val = (uint64_t)ptr[7] | ((uint64_t)ptr[6] << 8) |
+              ((uint64_t)ptr[5] << 16) | ((uint64_t)ptr[4] << 24) |
+              ((uint64_t)ptr[3] << 32) | ((uint64_t)ptr[2] << 40) |
+              ((uint64_t)ptr[1] << 48) | ((uint64_t)ptr[0] << 56);
+        break;
+
+    default:
+        ss_dassert(false);
+        break;
     }
 
     return val;
