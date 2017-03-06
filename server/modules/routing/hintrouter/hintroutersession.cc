@@ -51,5 +51,6 @@ void HintRouterSession::handleError(GWBUF*             pMessage,
                                     mxs_error_action_t action,
                                     bool*              pSuccess)
 {
+    ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     MXS_ERROR("handleError not implemented yet.");
 }

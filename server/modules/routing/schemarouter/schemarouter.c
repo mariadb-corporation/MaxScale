@@ -3557,30 +3557,16 @@ static void handleError(MXS_ROUTER* instance,
                         mxs_error_action_t action,
                         bool* succp)
 {
+    ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     MXS_SESSION* session;
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
 
     CHK_DCB(problem_dcb);
 
-    /** Don't handle same error twice on same DCB */
-    if (problem_dcb->dcb_errhandle_called)
-    {
-        /** we optimistically assume that previous call succeed */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        problem_dcb->dcb_errhandle_called = true;
-    }
     session = problem_dcb->session;
 
     if (session == NULL || rses == NULL)
-    {
-        *succp = false;
-    }
-    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
     {
         *succp = false;
     }
