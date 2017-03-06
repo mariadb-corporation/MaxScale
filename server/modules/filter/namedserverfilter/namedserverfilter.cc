@@ -28,10 +28,11 @@
  * @endverbatim
  */
 
-#define MXS_MODULE_NAME "RegexHintFilter"
+#define MXS_MODULE_NAME "namedserverfilter"
 
 #include <maxscale/cppdefs.hh>
 
+#include <string>
 #include <string.h>
 #include <stdio.h>
 
@@ -43,7 +44,6 @@
 #include <maxscale/modutil.h>
 #include <maxscale/pcre2.hh>
 #include <maxscale/utils.h>
-#include <string>
 
 using std::string;
 
@@ -62,14 +62,22 @@ typedef struct source_host
  */
 class RegexHintInst : public MXS_FILTER
 {
-public: // will change to private later
-    string match; /* Regular expression to match */
-    string server; /* Server to route to */
-    string user; /* User name to restrict matches */
+private:
+    string m_match; /* Regular expression to match */
+    string m_server; /* Server to route to */
+    string m_user; /* User name to restrict matches */
 
-    REGEXHINT_SOURCE_HOST *source; /* Source address to restrict matches */
-    pcre2_code* re; /* Compiled regex text */
+    REGEXHINT_SOURCE_HOST *m_source; /* Source address to restrict matches */
+    pcre2_code* m_regex; /* Compiled regex text, can be used from multiple threads */
 
+    /* Total statements diverted statistics. Unreliable due to non-locked but
+     * shared access. */
+    volatile unsigned int m_total_diverted;
+    volatile unsigned int m_total_undiverted;
+
+    int check_source_host(const char *remote, const struct sockaddr_in *ipv4);
+
+public:
     RegexHintInst(string match, string server, string user, REGEXHINT_SOURCE_HOST* source,
                   pcre2_code* regex);
     ~RegexHintInst();
@@ -87,6 +95,8 @@ typedef struct RegexHintSess_t
     int n_diverted; /* No. of statements diverted */
     int n_undiverted; /* No. of statements not diverted */
     int active; /* Is filter active */
+    pcre2_match_data *match_data; /* regex result container */
+    bool regex_error_printed;
 } RegexHintSess;
 
 /* Api entrypoints */
@@ -101,9 +111,6 @@ static uint64_t getCapabilities(MXS_FILTER* instance);
 /* End entrypoints */
 
 static bool validate_ip_address(const char *);
-static int check_source_host(RegexHintInst *,
-                             const char *,
-                             const struct sockaddr_in *);
 static REGEXHINT_SOURCE_HOST *set_source_address(const char *);
 static void free_instance(RegexHintInst *);
 
@@ -117,22 +124,18 @@ static const MXS_ENUM_VALUE option_values[] =
 
 RegexHintInst::RegexHintInst(string match, string server, string user,
                              REGEXHINT_SOURCE_HOST* source, pcre2_code* regex)
-    :   match(match),
-        server(server),
-        user(user),
-        source(source),
-        re(regex)
+    :   m_match(match),
+        m_server(server),
+        m_user(user),
+        m_source(source),
+        m_regex(regex),
+        m_total_diverted(0),
+        m_total_undiverted(0)
 {}
 RegexHintInst::~RegexHintInst()
 {
-    if (re)
-    {
-        pcre2_code_free(re);
-    }
-    if (source)
-    {
-        MXS_FREE(source);
-    }
+    pcre2_code_free(m_regex);
+    MXS_FREE(m_source);
 }
 
 RegexHintSess_t* RegexHintInst::newSession(MXS_SESSION *session)
@@ -144,20 +147,24 @@ RegexHintSess_t* RegexHintInst::newSession(MXS_SESSION *session)
     {
         my_session->n_diverted = 0;
         my_session->n_undiverted = 0;
+        my_session->regex_error_printed = false;
         my_session->active = 1;
+        /* It's best to generate match data from the pattern to avoid extra allocations
+         * during matching. If data creation fails, matching will fail as well. */
+        my_session->match_data = pcre2_match_data_create_from_pattern(m_regex, NULL);
 
         /* Check client IP against 'source' host option */
-        if (this->source && this->source->address &&
+        if (m_source && m_source->address &&
             (remote = session_get_remote(session)) != NULL)
         {
             my_session->active =
-                check_source_host(this, remote, &session->client_dcb->ipv4);
+                this->check_source_host(remote, &session->client_dcb->ipv4);
         }
 
         /* Check client user against 'user' option */
-        if (this->user.length() &&
+        if (m_user.length() &&
             (user = session_get_user(session)) &&
-            strcmp(user, this->user.c_str()))
+            (user != m_user))
         {
             my_session->active = 0;
         }
@@ -167,29 +174,41 @@ RegexHintSess_t* RegexHintInst::newSession(MXS_SESSION *session)
 
 int RegexHintInst::routeQuery(RegexHintSess_t* my_session, GWBUF *queue)
 {
-    char *sql;
+    char *sql = NULL;
+    int sql_len = 0;
 
     if (modutil_is_SQL(queue) && my_session->active)
     {
-        if ((sql = modutil_get_SQL(queue)) != NULL)
+        if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
-            int result = pcre2_match(this->re, (PCRE2_SPTR)sql,
-                                     0, 0, 0,
-                                     NULL, NULL);
-            if (result == 0)
+            int result = pcre2_match(m_regex, (PCRE2_SPTR)sql, sql_len, 0, 0,
+                                     my_session->match_data, NULL);
+            if (result >= 0)
             {
-                // Change hint_create_route() to take a const char* to remove copying.
-                char* zServer = MXS_STRDUP_A(this->server.c_str());
+                /* Have a match. No need to check if the regex matches the complete
+                 * query, since the user can form the regex to enforce this. */
                 queue->hint =
                     hint_create_route(queue->hint, HINT_ROUTE_TO_NAMED_SERVER,
-                                      zServer);
+                                      m_server.c_str());
                 my_session->n_diverted++;
+                m_total_diverted++;
             }
-            else
+            else if (result == PCRE2_ERROR_NOMATCH)
             {
                 my_session->n_undiverted++;
+                m_total_undiverted++;
             }
-            MXS_FREE(sql);
+            else if (result < 0)
+            {
+                // Print regex error only once per session
+                if (!my_session->regex_error_printed)
+                {
+                    MXS_PCRE2_PRINT_ERROR(result);
+                }
+                my_session->regex_error_printed = true;
+                my_session->n_undiverted++;
+                m_total_undiverted++;
+            }
         }
     }
     return my_session->down.routeQuery(my_session->down.instance,
@@ -199,7 +218,11 @@ int RegexHintInst::routeQuery(RegexHintSess_t* my_session, GWBUF *queue)
 void RegexHintInst::diagnostic(RegexHintSess_t* my_session, DCB *dcb)
 {
     dcb_printf(dcb, "\t\tMatch and route:           /%s/ -> %s\n",
-               match.c_str(), server.c_str());
+               m_match.c_str(), m_server.c_str());
+    dcb_printf(dcb, "\t\tTotal no. of queries diverted by filter (approx.):     %d\n",
+               m_total_diverted);
+    dcb_printf(dcb, "\t\tTotal no. of queries not diverted by filter (approx.): %d\n",
+               m_total_undiverted);
     if (my_session)
     {
         dcb_printf(dcb, "\t\tNo. of queries diverted by filter: %d\n",
@@ -207,19 +230,72 @@ void RegexHintInst::diagnostic(RegexHintSess_t* my_session, DCB *dcb)
         dcb_printf(dcb, "\t\tNo. of queries not diverted by filter:     %d\n",
                    my_session->n_undiverted);
     }
-    if (source)
+    if (m_source)
     {
         dcb_printf(dcb,
                    "\t\tReplacement limited to connections from     %s\n",
-                   source->address);
+                   m_source->address);
     }
-    if (user.length())
+    if (m_user.length())
     {
         dcb_printf(dcb,
                    "\t\tReplacement limit to user           %s\n",
-                   user.c_str());
+                   m_user.c_str());
     }
 }
+
+/**
+ * Check whether the client IP
+ * matches the configured 'source' host
+ * which can have up to three % wildcards
+ *
+ * @param remote      The clientIP
+ * @param ipv4        The client IPv4 struct
+ * @return            1 for match, 0 otherwise
+ */
+int RegexHintInst::check_source_host(const char *remote, const struct sockaddr_in *ipv4)
+{
+    int ret = 0;
+    struct sockaddr_in check_ipv4;
+
+    memcpy(&check_ipv4, ipv4, sizeof(check_ipv4));
+
+    switch (m_source->netmask)
+    {
+    case 32:
+        ret = strcmp(m_source->address, remote) == 0 ? 1 : 0;
+        break;
+    case 24:
+        /* Class C check */
+        check_ipv4.sin_addr.s_addr &= 0x00FFFFFF;
+        break;
+    case 16:
+        /* Class B check */
+        check_ipv4.sin_addr.s_addr &= 0x0000FFFF;
+        break;
+    case 8:
+        /* Class A check */
+        check_ipv4.sin_addr.s_addr &= 0x000000FF;
+        break;
+    default:
+        break;
+    }
+
+    ret = (m_source->netmask < 32) ?
+          (check_ipv4.sin_addr.s_addr == m_source->ipv4.sin_addr.s_addr) :
+          ret;
+
+    if (ret)
+    {
+        MXS_INFO("Client IP %s matches host source %s%s",
+                 remote,
+                 m_source->netmask < 32 ? "with wildcards " : "",
+                 m_source->address);
+    }
+
+    return ret;
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -253,28 +329,27 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
     string server(config_get_string(params, "server"));
     string user(config_get_string(params, "user"));
 
-    int cflags = config_get_enum(params, "options", option_values);
+    int pcre_ops = config_get_enum(params, "options", option_values);
     int errorcode = -1;
     PCRE2_SIZE error_offset = -1;
     pcre2_code* regex =
-        pcre2_compile((PCRE2_SPTR) match.c_str(), PCRE2_ZERO_TERMINATED, cflags,
+        pcre2_compile((PCRE2_SPTR) match.c_str(), match.length(), pcre_ops,
                       &errorcode, &error_offset, NULL);
-
-    if (!regex)
+    if (regex)
+    {
+        // Try to compile even further for faster matching
+        if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
+        {
+            MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, "
+                       "falling back to normal compilation.", match.c_str());
+        }
+    }
+    else
     {
         error = true;
-
-        char errorbuf[100]; //How long should this be??
-        int err_msg_rval = pcre2_get_error_message(errorcode, (PCRE2_UCHAR*)errorbuf,
-                                                   sizeof(errorbuf));
-        MXS_ERROR("Invalid PCRE2 regular expression '%s' at position '%zu'.",
+        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
                   match.c_str(), error_offset);
-        MXS_ERROR("PCRE2 Error message: '%s'.", errorbuf);
-        if (err_msg_rval == PCRE2_ERROR_NOMEMORY)
-        {
-            MXS_ERROR("PCRE2 error buffer was too small to contain the complete"
-                      "message.");
-        }
+        MXS_PCRE2_PRINT_ERROR(errorcode);
     }
 
     if (error)
@@ -338,7 +413,9 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 static void
 freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
 {
-    MXS_FREE(session);
+    RegexHintSess_t* my_session = (RegexHintSess_t*)session;
+    pcre2_match_data_free(my_session->match_data);
+    MXS_FREE(my_session);
     return;
 }
 
@@ -396,8 +473,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 {
     RegexHintInst *my_instance = static_cast<RegexHintInst*>(instance);
     RegexHintSess *my_session = (RegexHintSess *) fsession;
-
-
+    my_instance->diagnostic(my_session, dcb);
 }
 
 /**
@@ -459,61 +535,6 @@ static bool validate_ip_address(const char *host)
     {
         return false;
     }
-}
-
-/**
- * Check whether the client IP
- * matches the configured 'source' host
- * which can have up to three % wildcards
- *
- * @param instance    The filter instance
- * @param remote      The clientIP
- * @param ipv4        The client IPv4 struct
- * @return            1 for match, 0 otherwise
- */
-static int check_source_host(RegexHintInst *instance,
-                             const char *remote,
-                             const struct sockaddr_in *ipv4)
-{
-    int ret = 0;
-    struct sockaddr_in check_ipv4;
-
-    memcpy(&check_ipv4, ipv4, sizeof(check_ipv4));
-
-    switch (instance->source->netmask)
-    {
-    case 32:
-        ret = strcmp(instance->source->address, remote) == 0 ? 1 : 0;
-        break;
-    case 24:
-        /* Class C check */
-        check_ipv4.sin_addr.s_addr &= 0x00FFFFFF;
-        break;
-    case 16:
-        /* Class B check */
-        check_ipv4.sin_addr.s_addr &= 0x0000FFFF;
-        break;
-    case 8:
-        /* Class A check */
-        check_ipv4.sin_addr.s_addr &= 0x000000FF;
-        break;
-    default:
-        break;
-    }
-
-    ret = (instance->source->netmask < 32) ?
-          (check_ipv4.sin_addr.s_addr == instance->source->ipv4.sin_addr.s_addr) :
-          ret;
-
-    if (ret)
-    {
-        MXS_INFO("Client IP %s matches host source %s%s",
-                 remote,
-                 instance->source->netmask < 32 ? "with wildcards " : "",
-                 instance->source->address);
-    }
-
-    return ret;
 }
 
 /**

@@ -10,7 +10,10 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
-### Blah
+### NamedServerFilter
+
+This filter now uses the PCRE2-libarary to match queries. Previously, it used
+the POSIX-version of PCRE2.
 
 ## Dropped Features
 

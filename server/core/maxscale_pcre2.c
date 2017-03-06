@@ -26,6 +26,8 @@
 
 #include <maxscale/pcre2.h>
 #include <maxscale/alloc.h>
+#include <maxscale/debug.h>
+#include <maxscale/log_manager.h>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.
@@ -132,4 +134,25 @@ mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subje
         *error = err;
     }
     return rval;
+}
+
+void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
+                           int line_num, const char* func_name)
+{
+    ss_dassert(module_name);
+    ss_dassert(filename);
+    ss_dassert(func_name);
+
+    char errorbuf[100];
+    int err_msg_rval = pcre2_get_error_message(errorcode, (PCRE2_UCHAR*)errorbuf,
+                                               sizeof(errorbuf));
+
+    mxs_log_message(LOG_ERR, module_name, filename, line_num, func_name,
+                    "PCRE2 Error message: '%s'.", errorbuf);
+    if (err_msg_rval == PCRE2_ERROR_NOMEMORY)
+    {
+        mxs_log_message(LOG_ERR, module_name, filename, line_num, func_name,
+                        "PCRE2 error buffer was too small to contain the complete"
+                        "message.");
+    }
 }
