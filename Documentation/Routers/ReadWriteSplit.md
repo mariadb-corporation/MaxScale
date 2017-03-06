@@ -100,6 +100,25 @@ The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the connection
 
 `LEAST_BEHIND_MASTER` does not take server weights into account when choosing a server.
 
+#### Interaction Between `slave_selection_criteria` and `max_slave_connections`
+
+Depending on the value of `max_slave_connections`, the slave selection criteria
+behave in different ways. Here are a few example cases of how the different
+criteria work with different amounts of slave connections.
+
+* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` and `max_slave_connections=1`, each session picks
+  one slave and one master
+
+* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and `max_slave_connections=100%`, each session
+  picks one master and as many slaves as possible
+
+* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` each read is load balanced based on how many
+  queries are active on a particular slave
+
+* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` each read is sent to the slave with the least
+  amount of connections
+
+
 ### `max_sescmd_history`
 
 **`max_sescmd_history`** sets a limit on how many session commands each session can execute before the session command history is disabled. The default is an unlimited number of session commands.

@@ -72,14 +72,14 @@ static const char* alter_table_regex =
 
 /* The router entry points */
 static MXS_ROUTER *createInstance(SERVICE *service, char **options);
-static void *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static void closeSession(MXS_ROUTER *instance, void *router_session);
-static void freeSession(MXS_ROUTER *instance, void *router_session);
-static int routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
+static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
-static void clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue,
+static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
-static void errorReply(MXS_ROUTER *instance, void *router_session, GWBUF *message,
+static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *message,
                        DCB *backend_dcb, mxs_error_action_t action, bool *succp);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 extern int MaxScaleUptime();
@@ -630,7 +630,7 @@ createInstance(SERVICE *service, char **options)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static void *
+static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     AVRO_INSTANCE *inst = (AVRO_INSTANCE *) instance;
@@ -703,7 +703,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param router_cli_ses    The particular session to free
  *
  */
-static void freeSession(MXS_ROUTER* router_instance, void* router_client_ses)
+static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_ses)
 {
     AVRO_INSTANCE *router = (AVRO_INSTANCE *) router_instance;
     AVRO_CLIENT *client = (AVRO_CLIENT *) router_client_ses;
@@ -752,7 +752,7 @@ static void freeSession(MXS_ROUTER* router_instance, void* router_client_ses)
  * @param instance          The router instance data
  * @param router_session    The session being closed
  */
-static void closeSession(MXS_ROUTER *instance, void *router_session)
+static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     AVRO_INSTANCE *router = (AVRO_INSTANCE *) instance;
     AVRO_CLIENT *client = (AVRO_CLIENT *) router_session;
@@ -784,7 +784,7 @@ static void closeSession(MXS_ROUTER *instance, void *router_session)
  * @return 1 on success, 0 on error
  */
 static int
-routeQuery(MXS_ROUTER *instance, void *router_session, GWBUF *queue)
+routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     AVRO_INSTANCE *router = (AVRO_INSTANCE *) instance;
     AVRO_CLIENT *client = (AVRO_CLIENT *) router_session;
@@ -960,7 +960,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static void
-clientReply(MXS_ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
+clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     /** We should never end up here */
     ss_dassert(false);
@@ -1002,7 +1002,7 @@ extract_message(GWBUF *errpkt)
  *
  */
 static void
-errorReply(MXS_ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb,
+errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *message, DCB *backend_dcb,
            mxs_error_action_t action,
            bool *succp)
 {

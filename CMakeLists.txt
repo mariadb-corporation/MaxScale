@@ -190,6 +190,9 @@ add_subdirectory(include/maxscale)
 if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
 endif()
+if(BUILD_TESTS)
+  add_subdirectory(examples)
+endif()
 
 # Generate text versions of some documents
 execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
@@ -224,6 +227,9 @@ install_file(etc/lsyncd_example.conf core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/server/maxscale_binlogserver_template.cnf core)
 
+# For devel package, these files are put to the base folder
+install_header(${CMAKE_SOURCE_DIR}/COPYRIGHT devel)
+install_header(${CMAKE_SOURCE_DIR}/LICENSE.TXT devel)
 
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)

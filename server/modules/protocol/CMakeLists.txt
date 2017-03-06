@@ -8,6 +8,3 @@ add_subdirectory(maxscaled)
 add_subdirectory(MySQL)
 add_subdirectory(telnetd)
 
-if(BUILD_TESTS)
-  add_subdirectory(testprotocol)
-endif()

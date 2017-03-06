@@ -105,6 +105,8 @@ private:
 
     void store_result();
 
+    bool should_consult_cache(GWBUF* pPacket);
+
 private:
     CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb);
 
@@ -119,5 +121,6 @@ private:
     char*                 m_zDefaultDb;  /**< The default database. */
     char*                 m_zUseDb;      /**< Pending default database. Needs server response. */
     bool                  m_refreshing;  /**< Whether the session is updating a stale cache entry. */
+    bool                  m_is_read_only;/**< Whether the current trx has been read-only in pratice. */
 };
 

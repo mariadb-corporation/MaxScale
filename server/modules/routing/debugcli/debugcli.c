@@ -43,11 +43,11 @@
 
 /* The router entry points */
 static  MXS_ROUTER *createInstance(SERVICE *service, char **options);
-static  void   *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
-static  void   closeSession(MXS_ROUTER *instance, void *router_session);
-static  void   freeSession(MXS_ROUTER *instance, void *router_session);
-static  int    execute(MXS_ROUTER *instance, void *router_session, GWBUF *queue);
-static  void   diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session);
+static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
 static  uint64_t getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION *cli);
@@ -147,7 +147,7 @@ createInstance(SERVICE *service, char **options)
  * @param session   The session itself
  * @return Session specific data for this session
  */
-static  void    *
+static MXS_ROUTER_SESSION *
 newSession(MXS_ROUTER *instance, MXS_SESSION *session)
 {
     CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
@@ -182,7 +182,7 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
  * @param router_session    The session being closed
  */
 static  void
-closeSession(MXS_ROUTER *instance, void *router_session)
+closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 {
     CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
     CLI_SESSION *session = (CLI_SESSION *)router_session;
@@ -218,9 +218,8 @@ closeSession(MXS_ROUTER *instance, void *router_session)
  * @param router_instance   The router session
  * @param router_client_session The router session as returned from newSession
  */
-static void freeSession(
-    MXS_ROUTER* router_instance,
-    void*   router_client_session)
+static void freeSession(MXS_ROUTER* router_instance,
+                        MXS_ROUTER_SESSION* router_client_session)
 {
     MXS_FREE(router_client_session);
     return;
@@ -237,7 +236,7 @@ static void freeSession(
  * @return The number of bytes sent
  */
 static  int
-execute(MXS_ROUTER *instance, void *router_session, GWBUF *queue)
+execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
 {
     CLI_SESSION *session = (CLI_SESSION *)router_session;
 

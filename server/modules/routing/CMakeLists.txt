@@ -12,6 +12,4 @@ add_subdirectory(readconnroute)
 add_subdirectory(readwritesplit)
 add_subdirectory(schemarouter)
 
-if(BUILD_TESTS)
-  add_subdirectory(testroute)
-endif()
+

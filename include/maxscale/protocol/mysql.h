@@ -84,13 +84,12 @@ MXS_BEGIN_DECLS
 #define MYSQL_CHARSET_OFFSET    12
 #define MYSQL_CLIENT_CAP_OFFSET 4
 #define MYSQL_CLIENT_CAP_SIZE   4
+#define MARIADB_CAP_OFFSET MYSQL_CHARSET_OFFSET + 19
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE1 0xff
-#define GW_MYSQL_SERVER_CAPABILITIES_BYTE2 0xf7
 #define GW_MYSQL_SERVER_LANGUAGE 0x08
-#define GW_MYSQL_MAX_PACKET_LEN 0xffffffL;
+#define GW_MYSQL_MAX_PACKET_LEN 0xffffffL
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
@@ -190,7 +189,8 @@ typedef struct mysql_session
 typedef enum
 {
     GW_MYSQL_CAPABILITIES_NONE =                   0,
-    GW_MYSQL_CAPABILITIES_LONG_PASSWORD =          (1 << 0),
+    /** This is sent by pre-10.2 clients */
+    GW_MYSQL_CAPABILITIES_CLIENT_MYSQL =           (1 << 0),
     GW_MYSQL_CAPABILITIES_FOUND_ROWS =             (1 << 1),
     GW_MYSQL_CAPABILITIES_LONG_FLAG =              (1 << 2),
     GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB =        (1 << 3),
@@ -210,34 +210,59 @@ typedef enum
     GW_MYSQL_CAPABILITIES_MULTI_RESULTS =          (1 << 17),
     GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS =       (1 << 18),
     GW_MYSQL_CAPABILITIES_PLUGIN_AUTH =            (1 << 19),
+    GW_MYSQL_CAPABILITIES_CONNECT_ATTRS =          (1 << 20),
+    GW_MYSQL_CAPABILITIES_AUTH_LENENC_DATA =       (1 << 21),
+    GW_MYSQL_CAPABILITIES_EXPIRE_PASSWORD =        (1 << 22),
+    GW_MYSQL_CAPABILITIES_SESSION_TRACK =          (1 << 23),
+    GW_MYSQL_CAPABILITIES_DEPRECATE_EOF =          (1 << 24),
     GW_MYSQL_CAPABILITIES_SSL_VERIFY_SERVER_CERT = (1 << 30),
     GW_MYSQL_CAPABILITIES_REMEMBER_OPTIONS =       (1 << 31),
-    GW_MYSQL_CAPABILITIES_CLIENT = (GW_MYSQL_CAPABILITIES_LONG_PASSWORD |
-                                    GW_MYSQL_CAPABILITIES_FOUND_ROWS |
-                                    GW_MYSQL_CAPABILITIES_LONG_FLAG |
-                                    GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
-                                    GW_MYSQL_CAPABILITIES_LOCAL_FILES |
-                                    GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
-                                    GW_MYSQL_CAPABILITIES_TRANSACTIONS |
-                                    GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
-                                    GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
-                                    GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
-                                    GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
-                                    GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
-    GW_MYSQL_CAPABILITIES_CLIENT_COMPRESS = (GW_MYSQL_CAPABILITIES_LONG_PASSWORD |
-                                             GW_MYSQL_CAPABILITIES_FOUND_ROWS |
-                                             GW_MYSQL_CAPABILITIES_LONG_FLAG |
-                                             GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
-                                             GW_MYSQL_CAPABILITIES_LOCAL_FILES |
-                                             GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
-                                             GW_MYSQL_CAPABILITIES_TRANSACTIONS |
-                                             GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
-                                             GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
-                                             GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
-                                             GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
-                                             GW_MYSQL_CAPABILITIES_COMPRESS
-                                            ),
+    GW_MYSQL_CAPABILITIES_CLIENT = (
+        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL |
+        GW_MYSQL_CAPABILITIES_FOUND_ROWS |
+        GW_MYSQL_CAPABILITIES_LONG_FLAG |
+        GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
+        GW_MYSQL_CAPABILITIES_LOCAL_FILES |
+        GW_MYSQL_CAPABILITIES_PLUGIN_AUTH |
+        GW_MYSQL_CAPABILITIES_TRANSACTIONS |
+        GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
+        GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
+        GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_SECURE_CONNECTION),
+    GW_MYSQL_CAPABILITIES_SERVER = (
+        GW_MYSQL_CAPABILITIES_CLIENT_MYSQL |
+        GW_MYSQL_CAPABILITIES_FOUND_ROWS |
+        GW_MYSQL_CAPABILITIES_LONG_FLAG |
+        GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB |
+        GW_MYSQL_CAPABILITIES_NO_SCHEMA |
+        GW_MYSQL_CAPABILITIES_ODBC |
+        GW_MYSQL_CAPABILITIES_LOCAL_FILES |
+        GW_MYSQL_CAPABILITIES_IGNORE_SPACE |
+        GW_MYSQL_CAPABILITIES_PROTOCOL_41 |
+        GW_MYSQL_CAPABILITIES_INTERACTIVE |
+        GW_MYSQL_CAPABILITIES_IGNORE_SIGPIPE |
+        GW_MYSQL_CAPABILITIES_TRANSACTIONS |
+        GW_MYSQL_CAPABILITIES_RESERVED |
+        GW_MYSQL_CAPABILITIES_SECURE_CONNECTION |
+        GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS |
+        GW_MYSQL_CAPABILITIES_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PS_MULTI_RESULTS |
+        GW_MYSQL_CAPABILITIES_PLUGIN_AUTH),
 } gw_mysql_capabilities_t;
+
+/**
+ * Capabilities supported by MariaDB 10.2 and later, stored in the last 4 bytes
+ * of the 10 byte filler of the initial handshake packet.
+ *
+ * The actual capability bytes use by the server are left shifted by an extra 32
+ * bits to get one 64 bit capability that combines the old and new capabilities.
+ * Since we only use these in the non-shifted form, the definitions declared here
+ * are right shifted by 32 bytes and can be directly copied into the extra capabilities.
+ */
+#define MXS_MARIA_CAP_PROGRESS             (1 << 0)
+#define MXS_MARIA_CAP_COM_MULTI            (1 << 1)
+#define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1 << 2)
 
 typedef enum enum_server_command mysql_server_cmd_t;
 
@@ -277,6 +302,7 @@ typedef struct
     uint8_t                scramble[MYSQL_SCRAMBLE_LEN]; /*< server scramble, created or received */
     uint32_t               server_capabilities;          /*< server capabilities, created or received */
     uint32_t               client_capabilities;          /*< client capabilities, created or received */
+    uint32_t               extra_capabilities;           /*< MariaDB 10.2 capabilities */
     unsigned long          tid;                          /*< MySQL Thread ID, in handshake */
     unsigned int           charset;                      /*< MySQL character set at connect time */
     bool                   ignore_reply;                 /*< If the reply should be discarded */

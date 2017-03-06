@@ -103,6 +103,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     p->protocol_command.scom_nresponse_packets = 0;
     p->protocol_command.scom_nbytes_to_read = 0;
     p->stored_query = NULL;
+    p->extra_capabilities = 0;
 #if defined(SS_DEBUG)
     p->protocol_chk_top = CHK_NUM_PROTOCOL;
     p->protocol_chk_tail = CHK_NUM_PROTOCOL;
@@ -1364,8 +1365,12 @@ mxs_auth_state_t gw_send_backend_auth(DCB *dcb)
 
     payload++;
 
-    // 23 bytes of 0
-    payload += 23;
+    // 19 filler bytes of 0
+    payload += 19;
+
+    // Either MariaDB 10.2 extra capabilities or 4 bytes filler
+    memcpy(payload, &conn->extra_capabilities, sizeof(conn->extra_capabilities));
+    payload += 4;
 
     if (dcb->server->server_ssl && dcb->ssl_state != SSL_ESTABLISHED)
     {
