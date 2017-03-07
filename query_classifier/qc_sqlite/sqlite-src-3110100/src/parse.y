@@ -99,6 +99,7 @@ extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
 extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
 extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int,ExprList*);
 extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName);
 extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void mxs_sqlite3StartTable(Parse*,Token*,Token*,int,int,int,int);
 extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
@@ -337,6 +338,22 @@ cmd ::= ROLLBACK id_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
 cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
 cmd ::= END trans_opt.         {sqlite3CommitTransaction(pParse);}
 cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
+%endif
+
+%ifdef MAXSCALE
+savepoint_opt ::= SAVEPOINT.
+savepoint_opt ::= .
+work_opt ::= WORK.
+work_opt ::= .
+cmd ::= SAVEPOINT nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_BEGIN, &X);
+}
+cmd ::= RELEASE savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_RELEASE, &X);
+}
+cmd ::= ROLLBACK work_opt TO savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_ROLLBACK, &X);
+}
 %endif
 
 %ifndef MAXSCALE
@@ -603,6 +620,7 @@ columnid(A) ::= nm(X). {
   UNSIGNED
   VALUE VIEW /*VIRTUAL*/
   /*WITH*/
+  WORK
 %endif
   .
 %wildcard ANY.
