@@ -1276,9 +1276,8 @@ static bool create_monitor_server_config(const MXS_MONITOR *monitor, const char 
 
     if (file == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
-                  filename, monitor->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  filename, monitor->name, errno, mxs_strerror(errno));
         return false;
     }
 
@@ -1315,9 +1314,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
 
     if (file == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
-                  filename, monitor->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  filename, monitor->name, errno, mxs_strerror(errno));
         return false;
     }
 
@@ -1350,9 +1348,8 @@ bool monitor_serialize_servers(const MXS_MONITOR *monitor)
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
-                  filename, errno, strerror_r(errno, err, sizeof(err)));
+                  filename, errno, mxs_strerror(errno));
     }
     else if (create_monitor_server_config(monitor, filename))
     {
@@ -1369,9 +1366,8 @@ bool monitor_serialize_servers(const MXS_MONITOR *monitor)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 
@@ -1387,9 +1383,8 @@ bool monitor_serialize(const MXS_MONITOR *monitor)
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
-                  filename, errno, strerror_r(errno, err, sizeof(err)));
+                  filename, errno, mxs_strerror(errno));
     }
     else if (create_monitor_config(monitor, filename))
     {
@@ -1406,9 +1401,8 @@ bool monitor_serialize(const MXS_MONITOR *monitor)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 

@@ -537,14 +537,13 @@ dcb_process_victim_queue(int threadid)
             {
                 int eno = errno;
                 errno = 0;
-                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("%lu [dcb_process_victim_queue] Error : Failed to close "
                           "socket %d on dcb %p due error %d, %s.",
                           pthread_self(),
                           dcb->fd,
                           dcb,
                           eno,
-                          strerror_r(eno, errbuf, sizeof(errbuf)));
+                          mxs_strerror(eno));
             }
             else
             {
@@ -868,7 +867,6 @@ dcb_bytes_readable(DCB *dcb)
 
     if (-1 == ioctl(dcb->fd, FIONREAD, &bytesavailable))
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
         MXS_ERROR("%lu [dcb_read] Error : ioctl FIONREAD for dcb %p in "
                   "state %s fd %d failed due error %d, %s.",
@@ -877,7 +875,7 @@ dcb_bytes_readable(DCB *dcb)
                   STRDCBSTATE(dcb->state),
                   dcb->fd,
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         /* </editor-fold> */
         return -1;
     }
@@ -946,7 +944,6 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
          * This is a fatal error which should cause shutdown.
          * Todo shutdown if memory allocation fails.
          */
-        char errbuf[MXS_STRERROR_BUFLEN];
         /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
         MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
                   "for dcb %p fd %d, due %d, %s.",
@@ -954,7 +951,7 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
                   dcb,
                   dcb->fd,
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         /* </editor-fold> */
         *nsingleread = -1;
     }
@@ -967,7 +964,6 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
         {
             if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                char errbuf[MXS_STRERROR_BUFLEN];
                 /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
                 MXS_ERROR("%lu [dcb_read] Error : Read failed, dcb %p in state "
                           "%s fd %d, due %d, %s.",
@@ -976,7 +972,7 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
                           STRDCBSTATE(dcb->state),
                           dcb->fd,
                           errno,
-                          strerror_r(errno, errbuf, sizeof(errbuf)));
+                          mxs_strerror(errno));
                 /* </editor-fold> */
             }
             gwbuf_free(buffer);
@@ -1076,7 +1072,6 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
              * This is a fatal error which should cause shutdown.
              * Todo shutdown if memory allocation fails.
              */
-            char errbuf[MXS_STRERROR_BUFLEN];
             /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
             MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
                       "for dcb %p fd %d, due %d, %s.",
@@ -1084,7 +1079,7 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
                       dcb,
                       dcb->fd,
                       errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
+                      mxs_strerror(errno));
             /* </editor-fold> */
             *nsingleread = -1;
             return NULL;
@@ -1175,9 +1170,7 @@ dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret)
     {
         int local_errno = errno;
         MXS_ERROR("SSL error caused by TCP error %d %s",
-                  local_errno,
-                  strerror_r(local_errno, errbuf, sizeof(errbuf))
-                 );
+                  local_errno, mxs_strerror(local_errno));
     }
     else
     {
@@ -1278,7 +1271,6 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
     {
         if (eno == EPIPE)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [dcb_write] Write to dcb "
                       "%p in state %s fd %d failed "
                       "due errno %d, %s",
@@ -1287,7 +1279,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                       STRDCBSTATE(dcb->state),
                       dcb->fd,
                       eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
+                      mxs_strerror(eno));
         }
     }
 
@@ -1297,7 +1289,6 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
             eno != EAGAIN &&
             eno != EWOULDBLOCK)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Write to dcb %p in "
                       "state %s fd %d failed due "
                       "errno %d, %s",
@@ -1305,7 +1296,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                       STRDCBSTATE(dcb->state),
                       dcb->fd,
                       eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
+                     mxs_strerror(eno));
 
         }
 
@@ -1331,12 +1322,11 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
         }
         if (dolog)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [dcb_write] Writing to %s socket failed due %d, %s.",
                       pthread_self(),
                       DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ? "client" : "backend server",
                       eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
+                     mxs_strerror(eno));
         }
     }
 }
@@ -2097,13 +2087,12 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
             saved_errno != EPIPE)
 #endif
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Write to %s %s in state %s failed due errno %d, %s",
                       DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
-                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)));
+                      saved_errno, mxs_strerror(saved_errno));
             MXS_DEBUG("Write to %s %s in state %s failed due errno %d, %s (at %p, fd %d)",
                       DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
-                      saved_errno, strerror_r(saved_errno, errbuf, sizeof(errbuf)),
+                      saved_errno, mxs_strerror(saved_errno),
                       dcb, dcb->fd);
         }
     }
@@ -2677,7 +2666,6 @@ dcb_accept(DCB *listener)
     int sendbuf;
     struct sockaddr_storage client_conn;
     socklen_t optlen = sizeof(sendbuf);
-    char errbuf[MXS_STRERROR_BUFLEN];
 
     if ((c_sock = dcb_accept_one_connection(listener, (struct sockaddr *)&client_conn)) >= 0)
     {
@@ -2691,7 +2679,7 @@ dcb_accept(DCB *listener)
         if (setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen) != 0)
         {
             MXS_ERROR("Failed to set socket options. Error %d: %s",
-                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                      errno, mxs_strerror(errno));
         }
 
         sendbuf = MXS_CLIENT_SO_RCVBUF;
@@ -2699,7 +2687,7 @@ dcb_accept(DCB *listener)
         if (setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen) != 0)
         {
             MXS_ERROR("Failed to set socket options. Error %d: %s",
-                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                      errno, mxs_strerror(errno));
         }
         setnonblocking(c_sock);
 
@@ -2826,7 +2814,6 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
 
         if (c_sock == -1)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             /* Did not get a file descriptor */
             if (eno == EAGAIN || eno == EWOULDBLOCK)
             {
@@ -2848,14 +2835,14 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
                 MXS_DEBUG("%lu [dcb_accept_one_connection] Error %d, %s. ",
                           pthread_self(),
                           eno,
-                          strerror_r(eno, errbuf, sizeof(errbuf)));
+                         mxs_strerror(eno));
 
                 /* Log an error the first time this happens */
                 if (i == 0)
                 {
                     MXS_ERROR("Error %d, %s. Failed to accept new client connection.",
                               eno,
-                              strerror_r(eno, errbuf, sizeof(errbuf)));
+                             mxs_strerror(eno));
                 }
                 nanosecs = (long long)1000000 * 100 * i * i;
                 ts1.tv_sec = nanosecs / 1000000000;
@@ -2871,7 +2858,7 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
                  */
                 MXS_ERROR("Failed to accept new client connection due to %d, %s.",
                           eno,
-                          strerror_r(eno, errbuf, sizeof(errbuf)));
+                         mxs_strerror(eno));
                 break;
             }
         }
@@ -3117,10 +3104,8 @@ dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_
 {
     if (setsockopt(sockfd, level, optname, optval, optlen) != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to set socket options. Error %d: %s",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  errno, mxs_strerror(errno));
         return -1;
     }
     return 0;

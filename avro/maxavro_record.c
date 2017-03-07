@@ -325,9 +325,8 @@ GWBUF* maxavro_record_read_binary(MAXAVRO_FILE *file)
             {
                 if (ferror(file->file))
                 {
-                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Failed to read %ld bytes: %d, %s", data_size, errno,
-                              strerror_r(errno, err, sizeof(err)));
+                              mxs_strerror(errno));
                     file->last_error = MAXAVRO_ERR_IO;
                 }
                 gwbuf_free(rval);

@@ -2217,9 +2217,8 @@ static bool create_service_config(const SERVICE *service, const char *filename)
 
     if (file == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open file '%s' when serializing service '%s': %d, %s",
-                  filename, service->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  filename, service->name, errno, mxs_strerror(errno));
         return false;
     }
 
@@ -2258,9 +2257,8 @@ bool service_serialize_servers(const SERVICE *service)
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
-                  filename, errno, strerror_r(errno, err, sizeof(err)));
+                  filename, errno, mxs_strerror(errno));
     }
     else if (create_service_config(service, filename))
     {
@@ -2277,9 +2275,8 @@ bool service_serialize_servers(const SERVICE *service)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 

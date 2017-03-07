@@ -176,9 +176,8 @@ bool runtime_destroy_server(SERVER *server)
         {
             if (errno != ENOENT)
             {
-                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Failed to remove persisted server configuration '%s': %d, %s",
-                          filename, errno, strerror_r(errno, err, sizeof(err)));
+                          filename, errno, mxs_strerror(errno));
             }
             else
             {
@@ -542,9 +541,8 @@ bool runtime_destroy_listener(SERVICE *service, const char *name)
     {
         if (errno != ENOENT)
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to remove persisted listener configuration '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
         else
         {
@@ -618,9 +616,8 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     {
         if (errno != ENOENT)
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to remove persisted monitor configuration '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
         else
         {

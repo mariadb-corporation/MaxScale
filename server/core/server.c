@@ -1119,9 +1119,8 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     if (file == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open file '%s' when serializing server '%s': %d, %s",
-                  filename, server->unique_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  filename, server->unique_name, errno, mxs_strerror(errno));
         return false;
     }
 
@@ -1230,9 +1229,8 @@ bool server_serialize(const SERVER *server)
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove temporary server configuration at '%s': %d, %s",
-                  filename, errno, strerror_r(errno, err, sizeof(err)));
+                  filename, errno, mxs_strerror(errno));
     }
     else if (create_server_config(server, filename))
     {
@@ -1249,9 +1247,8 @@ bool server_serialize(const SERVER *server)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary server configuration at '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 

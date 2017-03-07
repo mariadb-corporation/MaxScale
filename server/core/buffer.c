@@ -94,9 +94,7 @@ gwbuf_alloc(unsigned int size)
 retblock:
     if (rval == NULL)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Memory allocation failed due to %s.", mxs_strerror(errno));
     }
 #if defined(BUFFER_TRACE)
     else

@@ -70,9 +70,8 @@ bool avro_open_binlog(const char *binlogdir, const char *file, int *dest)
     {
         if (errno != ENOENT)
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open binlog file %s: %d, %s", path, errno,
-                      strerror_r(errno, err, sizeof(err)));
+                      mxs_strerror(errno));
         }
         return false;
     }
@@ -166,7 +165,6 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
 {
     FILE *config_file;
     char filename[PATH_MAX + 1];
-    char err_msg[MXS_STRERROR_BUFLEN];
 
     snprintf(filename, sizeof(filename), "%s/"AVRO_PROGRESS_FILE".tmp", router->avrodir);
 
@@ -176,7 +174,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
     if (config_file == NULL)
     {
         MXS_ERROR("Failed to open file '%s': %d, %s", filename,
-                  errno, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  errno, mxs_strerror(errno));
         return false;
     }
 
@@ -195,7 +193,7 @@ bool avro_save_conversion_state(AVRO_INSTANCE *router)
     if (rc == -1)
     {
         MXS_ERROR("Failed to rename file '%s' to '%s': %d, %s", filename, newname,
-                  errno, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  errno, mxs_strerror(errno));
         return false;
     }
 
@@ -425,11 +423,10 @@ static GWBUF* read_event_data(AVRO_INSTANCE *router, REP_HEADER* hdr, uint64_t p
         {
             if (n == -1)
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error reading the event at %lu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,
-                          strerror_r(errno, err_msg, sizeof(err_msg)),
+                          mxs_strerror(errno),
                           hdr->event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
@@ -519,10 +516,9 @@ avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router)
                 break;
             case -1:
                 {
-                    char err_msg[BLRM_STRERROR_R_MSG_SIZE + 1] = "";
                     MXS_ERROR("Failed to read binlog file %s at position %llu (%s).",
                               router->binlog_name, pos,
-                              strerror_r(errno, err_msg, sizeof(err_msg)));
+                              mxs_strerror(errno));
 
                     if (errno == EBADF)
                         MXS_ERROR("Bad file descriptor in read binlog for file %s"

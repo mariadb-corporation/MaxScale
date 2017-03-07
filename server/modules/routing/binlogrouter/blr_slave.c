@@ -1008,10 +1008,9 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 if (removed_cfg == -1)
                 {
-                    char err_msg[MXS_STRERROR_BUFLEN];
                     snprintf(error_string, BINLOG_ERROR_MSG_LEN,
                              "Error removing %s, %s, errno %u", path,
-                             strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                             mxs_strerror(errno), errno);
                     MXS_ERROR("%s: %s", router->service->name, error_string);
                 }
 
@@ -3677,9 +3676,8 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
             /* Truncate previous binlog file to last_safe pos */
             if (truncate(file, router->last_safe_pos) == -1)
             {
-                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Failed to truncate file: %d, %s",
-                          errno, strerror_r(errno, err, sizeof(err)));
+                          errno, mxs_strerror(errno));
             }
 
             /* Log it */

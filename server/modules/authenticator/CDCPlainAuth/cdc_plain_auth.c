@@ -114,8 +114,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
             }
             else
             {
-                char err[MXS_STRERROR_BUFLEN];
-                char *real_err = strerror_r(errno, err, sizeof(err));
+                const char *real_err = mxs_strerror(errno);
                 MXS_NOTICE("Failed to write to file '%s': %s", path, real_err);
                 modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
             }
@@ -124,8 +123,7 @@ static bool cdc_add_new_user(const MODULECMD_ARG *args)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
-            char *real_err = strerror_r(errno, err, sizeof(err));
+            const char *real_err = mxs_strerror(errno);
             MXS_NOTICE("Failed to open file '%s': %s", path, real_err);
             modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
         }

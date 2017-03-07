@@ -541,9 +541,8 @@ static bool is_directory(const char *dir)
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_WARNING("Could not access %s, not reading: %s",
-                        dir, strerror_r(errno, errbuf, sizeof(errbuf)));
+                        dir, mxs_strerror(errno));
         }
     }
     else
@@ -2365,9 +2364,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Failed to open file '%s': %s", filename,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Failed to open file '%s': %s", filename, mxs_strerror(errno));
             rval = true;
         }
     }
@@ -3255,9 +3252,8 @@ static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *val
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s", value,
-                      buf, errno, strerror_r(errno, err, sizeof(err)));
+                      buf, errno, mxs_strerror(errno));
         }
     }
     else

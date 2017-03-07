@@ -231,10 +231,8 @@ CACHE_RULES *cache_rules_load(const char *path, uint32_t debug)
     }
     else
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-
         MXS_ERROR("Could not open rules file %s for reading: %s",
-                  path, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  path, mxs_strerror(errno));
     }
 
     return rules;

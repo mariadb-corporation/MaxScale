@@ -349,9 +349,8 @@ sigchld_handler (int i)
 
     if ((child = wait(&exit_status)) == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to wait child process: %d %s",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  errno, mxs_strerror(errno));
     }
     else
     {
@@ -464,11 +463,10 @@ static int signal_set(int sig, void (*handler)(int))
 
     if (err < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed call sigaction() in %s due to %d, %s.",
                   program_invocation_short_name,
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         rc = 1;
     }
 
@@ -500,9 +498,8 @@ static bool create_datadir(const char* base, char* datadir)
             }
             else
             {
-                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Cannot create data directory '%s': %d %s\n",
-                          datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                          datadir, errno, mxs_strerror(errno));
             }
         }
     }
@@ -510,9 +507,8 @@ static bool create_datadir(const char* base, char* datadir)
     {
         if (len < PATH_MAX)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr, "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                    datadir, errno, mxs_strerror(errno));
         }
         else
         {
@@ -538,9 +534,8 @@ int ntfw_cb(const char*        filename,
     {
         int eno = errno;
         errno = 0;
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
-                  datadir, eno, strerror_r(eno, errbuf, sizeof(errbuf)));
+                  datadir, eno, mxs_strerror(eno));
     }
     return rc;
 }
@@ -730,22 +725,20 @@ static void print_log_n_stderr(
     {
         if (mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS))
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("%s%s%s%s",
                       logstr,
                       eno == 0 ? "" : " (",
-                      eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                      eno == 0 ? "" : mxs_strerror(eno),
                       eno == 0 ? "" : ")");
         }
     }
     if (do_stderr)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr,
                 "* Error: %s%s%s%s\n",
                 fprstr,
                 eno == 0 ? "" : " (",
-                eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                eno == 0 ? "" : mxs_strerror(eno),
                 eno == 0 ? "" : ")");
     }
 }
@@ -1807,9 +1800,8 @@ int main(int argc, char **argv)
     }
     else
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Cannot create data directory '%s': %d %s\n",
-                  datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  datadir, errno, mxs_strerror(errno));
         goto return_main;
     }
 
@@ -2126,12 +2118,11 @@ static void unlink_pidfile(void)
     {
         if (unlink(pidfile))
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             fprintf(stderr,
                     "MaxScale failed to remove pidfile %s: error %d, %s\n",
                     pidfile,
                     errno,
-                    strerror_r(errno, errbuf, sizeof(errbuf)));
+                    mxs_strerror(errno));
         }
     }
 }
@@ -2587,36 +2578,32 @@ static int set_user(const char* user)
     pwname = getpwnam(user);
     if (pwname == NULL)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to retrieve user information for '%s': %d %s\n",
-               user, errno, errno == 0 ? "User not found" : strerror_r(errno, errbuf, sizeof(errbuf)));
+               user, errno, errno == 0 ? "User not found" : mxs_strerror(errno));
         return -1;
     }
 
     rval = setgid(pwname->pw_gid);
     if (rval != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to change group to '%d': %d %s\n",
-               pwname->pw_gid, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+               pwname->pw_gid, errno, mxs_strerror(errno));
         return rval;
     }
 
     rval = setuid(pwname->pw_uid);
     if (rval != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         printf("Error: Failed to change user to '%s': %d %s\n",
-               pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+               pwname->pw_name, errno, mxs_strerror(errno));
         return rval;
     }
     if (prctl(PR_GET_DUMPABLE) == 0)
     {
         if (prctl(PR_SET_DUMPABLE , 1) == -1)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
-                   pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                   pwname->pw_name, errno, mxs_strerror(errno));
             return -1;
         }
     }
@@ -2660,14 +2647,13 @@ static bool change_cwd()
 
     if (chdir(get_logdir()) != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
                   "Trying to change working directory to '/'.",
-                  get_logdir(), errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+                  get_logdir(), errno, mxs_strerror(errno));
         if (chdir("/") != 0)
         {
             MXS_ERROR("Failed to change working directory to '/': %d, %s",
-                      errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+                      errno, mxs_strerror(errno));
             rval = false;
         }
         else
@@ -2719,8 +2705,7 @@ static bool daemonize(void)
 
     if (pid < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        fprintf(stderr, "fork() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        fprintf(stderr, "fork() error %s\n", mxs_strerror(errno));
         exit(1);
     }
 
@@ -2732,8 +2717,7 @@ static bool daemonize(void)
 
     if (setsid() < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
+        fprintf(stderr, "setsid() error %s\n", mxs_strerror(errno));
         exit(1);
     }
     return false;

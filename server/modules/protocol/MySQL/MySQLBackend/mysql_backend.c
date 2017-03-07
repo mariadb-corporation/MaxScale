@@ -1119,16 +1119,15 @@ static int gw_error_backend_event(DCB *dcb)
 
         if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0 && error != 0)
         {
-            char errstring[MXS_STRERROR_BUFLEN];
             if (dcb->state != DCB_STATE_POLLING)
             {
                 MXS_ERROR("DCB in state %s got error '%s'.", STRDCBSTATE(dcb->state),
-                          strerror_r(error, errstring, sizeof(errstring)));
+                          mxs_strerror(errno));
             }
             else
             {
                 MXS_ERROR("Error '%s' in session that is not ready for routing.",
-                          strerror_r(error, errstring, sizeof(errstring)));
+                          mxs_strerror(errno));
             }
         }
     }
@@ -1168,10 +1167,9 @@ static int gw_backend_hangup(DCB *dcb)
         {
             if (error != 0 && session->state != SESSION_STATE_STOPPING)
             {
-                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Hangup in session that is not ready for routing, "
                           "Error reported is '%s'.",
-                          strerror_r(error, errstring, sizeof(errstring)));
+                          mxs_strerror(errno));
             }
         }
     }

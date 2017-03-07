@@ -179,9 +179,8 @@ int externcmd_execute(EXTERNCMD* cmd)
 
     if (pid < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
-                  cmd->argv[0], errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  cmd->argv[0], errno, mxs_strerror(errno));
         rval = -1;
     }
     else if (pid == 0)

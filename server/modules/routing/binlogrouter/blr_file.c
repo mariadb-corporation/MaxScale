@@ -307,10 +307,9 @@ blr_file_init(ROUTER_INSTANCE *router)
     root_len = strlen(router->fileroot);
     if ((dirp = opendir(path)) == NULL)
     {
-        char err_msg[BLRM_STRERROR_R_MSG_SIZE];
         MXS_ERROR("%s: Unable to read the binlog directory %s, %s.",
                   router->service->name, router->binlogdir,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
         return 0;
     }
     while ((dp = readdir(dirp)) != NULL)
@@ -433,20 +432,20 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
         else
         {
             MXS_ERROR("%s: Failed to write magic string to created binlog file %s, %s.",
-                      router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                      router->service->name, path, mxs_strerror(errno));
             close(fd);
 
             if (!unlink(path))
             {
                 MXS_ERROR("%s: Failed to delete file %s, %s.",
-                          router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                          router->service->name, path, mxs_strerror(errno));
             }
         }
     }
     else
     {
         MXS_ERROR("%s: Failed to create binlog file %s, %s.",
-                  router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+                  router->service->name, path, mxs_strerror(errno));
     }
 
     return created;
@@ -577,19 +576,18 @@ blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size,
     /* Check write operation result*/
     if (n != size)
     {
-        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->binlog_position,
                   router->binlog_name,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
         {
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                       router->service->name, router->binlog_position,
                       router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
         }
         return 0;
     }
@@ -836,9 +834,8 @@ blr_read_binlog(ROUTER_INSTANCE *router,
             break;
         case -1:
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
-                         file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
+                         file->binlogname, mxs_strerror(errno), pos);
 
                 if (errno == EBADF)
                 {
@@ -899,10 +896,9 @@ blr_read_binlog(ROUTER_INSTANCE *router,
                     break;
                 case -1:
                     {
-                        char err_msg[MXS_STRERROR_BUFLEN];
                         snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                                  "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-                                 file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
+                                 file->binlogname, mxs_strerror(errno), pos);
 
                         if (errno == EBADF)
                         {
@@ -983,13 +979,12 @@ blr_read_binlog(ROUTER_INSTANCE *router,
 
         if (n == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             snprintf(errmsg, BINLOG_ERROR_MSG_LEN,
                      "Error reading the binlog event at %lu in binlog file '%s';"
                      "(%s), expected %d bytes.",
                      pos,
                      file->binlogname,
-                     strerror_r(errno, err_msg, sizeof(err_msg)),
+                     mxs_strerror(errno),
                      hdr->event_size - BINLOG_EVENT_HDR_LEN);
         }
         else
@@ -1199,9 +1194,8 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
     }
     if (write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf)) == -1)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to write cached response: %d, %s",
-                  errno, strerror_r(errno, err, sizeof(err)));
+                  errno, mxs_strerror(errno));
     }
 
     close(fd);
@@ -1257,9 +1251,8 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
     }
     if (read(fd, GWBUF_DATA(buf), statb.st_size) == -1)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to read cached response: %d, %s",
-                  errno, strerror_r(errno, err, sizeof(err)));
+                  errno, mxs_strerror(errno));
     }
     close(fd);
     return buf;
@@ -1438,10 +1431,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                 break;
             case -1:
                 {
-                    char err[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Failed to read binlog file %s at position %llu"
                               " (%s).", router->binlog_name, pos,
-                              strerror_r(errno, err, sizeof(err)));
+                              mxs_strerror(errno));
 
                     if (errno == EBADF)
                     {
@@ -1657,11 +1649,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         {
             if (n == -1)
             {
-                char err[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error reading the event at %llu in %s. "
                           "%s, expected %d bytes.",
                           pos, router->binlog_name,
-                          strerror_r(errno, err, sizeof(err)),
+                          mxs_strerror(errno),
                           hdr.event_size - BINLOG_EVENT_HDR_LEN);
             }
             else
@@ -2443,7 +2434,6 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
 
     char filename[len + sizeof('/') + sizeof(MASTER_INI)]; // sizeof includes NULL
     char tmp_file[len + sizeof('/') + sizeof(MASTER_INI) + sizeof('.') + sizeof(TMP)];
-    char err_msg[MXS_STRERROR_BUFLEN];
     char *ssl_ca;
     char *ssl_cert;
     char *ssl_key;
@@ -2457,7 +2447,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     if (config_file == NULL)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 2;
     }
 
@@ -2465,7 +2455,7 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     {
         fclose(config_file);
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 2;
     }
 
@@ -2517,14 +2507,14 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     if (rc == -1)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 3;
     }
 
     if (chmod(filename, S_IRUSR | S_IWUSR) < 0)
     {
         snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u",
-                 strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+                 mxs_strerror(errno), errno);
         return 3;
     }
 
@@ -2724,12 +2714,11 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
     /* Write the event */
     if ((n = pwrite(router->binlog_fd, new_event, event_size, router->last_written)) != event_size)
     {
-        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write %s special binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, new_event_desc, (unsigned long)file_offset,
                   router->binlog_name,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
 
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
@@ -2737,7 +2726,7 @@ blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t 
             MXS_ERROR("%s: Failed to truncate %s special binlog record at %lu of %s, %s. ",
                       router->service->name, new_event_desc, (unsigned long)file_offset,
                       router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
         }
         MXS_FREE(new_event);
         return 0;

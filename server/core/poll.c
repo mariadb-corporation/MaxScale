@@ -239,9 +239,8 @@ poll_init()
     {
         if ((epoll_fd[i] = epoll_create(MAX_EVENTS)) == -1)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_ERROR("FATAL: Could not create epoll instance: %s",
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
+                      mxs_strerror(errno));
             exit(-1);
         }
     }
@@ -930,13 +929,12 @@ process_pollq(int thread_id, struct epoll_event *event)
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLOUT due %d, %s. "
                       "dcb %p, fd %i",
                       pthread_self(),
                       eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)),
+                      mxs_strerror(eno),
                       dcb,
                       dcb->fd);
         }
@@ -988,12 +986,11 @@ process_pollq(int thread_id, struct epoll_event *event)
         int eno = gw_getsockerrno(dcb->fd);
         if (eno != 0)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
             MXS_DEBUG("%lu [poll_waitevents] "
                       "EPOLLERR due %d, %s.",
                       pthread_self(),
                       eno,
-                      strerror_r(eno, errbuf, sizeof(errbuf)));
+                      mxs_strerror(eno));
         }
         ts_stats_increment(pollStats.n_error, thread_id);
 
@@ -1006,7 +1003,6 @@ process_pollq(int thread_id, struct epoll_event *event)
     if (ev & EPOLLHUP)
     {
         ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -1014,7 +1010,7 @@ process_pollq(int thread_id, struct epoll_event *event)
                   dcb,
                   dcb->fd,
                   eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(eno));
         ts_stats_increment(pollStats.n_hup, thread_id);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -1031,7 +1027,6 @@ process_pollq(int thread_id, struct epoll_event *event)
     if (ev & EPOLLRDHUP)
     {
         ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        ss_debug(char errbuf[MXS_STRERROR_BUFLEN]);
         MXS_DEBUG("%lu [poll_waitevents] "
                   "EPOLLRDHUP on dcb %p, fd %d. "
                   "Errno %d, %s.",
@@ -1039,7 +1034,7 @@ process_pollq(int thread_id, struct epoll_event *event)
                   dcb,
                   dcb->fd,
                   eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(eno));
         ts_stats_increment(pollStats.n_hup, thread_id);
 
         if ((dcb->flags & DCBF_HUNG) == 0)
