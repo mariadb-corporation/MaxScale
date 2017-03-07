@@ -313,10 +313,9 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 //
 
 %ifdef MAXSCALE
-id_opt ::= .
-id_opt ::= deferred_id.
-
-cmd ::= BEGIN id_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
+work_opt ::= WORK.
+work_opt ::= .
+cmd ::= BEGIN work_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
 %endif
 %ifndef MAXSCALE
 cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
@@ -330,9 +329,8 @@ transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
 %endif
 %ifdef MAXSCALE
-cmd ::= COMMIT id_opt.      {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= END id_opt.         {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK id_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT work_opt.       {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK work_opt.     {mxs_sqlite3RollbackTransaction(pParse);}
 %endif
 %ifndef MAXSCALE
 cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
@@ -343,8 +341,6 @@ cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
 %ifdef MAXSCALE
 savepoint_opt ::= SAVEPOINT.
 savepoint_opt ::= .
-work_opt ::= WORK.
-work_opt ::= .
 cmd ::= SAVEPOINT nm(X). {
   mxs_sqlite3Savepoint(pParse, SAVEPOINT_BEGIN, &X);
 }
