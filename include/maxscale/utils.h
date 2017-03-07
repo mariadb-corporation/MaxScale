@@ -35,31 +35,39 @@ MXS_BEGIN_DECLS
  */
 #define MXS_PTR(a, b) (((uint8_t*)(a)) + (b))
 
+/** The type of the socket */
+enum mxs_socket_type
+{
+    MXS_SOCKET_LISTENER, /**< */
+    MXS_SOCKET_NETWORK,
+};
+
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
 
 /**
- * Parse the bind configuration data.
- *
- * The configuration is passed as string in the `address|port` format.
- *
- * @param config        The bind address and port separated by a '|'
- * @param addr          The struct sockaddr_storage in which the data is written
- * @return              True on success, false on failure
- */
-bool parse_bindconfig(const char *config, struct sockaddr_storage *addr);
-
-
-/**
  * @brief Create a network socket and a socket configuration
  *
- * @param dest Pointer to a struct sockaddr_storage where the configuration is stored
+ * This helper function can be used to open both listener socket and network
+ * connection sockets. For listener sockets, the @c host and @c port parameters
+ * tell where the socket will bind to. For network sockets, the parameters tell
+ * where the connection is created.
+ *
+ * After calling this function, the only thing that needs to be done is to
+ * give @c addr and the return value of this function as the parameters to
+ * either bind() (for listeners) or connect() (for outbound network connections).
+ *
+ * @param type Type of the socket, either MXS_SOCKET_LISTENER for a listener
+ *             socket or MXS_SOCKET_NETWORK for a network connection socket
+ * @param addr Pointer to a struct sockaddr_storage where the socket
+ *             configuration is stored
  * @param host The target host for which the socket is created
  * @param port The target port on the host
  *
  * @return The opened socket or -1 on failure
  */
-int open_network_socket(struct sockaddr_storage *dest, char *host, uint16_t port);
+int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr,
+                        const char *host, uint16_t port);
 
 int setnonblocking(int fd);
 char  *gw_strend(register const char *s);

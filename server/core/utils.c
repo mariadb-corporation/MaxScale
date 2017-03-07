@@ -896,7 +896,7 @@ void utils_end()
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-static bool configure_socket(int so)
+static bool configure_network_socket(int so)
 {
     int sndbufsize = MXS_BACKEND_SO_SNDBUF;
     int rcvbufsize = MXS_BACKEND_SO_RCVBUF;
@@ -906,9 +906,21 @@ static bool configure_socket(int so)
         setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0 ||
         setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket option: %d, %s.",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        return false;
+    }
+
+    return setnonblocking(so) == 0;
+}
+
+static bool configure_listener_socket(int so)
+{
+    int one = 1;
+
+    if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0 ||
+        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+    {
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
         return false;
     }
 
@@ -934,8 +946,9 @@ static void set_port(struct sockaddr_storage *addr, uint16_t port)
     }
 }
 
-int open_network_socket(struct sockaddr_storage *dest, char *host, uint16_t port)
+int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host, uint16_t port)
 {
+    ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
 #ifdef __USE_POSIX
     struct addrinfo *ai = NULL, hint = {};
     int so, rc;
@@ -945,28 +958,24 @@ int open_network_socket(struct sockaddr_storage *dest, char *host, uint16_t port
 
     if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
     {
-        MXS_ERROR("Failed to obtain address for host %s, %s",
-                  host, gai_strerror(rc));
+        MXS_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
         return -1;
     }
 
     /* Take the first one */
     if (ai)
     {
-        so = socket(ai->ai_family, SOCK_STREAM, 0);
-
-        if (so < 0)
+        if ((so = socket(ai->ai_family, SOCK_STREAM, 0)) == -1)
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Socket creation failed: %d, %s.",
-                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Socket creation failed: %d, %s.", errno, mxs_strerror(errno));
         }
         else
         {
-            memcpy(dest, ai->ai_addr, ai->ai_addrlen);
-            set_port(dest, port);
+            memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+            set_port(addr, port);
 
-            if (!configure_socket(so))
+            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so)) ||
+                (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
                 close(so);
                 so = -1;
@@ -981,53 +990,6 @@ int open_network_socket(struct sockaddr_storage *dest, char *host, uint16_t port
 #endif
 
     return so;
-}
-
-bool parse_bindconfig(const char *config, struct sockaddr_storage *addr)
-{
-    char buf[strlen(config) + 1];
-    strcpy(buf, config);
-
-    char *port = strrchr(buf, '|');
-    short pnum;
-
-    if (port)
-    {
-        *port = 0;
-        port++;
-        pnum = atoi(port);
-    }
-    else
-    {
-        ss_dassert(false);
-        return 0;
-    }
-
-    struct addrinfo *ai = NULL, hint = {};
-    hint.ai_flags = AI_ALL;
-    hint.ai_family = AF_UNSPEC;
-    int rc = getaddrinfo(buf, NULL, &hint, &ai);
-
-    if (rc == 0)
-    {
-        if (ai)
-        {
-            memcpy(addr, ai->ai_addr, ai->ai_addrlen);
-            set_port(addr, pnum);
-            freeaddrinfo(ai);
-        }
-        else
-        {
-            MXS_ERROR("Failed to find valid network address for '%s'.", config);
-            rc = -1;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Failed to resolve network address for '%s': %s", config, gai_strerror(rc));
-    }
-
-    return rc == 0;
 }
 
 /**
