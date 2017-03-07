@@ -276,26 +276,13 @@ static void handleError(MXS_ROUTER         *instance,
                         bool               *succp)
 
 {
+    ss_dassert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     DCB *client_dcb;
     MXS_SESSION *session = backend_dcb->session;
-    mxs_session_state_t sesstate;
 
-    /** Don't handle same error twice on same DCB */
-    if (backend_dcb->dcb_errhandle_called)
-    {
-        /** we optimistically assume that previous call succeed */
-        *succp = true;
-        return;
-    }
-    else
-    {
-        backend_dcb->dcb_errhandle_called = true;
-    }
-
-    sesstate = session->state;
     client_dcb = session->client_dcb;
 
-    if (sesstate == SESSION_STATE_ROUTER_READY)
+    if (session->state == SESSION_STATE_ROUTER_READY)
     {
         CHK_DCB(client_dcb);
         client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));

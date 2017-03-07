@@ -74,10 +74,10 @@ typedef struct
     char* script; /*< Script to call when state changes occur on servers */
     uint64_t events; /*< enabled events */
     HASHTABLE *server_info; /**< Contains server specific information */
-    bool failover; /**< If simple failover is enabled */
+    bool detect_standalone_master; /**< If standalone master are detected */
     int failcount; /**< How many monitoring cycles servers must be
                                    down before failover is initiated */
-    bool failover_recovery; /**< Allow servers to rejoin the cluster in failover mode */
+    bool allow_cluster_recovery; /**< Allow failed servers to rejoin the cluster */
     bool warn_failover; /**< Log a warning when failover happens */
 } MYSQL_MONITOR;
 

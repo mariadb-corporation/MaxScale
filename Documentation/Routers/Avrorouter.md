@@ -171,6 +171,11 @@ data block. The default value is 1 transaction.
 Controls the number of row events that are grouped into a single Avro
 data block. The default value is 1000 row events.
 
+#### `block_size`
+
+The Avro data block size in bytes. The default is 16 kilobytes. Increase this
+value if individual events in the binary logs are very large.
+
 ## Module commands
 
 Read [Module Commands](../Reference/Module-Commands.md) documentation for details about module commands.

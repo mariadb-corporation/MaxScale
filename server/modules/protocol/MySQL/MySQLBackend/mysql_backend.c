@@ -602,6 +602,34 @@ gw_read_backend_event(DCB *dcb)
     return rc;
 }
 
+static void do_handle_error(DCB *dcb, mxs_error_action_t action, const char *errmsg)
+{
+    bool succp = false;
+    MXS_SESSION *session = dcb->session;
+
+    if (!dcb->dcb_errhandle_called)
+    {
+        GWBUF *errbuf = mysql_create_custom_error(1, 0, errmsg);
+        void *rsession = session->router_session;
+        MXS_ROUTER_OBJECT *router = session->service->router;
+        MXS_ROUTER *router_instance = session->service->router_instance;
+
+        router->handleError(router_instance, rsession, errbuf,
+                            dcb, action, &succp);
+
+        gwbuf_free(errbuf);
+        dcb->dcb_errhandle_called = true;
+    }
+    /**
+     * If error handler fails it means that routing session can't continue
+     * and it must be closed. In success, only this DCB is closed.
+     */
+    if (!succp)
+    {
+        session->state = SESSION_STATE_STOPPING;
+    }
+}
+
 /**
  * @brief Authentication of backend - read the reply, or handle an error
  *
@@ -609,43 +637,21 @@ gw_read_backend_event(DCB *dcb)
  * @param local_session     The current MySQL session data structure
  * @return
  */
-static void
-gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
+static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
 {
     MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
 
-    /* Only reload the users table if authentication failed and the
-     * client session is not stopping. It is possible that authentication
-     * fails because the client has closed the connection before all
-     * backends have done authentication. */
-    if (state == MXS_AUTH_STATE_FAILED && session->state != SESSION_STATE_STOPPING)
-    {
-        service_refresh_users(session->service);
-    }
-
-    GWBUF* errbuf = mysql_create_custom_error(1, 0, "Authentication with backend "
-                                              "failed. Session will be closed.");
-
     if (session->router_session)
     {
-        bool succp = false;
-
-        session->service->router->handleError(session->service->router_instance,
-                                              session->router_session,
-                                              errbuf, dcb, ERRACT_REPLY_CLIENT, &succp);
-
+        do_handle_error(dcb, ERRACT_REPLY_CLIENT,
+                        "Authentication with backend failed. Session will be closed.");
         session->state = SESSION_STATE_STOPPING;
-        ss_dassert(dcb->dcb_errhandle_called);
     }
     else
     {
-        /** A NULL router_session is valid if a router declares the
-         * RCAP_TYPE_NO_RSESSION capability flag */
         dcb->dcb_errhandle_called = true;
     }
-
-    gwbuf_free(errbuf);
 }
 
 /**
@@ -712,28 +718,7 @@ gw_read_and_write(DCB *dcb)
 
     if (return_code < 0)
     {
-        GWBUF* errbuf;
-        bool succp;
-#if defined(SS_DEBUG)
-        MXS_ERROR("Backend read error handling #2.");
-#endif
-        errbuf = mysql_create_custom_error(1,
-                                           0,
-                                           "Read from backend failed");
-
-        session->service->router->handleError(
-            session->service->router_instance,
-            session->router_session,
-            errbuf,
-            dcb,
-            ERRACT_NEW_CONNECTION,
-            &succp);
-        gwbuf_free(errbuf);
-
-        if (!succp)
-        {
-            session->state = SESSION_STATE_STOPPING;
-        }
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Read from backend failed");
         return 0;
     }
 
@@ -1113,18 +1098,11 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
  */
 static int gw_error_backend_event(DCB *dcb)
 {
-    MXS_SESSION* session;
-    void* rsession;
-    MXS_ROUTER_OBJECT* router;
-    MXS_ROUTER* router_instance;
-    GWBUF* errbuf;
-    bool succp;
-    mxs_session_state_t ses_state;
-
     CHK_DCB(dcb);
-    session = dcb->session;
+    MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
-    if (SESSION_STATE_DUMMY == session->state)
+
+    if (session->state == SESSION_STATE_DUMMY)
     {
         if (dcb->persistentstart == 0)
         {
@@ -1133,81 +1111,32 @@ static int gw_error_backend_event(DCB *dcb)
                       "Closing connection.");
         }
         dcb_close(dcb);
-        return 1;
     }
-    rsession = session->router_session;
-    router = session->service->router;
-    router_instance = session->service->router_instance;
-
-    /**
-     * Avoid running redundant error handling procedure.
-     * dcb_close is already called for the DCB. Thus, either connection is
-     * closed by router and COM_QUIT sent or there was an error which
-     * have already been handled.
-     */
-    if (dcb->state != DCB_STATE_POLLING)
+    else if (dcb->state != DCB_STATE_POLLING || session->state != SESSION_STATE_ROUTER_READY)
     {
-        int error, len;
+        int error;
+        int len = sizeof(error);
 
-        len = sizeof(error);
-
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
+        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0 && error != 0)
         {
-            if (error != 0)
+            char errstring[MXS_STRERROR_BUFLEN];
+            if (dcb->state != DCB_STATE_POLLING)
             {
-                char errstring[MXS_STRERROR_BUFLEN];
-                MXS_ERROR("DCB in state %s got error '%s'.",
-                          STRDCBSTATE(dcb->state),
+                MXS_ERROR("DCB in state %s got error '%s'.", STRDCBSTATE(dcb->state),
                           strerror_r(error, errstring, sizeof(errstring)));
             }
-        }
-        return 1;
-    }
-    errbuf = mysql_create_custom_error(1,
-                                       0,
-                                       "Lost connection to backend server.");
-
-    ses_state = session->state;
-
-    if (ses_state != SESSION_STATE_ROUTER_READY)
-    {
-        int error, len;
-
-        len = sizeof(error);
-        if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
-        {
-            if (error != 0)
+            else
             {
-                char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Error '%s' in session that is not ready for routing.",
                           strerror_r(error, errstring, sizeof(errstring)));
             }
         }
-        gwbuf_free(errbuf);
-        goto retblock;
     }
-
-#if defined(SS_DEBUG)
-    MXS_INFO("Backend error event handling.");
-#endif
-    router->handleError(router_instance,
-                        rsession,
-                        errbuf,
-                        dcb,
-                        ERRACT_NEW_CONNECTION,
-                        &succp);
-    gwbuf_free(errbuf);
-
-    /**
-     * If error handler fails it means that routing session can't continue
-     * and it must be closed. In success, only this DCB is closed.
-     */
-    if (!succp)
+    else
     {
-        session->state = SESSION_STATE_STOPPING;
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
-retblock:
     return 1;
 }
 
@@ -1223,47 +1152,21 @@ retblock:
  */
 static int gw_backend_hangup(DCB *dcb)
 {
-    MXS_SESSION* session;
-    void* rsession;
-    MXS_ROUTER_OBJECT* router;
-    MXS_ROUTER* router_instance;
-    bool succp;
-    GWBUF* errbuf;
-    mxs_session_state_t ses_state;
-
     CHK_DCB(dcb);
+    MXS_SESSION *session = dcb->session;
+    CHK_SESSION(session);
+
     if (dcb->persistentstart)
     {
         dcb->dcb_errhandle_called = true;
-        goto retblock;
     }
-    session = dcb->session;
-
-    if (session == NULL)
+    else if (session->state != SESSION_STATE_ROUTER_READY)
     {
-        goto retblock;
-    }
-
-    CHK_SESSION(session);
-
-    rsession = session->router_session;
-    router = session->service->router;
-    router_instance = session->service->router_instance;
-
-    errbuf = mysql_create_custom_error(1,
-                                       0,
-                                       "Lost connection to backend server.");
-
-    ses_state = session->state;
-
-    if (ses_state != SESSION_STATE_ROUTER_READY)
-    {
-        int error, len;
-
-        len = sizeof(error);
+        int error;
+        int len = sizeof(error);
         if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *) & len) == 0)
         {
-            if (error != 0 && ses_state != SESSION_STATE_STOPPING)
+            if (error != 0 && session->state != SESSION_STATE_STOPPING)
             {
                 char errstring[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Hangup in session that is not ready for routing, "
@@ -1271,31 +1174,12 @@ static int gw_backend_hangup(DCB *dcb)
                           strerror_r(error, errstring, sizeof(errstring)));
             }
         }
-        gwbuf_free(errbuf);
-        /*
-         * I'm pretty certain this is best removed and
-         * causes trouble if present, but have left it
-         * here just for now as a comment. Martin
-         */
-        /* dcb_close(dcb); */
-        goto retblock;
     }
-
-    router->handleError(router_instance,
-                        rsession,
-                        errbuf,
-                        dcb,
-                        ERRACT_NEW_CONNECTION,
-                        &succp);
-
-    gwbuf_free(errbuf);
-    /** There are no required backends available, close session. */
-    if (!succp)
+    else
     {
-        session->state = SESSION_STATE_STOPPING;
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
-retblock:
     return 1;
 }
 
@@ -1400,29 +1284,7 @@ static int backend_write_delayqueue(DCB *dcb, GWBUF *buffer)
 
     if (rc == 0)
     {
-        MXS_SESSION *session = dcb->session;
-        CHK_SESSION(session);
-        MXS_ROUTER_OBJECT *router = session->service->router;
-        MXS_ROUTER *router_instance = session->service->router_instance;
-        void *rsession = session->router_session;
-        bool succp = false;
-        GWBUF* errbuf = mysql_create_custom_error(
-                            1, 0, "Failed to write buffered data to back-end server. "
-                            "Buffer was empty or back-end was disconnected during "
-                            "operation. Attempting to find a new backend.");
-
-        router->handleError(router_instance,
-                            rsession,
-                            errbuf,
-                            dcb,
-                            ERRACT_NEW_CONNECTION,
-                            &succp);
-        gwbuf_free(errbuf);
-
-        if (!succp)
-        {
-            session->state = SESSION_STATE_STOPPING;
-        }
+        do_handle_error(dcb, ERRACT_NEW_CONNECTION, "Lost connection to backend server.");
     }
 
     return rc;
