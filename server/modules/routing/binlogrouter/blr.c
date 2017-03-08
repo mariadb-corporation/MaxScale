@@ -2749,6 +2749,7 @@ static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in)
 {
     MARIADB_GTID_INFO *rval = (MARIADB_GTID_INFO *) MXS_CALLOC(1, sizeof(MARIADB_GTID_INFO));
     char *gtid = MXS_STRDUP(in->gtid);
+    char *file = MXS_STRDUP(in->file);
     if (!gtid || !rval)
     {
         MXS_FREE(rval);
