@@ -756,8 +756,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
             {
                 start_sqlite_transaction(instance->handle);
 
-                /** Delete the old users */
-                delete_mysql_users(instance->handle);
                 MYSQL_ROW row;
 
                 while ((row = mysql_fetch_row(result)))
@@ -851,6 +849,10 @@ static int get_users(SERV_LISTENER *listener)
     {
         return -1;
     }
+
+    /** Delete the old users */
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    delete_mysql_users(instance->handle);
 
     SERVER_REF *server = service->dbref;
     int total_users = -1;
