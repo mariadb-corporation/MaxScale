@@ -167,6 +167,9 @@ static int blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS con
 static int blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_end_pos);
 static GWBUF *blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 extern MARIADB_GTID_INFO *blr_fetch_mariadb_gtid(ROUTER_INSTANCE *inst, char *gtid);
+static bool blr_handle_select_smt(ROUTER_INSTANCE *router,
+                                  ROUTER_SLAVE *slave,
+                                  char *select_stmt);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -520,173 +523,21 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         {
             MXS_ERROR("%s: Incomplete select query.", router->service->name);
         }
-        else if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
+        else
         {
-            MXS_FREE(query_text);
-            return blr_slave_send_timestamp(router, slave);
-        }
-        else if (strcasecmp(word, "@master_binlog_checksum") == 0 || strcasecmp(word, "@@global.binlog_checksum") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_replay(router, slave, router->saved_master.chksum2);
-        }
-        else if (strcasecmp(word, "@@GLOBAL.GTID_MODE") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_replay(router, slave, router->saved_master.gtid_mode);
-        }
-        else if (strcasecmp(word, "1") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_replay(router, slave, router->saved_master.select1);
-        }
-        else if (strcasecmp(word, "VERSION()") == 0)
-        {
-            MXS_FREE(query_text);
-            if (router->set_master_version)
+            /* Handle SELECT */
+            if (blr_handle_select_smt(router,
+                                      slave,
+                                      word))
             {
-                return blr_slave_send_var_value(router, slave, "VERSION()",
-                                                router->set_master_version, BLR_TYPE_STRING);
-            }
-            else
-            {
-                return blr_slave_replay(router, slave, router->saved_master.selectver);
-            }
-        }
-        else if (strcasecmp(word, "USER()") == 0)
-        {
-            /* Return user@host */
-            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOST_MAXLEN + 1] = "";
-
-            MXS_FREE(query_text);
-            snprintf(user_host, sizeof(user_host),
-                     "%s@%s", slave->dcb->user, slave->dcb->remote);
-
-            return blr_slave_send_var_value(router, slave, "USER()",
-                                            user_host, BLR_TYPE_STRING);
-        }
-        else if (strcasecmp(word, "@@version") == 0)
-        {
-            MXS_FREE(query_text);
-            if (router->set_master_version)
-            {
-                return blr_slave_send_var_value(router, slave, "@@version",
-                                                router->set_master_version, BLR_TYPE_STRING);
-            }
-            else
-            {
-                char *version = blr_extract_column(router->saved_master.selectver, 1);
-
-                blr_slave_send_var_value(router, slave, "@@version",
-                                         version == NULL ? "" : version, BLR_TYPE_STRING);
-                MXS_FREE(version);
-                return 1;
-            }
-        }
-        else if (strcasecmp(word, "@@version_comment") == 0)
-        {
-            MXS_FREE(query_text);
-            if (!router->saved_master.selectvercom)
-                /* This will allow mysql client to get in when @@version_comment is not available */
-            {
-                return blr_slave_send_ok(router, slave);
-            }
-            else
-            {
-                return blr_slave_replay(router, slave, router->saved_master.selectvercom);
-            }
-        }
-        else if (strcasecmp(word, "@@hostname") == 0)
-        {
-            MXS_FREE(query_text);
-            if (router->set_master_hostname)
-            {
-                return blr_slave_send_var_value(router, slave, "@@hostname",
-                                                router->set_master_hostname, BLR_TYPE_STRING);
-            }
-            else
-            {
-                return blr_slave_replay(router, slave, router->saved_master.selecthostname);
-            }
-        }
-        else if ((strcasecmp(word, "@@server_uuid") == 0) || (strcasecmp(word, "@@global.server_uuid") == 0))
-        {
-            char    heading[40]; /* to ensure we match the case in query and response */
-            strcpy(heading, word);
-
-            MXS_FREE(query_text);
-            if (router->set_master_uuid)
-            {
-                return blr_slave_send_var_value(router, slave, heading, router->master_uuid, BLR_TYPE_STRING);
-            }
-            else
-            {
-                char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
-                blr_slave_send_var_value(router, slave, heading,
-                                         master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
-                MXS_FREE(master_uuid);
-                return 1;
-            }
-        }
-        else if (strcasecmp(word, "@@max_allowed_packet") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_replay(router, slave, router->saved_master.map);
-        }
-        else if (strcasecmp(word, "@@maxscale_version") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_send_maxscale_version(router, slave);
-        }
-        else if ((strcasecmp(word, "@@server_id") == 0) || (strcasecmp(word, "@@global.server_id") == 0))
-        {
-            char    server_id[40];
-            char    heading[40]; /* to ensure we match the case in query and response */
-
-            sprintf(server_id, "%d", router->masterid);
-            strcpy(heading, word);
-
-            MXS_FREE(query_text);
-
-            return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
-        }
-        else if ((strcasecmp(word, "@@gtid_current_pos") == 0) || (strcasecmp(word, "@@global.gtid_current_pos") == 0))
-        {
-            char    heading[40];
-            char mariadb_gtid[GTID_MAX_LEN + 1];
-            mariadb_gtid[0] = '\0';
-            strcpy(heading, word);
-
-            MXS_FREE(query_text);
-
-            if (router->mariadb10_compat &&
-                router->mariadb_gtid)
-            {
-                spinlock_acquire(&router->binlog_lock);
-                strcpy(mariadb_gtid, router->last_mariadb_gtid);
-                spinlock_release(&router->binlog_lock);
-            }
-
-            return blr_slave_send_var_value(router, slave, heading, mariadb_gtid, BLR_TYPE_STRING);
-        }
-        else if (strcasecmp(word, "@@GLOBAL.gtid_domain_id") == 0)
-        {
-            /* If not mariadb an error message will be returned */
-            if (slave->mariadb10_compat && router->mariadb_gtid)
-            {
-                char heading[40];
-                strcpy(heading, word);
                 MXS_FREE(query_text);
-                return blr_slave_send_var_value(router,
-                                                slave,
-                                                heading,
-                                                "0",
-                                                BLR_TYPE_STRING);
+                return 1;
             }
-        }
-        else if (strcasestr(word, "binlog_gtid_pos"))
-        {
-            unexpected = false;
+            else
+            {
+                /* Handle a special case */
+                unexpected = strcasestr(word, "binlog_gtid_pos") == NULL;
+            }
         }
     }
     else if (strcasecmp(word, "SHOW") == 0)
@@ -6307,4 +6158,231 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
     }
 
     return 0;
+}
+
+/**
+ * Handle received SELECT statements from clients
+ *
+ * if a SELECT statement is one of suported one
+ * a proper reply to the connected client is done
+ *
+ * @param    router         Router instance
+ * @param    slave          Connected client/slave server
+ * @param    select_stmt    The SELECT statement
+ * @return   True for handled queries, False otherwise
+ */
+static bool blr_handle_select_smt(ROUTER_INSTANCE *router,
+                                  ROUTER_SLAVE *slave,
+                                  char *select_stmt)
+{
+    char *word;
+    char *brkb;
+    char *sep = " \t,=";
+
+    if ((word = strtok_r(select_stmt, sep, &brkb)) == NULL)
+    {
+        MXS_ERROR("%s: Incomplete select query.", router->service->name);
+        return false;
+    }
+    else if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
+    {
+        blr_slave_send_timestamp(router, slave);
+        return true;
+    }
+    else if (strcasecmp(word, "@master_binlog_checksum") == 0 ||
+             strcasecmp(word, "@@global.binlog_checksum") == 0)
+    {
+        blr_slave_replay(router, slave, router->saved_master.chksum2);
+        return true;
+    }
+    else if (strcasecmp(word, "@@GLOBAL.GTID_MODE") == 0)
+    {
+        blr_slave_replay(router, slave, router->saved_master.gtid_mode);
+        return true;
+    }
+    else if (strcasecmp(word, "1") == 0)
+    {
+        blr_slave_replay(router, slave, router->saved_master.select1);
+        return true;
+    }
+    else if (strcasecmp(word, "VERSION()") == 0)
+    {
+        if (router->set_master_version)
+        {
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     "VERSION()",
+                                     router->set_master_version,
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+        else
+        {
+            blr_slave_replay(router, slave, router->saved_master.selectver);
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "USER()") == 0)
+    {
+        /* Return user@host */
+        char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOST_MAXLEN + 1] = "";
+
+        snprintf(user_host, sizeof(user_host),
+                 "%s@%s", slave->dcb->user, slave->dcb->remote);
+
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 "USER()",
+                                 user_host,
+                                 BLR_TYPE_STRING);
+        return true;
+    }
+    else if (strcasecmp(word, "@@version") == 0)
+    {
+        if (router->set_master_version)
+        {
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     "@@version",
+                                     router->set_master_version,
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+        else
+        {
+            char *version = blr_extract_column(router->saved_master.selectver, 1);
+
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     "@@version",
+                                     version == NULL ? "" : version,
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+    }
+
+    else if (strcasecmp(word, "@@version_comment") == 0)
+    {
+        if (!router->saved_master.selectvercom)
+        /**
+         * This allows mysql client to get in when
+         * @@version_comment is not available
+         */
+        {
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
+        else
+        {
+            blr_slave_replay(router, slave, router->saved_master.selectvercom);
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "@@hostname") == 0)
+    {
+        if (router->set_master_hostname)
+        {
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     "@@hostname",
+                                     router->set_master_hostname,
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+        else
+        {
+            blr_slave_replay(router, slave, router->saved_master.selecthostname);
+            return true;
+        }
+    }
+    else if ((strcasecmp(word, "@@server_uuid") == 0) ||
+             (strcasecmp(word, "@@global.server_uuid") == 0))
+    {
+        char    heading[40]; /* to ensure we match the case in query and response */
+        strcpy(heading, word);
+
+        if (router->set_master_uuid)
+        {
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     heading,
+                                     router->master_uuid,
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+        else
+        {
+            char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     heading,
+                                     master_uuid == NULL ? "" : master_uuid,
+                                     BLR_TYPE_STRING);
+            MXS_FREE(master_uuid);
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "@@max_allowed_packet") == 0)
+    {
+        blr_slave_replay(router, slave, router->saved_master.map);
+        return true;
+    }
+    else if (strcasecmp(word, "@@maxscale_version") == 0)
+    {
+        blr_slave_send_maxscale_version(router, slave);
+        return true;
+    }
+    else if ((strcasecmp(word, "@@server_id") == 0) ||
+             (strcasecmp(word, "@@global.server_id") == 0))
+    {
+        char    server_id[40];
+        char    heading[40]; /* to ensure we match the case in query and response */
+
+        sprintf(server_id, "%d", router->masterid);
+        strcpy(heading, word);
+
+        blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
+        return true;
+    }
+    else if ((strcasecmp(word, "@@gtid_current_pos") == 0) ||
+             (strcasecmp(word, "@@global.gtid_current_pos") == 0))
+    {
+        char    heading[40];
+        char mariadb_gtid[GTID_MAX_LEN + 1];
+        mariadb_gtid[0] = '\0';
+        strcpy(heading, word);
+
+        if (router->mariadb10_compat &&
+            router->mariadb_gtid)
+        {
+            spinlock_acquire(&router->binlog_lock);
+            strcpy(mariadb_gtid, router->last_mariadb_gtid);
+            spinlock_release(&router->binlog_lock);
+        }
+
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 heading,
+                                 mariadb_gtid,
+                                 BLR_TYPE_STRING);
+        return true;
+    }
+    else if (strcasecmp(word, "@@GLOBAL.gtid_domain_id") == 0)
+    {
+        /* If not mariadb an error message will be returned */
+        if (slave->mariadb10_compat && router->mariadb_gtid)
+        {
+            char heading[40];
+            strcpy(heading, word);
+
+            blr_slave_send_var_value(router,
+                                     slave,
+                                     heading,
+                                     "0",
+                                     BLR_TYPE_STRING);
+            return true;
+        }
+    }
+
+     return false;
 }
