@@ -547,6 +547,7 @@ typedef struct pending_transaction
 typedef struct mariadb_gtid_info
 {
     char *gtid;        /** MariaDB 10.x GTID */
+    char *file;        /** The binlog file */
     uint64_t start;    /** The BEGIN pos */
     uint64_t end;      /** The next_pos in COMMIT event*/
 } MARIADB_GTID_INFO;
