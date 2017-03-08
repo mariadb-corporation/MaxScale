@@ -50,11 +50,11 @@ typedef struct hint
     struct hint     *next;  /*< Another hint for this buffer */
 } HINT;
 
-extern  HINT    *hint_alloc(HINT_TYPE, void *, unsigned int);
-extern  HINT    *hint_create_parameter(HINT *, char *, char *);
-extern  HINT    *hint_create_route(HINT *, HINT_TYPE, char *);
-extern  void    hint_free(HINT *);
-extern  HINT    *hint_dup(HINT *);
-bool            hint_exists(HINT **, HINT_TYPE);
+HINT *hint_alloc(HINT_TYPE, void *, unsigned int);
+HINT *hint_create_parameter(HINT *, char *, const char *);
+HINT *hint_create_route(HINT *, HINT_TYPE, const char *);
+void hint_free(HINT *);
+HINT *hint_dup(const HINT *);
+bool hint_exists(HINT **, HINT_TYPE);
 
 MXS_END_DECLS

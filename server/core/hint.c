@@ -38,11 +38,11 @@
  * Note : Optimize this to use version numbering instead of copying memory
  */
 HINT *
-hint_dup(HINT *hint)
+hint_dup(const HINT *hint)
 {
-    HINT *nlhead = NULL, *nltail = NULL, *ptr1, *ptr2;
+    const HINT *ptr1 = hint;
+    HINT *nlhead = NULL, *nltail = NULL, *ptr2;
 
-    ptr1 = hint;
     while (ptr1)
     {
         if ((ptr2 = (HINT *)MXS_MALLOC(sizeof(HINT))) == NULL)
@@ -91,7 +91,7 @@ hint_dup(HINT *hint)
  * @return The result hint list
  */
 HINT *
-hint_create_route(HINT *head, HINT_TYPE type, char *data)
+hint_create_route(HINT *head, HINT_TYPE type, const char *data)
 {
     HINT *hint;
 
@@ -122,7 +122,7 @@ hint_create_route(HINT *head, HINT_TYPE type, char *data)
  * @return The result hint list
  */
 HINT *
-hint_create_parameter(HINT *head, char *pname, char *value)
+hint_create_parameter(HINT *head, char *pname, const char *value)
 {
     HINT *hint;
 
