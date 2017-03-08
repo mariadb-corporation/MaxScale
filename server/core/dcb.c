@@ -2862,7 +2862,7 @@ dcb_accept(DCB *listener)
             client_dcb->fd = c_sock;
 
             // get client address
-            if (((struct sockaddr *)&client_conn)->sa_family == AF_UNIX)
+            if (client_conn.ss_family == AF_UNIX)
             {
                 // client address
                 client_dcb->remote = MXS_STRDUP_A("localhost_from_socket");
