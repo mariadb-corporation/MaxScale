@@ -166,6 +166,7 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave
 static int blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *error_message);
 static int blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_end_pos);
 static GWBUF *blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+extern MARIADB_GTID_INFO *blr_fetch_mariadb_gtid(ROUTER_INSTANCE *inst, char *gtid);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -2297,8 +2298,9 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
             /* Shall we avoid the lookup if file & pos is set? */
 
             /* Fetch the GTID from the storage */
-            MARIADB_GTID_INFO *f_gtid = hashtable_fetch(router->gtid_repo,
-                                                        slave->mariadb_gtid);
+            MARIADB_GTID_INFO *f_gtid = blr_fetch_mariadb_gtid(router,
+                                                               slave->mariadb_gtid);
+
             /* Not Found */
             if (!f_gtid)
             {

@@ -2734,6 +2734,7 @@ static void mariadb_gtid_info_free(MARIADB_GTID_INFO *in)
     if (in)
     {
         MXS_FREE(in->gtid);
+        MXS_FREE(in->file);
         MXS_FREE(in);
     }
 }
@@ -2752,9 +2753,11 @@ static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in)
     {
         MXS_FREE(rval);
         MXS_FREE(gtid);
+        MXS_FREE(file);
         return NULL;
     }
     rval->gtid = gtid;
+    rval->file = file;
     rval->start = in-> start;
     rval->end = in->end;
 

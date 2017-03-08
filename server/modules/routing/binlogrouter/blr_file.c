@@ -3311,6 +3311,7 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
     MARIADB_GTID_INFO gtid_info;
 
     gtid_info.gtid = inst->pending_transaction.gtid;
+    gtid_info.file = inst->binlog_name;
     gtid_info.start = inst->pending_transaction.start_pos;
     gtid_info.end = inst->pending_transaction.end_pos;
 
@@ -3332,4 +3333,24 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
               gtid_info.end);
 
     return true;
+}
+
+/**
+ * Get MariaDB GTID frim repo
+ *
+ * @param    inst The router instance
+ * @return   Found data or NULL
+ */
+
+MARIADB_GTID_INFO *blr_fetch_mariadb_gtid(ROUTER_INSTANCE *inst, char *gtid)
+{
+   if (!gtid)
+   {
+       return NULL;
+   }
+   else
+   {
+       return (MARIADB_GTID_INFO *)hashtable_fetch(inst->gtid_repo,
+                                                   gtid);
+   }
 }
