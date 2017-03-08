@@ -14,8 +14,13 @@
 * Named Server Filter now supports wildcards for source option.
 * Binlog Server can now be configured to encrypt binlog files.
 * New filters, _cache_, _ccrfilter_, _insertstream_, _masking_, and _maxrows_ are introduced.
+* GSSAPI based authentication can be used
+* Prepared statements are now in the database firewall filtered exactly like non-prepared
+  statements.
+* The firewall filter can now filter based on function usage.
 
 For more details, please refer to:
+* [MariaDB MaxScale 2.1.1 Release Notes](Release-Notes/MaxScale-2.1.1-Release-Notes.md)
 * [MariaDB MaxScale 2.1.0 Release Notes](Release-Notes/MaxScale-2.1.0-Release-Notes.md)
 
 ## MariaDB MaxScale 2.0
