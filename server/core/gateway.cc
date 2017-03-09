@@ -1368,6 +1368,18 @@ int main(int argc, char **argv)
         case 'V':
             rc = EXIT_SUCCESS;
             printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
+            if (strcmp(MAXSCALE_SOURCE, " ") != 0)
+            {
+                printf("Source:        %s\n", MAXSCALE_SOURCE);
+            }
+            if (strcmp(MAXSCALE_CMAKE_FLAGS, "") != 0)
+            {
+                printf("CMAKE flags:   %s\n", MAXSCALE_CMAKE_FLAGS);
+            }
+            if (strcmp(MAXSCALE_JENKINS_BUILD_TAG, "") != 0)
+            {
+                printf("Jenkins build: %s\n", MAXSCALE_JENKINS_BUILD_TAG);
+            }
             goto return_main;
 
         case 'l':
