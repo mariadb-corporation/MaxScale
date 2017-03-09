@@ -3306,40 +3306,51 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_INT:
-                strtol(value, &endptr, 10);
-                if (endptr != value && *endptr == '\0')
                 {
-                    valid = true;
+                    errno = 0;
+                    long int v = strtol(value, &endptr, 10);
+                    (void)v; // error: ignoring return value of 'strtol'
+                    if ((errno == 0) && (endptr != value) && (*endptr == '\0'))
+                    {
+                        valid = true;
+                    }
                 }
                 break;
 
             case MXS_MODULE_PARAM_SIZE:
-                strtoll(value, &endptr, 10);
-                if (endptr != value)
                 {
-                    switch (*endptr)
+                    errno = 0;
+                    long long int v = strtoll(value, &endptr, 10);
+                    (void)v; // error: ignoring return value of 'strtoll'
+                    if (errno == 0)
                     {
-                    case 'T':
-                    case 't':
-                    case 'G':
-                    case 'g':
-                    case 'M':
-                    case 'm':
-                    case 'K':
-                    case 'k':
-                        if (*(endptr + 1) == '\0' ||
-                            ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I') && *(endptr + 2) == '\0'))
+                        if (endptr != value)
                         {
-                            valid = true;
+                            switch (*endptr)
+                            {
+                            case 'T':
+                            case 't':
+                            case 'G':
+                            case 'g':
+                            case 'M':
+                            case 'm':
+                            case 'K':
+                            case 'k':
+                                if (*(endptr + 1) == '\0' ||
+                                    ((*(endptr + 1) == 'i' || *(endptr + 1) == 'I') && *(endptr + 2) == '\0'))
+                                {
+                                    valid = true;
+                                }
+                                break;
+
+                            case '\0':
+                                valid = true;
+                                break;
+
+                            default:
+                                break;
+                            }
                         }
-                        break;
-
-                    case '\0':
-                        valid = true;
-                        break;
-
-                    default:
-                        break;
                     }
                 }
                 break;
