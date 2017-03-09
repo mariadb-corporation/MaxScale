@@ -122,7 +122,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema, cons
 
         if (access(filepath, F_OK) == 0)
         {
-            rc = avro_file_writer_open(filepath, &table->avro_file);
+            rc = avro_file_writer_open_bs(filepath, &table->avro_file, block_size);
         }
         else
         {

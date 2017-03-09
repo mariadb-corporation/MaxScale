@@ -99,6 +99,7 @@ extern void mxs_sqlite3DropTable(Parse*, SrcList*, int, int, int);
 extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*, SrcList*);
 extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int,ExprList*);
 extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName);
 extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void mxs_sqlite3StartTable(Parse*,Token*,Token*,int,int,int,int);
 extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
@@ -312,10 +313,9 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 //
 
 %ifdef MAXSCALE
-id_opt ::= .
-id_opt ::= deferred_id.
-
-cmd ::= BEGIN id_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
+work_opt ::= WORK.
+work_opt ::= .
+cmd ::= BEGIN work_opt. {mxs_sqlite3BeginTransaction(pParse, 0);} // BEGIN [WORK]
 %endif
 %ifndef MAXSCALE
 cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
@@ -329,14 +329,27 @@ transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
 %endif
 %ifdef MAXSCALE
-cmd ::= COMMIT id_opt.      {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= END id_opt.         {mxs_sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK id_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT work_opt.       {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK work_opt.     {mxs_sqlite3RollbackTransaction(pParse);}
 %endif
 %ifndef MAXSCALE
 cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
 cmd ::= END trans_opt.         {sqlite3CommitTransaction(pParse);}
 cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
+%endif
+
+%ifdef MAXSCALE
+savepoint_opt ::= SAVEPOINT.
+savepoint_opt ::= .
+cmd ::= SAVEPOINT nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_BEGIN, &X);
+}
+cmd ::= RELEASE savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_RELEASE, &X);
+}
+cmd ::= ROLLBACK work_opt TO savepoint_opt nm(X). {
+  mxs_sqlite3Savepoint(pParse, SAVEPOINT_ROLLBACK, &X);
+}
 %endif
 
 %ifndef MAXSCALE
@@ -603,6 +616,7 @@ columnid(A) ::= nm(X). {
   UNSIGNED
   VALUE VIEW /*VIRTUAL*/
   /*WITH*/
+  WORK
 %endif
   .
 %wildcard ANY.
