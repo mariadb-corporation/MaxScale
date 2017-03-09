@@ -1236,7 +1236,8 @@ static bool get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
              * backend and update assign it to new candidate if
              * necessary.
              */
-            else if (SERVER_IS_SLAVE(&server))
+            else if (SERVER_IS_SLAVE(&server) ||
+                     (rses->rses_config.rw_master_reads && SERVER_IS_MASTER(&server)))
             {
                 if (max_rlag == MAX_RLAG_UNDEFINED ||
                     (b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
