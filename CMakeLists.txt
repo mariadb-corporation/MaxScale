@@ -57,6 +57,10 @@ include_directories(${PCRE2_INCLUDE_DIRS})
 if(NOT MARIADB_CONNECTOR_FOUND)
   message(STATUS "Building MariaDB Connector-C from source.")
   include(cmake/BuildMariaDBConnector.cmake)
+else()
+  # This is required as the core depends on the `connector-c` target
+  add_custom_target(connector-c)
+  message(STATUS "Using system Connector-C")
 endif()
 
 # You can find the variables set by this in the FindCURL.cmake file
