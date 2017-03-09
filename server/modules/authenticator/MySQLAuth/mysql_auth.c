@@ -106,18 +106,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-static void get_database_path(SERV_LISTENER *port, char *dest)
+static void get_database_path(SERV_LISTENER *port, char *dest, size_t size)
 {
     MYSQL_AUTH *instance = port->auth_instance;
     SERVICE *service = port->service;
+    ss_dassert(size - sizeof(DBUSERS_FILE) - 1 >= 0);
 
     if (instance->cache_dir)
     {
-        snprintf(dest, sizeof(dest) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
+        snprintf(dest, size, "%s/", instance->cache_dir);
     }
     else
     {
-        sprintf(dest, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+        snprintf(dest, size, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
     }
 
     if (mxs_mkdir_all(dest, S_IRWXU))
@@ -398,7 +399,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     if (auth_ses->handle == NULL)
     {
         char path[PATH_MAX];
-        get_database_path(dcb->listener, path);
+        get_database_path(dcb->listener, path, sizeof(path));
 
         if (!open_client_database(path, &auth_ses->handle))
         {
@@ -615,7 +616,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     if (instance->handle == NULL)
     {
         char path[PATH_MAX];
-        get_database_path(port, path);
+        get_database_path(port, path, sizeof(path));
         if (!open_instance_database(path, &instance->handle))
         {
             return MXS_AUTH_LOADUSERS_FATAL;
