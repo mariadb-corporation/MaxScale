@@ -1,4 +1,3 @@
-#include <my_config.h>
 #include <mysql.h>
 #include <harness.h>
 

@@ -36,7 +36,6 @@
  */
 #define _XOPEN_SOURCE 700
 #define OPENSSL_THREAD_DEFINES
-#include <my_config.h>
 
 #include <openssl/opensslconf.h>
 #if defined(OPENSSL_THREADS)

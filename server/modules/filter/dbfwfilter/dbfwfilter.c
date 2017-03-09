@@ -60,7 +60,6 @@
  *@endcode
  */
 
-#include <my_config.h>
 #include <stdio.h>
 #include <filter.h>
 #include <string.h>

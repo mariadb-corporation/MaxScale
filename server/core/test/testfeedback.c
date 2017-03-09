@@ -31,7 +31,6 @@
 #undef NDEBUG
 #endif
 #define FAILTEST(s) printf("TEST FAILED: " s "\n");return 1;
-#include <my_config.h>
 #include <mysql.h>
 #include <stdio.h>
 #include <notification.h>
