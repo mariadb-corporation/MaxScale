@@ -746,9 +746,8 @@ hashtable_save(HASHTABLE *table, const char *filename,
     }
     if (write(fd, &rval, sizeof(rval)) == -1) // Write zero counter, will be overrwriten at end
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
-                  strerror_r(errno, err, sizeof(err)));
+                  mxs_strerror(errno));
     }
     if ((iter = hashtable_iterator(table)) != NULL)
     {
@@ -776,9 +775,8 @@ hashtable_save(HASHTABLE *table, const char *filename,
     {
         if (write(fd, &rval, sizeof(rval)) == -1)
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to write hashtable item count: %d, %s", errno,
-                      strerror_r(errno, err, sizeof(err)));
+                      mxs_strerror(errno));
         }
     }
 

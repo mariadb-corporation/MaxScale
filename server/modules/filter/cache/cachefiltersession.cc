@@ -232,6 +232,20 @@ int CacheFilterSession::routeQuery(GWBUF* pPacket)
         }
         break;
 
+    case MYSQL_COM_STMT_PREPARE:
+        if (log_decisions())
+        {
+            MXS_NOTICE("MYSQL_COM_STMT_PREPARE, ignoring.");
+        }
+        break;
+
+    case MYSQL_COM_STMT_EXECUTE:
+        if (log_decisions())
+        {
+            MXS_NOTICE("MYSQL_COM_STMT_EXECUTE, ignoring.");
+        }
+        break;
+
     case MYSQL_COM_QUERY:
         if (should_consult_cache(pPacket))
         {

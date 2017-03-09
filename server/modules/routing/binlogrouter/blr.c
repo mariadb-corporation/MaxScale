@@ -699,12 +699,11 @@ createInstance(SERVICE *service, char **options)
         mkdir_rval = mkdir(inst->binlogdir, 0700);
         if (mkdir_rval == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Service %s, Failed to create binlog directory '%s': [%d] %s",
                       service->name,
                       inst->binlogdir,
                       errno,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
 
             free_instance(inst);
             return NULL;
@@ -1840,8 +1839,7 @@ errorReply(MXS_ROUTER *instance,
         getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 &&
         error != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
+        sprintf(msg, "%s ", mxs_strerror(error));
     }
     else
     {
@@ -2678,10 +2676,9 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
 
     if (!file)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open KEY file '%s': %s",
                   router->encryption.key_management_filename,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         return -1;
     }
 

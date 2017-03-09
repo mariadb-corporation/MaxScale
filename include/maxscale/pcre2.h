@@ -30,6 +30,13 @@ MXS_BEGIN_DECLS
 
 #include <pcre2.h>
 
+/**
+ * Print an error message explaining an error code.
+ * @param errorcode value returned by pcre2 functions
+ */
+#define MXS_PCRE2_PRINT_ERROR(errorcode)\
+    mxs_pcre2_print_error(errorcode, MXS_MODULE_NAME, __FILE__,__LINE__, __func__)
+
 typedef enum
 {
     MXS_PCRE2_MATCH,
@@ -41,5 +48,11 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject,
                                         const char *replace, char** dest, size_t* size);
 mxs_pcre2_result_t mxs_pcre2_simple_match(const char* pattern, const char* subject,
                                           int options, int* error);
+/**
+ * Print an error message explaining an error code. Best used through the macro
+ * MXS_PCRE2_PRINT_ERROR
+ */
+void mxs_pcre2_print_error(int errorcode, const char *module_name, const char *filename,
+                           int line_num, const char* func_name);
 
 MXS_END_DECLS

@@ -399,9 +399,8 @@ static bool create_listener_config(const SERV_LISTENER *listener, const char *fi
 
     if (file == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open file '%s' when serializing listener '%s': %d, %s",
-                  filename, listener->name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  filename, listener->name, errno, mxs_strerror(errno));
         return false;
     }
 
@@ -487,9 +486,8 @@ bool listener_serialize(const SERV_LISTENER *listener)
 
     if (unlink(filename) == -1 && errno != ENOENT)
     {
-        char err[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to remove temporary listener configuration at '%s': %d, %s",
-                  filename, errno, strerror_r(errno, err, sizeof(err)));
+                  filename, errno, mxs_strerror(errno));
     }
     else if (create_listener_config(listener, filename))
     {
@@ -506,9 +504,8 @@ bool listener_serialize(const SERV_LISTENER *listener)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to rename temporary listener configuration at '%s': %d, %s",
-                      filename, errno, strerror_r(errno, err, sizeof(err)));
+                      filename, errno, mxs_strerror(errno));
         }
     }
 

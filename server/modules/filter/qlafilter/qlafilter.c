@@ -327,11 +327,10 @@ createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params)
 
                 if (my_instance->unified_fp == NULL)
                 {
-                    char errbuf[MXS_STRERROR_BUFLEN];
                     MXS_ERROR("Opening output file for qla "
                               "filter failed due to %d, %s",
                               errno,
-                              strerror_r(errno, errbuf, sizeof(errbuf)));
+                              mxs_strerror(errno));
                     error = true;
                 }
                 MXS_FREE(filename);
@@ -427,11 +426,10 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
 
             if (my_session->fp == NULL)
             {
-                char errbuf[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Opening output file for qla "
                           "filter failed due to %d, %s",
                           errno,
-                          strerror_r(errno, errbuf, sizeof(errbuf)));
+                          mxs_strerror(errno));
                 MXS_FREE(my_session->filename);
                 MXS_FREE(my_session);
                 my_session = NULL;

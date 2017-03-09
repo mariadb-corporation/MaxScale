@@ -868,9 +868,8 @@ GWBUF* read_avro_json_schema(const char *avrofile, const char* dir)
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to open file '%s': %d, %s", buffer, errno,
-                      strerror_r(errno, err, sizeof(err)));
+                      mxs_strerror(errno));
         }
     }
     return rval;

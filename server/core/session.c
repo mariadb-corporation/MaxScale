@@ -769,6 +769,7 @@ sessionRowCallback(RESULTSET *set, void *data)
     SESSIONFILTER *cbdata = (SESSIONFILTER*)data;
     RESULT_ROW *row = NULL;
 
+    cbdata->current = 0;
     dcb_foreach(dcb_iter_cb, cbdata);
 
     if (cbdata->row)

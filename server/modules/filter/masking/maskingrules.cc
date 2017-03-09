@@ -783,10 +783,8 @@ auto_ptr<MaskingRules> MaskingRules::load(const char* zPath)
     }
     else
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-
         MXS_ERROR("Could not open rules file %s for reading: %s",
-                  zPath, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  zPath, mxs_strerror(errno));
     }
 
     return sRules;

@@ -2038,11 +2038,10 @@ GWBUF
             break;
         case -1:
             {
-                char err_msg[MXS_STRERROR_BUFLEN];
                 MXS_ERROR("Reading saved events: failed to read binlog "
                           "file %s at position %llu"
                           " (%s).", router->binlog_name,
-                          pos, strerror_r(errno, err_msg, sizeof(err_msg)));
+                          pos, mxs_strerror(errno));
 
                 if (errno == EBADF)
                 {
@@ -2098,11 +2097,10 @@ GWBUF
     {
         if (n == -1)
         {
-            char err_msg[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Reading saved events: the event at %llu in %s. "
                       "%s, expected %d bytes.",
                       pos, router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19);
+                      mxs_strerror(errno), hdr->event_size - 19);
         }
         else
         {
@@ -2350,12 +2348,11 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
     if ((n = pwrite(router->binlog_fd, buf, data_len,
                     router->last_written)) != data_len)
     {
-        char err_msg[MXS_STRERROR_BUFLEN];
         MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                   "Truncating to previous record.",
                   router->service->name, router->binlog_position,
                   router->binlog_name,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
+                  mxs_strerror(errno));
 
         /* Remove any partial event that was written */
         if (ftruncate(router->binlog_fd, router->binlog_position))
@@ -2363,7 +2360,7 @@ blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *
             MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                       router->service->name, router->last_written,
                       router->binlog_name,
-                      strerror_r(errno, err_msg, sizeof(err_msg)));
+                      mxs_strerror(errno));
         }
         return 0;
     }

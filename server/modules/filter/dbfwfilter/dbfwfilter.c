@@ -734,9 +734,8 @@ bool dbfw_reload_rules(const MODULECMD_ARG *argv)
     }
     else
     {
-        char err[MXS_STRERROR_BUFLEN];
         modulecmd_set_error("Failed to read rules at '%s': %d, %s", filename,
-                            errno, strerror_r(errno, err, sizeof(err)));
+                            errno, mxs_strerror(errno));
         rval = false;
     }
 
@@ -1483,9 +1482,8 @@ static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **us
     }
     else
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to open rule file '%s': %d, %s", filename, errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
 
     }
 

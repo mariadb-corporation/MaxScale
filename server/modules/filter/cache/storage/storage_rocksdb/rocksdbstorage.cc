@@ -70,8 +70,7 @@ bool deletePath(const string& path)
         }
         else
         {
-            char errbuf[MXS_STRERROR_BUFLEN];
-            MXS_ERROR("Could not stat: %s", strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Could not stat: %s", mxs_strerror(errno));
         }
     }
     else
@@ -98,10 +97,9 @@ bool deletePath(const string& path)
                 case FTS_DNR:
                 case FTS_ERR:
                     {
-                        char errbuf[MXS_STRERROR_BUFLEN];
                         MXS_ERROR("Error while traversing %s: %s",
                                   pCurrent->fts_accpath,
-                                  strerror_r(pCurrent->fts_errno, errbuf, sizeof(errbuf)));
+                                  mxs_strerror(pCurrent->fts_errno));
                         rv = false;
                     }
                     break;
@@ -125,11 +123,10 @@ bool deletePath(const string& path)
                 case FTS_DEFAULT:
                     if (remove(pCurrent->fts_accpath) < 0)
                     {
-                        char errbuf[MXS_STRERROR_BUFLEN];
                         MXS_ERROR("Could not remove '%s', the cache directory may need to "
                                   "be deleted manually: %s",
                                   pCurrent->fts_accpath,
-                                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                                  mxs_strerror(errno));
                         rv = false;
                     }
                     break;
@@ -261,10 +258,9 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
     }
     else if (errno != EEXIST)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to create storage directory %s: %s",
                   storageDirectory.c_str(),
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         ok = false;
     }
 

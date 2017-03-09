@@ -102,21 +102,19 @@ int setnonblocking(int fd)
 
     if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
                   fd,
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         return 1;
     }
 
     if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
                   fd,
                   errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  mxs_strerror(errno));
         return 1;
     }
     return 0;
@@ -391,18 +389,16 @@ static bool mkdir_all_internal(char *path, mode_t mask)
                     }
                     else
                     {
-                        char err[MXS_STRERROR_BUFLEN];
                         MXS_ERROR("Failed to create directory '%s': %d, %s",
-                                  path, errno, strerror_r(errno, err, sizeof(err)));
+                                  path, errno, mxs_strerror(errno));
                     }
                 }
             }
         }
         else
         {
-            char err[MXS_STRERROR_BUFLEN];
             MXS_ERROR("Failed to create directory '%s': %d, %s",
-                      path, errno, strerror_r(errno, err, sizeof(err)));
+                      path, errno, mxs_strerror(errno));
         }
     }
     else
@@ -711,9 +707,8 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
 
     if (search_re == NULL)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "Regex memory allocation failed : %s\n",
-                strerror_r(errno, errbuf, sizeof (errbuf)));
+                mxs_strerror(errno));
         newstr = haystack;
         goto retblock;
     }
@@ -724,9 +719,8 @@ char* replace_literal(char* haystack, const char* needle, const char* replacemen
 
     if (newstr == NULL)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         fprintf(stderr, "Regex memory allocation failed : %s\n",
-                strerror_r(errno, errbuf, sizeof (errbuf)));
+                mxs_strerror(errno));
         free(search_re);
         free(newstr);
         newstr = haystack;

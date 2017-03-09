@@ -3313,11 +3313,13 @@ static rses_property_t* mysql_sescmd_get_property(mysql_sescmd_t* scmd)
 }
 
 /**
- * Return RCAP_TYPE_STMT_INPUT.
+ * @brief Get router capabilities
+ *
+ * @return Always  RCAP_TYPE_CONTIGUOUS_INPUT
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_CONTIGUOUS_INPUT;
 }
 
 /**

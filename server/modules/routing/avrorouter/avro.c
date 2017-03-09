@@ -1129,7 +1129,6 @@ static bool ensure_dir_ok(const char* path, int mode)
 
     if (path)
     {
-        char err[MXS_STRERROR_BUFLEN];
         char resolved[PATH_MAX + 1];
         const char *rp = realpath(path, resolved);
 
@@ -1150,19 +1149,19 @@ static bool ensure_dir_ok(const char* path, int mode)
                 else
                 {
                     MXS_ERROR("Failed to access directory '%s': %d, %s", rp,
-                              errno, strerror_r(errno, err, sizeof(err)));
+                              errno, mxs_strerror(errno));
                 }
             }
             else
             {
                 MXS_ERROR("Failed to create directory '%s': %d, %s", rp,
-                          errno, strerror_r(errno, err, sizeof(err)));
+                          errno, mxs_strerror(errno));
             }
         }
         else
         {
             MXS_ERROR("Failed to resolve real path name for '%s': %d, %s", path,
-                      errno, strerror_r(errno, err, sizeof(err)));
+                      errno, mxs_strerror(errno));
         }
     }
 

@@ -1778,6 +1778,17 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTabList, ExprList* pChanges, Exp
     exposed_sqlite3ExprDelete(pParse->db, pWhere);
 }
 
+void mxs_sqlite3Savepoint(Parse *pParse, int op, Token *pName)
+{
+    QC_TRACE();
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_QUERY_PARSED;
+    info->type_mask = QUERY_TYPE_WRITE;
+}
+
 void maxscaleCollectInfoFromSelect(Parse* pParse, Select* pSelect, int sub_select)
 {
     QC_SQLITE_INFO* info = this_thread.info;
