@@ -646,6 +646,30 @@ char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
 uint32_t qc_get_type_mask(GWBUF* stmt);
 
 /**
+ * Returns the type bitmask of transaction related statements.
+ *
+ * If the statement starts a transaction, ends a transaction or
+ * changes the autocommit state, the returned bitmap will be a
+ * combination of:
+ *
+ *    QUERY_TYPE_BEGIN_TRX
+ *    QUERY_TYPE_COMMIT
+ *    QUERY_TYPE_ROLLBACK
+ *    QUERY_TYPE_ENABLE_AUTOCOMMIT
+ *    QUERY_TYPE_DISABLE_AUTOCOMMIT
+ *    QUERY_TYPE_READ  (explicitly read only transaction)
+ *    QUERY_TYPE_WRITE (explicitly read write transaction)
+ *
+ * Otherwise the result will be 0.
+ *
+ * @param stmt A COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return The relevant type bits if the statement is transaction
+ *         related, otherwise 0.
+ */
+uint32_t qc_get_trx_type_mask(GWBUF* stmt);
+
+/**
  * Returns whether the statement is a DROP TABLE statement.
  *
  * @param stmt  A buffer containing a COM_QUERY or COM_STMT_PREPARE packet.

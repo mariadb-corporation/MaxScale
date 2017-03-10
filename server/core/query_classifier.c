@@ -11,10 +11,12 @@
  * Public License.
  */
 
-#include <maxscale/query_classifier.h>
+#include "maxscale/query_classifier.h"
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/platform.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
 
 #include "../core/maxscale/modules.h"
@@ -34,9 +36,165 @@ struct type_name_info
     size_t name_len;
 };
 
-static const char default_qc_name[] = "qc_sqlite";
+static const char DEFAULT_QC_NAME[] = "qc_sqlite";
+static const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
 static QUERY_CLASSIFIER* classifier;
+
+typedef struct qc_trx_regex
+{
+    const char* match;
+    uint32_t    type_mask;
+    pcre2_code* code;
+} QC_TRX_REGEX;
+
+static QC_TRX_REGEX qc_trx_regexes[] =
+{
+    {
+        "^\\s*BEGIN(\\s+WORK)?\\s*;?\\s*$",
+        QUERY_TYPE_BEGIN_TRX
+    },
+    {
+        "^\\s*COMMIT(\\s+WORK)?\\s*;?\\s*$",
+        QUERY_TYPE_COMMIT,
+    },
+    {
+        "^\\s*ROLLBACK(\\s+WORK)?\\s*;?\\s*$",
+        QUERY_TYPE_ROLLBACK
+    },
+    {
+        "^\\s*START\\s+TRANSACTION\\s+READ\\s+ONLY\\s*;?\\s*$",
+        QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ
+    },
+    {
+        "^\\s*START\\s+TRANSACTION\\s+READ\\s+WRITE\\s*;?\\s*$",
+        QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE
+    },
+    {
+        "^\\s*START\\s+TRANSACTION(\\s*;?\\s*|(\\s+.*))$",
+        QUERY_TYPE_BEGIN_TRX
+    },
+    {
+        "^\\s*SET\\s+AUTOCOMMIT\\s*\\=\\s*(1|true)\\s*;?\\s*$",
+        QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT
+    },
+    {
+        "^\\s*SET\\s+AUTOCOMMIT\\s*\\=\\s*(0|false)\\s*;?\\s*$",
+        QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT
+    }
+};
+
+#define N_TRX_REGEXES (sizeof(qc_trx_regexes) / sizeof(qc_trx_regexes[0]))
+
+static thread_local pcre2_match_data* qc_trx_thread_datas[N_TRX_REGEXES];
+
+static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
+
+static bool compile_trx_regexes();
+static bool create_trx_thread_datas();
+static void free_trx_regexes();
+static void free_trx_thread_datas();
+
+static bool compile_trx_regexes()
+{
+    QC_TRX_REGEX* regex = qc_trx_regexes;
+    QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
+
+    bool success = true;
+
+    while (success && (regex < end))
+    {
+        int errcode;
+        PCRE2_SIZE erroffset;
+        regex->code = pcre2_compile((PCRE2_SPTR)regex->match, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS,
+                                    &errcode, &erroffset, NULL);
+
+        if (!regex->code)
+        {
+            success = false;
+            PCRE2_UCHAR errbuf[512];
+            pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+
+            MXS_ERROR("Regex compilation failed at %lu for regex '%s': %s.",
+                      erroffset, regex->match, errbuf);
+        }
+
+        ++regex;
+    }
+
+    if (!success)
+    {
+        free_trx_regexes();
+    }
+
+    return success;
+}
+
+static void free_trx_regexes()
+{
+    QC_TRX_REGEX* begin = qc_trx_regexes;
+    QC_TRX_REGEX* regex = begin + N_TRX_REGEXES;
+
+    while (regex > begin)
+    {
+        --regex;
+
+        if (regex->code)
+        {
+            pcre2_code_free(regex->code);
+            regex->code = NULL;
+        }
+    }
+}
+
+static bool create_trx_thread_datas()
+{
+    bool success = true;
+
+    QC_TRX_REGEX* regex = qc_trx_regexes;
+    QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
+
+    pcre2_match_data** data = qc_trx_thread_datas;
+
+    while (success && (regex < end))
+    {
+        *data = pcre2_match_data_create_from_pattern(regex->code, NULL);
+
+        if (!*data)
+        {
+            success = false;
+            MXS_ERROR("PCRE2 match data creation failed.");
+        }
+
+        ++regex;
+        ++data;
+    }
+
+    if (!success)
+    {
+        free_trx_thread_datas();
+    }
+
+    return success;
+}
+
+static void free_trx_thread_datas()
+{
+    pcre2_match_data** begin = qc_trx_thread_datas;
+    pcre2_match_data** data = begin + N_TRX_REGEXES;
+
+    while (data > begin)
+    {
+        --data;
+
+        if (*data)
+        {
+            pcre2_match_data_free(*data);
+            *data = NULL;
+        }
+    }
+}
+
 
 bool qc_setup(const char* plugin_name, const char* plugin_args)
 {
@@ -45,8 +203,8 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
 
     if (!plugin_name || (*plugin_name == 0))
     {
-        MXS_NOTICE("No query classifier specified, using default '%s'.", default_qc_name);
-        plugin_name = default_qc_name;
+        MXS_NOTICE("No query classifier specified, using default '%s'.", DEFAULT_QC_NAME);
+        plugin_name = DEFAULT_QC_NAME;
     }
 
     int32_t rv = QC_RESULT_ERROR;
@@ -59,7 +217,6 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
         if (rv != QC_RESULT_OK)
         {
             qc_unload(classifier);
-            classifier = NULL;
         }
     }
 
@@ -71,11 +228,57 @@ bool qc_process_init(uint32_t kind)
     QC_TRACE();
     ss_dassert(classifier);
 
-    bool rc = true;
+    const char* parse_using = getenv(QC_TRX_PARSE_USING);
 
-    if (kind & QC_INIT_PLUGIN)
+    if (parse_using)
     {
-        rc = classifier->qc_process_init() == 0;
+        if (strcmp(parse_using, "QC_TRX_PARSE_USING_QC") == 0)
+        {
+            qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
+            MXS_NOTICE("Transaction detection using QC.");
+        }
+        else if (strcmp(parse_using, "QC_TRX_PARSE_USING_REGEX") == 0)
+        {
+            qc_trx_parse_using = QC_TRX_PARSE_USING_REGEX;
+            MXS_NOTICE("Transaction detection using REGEX.");
+        }
+        else if (strcmp(parse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
+        {
+            ss_dassert(!true);
+        }
+        else
+        {
+            MXS_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
+                       "Parsing using QC.", parse_using);
+        }
+    }
+
+    bool rc = compile_trx_regexes();
+
+    if (rc)
+    {
+        rc = qc_thread_init(QC_INIT_SELF);
+
+        if (rc)
+        {
+            if (kind & QC_INIT_PLUGIN)
+            {
+                rc = classifier->qc_process_init() == 0;
+
+                if (!rc)
+                {
+                    qc_thread_end(QC_INIT_SELF);
+                }
+            }
+        }
+        else
+        {
+            free_trx_regexes();
+        }
+    }
+    else
+    {
+        MXS_ERROR("Could not compile transaction regexes.");
     }
 
     return rc;
@@ -89,8 +292,11 @@ void qc_process_end(uint32_t kind)
     if (kind & QC_INIT_PLUGIN)
     {
         classifier->qc_process_end();
-        classifier = NULL;
     }
+
+    qc_thread_end(QC_INIT_SELF);
+
+    free_trx_regexes();
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -113,6 +319,7 @@ void qc_unload(QUERY_CLASSIFIER* classifier)
 {
     // TODO: The module loading/unloading needs an overhaul before we
     // TODO: actually can unload something.
+    classifier = NULL;
 }
 
 bool qc_thread_init(uint32_t kind)
@@ -120,11 +327,20 @@ bool qc_thread_init(uint32_t kind)
     QC_TRACE();
     ss_dassert(classifier);
 
-    bool rc = true;
+    bool rc = create_trx_thread_datas();
 
-    if (kind & QC_INIT_PLUGIN)
+    if (rc)
     {
-        rc = classifier->qc_thread_init() == 0;
+        if (kind & QC_INIT_PLUGIN)
+        {
+            rc = classifier->qc_thread_init() == 0;
+
+            if (!rc)
+            {
+                free_trx_thread_datas();
+                rc = false;
+            }
+        }
     }
 
     return rc;
@@ -139,6 +355,8 @@ void qc_thread_end(uint32_t kind)
     {
         classifier->qc_thread_end();
     }
+
+    free_trx_thread_datas();
 }
 
 qc_parse_result_t qc_parse(GWBUF* query)
@@ -796,4 +1014,83 @@ char* qc_typemask_to_string(uint32_t types)
     }
 
     return s;
+}
+
+static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
+{
+    uint32_t type_mask = qc_get_type_mask(stmt);
+
+    if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+    {
+        type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+    }
+
+    type_mask &= (QUERY_TYPE_BEGIN_TRX |
+                  QUERY_TYPE_WRITE |
+                  QUERY_TYPE_READ |
+                  QUERY_TYPE_COMMIT |
+                  QUERY_TYPE_ROLLBACK |
+                  QUERY_TYPE_ENABLE_AUTOCOMMIT |
+                  QUERY_TYPE_DISABLE_AUTOCOMMIT);
+
+    return type_mask;
+}
+
+static uint32_t qc_get_trx_type_mask_using_regex(GWBUF* stmt)
+{
+    uint32_t type_mask = 0;
+
+    char* sql;
+    int len;
+
+    // This will exclude prepared statement but we are fine with that.
+    if (modutil_extract_SQL(stmt, &sql, &len))
+    {
+        QC_TRX_REGEX* regex = qc_trx_regexes;
+        QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
+        pcre2_match_data** data = qc_trx_thread_datas;
+
+        while ((type_mask == 0) && (regex < end))
+        {
+            if (pcre2_match(regex->code, (PCRE2_SPTR)sql, len, 0, 0, *data, NULL) >= 0)
+            {
+                type_mask = regex->type_mask;
+            }
+
+            ++regex;
+            ++data;
+        }
+    }
+
+    return type_mask;
+}
+
+uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
+{
+    uint32_t type_mask = 0;
+
+    switch (use)
+    {
+    case QC_TRX_PARSE_USING_QC:
+        type_mask = qc_get_trx_type_mask_using_qc(stmt);
+        break;
+
+    case QC_TRX_PARSE_USING_REGEX:
+        type_mask = qc_get_trx_type_mask_using_regex(stmt);
+        break;
+
+    case QC_TRX_PARSE_USING_PARSER:
+        ss_dassert(false);
+        break;
+
+    default:
+        ss_dassert(!true);
+    }
+
+    return type_mask;
+}
+
+uint32_t qc_get_trx_type_mask(GWBUF* stmt)
+{
+    return qc_get_trx_type_mask_using(stmt, qc_trx_parse_using);
 }
