@@ -20,6 +20,16 @@ MXS_BEGIN_DECLS
 #define QUERY_CLASSIFIER_VERSION {1, 1, 0}
 
 /**
+ * qc_init_kind_t specifies what kind of initialization should be performed.
+ */
+typedef enum qc_init_kind
+{
+    QC_INIT_SELF   = 0x01, /*< Initialize/finalize the query classifier itself. */
+    QC_INIT_PLUGIN = 0x02, /*< Initialize/finalize the plugin. */
+    QC_INIT_BOTH   = 0x03
+} qc_init_kind_t;
+
+/**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
  *
@@ -377,11 +387,14 @@ bool qc_setup(const char* plugin_name, const char* plugin_args);
  *
  * MaxScale calls this functions, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True, if the process wide initialization could be performed.
  *
  * @see qc_process_end qc_thread_init
  */
-bool qc_process_init(void);
+bool qc_process_init(uint32_t kind);
 
 /**
  * Finalizes the query classifier.
@@ -390,9 +403,12 @@ bool qc_process_init(void);
  * by a call to this function. MaxScale calls this function, so plugins
  * should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_process_init qc_thread_end
  */
-void qc_process_end(void);
+void qc_process_end(uint32_t kind);
 
 /**
  * Loads a particular query classifier.
@@ -426,11 +442,14 @@ void qc_unload(QUERY_CLASSIFIER* classifier);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True if the initialization succeeded, false otherwise.
  *
  * @see qc_thread_end
  */
-bool qc_thread_init(void);
+bool qc_thread_init(uint32_t kind);
 
 /**
  * Performs thread finalization needed by the query classifier.
@@ -439,9 +458,12 @@ bool qc_thread_init(void);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_thread_init
  */
-void qc_thread_end(void);
+void qc_thread_end(uint32_t kind);
 
 /**
  * Parses the statement in the provided buffer and returns a value specifying

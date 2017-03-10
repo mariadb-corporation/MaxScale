@@ -38,7 +38,6 @@ static const char default_qc_name[] = "qc_sqlite";
 
 static QUERY_CLASSIFIER* classifier;
 
-
 bool qc_setup(const char* plugin_name, const char* plugin_args)
 {
     QC_TRACE();
@@ -67,21 +66,31 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
     return (rv == QC_RESULT_OK) ? true : false;
 }
 
-bool qc_process_init(void)
+bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_process_init() == 0;
+    bool rc = true;
+
+    if (kind & QC_INIT_PLUGIN)
+    {
+        rc = classifier->qc_process_init() == 0;
+    }
+
+    return rc;
 }
 
-void qc_process_end(void)
+void qc_process_end(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_process_end();
-    classifier = NULL;
+    if (kind & QC_INIT_PLUGIN)
+    {
+        classifier->qc_process_end();
+        classifier = NULL;
+    }
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -106,20 +115,30 @@ void qc_unload(QUERY_CLASSIFIER* classifier)
     // TODO: actually can unload something.
 }
 
-bool qc_thread_init(void)
+bool qc_thread_init(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_thread_init() == 0;
+    bool rc = true;
+
+    if (kind & QC_INIT_PLUGIN)
+    {
+        rc = classifier->qc_thread_init() == 0;
+    }
+
+    return rc;
 }
 
-void qc_thread_end(void)
+void qc_thread_end(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_thread_end();
+    if (kind & QC_INIT_PLUGIN)
+    {
+        classifier->qc_thread_end();
+    }
 }
 
 qc_parse_result_t qc_parse(GWBUF* query)

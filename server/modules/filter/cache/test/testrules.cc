@@ -237,12 +237,12 @@ int main()
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
         set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
-        if (qc_setup("qc_sqlite", "") && qc_process_init())
+        if (qc_setup("qc_sqlite", "") && qc_process_init(QC_INIT_BOTH))
         {
             set_libdir(MXS_STRDUP_A("../"));
             rc = test();
 
-            qc_process_end();
+            qc_process_end(QC_INIT_BOTH);
         }
         else
         {
