@@ -223,11 +223,3 @@ Storage* StorageFactory::createRawStorage(const char* zName,
 
     return pStorage;
 }
-
-cache_result_t StorageFactory::get_key(const char* zDefaultDb,
-                                       const GWBUF* pQuery,
-                                       CACHE_KEY* pKey) const
-{
-    return m_pApi->getKey(zDefaultDb, pQuery, pKey);
-}
-

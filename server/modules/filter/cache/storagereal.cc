@@ -38,13 +38,6 @@ cache_result_t StorageReal::get_info(uint32_t flags, json_t** ppInfo) const
     return m_pApi->getInfo(m_pStorage, flags, ppInfo);
 }
 
-cache_result_t StorageReal::get_key(const char* zDefaultDb,
-                                    const GWBUF* pQuery,
-                                    CACHE_KEY* pKey) const
-{
-    return m_pApi->getKey(zDefaultDb, pQuery, pKey);
-}
-
 cache_result_t StorageReal::get_value(const CACHE_KEY& key,
                                       uint32_t flags,
                                       GWBUF** ppValue) const

@@ -17,20 +17,9 @@
 size_t cache_key_hash(const CACHE_KEY* key)
 {
     ss_dassert(key);
+    ss_dassert(sizeof(key->data) == sizeof(size_t));
 
-    size_t hash = 0;
-
-    const char* i   = key->data;
-    const char* end = i + CACHE_KEY_MAXLEN;
-
-    while (i < end)
-    {
-        int c = *i;
-        hash = c + (hash << 6) + (hash << 16) - hash;
-        ++i;
-    }
-
-    return hash;
+    return key->data;
 }
 
 bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
@@ -38,7 +27,7 @@ bool cache_key_equal_to(const CACHE_KEY* lhs, const CACHE_KEY* rhs)
     ss_dassert(lhs);
     ss_dassert(rhs);
 
-    return memcmp(lhs->data, rhs->data, CACHE_KEY_MAXLEN) == 0;
+    return lhs->data == rhs->data;
 }
 
 

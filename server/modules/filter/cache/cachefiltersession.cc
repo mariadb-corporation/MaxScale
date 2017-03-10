@@ -146,7 +146,7 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, cha
     , m_refreshing(false)
     , m_is_read_only(true)
 {
-    memset(m_key.data, 0, CACHE_KEY_MAXLEN);
+    m_key.data = 0;
 
     reset_response_state();
 }

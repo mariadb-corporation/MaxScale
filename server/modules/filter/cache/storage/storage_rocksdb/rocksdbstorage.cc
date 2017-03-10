@@ -13,12 +13,10 @@
 
 #define MXS_MODULE_NAME "storage_rocksdb"
 #include "rocksdbstorage.hh"
-#include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fts.h>
 #include <algorithm>
-#include <set>
 #include <rocksdb/env.h>
 #include <rocksdb/statistics.h>
 #include <maxscale/alloc.h>
@@ -28,19 +26,12 @@
 #include "rocksdbinternals.hh"
 
 using std::for_each;
-using std::set;
 using std::string;
 using std::unique_ptr;
 
 
 namespace
 {
-
-const size_t ROCKSDB_KEY_LENGTH = 2 * SHA512_DIGEST_LENGTH;
-
-#if ROCKSDB_KEY_LENGTH > CACHE_KEY_MAXLEN
-#error storage_rocksdb key is too long.
-#endif
 
 // See https://github.com/facebook/rocksdb/wiki/Basic-Operations#thread-pools
 // These figures should perhaps depend upon the number of cache instances.
@@ -318,67 +309,6 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName,
     return sStorage.release();
 }
 
-cache_result_t RocksDBStorage::Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey)
-{
-    ss_dassert(GWBUF_IS_CONTIGUOUS(&query));
-
-    int n;
-    bool fullnames = true;
-    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(&query), &n, fullnames);
-
-    set<string> dbs; // Elements in set are sorted.
-
-    for (int i = 0; i < n; ++i)
-    {
-        char *zTable = pzTables[i];
-        char *zDot = strchr(zTable, '.');
-
-        if (zDot)
-        {
-            *zDot = 0;
-            dbs.insert(zTable);
-        }
-        else if (zDefault_db)
-        {
-            // If zDefaultDB is NULL, then there will be a table for which we
-            // do not know the database. However, that will fail in the server,
-            // so nothing will be stored.
-            dbs.insert(zDefault_db);
-        }
-        MXS_FREE(zTable);
-    }
-    MXS_FREE(pzTables);
-
-    // dbs now contain each accessed database in sorted order. Now copy them to a single string.
-    string tag;
-    for_each(dbs.begin(), dbs.end(), [&tag](const string & db)
-    {
-        tag.append(db);
-    });
-
-    memset(pKey->data, 0, CACHE_KEY_MAXLEN);
-
-    const unsigned char* pData;
-
-    // We store the databases in the first half of the key. That will ensure that
-    // identical queries targeting different default databases will not clash.
-    // This will also mean that entries related to the same databases will
-    // be placed near each other.
-    pData = reinterpret_cast<const unsigned char*>(tag.data());
-    SHA512(pData, tag.length(), reinterpret_cast<unsigned char*>(pKey->data));
-
-    char *pSql;
-    int length;
-
-    modutil_extract_SQL(const_cast<GWBUF*>(&query), &pSql, &length);
-
-    // Then we store the query itself in the second half of the key.
-    pData = reinterpret_cast<const unsigned char*>(pSql);
-    SHA512(pData, length, reinterpret_cast<unsigned char*>(pKey->data) + SHA512_DIGEST_LENGTH);
-
-    return CACHE_RESULT_OK;
-}
-
 void RocksDBStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
 {
     *pConfig = m_config;
@@ -414,7 +344,7 @@ cache_result_t RocksDBStorage::get_value(const CACHE_KEY& key, uint32_t flags, G
 {
     // Use the root DB so that we get the value *with* the timestamp at the end.
     rocksdb::DB* pDb = m_sDb->GetRootDB();
-    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice rocksdb_key(reinterpret_cast<const char*>(&key.data), sizeof(key.data));
     string value;
 
     rocksdb::Status status = pDb->Get(rocksdb::ReadOptions(), rocksdb_key, &value);
@@ -501,7 +431,7 @@ cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF& valu
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(&value));
 
-    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice rocksdb_key(reinterpret_cast<const char*>(&key.data), sizeof(key.data));
     rocksdb::Slice rocksdb_value((char*)GWBUF_DATA(&value), GWBUF_LENGTH(&value));
 
     rocksdb::Status status = m_sDb->Put(Write_options(), rocksdb_key, rocksdb_value);
@@ -511,7 +441,7 @@ cache_result_t RocksDBStorage::put_value(const CACHE_KEY& key, const GWBUF& valu
 
 cache_result_t RocksDBStorage::del_value(const CACHE_KEY& key)
 {
-    rocksdb::Slice rocksdb_key(key.data, ROCKSDB_KEY_LENGTH);
+    rocksdb::Slice rocksdb_key(reinterpret_cast<const char*>(&key.data), sizeof(key.data));
 
     rocksdb::Status status = m_sDb->Delete(Write_options(), rocksdb_key);
 

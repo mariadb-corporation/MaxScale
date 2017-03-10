@@ -45,19 +45,6 @@ public:
     virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
 
     /**
-     * Create a key for a GWBUF.
-     *
-     * @param zDefaultDb  The default DB or NULL.
-     * @param query       An SQL query. Must be one contiguous buffer.
-     * @param pKey        Pointer to object where key will be stored.
-     *
-     * @return CACHE_RESULT_OK if a key was created, otherwise some error code.
-     */
-    virtual cache_result_t get_key(const char* zDefaultDb,
-                                   const GWBUF* pQuery,
-                                   CACHE_KEY* pKey) const = 0;
-
-    /**
      * Get a value from the cache.
      *
      * @param key      A key generated with get_key.
