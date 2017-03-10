@@ -977,15 +977,25 @@ static void usage(void)
  */
 void worker_thread_main(void* arg)
 {
-    if (modules_thread_init())
+    if (qc_thread_init(QC_INIT_SELF))
     {
-        poll_waitevents(arg);
+        if (modules_thread_init())
+        {
+            poll_waitevents(arg);
 
-        modules_thread_finish();
+            modules_thread_finish();
+        }
+        else
+        {
+            MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+        }
+
+        qc_thread_end(QC_INIT_SELF);
     }
     else
     {
-        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+        MXS_ERROR("Could not perform thread initialization for the "
+                  "internal query classifier. Thread exits.");
     }
 }
 
@@ -1918,6 +1928,16 @@ int main(int argc, char **argv)
 
     dcb_global_init();
 
+    /* Initialize the internal query classifier. The plugin will be initialized
+     * via the module initialization below.
+     */
+    if (!qc_process_init(QC_INIT_SELF))
+    {
+        MXS_ERROR("Failed to initialize the internal query classifier.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /* Init MaxScale modules */
     if (!modules_process_init())
     {
@@ -2035,6 +2055,11 @@ int main(int argc, char **argv)
 
     /*< Call finish on all modules. */
     modules_process_finish();
+
+    /* Finalize the internal query classifier. The plugin was finalized
+     * via the module finalizarion above.
+     */
+    qc_process_end(QC_INIT_SELF);
 
     log_exit_status();
     MXS_NOTICE("MaxScale is shutting down.");
