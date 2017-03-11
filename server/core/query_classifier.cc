@@ -18,6 +18,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
+#include "maxscale/trxboundarymatcher.hh"
 #include "maxscale/trxboundaryparser.hh"
 
 #include "../core/maxscale/modules.h"
@@ -42,159 +43,7 @@ static const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
 static QUERY_CLASSIFIER* classifier;
 
-typedef struct qc_trx_regex
-{
-    const char* match;
-    uint32_t    type_mask;
-    pcre2_code* code;
-} QC_TRX_REGEX;
-
-static QC_TRX_REGEX qc_trx_regexes[] =
-{
-    {
-        "^\\s*BEGIN(\\s+WORK)?\\s*;?\\s*$",
-        QUERY_TYPE_BEGIN_TRX
-    },
-    {
-        "^\\s*COMMIT(\\s+WORK)?\\s*;?\\s*$",
-        QUERY_TYPE_COMMIT,
-    },
-    {
-        "^\\s*ROLLBACK(\\s+WORK)?\\s*;?\\s*$",
-        QUERY_TYPE_ROLLBACK
-    },
-    {
-        "^\\s*START\\s+TRANSACTION\\s+READ\\s+ONLY\\s*;?\\s*$",
-        QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ
-    },
-    {
-        "^\\s*START\\s+TRANSACTION\\s+READ\\s+WRITE\\s*;?\\s*$",
-        QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE
-    },
-    {
-        "^\\s*START\\s+TRANSACTION(\\s*;?\\s*|(\\s+.*))$",
-        QUERY_TYPE_BEGIN_TRX
-    },
-    {
-        "^\\s*SET\\s+AUTOCOMMIT\\s*\\=\\s*(1|true)\\s*;?\\s*$",
-        QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT
-    },
-    {
-        "^\\s*SET\\s+AUTOCOMMIT\\s*\\=\\s*(0|false)\\s*;?\\s*$",
-        QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT
-    }
-};
-
-#define N_TRX_REGEXES (sizeof(qc_trx_regexes) / sizeof(qc_trx_regexes[0]))
-
-static thread_local pcre2_match_data* qc_trx_thread_datas[N_TRX_REGEXES];
-
 static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
-
-static bool compile_trx_regexes();
-static bool create_trx_thread_datas();
-static void free_trx_regexes();
-static void free_trx_thread_datas();
-
-static bool compile_trx_regexes()
-{
-    QC_TRX_REGEX* regex = qc_trx_regexes;
-    QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
-
-    bool success = true;
-
-    while (success && (regex < end))
-    {
-        int errcode;
-        PCRE2_SIZE erroffset;
-        regex->code = pcre2_compile((PCRE2_SPTR)regex->match, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS,
-                                    &errcode, &erroffset, NULL);
-
-        if (!regex->code)
-        {
-            success = false;
-            PCRE2_UCHAR errbuf[512];
-            pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-
-            MXS_ERROR("Regex compilation failed at %lu for regex '%s': %s.",
-                      erroffset, regex->match, errbuf);
-        }
-
-        ++regex;
-    }
-
-    if (!success)
-    {
-        free_trx_regexes();
-    }
-
-    return success;
-}
-
-static void free_trx_regexes()
-{
-    QC_TRX_REGEX* begin = qc_trx_regexes;
-    QC_TRX_REGEX* regex = begin + N_TRX_REGEXES;
-
-    while (regex > begin)
-    {
-        --regex;
-
-        if (regex->code)
-        {
-            pcre2_code_free(regex->code);
-            regex->code = NULL;
-        }
-    }
-}
-
-static bool create_trx_thread_datas()
-{
-    bool success = true;
-
-    QC_TRX_REGEX* regex = qc_trx_regexes;
-    QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
-
-    pcre2_match_data** data = qc_trx_thread_datas;
-
-    while (success && (regex < end))
-    {
-        *data = pcre2_match_data_create_from_pattern(regex->code, NULL);
-
-        if (!*data)
-        {
-            success = false;
-            MXS_ERROR("PCRE2 match data creation failed.");
-        }
-
-        ++regex;
-        ++data;
-    }
-
-    if (!success)
-    {
-        free_trx_thread_datas();
-    }
-
-    return success;
-}
-
-static void free_trx_thread_datas()
-{
-    pcre2_match_data** begin = qc_trx_thread_datas;
-    pcre2_match_data** data = begin + N_TRX_REGEXES;
-
-    while (data > begin)
-    {
-        --data;
-
-        if (*data)
-        {
-            pcre2_match_data_free(*data);
-            *data = NULL;
-        }
-    }
-}
 
 
 bool qc_setup(const char* plugin_name, const char* plugin_args)
@@ -255,7 +104,7 @@ bool qc_process_init(uint32_t kind)
         }
     }
 
-    bool rc = compile_trx_regexes();
+    bool rc = maxscale::TrxBoundaryMatcher::process_init();
 
     if (rc)
     {
@@ -275,7 +124,7 @@ bool qc_process_init(uint32_t kind)
         }
         else
         {
-            free_trx_regexes();
+            maxscale::TrxBoundaryMatcher::process_end();
         }
     }
     else
@@ -298,7 +147,7 @@ void qc_process_end(uint32_t kind)
 
     qc_thread_end(QC_INIT_SELF);
 
-    free_trx_regexes();
+    maxscale::TrxBoundaryMatcher::process_end();
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -329,7 +178,7 @@ bool qc_thread_init(uint32_t kind)
     QC_TRACE();
     ss_dassert(classifier);
 
-    bool rc = create_trx_thread_datas();
+    bool rc = maxscale::TrxBoundaryMatcher::thread_init();
 
     if (rc)
     {
@@ -339,7 +188,7 @@ bool qc_thread_init(uint32_t kind)
 
             if (!rc)
             {
-                free_trx_thread_datas();
+                maxscale::TrxBoundaryMatcher::thread_end();
                 rc = false;
             }
         }
@@ -358,7 +207,7 @@ void qc_thread_end(uint32_t kind)
         classifier->qc_thread_end();
     }
 
-    free_trx_thread_datas();
+    maxscale::TrxBoundaryMatcher::thread_end();
 }
 
 qc_parse_result_t qc_parse(GWBUF* query)
@@ -1040,31 +889,7 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 
 static uint32_t qc_get_trx_type_mask_using_regex(GWBUF* stmt)
 {
-    uint32_t type_mask = 0;
-
-    char* sql;
-    int len;
-
-    // This will exclude prepared statement but we are fine with that.
-    if (modutil_extract_SQL(stmt, &sql, &len))
-    {
-        QC_TRX_REGEX* regex = qc_trx_regexes;
-        QC_TRX_REGEX* end = regex + N_TRX_REGEXES;
-        pcre2_match_data** data = qc_trx_thread_datas;
-
-        while ((type_mask == 0) && (regex < end))
-        {
-            if (pcre2_match(regex->code, (PCRE2_SPTR)sql, len, 0, 0, *data, NULL) >= 0)
-            {
-                type_mask = regex->type_mask;
-            }
-
-            ++regex;
-            ++data;
-        }
-    }
-
-    return type_mask;
+    return maxscale::TrxBoundaryMatcher::type_mask_of(stmt);
 }
 
 static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
