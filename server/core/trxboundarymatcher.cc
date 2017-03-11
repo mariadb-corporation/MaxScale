@@ -40,15 +40,23 @@ REGEX_DATA this_unit_regexes[] =
         QUERY_TYPE_ROLLBACK
     },
     {
-        "^\\s*START\\s+TRANSACTION\\s+READ\\s+ONLY\\s*;?\\s*$",
+        "^\\s*START\\s+TRANSACTION\\s+("
+        "READ\\s+ONLY|"
+        "READ\\s+ONLY\\s*,\\s*WITH\\s+CONSISTENT\\s+SNAPSHOT|"
+        "WITH\\s+CONSISTENT\\s+SNAPSHOT\\s*,\\s*READ\\s+ONLY"
+        ")\\s*;?\\s*$",
         QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ
     },
     {
-        "^\\s*START\\s+TRANSACTION\\s+READ\\s+WRITE\\s*;?\\s*$",
+        "^\\s*START\\s+TRANSACTION\\s+("
+        "READ\\s+WRITE|"
+        "READ\\s+WRITE\\s*,\\s*WITH\\s+CONSISTENT\\s+SNAPSHOT|"
+        "WITH\\s+CONSISTENT\\s+SNAPSHOT\\s*,\\s*READ\\s+WRITE"
+        ")\\s*;?\\s*$",
         QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE
     },
     {
-        "^\\s*START\\s+TRANSACTION(\\s*;?\\s*|(\\s+.*))$",
+        "^\\s*START\\s+TRANSACTION(\\s+WITH\\s+CONSISTENT\\s+SNAPSHOT)?\\s*;?\\s*$",
         QUERY_TYPE_BEGIN_TRX
     },
     {
@@ -93,8 +101,8 @@ void log_pcre2_error(const char* zMatch, int errcode, int erroffset)
     PCRE2_UCHAR errbuf[512];
     pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
 
-    MXS_ERROR("Regex compilation failed at %d for regex '%s': %s.",
-              erroffset, zMatch, errbuf);
+    MXS_ERROR("Regex compilation failed at %d for regex '%s', i.e. '%s': %s.",
+              erroffset, zMatch, zMatch + erroffset, errbuf);
 }
 
 bool compile_regexes()
