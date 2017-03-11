@@ -16,7 +16,7 @@
 #include <maxscale/modutil.h>
 #include <maxscale/paths.h>
 #include <maxscale/protocol/mysql.h>
-#include "../../server/core/maxscale/query_classifier.h"
+#include "../core/maxscale/query_classifier.h"
 
 using namespace std;
 
@@ -51,6 +51,11 @@ uint32_t get_regex_trx_type_mask(GWBUF* pBuf)
     return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_REGEX);
 }
 
+uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
+{
+    return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_PARSER);
+}
+
 }
 
 namespace
@@ -76,18 +81,20 @@ struct test_case
 
     { "START TRANSACTION", QUERY_TYPE_BEGIN_TRX },
     { "START  TRANSACTION", QUERY_TYPE_BEGIN_TRX },
+
     { "START TRANSACTION READ ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
     { "START  TRANSACTION READ ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
-    { "START  TRANSACTION  READ ONLY ", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
-    { "START  TRANSACTION  READ  ONLY ", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
+    { "START  TRANSACTION  READ ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
+    { "START  TRANSACTION  READ  ONLY", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_READ },
+
     { "START TRANSACTION READ WRITE", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE },
     { "START  TRANSACTION READ WRITE", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE },
     { "START  TRANSACTION  READ WRITE", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE },
     { "START  TRANSACTION  READ  WRITE", QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_WRITE },
+
     { "START TRANSACTION WITH CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
     { "START  TRANSACTION WITH CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
     { "START  TRANSACTION  WITH CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
-    { "START  TRANSACTION  WITH  CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
     { "START  TRANSACTION  WITH  CONSISTENT SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
     { "START  TRANSACTION  WITH  CONSISTENT  SNAPSHOT", QUERY_TYPE_BEGIN_TRX },
 
@@ -97,6 +104,7 @@ struct test_case
     { "SET  AUTOCOMMIT  =true", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT  = true", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT  =  true", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
+
     { "SET AUTOCOMMIT=1", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT=1", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT =1", QUERY_TYPE_COMMIT|QUERY_TYPE_ENABLE_AUTOCOMMIT },
@@ -110,6 +118,7 @@ struct test_case
     { "SET  AUTOCOMMIT  =false", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT  = false", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT  =  false", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
+
     { "SET AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT=0", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
     { "SET  AUTOCOMMIT =0", QUERY_TYPE_BEGIN_TRX|QUERY_TYPE_DISABLE_AUTOCOMMIT },
@@ -272,6 +281,14 @@ int main(int argc, char* argv[])
             cout << "Regex" << endl;
             cout << "=====" << endl;
             if (!test(get_regex_trx_type_mask))
+            {
+                rc = EXIT_FAILURE;
+            }
+            cout << endl;
+
+            cout << "Parser" << endl;
+            cout << "======" << endl;
+            if (!test(get_parser_trx_type_mask))
             {
                 rc = EXIT_FAILURE;
             }

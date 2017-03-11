@@ -18,6 +18,7 @@
 #include <maxscale/platform.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
+#include "maxscale/trxboundaryparser.hh"
 
 #include "../core/maxscale/modules.h"
 
@@ -244,7 +245,8 @@ bool qc_process_init(uint32_t kind)
         }
         else if (strcmp(parse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
         {
-            ss_dassert(!true);
+            qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
+            MXS_NOTICE("Transaction detection using custom PARSER.");
         }
         else
         {
@@ -1065,6 +1067,13 @@ static uint32_t qc_get_trx_type_mask_using_regex(GWBUF* stmt)
     return type_mask;
 }
 
+static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(stmt);
+}
+
 uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
 {
     uint32_t type_mask = 0;
@@ -1080,7 +1089,7 @@ uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
         break;
 
     case QC_TRX_PARSE_USING_PARSER:
-        ss_dassert(false);
+        type_mask = qc_get_trx_type_mask_using_parser(stmt);
         break;
 
     default:
