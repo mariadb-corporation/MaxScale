@@ -38,7 +38,9 @@ public:
     {
         TK_AUTOCOMMIT,
         TK_BEGIN,
+        TK_COMMA,
         TK_COMMIT,
+        TK_CONSISTENT,
         TK_EQ,
         TK_FALSE,
         TK_ONE,
@@ -46,9 +48,11 @@ public:
         TK_READ,
         TK_ROLLBACK,
         TK_SET,
+        TK_SNAPSHOT,
         TK_START,
         TK_TRANSACTION,
         TK_TRUE,
+        TK_WITH,
         TK_WORK,
         TK_WRITE,
         TK_ZERO,
@@ -105,10 +109,23 @@ public:
     }
 
 private:
+    enum token_required_t
+    {
+        TOKEN_REQUIRED,
+        TOKEN_NOT_REQUIRED,
+    };
+
     void log_unexpected()
     {
         MXS_ERROR("In statement '%.*s', unexpected token at '%.*s'.",
                   (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
+    }
+
+    void log_exhausted()
+    {
+#ifndef NDEBUG
+        MXS_WARNING("More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+#endif
     }
 
     uint32_t parse()
@@ -200,6 +217,10 @@ private:
 
         switch (token)
         {
+        case TK_COMMA:
+            type_mask = parse_transaction(type_mask);
+            break;
+
         case PARSER_EXHAUSTED:
             break;
 
@@ -213,7 +234,7 @@ private:
 
     uint32_t parse_read(uint32_t type_mask)
     {
-        token_t token = next_token();
+        token_t token = next_token(TOKEN_REQUIRED);
 
         switch (token)
         {
@@ -227,7 +248,6 @@ private:
 
         case PARSER_EXHAUSTED:
             type_mask = 0;
-            MXS_WARNING("Expected more.");
             break;
 
         default:
@@ -263,7 +283,7 @@ private:
 
     uint32_t parse_set(uint32_t type_mask)
     {
-        token_t token = next_token();
+        token_t token = next_token(TOKEN_REQUIRED);
 
         switch (token)
         {
@@ -295,7 +315,6 @@ private:
 
         case PARSER_EXHAUSTED:
             type_mask = 0;
-            MXS_WARNING("Expected more.");
             break;
 
         default:
@@ -308,7 +327,7 @@ private:
 
     uint32_t parse_start(uint32_t type_mask)
     {
-        token_t token = next_token();
+        token_t token = next_token(TOKEN_REQUIRED);
 
         switch (token)
         {
@@ -318,7 +337,6 @@ private:
 
         case PARSER_EXHAUSTED:
             type_mask = 0;
-            MXS_WARNING("Expected more.");
             break;
 
         default:
@@ -341,14 +359,47 @@ private:
             type_mask = parse_read(type_mask);
             break;
 
+        case TK_WITH:
+            type_mask = parse_with_consistent_snapshot(type_mask);
+            break;
+
         case PARSER_EXHAUSTED:
             break;
 
         default:
-            MXS_WARNING("START TRANSACTION followed by '%.*s', assuming it's ok.",
-                        (int)(m_pEnd - m_pI), m_pI);
-            //type_mask = 0;
+            type_mask = 0;
             log_unexpected();
+        }
+
+        return type_mask;
+    }
+
+    uint32_t parse_with_consistent_snapshot(uint32_t type_mask)
+    {
+        token_t token = next_token(TOKEN_REQUIRED);
+
+        if (token == TK_CONSISTENT)
+        {
+            token = next_token(TOKEN_REQUIRED);
+
+            if (token == TK_SNAPSHOT)
+            {
+                token = next_token();
+
+                switch (token)
+                {
+                case TK_COMMA:
+                    type_mask = parse_transaction(type_mask);
+                    break;
+
+                case PARSER_EXHAUSTED:
+                    break;
+
+                default:
+                    type_mask = 0;
+                    log_unexpected();
+                }
+            }
         }
 
         return type_mask;
@@ -379,6 +430,10 @@ private:
 
         switch (token)
         {
+        case TK_COMMA:
+            type_mask = parse_transaction(type_mask);
+            break;
+
         case PARSER_EXHAUSTED:
             break;
 
@@ -435,7 +490,7 @@ private:
         return token;
     }
 
-    token_t next_token()
+    token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)
     {
         token_t token = PARSER_UNKNOWN_TOKEN;
 
@@ -479,17 +534,29 @@ private:
                 token = expect_token(TBP_EXPECT_TOKEN("begin"), TK_BEGIN);
                 break;
 
+            case ',':
+                ++m_pI;
+                token = TK_COMMA;
+                break;
+
             case 'c':
             case 'C':
-                token = expect_token(TBP_EXPECT_TOKEN("commit"), TK_COMMIT);
+                if (is_next_char('o') || is_next_char('O'))
+                {
+                    if (is_next_char('m', 2) || is_next_char('M', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("commit"), TK_COMMIT);
+                    }
+                    else if (is_next_char('n', 2) || is_next_char('N', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("consistent"), TK_CONSISTENT);
+                    }
+                }
                 break;
 
             case '=':
-                if (!is_next_char('='))
-                {
-                    ++m_pI;
-                    token = TK_EQ;
-                }
+                ++m_pI;
+                token = TK_EQ;
                 break;
 
             case 'f':
@@ -531,6 +598,10 @@ private:
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("set"), TK_SET);
                 }
+                else if (is_next_char('n') || is_next_char('N'))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("snapshot"), TK_SNAPSHOT);
+                }
                 else if (is_next_char('t') || is_next_char('T'))
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("start"), TK_START);
@@ -554,7 +625,11 @@ private:
 
             case 'w':
             case 'W':
-                if (is_next_char('o') || is_next_char('O'))
+                if (is_next_char('i') || is_next_char('I'))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("with"), TK_WITH);
+                }
+                else if (is_next_char('o') || is_next_char('O'))
                 {
                     token = expect_token(TBP_EXPECT_TOKEN("work"), TK_WORK);
                 }
@@ -578,6 +653,11 @@ private:
             default:
                 ;
             }
+        }
+
+        if ((token == PARSER_EXHAUSTED) && (required == TOKEN_REQUIRED))
+        {
+            log_exhausted();
         }
 
         return token;
