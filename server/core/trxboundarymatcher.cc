@@ -65,14 +65,19 @@ const size_t N_REGEXES = sizeof(this_unit_regexes)/sizeof(this_unit_regexes[0]);
 
 struct this_unit
 {
+    const char* zMatch;
+    pcre2_code* pCode;
     REGEX_DATA* pRegexes;
 } this_unit =
 {
+    .zMatch = "^\\s*(BEGIN|COMMIT|ROLLBACK|START|SET)",
+    NULL,
     .pRegexes = this_unit_regexes
 };
 
 thread_local struct this_thread
 {
+    pcre2_match_data* pData;
     pcre2_match_data* match_datas[N_REGEXES];
 } this_thread;
 
@@ -83,36 +88,54 @@ void free_regexes();
 bool create_thread_data();
 void free_thread_data();
 
+void log_pcre2_error(const char* zMatch, int errcode, int erroffset)
+{
+    PCRE2_UCHAR errbuf[512];
+    pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+
+    MXS_ERROR("Regex compilation failed at %d for regex '%s': %s.",
+              erroffset, zMatch, errbuf);
+}
+
 bool compile_regexes()
 {
-    REGEX_DATA* i = this_unit.pRegexes;
-    REGEX_DATA* end = i + N_REGEXES;
-
     bool success = true;
 
-    while (success && (i < end))
+    int errcode;
+    PCRE2_SIZE erroffset;
+
+    this_unit.pCode = pcre2_compile((PCRE2_SPTR)this_unit.zMatch,
+                                    PCRE2_ZERO_TERMINATED, PCRE2_CASELESS,
+                                    &errcode, &erroffset, NULL);
+
+    if (this_unit.pCode)
     {
-        int errcode;
-        PCRE2_SIZE erroffset;
-        i->pCode = pcre2_compile((PCRE2_SPTR)i->zMatch, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS,
-                                 &errcode, &erroffset, NULL);
+        REGEX_DATA* i = this_unit.pRegexes;
+        REGEX_DATA* end = i + N_REGEXES;
 
-        if (!i->pCode)
+        while (success && (i < end))
         {
-            success = false;
-            PCRE2_UCHAR errbuf[512];
-            pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+            i->pCode = pcre2_compile((PCRE2_SPTR)i->zMatch, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS,
+                                     &errcode, &erroffset, NULL);
 
-            MXS_ERROR("Regex compilation failed at %lu for regex '%s': %s.",
-                      erroffset, i->zMatch, errbuf);
+            if (!i->pCode)
+            {
+                success = false;
+                log_pcre2_error(i->zMatch, errcode, erroffset);
+            }
+
+            ++i;
         }
 
-        ++i;
+        if (!success)
+        {
+            free_regexes();
+        }
     }
-
-    if (!success)
+    else
     {
-        free_regexes();
+        success = false;
+        log_pcre2_error(this_unit.zMatch, errcode, erroffset);
     }
 
     return success;
@@ -133,34 +156,50 @@ void free_regexes()
             i->pCode = NULL;
         }
     }
+
+    if (this_unit.pCode)
+    {
+        pcre2_code_free(this_unit.pCode);
+        this_unit.pCode = NULL;
+    }
 }
 
 bool create_thread_data()
 {
     bool success = true;
 
-    REGEX_DATA* i = this_unit.pRegexes;
-    REGEX_DATA* end = i + N_REGEXES;
+    this_thread.pData = pcre2_match_data_create_from_pattern(this_unit.pCode, NULL);
 
-    pcre2_match_data** ppData = this_thread.match_datas;
-
-    while (success && (i < end))
+    if (this_thread.pData)
     {
-        *ppData = pcre2_match_data_create_from_pattern(i->pCode, NULL);
+        REGEX_DATA* i = this_unit.pRegexes;
+        REGEX_DATA* end = i + N_REGEXES;
 
-        if (!*ppData)
+        pcre2_match_data** ppData = this_thread.match_datas;
+
+        while (success && (i < end))
         {
-            success = false;
-            MXS_ERROR("PCRE2 match data creation failed.");
+            *ppData = pcre2_match_data_create_from_pattern(i->pCode, NULL);
+
+            if (!*ppData)
+            {
+                success = false;
+                MXS_ERROR("PCRE2 match data creation failed.");
+            }
+
+            ++i;
+            ++ppData;
         }
 
-        ++i;
-        ++ppData;
+        if (!success)
+        {
+            free_thread_data();
+        }
     }
-
-    if (!success)
+    else
     {
-        free_thread_data();
+        success = false;
+        MXS_ERROR("PCRE2 match data creation failed.");
     }
 
     return success;
@@ -181,6 +220,9 @@ void free_thread_data()
             *i = NULL;
         }
     }
+
+    pcre2_match_data_free(this_thread.pData);
+    this_thread.pData = NULL;
 }
 
 }
@@ -230,19 +272,22 @@ uint32_t TrxBoundaryMatcher::type_mask_of(const char* pSql, size_t len)
 {
     uint32_t type_mask = 0;
 
-    REGEX_DATA* i = this_unit.pRegexes;
-    REGEX_DATA* end = i + N_REGEXES;
-    pcre2_match_data** ppData = this_thread.match_datas;
-
-    while ((type_mask == 0) && (i < end))
+    if (pcre2_match(this_unit.pCode, (PCRE2_SPTR)pSql, len, 0, 0, this_thread.pData, NULL) >= 0)
     {
-        if (pcre2_match(i->pCode, (PCRE2_SPTR)pSql, len, 0, 0, *ppData, NULL) >= 0)
-        {
-            type_mask = i->type_mask;
-        }
+        REGEX_DATA* i = this_unit.pRegexes;
+        REGEX_DATA* end = i + N_REGEXES;
+        pcre2_match_data** ppData = this_thread.match_datas;
 
-        ++i;
-        ++ppData;
+        while ((type_mask == 0) && (i < end))
+        {
+            if (pcre2_match(i->pCode, (PCRE2_SPTR)pSql, len, 0, 0, *ppData, NULL) >= 0)
+            {
+                type_mask = i->type_mask;
+            }
+
+            ++i;
+            ++ppData;
+        }
     }
 
     return type_mask;
