@@ -83,7 +83,6 @@ typedef struct duplicate_context
 static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
 static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 
-extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT *);
 static bool process_config_update(CONFIG_CONTEXT *);
 static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);

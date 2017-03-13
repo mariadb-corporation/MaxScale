@@ -106,18 +106,19 @@ MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-static void get_database_path(SERV_LISTENER *port, char *dest)
+static void get_database_path(SERV_LISTENER *port, char *dest, size_t size)
 {
     MYSQL_AUTH *instance = port->auth_instance;
     SERVICE *service = port->service;
+    ss_dassert(size - sizeof(DBUSERS_FILE) - 1 >= 0);
 
     if (instance->cache_dir)
     {
-        snprintf(dest, sizeof(dest) - sizeof(DBUSERS_FILE) - 1, "%s/", instance->cache_dir);
+        snprintf(dest, size, "%s/", instance->cache_dir);
     }
     else
     {
-        sprintf(dest, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+        snprintf(dest, size, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
     }
 
     if (mxs_mkdir_all(dest, S_IRWXU))
@@ -254,6 +255,30 @@ static void mysql_auth_destroy(void *data)
     }
 }
 
+static bool is_localhost_address(struct sockaddr_storage *addr)
+{
+    bool rval = false;
+
+    if (addr->ss_family == AF_INET)
+    {
+        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        if (ip->sin_addr.s_addr == INADDR_LOOPBACK)
+        {
+            rval = true;
+        }
+    }
+    else if (addr->ss_family == AF_INET6)
+    {
+        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        if (memcmp(&ip->sin6_addr, &in6addr_loopback, sizeof(ip->sin6_addr)) == 0)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * @brief Authenticates a MySQL user who is a client to MaxScale.
  *
@@ -325,13 +350,13 @@ mysql_auth_authenticate(DCB *dcb)
         else if (dcb->service->log_auth_warnings)
         {
             MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
-                        dcb->service->name, client_data->user, dcb->remote, ntohs(dcb->ipv4.sin_port));
-            if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
+                        dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
+
+            if (is_localhost_address(&dcb->ip) &&
                 !dcb->service->localhost_match_wildcard_host)
             {
-                MXS_NOTICE("If you have a wildcard grant that covers"
-                           " this address, try adding "
-                           "'localhost_match_wildcard_host=true' for "
+                MXS_NOTICE("If you have a wildcard grant that covers this address, "
+                           "try adding 'localhost_match_wildcard_host=true' for "
                            "service '%s'. ", dcb->service->name);
             }
         }
@@ -374,7 +399,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     if (auth_ses->handle == NULL)
     {
         char path[PATH_MAX];
-        get_database_path(dcb->listener, path);
+        get_database_path(dcb->listener, path, sizeof(path));
 
         if (!open_client_database(path, &auth_ses->handle))
         {
@@ -591,7 +616,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     if (instance->handle == NULL)
     {
         char path[PATH_MAX];
-        get_database_path(port, path);
+        get_database_path(port, path, sizeof(path));
         if (!open_instance_database(path, &instance->handle))
         {
             return MXS_AUTH_LOADUSERS_FATAL;

@@ -998,10 +998,13 @@ bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
         unsigned int new_status = mon_srv->server->status & all_server_bits;
 
         /**
-         * The state has changed if the relevant state bits are not the same and
-         * the server is not going into maintenance or coming out of it
+         * The state has changed if the relevant state bits are not the same,
+         * the server is either running, stopping or starting and the server is
+         * not going into maintenance or coming out of it
          */
-        if (old_status != new_status && ((old_status | new_status) & SERVER_MAINT) == 0)
+        if (old_status != new_status &&
+            ((old_status | new_status) & SERVER_MAINT) == 0 &&
+            ((old_status | new_status) & SERVER_RUNNING) == SERVER_RUNNING)
         {
             rval = true;
         }

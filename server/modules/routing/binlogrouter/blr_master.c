@@ -2425,7 +2425,7 @@ bool blr_send_event(blr_thread_role_t role,
                   "the event has already been sent by thread %lu in the role of %s. "
                   "%u bytes buffered for writing in DCB %p. %lu events received from master.",
                   slave->dcb->remote,
-                  ntohs((slave->dcb->ipv4).sin_port),
+                  dcb_get_port(slave->dcb),
                   slave->serverid,
                   binlog_name,
                   binlog_pos,
@@ -2488,7 +2488,7 @@ bool blr_send_event(blr_thread_role_t role,
     {
         MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
                   hdr->event_size, slave->dcb->remote,
-                  ntohs(slave->dcb->ipv4.sin_port));
+                  dcb_get_port(slave->dcb));
     }
     return rval;
 }

@@ -1123,7 +1123,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
             MXS_NOTICE("%s: Slave %s:%d, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
-                       router->service->name, slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
+                       router->service->name, slave->dcb->remote, dcb_get_port(slave->dcb),
                        slave->serverid,
                        time(0) - slave->connect_time,
                        slave->stats.n_queries,
@@ -1529,7 +1529,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
             }
             dcb_printf(dcb,
                        "\t\tSlave_host_port:                         %s:%d\n",
-                       session->dcb->remote, ntohs((session->dcb->ipv4).sin_port));
+                       session->dcb->remote, dcb_get_port(session->dcb));
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
                        session->dcb->user);

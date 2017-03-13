@@ -152,8 +152,8 @@ static int gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing);
 static int gw_write_SSL(DCB *dcb, GWBUF *writeq, bool *stop_writing);
 static int dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret);
 static int dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn);
-static int dcb_listen_create_socket_inet(const char *config_bind);
-static int dcb_listen_create_socket_unix(const char *config_bind);
+static int dcb_listen_create_socket_inet(const char *host, uint16_t port);
+static int dcb_listen_create_socket_unix(const char *path);
 static int dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_t optlen);
 static void dcb_add_to_all_list(DCB *dcb);
 static DCB *dcb_find_free();
@@ -2711,25 +2711,30 @@ dcb_accept(DCB *listener)
             if (client_conn.ss_family == AF_UNIX)
             {
                 // client address
+                // Should this be `localhost` like it is in the MariaDB server?
                 client_dcb->remote = MXS_STRDUP_A("localhost_from_socket");
-                // set localhost IP for user authentication
-                (client_dcb->ipv4).sin_addr.s_addr = 0x0100007F;
             }
             else
             {
-                /* client IPv4 in raw data*/
-                memcpy(&client_dcb->ipv4,
-                       (struct sockaddr_in *)&client_conn,
-                       sizeof(struct sockaddr_in));
-                /* client IPv4 in string representation */
-                client_dcb->remote = (char *)MXS_CALLOC(INET_ADDRSTRLEN + 1, sizeof(char));
+                /* client IP in raw data*/
+                memcpy(&client_dcb->ip, &client_conn, sizeof(client_conn));
+                /* client IP in string representation */
+                client_dcb->remote = (char *)MXS_CALLOC(INET6_ADDRSTRLEN + 1, sizeof(char));
 
-                if (client_dcb->remote != NULL)
+                if (client_dcb->remote)
                 {
-                    inet_ntop(AF_INET,
-                              &(client_dcb->ipv4).sin_addr,
-                              client_dcb->remote,
-                              INET_ADDRSTRLEN);
+                    void *ptr;
+                    if (client_dcb->ip.ss_family == AF_INET)
+                    {
+                        ptr = &((struct sockaddr_in*)&client_dcb->ip)->sin_addr;
+                    }
+                    else
+                    {
+                        ptr = &((struct sockaddr_in6*)&client_dcb->ip)->sin6_addr;
+                    }
+
+                    inet_ntop(client_dcb->ip.ss_family, ptr,
+                              client_dcb->remote, INET6_ADDRSTRLEN);
                 }
             }
             memcpy(&client_dcb->func, protocol_funcs, sizeof(MXS_PROTOCOL));
@@ -2884,22 +2889,38 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
  * @param protocol_name Name of protocol that is listening
  * @return 0 if new listener created successfully, otherwise -1
  */
-int
-dcb_listen(DCB *listener, const char *config, const char *protocol_name)
+int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 {
-    int listener_socket;
+    char host[strlen(config) + 1];
+    strcpy(host, config);
+    char *port_str = strrchr(host, '|');
+    uint16_t port = 0;
 
-    listener->fd = -1;
-    if (strchr(config, '/'))
+    if (port_str)
     {
-        listener_socket = dcb_listen_create_socket_unix(config);
+        *port_str++ = 0;
+        port = atoi(port_str);
+    }
+
+    int listener_socket = -1;
+
+    if (strchr(host, '/'))
+    {
+        listener_socket = dcb_listen_create_socket_unix(host);
+    }
+    else if (port > 0)
+    {
+        listener_socket = dcb_listen_create_socket_inet(host, port);
     }
     else
     {
-        listener_socket = dcb_listen_create_socket_inet(config);
+        // We don't have a socket path or a network port
+        ss_dassert(false);
     }
+
     if (listener_socket < 0)
     {
+        ss_dassert(listener_socket == -1);
         return -1;
     }
 
@@ -2912,17 +2933,13 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
      */
     if (listen(listener_socket, INT_MAX) != 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to start listening on '%s' with protocol '%s': %d, %s",
-                  config,
-                  protocol_name,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                  config, protocol_name, errno, mxs_strerror(errno));
         close(listener_socket);
         return -1;
     }
 
-    MXS_NOTICE("Listening connections at %s with protocol %s", config, protocol_name);
+    MXS_NOTICE("Listening for connections at %s with protocol %s", config, protocol_name);
 
     // assign listener_socket to dcb
     listener->fd = listener_socket;
@@ -2938,107 +2955,59 @@ dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 }
 
 /**
- * @brief Create a listening socket, TCP
+ * @brief Create a network listener socket
  *
- * Parse the configuration provided and if valid create a socket.
- * Set options, set non-blocking and bind to the socket.
- *
- * @param config_bind The configuration information
- * @return socket if successful, -1 otherwise
+ * @param host The network address to listen on
+ * @param port The port to listen on
+ * @return     The opened socket or -1 on error
  */
-static int
-dcb_listen_create_socket_inet(const char *config_bind)
+static int dcb_listen_create_socket_inet(const char *host, uint16_t port)
 {
-    int listener_socket;
-    struct sockaddr_in server_address;
-    int one = 1;
+    struct sockaddr_storage server_address = {};
+    int listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
 
-    memset(&server_address, 0, sizeof(server_address));
-    if (!parse_bindconfig(config_bind, &server_address))
+    if (listener_socket != -1)
     {
-        MXS_ERROR("Error in parse_bindconfig for [%s]", config_bind);
-        return -1;
+        if (bind(listener_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
+        {
+            MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
+                      host, port, errno, mxs_strerror(errno));
+            close(listener_socket);
+            listener_socket = -1;
+        }
     }
 
-    /** Create the TCP socket */
-    if ((listener_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Can't create socket: %i, %s",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        return -1;
-    }
-
-    // socket options
-    if (dcb_set_socket_option(listener_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) != 0 ||
-        dcb_set_socket_option(listener_socket, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one)) != 0)
-    {
-        return -1;
-    }
-
-    // set NONBLOCKING mode
-    if (setnonblocking(listener_socket) != 0)
-    {
-        MXS_ERROR("Failed to set socket to non-blocking mode.");
-        close(listener_socket);
-        return -1;
-    }
-
-    if (bind(listener_socket, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
-    {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to bind on '%s': %i, %s",
-                  config_bind,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        close(listener_socket);
-        return -1;
-    }
     return listener_socket;
 }
 
 /**
- * @brief Create a listening socket, Unix
+ * @brief Create a Unix domain socket
  *
- * Parse the configuration provided and if valid create a socket.
- * Set options, set non-blocking and bind to the socket.
- *
- * @param config_bind The configuration information
- * @return socket if successful, -1 otherwise
+ * @param path The socket path
+ * @return     The opened socket or -1 on error
  */
-static int
-dcb_listen_create_socket_unix(const char *config_bind)
+static int dcb_listen_create_socket_unix(const char *path)
 {
     int listener_socket;
     struct sockaddr_un local_addr;
     int one = 1;
 
-    char *tmp = strrchr(config_bind, ':');
-    if (tmp)
-    {
-        *tmp = '\0';
-    }
-
-    if (strlen(config_bind) > sizeof(local_addr.sun_path) - 1)
+    if (strlen(path) > sizeof(local_addr.sun_path) - 1)
     {
         MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
-                  "The maximum length is %lu.", config_bind, sizeof(local_addr.sun_path) - 1);
+                  "The maximum length is %lu.", path, sizeof(local_addr.sun_path) - 1);
         return -1;
     }
 
     // UNIX socket create
     if ((listener_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Can't create UNIX socket: %i, %s",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxs_strerror(errno));
         return -1;
     }
 
     // socket options
-    if (dcb_set_socket_option(listener_socket, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) != 0)
+    if (dcb_set_socket_option(listener_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) != 0)
     {
         return -1;
     }
@@ -3053,36 +3022,30 @@ dcb_listen_create_socket_unix(const char *config_bind)
 
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sun_family = AF_UNIX;
-    strcpy(local_addr.sun_path, config_bind);
+    strcpy(local_addr.sun_path, path);
 
-    if ((-1 == unlink(config_bind)) && (errno != ENOENT))
+    if ((-1 == unlink(path)) && (errno != ENOENT))
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
         MXS_ERROR("Failed to unlink Unix Socket %s: %d %s",
-                  config_bind, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                  path, errno, mxs_strerror(errno));
     }
 
     /* Bind the socket to the Unix domain socket */
-    if (bind(listener_socket, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
+    if (bind(listener_socket, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %i, %s",
-                  config_bind,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
+                  path, errno, mxs_strerror(errno));
         close(listener_socket);
         return -1;
     }
 
     /* set permission for all users */
-    if (chmod(config_bind, 0777) < 0)
+    if (chmod(path, 0777) < 0)
     {
-        char errbuf[MXS_STRERROR_BUFLEN];
-        MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %i, %s",
-                  config_bind,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
+                  path, errno, mxs_strerror(errno));
     }
+
     return listener_socket;
 }
 
@@ -3302,4 +3265,26 @@ bool dcb_foreach(bool(*func)(DCB *, void *), void *data)
     }
 
     return more;
+}
+
+int dcb_get_port(const DCB *dcb)
+{
+    int rval = -1;
+
+    if (dcb->ip.ss_family == AF_INET)
+    {
+        struct sockaddr_in* ip = (struct sockaddr_in*)&dcb->ip;
+        rval = ntohs(ip->sin_port);
+    }
+    else if (dcb->ip.ss_family == AF_INET6)
+    {
+        struct sockaddr_in6* ip = (struct sockaddr_in6*)&dcb->ip;
+        rval = ntohs(ip->sin6_port);
+    }
+    else
+    {
+        ss_dassert(dcb->ip.ss_family == AF_UNIX);
+    }
+
+    return rval;
 }

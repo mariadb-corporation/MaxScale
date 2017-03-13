@@ -74,6 +74,7 @@ NOTE This feature was available already in _2.1.0_.
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.0.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%202.1.1%20AND%20fixVersion%20NOT%20IN%20(2.1.0))
 
+* [MXS-1178](https://jira.mariadb.org/browse/MXS-1178) master_accept_reads doesn't work with detect_replication_lag
 * [MXS-1165](https://jira.mariadb.org/browse/MXS-1165) MaxInfo eat too much memory when getting list of session and client.
 * [MXS-1143](https://jira.mariadb.org/browse/MXS-1143) Add support for new MariaDB 10.2 flags
 * [MXS-1130](https://jira.mariadb.org/browse/MXS-1130) Unexpected length encoding 'ff' encountered

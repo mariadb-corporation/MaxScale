@@ -37,12 +37,13 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
+#include <netinet/tcp.h>
 #include <openssl/sha.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/limits.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/poll.h>
 #include <maxscale/random_jkiss.h>
@@ -889,150 +890,100 @@ void utils_end()
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-/*
- * Set IP address in socket structure in_addr
- *
- * @param a     Pointer to a struct in_addr into which the address is written
- * @param p     The hostname to lookup
- * @return      1 on success, 0 on failure
- */
-int
-setipaddress(struct in_addr *a, char *p)
+static bool configure_network_socket(int so)
 {
-#ifdef __USE_POSIX
-    struct addrinfo *ai = NULL, hint;
-    int rc;
-    struct sockaddr_in *res_addr;
-    memset(&hint, 0, sizeof (hint));
+    int sndbufsize = MXS_BACKEND_SO_SNDBUF;
+    int rcvbufsize = MXS_BACKEND_SO_RCVBUF;
+    int one = 1;
 
-    hint.ai_socktype = SOCK_STREAM;
-
-    /*
-     * This is for the listening socket, matching INADDR_ANY only for now.
-     * For future specific addresses bind, a dedicated routine woulbd be better
-     */
-
-    if (strcmp(p, "0.0.0.0") == 0)
+    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &sndbufsize, sizeof(sndbufsize)) != 0 ||
+        setsockopt(so, SOL_SOCKET, SO_RCVBUF, &rcvbufsize, sizeof(rcvbufsize)) != 0 ||
+        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        hint.ai_flags = AI_PASSIVE;
-        hint.ai_family = AF_UNSPEC;
-        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
-        {
-            MXS_ERROR("Failed to obtain address for host %s, %s",
-                      p,
-                      gai_strerror(rc));
-
-            return 0;
-        }
-    }
-    else
-    {
-        hint.ai_flags = AI_CANONNAME;
-        hint.ai_family = AF_INET;
-
-        if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0)
-        {
-            MXS_ERROR("Failed to obtain address for host %s, %s",
-                      p,
-                      gai_strerror(rc));
-
-            return 0;
-        }
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        return false;
     }
 
-    /* take the first one */
-    if (ai != NULL)
-    {
-        res_addr = (struct sockaddr_in *)(ai->ai_addr);
-        memcpy(a, &res_addr->sin_addr, sizeof(struct in_addr));
-
-        freeaddrinfo(ai);
-
-        return 1;
-    }
-#else
-    struct hostent *h;
-
-    spinlock_acquire(&tmplock);
-    h = gethostbyname(p);
-    spinlock_release(&tmplock);
-
-    if (h == NULL)
-    {
-        if ((a->s_addr = inet_addr(p)) == -1)
-        {
-            MXS_ERROR("gethostbyname failed for [%s]", p);
-
-            return 0;
-        }
-    }
-    else
-    {
-        /* take the first one */
-        memcpy(a, h->h_addr, h->h_length);
-
-        return 1;
-    }
-#endif
-    return 0;
+    return setnonblocking(so) == 0;
 }
 
-
-/**
- * Parse the bind config data. This is passed in a string as address:port.
- *
- * The address may be either a . separated IP address or a hostname to
- * lookup. The address 0.0.0.0 is the wildcard address for SOCKADR_ANY.
- * The ':' and port are required.
- *
- * @param config        The bind address and port separated by a ':'
- * @param addr          The sockaddr_in in which the data is written
- * @return              0 on failure
- */
-int
-parse_bindconfig(const char *config, struct sockaddr_in *addr)
+static bool configure_listener_socket(int so)
 {
-    char buf[strlen(config) + 1];
-    strcpy(buf, config);
+    int one = 1;
 
-    char *port = strrchr(buf, ':');
-    short pnum;
-    if (port)
+    if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0 ||
+        setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
     {
-        *port = 0;
-        port++;
-        pnum = atoi(port);
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        return false;
+    }
+
+    return setnonblocking(so) == 0;
+}
+
+static void set_port(struct sockaddr_storage *addr, uint16_t port)
+{
+    if (addr->ss_family == AF_INET)
+    {
+        struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+        ip->sin_port = htons(port);
+    }
+    else if (addr->ss_family == AF_INET6)
+    {
+        struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+        ip->sin6_port = htons(port);
     }
     else
     {
-        return 0;
+        MXS_ERROR("Unknown address family: %d", (int)addr->ss_family);
+        ss_dassert(false);
+    }
+}
+
+int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr, const char *host, uint16_t port)
+{
+    ss_dassert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
+#ifdef __USE_POSIX
+    struct addrinfo *ai = NULL, hint = {};
+    int so, rc;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_family = AF_UNSPEC;
+    hint.ai_flags = AI_ALL;
+
+    if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
+    {
+        MXS_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
+        return -1;
     }
 
-    if (!strcmp(buf, "0.0.0.0"))
+    /* Take the first one */
+    if (ai)
     {
-        addr->sin_addr.s_addr = htonl(INADDR_ANY);
-    }
-    else
-    {
-        if (!inet_aton(buf, &addr->sin_addr))
+        if ((so = socket(ai->ai_family, SOCK_STREAM, 0)) == -1)
         {
-            struct hostent *hp = gethostbyname(buf);
+            MXS_ERROR("Socket creation failed: %d, %s.", errno, mxs_strerror(errno));
+        }
+        else
+        {
+            memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+            set_port(addr, port);
 
-            if (hp)
+            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so)) ||
+                (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
             {
-                bcopy(hp->h_addr, &(addr->sin_addr.s_addr), hp->h_length);
-            }
-            else
-            {
-                MXS_ERROR("Failed to lookup host '%s'.", buf);
-                return 0;
+                close(so);
+                so = -1;
             }
         }
+
+        freeaddrinfo(ai);
     }
 
-    addr->sin_family = AF_INET;
-    addr->sin_port = htons(pnum);
-    return 1;
+#else
+#error Only the POSIX networking interface is supported
+#endif
+
+    return so;
 }
 
 /**

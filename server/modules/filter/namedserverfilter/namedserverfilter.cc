@@ -35,6 +35,7 @@
 #include <string>
 #include <string.h>
 #include <stdio.h>
+#include <netdb.h>
 
 #include <maxscale/alloc.h>
 #include <maxscale/filter.h>
@@ -52,7 +53,7 @@ struct RegexHintSess_t;
 
 typedef struct source_host
 {
-    const char *address;
+    char *address;
     struct sockaddr_in ipv4;
     int netmask;
 } REGEXHINT_SOURCE_HOST;
@@ -75,7 +76,7 @@ private:
     volatile unsigned int m_total_diverted;
     volatile unsigned int m_total_undiverted;
 
-    int check_source_host(const char *remote, const struct sockaddr_in *ipv4);
+    int check_source_host(const char *remote, const struct sockaddr_storage *ip);
 
 public:
     RegexHintInst(string match, string server, string user, REGEXHINT_SOURCE_HOST* source,
@@ -135,6 +136,10 @@ RegexHintInst::RegexHintInst(string match, string server, string user,
 RegexHintInst::~RegexHintInst()
 {
     pcre2_code_free(m_regex);
+    if (m_source)
+    {
+        MXS_FREE(m_source->address);
+    }
     MXS_FREE(m_source);
 }
 
@@ -158,7 +163,7 @@ RegexHintSess_t* RegexHintInst::newSession(MXS_SESSION *session)
             (remote = session_get_remote(session)) != NULL)
         {
             my_session->active =
-                this->check_source_host(remote, &session->client_dcb->ipv4);
+                this->check_source_host(remote, &session->client_dcb->ip);
         }
 
         /* Check client user against 'user' option */
@@ -253,12 +258,12 @@ void RegexHintInst::diagnostic(RegexHintSess_t* my_session, DCB *dcb)
  * @param ipv4        The client IPv4 struct
  * @return            1 for match, 0 otherwise
  */
-int RegexHintInst::check_source_host(const char *remote, const struct sockaddr_in *ipv4)
+int RegexHintInst::check_source_host(const char *remote, const struct sockaddr_storage *ip)
 {
     int ret = 0;
     struct sockaddr_in check_ipv4;
 
-    memcpy(&check_ipv4, ipv4, sizeof(check_ipv4));
+    memcpy(&check_ipv4, ip, sizeof(check_ipv4));
 
     switch (m_source->netmask)
     {
@@ -552,28 +557,26 @@ static bool validate_ip_address(const char *host)
  */
 static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
 {
+    ss_dassert(input_host);
     int netmask = 32;
     int bytes = 0;
-    struct sockaddr_in serv_addr;
     REGEXHINT_SOURCE_HOST *source_host =
         (REGEXHINT_SOURCE_HOST*)MXS_CALLOC(1, sizeof(REGEXHINT_SOURCE_HOST));
 
-    if (!input_host || !source_host)
+    if (!source_host)
     {
         return NULL;
     }
 
     if (!validate_ip_address(input_host))
     {
-        MXS_WARNING("The given 'source' parameter source=%s"
-                    " is not a valid IP address: it will not be used.",
-                    input_host);
-
-        source_host->address = NULL;
-        return source_host;
+        MXS_WARNING("The given 'source' parameter '%s'"
+                    " is not a valid IPv4 address.", input_host);
+        MXS_FREE(source_host);
+        return NULL;
     }
 
-    source_host->address = input_host;
+    source_host->address = MXS_STRDUP_A(input_host);
 
     /* If no wildcards don't check it, set netmask to 32 and return */
     if (!strchr(input_host, '%'))
@@ -610,9 +613,15 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
     *out = '\0';
     source_host->netmask = netmask;
 
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    int rc = getaddrinfo(input_host, NULL, &hint, &ai);
+
     /* fill IPv4 data struct */
-    if (setipaddress(&source_host->ipv4.sin_addr, format_host) && strlen(format_host))
+    if (rc == 0)
     {
+        ss_dassert(ai->ai_family == AF_INET);
+        memcpy(&source_host->ipv4, ai->ai_addr, ai->ai_addrlen);
 
         /* if netmask < 32 there are % wildcards */
         if (source_host->netmask < 32)
@@ -621,16 +630,16 @@ static REGEXHINT_SOURCE_HOST *set_source_address(const char *input_host)
             source_host->ipv4.sin_addr.s_addr &= 0x00FFFFFF;
         }
 
-        MXS_INFO("Input %s is valid with netmask %d\n",
-                 source_host->address,
-                 source_host->netmask);
+        MXS_INFO("Input %s is valid with netmask %d", source_host->address, source_host->netmask);
+        freeaddrinfo(ai);
     }
     else
     {
-        MXS_WARNING("Found invalid IP address for parameter 'source=%s',"
-                    " it will not be used.",
-                    input_host);
-        source_host->address = NULL;
+        MXS_WARNING("Found invalid IP address for parameter 'source=%s': %s",
+                    input_host, gai_strerror(rc));
+        MXS_FREE(source_host->address);
+        MXS_FREE(source_host);
+        return NULL;
     }
 
     return (REGEXHINT_SOURCE_HOST *)source_host;
