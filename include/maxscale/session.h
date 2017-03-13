@@ -325,6 +325,17 @@ static inline bool session_set_autocommit(MXS_SESSION* ses, bool autocommit)
 MXS_SESSION* session_get_by_id(int id);
 
 /**
+ * @brief Close a session
+ *
+ * Calling this function will start the session shutdown process. The shutdown
+ * closes all related backend DCBs by calling the closeSession entry point
+ * of the router session.
+ *
+ * @param session The session to close
+ */
+void session_close(MXS_SESSION *session);
+
+/**
  * @brief Release a session reference
  *
  * This function is public only because the tee-filter uses it.

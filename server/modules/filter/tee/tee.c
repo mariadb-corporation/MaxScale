@@ -536,22 +536,9 @@ closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session)
         if ((bsession = my_session->branch_session) != NULL)
         {
             CHK_SESSION(bsession);
-
-            if (bsession->state != SESSION_STATE_STOPPING)
-            {
-                bsession->state = SESSION_STATE_STOPPING;
-            }
-            router = bsession->service->router;
-            router_instance = bsession->service->router_instance;
-            rsession = bsession->router_session;
-
-            /** Close router session and all its connections */
-            router->closeSession(router_instance, rsession);
+            bsession->ses_is_child = false;
+            session_close(bsession);
         }
-        /* No need to free the session, this is done as
-         * a side effect of closing the client DCB of the
-         * session.
-         */
 
         if (my_session->waiting[PARENT])
         {

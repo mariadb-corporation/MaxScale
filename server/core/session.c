@@ -303,6 +303,23 @@ session_simple_free(MXS_SESSION *session, DCB *dcb)
     session_final_free(session);
 }
 
+void session_close(MXS_SESSION *session)
+{
+    if (!session->ses_is_child && session->router_session)
+    {
+        if (session->state != SESSION_STATE_STOPPING)
+        {
+            session->state = SESSION_STATE_STOPPING;
+        }
+
+        MXS_ROUTER_OBJECT* router = session->service->router;
+        void* router_instance = session->service->router_instance;
+
+        /** Close router session and all its connections */
+        router->closeSession(router_instance, session->router_session);
+    }
+}
+
 /**
  * Deallocate the specified session
  *

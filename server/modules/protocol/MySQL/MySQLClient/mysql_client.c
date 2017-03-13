@@ -1347,52 +1347,12 @@ retblock:
     return 1;
 }
 
-static int
-gw_client_close(DCB *dcb)
+static int gw_client_close(DCB *dcb)
 {
-    MXS_SESSION* session;
-    MXS_ROUTER_OBJECT* router;
-    void* router_instance;
-#if defined(SS_DEBUG)
-    MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
-
-    if (dcb->state == DCB_STATE_POLLING ||
-        dcb->state == DCB_STATE_NOPOLLING ||
-        dcb->state == DCB_STATE_ZOMBIE)
-    {
-        if (!DCB_IS_CLONE(dcb))
-        {
-            CHK_PROTOCOL(protocol);
-        }
-    }
-#endif
-    MXS_DEBUG("%lu [gw_client_close]", pthread_self());
+    CHK_DCB(dcb);
+    ss_dassert(dcb->protocol);
     mysql_protocol_done(dcb);
-    session = dcb->session;
-    /**
-     * session may be NULL if session_alloc failed.
-     * In that case, router session wasn't created.
-     */
-    if (session != NULL && SESSION_STATE_DUMMY != session->state)
-    {
-        CHK_SESSION(session);
-
-        if (session->state != SESSION_STATE_STOPPING)
-        {
-            session->state = SESSION_STATE_STOPPING;
-        }
-        router_instance = session->service->router_instance;
-        router = session->service->router;
-        /**
-         * If router session is being created concurrently router
-         * session might be NULL and it shouldn't be closed.
-         */
-        if (session->router_session != NULL)
-        {
-            /** Close router session and all its connections */
-            router->closeSession(router_instance, session->router_session);
-        }
-    }
+    session_close(dcb->session);
     return 1;
 }
 

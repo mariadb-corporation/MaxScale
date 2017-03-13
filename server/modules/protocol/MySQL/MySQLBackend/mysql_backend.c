@@ -1112,46 +1112,31 @@ static int gw_backend_hangup(DCB *dcb)
  */
 static int gw_backend_close(DCB *dcb)
 {
-    MXS_SESSION* session;
-    GWBUF* quitbuf;
-
     CHK_DCB(dcb);
-    session = dcb->session;
-
-    MXS_DEBUG("%lu [gw_backend_close]", pthread_self());
-
-    quitbuf = mysql_create_com_quit(NULL, 0);
-    gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
+    ss_dassert(dcb->session);
 
     /** Send COM_QUIT to the backend being closed */
+    GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
+    gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
     mysql_send_com_quit(dcb, 0, quitbuf);
 
+    /** Free protocol data */
     mysql_protocol_done(dcb);
 
-    if (session)
-    {
-        CHK_SESSION(session);
-        /**
-         * The lock is needed only to protect the read of session->state and
-         * session->client_dcb values. Client's state may change by other thread
-         * but client's close and adding client's DCB to zombies list is executed
-         * only if client's DCB's state does _not_ change in parallel.
-         */
+    MXS_SESSION* session = dcb->session;
+    CHK_SESSION(session);
 
-        /**
-         * If session->state is STOPPING, start closing client session.
-         * Otherwise only this backend connection is closed.
-         */
-        if (session->state == SESSION_STATE_STOPPING &&
-            session->client_dcb != NULL)
-        {
-            if (session->client_dcb->state == DCB_STATE_POLLING)
-            {
-                /** Close client DCB */
-                dcb_close(session->client_dcb);
-            }
-        }
+    /**
+     * If session state is SESSION_STATE_STOPPING, start closing client session.
+     * Otherwise only this backend connection is closed.
+     */
+    if (session->client_dcb &&
+        session->state == SESSION_STATE_STOPPING &&
+        session->client_dcb->state == DCB_STATE_POLLING)
+    {
+        dcb_close(session->client_dcb);
     }
+
     return 1;
 }
 
