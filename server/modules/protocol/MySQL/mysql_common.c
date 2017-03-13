@@ -925,16 +925,17 @@ char* create_auth_failed_msg(GWBUF*readbuf,
 /**
  * Create a message error string to send via MySQL ERR packet.
  *
- * @param       username        the MySQL user
- * @param       hostaddr        the client IP
- * @param       sha1            authentication scramble data
- * @param       db              the MySQL db to connect to
+ * @param       username        The MySQL user
+ * @param       hostaddr        The client IP
+ * @param       password        If client provided a password
+ * @param       db              The default database the client requested
+ * @param       errcode         Authentication error code
  *
  * @return      Pointer to the allocated string or NULL on failure
  */
 char *create_auth_fail_str(char *username,
                            char *hostaddr,
-                           char *sha1,
+                           bool password,
                            char *db,
                            int errcode)
 {
@@ -974,7 +975,7 @@ char *create_auth_fail_str(char *username,
 
     if (db_len > 0)
     {
-        sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db);
+        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES": "NO", db);
     }
     else if (errcode == MXS_AUTH_FAILED_SSL)
     {
@@ -982,7 +983,7 @@ char *create_auth_fail_str(char *username,
     }
     else
     {
-        sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"));
+        sprintf(errstr, ferrstr, username, hostaddr, password ? "YES" : "NO");
     }
 
 retblock:

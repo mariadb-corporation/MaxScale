@@ -83,7 +83,6 @@ static void mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_
 static int gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int);
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 static void gw_process_one_new_client(DCB *client_dcb);
 
@@ -1072,86 +1071,67 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val, int packet_number)
 {
     int message_len;
     char *fail_str = NULL;
+    MYSQL_session *session = (MYSQL_session*)dcb->data;
 
     switch (auth_val)
     {
     case MXS_AUTH_NO_SESSION:
-        MXS_DEBUG("%lu [gw_read_client_event] session "
-                  "creation failed. fd %d, "
-                  "state = MYSQL_AUTH_NO_SESSION.",
-                  pthread_self(),
-                  dcb->fd);
+        MXS_DEBUG("%lu [gw_read_client_event] session creation failed. fd %d, "
+                  "state = MYSQL_AUTH_NO_SESSION.", pthread_self(), dcb->fd);
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
-                              "failed to create new session");
+        mysql_send_auth_error(dcb, packet_number, 0, "failed to create new session");
         break;
+
     case MXS_AUTH_FAILED_DB:
-        MXS_DEBUG("%lu [gw_read_client_event] database "
-                  "specified was not valid. fd %d, "
-                  "state = MYSQL_FAILED_AUTH_DB.",
-                  pthread_self(),
-                  dcb->fd);
+        MXS_DEBUG("%lu [gw_read_client_event] database specified was not valid. fd %d, "
+                  "state = MYSQL_FAILED_AUTH_DB.", pthread_self(), dcb->fd);
         /** Send error 1049 to client */
         message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
         fail_str = MXS_CALLOC(1, message_len + 1);
         MXS_ABORT_IF_NULL(fail_str);
-        snprintf(fail_str, message_len, "Unknown database '%s'",
-                 (char*)((MYSQL_session *)dcb->data)->db);
+        snprintf(fail_str, message_len, "Unknown database '%s'", session->db);
 
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
         break;
+
     case MXS_AUTH_FAILED_SSL:
         MXS_DEBUG("%lu [gw_read_client_event] client is "
                   "not SSL capable for SSL listener. fd %d, "
-                  "state = MYSQL_FAILED_AUTH_SSL.",
-                  pthread_self(),
-                  dcb->fd);
+                  "state = MYSQL_FAILED_AUTH_SSL.", pthread_self(), dcb->fd);
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
-                              "Access without SSL denied");
+        mysql_send_auth_error(dcb, packet_number, 0, "Access without SSL denied");
         break;
+
     case MXS_AUTH_SSL_INCOMPLETE:
         MXS_DEBUG("%lu [gw_read_client_event] unable to "
                   "complete SSL authentication. fd %d, "
-                  "state = MYSQL_AUTH_SSL_INCOMPLETE.",
-                  pthread_self(),
-                  dcb->fd);
+                  "state = MYSQL_AUTH_SSL_INCOMPLETE.", pthread_self(), dcb->fd);
 
         /** Send ERR 1045 to client */
-        mysql_send_auth_error(dcb,
-                              packet_number,
-                              0,
+        mysql_send_auth_error(dcb, packet_number, 0,
                               "failed to complete SSL authentication");
         break;
+
     case MXS_AUTH_FAILED:
         MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-                  "state = MYSQL_FAILED_AUTH.",
-                  pthread_self(),
-                  dcb->fd);
+                  "state = MYSQL_FAILED_AUTH.", pthread_self(), dcb->fd);
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-                                        dcb->remote,
-                                        (char*)((MYSQL_session *)dcb->data)->client_sha1,
-                                        (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+        fail_str = create_auth_fail_str(session->user, dcb->remote,
+                                        session->auth_token_len > 0,
+                                        session->db, auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
         break;
+
     default:
         MXS_DEBUG("%lu [gw_read_client_event] authentication failed. fd %d, "
-                  "state unrecognized.",
-                  pthread_self(),
-                  dcb->fd);
+                  "state unrecognized.", pthread_self(), dcb->fd);
         /** Send error 1045 to client */
-        fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-                                        dcb->remote,
-                                        (char*)((MYSQL_session *)dcb->data)->client_sha1,
-                                        (char*)((MYSQL_session *)dcb->data)->db, auth_val);
+        fail_str = create_auth_fail_str(session->user, dcb->remote,
+                                        session->auth_token_len > 0,
+                                        session->db, auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
     MXS_FREE(fail_str);

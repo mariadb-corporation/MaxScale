@@ -1510,7 +1510,7 @@ static int gw_change_user(DCB *backend,
         message = create_auth_fail_str(username,
                                        backend->session->client_dcb->remote,
                                        password_set,
-                                       "",
+                                       false,
                                        auth_ret);
         if (message == NULL)
         {

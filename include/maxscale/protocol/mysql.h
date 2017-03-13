@@ -407,7 +407,7 @@ bool protocol_get_response_status (MySQLProtocol* p, int* npackets, ssize_t* nby
 void protocol_set_response_status (MySQLProtocol* p, int  npackets, ssize_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
 
-char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int);
+char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *db, int);
 
 void init_response_status (
     GWBUF* buf,
