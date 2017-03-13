@@ -1368,6 +1368,8 @@ int main(int argc, char **argv)
         case 'V':
             rc = EXIT_SUCCESS;
             printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
+
+            // MAXSCALE_SOURCE is two values separated by a space, see CMakeLists.txt
             if (strcmp(MAXSCALE_SOURCE, " ") != 0)
             {
                 printf("Source:        %s\n", MAXSCALE_SOURCE);
