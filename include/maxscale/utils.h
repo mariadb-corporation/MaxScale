@@ -69,6 +69,23 @@ void utils_end();
 int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr,
                         const char *host, uint16_t port);
 
+/**
+ * @brief Create a UNIX domain socket
+ *
+ * This opens and prepares a UNIX domain socket for use. The @c addr parameter
+ * can be given to the bind() function to bind the socket.
+ *
+ * @param type Type of the socket, either MXS_SOCKET_LISTENER for a listener
+ *             socket or MXS_SOCKET_NETWORK for a network connection socket
+ * @param addr Pointer to a struct sockaddr_un where the socket configuration
+ *             is stored
+ * @param path Path to the socket
+ *
+ * @return The opened socket or -1 on failure
+ */
+int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr,
+                     const char *path);
+
 int setnonblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();

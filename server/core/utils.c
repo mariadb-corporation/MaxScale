@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <netinet/tcp.h>
 #include <openssl/sha.h>
 
@@ -974,6 +975,13 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
                 close(so);
                 so = -1;
             }
+            else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+            {
+                MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
+                          host, port, errno, mxs_strerror(errno));
+                close(so);
+                so = -1;
+            }
         }
 
         freeaddrinfo(ai);
@@ -984,6 +992,50 @@ int open_network_socket(enum mxs_socket_type type, struct sockaddr_storage *addr
 #endif
 
     return so;
+}
+
+static bool configure_unix_socket(int so)
+{
+    int one = 1;
+
+    if (setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) != 0)
+    {
+        MXS_ERROR("Failed to set socket option: %d, %s.", errno, mxs_strerror(errno));
+        return false;
+    }
+
+    return setnonblocking(so) == 0;
+}
+
+int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr, const char *path)
+{
+    int fd = -1;
+
+    if (strlen(path) > sizeof(addr->sun_path) - 1)
+    {
+        MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
+                  "The maximum length is %lu.", path, sizeof(addr->sun_path) - 1);
+    }
+    else if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
+        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxs_strerror(errno));
+    }
+    else if (configure_unix_socket(fd))
+    {
+        addr->sun_family = AF_UNIX;
+        strcpy(addr->sun_path, path);
+
+        /* Bind the socket to the Unix domain socket */
+        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr *)addr, sizeof(*addr)) < 0)
+        {
+            MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
+                      path, errno, mxs_strerror(errno));
+            close(fd);
+            fd = -1;
+        }
+    }
+
+    return fd;
 }
 
 /**

@@ -2964,20 +2964,7 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
 static int dcb_listen_create_socket_inet(const char *host, uint16_t port)
 {
     struct sockaddr_storage server_address = {};
-    int listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
-
-    if (listener_socket != -1)
-    {
-        if (bind(listener_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
-        {
-            MXS_ERROR("Failed to bind on '%s:%u': %d, %s",
-                      host, port, errno, mxs_strerror(errno));
-            close(listener_socket);
-            listener_socket = -1;
-        }
-    }
-
-    return listener_socket;
+    return open_network_socket(MXS_SOCKET_LISTENER, &server_address, host, port);
 }
 
 /**
@@ -2988,59 +2975,16 @@ static int dcb_listen_create_socket_inet(const char *host, uint16_t port)
  */
 static int dcb_listen_create_socket_unix(const char *path)
 {
-    int listener_socket;
-    struct sockaddr_un local_addr;
-    int one = 1;
-
-    if (strlen(path) > sizeof(local_addr.sun_path) - 1)
-    {
-        MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
-                  "The maximum length is %lu.", path, sizeof(local_addr.sun_path) - 1);
-        return -1;
-    }
-
-    // UNIX socket create
-    if ((listener_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-    {
-        MXS_ERROR("Can't create UNIX socket: %d, %s", errno, mxs_strerror(errno));
-        return -1;
-    }
-
-    // socket options
-    if (dcb_set_socket_option(listener_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) != 0)
-    {
-        return -1;
-    }
-
-    // set NONBLOCKING mode
-    if (setnonblocking(listener_socket) != 0)
-    {
-        MXS_ERROR("Failed to set socket to non-blocking mode.");
-        close(listener_socket);
-        return -1;
-    }
-
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sun_family = AF_UNIX;
-    strcpy(local_addr.sun_path, path);
-
-    if ((-1 == unlink(path)) && (errno != ENOENT))
+    if (unlink(path) == -1 && errno != ENOENT)
     {
         MXS_ERROR("Failed to unlink Unix Socket %s: %d %s",
                   path, errno, mxs_strerror(errno));
     }
 
-    /* Bind the socket to the Unix domain socket */
-    if (bind(listener_socket, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0)
-    {
-        MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
-                  path, errno, mxs_strerror(errno));
-        close(listener_socket);
-        return -1;
-    }
+    struct sockaddr_un local_addr;
+    int listener_socket = open_unix_socket(MXS_SOCKET_LISTENER, &local_addr, path);
 
-    /* set permission for all users */
-    if (chmod(path, 0777) < 0)
+    if (listener_socket >= 0 && chmod(path, 0777) < 0)
     {
         MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %d, %s",
                   path, errno, mxs_strerror(errno));
