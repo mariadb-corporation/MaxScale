@@ -41,12 +41,17 @@ public:
         TK_COMMA,
         TK_COMMIT,
         TK_CONSISTENT,
+        TK_DOT,
         TK_EQ,
         TK_FALSE,
+        TK_GLOBAL,
+        TK_GLOBAL_VAR,
         TK_ONE,
         TK_ONLY,
         TK_READ,
         TK_ROLLBACK,
+        TK_SESSION,
+        TK_SESSION_VAR,
         TK_SET,
         TK_SNAPSHOT,
         TK_START,
@@ -119,14 +124,16 @@ private:
 
     void log_unexpected()
     {
-        MXS_ERROR("In statement '%.*s', unexpected token at '%.*s'.",
-                  (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
+#ifdef SS_DEBUG
+        MXS_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
+                   (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
+#endif
     }
 
     void log_exhausted()
     {
 #ifdef SS_DEBUG
-        MXS_WARNING("More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
+        MXS_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
 #endif
     }
 
@@ -283,6 +290,45 @@ private:
         return type_mask;
     }
 
+    uint32_t parse_set_autocommit(uint32_t type_mask)
+    {
+        token_t token = next_token(TOKEN_REQUIRED);
+
+        switch (token)
+        {
+        case TK_EQ:
+            token = next_token(TOKEN_REQUIRED);
+            if (token == TK_ONE || token == TK_TRUE)
+            {
+                type_mask |= (QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT);
+            }
+            else if (token == TK_ZERO || token == TK_FALSE)
+            {
+                type_mask = (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+            }
+            else
+            {
+                type_mask = 0;
+
+                if (token != PARSER_EXHAUSTED)
+                {
+                    log_unexpected();
+                }
+            }
+            break;
+
+        case PARSER_EXHAUSTED:
+            type_mask = 0;
+            break;
+
+        default:
+            type_mask = 0;
+            log_unexpected();
+        }
+
+        return type_mask;
+    }
+
     uint32_t parse_set(uint32_t type_mask)
     {
         token_t token = next_token(TOKEN_REQUIRED);
@@ -290,28 +336,52 @@ private:
         switch (token)
         {
         case TK_AUTOCOMMIT:
-            token = next_token();
-            if (token == TK_EQ)
+            type_mask = parse_set_autocommit(type_mask);
+            break;
+
+        case TK_GLOBAL:
+        case TK_SESSION:
+            token = next_token(TOKEN_REQUIRED);
+            if (token == TK_AUTOCOMMIT)
             {
-                token = next_token();
-                if (token == TK_ONE || token == TK_TRUE)
+                type_mask = parse_set_autocommit(type_mask);
+            }
+            else
+            {
+                type_mask = 0;
+                if (token != PARSER_EXHAUSTED)
                 {
-                    type_mask |= (QUERY_TYPE_COMMIT | QUERY_TYPE_ENABLE_AUTOCOMMIT);
+                    log_unexpected();
                 }
-                else if (token == TK_ZERO || token == TK_FALSE)
+            }
+            break;
+
+        case TK_GLOBAL_VAR:
+        case TK_SESSION_VAR:
+            token = next_token(TOKEN_REQUIRED);
+            if (token == TK_DOT)
+            {
+                token = next_token(TOKEN_REQUIRED);
+                if (token == TK_AUTOCOMMIT)
                 {
-                    type_mask = (QUERY_TYPE_BEGIN_TRX | QUERY_TYPE_DISABLE_AUTOCOMMIT);
+                    type_mask = parse_set_autocommit(type_mask);
                 }
                 else
                 {
                     type_mask = 0;
-                    log_unexpected();
+                    if (token != PARSER_EXHAUSTED)
+                    {
+                        log_unexpected();
+                    }
                 }
             }
             else
             {
                 type_mask = 0;
-                MXS_WARNING("Expected more.");
+                if (token != PARSER_EXHAUSTED)
+                {
+                    log_unexpected();
+                }
             }
             break;
 
@@ -468,7 +538,7 @@ private:
     {
         const char* pNext = m_pI;
 
-        while ((pNext < m_pEnd) && isalpha(*pNext))
+        while ((pNext < m_pEnd) && (isalpha(*pNext) || (*pNext == '@')))
         {
             ++pNext;
         }
@@ -627,6 +697,21 @@ private:
         {
             switch (*m_pI)
             {
+            case '@':
+                if (is_next_char('a', 2) || is_next_char('A', 2))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("@@autocommit"), TK_AUTOCOMMIT);
+                }
+                if (is_next_char('s', 2) || is_next_char('S', 2))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("@@session"), TK_SESSION_VAR);
+                }
+                else if (is_next_char('g', 2) || is_next_char('G', 2))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("@@global"), TK_GLOBAL_VAR);
+                }
+                break;
+
             case 'a':
             case 'A':
                 token = expect_token(TBP_EXPECT_TOKEN("autocommit"), TK_AUTOCOMMIT);
@@ -657,6 +742,11 @@ private:
                 }
                 break;
 
+            case '.':
+                ++m_pI;
+                token = TK_DOT;
+                break;
+
             case '=':
                 ++m_pI;
                 token = TK_EQ;
@@ -665,6 +755,11 @@ private:
             case 'f':
             case 'F':
                 token = expect_token(TBP_EXPECT_TOKEN("false"), TK_FALSE);
+                break;
+
+            case 'g':
+            case 'G':
+                token = expect_token(TBP_EXPECT_TOKEN("global"), TK_GLOBAL);
                 break;
 
             case '1':
@@ -680,7 +775,21 @@ private:
 
             case 'o':
             case 'O':
-                token = expect_token(TBP_EXPECT_TOKEN("only"), TK_ONLY);
+                if (is_next_char('f') || is_next_char('F'))
+                {
+                    token = expect_token(TBP_EXPECT_TOKEN("off"), TK_ZERO);
+                }
+                else if (is_next_char('n') || is_next_char('N'))
+                {
+                    if (is_next_char('l') || is_next_char('L'))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("on"), TK_ONE);
+                    }
+                    else
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("only"), TK_ONLY);
+                    }
+                }
                 break;
 
             case 'r':
@@ -699,7 +808,14 @@ private:
             case 'S':
                 if (is_next_char('e') || is_next_char('E'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("set"), TK_SET);
+                    if (is_next_char('s', 2) || is_next_char('S', 2))
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("session"), TK_SESSION);
+                    }
+                    else
+                    {
+                        token = expect_token(TBP_EXPECT_TOKEN("set"), TK_SET);
+                    }
                 }
                 else if (is_next_char('n') || is_next_char('N'))
                 {
