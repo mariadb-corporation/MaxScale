@@ -6,7 +6,7 @@
 ## About MariaDB MaxScale
 
  - [About MariaDB MaxScale](About/About-MaxScale.md)
- - [Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
+ - [Release Notes](Release-Notes/MaxScale-2.1.1-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
 
