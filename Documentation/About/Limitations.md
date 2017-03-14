@@ -20,13 +20,6 @@ different backend authentication module is not supported.
 
 ### Limitations in the MySQL authenticator (MySQLAuth)
 
-* MariaDB MaxScale supports authentication that uses wildcard matching in
-hostnames in the `mysql.user` table of the backend database. For IP address
-entries either `%` or `_`-wildcards are accepted, they should not be mixed in
-the same entry. For text addresses both wildcards can be mixed.
-
-* Wildcards in text-form hostnames are not supported.
-
 * MySQL old style passwords are not supported. MySQL versions 4.1 and newer use a
 new authentication protocol which does not support pre-4.1 style passwords.
 
