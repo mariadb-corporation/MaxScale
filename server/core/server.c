@@ -296,6 +296,41 @@ SERVER * server_find_by_unique_name(const char *name)
     return server;
 }
 
+
+
+/**
+ * Find several servers with the names specified in an array with a given size.
+ * The returned array (but not the elements) should be freed by the caller, and
+ * is null-terminated.
+ *
+ * @param servers An array of server names
+ * @param size number of elements in the server names array
+ * @return A null-terminated array of SERVERs. May contain less elements than
+ * requested if some server names are not found.
+ */
+SERVER** server_find_by_unique_names(char **server_names, int size)
+{
+    ss_dassert(server_names);
+
+    SERVER **results = MXS_CALLOC(size + 1, sizeof(SERVER*)); // +1 for null
+    if (!results)
+    {
+        return NULL;
+    }
+
+    int res_ind = 0;
+    for (int i = 0; server_names[i] != NULL; i++)
+    {
+        SERVER *serv = server_find_by_unique_name(server_names[i]);
+        if (serv)
+        {
+            results[res_ind] = serv;
+            res_ind++;
+        }
+    }
+    return results;
+}
+
 /**
  * Find an existing server
  *

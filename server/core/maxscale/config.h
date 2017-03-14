@@ -111,4 +111,15 @@ SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *er
  */
 bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
 
+/**
+ * Parses a list of server names and writes the results in an array of strings
+ * with one server in each. The output array and its elements should be deallocated
+ * by the caller. The server names are not checked to be valid servers.
+ *
+ * @param servers A list of server names.
+ * @param output_array Save location for the array of server names. Set to null if none found.
+ * @return How many servers were found and set into the array.
+ */
+static int config_parse_server_list(const char *servers, char ***output_array);
+
 MXS_END_DECLS

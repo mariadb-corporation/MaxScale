@@ -206,6 +206,17 @@ struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const cha
 struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
+ * @brief Get an array of servers. The caller should free the returned array, but not
+ * the array elements.
+ *
+ * @param params List of configuration parameters
+ * @param key Parameter name
+ *
+ * @return Pointer to a null-terminated array of servers, or null if none found.
+ */
+struct server** config_get_serverlist(const MXS_CONFIG_PARAMETER *params, const char *key);
+
+/**
  * @brief Get copy of parameter value if it is defined
  *
  * If a parameter with the name of @c key is defined in @c params, a copy of the

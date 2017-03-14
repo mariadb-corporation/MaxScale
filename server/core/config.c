@@ -1057,6 +1057,24 @@ SERVER* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key)
     return server_find_by_unique_name(value);
 }
 
+SERVER** config_get_serverlist(const MXS_CONFIG_PARAMETER *params, const char *key)
+{
+    const char *value = config_get_value_string(params, key);
+    char **server_names = NULL;
+    SERVER **servers = NULL;
+    int n_names = config_parse_server_list(value, &server_names);
+    if (n_names > 0)
+    {
+        servers = server_find_by_unique_names(server_names, n_names);
+        for (int i = 0; i < n_names; i++)
+        {
+            MXS_FREE(server_names[i]);
+        }
+        MXS_FREE(server_names);
+    }
+    return servers;
+}
+
 char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 {
     const char *value = config_get_value_string(params, key);
@@ -3413,6 +3431,30 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 }
                 break;
 
+            case MXS_MODULE_PARAM_SERVERLIST:
+                if (context)
+                {
+                    valid = true;
+                    char **server_names = NULL;
+                    int n_serv = config_parse_server_list(value, &server_names);
+                    if (n_serv > 0)
+                    {
+                        /* Check that every server name in the list is found in the config. */
+                        for (int i = 0; i < n_serv; i++)
+                        {
+                            if (valid &&
+                                !config_contains_type(context, server_names[i], "server"))
+                            {
+                                valid = false;
+                            }
+                            MXS_FREE(server_names[i]);
+                        }
+                        MXS_FREE(server_names);
+                    }
+                    break;
+                }
+
+
             case MXS_MODULE_PARAM_PATH:
                 valid = check_path_parameter(&params[i], value);
                 break;
@@ -3426,4 +3468,71 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
     }
 
     return valid;
+}
+
+static int config_parse_server_list(const char *servers, char ***output_array)
+{
+    ss_dassert(servers);
+
+    /* First, check the string for the maximum amount of servers it
+     * might contain by counting the commas. */
+    int out_arr_size = 1;
+    const char *pos = servers;
+    while ((pos = strchr(pos, ',')) != NULL)
+    {
+        pos++;
+        out_arr_size++;
+    }
+    char **results = MXS_CALLOC(out_arr_size, sizeof(char*));
+    if (!results)
+    {
+        return -1;
+    }
+
+    /* Parse the server names from the list. They are separated by ',' and will
+     * be trimmed of whitespace. */
+    char srv_list_tmp[strlen(servers) + 1];
+    strcpy(srv_list_tmp, servers);
+    trim(srv_list_tmp);
+
+    bool error = false;
+    int output_ind = 0;
+    char *lasts;
+    char *s = strtok_r(srv_list_tmp, ",", &lasts);
+    while (s)
+    {
+        char srv_name_tmp[strlen(s) + 1];
+        strcpy(srv_name_tmp, s);
+        trim(srv_name_tmp);
+        if (strlen(srv_name_tmp) > 0)
+        {
+            results[output_ind] = MXS_STRDUP(srv_name_tmp);
+            if (!results[output_ind])
+            {
+                error = true;
+                break;
+            }
+            output_ind++;
+        }
+        s = strtok_r(NULL, ",", &lasts);
+    }
+
+    if (error)
+    {
+        int i = 0;
+        while (results[i])
+        {
+            MXS_FREE(results[i]);
+            i++;
+        }
+        output_ind = 0;
+    }
+
+    if (output_ind == 0)
+    {
+        MXS_FREE(results);
+        results = NULL;
+    }
+    *output_array = results;
+    return output_ind;
 }

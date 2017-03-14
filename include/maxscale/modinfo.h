@@ -79,6 +79,7 @@ enum mxs_module_param_type
     MXS_MODULE_PARAM_PATH, /**< Path to a file or a directory */
     MXS_MODULE_PARAM_SERVICE, /**< Service name */
     MXS_MODULE_PARAM_SERVER, /**< Server name */
+    MXS_MODULE_PARAM_SERVERLIST /**< List of server names, separated by ',' */
 };
 
 /** Maximum and minimum values for integer types */
