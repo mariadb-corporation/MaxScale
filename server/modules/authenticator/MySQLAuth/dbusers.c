@@ -238,12 +238,6 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
                 rval = MXS_AUTH_FAILED_DB;
             }
         }
-        else if (session->auth_token_len)
-        {
-            /** If authentication fails, this will trigger the right
-             * error message with `Using password : YES` */
-            session->client_sha1[0] = '_';
-        }
     }
 
     return rval;
