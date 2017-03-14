@@ -138,6 +138,7 @@ static struct option long_options[] =
     {"version",          no_argument,       0, 'v'},
     {"version-full",     no_argument,       0, 'V'},
     {"help",             no_argument,       0, '?'},
+    {"connector_plugindir", required_argument, 0, 'H'},
     {0, 0, 0, 0}
 };
 static bool syslog_configured = false;
@@ -927,6 +928,8 @@ static void usage(void)
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
             "  -F, --persistdir=PATH       path to persisted configuration directory\n"
             "  -M, --module_configdir=PATH path to module configuration directory\n"
+            "  -H, --connector_plugindir=PATH\n"
+            "                              path to MariaDB Connector-C plugin directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -1332,7 +1335,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:",
+    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1490,6 +1493,16 @@ int main(int argc, char **argv)
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
                 set_execdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'H':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_connector_plugindir(tmp_path);
             }
             else
             {
@@ -2525,6 +2538,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_execdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "connector_plugindir") == 0)
+        {
+            if (strcmp(get_connector_plugindir(), default_connector_plugindir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_connector_plugindir(tmp);
                 }
                 else
                 {

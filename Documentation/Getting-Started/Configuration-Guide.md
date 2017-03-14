@@ -442,6 +442,17 @@ files.
 execdir=/usr/local/bin/
 ```
 
+#### `connector_plugindir`
+
+Location of the MariaDB Connector-C plugin directory. The MariaDB Connector-C
+used in MaxScale can use this directory to load authentication plugins. The
+versions of the plugins must be binary compatible with the connector version
+that MaxScale was built with.
+
+```
+connector_plugindir=/usr/lib/plugin/
+```
+
 #### `persistdir`
 
 Configure the directory where persisted configurations are stored. When a new

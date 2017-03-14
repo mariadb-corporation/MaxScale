@@ -31,6 +31,7 @@
 #include <mysqld_error.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
+#include <maxscale/paths.h>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
@@ -408,22 +409,7 @@ MYSQL *gw_mysql_init()
 
     if (con)
     {
-        if (gw_mysql_set_timeouts(con) == 0)
-        {
-            // MYSQL_OPT_USE_REMOTE_CONNECTION must be set if the embedded
-            // libary is used. With Connector-C (at least 2.2.1) the call
-            // fails.
-#if !defined(LIBMARIADB)
-            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL) != 0)
-            {
-                MXS_ERROR("Failed to set external connection. "
-                          "It is needed for backend server connections.");
-                mysql_close(con);
-                con = NULL;
-            }
-#endif
-        }
-        else
+        if (gw_mysql_set_timeouts(con) != 0)
         {
             MXS_ERROR("Failed to set timeout values for backend connection.");
             mysql_close(con);
@@ -454,21 +440,21 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 
     MXS_CONFIG* cnf = config_get_global_options();
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_READ_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT,
                             (void *) &cnf->auth_read_timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_CONNECT_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT,
                             (void *) &cnf->auth_conn_timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_WRITE_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT,
                             (void *) &cnf->auth_write_timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
@@ -499,9 +485,10 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     }
 
     MXS_CONFIG* cnf = config_get_global_options();
-    mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-    mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
     if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
     {

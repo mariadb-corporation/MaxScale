@@ -138,6 +138,17 @@ void set_execdir(char* param)
 }
 
 /**
+ * Set the connector plugin directory.
+ * @param str Path to directory
+ */
+void set_connector_plugindir(char* param)
+{
+    MXS_FREE(connector_plugindir);
+    clean_up_pathname(param);
+    connector_plugindir = param;
+}
+
+/**
  * Get the directory with all the modules.
  * @return The module directory
  */
@@ -234,4 +245,13 @@ char* get_langdir()
 char* get_execdir()
 {
     return execdir ? execdir : (char*) default_execdir;
+}
+
+/**
+ * Get connector plugin directory
+ * @return The connector plugin directory
+ */
+char* get_connector_plugindir()
+{
+    return connector_plugindir ? connector_plugindir : (char*) default_connector_plugindir;
 }
