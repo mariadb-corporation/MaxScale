@@ -871,18 +871,32 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
 {
     uint32_t type_mask = qc_get_type_mask(stmt);
 
-    if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE) &&
+        qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
     {
-        type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
     }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        }
 
-    type_mask &= (QUERY_TYPE_BEGIN_TRX |
-                  QUERY_TYPE_WRITE |
-                  QUERY_TYPE_READ |
-                  QUERY_TYPE_COMMIT |
-                  QUERY_TYPE_ROLLBACK |
-                  QUERY_TYPE_ENABLE_AUTOCOMMIT |
-                  QUERY_TYPE_DISABLE_AUTOCOMMIT);
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (QUERY_TYPE_BEGIN_TRX |
+                      QUERY_TYPE_WRITE |
+                      QUERY_TYPE_READ |
+                      QUERY_TYPE_COMMIT |
+                      QUERY_TYPE_ROLLBACK |
+                      QUERY_TYPE_ENABLE_AUTOCOMMIT |
+                      QUERY_TYPE_DISABLE_AUTOCOMMIT);
+    }
 
     return type_mask;
 }
