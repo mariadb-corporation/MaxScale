@@ -781,13 +781,13 @@ private:
                 }
                 else if (is_next_char('n') || is_next_char('N'))
                 {
-                    if (is_next_char('l') || is_next_char('L'))
+                    if (is_next_char('l', 2) || is_next_char('L', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("on"), TK_ONE);
+                        token = expect_token(TBP_EXPECT_TOKEN("only"), TK_ONLY);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("only"), TK_ONLY);
+                        token = expect_token(TBP_EXPECT_TOKEN("on"), TK_ONE);
                     }
                 }
                 break;
