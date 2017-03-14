@@ -23,6 +23,14 @@ using namespace std;
 namespace
 {
 
+enum test_target_t
+{
+    TEST_PARSER = 0x1,
+    TEST_QC     = 0x2,
+    TEST_REGEX  = 0x4,
+    TEST_ALL    = (TEST_PARSER | TEST_QC)
+};
+
 GWBUF* create_gwbuf(const char* zStmt)
 {
     size_t len = strlen(zStmt);
@@ -121,7 +129,11 @@ bool test(uint32_t (*getter)(GWBUF*), const char* zStmt, uint32_t expected_type_
 const char* prefixes[] =
 {
     " ",
-    "  "
+    "  ",
+    "\n",
+    " \n",
+    "\n ",
+    "-- comment\n"
 };
 
 const int N_PREFIXES = sizeof(prefixes) / sizeof(prefixes[0]);
@@ -148,13 +160,19 @@ const char* suffixes[] =
 {
     " ",
     "  ",
+    "\n",
+    " \n",
+    "\n ",
     ";",
     " ;",
     "  ;",
     " ;",
     "  ;",
     " ; ",
-    "  ;  "
+    ";\n",
+    "  ;  ",
+    "-- comment this, comment that",
+    // "# comment this, comment that" /* qc_sqlite does not handle this */
 };
 
 const int N_SUFFIXES = sizeof(suffixes) / sizeof(suffixes[0]);
@@ -179,7 +197,13 @@ bool test_with_suffixes(uint32_t (*getter)(GWBUF*), const string& base, uint32_t
 
 const char* whitespace[] =
 {
-    "  "
+    "  ",
+    "\n",
+    "/**/",
+    "/***/",
+    "/****/",
+    "/* / * */",
+    "-- comment\n"
 };
 
 const int N_WHITESPACE = sizeof(whitespace) / sizeof(whitespace[0]);
@@ -264,14 +288,14 @@ bool test_with_commas(uint32_t (*getter)(GWBUF*), const string& base, uint32_t t
 }
 
 
-bool test(uint32_t (*getter)(GWBUF*))
+bool test(uint32_t (*getter)(GWBUF*), bool dont_bail_out)
 {
     bool rc = true;
 
     test_case* pTest = test_cases;
     test_case* pEnd  = pTest + N_TEST_CASES;
 
-    while (pTest < pEnd)
+    while ((pTest < pEnd) && (dont_bail_out || rc))
     {
         string base(pTest->zStmt);
         cout << base << endl;
@@ -284,24 +308,36 @@ bool test(uint32_t (*getter)(GWBUF*))
             rc = false;
         }
 
-        if (!test_with_prefixes(getter, base, pTest->type_mask))
+        if (dont_bail_out || rc)
         {
-            rc = false;
+            if (!test_with_prefixes(getter, base, pTest->type_mask))
+            {
+                rc = false;
+            }
         }
 
-        if (!test_with_whitespace(getter, base, pTest->type_mask))
+        if (dont_bail_out || rc)
         {
-            rc = false;
+            if (!test_with_whitespace(getter, base, pTest->type_mask))
+            {
+                rc = false;
+            }
         }
 
-        if (!test_with_commas(getter, base, pTest->type_mask))
+        if (dont_bail_out || rc)
         {
-            rc = false;
+            if (!test_with_commas(getter, base, pTest->type_mask))
+            {
+                rc = false;
+            }
         }
 
-        if (!test_with_suffixes(getter, base, pTest->type_mask))
+        if (dont_bail_out || rc)
         {
-            rc = false;
+            if (!test_with_suffixes(getter, base, pTest->type_mask))
+            {
+                rc = false;
+            }
         }
 
         ++pTest;
@@ -312,58 +348,124 @@ bool test(uint32_t (*getter)(GWBUF*))
 
 }
 
+namespace
+{
+
+char USAGE[] =
+    "usage: test_trxtracking [-p] [-q] [-r] [-d]\n"
+    "\n"
+    "-p  : Test using custom parser\n"
+    "-q  : Test using query classifier\n"
+    "-r  : Test using regex matching\n"
+    "-d  : Don't bail out at first error\n"
+    "\n"
+    "If neither -p, -q or -r has been specified, then all will be tested.\n";
+}
 
 int main(int argc, char* argv[])
 {
-    int rc = EXIT_FAILURE;
+    int rc = EXIT_SUCCESS;
 
-    set_datadir(strdup("/tmp"));
-    set_langdir(strdup("."));
-    set_process_datadir(strdup("/tmp"));
+    bool test_all = true;
+    uint32_t test_target = 0;
+    bool dont_bail_out = false;
 
-    if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+    int c;
+    while ((c = getopt(argc, argv, "pqr")) != -1)
     {
-        // We have to setup something in order for the regexes to be compiled.
-        if (qc_setup("qc_sqlite", NULL) && qc_process_init(QC_INIT_BOTH))
+        switch (c)
         {
-            rc = EXIT_SUCCESS;
+        case 'p':
+            test_all = false;
+            test_target |= TEST_PARSER;
+            break;
 
-            cout << "QC" << endl;
-            cout << "==" << endl;
-            if (!test(get_qc_trx_type_mask))
+        case 'q':
+            test_all = false;
+            test_target = TEST_QC;
+            break;
+
+        case 'r':
+            test_all = false;
+            test_target = TEST_REGEX;
+            break;
+
+        case 'd':
+            dont_bail_out = true;
+            break;
+
+        default:
+            cout << USAGE << endl;
+            rc = EXIT_FAILURE;
+        }
+    }
+
+    if (rc == EXIT_SUCCESS)
+    {
+        rc = EXIT_FAILURE;
+
+        if (test_all)
+        {
+            test_target = TEST_ALL;
+        }
+
+        set_datadir(strdup("/tmp"));
+        set_langdir(strdup("."));
+        set_process_datadir(strdup("/tmp"));
+
+        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        {
+            // We have to setup something in order for the regexes to be compiled.
+            if (qc_setup("qc_sqlite", NULL) && qc_process_init(QC_INIT_BOTH))
             {
-                rc = EXIT_FAILURE;
-            }
-            cout << endl;
+                rc = EXIT_SUCCESS;
 
-            cout << "Regex" << endl;
-            cout << "=====" << endl;
-            if (!test(get_regex_trx_type_mask))
+                if (test_target & TEST_QC)
+                {
+                    cout << "QC" << endl;
+                    cout << "==" << endl;
+                    if (!test(get_qc_trx_type_mask, dont_bail_out))
+                    {
+                        rc = EXIT_FAILURE;
+                    }
+                    cout << endl;
+                }
+
+                if (test_target & TEST_REGEX)
+                {
+                    cout << "Regex" << endl;
+                    cout << "=====" << endl;
+                    if (!test(get_regex_trx_type_mask, dont_bail_out))
+                    {
+                        rc = EXIT_FAILURE;
+                    }
+                    cout << endl;
+                }
+
+                if (test_target & TEST_PARSER)
+                {
+                    cout << "Parser" << endl;
+                    cout << "======" << endl;
+                    if (!test(get_parser_trx_type_mask, dont_bail_out))
+                    {
+                        rc = EXIT_FAILURE;
+                    }
+                    cout << endl;
+                }
+
+                qc_process_end(QC_INIT_BOTH);
+            }
+            else
             {
-                rc = EXIT_FAILURE;
+                cerr << "error: Could not initialize qc_sqlite." << endl;
             }
-            cout << endl;
 
-            cout << "Parser" << endl;
-            cout << "======" << endl;
-            if (!test(get_parser_trx_type_mask))
-            {
-                rc = EXIT_FAILURE;
-            }
-            cout << endl;
-
-            qc_process_end(QC_INIT_BOTH);
+            mxs_log_finish();
         }
         else
         {
-            cerr << "error: Could not initialize qc_sqlite." << endl;
+            cerr << "error: Could not initialize log." << endl;
         }
-
-        mxs_log_finish();
-    }
-    else
-    {
-        cerr << "error: Could not initialize log." << endl;
     }
 
     return rc;

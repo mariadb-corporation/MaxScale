@@ -97,8 +97,10 @@ public:
     {
         uint32_t type_mask = 0;
 
-        if (modutil_extract_SQL(pBuf, &m_pSql, &m_len))
+        char* pSql;
+        if (modutil_extract_SQL(pBuf, &pSql, &m_len))
         {
+            m_pSql = pSql;
             m_pI = m_pSql;
             m_pEnd = m_pI + m_len;
 
@@ -123,7 +125,7 @@ private:
 
     void log_exhausted()
     {
-#ifndef NDEBUG
+#ifdef SS_DEBUG
         MXS_WARNING("More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
 #endif
     }
@@ -490,14 +492,115 @@ private:
         return token;
     }
 
+    void bypass_whitespace()
+    {
+        while (m_pI != m_pEnd)
+        {
+            if (isspace(*m_pI))
+            {
+                ++m_pI;
+            }
+            else if (*m_pI == '/') // Might be a comment
+            {
+                if ((m_pI + 1 != m_pEnd) && (*(m_pI + 1) == '*')) // Indeed it was
+                {
+                    m_pI += 2;
+
+                    while (m_pI != m_pEnd)
+                    {
+                        if (*m_pI == '*') // Might be the end of the comment
+                        {
+                            ++m_pI;
+
+                            if (m_pI != m_pEnd)
+                            {
+                                if (*m_pI == '/') // Indeed it was
+                                {
+                                    ++m_pI;
+                                    break; // Out of this inner while.
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // It was not the end of the comment.
+                            ++m_pI;
+                        }
+                    }
+                }
+                else
+                {
+                    // Was not a comment, so we'll bail out.
+                    break;
+                }
+            }
+            else if (*m_pI == '-') // Might be the start of a comment to the end of line
+            {
+                bool is_comment = false;
+
+                if (m_pI + 1 != m_pEnd)
+                {
+                    if (*(m_pI + 1) == '-') // Might be, yes.
+                    {
+                        if (m_pI + 2 != m_pEnd)
+                        {
+                            if (isspace(*(m_pI + 2))) // Yes, it is.
+                            {
+                                is_comment = true;
+
+                                m_pI += 3;
+
+                                while ((m_pI != m_pEnd) && (*m_pI != '\n'))
+                                {
+                                    ++m_pI;
+                                }
+
+                                if (m_pI != m_pEnd)
+                                {
+                                    ss_dassert(*m_pI == '\n');
+                                    ++m_pI;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!is_comment)
+                {
+                    break;
+                }
+            }
+            else if (*m_pI == '#')
+            {
+                ++m_pI;
+
+                while ((m_pI != m_pEnd) && (*m_pI != '\n'))
+                {
+                    ++m_pI;
+                }
+
+                if (m_pI != m_pEnd)
+                {
+                    ss_dassert(*m_pI == '\n');
+                    ++m_pI;
+                }
+
+                m_pI = m_pEnd;
+                break;
+            }
+            else
+            {
+                // Neither whitespace not start of a comment, so we bail out.
+                break;
+            }
+        }
+    }
+
     token_t next_token(token_required_t required = TOKEN_NOT_REQUIRED)
     {
         token_t token = PARSER_UNKNOWN_TOKEN;
 
-        while ((m_pI != m_pEnd) && isblank(*m_pI))
-        {
-            ++m_pI;
-        }
+        bypass_whitespace();
 
         if (m_pI == m_pEnd)
         {
@@ -507,7 +610,7 @@ private:
         {
             ++m_pI;
 
-            while ((m_pI != m_pEnd) && isblank(*m_pI))
+            while ((m_pI != m_pEnd) && isspace(*m_pI))
             {
                 ++m_pI;
             }
@@ -668,7 +771,7 @@ private:
     TrxBoundaryParser& operator = (const TrxBoundaryParser&);
 
 private:
-    char*       m_pSql;
+    const char* m_pSql;
     int         m_len;
     const char* m_pI;
     const char* m_pEnd;
