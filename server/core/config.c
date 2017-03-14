@@ -3400,16 +3400,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if ((context && config_contains_type(context, value, "service")) ||
-                    service_find(value))
+                if (context && config_contains_type(context, value, "service"))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if ((context && config_contains_type(context, value, "server")) ||
-                    server_find_by_unique_name(value))
+                if (context && config_contains_type(context, value, "server"))
                 {
                     valid = true;
                 }
