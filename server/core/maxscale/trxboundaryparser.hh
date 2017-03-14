@@ -13,6 +13,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <ctype.h>
+#include <maxscale/modutil.h>
 #include <maxscale/query_classifier.h>
 
 namespace maxscale
@@ -87,6 +89,29 @@ public:
         , m_pI(NULL)
         , m_pEnd(NULL)
     {
+    }
+
+    /**
+     * Return the type mask of a statement, provided the statement affects
+     * transaction state or autocommit mode.
+     *
+     * @param pSql  SQL statament.
+     * @param len   Length of pSql.
+     *
+     * @return The corresponding type mask or 0, if the statement does not
+     *         affect transaction state or autocommit mode.
+     */
+    uint32_t type_mask_of(const char* pSql, size_t len)
+    {
+        uint32_t type_mask = 0;
+
+        m_pSql = pSql;
+        m_len = len;
+
+        m_pI = m_pSql;
+        m_pEnd = m_pI + m_len;
+
+        return parse();
     }
 
     /**
