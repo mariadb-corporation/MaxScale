@@ -722,43 +722,80 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->saved_master.map = buf;
         blr_cache_response(router, "map", buf);
 
-        // Query for Server Variables
-        buf = blr_make_query(router->master, MYSQL_CONNECTOR_SERVER_VARS_QUERY);
-        router->master_state = BLRM_SERVER_VARS;
-        router->master->func.write(router->master, buf);
-        break;
+        if (router->maxwell_compat)
+        {
+            // Query for Server Variables
+            buf = blr_make_query(router->master, MYSQL_CONNECTOR_SERVER_VARS_QUERY);
+            router->master_state = BLRM_SERVER_VARS;
+            router->master->func.write(router->master, buf);
+            break;
+        }
+        else
+        {
+            // Continue: ready for the registration, nothing to write/read
+            router->master_state = BLRM_REGISTER_READY;
+        }
     case BLRM_SERVER_VARS:
-        if (router->saved_master.server_vars)
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->maxwell_compat)
         {
-            GWBUF_CONSUME_ALL(router->saved_master.server_vars);
-        }
-        router->saved_master.server_vars = buf;
-        blr_cache_response(router, "server_vars", buf);
+            if (router->saved_master.server_vars)
+            {
+                GWBUF_CONSUME_ALL(router->saved_master.server_vars);
+            }
+            router->saved_master.server_vars = buf;
+            blr_cache_response(router, "server_vars", buf);
 
-        buf = blr_make_query(router->master, "SELECT IF(@@global.log_bin, 'ON', 'OFF'), @@global.binlog_format, @@global.binlog_row_image");
-        router->master_state = BLRM_BINLOG_VARS;
-        router->master->func.write(router->master, buf);
-        break;
+            buf = blr_make_query(router->master,
+                                 "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
+                                 "@@global.binlog_format, @@global.binlog_row_image");
+            router->master_state = BLRM_BINLOG_VARS;
+            router->master->func.write(router->master, buf);
+            break;
+        }
     case BLRM_BINLOG_VARS:
-        if (router->saved_master.binlog_vars)
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY.
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->maxwell_compat)
         {
-            GWBUF_CONSUME_ALL(router->saved_master.binlog_vars);
-        }
-        router->saved_master.binlog_vars = buf;
-        blr_cache_response(router, "binlog_vars", buf);
+            if (router->saved_master.binlog_vars)
+            {
+                GWBUF_CONSUME_ALL(router->saved_master.binlog_vars);
+            }
+            router->saved_master.binlog_vars = buf;
+            blr_cache_response(router, "binlog_vars", buf);
 
-        buf = blr_make_query(router->master, "select @@lower_case_table_names");
-        router->master_state = BLRM_LOWER_CASE_TABLES;
-        router->master->func.write(router->master, buf);
-        break;
+            buf = blr_make_query(router->master, "select @@lower_case_table_names");
+            router->master_state = BLRM_LOWER_CASE_TABLES;
+            router->master->func.write(router->master, buf);
+            break;
+        }
     case BLRM_LOWER_CASE_TABLES:
-        if (router->saved_master.lower_case_tables)
+        /**
+         * This branch could be reached as fallthrough from BLRM_MAP
+         * with new state BLRM_REGISTER_READY.
+         * Go ahead if maxwell_compat is not set
+         */
+        if (router->maxwell_compat)
         {
-            GWBUF_CONSUME_ALL(router->saved_master.lower_case_tables);
+            if (router->saved_master.lower_case_tables)
+            {
+                GWBUF_CONSUME_ALL(router->saved_master.lower_case_tables);
+            }
+            router->saved_master.lower_case_tables = buf;
+            blr_cache_response(router, "lower_case_tables", buf);
+            router->master_state = BLRM_REGISTER_READY;
+            // Continue: ready for the registration, nothing to write/read
         }
-        router->saved_master.lower_case_tables = buf;
-        blr_cache_response(router, "lower_case_tables", buf);
-
+    case BLRM_REGISTER_READY:
+        // Prepare registration
         buf = blr_make_registration(router);
         router->master_state = BLRM_REGISTER;
         router->master->func.write(router->master, buf);
