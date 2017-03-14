@@ -873,7 +873,7 @@ static int get_users(SERV_LISTENER *listener)
 
     MXS_FREE(dpwd);
 
-    if (server == NULL)
+    if (server == NULL && total_users == -1)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.", service->name);
