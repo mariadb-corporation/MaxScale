@@ -16,6 +16,7 @@
 
 #include <string>
 #include <vector>
+#include <netdb.h>
 
 #include <maxscale/filter.hh>
 #include <maxscale/buffer.hh>
@@ -42,7 +43,7 @@ private:
     MappingArray m_mapping; /* Regular expression to serverlist mapping */
     const int m_ovector_size; /* Given to pcre2_match_data_create() */
 
-    int check_source_host(const char *remote, const struct sockaddr_in *ipv4);
+    int check_source_host(const char *remote, const struct sockaddr_storage *ip);
 public:
     /* Total statements diverted statistics. Unreliable due to lockless yet
      * shared access. */
@@ -106,11 +107,12 @@ struct RegexToServers
 /* Container for address-specific filtering */
 struct SourceHost
 {
-    const char *m_address;
+    string m_address;
     struct sockaddr_in m_ipv4;
     int m_netmask;
-    SourceHost()
-        : m_address(NULL)
-    {};
-
+    SourceHost(string address, const struct sockaddr_in& ipv4, int netmask)
+        : m_address(address),
+          m_ipv4(ipv4),
+          m_netmask(netmask)
+    {}
 };
