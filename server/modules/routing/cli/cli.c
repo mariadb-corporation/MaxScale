@@ -271,6 +271,8 @@ execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
         queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
     }
 
+    MXS_INFO("MaxAdmin: %s", session->cmdbuf);
+
     execute_cmd(session);
     return 1;
 }
