@@ -42,15 +42,17 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/modinfo.h>
 #include <maxscale/modutil.h>
+#include <maxscale/server.h>
 #include <maxscale/utils.h>
 
 using std::string;
 
 static void generate_param_names(int pairs);
 
-/* These arrays contain the possible config parameter names. */
-static StringArray param_names_match;
-static StringArray param_names_server;
+/* These arrays contain the allowed indexed config parameter names. match01,
+ * target01, match02, target02 ... */
+static StringArray param_names_match_indexed;
+static StringArray param_names_target_indexed;
 
 static const MXS_ENUM_VALUE option_values[] =
 {
@@ -59,6 +61,10 @@ static const MXS_ENUM_VALUE option_values[] =
     {"extended", PCRE2_EXTENDED}, // Ignore white space and # comments
     {NULL}
 };
+
+static const char MATCH_STR[] = "match";
+static const char SERVER_STR[] = "server";
+static const char TARGET_STR[] = "target";
 
 RegexHintFilter::RegexHintFilter(string user, SourceHost* source,
                                  const MappingArray& mapping, int ovector_size)
@@ -113,16 +119,16 @@ int RegexHintFSession::routeQuery(GWBUF* queue)
         if (modutil_extract_SQL(queue, &sql, &sql_len))
         {
             const RegexToServers* reg_serv =
-                m_fil_inst.find_servers(m_match_data, sql, sql_len);
+                m_fil_inst.find_servers(sql, sql_len, m_match_data);
 
             if (reg_serv)
             {
                 /* Add the servers in the list to the buffer routing hints */
-                for (unsigned int i = 0; i < reg_serv->m_servers.size(); i++)
+                for (unsigned int i = 0; i < reg_serv->m_targets.size(); i++)
                 {
                     queue->hint =
-                        hint_create_route(queue->hint, HINT_ROUTE_TO_NAMED_SERVER,
-                                          ((reg_serv->m_servers)[i]).c_str());
+                        hint_create_route(queue->hint, reg_serv->m_htype,
+                                          ((reg_serv->m_targets)[i]).c_str());
                 }
                 m_n_diverted++;
                 m_fil_inst.m_total_diverted++;
@@ -170,15 +176,15 @@ RegexHintFSession* RegexHintFilter::newSession(MXS_SESSION* session)
 }
 
 /**
- * Find the first server list with a matching regural expression.
+ * Find the first server list with a matching regular expression.
  *
- * @param match_data    result container, from filter session
  * @param sql   SQL-query string, not null-terminated
- * @paran sql_len length of SQL-query
+ * @paran sql_len   length of SQL-query
+ * @param match_data    result container, from filter session
  * @return a set of servers from the main mapping container
  */
 const RegexToServers*
-RegexHintFilter::find_servers(pcre2_match_data* match_data, char* sql, int sql_len)
+RegexHintFilter::find_servers(char* sql, int sql_len, pcre2_match_data* match_data)
 {
     /* Go through the regex array and find a match. */
     for (unsigned int i = 0; i < m_mapping.size(); i++)
@@ -230,8 +236,7 @@ RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* 
 {
     bool error = false;
     SourceHost* source_host = NULL;
-    /* The cfg_param cannot be changed to string because set_source_address doesn't
-       copy the contents. This inefficient as the config string searching */
+
     const char* source = config_get_string(params, "source");
     if (*source)
     {
@@ -244,11 +249,47 @@ RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* 
     }
 
     int pcre_ops = config_get_enum(params, "options", option_values);
+
+    string match_val_legacy(config_get_string(params, MATCH_STR));
+    string server_val_legacy(config_get_string(params, SERVER_STR));
+    const bool legacy_mode = (match_val_legacy.length() || server_val_legacy.length());
+
+    if (legacy_mode && (!match_val_legacy.length() || !server_val_legacy.length()))
+    {
+        MXS_ERROR("Only one of '%s' and '%s' is set. If using legacy mode, set both."
+                  "If using indexed parameters, set neither and use '%s01' and '%s01' etc.",
+                  MATCH_STR, SERVER_STR, MATCH_STR, TARGET_STR);
+        error = true;
+    }
+
     MappingArray mapping;
     uint32_t max_capcount;
+    /* Try to form the mapping with indexed parameter names */
     form_regex_server_mapping(params, pcre_ops, &mapping, &max_capcount);
 
-    if (!mapping.size() || error)
+    if (!legacy_mode && !mapping.size())
+    {
+        MXS_ERROR("Could not parse any indexed '%s'-'%s' pairs.", MATCH_STR, TARGET_STR);
+        error = true;
+    }
+    else if (legacy_mode && mapping.size())
+    {
+        MXS_ERROR("Found both legacy parameters and indexed parameters. Use only "
+                  "one type of parameters.");
+        error = true;
+    }
+    else if (legacy_mode && !mapping.size())
+    {
+        /* Using legacy mode and no indexed parameters found. Add the legacy parameters
+         * to the mapping. */
+        if (!regex_compile_and_add(pcre_ops, true, match_val_legacy, server_val_legacy,
+                                   &mapping, &max_capcount))
+        {
+            error = true;
+        }
+    }
+
+    if (error)
     {
         delete source_host;
         return NULL;
@@ -297,10 +338,10 @@ void RegexHintFilter::diagnostics(DCB* dcb)
     {
         dcb_printf(dcb, "\t\t\t/%s/ -> ",
                    m_mapping[i].m_match.c_str());
-        dcb_printf(dcb, "%s", m_mapping[i].m_servers[0].c_str());
-        for (unsigned int j = 1; j < m_mapping[i].m_servers.size(); j++)
+        dcb_printf(dcb, "%s", m_mapping[i].m_targets[0].c_str());
+        for (unsigned int j = 1; j < m_mapping[i].m_targets.size(); j++)
         {
-            dcb_printf(dcb, ", %s", m_mapping[i].m_servers[j].c_str());
+            dcb_printf(dcb, ", %s", m_mapping[i].m_targets[j].c_str());
         }
         dcb_printf(dcb, "\n");
     }
@@ -325,118 +366,190 @@ void RegexHintFilter::diagnostics(DCB* dcb)
 
 /**
  * Parse the server list and add the contained servers to the struct's internal
- * list. Server names are not verified to be valid servers.
+ * list. Server names are verified to be valid servers.
  *
  * @param server_names The list of servers as read from the config file
  * @return How many were found
  */
-int RegexToServers::add_servers(string server_names)
+int RegexToServers::add_servers(string server_names, bool legacy_mode)
 {
-    /* Parse the list, server names separated by ','. Do as in config.c :
-     * configure_new_service() to stay compatible. We cannot check here
-     * (at least not easily) if the server is named correctly, since the
-     * filter doesn't even know its service. */
-    char servers[server_names.length() + 1];
-    strcpy(servers, server_names.c_str());
-    int found = 0;
-    char* lasts;
-    char* s = strtok_r(servers, ",", &lasts);
-    while (s)
+    if (legacy_mode)
     {
-        m_servers.push_back(s);
-        found++;
-        s = strtok_r(NULL, ",", &lasts);
+        /* Should have just one server name, already known to be valid */
+        m_targets.push_back(server_names);
+        return 1;
     }
-    return found;
+
+    /* Have to parse the server list here instead of in config loader, since the list
+     * may contain special placeholder strings.
+     */
+    bool error = false;
+    char** names_arr = NULL;
+    const int n_names = config_parse_server_list(server_names.c_str(), &names_arr);
+    if (n_names > 1)
+    {
+        /* The string contains a server list, all must be valid servers */
+        SERVER **servers;
+        int found = server_find_by_unique_names(names_arr, n_names, &servers);
+        if (found != n_names)
+        {
+            error = true;
+            for (int i = 0; i < n_names; i++)
+            {
+                /* servers is valid only if found > 0 */
+                if (!found || !servers[i])
+                {
+                    MXS_ERROR("'%s' is not a valid server name.", names_arr[i]);
+                }
+            }
+        }
+        if (found)
+        {
+            MXS_FREE(servers);
+        }
+        if (!error)
+        {
+            for (int i = 0; i < n_names; i++)
+            {
+                m_targets.push_back(names_arr[i]);
+            }
+        }
+    }
+    else if (n_names == 1)
+    {
+        /* The string is either a server name or a special reserved id */
+        if (server_find_by_unique_name(names_arr[0]))
+        {
+            m_targets.push_back(names_arr[0]);
+        }
+        else if (strcmp(names_arr[0], "->master") == 0)
+        {
+            m_targets.push_back(names_arr[0]);
+            m_htype = HINT_ROUTE_TO_MASTER;
+        }
+        else if (strcmp(names_arr[0], "->slave") == 0)
+        {
+            m_targets.push_back(names_arr[0]);
+            m_htype = HINT_ROUTE_TO_SLAVE;
+        }
+        else
+        {
+            error = true;
+        }
+    }
+    else
+    {
+        error = true;
+    }
+
+    for (int i = 0; i < n_names; i++)
+    {
+        MXS_FREE(names_arr[i]);
+    }
+    MXS_FREE(names_arr);
+    return error ? 0 : n_names;
+}
+
+bool RegexHintFilter::regex_compile_and_add(int pcre_ops, bool legacy_mode,
+                                            const string& match, const string& servers,
+                                            MappingArray* mapping, uint32_t* max_capcount)
+{
+    bool success = true;
+    int errorcode = -1;
+    PCRE2_SIZE error_offset = -1;
+    pcre2_code* regex =
+        pcre2_compile((PCRE2_SPTR) match.c_str(), match.length(), pcre_ops,
+                      &errorcode, &error_offset, NULL);
+
+    if (regex)
+    {
+        // Try to compile even further for faster matching
+        if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
+        {
+            MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, "
+                       "falling back to normal compilation.", match.c_str());
+        }
+
+        RegexToServers regex_ser(match, regex);
+        if (regex_ser.add_servers(servers, legacy_mode) == 0)
+        {
+            // The servers string didn't seem to contain any servers
+            MXS_ERROR("Could not parse servers from string '%s'.", servers.c_str());
+            success = false;
+        }
+        mapping->push_back(regex_ser);
+
+        /* Check what is the required match_data size for this pattern. The
+         * largest value is used to form the match data.
+         */
+        uint32_t capcount = 0;
+        int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
+        if (ret_info != 0)
+        {
+            MXS_PCRE2_PRINT_ERROR(ret_info);
+            success = false;
+        }
+        else
+        {
+            if (capcount > *max_capcount)
+            {
+                *max_capcount = capcount;
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
+                  match.c_str(), error_offset);
+        MXS_PCRE2_PRINT_ERROR(errorcode);
+        success = false;
+    }
+    return success;
 }
 
 /**
- * Read all regexes from the supplied configuration, compile them and form the mapping
+ * Read all indexed regexes from the supplied configuration, compile them and form the mapping
  *
- * @param mapping An array of regex->serverlist mappings for filling in. Is cleared on error.
- * @param pcre_ops options for pcre2_compile
  * @param params config parameters
+ * @param pcre_ops options for pcre2_compile
+ * @param mapping An array of regex->serverlist mappings for filling in. Is cleared on error.
+ * @param max_capcount_out The maximum detected pcre2 capture count is written here.
  */
 void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, int pcre_ops,
                                                 MappingArray* mapping, uint32_t* max_capcount_out)
 {
-    ss_dassert(param_names_match.size() == param_names_server.size());
+    ss_dassert(param_names_match_indexed.size() == param_names_target_indexed.size());
     bool error = false;
     uint32_t max_capcount = 0;
     *max_capcount_out = 0;
     /* The config parameters can be in any order and may be skipping numbers.
      * Must just search for every possibility. Quite inefficient, but this is
      * only done once. */
-    for (unsigned int i = 0; i < param_names_match.size(); i++)
+    for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
     {
-        const char* match_param_name = param_names_match[i].c_str();
-        const char* server_param_name = param_names_server[i].c_str();
-        string match(config_get_string(params, match_param_name));
-        string servers(config_get_string(params, server_param_name));
+        const char* param_name_match = param_names_match_indexed[i].c_str();
+        const char* param_name_target = param_names_target_indexed[i].c_str();
+        string match(config_get_string(params, param_name_match));
+        string target(config_get_string(params, param_name_target));
 
         /* Check that both the regex and server config parameters are found */
-        if (match.length() < 1 || servers.length() < 1)
+        if (match.length() < 1 || target.length() < 1)
         {
             if (match.length() > 0)
             {
-                MXS_ERROR("No server defined for regex setting '%s'.", match_param_name);
+                MXS_ERROR("No server defined for regex setting '%s'.", param_name_match);
                 error = true;
             }
-            else if (servers.length() > 0)
+            else if (target.length() > 0)
             {
-                MXS_ERROR("No regex defined for server setting '%s'.", server_param_name);
+                MXS_ERROR("No regex defined for server setting '%s'.", param_name_target);
                 error = true;
             }
             continue;
         }
 
-        int errorcode = -1;
-        PCRE2_SIZE error_offset = -1;
-        pcre2_code* regex =
-            pcre2_compile((PCRE2_SPTR) match.c_str(), match.length(), pcre_ops,
-                          &errorcode, &error_offset, NULL);
-
-        if (regex)
+        if (!regex_compile_and_add(pcre_ops, false, match, target, mapping, &max_capcount))
         {
-            // Try to compile even further for faster matching
-            if (pcre2_jit_compile(regex, PCRE2_JIT_COMPLETE) < 0)
-            {
-                MXS_NOTICE("PCRE2 JIT compilation of pattern '%s' failed, "
-                           "falling back to normal compilation.", match.c_str());
-            }
-
-            RegexToServers regex_ser(match, regex);
-            if (regex_ser.add_servers(servers) == 0)
-            {
-                // The servers string didn't seem to contain any servers
-                MXS_ERROR("Could not parse servers from string '%s'.", servers.c_str());
-                error = true;
-            }
-            mapping->push_back(regex_ser);
-
-            /* Check what is the required match_data size for this pattern. The
-             * largest value is used to form the match data.
-             */
-            uint32_t capcount = 0;
-            int ret_info = pcre2_pattern_info(regex, PCRE2_INFO_CAPTURECOUNT, &capcount);
-            if (ret_info != 0)
-            {
-                MXS_PCRE2_PRINT_ERROR(ret_info);
-                error = true;
-            }
-            else
-            {
-                if (capcount > max_capcount)
-                {
-                    max_capcount = capcount;
-                }
-            }
-        }
-        else
-        {
-            MXS_ERROR("Invalid PCRE2 regular expression '%s' (position '%zu').",
-                      match.c_str(), error_offset);
-            MXS_PCRE2_PRINT_ERROR(errorcode);
             error = true;
         }
     }
@@ -456,12 +569,11 @@ void RegexHintFilter::form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, in
 }
 
 /**
- * Check whether the client IP
- * matches the configured 'source' host
- * which can have up to three % wildcards
+ * Check whether the client IP matches the configured 'source' host,
+ * which can have up to three % wildcards.
  *
  * @param remote      The clientIP
- * @param ipv4        The client IPv4 struct
+ * @param ipv4        The client socket address struct
  * @return            1 for match, 0 otherwise
  */
 int RegexHintFilter::check_source_host(const char* remote, const struct sockaddr_storage *ip)
@@ -559,17 +671,11 @@ bool RegexHintFilter::validate_ip_address(const char* host)
 }
 
 /**
- * Set the 'source' option into a proper struct
- *
- * Input IP, which could have wildcards %, is checked
- * and the netmask 32/24/16/8 is added.
- *
- * In case of errors the 'address' field of
- * struct REGEXHINT_SOURCE_HOST is set to NULL
+ * Set the 'source' option into a proper struct. Input IP, which could have
+ * wildcards %, is checked and the netmask 32/24/16/8 is added.
  *
  * @param input_host    The config source parameter
- * @return              The filled struct with netmask
- *
+ * @return              The filled struct with netmask, or null on error
  */
 SourceHost* RegexHintFilter::set_source_address(const char* input_host)
 {
@@ -682,6 +788,8 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         {
             {"source", MXS_MODULE_PARAM_STRING},
             {"user", MXS_MODULE_PARAM_STRING},
+            {MATCH_STR, MXS_MODULE_PARAM_STRING},
+            {SERVER_STR, MXS_MODULE_PARAM_SERVER},
             {
                 "options",
                 MXS_MODULE_PARAM_ENUM,
@@ -714,16 +822,17 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     /* Create parameter pair names */
     generate_param_names(match_server_pairs);
 
-
     /* Now make the actual parameters for the module struct */
-    MXS_MODULE_PARAM new_param = {NULL, MXS_MODULE_PARAM_STRING, NULL};
-    for (unsigned int i = 0; i < param_names_match.size(); i++)
+    MXS_MODULE_PARAM new_param_match = {NULL, MXS_MODULE_PARAM_STRING, NULL};
+    /* Cannot use SERVERLIST in the target, since it may contain MASTER, SLAVE. */
+    MXS_MODULE_PARAM new_param_target = {NULL, MXS_MODULE_PARAM_STRING, NULL};
+    for (unsigned int i = 0; i < param_names_match_indexed.size(); i++)
     {
-        new_param.name = param_names_match.at(i).c_str();
-        info.parameters[params_counter] = new_param;
+        new_param_match.name = param_names_match_indexed.at(i).c_str();
+        info.parameters[params_counter] = new_param_match;
         params_counter++;
-        new_param.name = param_names_server.at(i).c_str();
-        info.parameters[params_counter] = new_param;
+        new_param_target.name = param_names_target_indexed.at(i).c_str();
+        info.parameters[params_counter] = new_param_target;
         params_counter++;
     }
     info.parameters[params_counter].name = MXS_END_MODULE_PARAMS;
@@ -731,38 +840,30 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     return &info;
 }
 
-/* Generate N pairs of parameter names of form matchXX and serverXX
+/*
+ * Generate N pairs of parameter names of form matchXX and targetXX and add them
+ * to the global arrays.
  *
  * @param pairs The number of parameter pairs to generate
  */
 static void generate_param_names(int pairs)
 {
-    const char MATCH[] = "match";
-    const char SERVER[] = "server";
-    const int namelen_match = sizeof(MATCH) + 2;
-    const int namelen_server = sizeof(SERVER) + 2;
+    const int namelen_match = sizeof(MATCH_STR) + 2;
+    const int namelen_server = sizeof(TARGET_STR) + 2;
 
     char name_match[namelen_match];
     char name_server[namelen_server];
 
-    /* First, create the old "match" and "server" parameters for backwards
-     * compatibility. */
-    if (pairs > 0)
-    {
-        param_names_match.push_back(MATCH);
-        param_names_server.push_back(SERVER);
-    }
-    /* Then all the rest. */
     const char FORMAT[] = "%s%02d";
-    for (int counter = 1; counter < pairs; counter++)
+    for (int counter = 1; counter <= pairs; counter++)
     {
-        ss_debug(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH, counter);
+        ss_debug(int rval = ) snprintf(name_match, namelen_match, FORMAT, MATCH_STR, counter);
         ss_dassert(rval == namelen_match - 1);
-        ss_debug(rval = ) snprintf(name_server, namelen_server, FORMAT, SERVER, counter);
+        ss_debug(rval = ) snprintf(name_server, namelen_server, FORMAT, TARGET_STR, counter);
         ss_dassert(rval == namelen_server - 1);
 
         // Have both names, add them to the global vectors
-        param_names_match.push_back(name_match);
-        param_names_server.push_back(name_server);
+        param_names_match_indexed.push_back(name_match);
+        param_names_target_indexed.push_back(name_server);
     }
 }

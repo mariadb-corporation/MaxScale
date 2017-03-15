@@ -21,6 +21,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/pcre2.hh>
+#include <maxscale/hint.h>
 
 class RegexHintFilter;
 class RegexHintFSession;
@@ -58,9 +59,12 @@ public:
     RegexHintFSession* newSession(MXS_SESSION *session);
     void diagnostics(DCB* dcb);
     uint64_t getCapabilities();
-    const RegexToServers* find_servers(pcre2_match_data* mdata, char* sql, int sql_len);
+    const RegexToServers* find_servers(char* sql, int sql_len, pcre2_match_data* mdata);
+
     static void form_regex_server_mapping(MXS_CONFIG_PARAMETER* params, int pcre_ops,
                                           MappingArray* mapping, uint32_t* max_capcount_out);
+    static bool regex_compile_and_add(int pcre_ops, bool legacy_mode, const string& match,
+                                      const string& servers, MappingArray* mapping, uint32_t* max_capcount);
     static bool validate_ip_address(const char *);
     static SourceHost* set_source_address(const char *);
 };
@@ -92,16 +96,18 @@ struct RegexToServers
 {
     string m_match; /* Regex in text form */
     pcre2_code* m_regex; /* Compiled regex */
-    StringArray m_servers; /* List of target servers. */
+    StringArray m_targets; /* List of target servers. */
+    HINT_TYPE m_htype; /* For special hint types */
     volatile bool m_error_printed; /* Has an error message about
                                     * matching this regex been printed yet? */
     RegexToServers(string match, pcre2_code* regex)
         : m_match(match),
           m_regex(regex),
+          m_htype(HINT_ROUTE_TO_NAMED_SERVER),
           m_error_printed(false)
     {}
 
-    int add_servers(string server_names);
+    int add_servers(string server_names, bool legacy_mode);
 };
 
 /* Container for address-specific filtering */
