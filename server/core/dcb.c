@@ -2865,8 +2865,7 @@ dcb_accept(DCB *listener)
             if (client_conn.ss_family == AF_UNIX)
             {
                 // client address
-                // Should this be `localhost` like it is in the MariaDB server?
-                client_dcb->remote = MXS_STRDUP_A("localhost_from_socket");
+                client_dcb->remote = MXS_STRDUP_A("localhost");
             }
             else
             {
