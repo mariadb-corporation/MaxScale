@@ -20,7 +20,6 @@ MXS_BEGIN_DECLS
 typedef enum qc_trx_parse_using
 {
     QC_TRX_PARSE_USING_QC,     /**< Use the query classifier. */
-    QC_TRX_PARSE_USING_REGEX,  /**< Use regexp mathing. */
     QC_TRX_PARSE_USING_PARSER, /**< Use custom parser. */
 } qc_trx_parse_using_t;
 

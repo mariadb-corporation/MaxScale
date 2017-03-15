@@ -27,7 +27,6 @@ enum test_target_t
 {
     TEST_PARSER = 0x1,
     TEST_QC     = 0x2,
-    TEST_REGEX  = 0x4,
     TEST_ALL    = (TEST_PARSER | TEST_QC)
 };
 
@@ -52,11 +51,6 @@ GWBUF* create_gwbuf(const char* zStmt)
 uint32_t get_qc_trx_type_mask(GWBUF* pBuf)
 {
     return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_QC);
-}
-
-uint32_t get_regex_trx_type_mask(GWBUF* pBuf)
-{
-    return qc_get_trx_type_mask_using(pBuf, QC_TRX_PARSE_USING_REGEX);
 }
 
 uint32_t get_parser_trx_type_mask(GWBUF* pBuf)
@@ -376,7 +370,7 @@ int main(int argc, char* argv[])
     bool dont_bail_out = false;
 
     int c;
-    while ((c = getopt(argc, argv, "dpqr")) != -1)
+    while ((c = getopt(argc, argv, "dpq")) != -1)
     {
         switch (c)
         {
@@ -388,11 +382,6 @@ int main(int argc, char* argv[])
         case 'q':
             test_all = false;
             test_target = TEST_QC;
-            break;
-
-        case 'r':
-            test_all = false;
-            test_target = TEST_REGEX;
             break;
 
         case 'd':
@@ -430,17 +419,6 @@ int main(int argc, char* argv[])
                     cout << "QC" << endl;
                     cout << "==" << endl;
                     if (!test(get_qc_trx_type_mask, dont_bail_out))
-                    {
-                        rc = EXIT_FAILURE;
-                    }
-                    cout << endl;
-                }
-
-                if (test_target & TEST_REGEX)
-                {
-                    cout << "Regex" << endl;
-                    cout << "=====" << endl;
-                    if (!test(get_regex_trx_type_mask, dont_bail_out))
                     {
                         rc = EXIT_FAILURE;
                     }

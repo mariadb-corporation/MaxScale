@@ -18,7 +18,6 @@
 #include <maxscale/platform.h>
 #include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
-#include "maxscale/trxboundarymatcher.hh"
 #include "maxscale/trxboundaryparser.hh"
 
 #include "../core/maxscale/modules.h"
@@ -87,11 +86,6 @@ bool qc_process_init(uint32_t kind)
             qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
             MXS_NOTICE("Transaction detection using QC.");
         }
-        else if (strcmp(parse_using, "QC_TRX_PARSE_USING_REGEX") == 0)
-        {
-            qc_trx_parse_using = QC_TRX_PARSE_USING_REGEX;
-            MXS_NOTICE("Transaction detection using REGEX.");
-        }
         else if (strcmp(parse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
         {
             qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
@@ -104,32 +98,19 @@ bool qc_process_init(uint32_t kind)
         }
     }
 
-    bool rc = maxscale::TrxBoundaryMatcher::process_init();
+    bool rc = qc_thread_init(QC_INIT_SELF);
 
     if (rc)
     {
-        rc = qc_thread_init(QC_INIT_SELF);
-
-        if (rc)
+        if (kind & QC_INIT_PLUGIN)
         {
-            if (kind & QC_INIT_PLUGIN)
-            {
-                rc = classifier->qc_process_init() == 0;
+            rc = classifier->qc_process_init() == 0;
 
-                if (!rc)
-                {
-                    qc_thread_end(QC_INIT_SELF);
-                }
+            if (!rc)
+            {
+                qc_thread_end(QC_INIT_SELF);
             }
         }
-        else
-        {
-            maxscale::TrxBoundaryMatcher::process_end();
-        }
-    }
-    else
-    {
-        MXS_ERROR("Could not compile transaction regexes.");
     }
 
     return rc;
@@ -146,8 +127,6 @@ void qc_process_end(uint32_t kind)
     }
 
     qc_thread_end(QC_INIT_SELF);
-
-    maxscale::TrxBoundaryMatcher::process_end();
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -178,20 +157,11 @@ bool qc_thread_init(uint32_t kind)
     QC_TRACE();
     ss_dassert(classifier);
 
-    bool rc = maxscale::TrxBoundaryMatcher::thread_init();
+    bool rc = true;
 
-    if (rc)
+    if (kind & QC_INIT_PLUGIN)
     {
-        if (kind & QC_INIT_PLUGIN)
-        {
-            rc = classifier->qc_thread_init() == 0;
-
-            if (!rc)
-            {
-                maxscale::TrxBoundaryMatcher::thread_end();
-                rc = false;
-            }
-        }
+        rc = classifier->qc_thread_init() == 0;
     }
 
     return rc;
@@ -206,8 +176,6 @@ void qc_thread_end(uint32_t kind)
     {
         classifier->qc_thread_end();
     }
-
-    maxscale::TrxBoundaryMatcher::thread_end();
 }
 
 qc_parse_result_t qc_parse(GWBUF* query)
@@ -901,11 +869,6 @@ static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
     return type_mask;
 }
 
-static uint32_t qc_get_trx_type_mask_using_regex(GWBUF* stmt)
-{
-    return maxscale::TrxBoundaryMatcher::type_mask_of(stmt);
-}
-
 static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
 {
     maxscale::TrxBoundaryParser parser;
@@ -921,10 +884,6 @@ uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
     {
     case QC_TRX_PARSE_USING_QC:
         type_mask = qc_get_trx_type_mask_using_qc(stmt);
-        break;
-
-    case QC_TRX_PARSE_USING_REGEX:
-        type_mask = qc_get_trx_type_mask_using_regex(stmt);
         break;
 
     case QC_TRX_PARSE_USING_PARSER:
