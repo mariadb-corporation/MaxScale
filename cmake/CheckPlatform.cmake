@@ -44,11 +44,6 @@ check_include_files(time.h HAVE_TIME)
 check_include_files(unistd.h HAVE_UNISTD)
 
 # Check for libraries MaxScale depends on
-find_library(HAVE_LIBAIO NAMES aio)
-if(NOT HAVE_LIBAIO)
-  message(FATAL_ERROR "Could not find libaio")
-endif()
-
 find_library(HAVE_LIBSSL NAMES ssl)
 if(NOT HAVE_LIBSSL)
   message(FATAL_ERROR "Could not find libssl")
