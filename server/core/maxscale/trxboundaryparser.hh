@@ -542,12 +542,23 @@ private:
         return type_mask;
     }
 
+    inline bool is_next_alpha(char uc, int offset = 1) const
+    {
+        ss_dassert(uc >= 'A' && uc <= 'Z');
+
+        char lc = uc + ('a' - 'A');
+
+        return
+            ((m_pI + offset) < m_pEnd) &&
+            ((*(m_pI + offset) == uc) || (*(m_pI + offset) == lc));
+    }
+
     bool is_next_char(char c, int offset = 1) const
     {
         return ((m_pI + offset) < m_pEnd) && (*(m_pI + offset) == c);
     }
 
-    bool get_next_char(char* pC) const
+    bool peek_next_char(char* pC) const
     {
         bool rc = (m_pI + 1 < m_pEnd);
 
@@ -559,20 +570,28 @@ private:
         return rc;
     }
 
+    // Significantly faster than library version.
+    static char toupper(char c)
+    {
+        return (c >= 'a' && c <='z') ? c - ('a' - 'A') : c;
+    }
+
     token_t expect_token(const char* zWord, int len, token_t token)
     {
-        const char* pNext = m_pI;
+        const char* pI = m_pI;
+        const char* pEnd = zWord + len;
 
-        while ((pNext < m_pEnd) && (isalpha(*pNext) || (*pNext == '@')))
+        while ((pI < m_pEnd) && (zWord < pEnd) && (toupper(*pI) == *zWord))
         {
-            ++pNext;
+            ++pI;
+            ++zWord;
         }
 
-        if (pNext - m_pI == len)
+        if (zWord == pEnd)
         {
-            if (strncasecmp(m_pI, zWord, len) == 0)
+            if ((pI == m_pEnd) || (!isalpha(*pI))) // Handwritten isalpha not faster than library version.
             {
-                m_pI = pNext;
+                m_pI = pI;
             }
             else
             {
@@ -723,28 +742,28 @@ private:
             switch (*m_pI)
             {
             case '@':
-                if (is_next_char('a', 2) || is_next_char('A', 2))
+                if (is_next_alpha('A', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@autocommit"), TK_AUTOCOMMIT);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@AUTOCOMMIT"), TK_AUTOCOMMIT);
                 }
-                if (is_next_char('s', 2) || is_next_char('S', 2))
+                else if (is_next_alpha('S', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@session"), TK_SESSION_VAR);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@SESSION"), TK_SESSION_VAR);
                 }
-                else if (is_next_char('g', 2) || is_next_char('G', 2))
+                else if (is_next_alpha('G', 2))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("@@global"), TK_GLOBAL_VAR);
+                    token = expect_token(TBP_EXPECT_TOKEN("@@GLOBAL"), TK_GLOBAL_VAR);
                 }
                 break;
 
             case 'a':
             case 'A':
-                token = expect_token(TBP_EXPECT_TOKEN("autocommit"), TK_AUTOCOMMIT);
+                token = expect_token(TBP_EXPECT_TOKEN("AUTOCOMMIT"), TK_AUTOCOMMIT);
                 break;
 
             case 'b':
             case 'B':
-                token = expect_token(TBP_EXPECT_TOKEN("begin"), TK_BEGIN);
+                token = expect_token(TBP_EXPECT_TOKEN("BEGIN"), TK_BEGIN);
                 break;
 
             case ',':
@@ -754,15 +773,15 @@ private:
 
             case 'c':
             case 'C':
-                if (is_next_char('o') || is_next_char('O'))
+                if (is_next_alpha('O'))
                 {
-                    if (is_next_char('m', 2) || is_next_char('M', 2))
+                    if (is_next_alpha('M', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("commit"), TK_COMMIT);
+                        token = expect_token(TBP_EXPECT_TOKEN("COMMIT"), TK_COMMIT);
                     }
-                    else if (is_next_char('n', 2) || is_next_char('N', 2))
+                    else if (is_next_alpha('N', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("consistent"), TK_CONSISTENT);
+                        token = expect_token(TBP_EXPECT_TOKEN("CONSISTENT"), TK_CONSISTENT);
                     }
                 }
                 break;
@@ -779,18 +798,18 @@ private:
 
             case 'f':
             case 'F':
-                token = expect_token(TBP_EXPECT_TOKEN("false"), TK_FALSE);
+                token = expect_token(TBP_EXPECT_TOKEN("FALSE"), TK_FALSE);
                 break;
 
             case 'g':
             case 'G':
-                token = expect_token(TBP_EXPECT_TOKEN("global"), TK_GLOBAL);
+                token = expect_token(TBP_EXPECT_TOKEN("GLOBAL"), TK_GLOBAL);
                 break;
 
             case '1':
                 {
                     char c;
-                    if (!get_next_char(&c) || !isdigit(c))
+                    if (!peek_next_char(&c) || !isdigit(c))
                     {
                         ++m_pI;
                         token = TK_ONE;
@@ -800,93 +819,93 @@ private:
 
             case 'o':
             case 'O':
-                if (is_next_char('f') || is_next_char('F'))
+                if (is_next_alpha('F'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("off"), TK_ZERO);
+                    token = expect_token(TBP_EXPECT_TOKEN("OFF"), TK_ZERO);
                 }
-                else if (is_next_char('n') || is_next_char('N'))
+                else if (is_next_alpha('N'))
                 {
-                    if (is_next_char('l', 2) || is_next_char('L', 2))
+                    if (is_next_char('L', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("only"), TK_ONLY);
+                        token = expect_token(TBP_EXPECT_TOKEN("ONLY"), TK_ONLY);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("on"), TK_ONE);
+                        token = expect_token(TBP_EXPECT_TOKEN("ON"), TK_ONE);
                     }
                 }
                 break;
 
             case 'r':
             case 'R':
-                if (is_next_char('e') || is_next_char('E'))
+                if (is_next_alpha('E'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("read"), TK_READ);
+                    token = expect_token(TBP_EXPECT_TOKEN("READ"), TK_READ);
                 }
-                else if (is_next_char('o') || is_next_char('O'))
+                else if (is_next_alpha('O'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("rollback"), TK_ROLLBACK);
+                    token = expect_token(TBP_EXPECT_TOKEN("ROLLBACK"), TK_ROLLBACK);
                 }
                 break;
 
             case 's':
             case 'S':
-                if (is_next_char('e') || is_next_char('E'))
+                if (is_next_alpha('E'))
                 {
-                    if (is_next_char('s', 2) || is_next_char('S', 2))
+                    if (is_next_alpha('S', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("session"), TK_SESSION);
+                        token = expect_token(TBP_EXPECT_TOKEN("SESSION"), TK_SESSION);
                     }
                     else
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("set"), TK_SET);
+                        token = expect_token(TBP_EXPECT_TOKEN("SET"), TK_SET);
                     }
                 }
-                else if (is_next_char('n') || is_next_char('N'))
+                else if (is_next_alpha('N'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("snapshot"), TK_SNAPSHOT);
+                    token = expect_token(TBP_EXPECT_TOKEN("SNAPSHOT"), TK_SNAPSHOT);
                 }
-                else if (is_next_char('t') || is_next_char('T'))
+                else if (is_next_char('T'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("start"), TK_START);
+                    token = expect_token(TBP_EXPECT_TOKEN("START"), TK_START);
                 }
                 break;
 
             case 't':
             case 'T':
-                if (is_next_char('r') || is_next_char('R'))
+                if (is_next_alpha('R'))
                 {
-                    if (is_next_char('a', 2) || is_next_char('A', 2))
+                    if (is_next_alpha('A', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("transaction"), TK_TRANSACTION);
+                        token = expect_token(TBP_EXPECT_TOKEN("TRANSACTION"), TK_TRANSACTION);
                     }
-                    else if (is_next_char('u', 2) || is_next_char('U', 2))
+                    else if (is_next_alpha('U', 2))
                     {
-                        token = expect_token(TBP_EXPECT_TOKEN("true"), TK_TRUE);
+                        token = expect_token(TBP_EXPECT_TOKEN("TRUE"), TK_TRUE);
                     }
                 }
                 break;
 
             case 'w':
             case 'W':
-                if (is_next_char('i') || is_next_char('I'))
+                if (is_next_alpha('I'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("with"), TK_WITH);
+                    token = expect_token(TBP_EXPECT_TOKEN("WITH"), TK_WITH);
                 }
-                else if (is_next_char('o') || is_next_char('O'))
+                else if (is_next_alpha('O'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("work"), TK_WORK);
+                    token = expect_token(TBP_EXPECT_TOKEN("WORK"), TK_WORK);
                 }
-                else if (is_next_char('r') || is_next_char('R'))
+                else if (is_next_alpha('R'))
                 {
-                    token = expect_token(TBP_EXPECT_TOKEN("write"), TK_WRITE);
+                    token = expect_token(TBP_EXPECT_TOKEN("WRITE"), TK_WRITE);
                 }
                 break;
 
             case '0':
                 {
                     char c;
-                    if (!get_next_char(&c) || !isdigit(c))
+                    if (!peek_next_char(&c) || !isdigit(c))
                     {
                         ++m_pI;
                         token = TK_ZERO;
