@@ -376,7 +376,7 @@ int main(int argc, char* argv[])
     bool dont_bail_out = false;
 
     int c;
-    while ((c = getopt(argc, argv, "pqr")) != -1)
+    while ((c = getopt(argc, argv, "dpqr")) != -1)
     {
         switch (c)
         {
