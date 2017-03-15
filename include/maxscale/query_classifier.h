@@ -30,6 +30,18 @@ typedef enum qc_init_kind
 } qc_init_kind_t;
 
 /**
+ * @c qc_collect_info_t specifies what information should be collected during parsing.
+ */
+typedef enum qc_collect_info
+{
+    QC_COLLECT_TABLES    = 0x01, /*< Collect table names. */
+    QC_COLLECT_DATABASES = 0x02, /*< Collect database names. */
+    QC_COLLECT_FIELDS    = 0x04, /*< Collect field information. */
+    QC_COLLECT_FUNCTIONS = 0x08, /*< Collect function information. */
+
+    QC_COLLECT_ALL = (QC_COLLECT_TABLES|QC_COLLECT_DATABASES|QC_COLLECT_FIELDS|QC_COLLECT_FUNCTIONS)
+} qc_collect_info_t;
+/**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
  *
@@ -196,13 +208,16 @@ typedef struct query_classifier
     /**
      * Called to explicitly parse a statement.
      *
-     * @param stmt    The statement to be parsed.
-     * @param result  On return, the parse result, if @c QC_RESULT_OK is returned.
+     * @param stmt     The statement to be parsed.
+     * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+     *                 should be collected. Only a hint and must not restrict what information
+     *                 later can be queried.
+     * @param result   On return, the parse result, if @c QC_RESULT_OK is returned.
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (*qc_parse)(GWBUF* stmt, int32_t* result);
+    int32_t (*qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
 
     /**
      * Reports the type of the statement.
@@ -476,11 +491,17 @@ void qc_thread_end(uint32_t kind);
  * already then this function will only return the result of that parsing;
  * the statement will not be parsed again.
  *
- * @param stmt  A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
+ * @param stmt     A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
+ * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+ *                 should be collected.
+ *
+ *                 Note that this is merely a hint and does not restrict what
+ *                 information can be queried for. If necessary, the statement
+ *                 will transparently be reparsed.
  *
  * @return To what extent the statement could be parsed.
  */
-qc_parse_result_t qc_parse(GWBUF* stmt);
+qc_parse_result_t qc_parse(GWBUF* stmt, uint32_t collect);
 
 /**
  * Convert a qc_field_usage_t enum to corresponding string.

@@ -2792,7 +2792,7 @@ static int32_t qc_sqlite_process_init(void);
 static void qc_sqlite_process_end(void);
 static int32_t qc_sqlite_thread_init(void);
 static void qc_sqlite_thread_end(void);
-static int32_t qc_sqlite_parse(GWBUF* query, int32_t* result);
+static int32_t qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result);
 static int32_t qc_sqlite_get_type_mask(GWBUF* query, uint32_t* typemask);
 static int32_t qc_sqlite_get_operation(GWBUF* query, int32_t* op);
 static int32_t qc_sqlite_get_created_table_name(GWBUF* query, char** name);
@@ -3010,7 +3010,7 @@ static void qc_sqlite_thread_end(void)
     this_thread.initialized = false;
 }
 
-static int32_t qc_sqlite_parse(GWBUF* query, int32_t* result)
+static int32_t qc_sqlite_parse(GWBUF* query, uint32_t collect, int32_t* result)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);

@@ -312,13 +312,13 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     int32_t rv1;
-    pClassifier1->qc_parse(pCopy1, &rv1);
+    pClassifier1->qc_parse(pCopy1, QC_COLLECT_ALL, &rv1);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time1, start, finish);
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     int32_t rv2;
-    pClassifier2->qc_parse(pCopy2, &rv2);
+    pClassifier2->qc_parse(pCopy2, QC_COLLECT_ALL, &rv2);
     clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
     update_time(&global.time2, start, finish);
 

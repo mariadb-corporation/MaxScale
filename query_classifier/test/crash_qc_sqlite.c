@@ -51,7 +51,7 @@ int main()
         // being of the opinion that the statement was not the one to be
         // classified and hence an alien parse-tree being passed to sqlite3's
         // code generator.
-        qc_parse(stmt);
+        qc_parse(stmt, QC_COLLECT_ALL);
 
         qc_process_end(QC_INIT_BOTH);
 

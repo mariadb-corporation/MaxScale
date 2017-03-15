@@ -2007,7 +2007,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        qc_parse_result_t parse_result = qc_parse(queue);
+        qc_parse_result_t parse_result = qc_parse(queue, QC_COLLECT_ALL);
 
         if (parse_result == QC_QUERY_INVALID)
         {

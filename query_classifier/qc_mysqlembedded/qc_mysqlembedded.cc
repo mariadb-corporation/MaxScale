@@ -136,7 +136,7 @@ bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
-int32_t qc_mysql_parse(GWBUF* querybuf, int32_t* result)
+int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 {
     bool parsed = ensure_query_is_parsed(querybuf);
 
