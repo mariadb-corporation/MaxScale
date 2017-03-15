@@ -1256,6 +1256,12 @@ bool set_dirs(const char *basedir)
         set_config_persistdir(path);
     }
 
+    if (rv && (rv = handle_path_arg(&path, basedir,
+                                    "var/" MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH, true, true)))
+    {
+        set_connector_plugindir(path);
+    }
+
     return rv;
 }
 
