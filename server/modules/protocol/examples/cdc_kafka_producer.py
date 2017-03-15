@@ -45,7 +45,7 @@ while True:
 
       while True:
          rbuf = rbuf.lstrip()
-         data = decoder.raw_decode(rbuf.decode('ascii'))
+         data = decoder.raw_decode(rbuf.decode('utf_8'))
          rbuf = rbuf[data[1]:]
          producer.send(topic=opts.kafka_topic, value=json.dumps(data[0]).encode())
          producer.flush()

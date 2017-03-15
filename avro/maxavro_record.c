@@ -99,10 +99,11 @@ static json_t* read_and_pack_value(MAXAVRO_FILE *file, MAXAVRO_SCHEMA_FIELD *fie
     case MAXAVRO_TYPE_BYTES:
     case MAXAVRO_TYPE_STRING:
         {
-            char *str = maxavro_read_string(file);
+            size_t len;
+            char *str = maxavro_read_string(file, &len);
             if (str)
             {
-                value = json_string(str);
+                value = json_stringn(str, len);
                 free(str);
             }
         }
