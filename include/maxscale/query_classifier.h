@@ -34,10 +34,11 @@ typedef enum qc_init_kind
  */
 typedef enum qc_collect_info
 {
-    QC_COLLECT_TABLES    = 0x01, /*< Collect table names. */
-    QC_COLLECT_DATABASES = 0x02, /*< Collect database names. */
-    QC_COLLECT_FIELDS    = 0x04, /*< Collect field information. */
-    QC_COLLECT_FUNCTIONS = 0x08, /*< Collect function information. */
+    QC_COLLECT_ESSENTIALS = 0x00, /*< Collect only the base minimum. */
+    QC_COLLECT_TABLES     = 0x01, /*< Collect table names. */
+    QC_COLLECT_DATABASES  = 0x02, /*< Collect database names. */
+    QC_COLLECT_FIELDS     = 0x04, /*< Collect field information. */
+    QC_COLLECT_FUNCTIONS  = 0x08, /*< Collect function information. */
 
     QC_COLLECT_ALL = (QC_COLLECT_TABLES|QC_COLLECT_DATABASES|QC_COLLECT_FIELDS|QC_COLLECT_FUNCTIONS)
 } qc_collect_info_t;
