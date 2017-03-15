@@ -307,11 +307,11 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 
     if (port->address)
     {
-        sprintf(config_bind, "%s:%d", port->address, port->port);
+        sprintf(config_bind, "%s|%d", port->address, port->port);
     }
     else
     {
-        sprintf(config_bind, "0.0.0.0:%d", port->port);
+        sprintf(config_bind, "0.0.0.0|%d", port->port);
     }
 
     /** Load the authentication users before before starting the listener */

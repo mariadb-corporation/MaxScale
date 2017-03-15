@@ -102,7 +102,6 @@ static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
 static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
 static SERVER_REF *get_root_master(SERVER_REF *servers);
-static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession);
 
 /**
  * The module entry point routine. It is this routine that
@@ -809,50 +808,4 @@ static SERVER_REF *get_root_master(SERVER_REF *servers)
         }
     }
     return master_host;
-}
-
-static int handle_state_switch(DCB* dcb, DCB_REASON reason, void * routersession)
-{
-    ss_dassert(dcb != NULL);
-    MXS_SESSION* session = dcb->session;
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES*) routersession;
-    SERVICE* service = session->service;
-    MXS_ROUTER* router = (MXS_ROUTER *) service->router;
-
-    if (NULL == dcb->session->router_session && DCB_REASON_ERROR != reason)
-    {
-        /*
-         * We cannot handle a DCB that does not have a router session,
-         * except in the case where error processing is invoked.
-         */
-        return 0;
-    }
-    switch (reason)
-    {
-    case DCB_REASON_CLOSE:
-        dcb->func.close(dcb);
-        break;
-    case DCB_REASON_DRAINED:
-        /** Do we need to do anything? */
-        break;
-    case DCB_REASON_HIGH_WATER:
-        /** Do we need to do anything? */
-        break;
-    case DCB_REASON_LOW_WATER:
-        /** Do we need to do anything? */
-        break;
-    case DCB_REASON_ERROR:
-        dcb->func.error(dcb);
-        break;
-    case DCB_REASON_HUP:
-        dcb->func.hangup(dcb);
-        break;
-    case DCB_REASON_NOT_RESPONDING:
-        dcb->func.hangup(dcb);
-        break;
-    default:
-        break;
-    }
-
-    return 0;
 }

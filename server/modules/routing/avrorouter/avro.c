@@ -904,7 +904,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
 
             dcb_printf(dcb, "\t\tClient UUID:                 %s\n", session->uuid);
             dcb_printf(dcb, "\t\tClient_host_port:            %s:%d\n",
-                       session->dcb->remote, ntohs((session->dcb->ipv4).sin_port));
+                       session->dcb->remote, dcb_get_port(session->dcb));
             dcb_printf(dcb, "\t\tUsername:                    %s\n", session->dcb->user);
             dcb_printf(dcb, "\t\tClient DCB:                  %p\n", session->dcb);
             dcb_printf(dcb, "\t\tClient protocol:             %s\n",

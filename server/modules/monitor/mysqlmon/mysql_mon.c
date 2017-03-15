@@ -1777,8 +1777,11 @@ static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *mon, int num_serve
                                                               master->server->unique_name);
                     ss_dassert(info);
 
-                    /** Only set the Master status if read_only is disabled */
-                    monitor_set_pending_status(master, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
+                    if (SERVER_IS_RUNNING(master->server))
+                    {
+                        /** Only set the Master status if read_only is disabled */
+                        monitor_set_pending_status(master, info->read_only ? SERVER_SLAVE : SERVER_MASTER);
+                    }
 
                     handle->master = master;
                 }

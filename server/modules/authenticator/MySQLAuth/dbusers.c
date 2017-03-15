@@ -53,7 +53,7 @@ static int get_users(SERV_LISTENER *listener);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
-static bool get_hostname(const char *ip_address, char *client_hostname);
+static bool get_hostname(DCB *dcb, char *client_hostname, size_t size);
 
 static char* get_new_users_query(const char *server_version, bool include_root)
 {
@@ -208,7 +208,8 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
          * as a last resort so we avoid the high cost of the DNS lookup.
          */
         char client_hostname[MYSQL_HOST_MAXLEN];
-        get_hostname(dcb->remote, client_hostname);
+        get_hostname(dcb, client_hostname, sizeof(client_hostname) - 1);
+
         sprintf(sql, mysqlauth_validate_user_query, session->user, client_hostname,
                 client_hostname, session->db, session->db);
 
@@ -237,12 +238,6 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
                 rval = MXS_AUTH_FAILED_DB;
             }
         }
-        else if (session->auth_token_len)
-        {
-            /** If authentication fails, this will trigger the right
-             * error message with `Using password : YES` */
-            session->client_sha1[0] = '_';
-        }
     }
 
     return rval;
@@ -267,6 +262,69 @@ static bool delete_mysql_users(sqlite3 *handle)
     }
 
     return rval;
+}
+
+/**
+ * If the hostname is of form a.b.c.d/e.f.g.h where e-h is 255 or 0, replace
+ * the zeros in the first part with '%' and remove the second part. This does
+ * not yet support netmasks completely, but should be sufficient for most
+ * situations. In case of error, the hostname may end in an invalid state, which
+ * will cause an error later on.
+ *
+ * @param host  The hostname, which is modified in-place. If merging is unsuccessful,
+ *              it may end up garbled.
+ */
+static void merge_netmask(char *host)
+{
+    char *delimiter_loc = strchr(host, '/');
+    if (delimiter_loc == NULL)
+    {
+        return; // Nothing to do
+    }
+    /* If anything goes wrong, we put the '/' back in to ensure the hostname
+     * cannot be used.
+     */
+    *delimiter_loc = '\0';
+
+    char *ip_token_loc = host;
+    char *mask_token_loc = delimiter_loc + 1; // This is at minimum a \0
+
+    while (ip_token_loc && mask_token_loc)
+    {
+        if (strncmp(mask_token_loc, "255", 3) == 0)
+        {
+            // Skip
+        }
+        else if (*mask_token_loc == '0' && *ip_token_loc == '0')
+        {
+            *ip_token_loc = '%';
+        }
+        else
+        {
+            /* Any other combination is considered invalid. This may leave the
+             * hostname in a partially modified state.
+             * TODO: handle more cases
+             */
+            *delimiter_loc = '/';
+            MXS_ERROR("Unrecognized IP-bytes in host/mask-combination. "
+                    "Merge incomplete: %s", host);
+            return;
+        }
+
+        ip_token_loc = strchr(ip_token_loc, '.');
+        mask_token_loc = strchr(mask_token_loc, '.');
+        if (ip_token_loc && mask_token_loc)
+        {
+            ip_token_loc++;
+            mask_token_loc++;
+        }
+    }
+    if (ip_token_loc || mask_token_loc)
+    {
+        *delimiter_loc = '/';
+        MXS_ERROR("Unequal number of IP-bytes in host/mask-combination. "
+                "Merge incomplete: %s", host);
+    }
 }
 
 void add_mysql_user(sqlite3 *handle, const char *user, const char *host,
@@ -611,30 +669,27 @@ bool check_service_permissions(SERVICE* service)
  *
  * @return True if the hostname query was successful
  */
-static bool get_hostname(const char *ip_address, char *client_hostname)
+static bool get_hostname(DCB *dcb, char *client_hostname, size_t size)
 {
-    /* Looks like the parameters are valid. First, convert the client IP string
-     * to binary form. This is somewhat silly, since just a while ago we had the
-     * binary address but had to zero it. dbusers.c should be refactored to fix this.
-     */
-    struct sockaddr_in bin_address;
-    bin_address.sin_family = AF_INET;
-    if (inet_pton(bin_address.sin_family, ip_address, &(bin_address.sin_addr)) != 1)
+    struct addrinfo *ai = NULL, hint = {};
+    hint.ai_flags = AI_ALL;
+    int rc;
+
+    if ((rc = getaddrinfo(dcb->remote, NULL, &hint, &ai)) != 0)
     {
-        MXS_ERROR("Could not convert to binary ip-address: '%s'.", ip_address);
+        MXS_ERROR("Failed to obtain address for host %s, %s",
+                  dcb->remote, gai_strerror(rc));
         return false;
     }
 
     /* Try to lookup the domain name of the given IP-address. This is a slow
      * i/o-operation, which will stall the entire thread. TODO: cache results
-     * if this feature is used often.
-     */
-    MXS_DEBUG("Resolving '%s'", ip_address);
-    int lookup_result = getnameinfo((struct sockaddr*)&bin_address,
-                                    sizeof(struct sockaddr_in),
-                                    client_hostname, sizeof(client_hostname),
+     * if this feature is used often. */
+    int lookup_result = getnameinfo(ai->ai_addr, ai->ai_addrlen,
+                                    client_hostname, size,
                                     NULL, 0, // No need for the port
                                     NI_NAMEREQD); // Text address only
+    freeaddrinfo(ai);
 
     if (lookup_result != 0)
     {
@@ -646,7 +701,7 @@ static bool get_hostname(const char *ip_address, char *client_hostname)
         MXS_DEBUG("IP-lookup success, hostname is: '%s'", client_hostname);
     }
 
-    return false;
+    return lookup_result == 0;
 }
 
 void start_sqlite_transaction(sqlite3 *handle)
@@ -695,8 +750,6 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
             {
                 start_sqlite_transaction(instance->handle);
 
-                /** Delete the old users */
-                delete_mysql_users(instance->handle);
                 MYSQL_ROW row;
 
                 while ((row = mysql_fetch_row(result)))
@@ -704,6 +757,11 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
                     if (service->strip_db_esc)
                     {
                         strip_escape_chars(row[2]);
+                    }
+
+                    if (strchr(row[1], '/'))
+                    {
+                        merge_netmask(row[1]);
                     }
 
                     add_mysql_user(instance->handle, row[0], row[1], row[2],
@@ -785,6 +843,10 @@ static int get_users(SERV_LISTENER *listener)
     {
         return -1;
     }
+
+    /** Delete the old users */
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)listener->auth_instance;
+    delete_mysql_users(instance->handle);
 
     SERVER_REF *server = service->dbref;
     int total_users = -1;

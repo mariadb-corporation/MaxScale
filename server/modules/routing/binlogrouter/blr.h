@@ -736,14 +736,15 @@ typedef struct binlog_pos_fix
 #define BLRM_SERVER_VARS        0x0016
 #define BLRM_BINLOG_VARS        0x0017
 #define BLRM_LOWER_CASE_TABLES  0x0018
-#define BLRM_REGISTER           0x0019
-#define BLRM_CHECK_SEMISYNC     0x001A
-#define BLRM_REQUEST_SEMISYNC   0x001B
-#define BLRM_REQUEST_BINLOGDUMP 0x001C
-#define BLRM_BINLOGDUMP         0x001D
-#define BLRM_SLAVE_STOPPED      0x001E
+#define BLRM_REGISTER_READY     0x0019
+#define BLRM_REGISTER           0x001A
+#define BLRM_CHECK_SEMISYNC     0x001B
+#define BLRM_REQUEST_SEMISYNC   0x001C
+#define BLRM_REQUEST_BINLOGDUMP 0x001D
+#define BLRM_BINLOGDUMP         0x001E
+#define BLRM_SLAVE_STOPPED      0x001F
 
-#define BLRM_MAXSTATE           0x001E
+#define BLRM_MAXSTATE           0x001F
 
 static char *blrm_states[] =
 {
@@ -772,6 +773,7 @@ static char *blrm_states[] =
     "Query server variables",
     "Query binlog variables",
     "Query @@lower_case_table_names",
+    "Ready to Register",
     "Register slave",
     "Semi-Sync Support retrivial",
     "Request Semi-Sync Replication",

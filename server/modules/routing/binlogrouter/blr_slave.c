@@ -2262,7 +2262,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                       "Latest safe position %lu, end of binlog file %lu",
                       router->service->name,
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       (unsigned long)slave->binlog_pos,
@@ -2382,7 +2382,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 
     MXS_NOTICE("%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
                router->service->name, slave->dcb->remote,
-               ntohs((slave->dcb->ipv4).sin_port),
+               dcb_get_port(slave->dcb),
                slave->serverid,
                slave->binlogfile, (unsigned long)slave->binlog_pos);
 
@@ -2546,7 +2546,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             }
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup "
                       "failed to open binlog file",
-                      slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
+                      slave->dcb->remote, dcb_get_port(slave->dcb), slave->serverid,
                       slave->binlogfile);
 
             slave->cstate &= ~CS_BUSY;
@@ -2675,7 +2675,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                 MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup "
                           "failed to open binlog file in rotate event",
                           slave->dcb->remote,
-                          ntohs((slave->dcb->ipv4).sin_port),
+                          dcb_get_port(slave->dcb),
                           slave->serverid,
                           slave->binlogfile);
 
@@ -2719,7 +2719,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             MXS_WARNING("Slave %s:%i, server-id %d, binlog '%s, position %u: "
                         "Slave-thread could not send event to slave, closing connection.",
                         slave->dcb->remote,
-                        ntohs((slave->dcb->ipv4).sin_port),
+                        dcb_get_port(slave->dcb),
                         slave->serverid,
                         binlog_name,
                         binlog_pos);
@@ -2754,7 +2754,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
                       router->service->name,
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       read_errmsg);
@@ -2765,7 +2765,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
                       router->service->name,
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       read_errmsg);
@@ -2787,7 +2787,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
                       router->service->name,
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       read_errmsg);
@@ -2822,7 +2822,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                        "current committed transaction event being sent: %lu, %s",
                        router->service->name,
                        slave->dcb->remote,
-                       ntohs((slave->dcb->ipv4).sin_port),
+                       dcb_get_port(slave->dcb),
                        slave->serverid,
                        slave->binlogfile,
                        slave->stats.n_events - events_before,
@@ -2897,7 +2897,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
                       "previous failure of the master.",
                       router->service->name,
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile, (unsigned long)slave->binlog_pos,
                       router->binlog_name, router->binlog_position);
@@ -3142,7 +3142,7 @@ blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
         {
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       err_msg);
@@ -6104,7 +6104,7 @@ blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_en
         {
             MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
                       slave->dcb->remote,
-                      ntohs((slave->dcb->ipv4).sin_port),
+                      dcb_get_port(slave->dcb),
                       slave->serverid,
                       slave->binlogfile,
                       err_msg);

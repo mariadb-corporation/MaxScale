@@ -83,7 +83,6 @@ typedef struct duplicate_context
 static bool duplicate_context_init(DUPLICATE_CONTEXT* context);
 static void duplicate_context_finish(DUPLICATE_CONTEXT* context);
 
-extern int setipaddress(struct in_addr *, char *);
 static bool process_config_context(CONFIG_CONTEXT *);
 static bool process_config_update(CONFIG_CONTEXT *);
 static char *config_get_value(MXS_CONFIG_PARAMETER *, const char *);
@@ -3401,16 +3400,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if ((context && config_contains_type(context, value, "service")) ||
-                    service_find(value))
+                if (context && config_contains_type(context, value, "service"))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if ((context && config_contains_type(context, value, "server")) ||
-                    server_find_by_unique_name(value))
+                if (context && config_contains_type(context, value, "server"))
                 {
                     valid = true;
                 }
