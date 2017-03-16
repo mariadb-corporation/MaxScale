@@ -79,7 +79,29 @@ typedef struct
                                    down before failover is initiated */
     bool allow_cluster_recovery; /**< Allow failed servers to rejoin the cluster */
     bool warn_failover; /**< Log a warning when failover happens */
+    bool load_backup; /**< Whether backup file should be loaded */
 } MYSQL_MONITOR;
+
+/**
+ * @brief Store a backup of server states
+ *
+ * @param monitor Monitor to backup
+ */
+void store_server_backup(MXS_MONITOR *monitor);
+
+/**
+ * @brief Load a backup of server states
+ *
+ * @param monitor Monitor where backup is loaded
+ */
+void load_server_backup(MXS_MONITOR *monitor);
+
+/**
+ * @brief Remove stored backup file
+ *
+ * @param monitor Monitor whose backup is removed
+ */
+void remove_server_backup(MXS_MONITOR *monitor);
 
 MXS_END_DECLS
 

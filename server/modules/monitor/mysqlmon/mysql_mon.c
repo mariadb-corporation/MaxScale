@@ -269,6 +269,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
+        handle->load_backup = true;
         spinlock_init(&handle->lock);
     }
 
@@ -326,6 +327,9 @@ stopMonitor(MXS_MONITOR *mon)
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
+
+    /** Controlled shutdown, remove stored backup */
+    remove_server_backup(mon);
 }
 
 /**
@@ -1098,6 +1102,12 @@ monitorMain(void *arg)
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
 
+        if (handle->load_backup)
+        {
+            handle->load_backup = false;
+            load_server_backup(mon);
+        }
+
         /* start from the first server in the list */
         ptr = mon->databases;
 
@@ -1375,6 +1385,7 @@ monitorMain(void *arg)
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
+        store_server_backup(mon);
         release_monitor_servers(mon);
     } /*< while (1) */
 }
