@@ -49,6 +49,8 @@ void cache_config_finish(CACHE_CONFIG& config)
     config.hard_ttl = 0;
     config.soft_ttl = 0;
     config.debug = 0;
+    config.thread_model = CACHE_THREAD_MODEL_MT;
+    config.selects = CACHE_SELECTS_VERIFY_CACHEABLE;
 }
 
 /**
@@ -107,10 +109,18 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
 //
 
 // Enumeration values for `cached_data`
-static const MXS_ENUM_VALUE cached_data_values[] =
+static const MXS_ENUM_VALUE parameter_cached_data_values[] =
 {
     {"shared",          CACHE_THREAD_MODEL_MT},
     {"thread_specific", CACHE_THREAD_MODEL_ST},
+    {NULL}
+};
+
+// Enumeration values for `selects`
+static const MXS_ENUM_VALUE parameter_selects_values[] =
+{
+    {"assume_cacheable", CACHE_SELECTS_ASSUME_CACHEABLE},
+    {"verify_cacheable", CACHE_SELECTS_VERIFY_CACHEABLE},
     {NULL}
 };
 
@@ -194,7 +204,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                 MXS_MODULE_PARAM_ENUM,
                 CACHE_DEFAULT_THREAD_MODEL,
                 MXS_MODULE_OPT_NONE,
-                cached_data_values
+                parameter_cached_data_values
+            },
+            {
+                "selects",
+                MXS_MODULE_PARAM_ENUM,
+                CACHE_DEFAULT_SELECTS,
+                MXS_MODULE_OPT_NONE,
+                parameter_selects_values
             },
             {MXS_END_MODULE_PARAMS}
         }
@@ -291,7 +308,10 @@ bool CacheFilter::process_params(char **pzOptions, MXS_CONFIG_PARAMETER *ppParam
     config.max_resultset_size = config_get_size(ppParams, "max_resultset_size");
     config.thread_model = static_cast<cache_thread_model_t>(config_get_enum(ppParams,
                                                                             "cached_data",
-                                                                            cached_data_values));
+                                                                            parameter_cached_data_values));
+    config.selects = static_cast<cache_selects_t>(config_get_enum(ppParams,
+                                                                  "selects",
+                                                                  parameter_selects_values));
 
     if (!config.storage)
     {

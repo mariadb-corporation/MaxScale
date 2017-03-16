@@ -54,6 +54,14 @@
 #define CACHE_DEFAULT_MAX_SIZE           "0"
 // Thread model
 #define CACHE_DEFAULT_THREAD_MODEL       "shared"
+// Cacheable selects
+#define CACHE_DEFAULT_SELECTS            "verify_cacheable"
+
+typedef enum cache_selects
+{
+    CACHE_SELECTS_ASSUME_CACHEABLE,
+    CACHE_SELECTS_VERIFY_CACHEABLE,
+} cache_selects_t;
 
 typedef struct cache_config
 {
@@ -70,4 +78,5 @@ typedef struct cache_config
     uint64_t max_size;                 /**< Maximum size of the cache.*/
     uint32_t debug;                    /**< Debug settings. */
     cache_thread_model_t thread_model; /**< Thread model. */
+    cache_selects_t selects;           /**< Assume/verify that selects are cacheable. */
 } CACHE_CONFIG;

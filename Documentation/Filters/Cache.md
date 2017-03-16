@@ -227,6 +227,29 @@ cached_data=thread_specific
 Default is `shared`. See `max_count` and `max_size` what implication changing
 this setting to `thread_specific` has.
 
+#### `selects`
+
+An enumeration option specifying what approach the cache should take with
+respect to `SELECT` statements. The allowed values are:
+
+   * `assume_cacheable`: The cache can assume that all `SELECT` statements,
+     without exceptions, are cacheable.
+   * `verify_cacheable`: The cache can *not* assume that all `SELECT`
+     statements are cacheable, but must verify that.
+
+```
+select=assume_cacheable
+```
+
+Default is `verify_cacheable`. In this case, the `SELECT` statements will be
+parsed and only those that are safe for caching - e.g. do *not* call any
+non-cacheable functions or access any non-cacheable variables - will be
+subject to caching.
+
+If `assume_cacheable` is specified, then all `SELECT` statements are
+assumed to be cacheable and will be parsed *only* if some specific rule
+requires that.
+
 #### `debug`
 
 An integer value, using which the level of debug logging made by the cache
