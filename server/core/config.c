@@ -1057,22 +1057,45 @@ SERVER* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key)
     return server_find_by_unique_name(value);
 }
 
-SERVER** config_get_serverlist(const MXS_CONFIG_PARAMETER *params, const char *key)
+int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
+                           SERVER*** output)
 {
     const char *value = config_get_value_string(params, key);
     char **server_names = NULL;
-    SERVER **servers = NULL;
-    int n_names = config_parse_server_list(value, &server_names);
+    int found = 0;
+    const int n_names = config_parse_server_list(value, &server_names);
     if (n_names > 0)
     {
-        servers = server_find_by_unique_names(server_names, n_names);
+        SERVER** servers;
+        found = server_find_by_unique_names(server_names, n_names, &servers);
         for (int i = 0; i < n_names; i++)
         {
             MXS_FREE(server_names[i]);
         }
         MXS_FREE(server_names);
+
+        if (found)
+        {
+            /* Fill in the result array */
+            SERVER** result = MXS_CALLOC(found, sizeof(SERVER*));
+            if (result)
+            {
+                int res_ind = 0;
+                for (int i = 0; i < n_names; i++)
+                {
+                    if (servers[i])
+                    {
+                        result[res_ind] = servers[i];
+                        res_ind++;
+                    }
+                }
+                *output = result;
+                ss_dassert(found == res_ind);
+            }
+            MXS_FREE(servers);
+        }
     }
-    return servers;
+    return found;
 }
 
 char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
@@ -3470,7 +3493,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
     return valid;
 }
 
-static int config_parse_server_list(const char *servers, char ***output_array)
+int config_parse_server_list(const char *servers, char ***output_array)
 {
     ss_dassert(servers);
 
@@ -3486,7 +3509,7 @@ static int config_parse_server_list(const char *servers, char ***output_array)
     char **results = MXS_CALLOC(out_arr_size, sizeof(char*));
     if (!results)
     {
-        return -1;
+        return 0;
     }
 
     /* Parse the server names from the list. They are separated by ',' and will
@@ -3531,8 +3554,10 @@ static int config_parse_server_list(const char *servers, char ***output_array)
     if (output_ind == 0)
     {
         MXS_FREE(results);
-        results = NULL;
     }
-    *output_array = results;
+    else
+    {
+        *output_array = results;
+    }
     return output_ind;
 }

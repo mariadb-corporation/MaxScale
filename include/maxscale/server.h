@@ -256,7 +256,7 @@ bool server_remove_parameter(SERVER *server, const char *name);
 
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
-extern SERVER** server_find_by_unique_names(char **server_names, int size);
+extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);
 extern char *server_status(const SERVER *);
 extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);

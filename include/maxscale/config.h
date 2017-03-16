@@ -206,15 +206,33 @@ struct service* config_get_service(const MXS_CONFIG_PARAMETER *params, const cha
 struct server* config_get_server(const MXS_CONFIG_PARAMETER *params, const char *key);
 
 /**
- * @brief Get an array of servers. The caller should free the returned array, but not
- * the array elements.
+ * @brief Get an array of servers. The caller should free the produced array,
+ * but not the array elements.
  *
  * @param params List of configuration parameters
  * @param key Parameter name
- *
- * @return Pointer to a null-terminated array of servers, or null if none found.
+ * @param output Where to save the output
+ * @return How many servers were found, equal to output array size
  */
-struct server** config_get_serverlist(const MXS_CONFIG_PARAMETER *params, const char *key);
+int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
+                           struct server*** output);
+
+/**
+ * Parse a list of server names and write the results in an array of strings
+ * with one server name in each. The output array and its elements should be
+ * deallocated by the caller. The server names are not checked to be actual
+ * configured servers.
+ * 
+ * The output array may contain more elements than the the value returned, but these
+ * extra elements are null and in the end of the array. If no server names were
+ * parsed or if an error occurs, nothing is written to the output parameter.
+ *
+ * @param servers A list of server names
+ * @param output_array Where to save the output
+ * @return How many servers were found and set into the array. 0 on error or if
+ * none were found.
+ */
+int config_parse_server_list(const char *servers, char ***output_array);
 
 /**
  * @brief Get copy of parameter value if it is defined

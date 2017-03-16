@@ -296,39 +296,45 @@ SERVER * server_find_by_unique_name(const char *name)
     return server;
 }
 
-
-
 /**
  * Find several servers with the names specified in an array with a given size.
- * The returned array (but not the elements) should be freed by the caller, and
- * is null-terminated.
+ * The returned array (but not the elements) should be freed by the caller.
+ * If no valid server names were found or in case of error, nothing is written
+ * to the output parameter.
  *
  * @param servers An array of server names
- * @param size number of elements in the server names array
- * @return A null-terminated array of SERVERs. May contain less elements than
- * requested if some server names are not found.
+ * @param size Number of elements in the input server names array, equal to output
+ * size if any servers are found.
+ * @param output Where to save the output. Contains null elements for invalid server
+ * names. If all were invalid, the output is left untouched.
+ * @return Number of valid server names found
  */
-SERVER** server_find_by_unique_names(char **server_names, int size)
+int server_find_by_unique_names(char **server_names, int size, SERVER*** output)
 {
-    ss_dassert(server_names);
+    ss_dassert(server_names && (size > 0));
 
-    SERVER **results = MXS_CALLOC(size + 1, sizeof(SERVER*)); // +1 for null
+    SERVER **results = MXS_CALLOC(size, sizeof(SERVER*));
     if (!results)
     {
-        return NULL;
+        return 0;
     }
 
-    int res_ind = 0;
-    for (int i = 0; server_names[i] != NULL; i++)
+    int found = 0;
+    for (int i = 0; i < size; i++)
     {
-        SERVER *serv = server_find_by_unique_name(server_names[i]);
-        if (serv)
-        {
-            results[res_ind] = serv;
-            res_ind++;
-        }
+        results[i] = server_find_by_unique_name(server_names[i]);
+        found += (results[i]) ? 1 : 0;
     }
-    return results;
+
+    if (found)
+    {
+        *output = results;
+    }
+    else
+    {
+        MXS_FREE(results);
+    }
+    return found;
 }
 
 /**
