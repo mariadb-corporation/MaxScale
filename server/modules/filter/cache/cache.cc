@@ -125,59 +125,27 @@ cache_result_t Cache::get_default_key(const char* zDefault_db,
 {
     ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
 
-    int n;
-    bool fullnames = true;
-    char** pzTables = qc_get_table_names(const_cast<GWBUF*>(pQuery), &n, fullnames);
-
-    set<string> dbs; // Elements in set are sorted.
-
-    for (int i = 0; i < n; ++i)
-    {
-        char *zTable = pzTables[i];
-        char *zDot = strchr(zTable, '.');
-
-        if (zDot)
-        {
-            *zDot = 0;
-            dbs.insert(zTable);
-        }
-        else if (zDefault_db)
-        {
-            // If zdefault_db is NULL, then there will be a table for which we
-            // do not know the database. However, that will fail in the server,
-            // so nothing will be stored.
-            dbs.insert(zDefault_db);
-        }
-        MXS_FREE(zTable);
-    }
-    MXS_FREE(pzTables);
-
-    // dbs now contain each accessed database in sorted order. Now copy them to a single string.
-    string tag;
-    for (set<string>::const_iterator i = dbs.begin(); i != dbs.end(); ++i)
-    {
-        tag.append(*i);
-    }
-
-    const unsigned char* pData;
-
-    // We hash the databases in the first half of the key. That will ensure that
-    // identical queries targeting different default databases will not clash.
-    pData = reinterpret_cast<const unsigned char*>(tag.data());
-    uint64_t table_crc = crc32(0, Z_NULL, 0);
-    table_crc = crc32(table_crc, pData, tag.length());
-
     char *pSql;
     int length;
 
     modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
 
-    // Then we hash the query itself in the second half of the key.
-    pData = reinterpret_cast<const unsigned char*>(pSql);
-    uint64_t stmt_crc = crc32(0, Z_NULL, 0);
-    stmt_crc = crc32(stmt_crc, pData, length);
+    uint64_t crc1 = crc32(0, Z_NULL, 0);
 
-    pKey->data = (table_crc << 32) | stmt_crc;
+    const Bytef* pData;
+
+    if (zDefault_db)
+    {
+        pData = reinterpret_cast<const Bytef*>(zDefault_db);
+        crc1 = crc32(crc1, pData, strlen(zDefault_db));
+    }
+
+    pData = reinterpret_cast<const Bytef*>(pSql);
+
+    crc1 = crc32(crc1, pData, length);
+    uint64_t crc2 = crc32(crc1, pData, length);
+
+    pKey->data = (crc1 << 32 | crc2);
 
     return CACHE_RESULT_OK;
 }
