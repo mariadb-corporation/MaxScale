@@ -379,7 +379,7 @@ void load_server_backup(MXS_MONITOR *monitor)
                         if (process_data_file(monitor, data + MMB_LEN_SCHEMA_VERSION,
                                               data + size - MMB_LEN_CRC32))
                         {
-                            MXS_WARNING("Loaded persisted server states from backup file.");
+                            MXS_NOTICE("Loaded server states from backup file: %s", path);
                         }
                     }
                     else

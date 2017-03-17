@@ -327,9 +327,6 @@ stopMonitor(MXS_MONITOR *mon)
 
     handle->shutdown = 1;
     thread_wait(handle->thread);
-
-    /** Controlled shutdown, remove stored backup */
-    remove_server_backup(mon);
 }
 
 /**
