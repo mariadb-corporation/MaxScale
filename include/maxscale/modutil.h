@@ -53,8 +53,28 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              int             merrno,
                                              const char      *statemsg,
                                              const char      *msg);
+
 int modutil_count_signal_packets(GWBUF*, int, int, int*);
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
+
+/**
+ * Given a buffer containing a MySQL statement, this function will return
+ * a pointer to the first character that is not whitespace. In this context,
+ * comments are also counted as whitespace. For instance:
+ *
+ *    "SELECT"                    => "SELECT"
+ *    "  SELECT                   => "SELECT"
+ *    " / * A comment * / SELECT" => "SELECT"
+ *    "-- comment\nSELECT"        => "SELECT"
+ *
+ *  @param sql  Pointer to buffer containing a MySQL statement
+ *  @param len  Length of sql.
+ *
+ *  @return The first non whitespace (including comments) character. If the
+ *          entire buffer is only whitespace, the returned pointer will point
+ *          to the character following the buffer (i.e. sql + len).
+ */
+char* modutil_MySQL_bypass_whitespace(char* sql, size_t len);
 
 /** Character and token searching functions */
 char* strnchr_esc(char* ptr, char c, int len);
