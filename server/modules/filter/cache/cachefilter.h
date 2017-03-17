@@ -56,6 +56,8 @@
 #define CACHE_DEFAULT_THREAD_MODEL       "shared"
 // Cacheable selects
 #define CACHE_DEFAULT_SELECTS            "verify_cacheable"
+// Storage
+#define CACHE_DEFAULT_STORAGE            "storage_inmemory"
 
 typedef enum cache_selects
 {

@@ -15,6 +15,11 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Cache
+
+* The storage `storage_inmemory` is now the default, so the parameter
+  `storage` no longer need to be set explicitly.
+
 ### Improved Wildcard Matching
 
 The MySQLAuth module now supports all types of wildcards for both IP addresses

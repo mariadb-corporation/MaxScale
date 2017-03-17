@@ -153,8 +153,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             {
                 "storage",
                 MXS_MODULE_PARAM_STRING,
-                NULL,
-                MXS_MODULE_OPT_REQUIRED
+                CACHE_DEFAULT_STORAGE
             },
             {
                 "storage_options",

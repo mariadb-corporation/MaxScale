@@ -71,8 +71,6 @@ type=filter
 module=cache
 hard_ttl=30
 soft_ttl=20
-storage=...
-storage_options=...
 rules=...
 ...
 
@@ -95,10 +93,10 @@ sharing.
 
 ### Filter Parameters
 
-The cache filter has one mandatory parameter - `storage` - and a few
-optional ones. Note that it is advisable to specify `max_size` to prevent
-the cache from using up all memory there is, in case there is very litte
-overlap among the queries.
+The cache filter has no mandatory parameters but a range of optional ones.
+Note that it is advisable to specify `max_size` to prevent the cache from
+using up all memory there is, in case there is very litte overlap among the
+queries.
 
 #### `storage`
 
@@ -108,6 +106,8 @@ argument. For instance:
 ```
 storage=storage_inmemory
 ```
+The default is `storage_inmemory`.
+
 See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
