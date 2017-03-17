@@ -136,6 +136,46 @@ bool uses_non_cacheable_variable(GWBUF* pPacket)
 
 }
 
+namespace
+{
+
+bool is_select_statement(GWBUF* pStmt)
+{
+    bool is_select = false;
+
+    char* pSql;
+    int len;
+
+    ss_debug(int rc =) modutil_extract_SQL(pStmt, &pSql, &len);
+    ss_dassert(rc == 1);
+
+    char* pSql_end = pSql + len;
+
+    pSql = modutil_MySQL_bypass_whitespace(pSql, len);
+
+    const char SELECT[] = "SELECT";
+
+    const char* pSelect = SELECT;
+    const char* pSelect_end = pSelect + sizeof(SELECT) - 1;
+
+    while ((pSql < pSql_end) && (pSelect < pSelect_end) && (toupper(*pSql) == *pSelect))
+    {
+        ++pSql;
+        ++pSelect;
+    }
+
+    if (pSelect == pSelect_end)
+    {
+        if ((pSql == pSql_end) || !isalpha(*pSql))
+        {
+            is_select = true;
+        }
+    }
+
+    return is_select;
+}
+
+}
 
 CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession, Cache* pCache, char* zDefaultDb)
     : maxscale::FilterSession(pSession)
@@ -772,7 +812,7 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 {
     bool consult_cache = false;
 
-    uint32_t type_mask = qc_get_type_mask(pPacket);
+    uint32_t type_mask = qc_get_trx_type_mask(pPacket); // Note, only trx-related type mask
 
     const char* zReason = NULL;
 
@@ -780,13 +820,6 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
     {
         // When a transaction is started, we initially assume it is read-only.
         m_is_read_only = true;
-    }
-    else if (!qc_query_is_type(type_mask, QUERY_TYPE_READ))
-    {
-        // Thereafter, if there's any non-read statement we mark it as non-readonly.
-        // Note that the state of m_is_read_only is not consulted if there is no
-        // on-going transaction of if there is an explicitly read-only transaction.
-        m_is_read_only = false;
     }
 
     if (!session_trx_is_active(m_pSession))
@@ -823,31 +856,42 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
     if (consult_cache)
     {
-        if (qc_get_operation(pPacket) == QUERY_OP_SELECT)
+        if (is_select_statement(pPacket))
         {
-            if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+            if (m_pCache->config().selects == CACHE_SELECTS_VERIFY_CACHEABLE)
             {
-                consult_cache = false;
-                zReason = "user variables are read";
-            }
-            else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
-            {
-                consult_cache = false;
-                zReason = "system variables are read";
-            }
-            else if (uses_non_cacheable_function(pPacket))
-            {
-                consult_cache = false;
-                zReason = "uses non-cacheable function";
-            }
-            else if (uses_non_cacheable_variable(pPacket))
-            {
-                consult_cache = false;
-                zReason = "uses non-cacheable variable";
+                // Note that the type mask must be obtained a new. A few lines
+                // above we only got the transaction state related type mask.
+                type_mask = qc_get_type_mask(pPacket);
+
+                if (qc_query_is_type(type_mask, QUERY_TYPE_USERVAR_READ))
+                {
+                    consult_cache = false;
+                    zReason = "user variables are read";
+                }
+                else if (qc_query_is_type(type_mask, QUERY_TYPE_SYSVAR_READ))
+                {
+                    consult_cache = false;
+                    zReason = "system variables are read";
+                }
+                else if (uses_non_cacheable_function(pPacket))
+                {
+                    consult_cache = false;
+                    zReason = "uses non-cacheable function";
+                }
+                else if (uses_non_cacheable_variable(pPacket))
+                {
+                    consult_cache = false;
+                    zReason = "uses non-cacheable variable";
+                }
             }
         }
         else
         {
+            // A bit broad, as e.g. SHOW will cause the read only state to be turned
+            // off. However, during normal use this will always be an UPDATE, INSERT
+            // or DELETE.
+            m_is_read_only = false;
             consult_cache = false;
             zReason = "statement is not SELECT";
         }
