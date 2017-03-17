@@ -2296,3 +2296,29 @@ void service_print_users(DCB *dcb, const SERVICE *service)
         }
     }
 }
+
+bool service_port_is_used(unsigned short port)
+{
+    bool rval = false;
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (SERV_LISTENER *proto = service->ports; proto; proto = proto->next)
+        {
+            if (proto->port == port)
+            {
+                rval = true;
+                break;
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}

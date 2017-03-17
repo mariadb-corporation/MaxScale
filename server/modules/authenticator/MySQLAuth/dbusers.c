@@ -635,7 +635,8 @@ bool check_service_permissions(SERVICE* service)
 
     for (SERVER_REF *server = service->dbref; server; server = server->next)
     {
-        if (check_server_permissions(service, server->server, user, dpasswd))
+        if (server_is_mxs_service(server->server) ||
+            check_server_permissions(service, server->server, user, dpasswd))
         {
             rval = true;
         }

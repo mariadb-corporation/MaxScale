@@ -1341,3 +1341,22 @@ void server_clear_status(SERVER *server, int bit)
     }
     spinlock_release(&server->lock);
 }
+
+bool server_is_mxs_service(const SERVER *server)
+{
+    bool rval = false;
+
+    /** Do a coarse check for local server pointing to a MaxScale service */
+    if (strcmp(server->name, "127.0.0.1") == 0 ||
+        strcmp(server->name, "::1") == 0 ||
+        strcmp(server->name, "localhost") == 0 ||
+        strcmp(server->name, "localhost.localdomain") == 0)
+    {
+        if (service_port_is_used(server->port))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
