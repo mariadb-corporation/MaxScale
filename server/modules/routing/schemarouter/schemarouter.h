@@ -318,9 +318,7 @@ struct schemarouter_session
 #if defined(SS_DEBUG)
     skygw_chk_t      rses_chk_top;
 #endif
-    SPINLOCK         rses_lock;      /*< protects rses_deleted                 */
-    int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
-    bool             rses_closed;    /*< true when closeSession is called      */
+    bool             closed;    /*< true when closeSession is called      */
     DCB*             rses_client_dcb;
     MYSQL_session*   rses_mysql_session; /*< Session client data (username, password, SHA1). */
     /** Properties listed by their type */
@@ -333,8 +331,8 @@ struct schemarouter_session
     bool             rses_transaction_active; /*< Is a transaction active */
     struct schemarouter_instance   *router;   /*< The router instance */
     struct schemarouter_session* next; /*< List of router sessions */
-    shard_map_t*
-    shardmap; /*< Database hash containing names of the databases mapped to the servers that contain them */
+    shard_map_t     *shardmap; /*< Database hash containing names of the databases
+                                * mapped to the servers that contain them */
     char            connect_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Database the user was trying to connect to */
     char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
     init_mask_t    init; /*< Initialization state bitmask */
