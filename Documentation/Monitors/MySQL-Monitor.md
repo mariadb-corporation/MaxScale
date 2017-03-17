@@ -200,6 +200,14 @@ external agent that automatically reintegrates failed servers into the
 cluster. One of these agents is the _replication-manager_ which automatically
 configures the failed servers as new slaves of the current master.
 
+### `journal_max_age`
+
+The maximum journal file age in seconds. The default value is 28800 seconds.
+
+When the MySQL monitor starts, it reads any stored journal files. If the journal
+file is older than the value of _journal_max_age_, it will be removed and the
+monitor starts with no prior knowledge of the servers.
+
 ## MySQL Monitor Crash Safety
 
 Starting with MaxScale 2.2.0, the mysqlmon module keeps an on-disk journal of

@@ -18,14 +18,15 @@
 #include <maxscale/utils.h>
 
 #include <zlib.h>
+#include <sys/stat.h>
 
 /**
  * Crash-safe storage of server states
  *
- * This file contains functions to store and load backups of the server states.
+ * This file contains functions to store and load journals of the server states.
  */
 
-/** Schema version, backups must have a matching version */
+/** Schema version, journals must have a matching version */
 #define MMB_SCHEMA_VERSION     1
 
 /** Constants for byte lengths of the values */
@@ -163,7 +164,7 @@ static int get_data_file_path(MXS_MONITOR *monitor, char *path)
 }
 
 /**
- * @brief Open stored backup file
+ * @brief Open stored journal file
  *
  * @param monitor Monitor to reload
  * @param path Output where path is stored
@@ -259,7 +260,7 @@ static bool check_crc32(const uint8_t *data, uint32_t size, const uint8_t *crc_p
 }
 
 /**
- * Process the stored backup data
+ * Process the stored journal data
  */
 static bool process_data_file(MXS_MONITOR *monitor, const char *data, const char *crc_ptr)
 {
@@ -300,7 +301,7 @@ static bool process_data_file(MXS_MONITOR *monitor, const char *data, const char
     return true;
 }
 
-void store_server_backup(MXS_MONITOR *monitor)
+void store_server_journal(MXS_MONITOR *monitor)
 {
     /** Calculate how much memory we need to allocate */
     uint32_t size = MMB_LEN_SCHEMA_VERSION + MMB_LEN_CRC32;
@@ -353,7 +354,7 @@ void store_server_backup(MXS_MONITOR *monitor)
     MXS_FREE(data);
 }
 
-void load_server_backup(MXS_MONITOR *monitor)
+void load_server_journal(MXS_MONITOR *monitor)
 {
     char path[PATH_MAX];
     FILE *file = open_data_file(monitor, path);
@@ -406,7 +407,7 @@ void load_server_backup(MXS_MONITOR *monitor)
                 else
                 {
                     MXS_ERROR("Failed to read journal file: Expected %u bytes, "
-                        "read %lu bytes.", size, bytes);
+                              "read %lu bytes.", size, bytes);
                 }
             }
             MXS_FREE(data);
@@ -429,7 +430,7 @@ void load_server_backup(MXS_MONITOR *monitor)
     }
 }
 
-void remove_server_backup(MXS_MONITOR *monitor)
+void remove_server_journal(MXS_MONITOR *monitor)
 {
     char path[PATH_MAX];
 
@@ -441,4 +442,40 @@ void remove_server_backup(MXS_MONITOR *monitor)
     {
         MXS_ERROR("Path to monitor journal directory is too long.");
     }
+}
+
+bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age)
+{
+    bool is_stale = true;
+    char path[PATH_MAX];
+
+    if (get_data_file_path(monitor, path) < PATH_MAX)
+    {
+        struct stat st;
+
+        if (stat(path, &st) == 0)
+        {
+            time_t tdiff = time(NULL) - st.st_mtim.tv_sec;
+
+            if (tdiff >= max_age)
+            {
+                MXS_WARNING("Journal file was created %ld seconds ago. Maximum journal "
+                            "age is %ld seconds.", tdiff, max_age);
+            }
+            else
+            {
+                is_stale = false;
+            }
+        }
+        else if (errno != ENOENT)
+        {
+            MXS_ERROR("Failed to inspect journal file: %d, %s", errno, mxs_strerror(errno));
+        }
+    }
+    else
+    {
+        MXS_ERROR("Path to monitor journal directory is too long.");
+    }
+
+    return is_stale;
 }
