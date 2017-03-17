@@ -75,7 +75,7 @@ static void handleError(MXS_ROUTER* instance,
                         DCB* backend_dcb,
                         mxs_error_action_t action,
                         bool* succp);
-static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
+static backend_ref_t* get_bref_from_dcb(SCHEMAROUTER_SESSION* rses, DCB* dcb);
 
 static route_target_t get_shard_route_target(qc_query_type_t qtype,
                                              bool            trx_active,
@@ -86,22 +86,22 @@ static uint64_t getCapabilities(MXS_ROUTER* instance);
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
                                     MXS_SESSION*     session,
-                                    ROUTER_INSTANCE* router);
+                                    SCHEMAROUTER* router);
 
 static bool get_shard_dcb(DCB**              dcb,
-                          ROUTER_CLIENT_SES* rses,
+                          SCHEMAROUTER_SESSION* rses,
                           char*              name);
 
-static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses);
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses);
+static bool rses_begin_locked_router_action(SCHEMAROUTER_SESSION* rses);
+static void rses_end_locked_router_action(SCHEMAROUTER_SESSION* rses);
 static void mysql_sescmd_done(mysql_sescmd_t* sescmd);
 static mysql_sescmd_t* mysql_sescmd_init(rses_property_t*   rses_prop,
                                          GWBUF*             sescmd_buf,
                                          unsigned char      packet_type,
-                                         ROUTER_CLIENT_SES* rses);
+                                         SCHEMAROUTER_SESSION* rses);
 static rses_property_t* mysql_sescmd_get_property(mysql_sescmd_t* scmd);
 static rses_property_t* rses_property_init(rses_property_type_t prop_type);
-static void rses_property_add(ROUTER_CLIENT_SES* rses,
+static void rses_property_add(SCHEMAROUTER_SESSION* rses,
                               rses_property_t*   prop);
 static void rses_property_done(rses_property_t* prop);
 static mysql_sescmd_t* rses_property_get_sescmd(rses_property_t* prop);
@@ -116,43 +116,43 @@ static GWBUF* sescmd_cursor_clone_querybuf(sescmd_cursor_t* scur);
 static mysql_sescmd_t* sescmd_cursor_get_command(sescmd_cursor_t* scur);
 static bool sescmd_cursor_next(sescmd_cursor_t* scur);
 static GWBUF* sescmd_cursor_process_replies(GWBUF* replybuf, backend_ref_t* bref);
-static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
+static void tracelog_routed_query(SCHEMAROUTER_SESSION* rses,
                                   char*              funcname,
                                   backend_ref_t*     bref,
                                   GWBUF*             buf);
-static bool route_session_write(ROUTER_CLIENT_SES* router_client_ses,
+static bool route_session_write(SCHEMAROUTER_SESSION* router_client_ses,
                                 GWBUF*             querybuf,
-                                ROUTER_INSTANCE*   inst,
+                                SCHEMAROUTER*   inst,
                                 unsigned char      packet_type,
                                 qc_query_type_t    qtype);
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state);
 static void bref_set_state(backend_ref_t*   bref, bref_state_t state);
 static sescmd_cursor_t* backend_ref_get_sescmd_cursor (backend_ref_t* bref);
 static int  router_handle_state_switch(DCB* dcb, DCB_REASON reason, void* data);
-static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
-                                        ROUTER_CLIENT_SES* rses,
+static bool handle_error_new_connection(SCHEMAROUTER*   inst,
+                                        SCHEMAROUTER_SESSION* rses,
                                         DCB*               backend_dcb,
                                         GWBUF*             errmsg);
 static void handle_error_reply_client(MXS_SESSION*       ses,
-                                      ROUTER_CLIENT_SES* rses,
+                                      SCHEMAROUTER_SESSION* rses,
                                       DCB*               backend_dcb,
                                       GWBUF*             errmsg);
 
 static SPINLOCK instlock;
-static ROUTER_INSTANCE* instances;
+static SCHEMAROUTER* instances;
 
 bool detect_show_shards(GWBUF* query);
-int process_show_shards(ROUTER_CLIENT_SES* rses);
+int process_show_shards(SCHEMAROUTER_SESSION* rses);
 static int hashkeyfun(const void* key);
 static int hashcmpfun(const void *, const void *);
 
 void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
-int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
+int inspect_backend_mapping_states(SCHEMAROUTER_SESSION *router_cli_ses,
                                    backend_ref_t *bref,
                                    GWBUF** wbuf);
-bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses);
-void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses);
-void synchronize_shard_map(ROUTER_CLIENT_SES *client);
+bool handle_default_db(SCHEMAROUTER_SESSION *router_cli_ses);
+void route_queued_query(SCHEMAROUTER_SESSION *router_cli_ses);
+void synchronize_shard_map(SCHEMAROUTER_SESSION *client);
 
 static int hashkeyfun(const void* key)
 {
@@ -279,7 +279,7 @@ char* get_lenenc_str(void* data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* bref, GWBUF** buffer)
+showdb_response_t parse_showdb_response(SCHEMAROUTER_SESSION* rses, backend_ref_t* bref, GWBUF** buffer)
 {
     unsigned char* ptr;
     char* target = bref->bref_backend->server->unique_name;
@@ -400,7 +400,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
  * @param session Router client session
  * @return 1 if all writes to backends were succesful and 0 if one or more errors occurred
  */
-int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
+int gen_databaselist(SCHEMAROUTER* inst, SCHEMAROUTER_SESSION* session)
 {
     DCB* dcb;
     const char* query = "SHOW DATABASES";
@@ -451,8 +451,8 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
  * @param buffer Query to inspect
  * @return Name of the backend or NULL if the query contains no known databases.
  */
-char* get_shard_target_name(ROUTER_INSTANCE* router,
-                            ROUTER_CLIENT_SES* client,
+char* get_shard_target_name(SCHEMAROUTER* router,
+                            SCHEMAROUTER_SESSION* client,
                             GWBUF* buffer,
                             qc_query_type_t qtype)
 {
@@ -571,7 +571,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
  * @param shard Shard to check
  * @return True if the backend server is running
  */
-bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
+bool check_shard_status(SCHEMAROUTER* router, char* shard)
 {
     for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
     {
@@ -651,11 +651,11 @@ MXS_MODULE* MXS_CREATE_MODULE()
  */
 static MXS_ROUTER* createInstance(SERVICE *service, char **options)
 {
-    ROUTER_INSTANCE* router;
+    SCHEMAROUTER* router;
     MXS_CONFIG_PARAMETER* conf;
     MXS_CONFIG_PARAMETER* param;
 
-    if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((router = MXS_CALLOC(1, sizeof(SCHEMAROUTER))) == NULL)
     {
         return NULL;
     }
@@ -824,7 +824,7 @@ static MXS_ROUTER* createInstance(SERVICE *service, char **options)
  * @param map Shard map to update
  * @return Current state of the shard map
  */
-enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* router)
+enum shard_map_state shard_map_update_state(shard_map_t *self, SCHEMAROUTER* router)
 {
     spinlock_acquire(&self->lock);
     double tdiff = difftime(time(NULL), self->last_updated);
@@ -850,8 +850,8 @@ enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* 
 static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* router_inst, MXS_SESSION* session)
 {
     backend_ref_t* backend_ref; /*< array of backend references (DCB, BACKEND, cursor) */
-    ROUTER_CLIENT_SES* client_rses = NULL;
-    ROUTER_INSTANCE* router      = (ROUTER_INSTANCE *)router_inst;
+    SCHEMAROUTER_SESSION* client_rses = NULL;
+    SCHEMAROUTER* router      = (SCHEMAROUTER *)router_inst;
     bool succp;
     int router_nservers = 0; /*< # of servers in total */
     char db[MYSQL_DATABASE_MAXLEN + 1] = "";
@@ -878,7 +878,7 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* router_inst, MXS_SESSION* sess
         MXS_INFO("Client'%s' connecting with empty database.", data->user);
     }
 
-    client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (SCHEMAROUTER_SESSION *)MXS_CALLOC(1, sizeof(SCHEMAROUTER_SESSION));
 
     if (client_rses == NULL)
     {
@@ -1042,8 +1042,8 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* router_inst, MXS_SESSION* sess
  */
 static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session)
 {
-    ROUTER_CLIENT_SES* router_cli_ses;
-    ROUTER_INSTANCE* inst;
+    SCHEMAROUTER_SESSION* router_cli_ses;
+    SCHEMAROUTER* inst;
     backend_ref_t*     backend_ref;
 
     MXS_DEBUG("%lu [schemarouter:closeSession]", pthread_self());
@@ -1056,7 +1056,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
     {
         return;
     }
-    router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
     CHK_CLIENT_RSES(router_cli_ses);
 
     inst = router_cli_ses->router;
@@ -1137,7 +1137,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_sessio
 
 static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_client_session)
 {
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
+    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_client_session;
 
     for (int i = 0; i < router_cli_ses->rses_nbackends; i++)
     {
@@ -1186,7 +1186,7 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
  * @return True if proper DCB was found, false otherwise.
  */
 static bool get_shard_dcb(DCB**              p_dcb,
-                          ROUTER_CLIENT_SES* rses,
+                          SCHEMAROUTER_SESSION* rses,
                           char*              name)
 {
     backend_ref_t* backend_ref;
@@ -1285,7 +1285,7 @@ void check_drop_tmp_table(MXS_ROUTER* instance,
     char** tbl = NULL;
     char *hkey, *dbname;
 
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
     rses_property_t* rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
@@ -1341,7 +1341,7 @@ qc_query_type_t is_read_tmp_table(MXS_ROUTER* instance,
     char** tbl = NULL;
     char *hkey, *dbname;
 
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
     qc_query_type_t qtype = type;
     rses_property_t* rses_prop_tmp;
 
@@ -1415,7 +1415,7 @@ void check_create_tmp_table(MXS_ROUTER* instance,
     int klen = 0;
     char *hkey, *dbname;
 
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
     rses_property_t* rses_prop_tmp;
     HASHTABLE* h;
 
@@ -1546,7 +1546,7 @@ RESULT_ROW *result_set_cb(struct resultset * rset, void *data)
  * @param client Router client session
  * @return True if the sending of the database list was successful, otherwise false
  */
-bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
+bool send_database_list(SCHEMAROUTER* router, SCHEMAROUTER_SESSION* client)
 {
     bool rval = false;
     spinlock_acquire(&client->shardmap->lock);
@@ -1611,17 +1611,15 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
  * an error message is sent to the client.
  *
  */
-static int routeQuery(MXS_ROUTER* instance,
-                      MXS_ROUTER_SESSION* router_session,
-                      GWBUF* qbuf)
+static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, GWBUF* qbuf)
 {
     qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     mysql_server_cmd_t packet_type;
     uint8_t* packet;
-    int i, ret = 0;
+    int ret = 0;
     DCB* target_dcb = NULL;
-    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
-    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    SCHEMAROUTER* inst = (SCHEMAROUTER *)instance;
+    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
     bool rses_is_closed = false;
     bool change_successful = false;
     route_target_t route_target = TARGET_UNDEFINED;
@@ -2126,7 +2124,7 @@ retblock:
  *
  */
 static bool rses_begin_locked_router_action(
-    ROUTER_CLIENT_SES* rses)
+    SCHEMAROUTER_SESSION* rses)
 {
     bool succp = false;
 
@@ -2162,7 +2160,7 @@ return_succp:
  * @details (write detailed description here)
  *
  */
-static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
+static void rses_end_locked_router_action(SCHEMAROUTER_SESSION* rses)
 {
     CHK_CLIENT_RSES(rses);
     spinlock_release(&rses->rses_lock);
@@ -2178,7 +2176,7 @@ static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
  */
 static void diagnostic(MXS_ROUTER *instance, DCB *dcb)
 {
-    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
+    SCHEMAROUTER *router = (SCHEMAROUTER *)instance;
     int i = 0;
 
     double sescmd_pct = router->stats.n_sescmd != 0 ?
@@ -2243,12 +2241,12 @@ static void clientReply(MXS_ROUTER* instance,
                         DCB* backend_dcb)
 {
     DCB* client_dcb;
-    ROUTER_CLIENT_SES* router_cli_ses;
+    SCHEMAROUTER_SESSION* router_cli_ses;
     sescmd_cursor_t* scur = NULL;
     backend_ref_t* bref;
     GWBUF* writebuf = buffer;
 
-    router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
+    router_cli_ses = (SCHEMAROUTER_SESSION *) router_session;
     CHK_CLIENT_RSES(router_cli_ses);
 
     /**
@@ -2497,7 +2495,7 @@ static void clientReply(MXS_ROUTER* instance,
         if ((ret = bref->bref_dcb->func.write(bref->bref_dcb,
                                               gwbuf_clone(bref->bref_pending_cmd))) == 1)
         {
-            ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *) instance;
+            SCHEMAROUTER* inst = (SCHEMAROUTER *) instance;
             atomic_add(&inst->stats.n_queries, 1);
             /**
              * Add one query response waiter to backend reference
@@ -2675,7 +2673,7 @@ static void bref_set_state(backend_ref_t* bref, bref_state_t state)
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
                                     MXS_SESSION*     session,
-                                    ROUTER_INSTANCE* router)
+                                    SCHEMAROUTER* router)
 {
     bool succp = true;
     /*
@@ -2888,7 +2886,7 @@ static void rses_property_done(rses_property_t* prop)
  *
  * Router client session must be locked.
  */
-static void rses_property_add(ROUTER_CLIENT_SES* rses,
+static void rses_property_add(SCHEMAROUTER_SESSION* rses,
                               rses_property_t*   prop)
 {
     rses_property_t* p;
@@ -2941,7 +2939,7 @@ static mysql_sescmd_t* rses_property_get_sescmd(rses_property_t* prop)
 static mysql_sescmd_t* mysql_sescmd_init(rses_property_t*   rses_prop,
                                          GWBUF*             sescmd_buf,
                                          unsigned char      packet_type,
-                                         ROUTER_CLIENT_SES* rses)
+                                         SCHEMAROUTER_SESSION* rses)
 {
     mysql_sescmd_t* sescmd;
 
@@ -3123,7 +3121,7 @@ static bool sescmd_cursor_history_empty(sescmd_cursor_t* scur)
 
 static void sescmd_cursor_reset(sescmd_cursor_t* scur)
 {
-    ROUTER_CLIENT_SES* rses;
+    SCHEMAROUTER_SESSION* rses;
     CHK_SESCMD_CUR(scur);
     CHK_CLIENT_RSES(scur->scmd_cur_rses);
     rses = scur->scmd_cur_rses;
@@ -3334,9 +3332,9 @@ static uint64_t getCapabilities(MXS_ROUTER* instance)
  * Return true if succeed, false is returned if router session was closed or
  * if execute_sescmd_in_backend failed.
  */
-static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
+static bool route_session_write(SCHEMAROUTER_SESSION* router_cli_ses,
                                 GWBUF*             querybuf,
-                                ROUTER_INSTANCE*   inst,
+                                SCHEMAROUTER*   inst,
                                 unsigned char      packet_type,
                                 qc_query_type_t    qtype)
 {
@@ -3561,8 +3559,8 @@ static void handleError(MXS_ROUTER* instance,
 {
     ss_dassert(problem_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     MXS_SESSION* session;
-    ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
+    SCHEMAROUTER* inst = (SCHEMAROUTER *)instance;
+    SCHEMAROUTER_SESSION* rses = (SCHEMAROUTER_SESSION *)router_session;
 
     CHK_DCB(problem_dcb);
 
@@ -3618,7 +3616,7 @@ static void handleError(MXS_ROUTER* instance,
 
 
 static void handle_error_reply_client(MXS_SESSION*       ses,
-                                      ROUTER_CLIENT_SES* rses,
+                                      SCHEMAROUTER_SESSION* rses,
                                       DCB*               backend_dcb,
                                       GWBUF*             errmsg)
 {
@@ -3652,7 +3650,7 @@ static void handle_error_reply_client(MXS_SESSION*       ses,
  * @return True if session has a single backend server in use that is running.
  * False if no backends are in use or running.
  */
-bool have_servers(ROUTER_CLIENT_SES* rses)
+bool have_servers(SCHEMAROUTER_SESSION* rses)
 {
     int i;
 
@@ -3681,8 +3679,8 @@ bool have_servers(ROUTER_CLIENT_SES* rses)
  *
  * @return true if there are enough backend connections to continue, false if not
  */
-static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
-                                        ROUTER_CLIENT_SES* rses,
+static bool handle_error_new_connection(SCHEMAROUTER*   inst,
+                                        SCHEMAROUTER_SESSION* rses,
                                         DCB*               backend_dcb,
                                         GWBUF*             errmsg)
 {
@@ -3762,7 +3760,7 @@ return_succp:
  *
  * @return backend reference pointer if succeed or NULL
  */
-static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses,
+static backend_ref_t* get_bref_from_dcb(SCHEMAROUTER_SESSION* rses,
                                         DCB*               dcb)
 {
     backend_ref_t* bref;
@@ -3844,7 +3842,7 @@ bool detect_show_shards(GWBUF* query)
 struct shard_list
 {
     HASHITERATOR* iter;
-    ROUTER_CLIENT_SES* rses;
+    SCHEMAROUTER_SESSION* rses;
     RESULTSET* rset;
 };
 
@@ -3874,7 +3872,7 @@ RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
  * @param rses Router client session
  * @return 0 on success, -1 on error
  */
-int process_show_shards(ROUTER_CLIENT_SES* rses)
+int process_show_shards(SCHEMAROUTER_SESSION* rses)
 {
     int rval = 0;
 
@@ -3940,7 +3938,7 @@ void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const c
  * @param router_cli_ses
  * @return
  */
-bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
+bool handle_default_db(SCHEMAROUTER_SESSION *router_cli_ses)
 {
     bool rval = false;
     char* target = NULL;
@@ -4009,7 +4007,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
     return rval;
 }
 
-void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
+void route_queued_query(SCHEMAROUTER_SESSION *router_cli_ses)
 {
     GWBUF* tmp = router_cli_ses->queue;
     router_cli_ses->queue = router_cli_ses->queue->next;
@@ -4029,7 +4027,7 @@ void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
  * @param router_cli_ses Router client session
  * @return 1 if mapping is done, 0 if it is still ongoing and -1 on error
  */
-int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
+int inspect_backend_mapping_states(SCHEMAROUTER_SESSION *router_cli_ses,
                                    backend_ref_t *bref,
                                    GWBUF** wbuf)
 {
@@ -4151,7 +4149,7 @@ void replace_shard_map(shard_map_t **target, shard_map_t **source)
  * is discarded and the router's shard map is used.
  * @param client Router session
  */
-void synchronize_shard_map(ROUTER_CLIENT_SES *client)
+void synchronize_shard_map(SCHEMAROUTER_SESSION *client)
 {
     spinlock_acquire(&client->router->lock);
 

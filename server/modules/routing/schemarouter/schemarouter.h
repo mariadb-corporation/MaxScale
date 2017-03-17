@@ -110,7 +110,7 @@ typedef enum backend_type_t
     BE_COUNT
 } backend_type_t;
 
-struct router_instance;
+struct schemarouter_instance;
 
 /**
  * Route target types
@@ -132,7 +132,7 @@ typedef enum
 #define TARGET_IS_ANY(t)          (t & TARGET_ANY)
 
 typedef struct rses_property_st rses_property_t;
-typedef struct router_client_session ROUTER_CLIENT_SES;
+typedef struct schemarouter_session SCHEMAROUTER_SESSION;
 
 /**
  * Router session properties
@@ -189,7 +189,7 @@ struct rses_property_st
 #if defined(SS_DEBUG)
     skygw_chk_t          rses_prop_chk_top;
 #endif
-    ROUTER_CLIENT_SES*   rses_prop_rsession; /*< Parent router session */
+    SCHEMAROUTER_SESSION*   rses_prop_rsession; /*< Parent router session */
     int                  rses_prop_refcount; /*< Reference count*/
     rses_property_type_t rses_prop_type; /*< Property type */
     union rses_prop_data
@@ -208,7 +208,7 @@ typedef struct sescmd_cursor_st
 #if defined(SS_DEBUG)
     skygw_chk_t        scmd_cur_chk_top;
 #endif
-    ROUTER_CLIENT_SES* scmd_cur_rses;         /*< pointer to owning router session */
+    SCHEMAROUTER_SESSION* scmd_cur_rses;         /*< pointer to owning router session */
     rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
     mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
     bool               scmd_cur_active;       /*< true if command is being executed */
@@ -313,7 +313,7 @@ typedef struct
 /**
  * The client session structure used within this router.
  */
-struct router_client_session
+struct schemarouter_session
 {
 #if defined(SS_DEBUG)
     skygw_chk_t      rses_chk_top;
@@ -331,8 +331,8 @@ struct router_client_session
     int              rses_nbackends; /*< Number of backends */
     bool             rses_autocommit_enabled; /*< Is autocommit enabled */
     bool             rses_transaction_active; /*< Is a transaction active */
-    struct router_instance   *router;   /*< The router instance */
-    struct router_client_session* next; /*< List of router sessions */
+    struct schemarouter_instance   *router;   /*< The router instance */
+    struct schemarouter_session* next; /*< List of router sessions */
     shard_map_t*
     shardmap; /*< Database hash containing names of the databases mapped to the servers that contain them */
     char            connect_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Database the user was trying to connect to */
@@ -353,18 +353,18 @@ struct router_client_session
 /**
  * The per instance data for the router.
  */
-typedef struct router_instance
+typedef struct schemarouter_instance
 {
     HASHTABLE*              shard_maps;  /*< Shard maps hashed by user name */
     SERVICE*                service;     /*< Pointer to service                 */
-    ROUTER_CLIENT_SES*      connections; /*< List of client connections         */
+    SCHEMAROUTER_SESSION*      connections; /*< List of client connections         */
     SPINLOCK                lock;        /*< Lock for the instance data         */
     schemarouter_config_t        schemarouter_config; /*< expanded config info from SERVICE */
     int                     schemarouter_version;/*< version number for router's config */
     unsigned int            bitmask;     /*< Bitmask to apply to server->status */
     unsigned int            bitvalue;    /*< Required value of server->status   */
     ROUTER_STATS            stats;       /*< Statistics for this router         */
-    struct router_instance* next;        /*< Next router on the list            */
+    struct schemarouter_instance* next;        /*< Next router on the list            */
     bool            available_slaves; /*< The router has some slaves available */
     HASHTABLE*              ignored_dbs; /*< List of databases to ignore when the
                                           * database mapping finds multiple servers
@@ -374,7 +374,7 @@ typedef struct router_instance
                                            * if they are found on more than one server. */
     pcre2_match_data*             ignore_match_data;
 
-} ROUTER_INSTANCE;
+} SCHEMAROUTER;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
