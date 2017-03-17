@@ -10,17 +10,35 @@ The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-SELECTs using the following functions will not be cached: `BENCHMARK`,
-`CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
-`CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
-`IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
-`MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
-`SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
+The cache will be used and populated in the following circumstances:
+* There is _no_ explicit transaction active, that is, _autocommit_ is used,
+* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
+  READ ONLY`) active, or
+* there is a transaction active and _no_ statement that modify the database
+  has been performed.
 
-Note that installing the cache causes all statements to be parsed. The
-implication of that is that unless statements _already_ need to be parsed,
-e.g. due to the presence of another filter or the chosen router, then adding
-the cache will not necessarily improve the performance, but may decrease it.
+In practice, the last bullet point basically means that if a transaction has
+been started with `BEGIN`, `START TRANSACTION` or `START TRANSACTION READ
+WRITE`, then the cache will be used and populated until the first `UPDATE`,
+`INSERT` or `DELETE` statement is encountered.
+
+By default, it is *ensured* that the cache is **not** used in the following
+circumstances:
+
+* The `SELECT` uses any of the following functions: `BENCHMARK`,
+  `CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
+  `CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
+  `IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
+  `MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
+  `SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
+* The `SELECT` accesses any of the following fields: `CURRENT_DATE`,
+  `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
+* The `SELECT` uses system or user variables.
+
+Ensuring that, requires all `SELECT` statements to be parsed. If it is known
+that there will be *no* such statements, that safety measure can be turned
+off, which has a *significant impact* on the performance. Please see the cache
+parameter [selects](#selects).
 
 ## Limitations
 
@@ -31,24 +49,6 @@ Currently there is **no** cache invalidation, apart from _time-to-live_.
 
 ### Prepared Statements
 Resultsets of prepared statements are **not** cached.
-
-### Transactions
-The cache will be used and populated in the following circumstances:
-
-* There is _no_ explicit transaction active, that is, _autocommit_ is used,
-* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
-  READ ONLY`) active, or
-* there is a transaction active and _no_ statement that modify the database
-  has been performed.
-
-In practice, the last bullet point basically means that if a transaction has
-been started with `BEGIN` or `START TRANSACTION READ WRITE`, then the cache
-will be used and populated until the first `UPDATE`, `INSERT` or `DELETE`
-statement is encountered.
-
-### Variables
-If user or system variables are used in the _SELECT_ statement, the result
-will not be cached.
 
 ### Security
 The cache is **not** aware of grants.
