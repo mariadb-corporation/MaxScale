@@ -42,7 +42,7 @@ static const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
 static QUERY_CLASSIFIER* classifier;
 
-static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
+static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
 
 
 bool qc_setup(const char* plugin_name, const char* plugin_args)
