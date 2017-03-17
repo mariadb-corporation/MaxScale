@@ -35,6 +35,14 @@ The commands can be issued, but have no effect.
 
 ## New Features
 
+### MySQL Monitor Crash Safety
+
+The MySQL monitor keeps a journal of the state of the servers and the currently
+elected master. This information will be read if MaxScale suffers an
+uncontrolled shutdown. By doing the journaling of server states, the mysqlmon
+monitor is able to keep track of stale master and stale slave states across
+restarts and crashes.
+
 ### Avrorouter `deflate` compression
 
 The Avrorouter now supports the `deflate` compression method. This allows the
