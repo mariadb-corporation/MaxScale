@@ -62,7 +62,8 @@ static bool rename_tmp_file(const char *src)
     if (rename(src, dest) == -1)
     {
         rval = false;
-        MXS_ERROR("Failed to rename '%s' to '%s'", src, dest);
+        MXS_ERROR("Failed to rename journal file '%s' to '%s': %d, %s",
+                  src, dest, errno, mxs_strerror(errno));
     }
 
     return rval;
@@ -86,7 +87,11 @@ static FILE* open_tmp_file(MXS_MONITOR *monitor, char *path)
     if (nbytes < PATH_MAX - sizeof(filename) && mxs_mkdir_all(path, 0744))
     {
         strcat(path, filename);
-        rval = fopen(path, "wb");
+
+        if ((rval = fopen(path, "wb")) == NULL)
+        {
+            MXS_ERROR("Failed to open file '%s': %d, %s", path, errno, mxs_strerror(errno));
+        }
     }
 
     return rval;
@@ -173,8 +178,7 @@ static FILE* open_data_file(MXS_MONITOR *monitor, char *path)
     {
         if ((rval = fopen(path, "rb")) == NULL && errno != ENOENT)
         {
-            MXS_ERROR("Failed to open persisted server states: %d, %s",
-                      errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to open journal file: %d, %s", errno, mxs_strerror(errno));
         }
     }
 
@@ -267,7 +271,7 @@ static bool process_data_file(MXS_MONITOR *monitor, const char *data, const char
         /** All values contain a null terminated string */
         if (!has_null_terminator(ptr, crc_ptr))
         {
-            MXS_ERROR("Possible corrupted data file (no null terminator found), ignoring persisted states.");
+            MXS_ERROR("Possible corrupted journal file (no null terminator found). Ignoring.");
             return false;
         }
 
@@ -285,7 +289,7 @@ static bool process_data_file(MXS_MONITOR *monitor, const char *data, const char
             break;
 
         default:
-            MXS_ERROR("Possible corrupted data file (unknown stored value), ignoring persisted states.");
+            MXS_ERROR("Possible corrupted journal file (unknown stored value). Ignoring.");
             return false;
         }
         ss_dassert(prevptr != ptr);
@@ -340,7 +344,7 @@ void store_server_backup(MXS_MONITOR *monitor)
             }
             else
             {
-                MXS_ERROR("Failed to write backup data to disk: %d, %s",
+                MXS_ERROR("Failed to write journal data to disk: %d, %s",
                           errno, mxs_strerror(errno));
             }
             fclose(file);
@@ -357,9 +361,10 @@ void load_server_backup(MXS_MONITOR *monitor)
     if (file)
     {
         uint32_t size = 0;
+        size_t bytes = fread(&size, 1, MMB_LEN_BYTES, file);
         ss_dassert(sizeof(size) == MMB_LEN_BYTES);
 
-        if (fread(&size, 1, MMB_LEN_BYTES, file) == MMB_LEN_BYTES)
+        if (bytes == MMB_LEN_BYTES)
         {
             /** Payload contents:
              *
@@ -369,7 +374,7 @@ void load_server_backup(MXS_MONITOR *monitor)
              */
             char *data = (char*)MXS_MALLOC(size);
 
-            if (fread(data, 1, size, file) == size)
+            if (data && (bytes = fread(data, 1, size, file)) == size)
             {
                 if (*data == MMB_SCHEMA_VERSION)
                 {
@@ -379,25 +384,45 @@ void load_server_backup(MXS_MONITOR *monitor)
                         if (process_data_file(monitor, data + MMB_LEN_SCHEMA_VERSION,
                                               data + size - MMB_LEN_CRC32))
                         {
-                            MXS_NOTICE("Loaded server states from backup file: %s", path);
+                            MXS_NOTICE("Loaded server states from journal file: %s", path);
                         }
                     }
                     else
                     {
-                        MXS_ERROR("CRC32 mismatch in persisted server state file. "
-                                  "Ignoring persisted server states.");
+                        MXS_ERROR("CRC32 mismatch in journal file. Ignoring.");
                     }
                 }
                 else
                 {
-                    MXS_ERROR("Unknown backup schema version: %d", (int)*data);
+                    MXS_ERROR("Unknown journal schema version: %d", (int)*data);
                 }
+            }
+            else if (data)
+            {
+                if (ferror(file))
+                {
+                    MXS_ERROR("Failed to read journal file: %d, %s", errno, mxs_strerror(errno));
+                }
+                else
+                {
+                    MXS_ERROR("Failed to read journal file: Expected %u bytes, "
+                        "read %lu bytes.", size, bytes);
+                }
+            }
+            MXS_FREE(data);
+        }
+        else
+        {
+            if (ferror(file))
+            {
+                MXS_ERROR("Failed to read journal file length: %d, %s",
+                          errno, mxs_strerror(errno));
             }
             else
             {
-                MXS_ERROR("Failed to read persisted server states.");
+                MXS_ERROR("Failed to read journal file length: Expected %d bytes, "
+                          "read %lu bytes.", MMB_LEN_BYTES, bytes);
             }
-            MXS_FREE(data);
         }
 
         fclose(file);
@@ -414,6 +439,6 @@ void remove_server_backup(MXS_MONITOR *monitor)
     }
     else
     {
-        MXS_ERROR("Path to monitor data directory is too long.");
+        MXS_ERROR("Path to monitor journal directory is too long.");
     }
 }
