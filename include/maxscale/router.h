@@ -79,21 +79,123 @@ typedef enum error_action
  */
 typedef struct mxs_router_object
 {
+    /**
+     * @brief Create a new instance of the router
+     *
+     * This function is called when a new router instance is created. The return
+     * value of this function will be passed as the first parameter to the
+     * other API functions.
+     *
+     * @param service The service where the instance is created
+     * @param options Router options
+     *
+     * @return New router instance on NULL on error
+     */
     MXS_ROUTER *(*createInstance)(SERVICE *service, char **options);
+
+    /**
+     * Called to create a new user session within the router
+     *
+     * This function is called when a new router session is created for a client.
+     * The return value of this function will be passed as the second parameter
+     * to the @c routeQuery, @c clientReply, @c closeSession, @c freeSession,
+     * and @c handleError functions.
+     *
+     * @param instance Router instance
+     * @param session  Client MXS_SESSION object
+     *
+     * @return New router session or NULL on error
+     */
     MXS_ROUTER_SESSION *(*newSession)(MXS_ROUTER *instance, MXS_SESSION *session);
+
+    /**
+     * @brief Called when a session is closed
+     *
+     * The router should close all objects (including backend DCBs) but not free any memory.
+     *
+     * @param instance       Router instance
+     * @param router_session Router session
+     */
     void     (*closeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+
+    /**
+     * @brief Called when a session is freed
+     *
+     * The session should free all allocated memory in this function.
+     *
+     * @param instance       Router instance
+     * @param router_session Router session
+     */
     void     (*freeSession)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
+
+    /**
+     * @brief Called on each query that requires routing
+     *
+     * TODO: Document how routeQuery should be used
+     *
+     * @param instance       Router instance
+     * @param router_session Router session
+     * @param queue          Request from the client
+     *
+     * @return If successful, the function returns 1. If an error occurs
+     * and the session should be closed, the function returns 0.
+     */
     int32_t  (*routeQuery)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
+
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Router instance
+     * @param dcb      DCB where the diagnostic information should be written
+     */
     void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
-    void     (*clientReply)(MXS_ROUTER* instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
-                            DCB *backend_dcb);
+
+    /**
+     * @brief Called for each reply packet
+     *
+     * TODO: Document how clientReply should be used
+     *
+     * @param instance       Router instance
+     * @param router_session Router session
+     * @param queue          Response from the server
+     * @param backend_dcb    The backend DCB which responded to the query
+     */
+    void     (*clientReply)(MXS_ROUTER* instance, MXS_ROUTER_SESSION *router_session,
+                            GWBUF *queue, DCB *backend_dcb);
+
+    /**
+     * @brief Called when a backend DCB has failed
+     *
+     * @param instance       Router instance
+     * @param router_session Router session
+     * @param errmsgbuf      Error message buffer
+     * @param backend_dcb    The backend DCB that has failed
+     * @param action         The type of the action (TODO: Remove this parameter)
+     *
+     * @param succp Pointer to a `bool` which should be set to true for success or false for error
+     */
     void     (*handleError)(MXS_ROUTER         *instance,
                             MXS_ROUTER_SESSION *router_session,
                             GWBUF              *errmsgbuf,
                             DCB                *backend_dcb,
                             mxs_error_action_t action,
                             bool*              succp);
+
+    /**
+     * @brief Called to obtain the capabilities of the router
+     *
+     * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
+     *
+     * @see routing.h
+     */
     uint64_t (*getCapabilities)(MXS_ROUTER *instance);
+
+    /**
+     * @brief Called for destroying a router instance
+     *
+     * @param instance Router instance
+     */
     void     (*destroyInstance)(MXS_ROUTER *instance);
 } MXS_ROUTER_OBJECT;
 
