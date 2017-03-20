@@ -1886,6 +1886,10 @@ static bool cache_rules_parse_json(CACHE_RULES *self, json_t *root)
                 MXS_ERROR("The cache rules object contains a `%s` key, but it is not an array.", KEY_USE);
             }
         }
+        else
+        {
+            parsed = true;
+        }
     }
 
     return parsed;
