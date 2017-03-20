@@ -627,7 +627,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
 
 bool check_service_permissions(SERVICE* service)
 {
-    if (is_internal_service(service->routerModule) ||
+    if (rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH) ||
         config_get_global_options()->skip_permission_checks ||
         service->dbref == NULL) // No servers to check
     {

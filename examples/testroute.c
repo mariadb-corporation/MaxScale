@@ -152,7 +152,7 @@ diagnostic(MXS_ROUTER *instance, DCB *dcb)
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return 0;
+    return RCAP_TYPE_NONE;
 }
 
 

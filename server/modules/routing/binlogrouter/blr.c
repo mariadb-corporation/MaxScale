@@ -171,7 +171,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Binlogrouter",
         "V2.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT |
+        RCAP_TYPE_RESULTSET_OUTPUT | RCAP_TYPE_NO_AUTH,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -1891,7 +1892,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_NO_RSESSION | RCAP_TYPE_CONTIGUOUS_OUTPUT | RCAP_TYPE_RESULTSET_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /**

@@ -281,7 +281,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A RabbitMQ query logging filter",
         "V1.0.2",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -1513,5 +1513,5 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

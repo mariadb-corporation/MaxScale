@@ -134,7 +134,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A routing hint filter that send queries to the master after data modification",
         "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -389,5 +389,5 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

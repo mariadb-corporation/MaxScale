@@ -142,7 +142,10 @@ SERVICE* service_alloc(const char *name, const char *router)
         return NULL;
     }
 
-    service->capabilities = 0;
+    const MXS_MODULE* module = get_module(my_router, MODULE_ROUTER);
+    ss_dassert(module);
+
+    service->capabilities = module->module_capabilities;
     service->client_count = 0;
     service->n_dbref = 0;
     service->name = my_name;
@@ -1239,6 +1242,9 @@ serviceSetFilters(SERVICE *service, char *filters)
         {
             if (filter_load(flist[n - 1]))
             {
+                const MXS_MODULE* module = get_module(flist[n - 1]->module, MODULE_FILTER);
+                ss_dassert(module);
+                capabilities |= module->module_capabilities;
                 capabilities |= flist[n - 1]->obj->getCapabilities(flist[n - 1]->filter);
             }
             else

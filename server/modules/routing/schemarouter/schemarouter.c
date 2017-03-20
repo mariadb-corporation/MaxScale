@@ -618,7 +618,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "A database sharding router for simple sharding",
         "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -3099,7 +3099,7 @@ static rses_property_t* mysql_sescmd_get_property(mysql_sescmd_t* scmd)
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /**

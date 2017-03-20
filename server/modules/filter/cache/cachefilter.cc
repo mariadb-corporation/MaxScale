@@ -134,7 +134,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_TRANSACTION_TRACKING,
         &CacheFilter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -274,7 +274,7 @@ void CacheFilter::diagnostics(DCB* pDcb)
 
 uint64_t CacheFilter::getCapabilities()
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING;
+    return RCAP_TYPE_NONE;
 }
 
 // static

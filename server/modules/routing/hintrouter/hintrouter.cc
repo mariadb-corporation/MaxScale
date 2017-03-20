@@ -82,7 +82,7 @@ void HintRouter::diagnostics(DCB* pOut)
 uint64_t HintRouter::getCapabilities()
 {
     HR_ENTRY();
-    return RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 
@@ -95,7 +95,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,      /* Implemented module API version */
         "A hint router", /* Description */
         "V1.0.0", /* Module version */
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_STMT_OUTPUT,
         &HintRouter::s_object,
         NULL, /* Process init, can be null */
         NULL, /* Process finish, can be null */

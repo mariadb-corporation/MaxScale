@@ -78,7 +78,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT,
         &MaskingFilter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -146,7 +146,7 @@ void MaskingFilter::diagnostics(DCB* pDcb)
 // static
 uint64_t MaskingFilter::getCapabilities()
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_CONTIGUOUS_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 std::tr1::shared_ptr<MaskingRules> MaskingFilter::rules() const

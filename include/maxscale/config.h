@@ -294,10 +294,6 @@ void config_enable_feedback_task(void);
  */
 void config_disable_feedback_task(void);
 
-
-/** TODO: Add new capability that allows skipping of permission checks */
-bool is_internal_service(const char *router);
-
 /**
  * @brief Reload the configuration
  *

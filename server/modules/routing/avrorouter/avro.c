@@ -170,7 +170,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "Binlogrouter",
         "V1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_NO_RSESSION | RCAP_TYPE_NO_AUTH,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -1019,7 +1019,7 @@ errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *mess
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_NO_RSESSION;
+    return RCAP_TYPE_NONE;
 }
 
 /**

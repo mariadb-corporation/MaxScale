@@ -123,7 +123,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A query rewrite filter that uses regular expressions to rewrite queries",
         "V1.1.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_CONTIGUOUS_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -493,5 +493,5 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_CONTIGUOUS_INPUT;
+    return RCAP_TYPE_NONE;
 }

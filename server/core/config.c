@@ -72,6 +72,7 @@
 #include "maxscale/service.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
+#include "maxscale/router.h"
 
 typedef struct duplicate_context
 {
@@ -2012,38 +2013,6 @@ config_truth_value(const char *str)
     return -1;
 }
 
-static char *InternalRouters[] =
-{
-    "debugcli",
-    "cli",
-    "maxinfo",
-    "binlogrouter",
-    "testroute",
-    "avrorouter",
-    NULL
-};
-
-/**
- * Determine if the router is one of the special internal services that
- * MaxScale offers.
- *
- * @param router        The router name
- * @return      Non-zero if the router is in the InternalRouters table
- */
-bool is_internal_service(const char *router)
-{
-    if (router)
-    {
-        for (int i = 0; InternalRouters[i]; i++)
-        {
-            if (strcmp(router, InternalRouters[i]) == 0)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 /**
  * Get the MAC address of first network interface
  *
@@ -2638,7 +2607,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     {
         serviceSetUser(obj->element, user, auth);
     }
-    else if (!is_internal_service(router))
+    else if (!rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH))
     {
         error_count++;
         MXS_ERROR("Service '%s' is missing %s%s%s.",

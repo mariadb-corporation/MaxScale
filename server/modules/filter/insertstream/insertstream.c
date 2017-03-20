@@ -110,7 +110,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "Data streaming filter",
         "1.0.0",
-        MXS_NO_MODULE_CAPABILITIES,
+        RCAP_TYPE_TRANSACTION_TRACKING,
         &MyObject,
         NULL,
         NULL,
@@ -520,7 +520,7 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_TRANSACTION_TRACKING;
+    return RCAP_TYPE_NONE;
 }
 
 /**
