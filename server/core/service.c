@@ -488,7 +488,10 @@ int serviceInitialize(SERVICE *service)
 
     if ((service->router_instance = service->router->createInstance(service, router_options)))
     {
-        service->capabilities |= service->router->getCapabilities(service->router_instance);
+        if (service->router->getCapabilities)
+        {
+            service->capabilities |= service->router->getCapabilities(service->router_instance);
+        }
 
         if (!config_get_global_options()->config_check)
         {
@@ -1245,7 +1248,10 @@ serviceSetFilters(SERVICE *service, char *filters)
                 const MXS_MODULE* module = get_module(flist[n - 1]->module, MODULE_FILTER);
                 ss_dassert(module);
                 capabilities |= module->module_capabilities;
-                capabilities |= flist[n - 1]->obj->getCapabilities(flist[n - 1]->filter);
+                if (flist[n - 1]->obj->getCapabilities)
+                {
+                    capabilities |= flist[n - 1]->obj->getCapabilities(flist[n - 1]->filter);
+                }
             }
             else
             {

@@ -58,7 +58,9 @@ typedef enum error_action
 
 /**
  * @verbatim
- * The "module object" structure for a query router module
+ * The "module object" structure for a query router module. All entry points
+ * marked with `(optional)` are optional entry points which can be set to NULL
+ * if no implementation is required.
  *
  * The entry points are:
  *  createInstance  Called by the service to create a new instance of the query router
@@ -67,11 +69,11 @@ typedef enum error_action
  *  freeSession     Called when a session is freed
  *  routeQuery      Called on each query that requires routing
  *  diagnostics     Called to force the router to print diagnostic output
- *  clientReply     Called to reply to client the data from one or all backends
+ *  clientReply     Called to reply to client the data from one or all backends (optional)
  *  handleError     Called to reply to client errors with optional closeSession
  *                  or make a request for a new backend connection
- *  getCapabilities Called to obtain the capabilities of the router
- *  destroyInstance Called for destroying a router instance
+ *  getCapabilities Called to obtain the capabilities of the router (optional)
+ *  destroyInstance Called for destroying a router instance (optional)
  *
  * @endverbatim
  *
