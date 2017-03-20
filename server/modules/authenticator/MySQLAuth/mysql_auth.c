@@ -613,8 +613,11 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         return MXS_AUTH_LOADUSERS_FATAL;
     }
 
+    bool skip_local = false;
+
     if (instance->handle == NULL)
     {
+        skip_local = true;
         char path[PATH_MAX];
         get_database_path(port, path, sizeof(path));
         if (!open_instance_database(path, &instance->handle))
@@ -623,7 +626,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         }
     }
 
-    int loaded = replace_mysql_users(port);
+    int loaded = replace_mysql_users(port, skip_local);
 
     if (loaded < 0)
     {
@@ -641,7 +644,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         }
     }
 
-    if (loaded == 0)
+    if (loaded == 0 && !skip_local)
     {
         MXS_WARNING("[%s]: failed to load any user information. Authentication"
                     " will probably fail as a result.", service->name);

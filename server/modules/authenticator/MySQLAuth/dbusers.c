@@ -50,7 +50,7 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) %s"
 
-static int get_users(SERV_LISTENER *listener);
+static int get_users(SERV_LISTENER *listener, bool skip_local);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
@@ -72,10 +72,10 @@ static char* get_new_users_query(const char *server_version, bool include_root)
     return rval;
 }
 
-int replace_mysql_users(SERV_LISTENER *listener)
+int replace_mysql_users(SERV_LISTENER *listener, bool skip_local)
 {
     spinlock_acquire(&listener->lock);
-    int i = get_users(listener);
+    int i = get_users(listener, skip_local);
     spinlock_release(&listener->lock);
     return i;
 }
@@ -814,7 +814,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(SERV_LISTENER *listener)
+static int get_users(SERV_LISTENER *listener, bool skip_local)
 {
     char *service_user = NULL;
     char *service_passwd = NULL;
@@ -841,6 +841,12 @@ static int get_users(SERV_LISTENER *listener)
 
     for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
     {
+        if (skip_local && server_is_mxs_service(server->server))
+        {
+            total_users = 0;
+            continue;
+        }
+
         MYSQL *con = gw_mysql_init();
         if (con)
         {
