@@ -14,7 +14,7 @@ The cache will be used and populated in the following circumstances:
 * There is _no_ explicit transaction active, that is, _autocommit_ is used,
 * there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
   READ ONLY`) active, or
-* there is a transaction active and _no_ statement that modify the database
+* there is a transaction active and _no_ statement that modifies the database
   has been performed.
 
 In practice, the last bullet point basically means that if a transaction has
@@ -35,10 +35,11 @@ circumstances:
   `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
 * The `SELECT` uses system or user variables.
 
-Ensuring that, requires all `SELECT` statements to be parsed. If it is known
-that there will be *no* such statements, that safety measure can be turned
-off, which has a *significant impact* on the performance. Please see the cache
-parameter [selects](#selects).
+In order to ensure that, all `SELECT` statements have to be parsed, which
+carries a _significant_ performance cost. If it is known that there are no
+such statements or that it does not matter even if they are cached, that
+safety measure can be turned off. Please read [performance](#performance)
+for more details.
 
 ## Limitations
 
@@ -701,3 +702,61 @@ The rules specify that the data of the table `sbtest` should be cached.
     ]
 }
 ```
+
+# Performance
+
+Perhaps the most significant factor affecting the performance of the cache is
+whether the statements need to be parsed or not. By default, all statements are
+parsed in order to exclude `SELECT` statements that use non-cacheable functions,
+access non-cacheable variables or refer to system or user variables.
+
+If it is known that no such statements are used or if it does not matter if the
+results are cached, that safety measure can be turned off. To do that, add the
+following line to the cache configuration:
+```
+[MyCache]
+...
+selects=assume_cacheable
+```
+
+With that configuration, the cache itself will not cause the statements to be
+parsed.
+
+But note that even with `assume_cacheable` configured, a rule referring
+specifically to a _database_, _table_ or _column_ will still cause the
+statement to be parsed.
+
+For instance, a simple rule like
+```
+{
+    "store": [
+        {
+            "attribute": "database",
+            "op": "=",
+            "value": "db1"
+        }
+    ]
+}
+```
+cannot be fulfilled without parsing the statement.
+
+If the rule is instead expressed using a regular expression
+```
+{
+    "store": [
+        {
+            "attribute": "query",
+            "op": "like",
+            "value": ".*db1.*"
+        }
+    ]
+}
+```
+then the statement will again not be parsed.
+
+However, even if regular expression matching is performance wise cheaper
+than parsing, it still carries a cost.
+
+For maximum performance, arrange the situation so that
+* `selects=assume_cacheable` can be configured, and that
+* _no_ rules file is needed.
