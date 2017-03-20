@@ -161,6 +161,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
         MXS_MODULE_API_ROUTER, MXS_MODULE_GA, MXS_ROUTER_VERSION,
         "A Read/Write splitting router for enhancement read scalability",
         "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

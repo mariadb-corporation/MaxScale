@@ -148,6 +148,7 @@ extern "C"
             QUERY_CLASSIFIER_VERSION,
             "Dummy Query Classifier",
             "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
             &qc,
             qc_dummy_process_init,
             qc_dummy_process_end,

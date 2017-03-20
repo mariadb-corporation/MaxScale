@@ -78,6 +78,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A masking filter that is capable of masking/obfuscating returned column values.",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MaskingFilter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */

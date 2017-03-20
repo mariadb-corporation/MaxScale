@@ -95,6 +95,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,      /* Implemented module API version */
         "A hint router", /* Description */
         "V1.0.0", /* Module version */
+        MXS_NO_MODULE_CAPABILITIES,
         &HintRouter::s_object,
         NULL, /* Process init, can be null */
         NULL, /* Process finish, can be null */

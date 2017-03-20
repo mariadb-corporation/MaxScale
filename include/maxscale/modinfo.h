@@ -18,6 +18,8 @@
 
 #include <maxscale/cdefs.h>
 
+#include <stdint.h>
+
 MXS_BEGIN_DECLS
 
 /**
@@ -133,6 +135,7 @@ typedef struct mxs_module
     MXS_MODULE_VERSION  api_version;   /**< Module API version */
     const char         *description;   /**< Module description */
     const char         *version;       /**< Module version */
+    uint64_t            module_capabilities; /**< Declared module capabilities */
     void               *module_object; /**< Module type specific API implementation */
     /**
      * If non-NULL, this function is called once at process startup. If the
@@ -174,6 +177,13 @@ typedef struct mxs_module
  * parameters, it should be the only value.
  */
 #define MXS_END_MODULE_PARAMS 0
+
+/**
+ * This value should be given to the @c module_capabilities member if the module
+ * declares no capabilities. Currently only routers and filters can declare
+ * capabilities.
+ */
+#define MXS_NO_MODULE_CAPABILITIES 0
 
 /**
  * Name of the module entry point

@@ -607,6 +607,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,      /* Implemented module API version */
         "A simple round robin router", /* Description */
         "V1.1.0", /* Module version */
+        MXS_NO_MODULE_CAPABILITIES,
         &entryPoints, /* Defined above */
         process_init, /* Process init, can be null */
         process_finish, /* Process finish, can be null */

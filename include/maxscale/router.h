@@ -118,6 +118,7 @@ typedef enum router_capability
     RCAP_TYPE_NO_RSESSION   = 0x00010000, /**< Router does not use router sessions */
     RCAP_TYPE_NO_USERS_INIT = 0x00020000, /**< Prevent the loading of authenticator
                                              users when the service is started */
+    RCAP_TYPE_NO_AUTH       = 0x00040000, /**< No `user` or `password` parameter required */
 } mxs_router_capability_t;
 
 typedef enum

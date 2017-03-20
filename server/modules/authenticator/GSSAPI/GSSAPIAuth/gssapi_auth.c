@@ -676,6 +676,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_AUTHENTICATOR_VERSION,
         "GSSAPI authenticator",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

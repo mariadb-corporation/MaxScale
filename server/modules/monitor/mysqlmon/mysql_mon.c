@@ -116,6 +116,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MONITOR_VERSION,
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

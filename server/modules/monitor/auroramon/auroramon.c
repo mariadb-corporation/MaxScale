@@ -273,6 +273,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MONITOR_VERSION,
         "Aurora monitor",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
