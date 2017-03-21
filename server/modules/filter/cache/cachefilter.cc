@@ -102,6 +102,20 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     return true;
 }
 
+int cache_process_init()
+{
+    uint32_t jit_available;
+    pcre2_config(PCRE2_CONFIG_JIT, &jit_available);
+
+    if (!jit_available)
+    {
+        MXS_WARNING("pcre2 JIT is not available; regex matching will not be "
+                    "as efficient as it could be.");
+    }
+
+    return 0;
+}
+
 }
 
 //
@@ -145,7 +159,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         "A caching filter that is capable of caching and returning cached data.",
         VERSION_STRING,
         &CacheFilter::s_object,
-        NULL, /* Process init. */
+        cache_process_init, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
         NULL, /* Thread finish. */

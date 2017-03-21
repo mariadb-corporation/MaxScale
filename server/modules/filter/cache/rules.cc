@@ -532,6 +532,10 @@ static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
 
     if (code)
     {
+        // We do not care about the result. If JIT is not present, we have
+        // complained about it already.
+        pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
+
         int n_threads = config_threadcount();
 
         pcre2_match_data **datas = alloc_match_datas(n_threads, code);
