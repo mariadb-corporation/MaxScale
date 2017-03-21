@@ -109,7 +109,6 @@ class AccountRegexp : public MaskingRules::Rule::Account
 public:
     ~AccountRegexp()
     {
-        pcre2_match_data_free(m_pData);
         pcre2_code_free(m_pCode);
     }
 
@@ -126,24 +125,10 @@ public:
         {
             Closer<pcre2_code*> code(pCode);
 
-            pcre2_match_data* pData = pcre2_match_data_create_from_pattern(pCode, NULL);
+            sAccount = shared_ptr<AccountRegexp>(new AccountRegexp(user, host, pCode));
 
-            if (pData)
-            {
-                Closer<pcre2_match_data*> data(pData);
-
-                sAccount = shared_ptr<AccountRegexp>(new AccountRegexp(user, host, pCode, pData));
-
-                // Ownership of pCode and pData has been moved to the
-                // AccountRegexp instance.
-                data.release();
-                code.release();
-            }
-            else
-            {
-                MXS_ERROR("PCRE2 match data creation failed. Most likely due to a "
-                          "lack of available memory.");
-            }
+            // Ownership of pCode has been moved to the AccountRegexp object.
+            code.release();
         }
         else
         {
@@ -171,20 +156,31 @@ public:
         ss_dassert(zUser);
         ss_dassert(zHost);
 
-        return
-            (m_user.empty() || (m_user == zUser)) &&
-            pcre2_match(m_pCode, (PCRE2_SPTR)zHost, 0, 0, 0, m_pData, NULL) >= 0;
+        bool rv = (m_user.empty() || (m_user == zUser));
+
+        if (rv)
+        {
+            ss_dassert(m_pCode);
+            pcre2_match_data* pData = pcre2_match_data_create_from_pattern(m_pCode, NULL);
+
+            if (pData)
+            {
+                Closer<pcre2_match_data*> data(pData);
+
+                rv = (pcre2_match(m_pCode, (PCRE2_SPTR)zHost, 0, 0, 0, pData, NULL) >= 0);
+            }
+        }
+
+        return rv;
     }
 
 private:
     AccountRegexp(const string& user,
                   const string& host,
-                  pcre2_code* pCode,
-                  pcre2_match_data* pData)
+                  pcre2_code* pCode)
         : m_user(user)
         , m_host(host)
         , m_pCode(pCode)
-        , m_pData(pData)
     {
     }
 
@@ -192,10 +188,9 @@ private:
     AccountRegexp& operator = (const AccountRegexp&);
 
 private:
-    string            m_user;
-    string            m_host;
-    pcre2_code*       m_pCode;
-    pcre2_match_data* m_pData;
+    string      m_user;
+    string      m_host;
+    pcre2_code* m_pCode;
 };
 
 /**
