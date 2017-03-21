@@ -104,7 +104,7 @@ static int pidfd = PIDFD_CLOSED;
 /**
  * exit flag for log flusher.
  */
-static bool do_exit = FALSE;
+static bool do_exit = false;
 
 /**
  * If MaxScale is started to run in daemon process the value is true.
@@ -2128,7 +2128,7 @@ int maxscale_shutdown()
 
 static void log_flush_shutdown(void)
 {
-    do_exit = TRUE;
+    do_exit = true;
 }
 
 
