@@ -886,6 +886,18 @@ Example:
 max_connections=100
 ```
 
+#### `max_retry_interval`
+
+Configure the maximum interval between consecutive attempts to bind to an
+interface. The default value for this parameter is 3600 seconds. This
+parameter was introduced in MaxScale 2.2.0.
+
+When a listener fails to bind to the interface it is assigned to, it will
+attempt to bind to the interface again after 10 seconds. If the attempt fails,
+the interval is incremented by 10 seconds and the next attempt will be in 20
+seconds. The interval is incremented until the value of `max_retry_interval` is
+reached at which point the listener attempts to bind to the interface every
+`max_retry_interval` seconds.
 
 ### Server
 

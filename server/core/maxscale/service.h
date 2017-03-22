@@ -130,6 +130,14 @@ void  service_update(SERVICE *service, char *router, char *user, char *auth);
 void service_add_parameters(SERVICE *service, const MXS_CONFIG_PARAMETER *param);
 
 /**
+ * @brief Set listener rebinding interval
+ *
+ * @param service Service to configure
+ * @param value String value o
+ */
+void service_set_retry_interval(SERVICE *service, int value);
+
+/**
  * Internal debugging diagnostics
  */
 void       printService(SERVICE *service);

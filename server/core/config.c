@@ -124,6 +124,7 @@ static const char *service_params[] =
     "passwd", // DEPRECATE: See config_get_password.
     "password",
     "enable_root_user",
+    "max_retry_interval",
     "max_connections",
     "max_queued_connections",
     "queued_connection_timeout",
@@ -2559,6 +2560,24 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (enable_root_user)
     {
         serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
+    }
+
+    char *max_retry_interval = config_get_value(obj->parameters, "max_retry_interval");
+
+    if (max_retry_interval)
+    {
+        char *endptr;
+        long val = strtol(max_retry_interval, &endptr, 10);
+
+        if (val && *endptr == '\0')
+        {
+            service_set_retry_interval(obj->element, val);
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for 'max_retry_interval': %s", max_retry_interval);
+            error_count++;
+        }
     }
 
     char *connection_timeout = config_get_value(obj->parameters, "connection_timeout");

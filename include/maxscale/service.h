@@ -151,6 +151,7 @@ typedef struct service
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service. */
+    int max_retry_interval;            /**< Maximum retry interval */
 } SERVICE;
 
 typedef enum count_spec_t
