@@ -25,19 +25,8 @@
 
 /**
  * @file adminusers.c - Administration user account management
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                  Description
- * 18/07/13     Mark Riddoch         Initial implementation
- * 23/07/13     Mark Riddoch         Addition of error mechanism to add user
- * 23/05/16     Massimiliano Pinto   admin_add_user and admin_remove_user
- *                                   no longer accept password parameter
- * 02/09/16     Johan Wikman         Enabled Linux accounts and MaxScale users
- *
- * @endverbatim
  */
+
 static void  initialise();
 
 static USERS *loadLinuxUsers();
@@ -55,18 +44,18 @@ static USERS *linux_users = NULL;
 static USERS *inet_users = NULL;
 static int   admin_init = 0;
 
-static char *ADMIN_ERR_NOMEM            = "Out of memory";
-static char *ADMIN_ERR_FILEOPEN         = "Unable to create password file";
-static char *ADMIN_ERR_DUPLICATE        = "Duplicate username specified";
-static char *ADMIN_ERR_USERNOTFOUND     = "User not found";
-static char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
-static char *ADMIN_ERR_FILEAPPEND       = "Unable to append to password file";
-static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
-static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
-static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
-static char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
-static char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
-static char *ADMIN_SUCCESS              = NULL;
+static const char *ADMIN_ERR_NOMEM            = "Out of memory";
+static const char *ADMIN_ERR_FILEOPEN         = "Unable to create password file";
+static const char *ADMIN_ERR_DUPLICATE        = "Duplicate username specified";
+static const char *ADMIN_ERR_USERNOTFOUND     = "User not found";
+static const char *ADMIN_ERR_AUTHENTICATION   = "Authentication failed";
+static const char *ADMIN_ERR_FILEAPPEND       = "Unable to append to password file";
+static const char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
+static const char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
+static const char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
+static const char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
+static const char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
+static const char *ADMIN_SUCCESS              = NULL;
 
 static const int LINELEN = 80;
 
@@ -329,10 +318,10 @@ void dcb_print_users(DCB *dcb, const char* heading, USERS *users)
 
         if (iter)
         {
-            char *sep = "";
+            const char *sep = "";
             const char *user;
 
-            while ((user = hashtable_next(iter)) != NULL)
+            while ((user = (const char*)hashtable_next(iter)) != NULL)
             {
                 dcb_printf(dcb, "%s%s", sep, user);
                 sep = ", ";
@@ -387,7 +376,7 @@ loadUsers(const char *fname)
             break;
         }
 
-        char *password;
+        const char *password;
         char *colon = strchr(uname, ':');
         if (colon)
         {
