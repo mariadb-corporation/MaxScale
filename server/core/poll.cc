@@ -88,6 +88,7 @@ int max_poll_sleep;
 thread_local int current_thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
+static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 
 /** Poll cross-thread messaging variables */
 static volatile int     *poll_msg;
@@ -100,6 +101,7 @@ static simple_mutex_t epoll_wait_mutex; /*< serializes calls to epoll_wait */
 static int n_waiting = 0;    /*< No. of threads in epoll_wait */
 
 static void poll_check_message(void);
+static bool poll_dcb_session_check(DCB *dcb, const char *function);
 
 /**
  * Thread load average, this is the average number of descriptors in each
@@ -954,7 +956,7 @@ process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
 #endif
     return rc;
 }
-
+#ifdef CRAP
 static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int wid, uint32_t events)
 {
     uint32_t rc = process_pollq_dcb((DCB*)data, wid, events);
@@ -988,7 +990,7 @@ static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int wid, uint32_t events)
 
     return rc;
 }
-
+#endif
 /**
  *
  * Check that the DCB has a session link before processing.
