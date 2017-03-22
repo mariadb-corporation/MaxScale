@@ -348,7 +348,7 @@ static void add_monitor_defaults(MXS_MONITOR *monitor)
 {
     /** Inject the default module parameters in case we only deleted
      * a parameter */
-    CONFIG_CONTEXT ctx = {.object = ""};
+    CONFIG_CONTEXT ctx = {.object = (char*)""};
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
     if (mod)
