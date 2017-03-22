@@ -747,16 +747,54 @@ If the rule is instead expressed using a regular expression
         {
             "attribute": "query",
             "op": "like",
-            "value": ".*db1.*"
+            "value": "FROM db1\\..*"
         }
     ]
 }
 ```
 then the statement will again not be parsed.
 
-However, even if regular expression matching is performance wise cheaper
-than parsing, it still carries a cost.
+However, even if regular expression matching performance wise is cheaper
+than parsing, it still carries a cost. In the following is a table with numbers
+giving a rough picture of the relative cost of different approaches.
 
-For maximum performance, arrange the situation so that
-* `selects=assume_cacheable` can be configured, and that
-* _no_ rules file is needed.
+In the table, _regexp match_ means that the cacheable statements
+were picked out using a rule like
+```
+{
+    "attribute": "query",
+    "op": "like",
+    "value": "FROM dbname"
+}
+```
+while _exact match_ means that the cacheable statements were picked out using a
+rule like
+```
+{
+    "attribute": "database",
+    "op": "=",
+    "value": "dbname"
+}
+```
+The exact match rule requires all statements to be parsed.
+
+Note that the qps figures are only indicative.
+
+| `selects`          | Rule           | qps |
+| -------------------| ---------------|-----|
+| `assume_cacheable` | none           | 100 |
+| `assume_cacheable` | _regexp match_ |  98 |
+| `assume_cacheable` | _exact match_  |  60 |
+| `verify_cacheable` | none           |  60 |
+| `verify_cacheable` | _regexp match_ |  58 |
+| `verify_cacheable` | _exact match_  |  58 |
+
+## Summary
+
+For maximum performance:
+* Arrange the situation so that `selects=assume_cacheable` can be
+  configured, and use _no_ rules.
+* If `selects=assume_cacheable` has been configured, use _only_
+  regexp based rules.
+* If `selects=verify_cacheable` has been configured non-regex based
+  matching can be used.
