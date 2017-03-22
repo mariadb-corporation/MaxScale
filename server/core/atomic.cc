@@ -11,16 +11,10 @@
  * Public License.
  */
 
+#include <maxscale/atomic.h>
+
 /**
  * @file atomic.c  - Implementation of atomic operations for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 10/06/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
 int
