@@ -962,36 +962,6 @@ static void usage(void)
             get_config_persistdir(), get_module_configdir(), get_connector_plugindir());
 }
 
-
-/**
- * The entry point of each worker thread.
- *
- * @param arg The thread argument.
- */
-void worker_thread_main(void* arg)
-{
-    if (qc_thread_init(QC_INIT_SELF))
-    {
-        if (modules_thread_init())
-        {
-            poll_waitevents(arg);
-
-            modules_thread_finish();
-        }
-        else
-        {
-            MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
-        }
-
-        qc_thread_end(QC_INIT_SELF);
-    }
-    else
-    {
-        MXS_ERROR("Could not perform thread initialization for the "
-                  "internal query classifier. Thread exits.");
-    }
-}
-
 /**
  * Deletes a particular signal from a provided signal set.
  *
