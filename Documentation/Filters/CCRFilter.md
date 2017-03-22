@@ -64,12 +64,20 @@ An optional parameter that can be used to control which statements trigger the
 statement re-routing. The parameter value is a regular expression that is used to
 match against the SQL text. Only non-SELECT statements are inspected.
 
+```
+match=.*INSERT.*
+```
+
 ### `ignore`
 
 An optional parameter that can be used to control which statements don't trigger
 the statement re-routing. This does the opposite of the _match_ parameter. The
 parameter value is a regular expression that is used to match against the SQL
 text. Only non-SELECT statements are inspected.
+
+```
+ignore=.*UPDATE.*
+```
 
 ## Example Configuration
 

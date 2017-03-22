@@ -1027,9 +1027,10 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
                 handle->warn_failover = false;
             }
 
-            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER);
-            monitor_set_pending_status(db, SERVER_MASTER);
+            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
+            handle->master = db;
         }
         else if (!handle->allow_cluster_recovery)
         {

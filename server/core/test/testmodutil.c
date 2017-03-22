@@ -578,6 +578,43 @@ void test_large_packets()
     }
 }
 
+char* bypass_whitespace(char* sql)
+{
+    return modutil_MySQL_bypass_whitespace(sql, strlen(sql));
+}
+
+void test_bypass_whitespace()
+{
+    char* sql;
+
+    sql = bypass_whitespace("SELECT");
+    ss_info_dassert(*sql == 'S', "1");
+
+    sql = bypass_whitespace(" SELECT");
+    ss_info_dassert(*sql == 'S', "2");
+
+    sql = bypass_whitespace("\tSELECT");
+    ss_info_dassert(*sql == 'S', "3");
+
+    sql = bypass_whitespace("\nSELECT");
+    ss_info_dassert(*sql == 'S', "4");
+
+    sql = bypass_whitespace("/* comment */SELECT");
+    ss_info_dassert(*sql == 'S', "5");
+
+    sql = bypass_whitespace(" /* comment */ SELECT");
+    ss_info_dassert(*sql == 'S', "6");
+
+    sql = bypass_whitespace("-- comment\nSELECT");
+    ss_info_dassert(*sql == 'S', "7");
+
+    sql = bypass_whitespace("-- comment\n /* comment */ SELECT");
+    ss_info_dassert(*sql == 'S', "8");
+
+    sql = bypass_whitespace("# comment\nSELECT");
+    ss_info_dassert(*sql == 'S', "9");
+}
+
 int main(int argc, char **argv)
 {
     int result = 0;
@@ -591,5 +628,6 @@ int main(int argc, char **argv)
     test_strnchr_esc();
     test_strnchr_esc_mysql();
     test_large_packets();
+    test_bypass_whitespace();
     exit(result);
 }

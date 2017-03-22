@@ -37,7 +37,7 @@ def read_json():
             rbuf += buf
             while True:
                 rbuf = rbuf.lstrip()
-                data = decoder.raw_decode(rbuf.decode('ascii'))
+                data = decoder.raw_decode(rbuf.decode('utf_8'))
                 rbuf = rbuf[data[1]:]
                 print(json.dumps(data[0]))
         except ValueError as err:

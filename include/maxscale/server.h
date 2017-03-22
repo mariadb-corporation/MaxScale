@@ -254,6 +254,14 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
  */
 bool server_remove_parameter(SERVER *server, const char *name);
 
+/**
+ * @brief Check if a server points to a local MaxScale service
+ *
+ * @param server Server to check
+ * @return True if the server points to a local MaxScale service
+ */
+bool server_is_mxs_service(const SERVER *server);
+
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
 extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);

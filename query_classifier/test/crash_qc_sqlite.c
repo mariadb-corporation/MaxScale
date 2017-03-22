@@ -41,7 +41,7 @@ int main()
 
     set_libdir(strdup("../qc_sqlite"));
 
-    if (qc_setup("qc_sqlite", NULL) && qc_process_init())
+    if (qc_setup("qc_sqlite", NULL) && qc_process_init(QC_INIT_BOTH))
     {
         const char s[] = "SELECT @@global.max_allowed_packet";
 
@@ -51,9 +51,9 @@ int main()
         // being of the opinion that the statement was not the one to be
         // classified and hence an alien parse-tree being passed to sqlite3's
         // code generator.
-        qc_parse(stmt);
+        qc_parse(stmt, QC_COLLECT_ALL);
 
-        qc_process_end();
+        qc_process_end(QC_INIT_BOTH);
 
         rv = EXIT_SUCCESS;
     }

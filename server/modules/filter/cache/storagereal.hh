@@ -25,10 +25,6 @@ public:
     cache_result_t get_info(uint32_t flags,
                             json_t** ppInfo) const;
 
-    cache_result_t get_key(const char* zDefaultDb,
-                           const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const;
-
     cache_result_t get_value(const CACHE_KEY& key,
                              uint32_t flags,
                              GWBUF** ppValue) const;

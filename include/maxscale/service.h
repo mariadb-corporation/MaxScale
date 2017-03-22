@@ -241,6 +241,14 @@ bool serviceHasBackend(SERVICE *service, SERVER *server);
 bool serviceHasListener(SERVICE *service, const char *protocol,
                         const char* address, unsigned short port);
 
+/**
+ * @brief Check if a MaxScale service listens on a port
+ *
+ * @param port The port to check
+ * @return True if a MaxScale service uses the port
+ */
+bool service_port_is_used(unsigned short port);
+
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
 int   serviceSetUser(SERVICE *service, char *user, char *auth);
 bool  serviceSetFilters(SERVICE *service, char *filters);

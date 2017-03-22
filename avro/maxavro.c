@@ -136,7 +136,7 @@ uint64_t avro_length_integer(uint64_t val)
  *
  * @see maxavro_get_error
  */
-char* maxavro_read_string(MAXAVRO_FILE* file)
+char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
 {
     char *key = NULL;
     uint64_t len;
@@ -149,6 +149,7 @@ char* maxavro_read_string(MAXAVRO_FILE* file)
             memcpy(key, file->buffer_ptr, len);
             key[len] = '\0';
             file->buffer_ptr += len;
+            *size = len;
         }
         else
         {
@@ -282,19 +283,10 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
     {
         for (long i = 0; i < blocks; i++)
         {
+            size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
-            uint64_t keylen;
-            uint64_t valuelen;
-
-            if (val && maxavro_read_integer_from_file(file, &keylen) &&
-                (val->key = MXS_MALLOC(keylen + 1)) &&
-                fread(val->key, 1, keylen, file->file) == keylen &&
-                maxavro_read_integer_from_file(file, &valuelen) &&
-                (val->value = MXS_MALLOC(valuelen + 1)) &&
-                fread(val->value, 1, valuelen, file->file) == valuelen)
+            if (val && (val->key = maxavro_read_string(file, &size)) && (val->value = maxavro_read_string(file, &size)))
             {
-                val->key[keylen] = '\0';
-                val->value[valuelen] = '\0';
                 val->next = rval;
                 rval = val;
             }

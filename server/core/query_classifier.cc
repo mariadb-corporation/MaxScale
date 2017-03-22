@@ -11,11 +11,14 @@
  * Public License.
  */
 
-#include <maxscale/query_classifier.h>
+#include "maxscale/query_classifier.h"
 #include <maxscale/log_manager.h>
 #include <maxscale/modutil.h>
 #include <maxscale/alloc.h>
+#include <maxscale/platform.h>
+#include <maxscale/pcre2.h>
 #include <maxscale/utils.h>
+#include "maxscale/trxboundaryparser.hh"
 
 #include "../core/maxscale/modules.h"
 
@@ -34,9 +37,12 @@ struct type_name_info
     size_t name_len;
 };
 
-static const char default_qc_name[] = "qc_sqlite";
+static const char DEFAULT_QC_NAME[] = "qc_sqlite";
+static const char QC_TRX_PARSE_USING[] = "QC_TRX_PARSE_USING";
 
 static QUERY_CLASSIFIER* classifier;
+
+static qc_trx_parse_using_t qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
 
 
 bool qc_setup(const char* plugin_name, const char* plugin_args)
@@ -46,8 +52,8 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
 
     if (!plugin_name || (*plugin_name == 0))
     {
-        MXS_NOTICE("No query classifier specified, using default '%s'.", default_qc_name);
-        plugin_name = default_qc_name;
+        MXS_NOTICE("No query classifier specified, using default '%s'.", DEFAULT_QC_NAME);
+        plugin_name = DEFAULT_QC_NAME;
     }
 
     int32_t rv = QC_RESULT_ERROR;
@@ -60,28 +66,67 @@ bool qc_setup(const char* plugin_name, const char* plugin_args)
         if (rv != QC_RESULT_OK)
         {
             qc_unload(classifier);
-            classifier = NULL;
         }
     }
 
     return (rv == QC_RESULT_OK) ? true : false;
 }
 
-bool qc_process_init(void)
+bool qc_process_init(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_process_init() == 0;
+    const char* parse_using = getenv(QC_TRX_PARSE_USING);
+
+    if (parse_using)
+    {
+        if (strcmp(parse_using, "QC_TRX_PARSE_USING_QC") == 0)
+        {
+            qc_trx_parse_using = QC_TRX_PARSE_USING_QC;
+            MXS_NOTICE("Transaction detection using QC.");
+        }
+        else if (strcmp(parse_using, "QC_TRX_PARSE_USING_PARSER") == 0)
+        {
+            qc_trx_parse_using = QC_TRX_PARSE_USING_PARSER;
+            MXS_NOTICE("Transaction detection using custom PARSER.");
+        }
+        else
+        {
+            MXS_NOTICE("QC_TRX_PARSE_USING set, but the value %s is not known. "
+                       "Parsing using QC.", parse_using);
+        }
+    }
+
+    bool rc = qc_thread_init(QC_INIT_SELF);
+
+    if (rc)
+    {
+        if (kind & QC_INIT_PLUGIN)
+        {
+            rc = classifier->qc_process_init() == 0;
+
+            if (!rc)
+            {
+                qc_thread_end(QC_INIT_SELF);
+            }
+        }
+    }
+
+    return rc;
 }
 
-void qc_process_end(void)
+void qc_process_end(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    classifier->qc_process_end();
-    classifier = NULL;
+    if (kind & QC_INIT_PLUGIN)
+    {
+        classifier->qc_process_end();
+    }
+
+    qc_thread_end(QC_INIT_SELF);
 }
 
 QUERY_CLASSIFIER* qc_load(const char* plugin_name)
@@ -104,32 +149,43 @@ void qc_unload(QUERY_CLASSIFIER* classifier)
 {
     // TODO: The module loading/unloading needs an overhaul before we
     // TODO: actually can unload something.
+    classifier = NULL;
 }
 
-bool qc_thread_init(void)
+bool qc_thread_init(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_thread_init() == 0;
+    bool rc = true;
+
+    if (kind & QC_INIT_PLUGIN)
+    {
+        rc = classifier->qc_thread_init() == 0;
+    }
+
+    return rc;
 }
 
-void qc_thread_end(void)
+void qc_thread_end(uint32_t kind)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
-    return classifier->qc_thread_end();
+    if (kind & QC_INIT_PLUGIN)
+    {
+        classifier->qc_thread_end();
+    }
 }
 
-qc_parse_result_t qc_parse(GWBUF* query)
+qc_parse_result_t qc_parse(GWBUF* query, uint32_t collect)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
     int32_t result = QC_QUERY_INVALID;
 
-    classifier->qc_parse(query, &result);
+    classifier->qc_parse(query, collect, &result);
 
     return (qc_parse_result_t)result;
 }
@@ -777,4 +833,71 @@ char* qc_typemask_to_string(uint32_t types)
     }
 
     return s;
+}
+
+static uint32_t qc_get_trx_type_mask_using_qc(GWBUF* stmt)
+{
+    uint32_t type_mask = qc_get_type_mask(stmt);
+
+    if (qc_query_is_type(type_mask, QUERY_TYPE_WRITE) &&
+        qc_query_is_type(type_mask, QUERY_TYPE_COMMIT))
+    {
+        // This is a commit reported for "CREATE TABLE...",
+        // "DROP TABLE...", etc. that cause an implicit commit.
+        type_mask = 0;
+    }
+    else
+    {
+        // Only START TRANSACTION can be explicitly READ or WRITE.
+        if (!(type_mask & QUERY_TYPE_BEGIN_TRX))
+        {
+            // So, strip them away for everything else.
+            type_mask &= ~(QUERY_TYPE_WRITE | QUERY_TYPE_READ);
+        }
+
+        // Then leave only the bits related to transaction and
+        // autocommit state.
+        type_mask &= (QUERY_TYPE_BEGIN_TRX |
+                      QUERY_TYPE_WRITE |
+                      QUERY_TYPE_READ |
+                      QUERY_TYPE_COMMIT |
+                      QUERY_TYPE_ROLLBACK |
+                      QUERY_TYPE_ENABLE_AUTOCOMMIT |
+                      QUERY_TYPE_DISABLE_AUTOCOMMIT);
+    }
+
+    return type_mask;
+}
+
+static uint32_t qc_get_trx_type_mask_using_parser(GWBUF* stmt)
+{
+    maxscale::TrxBoundaryParser parser;
+
+    return parser.type_mask_of(stmt);
+}
+
+uint32_t qc_get_trx_type_mask_using(GWBUF* stmt, qc_trx_parse_using_t use)
+{
+    uint32_t type_mask = 0;
+
+    switch (use)
+    {
+    case QC_TRX_PARSE_USING_QC:
+        type_mask = qc_get_trx_type_mask_using_qc(stmt);
+        break;
+
+    case QC_TRX_PARSE_USING_PARSER:
+        type_mask = qc_get_trx_type_mask_using_parser(stmt);
+        break;
+
+    default:
+        ss_dassert(!true);
+    }
+
+    return type_mask;
+}
+
+uint32_t qc_get_trx_type_mask(GWBUF* stmt)
+{
+    return qc_get_trx_type_mask_using(stmt, qc_trx_parse_using);
 }

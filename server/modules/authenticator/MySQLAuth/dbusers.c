@@ -31,6 +31,7 @@
 #include <mysqld_error.h>
 #include <maxscale/mysql_utils.h>
 #include <maxscale/alloc.h>
+#include <maxscale/paths.h>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
@@ -49,7 +50,7 @@
     FROM mysql.user AS u LEFT JOIN mysql.tables_priv AS t \
     ON (u.user = t.user AND u.host = t.host) %s"
 
-static int get_users(SERV_LISTENER *listener);
+static int get_users(SERV_LISTENER *listener, bool skip_local);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static char *mysql_format_user_entry(void *data);
@@ -71,10 +72,10 @@ static char* get_new_users_query(const char *server_version, bool include_root)
     return rval;
 }
 
-int replace_mysql_users(SERV_LISTENER *listener)
+int replace_mysql_users(SERV_LISTENER *listener, bool skip_local)
 {
     spinlock_acquire(&listener->lock);
-    int i = get_users(listener);
+    int i = get_users(listener, skip_local);
     spinlock_release(&listener->lock);
     return i;
 }
@@ -408,22 +409,7 @@ MYSQL *gw_mysql_init()
 
     if (con)
     {
-        if (gw_mysql_set_timeouts(con) == 0)
-        {
-            // MYSQL_OPT_USE_REMOTE_CONNECTION must be set if the embedded
-            // libary is used. With Connector-C (at least 2.2.1) the call
-            // fails.
-#if !defined(LIBMARIADB)
-            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL) != 0)
-            {
-                MXS_ERROR("Failed to set external connection. "
-                          "It is needed for backend server connections.");
-                mysql_close(con);
-                con = NULL;
-            }
-#endif
-        }
-        else
+        if (gw_mysql_set_timeouts(con) != 0)
         {
             MXS_ERROR("Failed to set timeout values for backend connection.");
             mysql_close(con);
@@ -454,21 +440,21 @@ static int gw_mysql_set_timeouts(MYSQL* handle)
 
     MXS_CONFIG* cnf = config_get_global_options();
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_READ_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_READ_TIMEOUT,
                             (void *) &cnf->auth_read_timeout)))
     {
         MXS_ERROR("Failed to set read timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_CONNECT_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_CONNECT_TIMEOUT,
                             (void *) &cnf->auth_conn_timeout)))
     {
         MXS_ERROR("Failed to set connect timeout for backend connection.");
         goto retblock;
     }
 
-    if ((rc = mysql_options(handle, MYSQL_OPT_WRITE_TIMEOUT,
+    if ((rc = mysql_optionsv(handle, MYSQL_OPT_WRITE_TIMEOUT,
                             (void *) &cnf->auth_write_timeout)))
     {
         MXS_ERROR("Failed to set write timeout for backend connection.");
@@ -499,9 +485,10 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     }
 
     MXS_CONFIG* cnf = config_get_global_options();
-    mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-    mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
+    mysql_optionsv(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+    mysql_optionsv(mysql, MYSQL_PLUGIN_DIR, get_connector_plugindir());
 
     if (mxs_mysql_real_connect(mysql, server, user, password) == NULL)
     {
@@ -648,7 +635,8 @@ bool check_service_permissions(SERVICE* service)
 
     for (SERVER_REF *server = service->dbref; server; server = server->next)
     {
-        if (check_server_permissions(service, server->server, user, dpasswd))
+        if (server_is_mxs_service(server->server) ||
+            check_server_permissions(service, server->server, user, dpasswd))
         {
             rval = true;
         }
@@ -826,7 +814,7 @@ int get_users_from_server(MYSQL *con, SERVER_REF *server, SERVICE *service, SERV
  * @param users     The users table into which to load the users
  * @return          -1 on any error or the number of users inserted
  */
-static int get_users(SERV_LISTENER *listener)
+static int get_users(SERV_LISTENER *listener, bool skip_local)
 {
     char *service_user = NULL;
     char *service_passwd = NULL;
@@ -853,6 +841,12 @@ static int get_users(SERV_LISTENER *listener)
 
     for (server = service->dbref; !service->svc_do_shutdown && server; server = server->next)
     {
+        if (skip_local && server_is_mxs_service(server->server))
+        {
+            total_users = 0;
+            continue;
+        }
+
         MYSQL *con = gw_mysql_init();
         if (con)
         {
@@ -886,7 +880,7 @@ static int get_users(SERV_LISTENER *listener)
 
     MXS_FREE(dpwd);
 
-    if (server == NULL)
+    if (server == NULL && total_users == -1)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.", service->name);

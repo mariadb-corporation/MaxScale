@@ -22,7 +22,7 @@
 
 /** Reading primitives */
 bool maxavro_read_integer(MAXAVRO_FILE *file, uint64_t *val);
-char* maxavro_read_string(MAXAVRO_FILE *file);
+char* maxavro_read_string(MAXAVRO_FILE *file, size_t *size);
 bool maxavro_skip_string(MAXAVRO_FILE* file);
 bool maxavro_read_float(MAXAVRO_FILE *file, float *dest);
 bool maxavro_read_double(MAXAVRO_FILE *file, double *dest);

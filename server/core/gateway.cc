@@ -104,7 +104,7 @@ static int pidfd = PIDFD_CLOSED;
 /**
  * exit flag for log flusher.
  */
-static bool do_exit = FALSE;
+static bool do_exit = false;
 
 /**
  * If MaxScale is started to run in daemon process the value is true.
@@ -138,6 +138,7 @@ static struct option long_options[] =
     {"version",          no_argument,       0, 'v'},
     {"version-full",     no_argument,       0, 'V'},
     {"help",             no_argument,       0, '?'},
+    {"connector_plugindir", required_argument, 0, 'H'},
     {0, 0, 0, 0}
 };
 static bool syslog_configured = false;
@@ -920,6 +921,8 @@ static void usage(void)
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
             "  -F, --persistdir=PATH       path to persisted configuration directory\n"
             "  -M, --module_configdir=PATH path to module configuration directory\n"
+            "  -H, --connector_plugindir=PATH\n"
+            "                              path to MariaDB Connector-C plugin directory\n"
             "  -N, --language=PATH         path to errmsg.sys file\n"
             "  -P, --piddir=PATH           path to PID file directory\n"
             "  -R, --basedir=PATH          base path for all other paths\n"
@@ -967,15 +970,25 @@ static void usage(void)
  */
 void worker_thread_main(void* arg)
 {
-    if (modules_thread_init())
+    if (qc_thread_init(QC_INIT_SELF))
     {
-        poll_waitevents(arg);
+        if (modules_thread_init())
+        {
+            poll_waitevents(arg);
 
-        modules_thread_finish();
+            modules_thread_finish();
+        }
+        else
+        {
+            MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+        }
+
+        qc_thread_end(QC_INIT_SELF);
     }
     else
     {
-        MXS_ERROR("Could not perform thread initialization for all modules. Thread exits.");
+        MXS_ERROR("Could not perform thread initialization for the "
+                  "internal query classifier. Thread exits.");
     }
 }
 
@@ -1236,6 +1249,12 @@ bool set_dirs(const char *basedir)
         set_config_persistdir(path);
     }
 
+    if (rv && (rv = handle_path_arg(&path, basedir,
+                                    "var/" MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH, true, true)))
+    {
+        set_connector_plugindir(path);
+    }
+
     return rv;
 }
 
@@ -1325,7 +1344,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:",
+    while ((opt = getopt_long(argc, argv, "dcf:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1485,6 +1504,16 @@ int main(int argc, char **argv)
             if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
             {
                 set_execdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+        case 'H':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_connector_plugindir(tmp_path);
             }
             else
             {
@@ -1899,6 +1928,16 @@ int main(int argc, char **argv)
 
     dcb_global_init();
 
+    /* Initialize the internal query classifier. The plugin will be initialized
+     * via the module initialization below.
+     */
+    if (!qc_process_init(QC_INIT_SELF))
+    {
+        MXS_ERROR("Failed to initialize the internal query classifier.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /* Init MaxScale modules */
     if (!modules_process_init())
     {
@@ -2017,6 +2056,11 @@ int main(int argc, char **argv)
     /*< Call finish on all modules. */
     modules_process_finish();
 
+    /* Finalize the internal query classifier. The plugin was finalized
+     * via the module finalizarion above.
+     */
+    qc_process_end(QC_INIT_SELF);
+
     log_exit_status();
     MXS_NOTICE("MaxScale is shutting down.");
 
@@ -2078,7 +2122,7 @@ int maxscale_shutdown()
 
 static void log_flush_shutdown(void)
 {
-    do_exit = TRUE;
+    do_exit = true;
 }
 
 
@@ -2518,6 +2562,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_execdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "connector_plugindir") == 0)
+        {
+            if (strcmp(get_connector_plugindir(), default_connector_plugindir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_connector_plugindir(tmp);
                 }
                 else
                 {

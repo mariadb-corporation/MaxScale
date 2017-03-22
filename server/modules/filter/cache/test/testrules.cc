@@ -195,7 +195,7 @@ int test_store()
 
         GWBUF *packet = create_gwbuf(test_case->query);
 
-        bool matches = cache_rules_should_store(rules, test_case->default_db, packet);
+        bool matches = cache_rules_should_store(rules, 0, test_case->default_db, packet);
 
         if  (matches != test_case->matches)
         {
@@ -237,12 +237,12 @@ int main()
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
         set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
-        if (qc_setup("qc_sqlite", "") && qc_process_init())
+        if (qc_setup("qc_sqlite", "") && qc_process_init(QC_INIT_BOTH))
         {
             set_libdir(MXS_STRDUP_A("../"));
             rc = test();
 
-            qc_process_end();
+            qc_process_end(QC_INIT_BOTH);
         }
         else
         {

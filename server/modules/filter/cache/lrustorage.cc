@@ -41,13 +41,6 @@ void LRUStorage::get_config(CACHE_STORAGE_CONFIG* pConfig)
     *pConfig = m_config;
 }
 
-cache_result_t LRUStorage::get_key(const char* zDefault_db,
-                                   const GWBUF* pQuery,
-                                   CACHE_KEY* pKey) const
-{
-    return m_pStorage->get_key(zDefault_db, pQuery, pKey);
-}
-
 cache_result_t LRUStorage::do_get_info(uint32_t what,
                                        json_t** ppInfo) const
 {

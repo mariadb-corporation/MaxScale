@@ -51,7 +51,7 @@ std::string cache_key_to_string(const CACHE_KEY& key);
 
 inline bool operator == (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
 {
-    return memcmp(lhs.data, rhs.data, sizeof(lhs.data)) == 0;
+    return lhs.data == rhs.data;
 }
 
 inline bool operator != (const CACHE_KEY& lhs, const CACHE_KEY& rhs)
@@ -64,7 +64,7 @@ class CacheKey : public CACHE_KEY
 public:
     CacheKey()
     {
-        memset(data, 0, sizeof(data));
+        data = 0;
     }
 };
 

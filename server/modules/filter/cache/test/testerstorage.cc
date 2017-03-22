@@ -178,7 +178,7 @@ int TesterStorage::run(size_t n_threads,
 
         CacheKey key;
 
-        sprintf(key.data, "%lu", i);
+        key.data = i;
 
         vector<uint8_t> value(size, static_cast<uint8_t>(i));
 

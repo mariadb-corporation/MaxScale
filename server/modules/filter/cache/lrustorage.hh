@@ -28,13 +28,6 @@ public:
      */
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
 
-    /**
-     * @see Storage::get_key
-     */
-    cache_result_t get_key(const char* zDefault_db,
-                           const GWBUF* pQuery,
-                           CACHE_KEY* pKey) const;
-
 protected:
     LRUStorage(const CACHE_STORAGE_CONFIG& config, Storage* pStorage);
 

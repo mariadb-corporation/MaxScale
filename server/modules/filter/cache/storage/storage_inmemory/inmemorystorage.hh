@@ -30,8 +30,6 @@ public:
                                             const CACHE_STORAGE_CONFIG& config,
                                             int argc, char* argv[]);
 
-    static cache_result_t Get_key(const char* zDefault_db, const GWBUF& query, CACHE_KEY* pKey);
-
     void get_config(CACHE_STORAGE_CONFIG* pConfig);
     virtual cache_result_t get_info(uint32_t what, json_t** ppInfo) const = 0;
     virtual cache_result_t get_value(const CACHE_KEY& key, uint32_t flags, GWBUF** ppResult) = 0;

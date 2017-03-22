@@ -1181,10 +1181,10 @@ mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 
         char *dpwd = decrypt_password(passwd);
 
-        mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
-        mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
-        mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
-
+        mysql_optionsv(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
+        mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
+        mysql_optionsv(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
+        mysql_optionsv(database->con, MYSQL_PLUGIN_DIR, get_connector_plugindir());
         time_t start = time(NULL);
         bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
         time_t end = time(NULL);
