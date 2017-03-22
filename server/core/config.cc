@@ -268,7 +268,7 @@ static void duplicate_context_finish(DUPLICATE_CONTEXT* context)
 char* config_clean_string_list(const char* str)
 {
     size_t destsize = strlen(str) + 1;
-    char *dest = MXS_MALLOC(destsize);
+    char *dest = (char*)MXS_MALLOC(destsize);
 
     if (dest)
     {
@@ -297,7 +297,7 @@ char* config_clean_string_list(const char* str)
                                         (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
                                         (PCRE2_UCHAR*) dest, &destsize)) == PCRE2_ERROR_NOMEMORY)
         {
-            char* tmp = MXS_REALLOC(dest, destsize * 2);
+            char* tmp = (char*)MXS_REALLOC(dest, destsize * 2);
             if (tmp == NULL)
             {
                 MXS_FREE(dest);
@@ -623,7 +623,7 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
     if (duplicate_context_init(&dcontext))
     {
-        CONFIG_CONTEXT ccontext = {.object = ""};
+        CONFIG_CONTEXT ccontext = {.object = (char*)""};
 
         if (config_load_single_file(filename, &dcontext, &ccontext))
         {
@@ -1079,7 +1079,7 @@ int config_get_server_list(const MXS_CONFIG_PARAMETER *params, const char *key,
         if (found)
         {
             /* Fill in the result array */
-            SERVER** result = MXS_CALLOC(found, sizeof(SERVER*));
+            SERVER** result = (SERVER**)MXS_CALLOC(found, sizeof(SERVER*));
             if (result)
             {
                 int res_ind = 0;
@@ -1116,7 +1116,7 @@ char* config_copy_string(const MXS_CONFIG_PARAMETER *params, const char *key)
 
 MXS_CONFIG_PARAMETER* config_clone_param(const MXS_CONFIG_PARAMETER* param)
 {
-    MXS_CONFIG_PARAMETER *p2 = MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
+    MXS_CONFIG_PARAMETER *p2 = (MXS_CONFIG_PARAMETER*)MXS_MALLOC(sizeof(MXS_CONFIG_PARAMETER));
 
     if (p2)
     {
@@ -1206,9 +1206,9 @@ config_get_feedback_data()
 
 static struct
 {
-    char* name;
-    int   priority;
-    char* replacement;
+    const char* name;
+    int         priority;
+    const char* replacement;
 } lognames[] =
 {
     { "log_messages", LOG_NOTICE,  "log_notice" }, // Deprecated
@@ -1469,7 +1469,7 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
     {
         if (!strcmp(ssl, "required"))
         {
-            if ((new_ssl = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
+            if ((new_ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
             {
                 return NULL;
             }
@@ -1896,7 +1896,7 @@ static void process_path_parameter(MXS_CONFIG_PARAMETER *param)
     {
         const char *mod_dir = get_module_configdir();
         size_t size = strlen(param->value) + strlen(mod_dir) + 3;
-        char *value = MXS_MALLOC(size);
+        char *value = (char*)MXS_MALLOC(size);
         MXS_ABORT_IF_NULL(value);
 
         sprintf(value, "/%s/%s", mod_dir, param->value);
@@ -2153,7 +2153,7 @@ config_get_release_string(char* release)
         if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
         {
             int fd;
-            int k = 0;
+            size_t k = 0;
             int skipindex = 0;
             int startindex = 0;
 
@@ -2339,7 +2339,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
     bool rval = false;
 
     int size = 1024;
-    char *buffer = MXS_MALLOC(size * sizeof(char));
+    char *buffer = (char*)MXS_MALLOC(size * sizeof(char));
 
     if (buffer)
     {
@@ -2363,7 +2363,7 @@ bool config_has_duplicate_sections(const char* filename, DUPLICATE_CONTEXT* cont
                     PCRE2_UCHAR section[len];
                     pcre2_substring_copy_bynumber(context->mdata, 1, section, &len);
 
-                    if (hashtable_add(context->hash, section, "") == 0)
+                    if (hashtable_add(context->hash, section, (char*)"") == 0)
                     {
                         MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
@@ -2419,7 +2419,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     {
         if (*size <= offset)
         {
-            char* tmp = (char*) MXS_REALLOC(destptr, *size * 2);
+            char* tmp = (char*)MXS_REALLOC(destptr, *size * 2);
             if (tmp)
             {
                 destptr = tmp;
@@ -2553,13 +2553,13 @@ int create_new_service(CONFIG_CONTEXT *obj)
     char *retry = config_get_value(obj->parameters, "retry_on_failure");
     if (retry)
     {
-        serviceSetRetryOnFailure(obj->element, retry);
+        serviceSetRetryOnFailure(service, retry);
     }
 
     char *enable_root_user = config_get_value(obj->parameters, "enable_root_user");
     if (enable_root_user)
     {
-        serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
+        serviceEnableRootUser(service, config_truth_value(enable_root_user));
     }
 
     char *max_retry_interval = config_get_value(obj->parameters, "max_retry_interval");
@@ -2583,7 +2583,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     char *connection_timeout = config_get_value(obj->parameters, "connection_timeout");
     if (connection_timeout)
     {
-        serviceSetTimeout(obj->element, atoi(connection_timeout));
+        serviceSetTimeout(service, atoi(connection_timeout));
     }
 
     const char *max_connections = config_get_value_string(obj->parameters, "max_connections");
@@ -2591,32 +2591,32 @@ int create_new_service(CONFIG_CONTEXT *obj)
     const char *queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
     if (strlen(max_connections))
     {
-        serviceSetConnectionLimits(obj->element, atoi(max_connections),
+        serviceSetConnectionLimits(service, atoi(max_connections),
                                    atoi(max_queued_connections), atoi(queued_connection_timeout));
     }
 
     char *auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
     if (auth_all_servers)
     {
-        serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
+        serviceAuthAllServers(service, config_truth_value(auth_all_servers));
     }
 
     char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
     if (strip_db_esc)
     {
-        serviceStripDbEsc(obj->element, config_truth_value(strip_db_esc));
+        serviceStripDbEsc(service, config_truth_value(strip_db_esc));
     }
 
     char *weightby = config_get_value(obj->parameters, "weightby");
     if (weightby)
     {
-        serviceWeightBy(obj->element, weightby);
+        serviceWeightBy(service, weightby);
     }
 
     char *wildcard = config_get_value(obj->parameters, "localhost_match_wildcard_host");
     if (wildcard)
     {
-        serviceEnableLocalhostMatchWildcardHost(obj->element, config_truth_value(wildcard));
+        serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(wildcard));
     }
 
     char *user = config_get_value(obj->parameters, "user");
@@ -2624,7 +2624,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
     if (user && auth)
     {
-        serviceSetUser(obj->element, user, auth);
+        serviceSetUser(service, user, auth);
     }
     else if (!rcap_type_required(service_get_capabilities(service), RCAP_TYPE_NO_AUTH))
     {
@@ -2659,7 +2659,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         if (version_string[0] != '5')
         {
             size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
-            service->version_string = MXS_MALLOC(len);
+            service->version_string = (char*)MXS_MALLOC(len);
             MXS_ABORT_IF_NULL(service->version_string);
             strcpy(service->version_string, "5.5.5-");
             strcat(service->version_string, version_string);
@@ -2684,7 +2684,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (mod)
     {
         config_add_defaults(obj, mod->parameters);
-        service_add_parameters(obj->element, obj->parameters);
+        service_add_parameters(service, obj->parameters);
     }
     else
     {
@@ -2745,7 +2745,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
 
     if (error_count == 0)
     {
-        SERVER *server = obj->element;
+        SERVER *server = (SERVER*)obj->element;
 
         if (monuser && monpw)
         {
@@ -2803,7 +2803,7 @@ int create_new_server(CONFIG_CONTEXT *obj)
         {
             if (!is_normal_server_parameter(params->name))
             {
-                server_add_parameter(obj->element, params->name, params->value);
+                server_add_parameter(server, params->name, params->value);
             }
             params = params->next;
         }
@@ -2826,7 +2826,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
     char *servers = config_get_value(obj->parameters, "servers");
     char *monitor = config_get_value(obj->parameters, "monitor");
     char *roptions = config_get_value(obj->parameters, "router_options");
-    SERVICE *service = obj->element;
+    SERVICE *service = (SERVICE*)obj->element;
 
     if (service)
     {
@@ -2872,7 +2872,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                     if (strcmp(trim(s), obj1->object) == 0 && obj1->element)
                     {
                         found = 1;
-                        serviceAddBackend(service, obj1->element);
+                        serviceAddBackend(service, (SERVER*)obj1->element);
                         break;
                     }
                     obj1 = obj1->next;
@@ -2949,12 +2949,13 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 
     if (error_count == 0)
     {
+        MXS_MONITOR* monitor = (MXS_MONITOR*)obj->element;
         const MXS_MODULE *mod = get_module(module, MODULE_MONITOR);
 
         if (mod)
         {
             config_add_defaults(obj, mod->parameters);
-            monitorAddParameters(obj->element, obj->parameters);
+            monitorAddParameters(monitor, obj->parameters);
         }
         else
         {
@@ -2970,7 +2971,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                 Perhaps a greater minimum value should be added? */
             if (*endptr == '\0' && interval > 0)
             {
-                monitorSetInterval(obj->element, (unsigned long)interval);
+                monitorSetInterval(monitor, (unsigned long)interval);
             }
             else
             {
@@ -2989,7 +2990,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
         if (connect_timeout)
         {
-            if (!monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout)))
             {
                 MXS_ERROR("Failed to set backend_connect_timeout");
                 error_count++;
@@ -2999,7 +3000,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *read_timeout = config_get_value(obj->parameters, "backend_read_timeout");
         if (read_timeout)
         {
-            if (!monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, atoi(read_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, atoi(read_timeout)))
             {
                 MXS_ERROR("Failed to set backend_read_timeout");
                 error_count++;
@@ -3009,7 +3010,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *write_timeout = config_get_value(obj->parameters, "backend_write_timeout");
         if (write_timeout)
         {
-            if (!monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
             {
                 MXS_ERROR("Failed to set backend_write_timeout");
                 error_count++;
@@ -3030,13 +3031,13 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                     if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
                     {
                         found = 1;
-                        if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                        if (hashtable_add(monitorhash, obj1->object, (char*)"") == 0)
                         {
                             MXS_WARNING("Multiple monitors are monitoring server [%s]. "
                                         "This will cause undefined behavior.",
                                         obj1->object);
                         }
-                        monitorAddServer(obj->element, obj1->element);
+                        monitorAddServer(monitor, (SERVER*)obj1->element);
                     }
                     obj1 = obj1->next;
                 }
@@ -3055,7 +3056,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *passwd = config_get_password(obj->parameters);
         if (user && passwd)
         {
-            monitorAddUser(obj->element, user, passwd);
+            monitorAddUser(monitor, user, passwd);
         }
         else if (user)
         {
@@ -3159,6 +3160,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     {
         if ((obj->element = filter_alloc(obj->object, module)))
         {
+            MXS_FILTER_DEF* filter_def = (MXS_FILTER_DEF*)obj->element;
             char *options = config_get_value(obj->parameters, "options");
             if (options)
             {
@@ -3166,7 +3168,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
                 char *s = strtok_r(options, ",", &lasts);
                 while (s)
                 {
-                    filter_add_option(obj->element, s);
+                    filter_add_option(filter_def, s);
                     s = strtok_r(NULL, ",", &lasts);
                 }
             }
@@ -3184,7 +3186,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
 
             for (MXS_CONFIG_PARAMETER *p = obj->parameters; p; p = p->next)
             {
-                filter_add_parameter(obj->element, p->name, p->value);
+                filter_add_parameter(filter_def, p->name, p->value);
             }
         }
         else
@@ -3494,7 +3496,7 @@ int config_parse_server_list(const char *servers, char ***output_array)
         pos++;
         out_arr_size++;
     }
-    char **results = MXS_CALLOC(out_arr_size, sizeof(char*));
+    char **results = (char**)MXS_CALLOC(out_arr_size, sizeof(char*));
     if (!results)
     {
         return 0;

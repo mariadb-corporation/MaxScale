@@ -39,7 +39,7 @@
 #include <maxscale/paths.h>
 
 // This is pretty ugly but it's required to test internal functions
-#include "../config.c"
+#include "../config.cc"
 #include "../server.c"
 
 /**
