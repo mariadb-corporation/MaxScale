@@ -99,7 +99,7 @@
 #include "maxscale/queuemanager.h"
 
 /* A DCB with null values, used for initialization */
-static DCB dcb_initialized = DCB_INIT;
+static DCB dcb_initialized;
 
 static  DCB           **all_dcbs;
 static  SPINLOCK       *all_dcbs_lock;
@@ -114,12 +114,18 @@ thread_local long next_timeout_check = 0;
 
 void dcb_global_init()
 {
+    dcb_initialized.dcb_chk_top = CHK_NUM_DCB;
+    dcb_initialized.fd = DCBFD_CLOSED;
+    dcb_initialized.state = DCB_STATE_ALLOC;
+    dcb_initialized.ssl_state = SSL_HANDSHAKE_UNKNOWN;
+    dcb_initialized.dcb_chk_tail = CHK_NUM_DCB;
+
     int nthreads = config_threadcount();
 
-    if ((zombies = MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs = MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs_lock = MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
-        (nzombies = MXS_CALLOC(nthreads, sizeof(int))) == NULL)
+    if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
+        (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
+        (all_dcbs_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
+        (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL)
     {
         MXS_OOM();
         raise(SIGABRT);

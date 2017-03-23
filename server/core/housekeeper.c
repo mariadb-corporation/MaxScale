@@ -52,7 +52,7 @@ static SPINLOCK tasklock = SPINLOCK_INIT;
 
 static bool do_shutdown = 0;
 
-long hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
+int64_t hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
 static THREAD hk_thr_handle;
 
 static void hkthread(void *);

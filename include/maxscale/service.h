@@ -145,7 +145,7 @@ typedef struct service
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     MXS_FILTER_DEF **filters;          /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
-    uint64_t conn_idle_timeout;            /**< Session timeout in seconds */
+    int64_t conn_idle_timeout;         /**< Session timeout in seconds */
     char *weightby;                    /**< Service weighting parameter name */
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
