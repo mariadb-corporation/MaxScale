@@ -64,6 +64,15 @@ static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
 
 /**
+ * The clientReply of the session.
+ *
+ * @param inst     In reality an MXS_SESSION*.
+ * @param session  In reality an MXS_SESSION*.
+ * @param data     The data to send to the client.
+ */
+static int session_reply(MXS_FILTER *inst, MXS_FILTER_SESSION *session, GWBUF *data);
+
+/**
  * @brief Initialize a session
  *
  * This routine puts initial values into the fields of the session pointed to
@@ -162,8 +171,12 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 
         session->head.routeQuery = (void *)(service->router->routeQuery);
 
-        session->tail.instance = session;
-        session->tail.session = session;
+        // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
+        // NOTE: and session_reply into a filter clientReply. That's dubious but ok
+        // NOTE: as session_reply will know what to do. In practice, the session
+        // NOTE: will be called as if it would be the last filter.
+        session->tail.instance = (MXS_FILTER*)session;
+        session->tail.session = (MXS_FILTER_SESSION*)session;
         session->tail.clientReply = session_reply;
 
         if (SESSION_STATE_TO_BE_FREED != session->state
@@ -664,14 +677,17 @@ session_setup_filters(MXS_SESSION *session)
  * Entry point for the final element in the upstream filter, i.e. the writing
  * of the data to the client.
  *
+ * Looks like a filter `clientReply`, but in this case both the instance and
+ * the session argument will be a MXS_SESSION*.
+ *
  * @param       instance        The "instance" data
  * @param       session         The session
  * @param       data            The buffer chain to write
  */
 int
-session_reply(void *instance, void *session, GWBUF *data)
+session_reply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *data)
 {
-    MXS_SESSION *the_session = (MXS_SESSION *)session;
+    MXS_SESSION *the_session = (MXS_SESSION*)session;
 
     return the_session->client_dcb->func.write(the_session->client_dcb, data);
 }

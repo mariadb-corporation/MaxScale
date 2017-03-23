@@ -94,11 +94,14 @@ typedef struct
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
+struct mxs_filter;
+struct mxs_filter_session;
+
 typedef struct mxs_downstream
 {
-    void *instance;
-    void *session;
-    int32_t (*routeQuery)(void *instance, void *session, GWBUF *request);
+    struct mxs_filter *instance;
+    struct mxs_filter_session *session;
+    int32_t (*routeQuery)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *request);
 } MXS_DOWNSTREAM;
 
 /**
@@ -107,9 +110,9 @@ typedef struct mxs_downstream
  */
 typedef struct mxs_upstream
 {
-    void *instance;
-    void *session;
-    int32_t (*clientReply)(void *instance, void *session, GWBUF *response);
+    struct mxs_filter *instance;
+    struct mxs_filter_session *session;
+    int32_t (*clientReply)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
     int32_t (*error)(void *instance, void *session, void *);
 } MXS_UPSTREAM;
 
