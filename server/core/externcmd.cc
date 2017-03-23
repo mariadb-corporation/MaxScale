@@ -217,7 +217,7 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
         for (int i = 0; cmd->argv[i] && rval; i++)
         {
             size_t size = strlen(cmd->argv[i]);
-            char* dest = MXS_MALLOC(size);
+            char* dest = (char*)MXS_MALLOC(size);
             if (dest)
             {
                 mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
@@ -274,7 +274,7 @@ char* get_command(const char* str)
 
     if (len > 0)
     {
-        rval = MXS_MALLOC(len + 1);
+        rval = (char*)MXS_MALLOC(len + 1);
 
         if (rval)
         {
