@@ -20,7 +20,8 @@ add_library(maxscale-common SHARED
   mlist.cc
   modutil.cc
   monitor.cc
-  queuemanager.c query_classifier.cc poll.c random_jkiss.c resultset.c router.cc secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
+  queuemanager.cc
+  query_classifier.cc poll.c random_jkiss.c resultset.c router.cc secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
