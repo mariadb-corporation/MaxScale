@@ -133,7 +133,7 @@ hashtable_alloc_real(HASHTABLE* target,
 
     if (target == NULL)
     {
-        if ((rval = MXS_MALLOC(sizeof(HASHTABLE))) == NULL)
+        if ((rval = (HASHTABLE*)MXS_MALLOC(sizeof(HASHTABLE))) == NULL)
         {
             return NULL;
         }
