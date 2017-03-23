@@ -46,11 +46,11 @@ static const char* sub_single = "$1.";
 static const char* sub_escape = "\\.";
 
 static void modutil_reply_routing_error(
-    DCB*     backend_dcb,
-    int      error,
-    char*    state,
-    char*    errstr,
-    uint32_t flags);
+    DCB*        backend_dcb,
+    int         error,
+    const char* state,
+    char*       errstr,
+    uint32_t    flags);
 
 
 /**
@@ -329,7 +329,7 @@ modutil_get_query(GWBUF *buf)
     char* query_str = NULL;
 
     packet = GWBUF_DATA(buf);
-    packet_type = packet[4];
+    packet_type = (mysql_server_cmd_t)packet[4];
 
     switch (packet_type)
     {
@@ -758,11 +758,11 @@ void modutil_reply_auth_error(DCB*     backend_dcb,
  * @param errstr        Plain-text string error
  * @param flags         GWBUF type flags
  */
-static void modutil_reply_routing_error(DCB*     backend_dcb,
-                                        int      error,
-                                        char*    state,
-                                        char*    errstr,
-                                        uint32_t flags)
+static void modutil_reply_routing_error(DCB*        backend_dcb,
+                                        int         error,
+                                        const char* state,
+                                        char*       errstr,
+                                        uint32_t    flags)
 {
     GWBUF* buf;
     CHK_DCB(backend_dcb);

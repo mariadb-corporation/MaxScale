@@ -643,7 +643,7 @@ gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
     return rval;
 }
 
-void gwbuf_set_type(GWBUF* buf, gwbuf_type_t type)
+void gwbuf_set_type(GWBUF* buf, uint32_t type)
 {
     /** Set type consistenly to all buffers on the list */
     while (buf != NULL)

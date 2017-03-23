@@ -326,9 +326,9 @@ extern GWBUF *gwbuf_split(GWBUF **buf, size_t length);
  * Set given type to all buffers on the list.
  * *
  * @param buf   The shared buffer
- * @param type  Type to be added
+ * @param type  Type to be added, mask of @c gwbuf_type_t values.
  */
-extern void gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
+extern void gwbuf_set_type(GWBUF *head, uint32_t type);
 
 /**
  * Add a property to a buffer.
