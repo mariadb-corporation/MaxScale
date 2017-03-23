@@ -59,7 +59,7 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, con
                                       (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
                                       (PCRE2_UCHAR*) *dest, size)) == PCRE2_ERROR_NOMEMORY)
         {
-            char *tmp = MXS_REALLOC(*dest, *size * 2);
+            char *tmp = (char*)MXS_REALLOC(*dest, *size * 2);
             if (tmp == NULL)
             {
                 break;
