@@ -7,13 +7,14 @@ add_library(maxscale-common SHARED
   config.cc
   config_runtime.cc
   dcb.cc
-  filter.cc
   externcmd.cc
-  paths.cc
+  filter.cc
   hashtable.cc
   hint.cc
   housekeeper.cc
-  load_utils.c log_manager.cc maxscale_pcre2.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.cc poll.c random_jkiss.c resultset.c router.cc secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
+  paths.cc
+  load_utils.cc
+  log_manager.cc maxscale_pcre2.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.cc poll.c random_jkiss.c resultset.c router.cc secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})

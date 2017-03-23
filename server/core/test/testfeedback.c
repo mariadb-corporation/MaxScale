@@ -45,7 +45,7 @@
 #include <regex.h>
 #include <maxscale/maxscale_test.h>
 
-#include "../load_utils.c"
+#include "../load_utils.cc"
 
 static char* server_options[] =
 {

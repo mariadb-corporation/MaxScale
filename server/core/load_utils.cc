@@ -90,7 +90,7 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
-    void *data = MXS_REALLOC(mem->data, mem->size + realsize + 1);
+    char *data = (char*)MXS_REALLOC(mem->data, mem->size + realsize + 1);
 
     if (data == NULL)
     {
@@ -201,8 +201,8 @@ void *load_module(const char *module, const char *type)
             return NULL;
         }
 
-        void *(*entry_point)() = sym;
-        MXS_MODULE *mod_info = entry_point();
+        void *(*entry_point)() = (void *(*)())sym;
+        MXS_MODULE *mod_info = (MXS_MODULE*)entry_point();
 
         if (!check_module(mod_info, type, module) ||
             (mod = register_module(module, type, dlhandle, mod_info)) == NULL)
@@ -730,7 +730,7 @@ do_http_post(GWBUF *buffer, void *cfg)
     FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) cfg;
 
     /* allocate first memory chunck for httpd servr reply */
-    chunk.data = MXS_MALLOC(1);  /* will be grown as needed by the realloc above */
+    chunk.data = (char*)MXS_MALLOC(1);  /* will be grown as needed by the realloc above */
     MXS_ABORT_IF_NULL(chunk.data);
     chunk.size = 0;    /* no data at this point */
 
