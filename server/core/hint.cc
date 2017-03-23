@@ -52,7 +52,7 @@ hint_dup(const HINT *hint)
         ptr2->type = ptr1->type;
         if (ptr1->data)
         {
-            ptr2->data = MXS_STRDUP_A(ptr1->data);
+            ptr2->data = MXS_STRDUP_A((const char*)ptr1->data);
         }
         else
         {
@@ -60,7 +60,7 @@ hint_dup(const HINT *hint)
         }
         if (ptr1->value)
         {
-            ptr2->value = MXS_STRDUP_A(ptr1->value);
+            ptr2->value = MXS_STRDUP_A((const char*)ptr1->value);
         }
         else
         {
