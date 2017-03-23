@@ -86,7 +86,7 @@ monitor_alloc(char *name, char *module)
         return NULL;
     }
 
-    if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
+    if ((mon->module = (MXS_MONITOR_OBJECT*)load_module(module, MODULE_MONITOR)) == NULL)
     {
         MXS_ERROR("Unable to load monitor module '%s'.", name);
         MXS_FREE(name);
@@ -161,7 +161,7 @@ monitor_free(MXS_MONITOR *mon)
  * @param monitor The Monitor that should be started
  */
 void
-monitorStart(MXS_MONITOR *monitor, void* params)
+monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
     spinlock_acquire(&monitor->lock);
 
@@ -957,7 +957,7 @@ static const char* mon_get_event_name(MXS_MONITOR_SERVERS* node)
  */
 static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
-    char *separator = "";
+    const char *separator = "";
     char arr[MAX_SERVER_NAME_LEN + 64]; // Some extra space for port and separator
     dest[0] = '\0';
 
@@ -991,7 +991,7 @@ bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_srv->mon_prev_status != -1)
+    if (mon_srv->mon_prev_status != (uint32_t)-1)
     {
 
         unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
@@ -1107,7 +1107,7 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
             totalStrLen += strlen(cmd->argv[i]) + 1; // +1 for space and one \0
         }
         int spaceRemaining = totalStrLen;
-        if ((scriptStr = MXS_CALLOC(totalStrLen, sizeof(char))) != NULL)
+        if ((scriptStr = (char*)MXS_CALLOC(totalStrLen, sizeof(char))) != NULL)
         {
             char *currentPos = scriptStr;
             // The script name should not begin with a space
