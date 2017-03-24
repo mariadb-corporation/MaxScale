@@ -1,4 +1,3 @@
-<<<<<<< 11c7812d5d69c4fadef32cae5b7c121f2f596e38
 add_library(maxscale-common SHARED
   adminusers.cc
   alloc.cc

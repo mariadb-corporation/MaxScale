@@ -139,9 +139,9 @@ void dcb_global_init()
 
     if ((zombies = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
         (all_dcbs = (DCB**)MXS_CALLOC(nthreads, sizeof(DCB*))) == NULL ||
-        (all_dcbs_lock = (SPINLOCK**)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
+        (all_dcbs_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL ||
         (nzombies = (int*)MXS_CALLOC(nthreads, sizeof(int))) == NULL ||
-        (fake_events = (fake_event_t*)MXS_CALLOC(nthreads, sizeof(fake_event_t*))) == NULL ||
+        (fake_events = (fake_event_t**)MXS_CALLOC(nthreads, sizeof(fake_event_t*))) == NULL ||
         (fake_event_lock = (SPINLOCK*)MXS_CALLOC(nthreads, sizeof(SPINLOCK))) == NULL)
     {
         MXS_OOM();
@@ -3447,7 +3447,7 @@ static void poll_add_event_to_dcb(DCB*       dcb,
                                   GWBUF*     buf,
                                   uint32_t ev)
 {
-    fake_event_t *event = MXS_MALLOC(sizeof(*event));
+    fake_event_t *event = (fake_event_t*)MXS_MALLOC(sizeof(*event));
 
     if (event)
     {

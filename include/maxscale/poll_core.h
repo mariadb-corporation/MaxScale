@@ -19,6 +19,8 @@
 #include <maxscale/cdefs.h>
 #include <sys/epoll.h>
 
+MXS_BEGIN_DECLS
+
 typedef enum mxs_poll_action
 {
     MXS_POLL_NOP    = 0x00,
@@ -96,3 +98,5 @@ int poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
  * @return 0 on success, non-zero on failure.
  */
 int poll_remove_fd_from_worker(int wid, int fd);
+
+MXS_END_DECLS
