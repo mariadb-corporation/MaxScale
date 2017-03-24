@@ -33,6 +33,8 @@
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/pcre2.h>
 
+#include "shard_map.hh"
+
 MXS_BEGIN_DECLS
 
 /**
@@ -55,25 +57,6 @@ typedef enum showdb_response
     SHOWDB_DUPLICATE_DATABASES,
     SHOWDB_FATAL_ERROR
 } showdb_response_t;
-
-enum shard_map_state
-{
-    SHMAP_UNINIT, /*< No databases have been added to this shard map */
-    SHMAP_READY, /*< All available databases have been added */
-    SHMAP_STALE /*< The shard map has old data or has not been updated recently */
-};
-
-/**
- * A map of the shards tied to a single user.
- */
-typedef struct shard_map
-{
-    HASHTABLE *hash; /*< A hashtable of database names and the servers which
-                       * have these databases. */
-    SPINLOCK lock;
-    time_t last_updated;
-    enum shard_map_state state; /*< State of the shard map */
-} shard_map_t;
 
 /**
  * The state of the backend server reference
