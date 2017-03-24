@@ -37,7 +37,7 @@ USERS *users_alloc()
 {
     USERS *rval;
 
-    if ((rval = MXS_CALLOC(1, sizeof(USERS))) == NULL)
+    if ((rval = (USERS*)MXS_CALLOC(1, sizeof(USERS))) == NULL)
     {
         return NULL;
     }
@@ -90,7 +90,7 @@ const char *users_fetch(USERS *users, const char *user)
 {
     atomic_add(&users->stats.n_fetches, 1);
     // TODO: Returning data from the hashtable is not threadsafe.
-    return hashtable_fetch(users->data, (char*)user);
+    return (const char*)hashtable_fetch(users->data, (char*)user);
 }
 
 int users_update(USERS *users, const char *user, const char *auth)
@@ -118,7 +118,7 @@ void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port)
         if (iter)
         {
             dcb_printf(dcb, "User names: ");
-            char *sep = "";
+            const char *sep = "";
             void *user;
 
             while ((user = hashtable_next(iter)) != NULL)

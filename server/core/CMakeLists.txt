@@ -31,7 +31,12 @@ add_library(maxscale-common SHARED
   service.cc
   session.cc
   spinlock.cc
-  thread.c users.c utils.c skygw_utils.cc statistics.c listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
+  thread.cc
+  users.cc
+  utils.cc
+  skygw_utils.cc
+  statistics.cc
+  listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
