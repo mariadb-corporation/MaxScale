@@ -49,9 +49,9 @@
  */
 int ssl_authenticate_client(DCB *dcb, bool is_capable)
 {
-    char *user = dcb->user ? dcb->user : "";
-    char *remote = dcb->remote ? dcb->remote : "";
-    char *service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
+    const char *user = dcb->user ? dcb->user : "";
+    const char *remote = dcb->remote ? dcb->remote : "";
+    const char *service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
 
     if (NULL == dcb->listener || NULL == dcb->listener->ssl)
     {

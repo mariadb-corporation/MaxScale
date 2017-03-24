@@ -12,6 +12,7 @@ add_library(maxscale-common SHARED
   hashtable.cc
   hint.cc
   housekeeper.cc
+  listener.cc
   load_utils.cc
   log_manager.cc
   maxscale_pcre2.cc
@@ -20,9 +21,9 @@ add_library(maxscale-common SHARED
   modutil.cc
   monitor.cc
   paths.cc
+  poll.cc
   query_classifier.cc
   queuemanager.cc
-  poll.cc
   random_jkiss.cc
   resultset.cc
   router.cc
@@ -30,13 +31,14 @@ add_library(maxscale-common SHARED
   server.cc
   service.cc
   session.cc
+  skygw_utils.cc
   spinlock.cc
+  ssl.cc
+  statistics.cc
   thread.cc
   users.cc
   utils.cc
-  skygw_utils.cc
-  statistics.cc
-  listener.c ssl.c mysql_utils.c mysql_binlog.c modulecmd.c)
+  mysql_utils.c mysql_binlog.c modulecmd.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
