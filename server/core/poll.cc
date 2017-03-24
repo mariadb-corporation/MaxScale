@@ -178,19 +178,19 @@ static THREAD_DATA *thread_data = NULL;    /*< Status of each thread */
  */
 static struct
 {
-    ts_stats_t *n_read;         /*< Number of read events   */
-    ts_stats_t *n_write;        /*< Number of write events  */
-    ts_stats_t *n_error;        /*< Number of error events  */
-    ts_stats_t *n_hup;          /*< Number of hangup events */
-    ts_stats_t *n_accept;       /*< Number of accept events */
-    ts_stats_t *n_polls;        /*< Number of poll cycles   */
-    ts_stats_t *n_pollev;       /*< Number of polls returning events */
-    ts_stats_t *n_nbpollev;     /*< Number of polls returning events */
-    ts_stats_t *n_nothreads;    /*< Number of times no threads are polling */
-    int32_t n_fds[MAXNFDS];     /*< Number of wakeups with particular n_fds value */
-    ts_stats_t *evq_length;     /*< Event queue length */
-    ts_stats_t *evq_max;        /*< Maximum event queue length */
-    ts_stats_t *blockingpolls;  /*< Number of epoll_waits with a timeout specified */
+    ts_stats_t n_read;         /*< Number of read events   */
+    ts_stats_t n_write;        /*< Number of write events  */
+    ts_stats_t n_error;        /*< Number of error events  */
+    ts_stats_t n_hup;          /*< Number of hangup events */
+    ts_stats_t n_accept;       /*< Number of accept events */
+    ts_stats_t n_polls;        /*< Number of poll cycles   */
+    ts_stats_t n_pollev;       /*< Number of polls returning events */
+    ts_stats_t n_nbpollev;     /*< Number of polls returning events */
+    ts_stats_t n_nothreads;    /*< Number of times no threads are polling */
+    int32_t n_fds[MAXNFDS];    /*< Number of wakeups with particular n_fds value */
+    ts_stats_t evq_length;     /*< Event queue length */
+    ts_stats_t evq_max;        /*< Maximum event queue length */
+    ts_stats_t blockingpolls;  /*< Number of epoll_waits with a timeout specified */
 } pollStats;
 
 #define N_QUEUE_TIMES   30
@@ -201,8 +201,8 @@ static struct
 {
     uint32_t qtimes[N_QUEUE_TIMES + 1];
     uint32_t exectimes[N_QUEUE_TIMES + 1];
-    ts_stats_t *maxqtime;
-    ts_stats_t *maxexectime;
+    ts_stats_t maxqtime;
+    ts_stats_t maxexectime;
 } queueStats;
 
 /**
@@ -230,7 +230,7 @@ poll_init()
 {
     n_threads = config_threadcount();
 
-    if (!(epoll_fd = MXS_MALLOC(sizeof(int) * n_threads)))
+    if (!(epoll_fd = (int*)MXS_MALLOC(sizeof(int) * n_threads)))
     {
         return;
     }
@@ -245,17 +245,17 @@ poll_init()
         }
     }
 
-    if ((fake_events = MXS_CALLOC(n_threads, sizeof(fake_event_t*))) == NULL)
+    if ((fake_events = (fake_event_t**)MXS_CALLOC(n_threads, sizeof(fake_event_t*))) == NULL)
     {
         exit(-1);
     }
 
-    if ((fake_event_lock = MXS_CALLOC(n_threads, sizeof(SPINLOCK))) == NULL)
+    if ((fake_event_lock = (SPINLOCK*)MXS_CALLOC(n_threads, sizeof(SPINLOCK))) == NULL)
     {
         exit(-1);
     }
 
-    if ((poll_msg = MXS_CALLOC(n_threads, sizeof(int))) == NULL)
+    if ((poll_msg = (int*)MXS_CALLOC(n_threads, sizeof(int))) == NULL)
     {
         exit(-1);
     }
@@ -875,7 +875,7 @@ static int
 process_pollq(int thread_id, struct epoll_event *event)
 {
     uint32_t ev = event->events;
-    DCB *dcb = event->data.ptr;
+    DCB *dcb = (DCB*)event->data.ptr;
     ss_dassert(dcb->thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
 
     /** Calculate event queue statistics */
@@ -1176,7 +1176,7 @@ event_to_string(uint32_t event)
 {
     char *str;
 
-    str = MXS_MALLOC(22);       // 22 is max returned string length
+    str = (char*)MXS_MALLOC(22);       // 22 is max returned string length
     if (str == NULL)
     {
         return NULL;
@@ -1233,7 +1233,7 @@ void
 dShowThreads(DCB *dcb)
 {
     int i, j, n;
-    char *state;
+    const char *state;
     double avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
     double qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 
@@ -1328,7 +1328,7 @@ dShowThreads(DCB *dcb)
             if (event_string == NULL)
             {
                 from_heap = false;
-                event_string = "??";
+                event_string = (char*)"??";
             }
             else
             {
@@ -1397,7 +1397,7 @@ static void poll_add_event_to_dcb(DCB*       dcb,
                                   GWBUF*     buf,
                                   uint32_t ev)
 {
-    fake_event_t *event = MXS_MALLOC(sizeof(*event));
+    fake_event_t *event = (fake_event_t*)MXS_MALLOC(sizeof(*event));
 
     if (event)
     {
