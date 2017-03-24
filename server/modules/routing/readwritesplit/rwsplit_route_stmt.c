@@ -19,9 +19,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <maxscale/alloc.h>
-
 #include <maxscale/router.h>
+#include <maxscale/modutil.h>
+
 #include "rwsplit_internal.h"
+
 /**
  * @file rwsplit_route_stmt.c   The functions that support the routing of
  * queries to back end servers. All the functions in this module are internal
@@ -43,6 +45,35 @@ static backend_ref_t *check_candidate_bref(backend_ref_t *cand,
                                            backend_ref_t *new,
                                            select_criteria_t sc);
 static backend_ref_t *get_root_master_bref(ROUTER_CLIENT_SES *rses);
+
+void handle_connection_keepalive(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
+                                 DCB *target_dcb)
+{
+    ss_dassert(target_dcb);
+    ss_debug(int nserv = 0);
+
+    for (int i = 0; i < rses->rses_nbackends; i++)
+    {
+        /** Each heartbeat is 1/10th of a second */
+        int keepalive = inst->rwsplit_config.connection_keepalive * 10;
+        backend_ref_t *bref = &rses->rses_backend_ref[i];
+
+        if (bref->bref_dcb != target_dcb && BREF_IS_IN_USE(bref) &&
+            !BREF_IS_WAITING_RESULT(bref))
+        {
+            ss_debug(nserv++);
+            int diff = hkheartbeat - bref->bref_dcb->last_read;
+
+            if (diff > keepalive)
+            {
+                MXS_INFO("Pinging %s, idle for %d seconds",
+                         bref->bref_dcb->server->unique_name, diff / 10);
+                modutil_ignorable_ping(bref->bref_dcb);
+            }
+        }
+    }
+    ss_dassert(nserv < rses->rses_nbackends);
+}
 
 /**
  * Routing function. Find out query type, backend type, and target DCB(s).
@@ -146,6 +177,12 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             ss_dassert(!store_stmt || TARGET_IS_SLAVE(route_target));
             handle_got_target(inst, rses, querybuf, target_dcb, store_stmt);
         }
+    }
+
+    if (succp && inst->rwsplit_config.connection_keepalive &&
+        (TARGET_IS_SLAVE(route_target) || TARGET_IS_MASTER(route_target)))
+    {
+        handle_connection_keepalive(inst, rses, target_dcb);
     }
 
     return succp;

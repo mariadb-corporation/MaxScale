@@ -707,17 +707,21 @@ gw_read_and_write(DCB *dcb)
 
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
 
-    if (proto->ignore_reply)
+    if (proto->ignore_replies > 0)
     {
-
-        /** The reply to a COM_CHANGE_USER is in packet */
-        GWBUF *query = proto->stored_query;
-        uint8_t result = *((uint8_t*)GWBUF_DATA(read_buffer) + 4);
-        proto->stored_query = NULL;
-        proto->ignore_reply = false;
+        /**
+         * The reply to an ignorable command is in the packet. Extract the
+         * response type and discard the response.
+         */
+        uint8_t result;
+        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN, 1, &result);
+        proto->ignore_replies--;
+        ss_dassert(proto->ignore_replies >= 0);
         gwbuf_free(read_buffer);
 
         int rval = 0;
+        GWBUF *query = proto->stored_query;
+        proto->stored_query = NULL;
 
         if (result == MYSQL_REPLY_OK)
         {
@@ -725,8 +729,11 @@ gw_read_and_write(DCB *dcb)
         }
         else if (query)
         {
-            /** The COM_CHANGE USER failed, generate a fake hangup event to
-             * close the DCB and send an error to the client. */
+            /**
+             * The ignorable command failed when we had a queued query from the
+             * client. Generate a fake hangup event to close the DCB and send
+             * an error to the client.
+             */
             gwbuf_free(query);
             poll_fake_hangup_event(dcb);
         }
@@ -884,13 +891,14 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             gwbuf_free(backend_protocol->stored_query);
         }
         dcb->was_persistent = false;
-        backend_protocol->ignore_reply = true;
+        backend_protocol->ignore_replies++;
+        ss_dassert(backend_protocol->ignore_replies > 0);
         backend_protocol->stored_query = queue;
 
         GWBUF *buf = gw_create_change_user_packet(dcb->session->client_dcb->data, dcb->protocol);
         return dcb_write(dcb, buf) ? 1 : 0;
     }
-    else if (backend_protocol->ignore_reply)
+    else if (backend_protocol->ignore_replies > 0)
     {
         if (MYSQL_IS_COM_QUIT((uint8_t*)GWBUF_DATA(queue)))
         {
@@ -974,6 +982,13 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             }
             else
             {
+                if (GWBUF_IS_IGNORABLE(queue))
+                {
+                    /** The response to this command should be ignored */
+                    backend_protocol->ignore_replies++;
+                    ss_dassert(backend_protocol->ignore_replies > 0);
+                }
+
                 /** Write to backend */
                 rc = dcb_write(dcb, queue);
             }

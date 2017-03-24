@@ -196,6 +196,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
             {"max_sescmd_history", MXS_MODULE_PARAM_COUNT, "0"},
             {"strict_multi_stmt",  MXS_MODULE_PARAM_BOOL, "true"},
             {"master_accept_reads", MXS_MODULE_PARAM_BOOL, "false"},
+            {"connection_keepalive", MXS_MODULE_PARAM_COUNT, "0"},
             {MXS_END_MODULE_PARAMS}
         }
     };
@@ -278,6 +279,7 @@ static MXS_ROUTER *createInstance(SERVICE *service, char **options)
     router->rwsplit_config.disable_sescmd_history = config_get_bool(params, "disable_sescmd_history");
     router->rwsplit_config.max_sescmd_history = config_get_integer(params, "max_sescmd_history");
     router->rwsplit_config.master_accept_reads = config_get_bool(params, "master_accept_reads");
+    router->rwsplit_config.connection_keepalive = config_get_integer(params, "connection_keepalive");
 
     if (!handle_max_slaves(router, config_get_string(params, "max_slave_connections")) ||
         (options && !rwsplit_process_router_options(router, options)))

@@ -1321,3 +1321,26 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
 
     return i;
 }
+
+bool modutil_ignorable_ping(DCB *dcb)
+{
+    static uint8_t com_ping_packet[] =
+    {
+        0x01, 0x00, 0x00, 0x00, 0x0e
+    };
+
+    GWBUF *buf = gwbuf_alloc_and_load(sizeof(com_ping_packet), com_ping_packet);
+    bool rval = false;
+
+    if (buf)
+    {
+        gwbuf_set_type(buf, GWBUF_TYPE_IGNORABLE);
+
+        if (dcb->func.write(dcb, buf))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
