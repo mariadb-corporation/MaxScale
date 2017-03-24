@@ -51,7 +51,7 @@ static thread_local struct this_thread
  */
 typedef struct worker_message
 {
-    int      id;   /*< Message id. */
+    uint32_t id;   /*< Message id. */
     intptr_t arg1; /*< Message specific first argument. */
     intptr_t arg2; /*< Message specific second argument. */
 } WORKER_MESSAGE;

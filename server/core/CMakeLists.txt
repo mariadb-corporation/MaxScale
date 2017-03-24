@@ -41,7 +41,7 @@ add_library(maxscale-common SHARED
   thread.cc
   users.cc
   utils.cc
-  worker.c
+  worker.cc
   )
 
 if(WITH_JEMALLOC)
