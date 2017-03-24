@@ -265,7 +265,7 @@ typedef struct backend_ref_st
     GWBUF*          map_queue;
     SERVER_REF*     bref_backend; /*< Backend server */
     DCB*            bref_dcb; /*< Backend DCB */
-    bref_state_t    bref_state; /*< State of the backend */
+    int             bref_state; /*< State of the backend */
     bool            bref_mapped; /*< Whether the backend has been mapped */
     bool            last_sescmd_replied;
     int             bref_num_result_wait; /*< Number of not yet received results */
@@ -335,7 +335,7 @@ struct schemarouter_session
                                 * mapped to the servers that contain them */
     char            connect_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Database the user was trying to connect to */
     char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
-    init_mask_t    init; /*< Initialization state bitmask */
+    int             init; /*< Initialization state bitmask */
     GWBUF*          queue; /*< Query that was received before the session was ready */
     DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */
     DCB*            dcb_reply; /*< Internal DCB used to send replies to the client */

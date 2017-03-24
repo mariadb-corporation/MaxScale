@@ -1,4 +1,4 @@
-add_library(schemarouter SHARED schemarouter.c sharding_common.c)
+add_library(schemarouter SHARED schemarouter.cc)
 target_link_libraries(schemarouter maxscale-common)
 add_dependencies(schemarouter pcre2)
 set_target_properties(schemarouter PROPERTIES VERSION "1.0.0")
