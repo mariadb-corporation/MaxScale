@@ -2571,7 +2571,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
         if (val && *endptr == '\0')
         {
-            service_set_retry_interval(obj->element, val);
+            service_set_retry_interval(service, val);
         }
         else
         {
