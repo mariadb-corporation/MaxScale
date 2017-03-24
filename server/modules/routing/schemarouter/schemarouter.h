@@ -34,6 +34,7 @@
 #include <maxscale/pcre2.h>
 
 #include "shard_map.hh"
+#include "session_command.hh"
 
 MXS_BEGIN_DECLS
 
@@ -254,6 +255,9 @@ typedef struct backend_ref_st
     int             bref_num_result_wait; /*< Number of not yet received results */
     sescmd_cursor_t bref_sescmd_cur; /*< Session command cursor */
     GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
+
+    SessionCommandList session_commands; /**< List of session commands that are
+                                          * to be executed on this backend server */
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_tail;
 #endif

@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/buffer.h>
@@ -29,6 +30,8 @@
 #include <maxscale/router.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
+
+using std::string;
 
 #define DEFAULT_REFRESH_INTERVAL "300"
 
@@ -569,9 +572,10 @@ static route_target_t get_shard_route_target(uint32_t qtype,
      * These queries are not affected by hints
      */
     if (qc_query_is_type(qtype, QUERY_TYPE_SESSION_WRITE) ||
+        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
+        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
         /** enable or disable autocommit are always routed to all */
         qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
         qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
@@ -1793,6 +1797,18 @@ static bool route_session_write(SCHEMAROUTER_SESSION* router_cli_ses,
     {
         if (BREF_IS_IN_USE((&backend_ref[i])))
         {
+            GWBUF *buffer = gwbuf_clone(querybuf);
+            backend_ref[i].session_commands.push_back(buffer);
+
+            for (SessionCommandList::iterator iter = backend_ref[i].session_commands.begin();
+                 iter != backend_ref[i].session_commands.end();
+                 iter++)
+            {
+                SessionCommand& scmd = *iter;
+                string str = scmd.to_string();
+                MXS_INFO("%s: %s", backend_ref[i].bref_backend->server->unique_name, str.c_str());
+            }
+
             sescmd_cursor_t* scur;
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
