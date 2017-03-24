@@ -48,9 +48,6 @@
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
 
-/* A session with null values, used for initialization */
-static MXS_SESSION session_initialized = SESSION_INIT;
-
 /** Global session id; updated safely by use of atomic_add */
 static int session_id;
 
@@ -76,19 +73,18 @@ static int session_reply(MXS_FILTER *inst, MXS_FILTER_SESSION *session, GWBUF *d
  * @brief Initialize a session
  *
  * This routine puts initial values into the fields of the session pointed to
- * by the parameter. The parameter has to be passed as void * because the
- * function can be called by the generic list manager, which does not know
- * the actual type of the list entries it handles.
- *
- * All fields can be initialized by the assignment of the static
- * initialized session.
+ * by the parameter.
  *
  * @param *session    Pointer to the session to be initialized
  */
 static void
-session_initialize(void *session)
+session_initialize(MXS_SESSION *session)
 {
-    *(MXS_SESSION *)session = session_initialized;
+    memset(session, 0, sizeof(MXS_SESSION));
+
+    session->ses_chk_top = CHK_NUM_SESSION;
+    session->state = SESSION_STATE_ALLOC;
+    session->ses_chk_tail = CHK_NUM_SESSION;
 }
 
 /**
@@ -166,10 +162,15 @@ session_alloc(SERVICE *service, DCB *client_dcb)
          * of the chain nearest the router working back to the client
          * protocol end of the chain.
          */
-        session->head.instance = service->router_instance;
-        session->head.session = session->router_session;
-
-        session->head.routeQuery = (void *)(service->router->routeQuery);
+        // NOTE: Here we cast the router instance into a MXS_FILTER and
+        // NOTE: and the router session into a MXS_FILTER_SESSION and
+        // NOTE: the router routeQuery into a filter routeQuery. That
+        // NOTE: is in order to be able to treat the router as the first
+        // NOTE: filter.
+        session->head.instance = (MXS_FILTER*)service->router_instance;
+        session->head.session = (MXS_FILTER_SESSION*)session->router_session;
+        session->head.routeQuery =
+            (int32_t (*)(MXS_FILTER*, MXS_FILTER_SESSION*, GWBUF*))service->router->routeQuery;
 
         // NOTE: Here we cast the session into a MXS_FILTER and MXS_FILTER_SESSION
         // NOTE: and session_reply into a filter clientReply. That's dubious but ok
@@ -326,7 +327,7 @@ void session_close(MXS_SESSION *session)
         }
 
         MXS_ROUTER_OBJECT* router = session->service->router;
-        void* router_instance = session->service->router_instance;
+        MXS_ROUTER* router_instance = session->service->router_instance;
 
         /** Close router session and all its connections */
         router->closeSession(router_instance, session->router_session);
@@ -569,7 +570,7 @@ dListSessions(DCB *dcb)
  * @param state         The session state
  * @return A string representation of the session state
  */
-char *
+const char *
 session_state(mxs_session_state_t state)
 {
     switch (state)
@@ -617,8 +618,8 @@ session_setup_filters(MXS_SESSION *session)
     MXS_UPSTREAM *tail;
     int i;
 
-    if ((session->filters = MXS_CALLOC(service->n_filters,
-                                       sizeof(SESSION_FILTER))) == NULL)
+    if ((session->filters = (SESSION_FILTER*)MXS_CALLOC(service->n_filters,
+                                                        sizeof(SESSION_FILTER))) == NULL)
     {
         return 0;
     }
@@ -897,7 +898,7 @@ static bool ses_find_id(DCB *dcb, void *data)
 {
     void **params = (void**)data;
     MXS_SESSION **ses = (MXS_SESSION**)params[0];
-    int *id = (int*)params[1];
+    size_t *id = (size_t*)params[1];
     bool rval = true;
 
     if (dcb->session->ses_id == *id)

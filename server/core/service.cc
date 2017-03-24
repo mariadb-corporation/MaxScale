@@ -121,7 +121,7 @@ SERVICE* service_alloc(const char *name, const char *router)
         return NULL;
     }
 
-    if ((service->router = load_module(my_router, MODULE_ROUTER)) == NULL)
+    if ((service->router = (MXS_ROUTER_OBJECT*)load_module(my_router, MODULE_ROUTER)) == NULL)
     {
         char* home = get_libdir();
         char* ldpath = getenv("LD_LIBRARY_PATH");
@@ -441,7 +441,7 @@ static char** copy_string_array(char** original)
             values++;
         }
 
-        array = MXS_MALLOC(sizeof(char*) * (values + 1));
+        array = (char**)MXS_MALLOC(sizeof(char*) * (values + 1));
 
         if (array)
         {
@@ -814,7 +814,7 @@ bool serviceHasListener(SERVICE *service, const char *protocol,
  */
 static SERVER_REF* server_ref_create(SERVER *server)
 {
-    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
+    SERVER_REF *sref = (SERVER_REF*)MXS_MALLOC(sizeof(SERVER_REF));
 
     if (sref)
     {
@@ -1586,11 +1586,11 @@ dListListeners(DCB *dcb)
 void
 service_update(SERVICE *service, char *router, char *user, char *auth)
 {
-    void *router_obj;
+    MXS_ROUTER_OBJECT *router_obj;
 
     if (!strcmp(service->routerModule, router))
     {
-        if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
+        if ((router_obj = (MXS_ROUTER_OBJECT*)load_module(router, MODULE_ROUTER)) == NULL)
         {
             MXS_ERROR("Failed to update router "
                       "for service %s to %s.",

@@ -93,7 +93,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     char *my_name = MXS_STRDUP(name);
     char *my_protocol = MXS_STRDUP(protocol);
     char *my_authenticator = MXS_STRDUP(authenticator);
-    DCB **persistent = MXS_CALLOC(nthr, sizeof(*persistent));
+    DCB **persistent = (DCB**)MXS_CALLOC(nthr, sizeof(*persistent));
 
     if (!server || !my_name || !my_protocol || !my_authenticator || !persistent)
     {
@@ -105,7 +105,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
         return NULL;
     }
 
-    if (snprintf(server->name, sizeof(server->name), "%s", address) > sizeof(server->name))
+    if (snprintf(server->name, sizeof(server->name), "%s", address) > (int)sizeof(server->name))
     {
         MXS_WARNING("Truncated server address '%s' to the maximum size of %lu characters.",
                     address, sizeof(server->name));
@@ -313,7 +313,7 @@ int server_find_by_unique_names(char **server_names, int size, SERVER*** output)
 {
     ss_dassert(server_names && (size > 0));
 
-    SERVER **results = MXS_CALLOC(size, sizeof(SERVER*));
+    SERVER **results = (SERVER**)MXS_CALLOC(size, sizeof(SERVER*));
     if (!results)
     {
         return 0;
@@ -765,7 +765,7 @@ server_status(const SERVER *server)
  * @param bit           The bit to set for the server
  */
 void
-server_set_status_nolock(SERVER *server, int bit)
+server_set_status_nolock(SERVER *server, unsigned bit)
 {
     server->status |= bit;
 
@@ -786,7 +786,7 @@ server_set_status_nolock(SERVER *server, int bit)
  * @param bit           The bit to set for the server
  */
 void
-server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set)
+server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set)
 {
     /** clear error logged flag before the next failure */
     if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
@@ -807,7 +807,7 @@ server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set)
  * @param bit           The bit to clear for the server
  */
 void
-server_clear_status_nolock(SERVER *server, int bit)
+server_clear_status_nolock(SERVER *server, unsigned bit)
 {
     server->status &= ~bit;
 }
@@ -838,14 +838,14 @@ void
 server_add_mon_user(SERVER *server, const char *user, const char *passwd)
 {
     if (user != server->monuser &&
-        snprintf(server->monuser, sizeof(server->monuser), "%s", user) > sizeof(server->monuser))
+        snprintf(server->monuser, sizeof(server->monuser), "%s", user) > (int)sizeof(server->monuser))
     {
         MXS_WARNING("Truncated monitor user for server '%s', maximum username "
                     "length is %lu characters.", server->unique_name, sizeof(server->monuser));
     }
 
     if (passwd != server->monpw &&
-        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > sizeof(server->monpw))
+        snprintf(server->monpw, sizeof(server->monpw), "%s", passwd) > (int)sizeof(server->monpw))
     {
         MXS_WARNING("Truncated monitor password for server '%s', maximum password "
                     "length is %lu characters.", server->unique_name, sizeof(server->monpw));
@@ -1085,7 +1085,7 @@ server_update_port(SERVER *server, unsigned short port)
 
 static struct
 {
-    char            *str;
+    const char     *str;
     unsigned int    bit;
 } ServerBits[] =
 {

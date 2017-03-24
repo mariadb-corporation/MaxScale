@@ -105,13 +105,13 @@ bool avro_handle_convert(const MODULECMD_ARG *args)
     bool rval = false;
 
     if (strcmp(args->argv[1].value.string, "start") == 0 &&
-        conversion_task_ctl(args->argv[0].value.service->router_instance, true))
+        conversion_task_ctl((AVRO_INSTANCE*)args->argv[0].value.service->router_instance, true))
     {
         MXS_NOTICE("Started conversion for service '%s'.", args->argv[0].value.service->name);
         rval = true;
     }
     else if (strcmp(args->argv[1].value.string, "stop") == 0 &&
-             conversion_task_ctl(args->argv[0].value.service->router_instance, false))
+             conversion_task_ctl((AVRO_INSTANCE*)args->argv[0].value.service->router_instance, false))
     {
         MXS_NOTICE("Stopped conversion for service '%s'.", args->argv[0].value.service->name);
         rval = true;

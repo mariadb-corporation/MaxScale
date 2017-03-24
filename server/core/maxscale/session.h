@@ -41,7 +41,7 @@ typedef enum
 } SESSIONLISTFILTER;
 
 int session_isvalid(MXS_SESSION *);
-char *session_state(mxs_session_state_t);
+const char *session_state(mxs_session_state_t);
 bool session_link_dcb(MXS_SESSION *, struct dcb *);
 
 RESULTSET *sessionGetList(SESSIONLISTFILTER);

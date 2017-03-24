@@ -38,7 +38,7 @@
 MXS_BEGIN_DECLS
 
 struct server;
-struct router;
+struct mxs_router;
 struct mxs_router_object;
 struct users;
 
@@ -126,7 +126,7 @@ typedef struct service
     char *routerModule;                /**< Name of router module to use */
     char **routerOptions;              /**< Router specific option strings */
     struct mxs_router_object *router;  /**< The router we are using */
-    void *router_instance;             /**< The router instance for this service */
+    struct mxs_router *router_instance;/**< The router instance for this service */
     char *version_string;              /**< version string for this service listeners */
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */

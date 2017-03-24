@@ -40,7 +40,7 @@
 
 // This is pretty ugly but it's required to test internal functions
 #include "../config.cc"
-#include "../server.c"
+#include "../server.cc"
 
 /**
  * test1    Allocate a server and do lots of other things
