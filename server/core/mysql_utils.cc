@@ -117,7 +117,7 @@ uint64_t mxs_leint_consume(uint8_t ** c)
 char* mxs_lestr_consume_dup(uint8_t** c)
 {
     uint64_t slen = mxs_leint_consume(c);
-    char *str = MXS_MALLOC((slen + 1) * sizeof(char));
+    char *str = (char*)MXS_MALLOC((slen + 1) * sizeof(char));
 
     if (str)
     {

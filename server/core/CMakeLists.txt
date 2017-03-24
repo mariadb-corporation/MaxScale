@@ -38,7 +38,8 @@ add_library(maxscale-common SHARED
   thread.cc
   users.cc
   utils.cc
-  mysql_utils.c mysql_binlog.c modulecmd.c)
+  mysql_utils.cc
+  mysql_binlog.cc modulecmd.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
