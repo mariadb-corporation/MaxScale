@@ -53,7 +53,7 @@ static inline void prepare_error()
 {
     if (errbuf == NULL)
     {
-        errbuf = MXS_MALLOC(MODULECMD_ERRBUF_SIZE);
+        errbuf = (char*)MXS_MALLOC(MODULECMD_ERRBUF_SIZE);
         MXS_ABORT_IF_NULL(errbuf);
         errbuf[0] = '\0';
     }
@@ -86,7 +86,7 @@ static void report_argc_mismatch(const MODULECMD *cmd, int argc)
 
 static MODULECMD_DOMAIN* domain_create(const char *domain)
 {
-    MODULECMD_DOMAIN *rval = MXS_MALLOC(sizeof(*rval));
+    MODULECMD_DOMAIN *rval = (MODULECMD_DOMAIN*)MXS_MALLOC(sizeof(*rval));
     char *dm = MXS_STRDUP(domain);
 
     if (rval && dm)
@@ -141,10 +141,10 @@ static MODULECMD* command_create(const char *identifier, const char *domain,
                                  modulecmd_arg_type_t* argv)
 {
     ss_dassert((argc && argv) || (argc == 0 && argv == NULL));
-    MODULECMD *rval = MXS_MALLOC(sizeof(*rval));
+    MODULECMD *rval = (MODULECMD*)MXS_MALLOC(sizeof(*rval));
     char *id = MXS_STRDUP(identifier);
     char *dm = MXS_STRDUP(domain);
-    modulecmd_arg_type_t *types = MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
+    modulecmd_arg_type_t *types = (modulecmd_arg_type_t*)MXS_MALLOC(sizeof(*types) * (argc ? argc : 1));
 
     if (rval && id  && dm && types)
     {
@@ -297,7 +297,7 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
             break;
 
         case MODULECMD_ARG_SESSION:
-            if ((arg->value.session = session_get_by_id(atoi(value))))
+            if ((arg->value.session = session_get_by_id(atoi((const char*)value))))
             {
                 arg->type.type = MODULECMD_ARG_SESSION;
             }
@@ -373,8 +373,8 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
 
 static MODULECMD_ARG* modulecmd_arg_create(int argc)
 {
-    MODULECMD_ARG* arg = MXS_MALLOC(sizeof(*arg));
-    struct arg_node *argv = MXS_CALLOC(argc, sizeof(*argv));
+    MODULECMD_ARG* arg = (MODULECMD_ARG*)MXS_MALLOC(sizeof(*arg));
+    struct arg_node *argv = (struct arg_node*)MXS_CALLOC(argc, sizeof(*argv));
 
     if (arg && argv)
     {
@@ -679,7 +679,7 @@ char* modulecmd_argtype_to_str(modulecmd_arg_type_t *type)
 
     size_t slen = strlen(strtype);
     size_t extra = MODULECMD_ARG_IS_REQUIRED(type) ? 0 : 2;
-    char *rval = MXS_MALLOC(slen + extra + 1);
+    char *rval = (char*)MXS_MALLOC(slen + extra + 1);
 
     if (rval)
     {

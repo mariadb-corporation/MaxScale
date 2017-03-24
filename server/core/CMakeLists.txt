@@ -18,8 +18,11 @@ add_library(maxscale-common SHARED
   maxscale_pcre2.cc
   misc.cc
   mlist.cc
+  modulecmd.cc
   modutil.cc
   monitor.cc
+  mysql_binlog.cc
+  mysql_utils.cc
   paths.cc
   poll.cc
   query_classifier.cc
@@ -38,8 +41,7 @@ add_library(maxscale-common SHARED
   thread.cc
   users.cc
   utils.cc
-  mysql_utils.cc
-  mysql_binlog.cc modulecmd.c)
+  )
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})
