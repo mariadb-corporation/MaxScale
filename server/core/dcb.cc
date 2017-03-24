@@ -1039,7 +1039,7 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
         }
     }
 
-    ss_dassert(gwbuf_length(*head) == (start_length + nreadtotal));
+    ss_dassert(gwbuf_length(*head) == (size_t)(start_length + nreadtotal));
 
     return nsingleread < 0 ? nsingleread : nreadtotal;
 }
@@ -2512,8 +2512,8 @@ int dcb_accept_SSL(DCB* dcb)
         return -1;
     }
 
-    ss_debug(char *remote = dcb->remote ? dcb->remote : "");
-    ss_debug(char *user = dcb->user ? dcb->user : "");
+    ss_debug(const char *remote = dcb->remote ? dcb->remote : "");
+    ss_debug(const char *user = dcb->user ? dcb->user : "");
 
     int ssl_rval = SSL_accept(dcb->ssl);
 
