@@ -28,6 +28,10 @@
 #define MXS_MODULE_NAME "schemarouter"
 
 #include <maxscale/cdefs.h>
+
+#include <set>
+#include <string>
+
 #include <maxscale/dcb.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/protocol/mysql.h>
@@ -250,7 +254,7 @@ struct schemarouter_session
     bool             rses_transaction_active; /*< Is a transaction active */
     struct schemarouter_instance   *router;   /*< The router instance */
     struct schemarouter_session* next; /*< List of router sessions */
-    shard_map_t     *shardmap; /*< Database hash containing names of the databases
+    Shard            shardmap; /**< Database hash containing names of the databases
                                 * mapped to the servers that contain them */
     char            connect_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Database the user was trying to connect to */
     char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
@@ -275,7 +279,7 @@ struct schemarouter_session
  */
 typedef struct schemarouter_instance
 {
-    HASHTABLE*              shard_maps;  /*< Shard maps hashed by user name */
+    ShardManager         shard_manager;  /*< Shard maps hashed by user name */
     SERVICE*                service;     /*< Pointer to service                 */
     SCHEMAROUTER_SESSION*      connections; /*< List of client connections         */
     SPINLOCK                lock;        /*< Lock for the instance data         */
@@ -286,9 +290,9 @@ typedef struct schemarouter_instance
     ROUTER_STATS            stats;       /*< Statistics for this router         */
     struct schemarouter_instance* next;        /*< Next router on the list            */
     bool            available_slaves; /*< The router has some slaves available */
-    HASHTABLE*              ignored_dbs; /*< List of databases to ignore when the
-                                          * database mapping finds multiple servers
-                                          * with the same database */
+    std::set<std::string> ignored_dbs; /*< List of databases to ignore when the
+                                              * database mapping finds multiple servers
+                                              * with the same database */
     pcre2_code*                   ignore_regex; /*< Databases matching this regex will
                                            * not cause the session to be terminated
                                            * if they are found on more than one server. */

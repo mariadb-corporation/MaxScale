@@ -15,65 +15,114 @@
 
 #include <maxscale/cppdefs.hh>
 
+#include <map>
+#include <string>
+#include <list>
+
 #include <maxscale/service.h>
 #include <maxscale/hashtable.h>
 #include <maxscale/spinlock.hh>
 
-enum shard_map_state
+using namespace maxscale;
+using std::map;
+using std::string;
+
+/** This contains the database to server mapping */
+typedef map<string, SERVER*> ServerMap;
+
+class Shard
 {
-    SHMAP_UNINIT, /*< No databases have been added to this shard map */
-    SHMAP_READY, /*< All available databases have been added */
-    SHMAP_STALE /*< The shard map has old data or has not been updated recently */
+public:
+    Shard();
+    ~Shard();
+
+    /**
+     * @brief Add a database location
+     *
+     * @param db     Database to add
+     * @param target Target where database is located
+     *
+     * @return True if location was added
+     */
+    bool add_location(string db, SERVER* target);
+
+    /**
+     * @brief Retrieve the location of a database
+     *
+     * @param db Database to locate
+     *
+     * @return The database or NULL if no server contains the database
+     */
+    SERVER* get_location(string db);
+
+    /**
+     * @brief Check if shard contains stale information
+     *
+     * @param max_interval The maximum lifetime of the shard
+     *
+     * @return True if the shard is stale
+     */
+    bool stale(double max_interval) const;
+
+    /**
+     * @brief Check if shard is empty
+     *
+     * @return True if shard contains no locations
+     */
+    bool empty() const;
+
+    /**
+     * @brief Retrieve all database to server mappings
+     *
+     * @param keys A map where the database to server mappings are added
+     */
+    void get_content(ServerMap& dest);
+
+    /**
+     * @brief Check if this shard is newer than the other shard
+     *
+     * @param shard The other shard to check
+     *
+     * @return True if this shard is newer
+     */
+    bool newer_than(const Shard& shard) const;
+
+private:
+    ServerMap m_map;
+    time_t    m_last_updated;
 };
 
-/**
- * A map of the shards tied to a single user.
- */
-typedef struct shard_map
+typedef map<string, Shard> ShardMap;
+
+class ShardManager
 {
-    HASHTABLE *hash; /*< A hashtable of database names and the servers which
-                       * have these databases. */
-    SPINLOCK lock;
-    time_t last_updated;
-    enum shard_map_state state; /*< State of the shard map */
-} shard_map_t;
+public:
+    ShardManager();
+    ~ShardManager();
 
-/** TODO: Replace these */
-int hashkeyfun(const void* key);
-int hashcmpfun(const void *, const void *);
-void keyfreefun(void* data);
+    /**
+     * @brief Retrieve or create a shard
+     *
+     * @param user         User whose shard to retrieve
+     * @param max_lifetime The maximum lifetime of a shard
+     *
+     * @return The latest version of the shard or a newly created shard if no
+     * old version is available
+     */
+    Shard get_shard(string user, double max_lifetime);
 
-/** TODO: Don't use this everywhere */
-/** Size of the hashtable used to store ignored databases */
-#define SCHEMAROUTER_HASHSIZE 100
+    /**
+     * @brief Update the shard information
+     *
+     * The shard information is updated if the new shard contains more up to date
+     * information than the one stored in the shard manager.
+     *
+     * @param shard New version of the shard
+     * @param user  The user whose shard this is
+     */
+    void update_shard(Shard& shard, string user);
 
-/**
- * Allocate a shard map and initialize it.
- * @return Pointer to new shard_map_t or NULL if memory allocation failed
- */
-shard_map_t* shard_map_alloc();
-
-/**
- * Check if the shard map is out of date and update its state if necessary.
- * @param router Router instance
- * @param map Shard map to update
- * @return Current state of the shard map
- */
-enum shard_map_state shard_map_update_state(shard_map_t *self, double refresh_min_interval);
-
-/**
- * Replace a shard map with another one. This function copies the contents of
- * the source shard map to the target and frees the source memory.
- * @param target Target shard map to replace
- * @param source Source shard map to use
- */
-void replace_shard_map(shard_map_t **target, shard_map_t **source);
-
-/**
- * Return the newer of two shard maps
- *
- * @param stored The currently stored shard map
- * @param current The replacement map the current client is using
- * @return The newer of the two shard maps
- */
-shard_map_t* get_latest_shard_map(shard_map_t *stored, shard_map_t *current);
+private:
+    SPINLOCK m_lock;
+    ShardMap m_maps;
+};
