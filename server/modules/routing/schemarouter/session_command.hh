@@ -38,6 +38,20 @@ public:
     bool is_reply_received() const;
 
     /**
+     * @brief Get the command type of the session command
+     *
+     * @return The type of the command
+     */
+    uint8_t get_command() const;
+
+    /**
+     * @brief Get the position of this session command
+     *
+     * @return The position of the session command
+     */
+    uint64_t get_position() const;
+
+    /**
      * @brief Creates a copy of the internal buffer
      * @return A copy of the internal buffer
      */
@@ -48,8 +62,9 @@ public:
      *
      * @param buffer The buffer containing the command. Note that the ownership
      *               of @c buffer is transferred to this object.
+     * @param id     A unique position identifier used to track replies
      */
-    SessionCommand(GWBUF *buffer);
+    SessionCommand(GWBUF *buffer, uint64_t id);
 
     ~SessionCommand();
 
@@ -61,8 +76,10 @@ public:
     std::string to_string();
 
 private:
-    Buffer m_buffer; /**< The buffer containing the command */
-    bool   m_replySent; /**< Whether the session command reply has been sent */
+    Buffer   m_buffer;    /**< The buffer containing the command */
+    uint8_t  m_command;   /**< The command being executed */
+    uint64_t m_pos;       /**< Unique position identifier */
+    bool     m_replySent; /**< Whether the session command reply has been sent */
 
     SessionCommand();
     SessionCommand& operator = (const SessionCommand& command);

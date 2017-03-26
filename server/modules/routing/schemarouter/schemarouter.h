@@ -147,25 +147,6 @@ typedef enum rses_property_type_t
         LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
 
 /**
- * Session variable command
- */
-typedef struct mysql_sescmd_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t        my_sescmd_chk_top;
-#endif
-    rses_property_t*   my_sescmd_prop;       /*< Parent property */
-    GWBUF*             my_sescmd_buf;        /*< Query buffer */
-    unsigned char      my_sescmd_packet_type;/*< Packet type */
-    bool               my_sescmd_is_replied; /*< Is cmd replied to client */
-    int      position; /*< Position of this command */
-#if defined(SS_DEBUG)
-    skygw_chk_t        my_sescmd_chk_tail;
-#endif
-} mysql_sescmd_t;
-
-
-/**
  * Property structure
  */
 struct rses_property_st
@@ -178,7 +159,6 @@ struct rses_property_st
     rses_property_type_t rses_prop_type; /*< Property type */
     union rses_prop_data
     {
-        mysql_sescmd_t  sescmd; /*< Session commands */
         HASHTABLE*  temp_tables; /*< Hashtable of table names */
     } rses_prop_data;
     rses_property_t*     rses_prop_next; /*< Next property of same type */
@@ -186,21 +166,6 @@ struct rses_property_st
     skygw_chk_t          rses_prop_chk_tail;
 #endif
 };
-
-typedef struct sescmd_cursor_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t        scmd_cur_chk_top;
-#endif
-    SCHEMAROUTER_SESSION* scmd_cur_rses;         /*< pointer to owning router session */
-    rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
-    mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
-    bool               scmd_cur_active;       /*< true if command is being executed */
-    int      position; /*< Position of this cursor */
-#if defined(SS_DEBUG)
-    skygw_chk_t        scmd_cur_chk_tail;
-#endif
-} sescmd_cursor_t;
 
 /**
  * Internal structure used to define the set of backend servers we are routing
@@ -253,7 +218,6 @@ typedef struct backend_ref_st
     bool            bref_mapped; /*< Whether the backend has been mapped */
     bool            last_sescmd_replied;
     int             bref_num_result_wait; /*< Number of not yet received results */
-    sescmd_cursor_t bref_sescmd_cur; /*< Session command cursor */
     GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
 
     SessionCommandList session_commands; /**< List of session commands that are
@@ -271,8 +235,6 @@ typedef struct schemarouter_config_st
     int               rw_max_slave_conn_percent;
     int               rw_max_slave_conn_count;
     mxs_target_t      rw_use_sql_variables_in;
-    int max_sescmd_hist;
-    bool disable_sescmd_hist;
     time_t last_refresh; /*< Last time the database list was refreshed */
     double refresh_min_interval; /*< Minimum required interval between refreshes of databases */
     bool refresh_databases; /*< Are databases refreshed when they are not found in the hashtable */
@@ -329,6 +291,9 @@ struct schemarouter_session
     ROUTER_STATS    stats;     /*< Statistics for this router         */
     int             n_sescmd;
     int             pos_generator;
+
+    uint64_t        sent_sescmd;    /**< The latest session command being executed */
+    uint64_t        replied_sescmd; /**< The last session command reply that was sent to the client */
 #if defined(SS_DEBUG)
     skygw_chk_t      rses_chk_tail;
 #endif

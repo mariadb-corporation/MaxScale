@@ -13,6 +13,7 @@
 
 #include "session_command.hh"
 #include <maxscale/modutil.h>
+#include <maxscale/protocol/mysql.h>
 
 void SessionCommand::mark_reply_received()
 {
@@ -24,15 +25,31 @@ bool SessionCommand::is_reply_received() const
     return m_replySent;
 }
 
+uint8_t SessionCommand::get_command() const
+{
+    return m_command;
+}
+
+uint64_t SessionCommand::get_position() const
+{
+    return m_pos;
+}
+
 Buffer SessionCommand::copy_buffer() const
 {
     return m_buffer;
 }
 
-SessionCommand::SessionCommand(GWBUF *buffer):
+SessionCommand::SessionCommand(GWBUF *buffer, uint64_t id):
     m_buffer(buffer),
+    m_command(0),
+    m_pos(id),
     m_replySent(false)
 {
+    if (buffer)
+    {
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &m_command);
+    }
 }
 
 SessionCommand::~SessionCommand()
@@ -42,15 +59,18 @@ SessionCommand::~SessionCommand()
 std::string SessionCommand::to_string()
 {
     std::string str;
-    
-    GWBUF **buf = &m_buffer;
     char *sql;
     int sql_len;
 
-    if (modutil_extract_SQL(*buf, &sql, &sql_len))
+    /** TODO: Create C++ versions of modutil functions  */
+    GWBUF *buf = m_buffer.release();
+
+    if (modutil_extract_SQL(buf, &sql, &sql_len))
     {
         str.append(sql, sql_len);
     }
+
+    m_buffer.reset(buf);
 
     return str;
 }
