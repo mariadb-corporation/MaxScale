@@ -797,28 +797,14 @@ mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,
     return cmd;
 }
 
-
-/**
- * Examine command type and the readbuf. Conclude response
- * packet count from the command type or from the first packet
- * content.
- * Fails if read buffer doesn't include enough data to read the
- * packet length.
- */
-void init_response_status(GWBUF*             buf,
-                          mysql_server_cmd_t cmd,
-                          int*               npackets,
-                          ssize_t*           nbytes_left)
+void mysql_num_response_packets(GWBUF *buf, uint8_t cmd, int *npackets, size_t *nbytes)
 {
     uint8_t readbuf[3];
     int nparam = 0;
     int nattr = 0;
-    uint8_t* data;
-
-    ss_dassert(gwbuf_length(buf) >= 3);
 
     /** Read command byte */
-    gwbuf_copy_data(buf, 4, 1, readbuf);
+    gwbuf_copy_data(buf, MYSQL_HEADER_LEN, 1, readbuf);
 
     if (readbuf[0] == 0xff) /*< error */
     {
@@ -853,16 +839,21 @@ void init_response_status(GWBUF*             buf,
     }
 
     gwbuf_copy_data(buf, 0, 3, readbuf);
-    *nbytes_left = gw_mysql_get_byte3(readbuf) + MYSQL_HEADER_LEN;
-    /**
-     * There is at least one complete packet in the buffer so buffer is bigger
-     * than packet
-     */
+    *nbytes = gw_mysql_get_byte3(readbuf) + MYSQL_HEADER_LEN;
+}
+
+/**
+ * Examine command type and the readbuf. Conclude response packet count
+ * from the command type or from the first packet content.  Fails if read
+ * buffer doesn't include enough data to read the packet length.
+ */
+void init_response_status(GWBUF* buf, uint8_t cmd, int *npackets, size_t *nbytes_left)
+{
+    ss_dassert(gwbuf_length(buf) >= 3);
+    mysql_num_response_packets(buf, cmd, npackets, nbytes_left);
     ss_dassert(*nbytes_left > 0);
     ss_dassert(*npackets > 0);
 }
-
-
 
 /**
  * Read how many packets are left from current response and how many bytes there
@@ -870,14 +861,14 @@ void init_response_status(GWBUF*             buf,
  */
 bool protocol_get_response_status(MySQLProtocol* p,
                                   int* npackets,
-                                  ssize_t* nbytes)
+                                  size_t* nbytes)
 {
     bool succp;
 
     CHK_PROTOCOL(p);
 
     *npackets = p->protocol_command.scom_nresponse_packets;
-    *nbytes   = (ssize_t)p->protocol_command.scom_nbytes_to_read;
+    *nbytes   = (size_t)p->protocol_command.scom_nbytes_to_read;
 
     if (*npackets < 0 && *nbytes == 0)
     {
@@ -893,7 +884,7 @@ bool protocol_get_response_status(MySQLProtocol* p,
 
 void protocol_set_response_status(MySQLProtocol* p,
                                   int npackets_left,
-                                  ssize_t nbytes)
+                                  size_t nbytes)
 {
     CHK_PROTOCOL(p);
 

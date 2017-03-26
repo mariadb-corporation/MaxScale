@@ -1425,11 +1425,11 @@ static GWBUF* process_response_data(DCB* dcb,
                                     int nbytes_to_process)
 {
     int npackets_left = 0; /*< response's packet count */
-    ssize_t nbytes_left = 0; /*< nbytes to be read for the packet */
+    size_t nbytes_left = 0; /*< nbytes to be read for the packet */
     MySQLProtocol* p;
     GWBUF* outbuf = NULL;
     int initial_packets = npackets_left;
-    ssize_t initial_bytes = nbytes_left;
+    size_t initial_bytes = nbytes_left;
 
     /** Get command which was stored in gw_MySQLWrite_backend */
     p = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -1582,7 +1582,7 @@ static GWBUF* process_response_data(DCB* dcb,
 static bool sescmd_response_complete(DCB* dcb)
 {
     int npackets_left;
-    ssize_t nbytes_left;
+    size_t nbytes_left;
     MySQLProtocol* p;
     bool succp;
 

@@ -277,7 +277,7 @@ typedef struct server_command_st
 {
     mysql_server_cmd_t        scom_cmd;
     int                       scom_nresponse_packets; /*< packets in response */
-    ssize_t                   scom_nbytes_to_read;    /*< bytes left to read in current packet */
+    size_t                    scom_nbytes_to_read;    /*< bytes left to read in current packet */
     struct server_command_st* scom_next;
 } server_command_t;
 
@@ -403,17 +403,13 @@ void   protocol_remove_srv_command(MySQLProtocol* p);
 bool   protocol_waits_response(MySQLProtocol* p);
 mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p, bool removep);
 int  get_stmt_nresponse_packets(GWBUF* buf, mysql_server_cmd_t cmd);
-bool protocol_get_response_status (MySQLProtocol* p, int* npackets, ssize_t* nbytes);
-void protocol_set_response_status (MySQLProtocol* p, int  npackets, ssize_t  nbytes);
+bool protocol_get_response_status (MySQLProtocol* p, int* npackets, size_t* nbytes);
+void protocol_set_response_status (MySQLProtocol* p, int  npackets, size_t  nbytes);
 void protocol_archive_srv_command(MySQLProtocol* p);
 
 char* create_auth_fail_str(char *username, char *hostaddr, bool password, char *db, int);
 
-void init_response_status (
-    GWBUF* buf,
-    mysql_server_cmd_t cmd,
-    int* npackets,
-    ssize_t* nbytes);
+void init_response_status(GWBUF* buf, uint8_t cmd, int* npackets, size_t* nbytes);
 bool read_complete_packet(DCB *dcb, GWBUF **readbuf);
 bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
 
@@ -431,5 +427,16 @@ bool mxs_mysql_is_ok_packet(GWBUF *buffer);
 
 /** Check for result set */
 bool mxs_mysql_is_result_set(GWBUF *buffer);
+
+/**
+ * @brief Calculate how many packets a session command will receive
+ *
+ * @param buf Buffer containing the response
+ * @param cmd Command that was executed
+ * @param npackets Pointer where the number of packets is stored
+ * @param nbytes Pointer where number of bytes is stored
+ */
+void mysql_num_response_packets(GWBUF *buf, uint8_t cmd,
+                                int* npackets, size_t *nbytes);
 
 MXS_END_DECLS
