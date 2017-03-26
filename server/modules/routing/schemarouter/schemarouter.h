@@ -115,7 +115,6 @@ typedef enum
 #define TARGET_IS_ALL(t)          (t & TARGET_ALL)
 #define TARGET_IS_ANY(t)          (t & TARGET_ANY)
 
-typedef struct rses_property_st rses_property_t;
 typedef struct schemarouter_session SCHEMAROUTER_SESSION;
 
 /**
@@ -147,27 +146,6 @@ typedef enum rses_property_type_t
         LEAST_CURRENT_OPERATIONS : UNDEFINED_CRITERIA))))
 
 /**
- * Property structure
- */
-struct rses_property_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t          rses_prop_chk_top;
-#endif
-    SCHEMAROUTER_SESSION*   rses_prop_rsession; /*< Parent router session */
-    int                  rses_prop_refcount; /*< Reference count*/
-    rses_property_type_t rses_prop_type; /*< Property type */
-    union rses_prop_data
-    {
-        HASHTABLE*  temp_tables; /*< Hashtable of table names */
-    } rses_prop_data;
-    rses_property_t*     rses_prop_next; /*< Next property of same type */
-#if defined(SS_DEBUG)
-    skygw_chk_t          rses_prop_chk_tail;
-#endif
-};
-
-/**
  * Internal structure used to define the set of backend servers we are routing
  * connections to. This provides the storage for routing module specific data
  * that is required for each of the backend servers.
@@ -180,12 +158,7 @@ typedef struct backend_st
     skygw_chk_t     be_chk_top;
 #endif
     SERVER*         backend_server;      /*< The server itself */
-    int             backend_conn_count;  /*< Number of connections to
-                          *  the server
-                          */
-    bool            be_valid;        /*< Valid when belongs to the
-                          *  router's configuration
-                          */
+
     int     weight;          /*< Desired weighting on the
                           *  load. Expressed in .1%
                           * increments
@@ -198,7 +171,6 @@ typedef struct backend_st
     skygw_chk_t     be_chk_tail;
 #endif
 } BACKEND;
-
 
 /**
  * Reference to BACKEND.
@@ -270,8 +242,6 @@ struct schemarouter_session
     bool             closed;    /*< true when closeSession is called      */
     DCB*             rses_client_dcb;
     MYSQL_session*   rses_mysql_session; /*< Session client data (username, password, SHA1). */
-    /** Properties listed by their type */
-    rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT]; /*< Session properties */
     backend_ref_t*   rses_master_ref; /*< Router session master reference */
     backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
     schemarouter_config_t rses_config;    /*< Copied config info from router instance */

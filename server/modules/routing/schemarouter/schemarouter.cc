@@ -44,9 +44,7 @@ using std::string;
 
 static backend_ref_t* get_bref_from_dcb(SCHEMAROUTER_SESSION* rses, DCB* dcb);
 
-static route_target_t get_shard_route_target(qc_query_type_t qtype,
-                                             bool            trx_active,
-                                             HINT*           hint);
+static route_target_t get_shard_route_target(qc_query_type_t qtype);
 static bool connect_backend_servers(backend_ref_t*   backend_ref,
                                     int              router_nservers,
                                     MXS_SESSION*     session,
@@ -56,11 +54,6 @@ static bool get_shard_dcb(DCB**              dcb,
                           SCHEMAROUTER_SESSION* rses,
                           char*              name);
 
-
-static rses_property_t* rses_property_init(rses_property_type_t prop_type);
-static void rses_property_add(SCHEMAROUTER_SESSION* rses,
-                              rses_property_t*   prop);
-static void rses_property_done(rses_property_t* prop);
 static bool execute_sescmd_in_backend(backend_ref_t* backend_ref);
 static void tracelog_routed_query(SCHEMAROUTER_SESSION* rses,
                                   char*              funcname,
@@ -534,9 +527,7 @@ return_succp:
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-static route_target_t get_shard_route_target(uint32_t qtype,
-                                             bool            trx_active, /*< !!! turha ? */
-                                             HINT*           hint) /*< !!! turha ? */
+static route_target_t get_shard_route_target(uint32_t qtype)
 {
     route_target_t target = TARGET_UNDEFINED;
 
@@ -548,7 +539,6 @@ static route_target_t get_shard_route_target(uint32_t qtype,
         qc_query_is_type(qtype, QUERY_TYPE_USERVAR_WRITE) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT) ||
         qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
-        /** enable or disable autocommit are always routed to all */
         qc_query_is_type(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
         qc_query_is_type(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
     {
@@ -560,243 +550,8 @@ static route_target_t get_shard_route_target(uint32_t qtype,
     {
         target = TARGET_ANY;
     }
-#if defined(SS_DEBUG)
-    MXS_INFO("Selected target type \"%s\"", STRTARGET(target));
-#endif
+
     return target;
-}
-
-/**
- * Check if the query is a DROP TABLE... query and
- * if it targets a temporary table, remove it from the hashtable.
- * @param instance Router instance
- * @param router_session Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-void check_drop_tmp_table(MXS_ROUTER* instance,
-                          void* router_session,
-                          GWBUF* querybuf,
-                          qc_query_type_t type)
-{
-    int tsize = 0, klen = 0, i;
-    char** tbl = NULL;
-    char *hkey, *dbname;
-
-    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
-    rses_property_t* rses_prop_tmp;
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->current_db;
-
-    if (qc_is_drop_table_query(querybuf))
-    {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-        if (tbl != NULL)
-        {
-            for (i = 0; i < tsize; i++)
-            {
-                klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = (char*)MXS_CALLOC(klen, sizeof(char));
-                MXS_ABORT_IF_NULL(hkey);
-                strcpy(hkey, dbname);
-                strcat(hkey, ".");
-                strcat(hkey, tbl[i]);
-
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-                    if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables,
-                                         (void *)hkey))
-                    {
-                        MXS_INFO("Temporary table dropped: %s", hkey);
-                    }
-                }
-                MXS_FREE(tbl[i]);
-                MXS_FREE(hkey);
-            }
-
-            MXS_FREE(tbl);
-        }
-    }
-}
-
-/**
- * Check if the query targets a temporary table.
- * @param instance Router instance
- * @param router_session Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- * @return The type of the query
- */
-qc_query_type_t is_read_tmp_table(MXS_ROUTER* instance,
-                                  void* router_session,
-                                  GWBUF* querybuf,
-                                  qc_query_type_t type)
-{
-
-    bool target_tmp_table = false;
-    int tsize = 0, klen = 0, i;
-    char** tbl = NULL;
-    char *hkey, *dbname;
-
-    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
-    qc_query_type_t qtype = type;
-    rses_property_t* rses_prop_tmp;
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->current_db;
-
-    if (qc_query_is_type(qtype, QUERY_TYPE_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_LOCAL_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_USERVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_SYSVAR_READ) ||
-        qc_query_is_type(qtype, QUERY_TYPE_GSYSVAR_READ))
-    {
-        tbl = qc_get_table_names(querybuf, &tsize, false);
-
-        if (tbl != NULL && tsize > 0)
-        {
-            /** Query targets at least one table */
-            for (i = 0; i < tsize && !target_tmp_table && tbl[i]; i++)
-            {
-                klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = (char*)MXS_CALLOC(klen, sizeof(char));
-                MXS_ABORT_IF_NULL(hkey);
-                strcpy(hkey, dbname);
-                strcat(hkey, ".");
-                strcat(hkey, tbl[i]);
-
-                if (rses_prop_tmp && rses_prop_tmp->rses_prop_data.temp_tables)
-                {
-
-                    if ((target_tmp_table =
-                             (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey)))
-                    {
-                        /**Query target is a temporary table*/
-                        qtype = QUERY_TYPE_READ_TMP_TABLE;
-                        MXS_INFO("Query targets a temporary table: %s", hkey);
-                    }
-                }
-
-                MXS_FREE(hkey);
-            }
-        }
-    }
-
-    if (tbl != NULL)
-    {
-        for (i = 0; i < tsize; i++)
-        {
-            MXS_FREE(tbl[i]);
-        }
-        MXS_FREE(tbl);
-    }
-
-    return qtype;
-}
-
-/**
- * If query is of type QUERY_TYPE_CREATE_TMP_TABLE then find out
- * the database and table name, create a hashvalue and
- * add it to the router client session's property. If property
- * doesn't exist then create it first.
- * @param instance Router instance
- * @param router_session Router client session
- * @param querybuf GWBUF containing the query
- * @param type The type of the query resolved so far
- */
-void check_create_tmp_table(MXS_ROUTER* instance,
-                            void* router_session,
-                            GWBUF* querybuf,
-                            qc_query_type_t type)
-{
-    int klen = 0;
-    char *hkey, *dbname;
-
-    SCHEMAROUTER_SESSION* router_cli_ses = (SCHEMAROUTER_SESSION *)router_session;
-    rses_property_t* rses_prop_tmp;
-    HASHTABLE* h;
-
-    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->current_db;
-
-    if (qc_query_is_type(type, QUERY_TYPE_CREATE_TMP_TABLE))
-    {
-        bool  is_temp = true;
-        char* tblname = NULL;
-
-        tblname = qc_get_created_table_name(querybuf);
-
-        if (tblname && strlen(tblname) > 0)
-        {
-            klen = strlen(dbname) + strlen(tblname) + 2;
-            hkey = (char*)MXS_CALLOC(klen, sizeof(char));
-            MXS_ABORT_IF_NULL(hkey);
-            strcpy(hkey, dbname);
-            strcat(hkey, ".");
-            strcat(hkey, tblname);
-        }
-        else
-        {
-            hkey = NULL;
-        }
-
-        if (rses_prop_tmp == NULL)
-        {
-            if ((rses_prop_tmp =
-                     (rses_property_t*)MXS_CALLOC(1, sizeof(rses_property_t))))
-            {
-#if defined(SS_DEBUG)
-                rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-                rses_prop_tmp->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-                rses_prop_tmp->rses_prop_rsession = router_cli_ses;
-                rses_prop_tmp->rses_prop_refcount = 1;
-                rses_prop_tmp->rses_prop_next = NULL;
-                rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
-                router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
-            }
-        }
-        if (rses_prop_tmp)
-        {
-            if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
-            {
-                h = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun);
-                hashtable_memory_fns(h,
-                                     hashtable_item_strdup, hashtable_item_strdup,
-                                     hashtable_item_free, hashtable_item_free);
-                if (h != NULL)
-                {
-                    rses_prop_tmp->rses_prop_data.temp_tables = h;
-                }
-                else
-                {
-                    MXS_ERROR("Failed to allocate a new hashtable.");
-                }
-
-            }
-
-            if (hkey && rses_prop_tmp->rses_prop_data.temp_tables &&
-                hashtable_add(rses_prop_tmp->rses_prop_data.temp_tables,
-                              (void *)hkey,
-                              (void *)is_temp) == 0) /*< Conflict in hash table */
-            {
-                MXS_INFO("Temporary table conflict in hashtable: %s", hkey);
-            }
-#if defined(SS_DEBUG)
-            {
-                bool retkey = hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, hkey);
-                if (retkey)
-                {
-                    MXS_INFO("Temporary table added: %s", hkey);
-                }
-            }
-#endif
-        }
-
-        MXS_FREE(hkey);
-        MXS_FREE(tblname);
-    }
 }
 
 int cmpfn(const void* a, const void *b)
@@ -1141,86 +896,6 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
     }
 
     return succp;
-}
-
-/**
- * Create a generic router session property strcture.
- */
-static rses_property_t* rses_property_init(rses_property_type_t prop_type)
-{
-    rses_property_t* prop;
-
-    prop = (rses_property_t*)MXS_CALLOC(1, sizeof(rses_property_t));
-    if (prop == NULL)
-    {
-        goto return_prop;
-    }
-    prop->rses_prop_type = prop_type;
-#if defined(SS_DEBUG)
-    prop->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
-    prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
-#endif
-
-return_prop:
-    CHK_RSES_PROP(prop);
-    return prop;
-}
-
-/**
- * Property is freed at the end of router client session.
- */
-static void rses_property_done(rses_property_t* prop)
-{
-    CHK_RSES_PROP(prop);
-
-    switch (prop->rses_prop_type)
-    {
-    case RSES_PROP_TYPE_TMPTABLES:
-        hashtable_free(prop->rses_prop_data.temp_tables);
-        break;
-
-    default:
-        MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
-                  "in property %p",
-                  pthread_self(),
-                  prop->rses_prop_type,
-                  prop);
-        ss_dassert(false);
-        break;
-    }
-    MXS_FREE(prop);
-}
-
-/**
- * Add property to the router_client_ses structure's rses_properties
- * array. The slot is determined by the type of property.
- * In each slot there is a list of properties of similar type.
- *
- * Router client session must be locked.
- */
-static void rses_property_add(SCHEMAROUTER_SESSION* rses,
-                              rses_property_t*   prop)
-{
-    rses_property_t* p;
-
-    CHK_CLIENT_RSES(rses);
-    CHK_RSES_PROP(prop);
-
-    prop->rses_prop_rsession = rses;
-    p = rses->rses_properties[prop->rses_prop_type];
-
-    if (p == NULL)
-    {
-        rses->rses_properties[prop->rses_prop_type] = prop;
-    }
-    else
-    {
-        while (p->rses_prop_next != NULL)
-        {
-            p = p->rses_prop_next;
-        }
-        p->rses_prop_next = prop;
-    }
 }
 
 /**
@@ -2304,9 +1979,6 @@ static MXS_ROUTER_SESSION* newSession(MXS_ROUTER* router_inst, MXS_SESSION* sess
             backend_ref[i].bref_backend = ref;
             backend_ref[i].bref_pending_cmd = NULL;
             backend_ref[i].bref_num_result_wait = 0;
-
-            client_rses->rses_properties[RSES_PROP_TYPE_SESCMD] = NULL;
-            client_rses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = NULL;
             i++;
         }
     }
@@ -2425,22 +2097,6 @@ static void freeSession(MXS_ROUTER* router_instance, MXS_ROUTER_SESSION* router_
         gwbuf_free(router_cli_ses->rses_backend_ref[i].bref_pending_cmd);
     }
 
-    /**
-     * For each property type, walk through the list, finalize properties
-     * and free the allocated memory.
-     */
-    for (int i = RSES_PROP_TYPE_FIRST; i < RSES_PROP_TYPE_COUNT; i++)
-    {
-        rses_property_t* p = router_cli_ses->rses_properties[i];
-        rses_property_t* q = p;
-
-        while (p != NULL)
-        {
-            q = p->rses_prop_next;
-            rses_property_done(p);
-            p = q;
-        }
-    }
     /*
      * We are no longer in the linked list, free
      * all the memory and other resources associated
@@ -2690,9 +2346,7 @@ static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session, 
         goto retblock;
     }
 
-    route_target = get_shard_route_target(qtype,
-                                          router_cli_ses->rses_transaction_active,
-                                          querybuf->hint);
+    route_target = get_shard_route_target(qtype);
 
     if (packet_type == MYSQL_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
     {
