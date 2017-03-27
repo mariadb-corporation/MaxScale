@@ -39,9 +39,13 @@ public:
     void diagnostics(DCB* pDcb);
     uint64_t getCapabilities();
 
-protected:
+private:
     friend class SchemaRouterSession;
 
+    /** Internal functions */
+    SchemaRouter(SERVICE *service, char **options);
+
+    /** Member variables */
     schemarouter_config_t m_config;        /*< expanded config info from SERVICE */
     ShardManager          m_shard_manager; /*< Shard maps hashed by user name */
     SERVICE*              m_service;       /*< Pointer to service */
@@ -54,6 +58,4 @@ protected:
                                             * not cause the session to be terminated
                                             * if they are found on more than one server. */
     pcre2_match_data*     m_ignore_match_data;
-
-    SchemaRouter(SERVICE *service, char **options);
 };

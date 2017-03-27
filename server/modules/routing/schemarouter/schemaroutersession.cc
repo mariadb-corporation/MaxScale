@@ -36,16 +36,16 @@ bool detect_show_shards(GWBUF* query);
 void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
 
 
-SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter& router):
+SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router):
     mxs::RouterSession(session),
     m_closed(false),
     m_client(session->client_dcb),
     m_mysql_session((MYSQL_session*)session->client_dcb->data),
     m_backends(NULL),
-    m_config(router.m_config),
+    m_config(m_router->m_config),
     m_backend_count(0),
     m_router(router),
-    m_shard(router.m_shard_manager.get_shard(m_client->user, m_config.refresh_min_interval)),
+    m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config.refresh_min_interval)),
     m_state(0),
     m_sent_sescmd(0),
     m_replied_sescmd(0)
@@ -79,11 +79,11 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter& rou
         m_state |= INIT_USE_DB;
     }
 
-    int router_nservers = router.m_service->n_dbref;
+    int router_nservers = m_router->m_service->n_dbref;
     backend_ref_t* backend_ref = new backend_ref_t[router_nservers];
     int i = 0;
 
-    for (SERVER_REF *ref = router.m_service->dbref; ref && i < router_nservers; ref = ref->next)
+    for (SERVER_REF *ref = m_router->m_service->dbref; ref && i < router_nservers; ref = ref->next)
     {
         if (ref->active)
         {
@@ -116,7 +116,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter& rou
         m_connect_db = db;
     }
 
-    atomic_add(&router.m_stats.sessions, 1);
+    atomic_add(&m_router->m_stats.sessions, 1);
 }
 
 SchemaRouterSession::~SchemaRouterSession()
@@ -165,26 +165,26 @@ void SchemaRouterSession::close()
             }
         }
 
-        spinlock_acquire(&m_router.m_lock);
-        if (m_router.m_stats.longest_sescmd < m_stats.longest_sescmd)
+        spinlock_acquire(&m_router->m_lock);
+        if (m_router->m_stats.longest_sescmd < m_stats.longest_sescmd)
         {
-            m_router.m_stats.longest_sescmd = m_stats.longest_sescmd;
+            m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
         }
         double ses_time = difftime(time(NULL), m_client->session->stats.connect);
-        if (m_router.m_stats.ses_longest < ses_time)
+        if (m_router->m_stats.ses_longest < ses_time)
         {
-            m_router.m_stats.ses_longest = ses_time;
+            m_router->m_stats.ses_longest = ses_time;
         }
-        if (m_router.m_stats.ses_shortest > ses_time && m_router.m_stats.ses_shortest > 0)
+        if (m_router->m_stats.ses_shortest > ses_time && m_router->m_stats.ses_shortest > 0)
         {
-            m_router.m_stats.ses_shortest = ses_time;
+            m_router->m_stats.ses_shortest = ses_time;
         }
 
-        m_router.m_stats.ses_average =
-            (ses_time + ((m_router.m_stats.sessions - 1) * m_router.m_stats.ses_average)) /
-            (m_router.m_stats.sessions);
+        m_router->m_stats.ses_average =
+            (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average)) /
+            (m_router->m_stats.sessions);
 
-        spinlock_release(&m_router.m_lock);
+        spinlock_release(&m_router->m_lock);
     }
 }
 
@@ -437,8 +437,8 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         /** Session commands, route to all servers */
         if (route_session_write(pPacket, command))
         {
-            atomic_add(&m_router.m_stats.n_sescmd, 1);
-            atomic_add(&m_router.m_stats.n_queries, 1);
+            atomic_add(&m_router->m_stats.n_sescmd, 1);
+            atomic_add(&m_router->m_stats.n_queries, 1);
             ret = 1;
         }
     }
@@ -469,7 +469,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         {
             backend_ref_t* bref;
 
-            atomic_add(&m_router.m_stats.n_queries, 1);
+            atomic_add(&m_router->m_stats.n_queries, 1);
 
             /**
              * Add one query response waiter to backend reference
@@ -624,7 +624,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
             if (ret == 1)
             {
-                atomic_add(&m_router.m_stats.n_queries, 1);
+                atomic_add(&m_router->m_stats.n_queries, 1);
                 bref_set_state(bref, BREF_QUERY_ACTIVE);
                 bref_set_state(bref, BREF_WAITING_RESULT);
             }
@@ -679,7 +679,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
  * this user.
  *
  * If the router doesn't have a shard map for this user then the current shard map
- * of the client session is added to the router. If the shard map in the router is
+ * of the client session is added to the m_router-> If the shard map in the router is
  * out of date, its contents are replaced with the contents of the current client
  * session. If the router has a usable shard map, the current shard map of the client
  * is discarded and the router's shard map is used.
@@ -687,8 +687,8 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
  */
 void SchemaRouterSession::synchronize_shard_map()
 {
-    m_router.m_stats.shmap_cache_miss++;
-    m_router.m_shard_manager.update_shard(m_shard, m_client->user);
+    m_router->m_stats.shmap_cache_miss++;
+    m_router->m_shard_manager.update_shard(m_shard, m_client->user);
 }
 
 /**
@@ -1476,11 +1476,11 @@ showdb_response_t SchemaRouterSession::parse_showdb_response(backend_ref_t* bref
             }
             else
             {
-                if (!(m_router.m_ignored_dbs.find(data) != m_router.m_ignored_dbs.end() ||
-                      (m_router.m_ignore_regex &&
-                       pcre2_match(m_router.m_ignore_regex, (PCRE2_SPTR)data,
+                if (!(m_router->m_ignored_dbs.find(data) != m_router->m_ignored_dbs.end() ||
+                      (m_router->m_ignore_regex &&
+                       pcre2_match(m_router->m_ignore_regex, (PCRE2_SPTR)data,
                                    PCRE2_ZERO_TERMINATED, 0, 0,
-                                   m_router.m_ignore_match_data, NULL) >= 0)))
+                                   m_router->m_ignore_match_data, NULL) >= 0)))
                 {
                     duplicate_found = true;
                     SERVER *duplicate = m_shard.get_location(data);

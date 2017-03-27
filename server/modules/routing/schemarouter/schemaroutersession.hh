@@ -117,7 +117,7 @@ class SchemaRouterSession: public mxs::RouterSession
 {
 public:
 
-    SchemaRouterSession(MXS_SESSION* session, SchemaRouter& router);
+    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router);
 
     /**
      * The RouterSession instance will be deleted when a client session
@@ -159,22 +159,6 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 private:
-    bool                  m_closed;         /**< True if session closed */
-    DCB*                  m_client;         /**< The client DCB */
-    MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
-    backend_ref_t*        m_backends;       /**< Pointer to backend reference array */
-    schemarouter_config_t m_config;         /**< Copied config info from router instance */
-    int                   m_backend_count;  /**< Number of backends */
-    SchemaRouter&         m_router;         /**< The router instance */
-    Shard                 m_shard;          /**< Database to server mapping */
-    string                m_connect_db;     /**< Database the user was trying to connect to */
-    string                m_current_db;     /**< Current active database */
-    int                   m_state;          /**< Initialization state bitmask */
-    list<Buffer>          m_queue;          /**< Query that was received before the session was ready */
-    ROUTER_STATS          m_stats;          /**< Statistics for this router */
-    uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
-    uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
-
     /** Internal functions */
     SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
     backend_ref_t* get_bref_from_dcb(DCB* dcb);
@@ -196,4 +180,21 @@ private:
     void process_response(backend_ref_t* bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  route_target_t& route_target);
+
+    /** Member variables */
+    bool                  m_closed;         /**< True if session closed */
+    DCB*                  m_client;         /**< The client DCB */
+    MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
+    backend_ref_t*        m_backends;       /**< Pointer to backend reference array */
+    schemarouter_config_t m_config;         /**< Copied config info from router instance */
+    int                   m_backend_count;  /**< Number of backends */
+    SchemaRouter*         m_router;         /**< The router instance */
+    Shard                 m_shard;          /**< Database to server mapping */
+    string                m_connect_db;     /**< Database the user was trying to connect to */
+    string                m_current_db;     /**< Current active database */
+    int                   m_state;          /**< Initialization state bitmask */
+    list<Buffer>          m_queue;          /**< Query that was received before the session was ready */
+    ROUTER_STATS          m_stats;          /**< Statistics for this router */
+    uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
+    uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
 };

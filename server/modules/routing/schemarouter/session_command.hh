@@ -79,7 +79,4 @@ private:
     uint8_t  m_command;   /**< The command being executed */
     uint64_t m_pos;       /**< Unique position identifier */
     bool     m_reply_sent; /**< Whether the session command reply has been sent */
-
-    SessionCommand();
-    SessionCommand& operator = (const SessionCommand& command);
 };

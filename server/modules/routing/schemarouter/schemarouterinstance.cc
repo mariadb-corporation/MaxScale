@@ -187,7 +187,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
 
 SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 {
-    return new SchemaRouterSession(pSession, *this);
+    return new SchemaRouterSession(pSession, this);
 }
 
 void SchemaRouter::diagnostics(DCB* dcb)
