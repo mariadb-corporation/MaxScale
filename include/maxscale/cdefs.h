@@ -40,6 +40,14 @@
 #define OPENSSL_THREAD_DEFINES 1
 
 /**
+ * Fix compile errors for PRId64
+ * in Centos 6
+ */
+#ifndef __STDC_FORMAT_MACROS
+# define __STDC_FORMAT_MACROS
+#endif
+
+/**
  * Define intended for use with strerror.
  *
  * char errbuf[MXS_STRERROR_BUFLEN];

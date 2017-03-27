@@ -623,7 +623,8 @@ config_load_and_process(const char* filename, bool (*process_config)(CONFIG_CONT
 
     if (duplicate_context_init(&dcontext))
     {
-        CONFIG_CONTEXT ccontext = {.object = (char*)""};
+        CONFIG_CONTEXT ccontext = {};
+        ccontext.object = (char*)"";
 
         if (config_load_single_file(filename, &dcontext, &ccontext))
         {

@@ -329,7 +329,8 @@ filter_add_option(MXS_FILTER_DEF *filter, const char *option)
 void
 filter_add_parameter(MXS_FILTER_DEF *filter, const char *name, const char *value)
 {
-    CONFIG_CONTEXT ctx = {.object = (char*)""};
+    CONFIG_CONTEXT ctx = {};
+    ctx.object = (char*)"";
 
     config_add_param(&ctx, name, value);
     ctx.parameters->next = filter->parameters;

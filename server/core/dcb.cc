@@ -2461,7 +2461,9 @@ bool count_by_usage_cb(DCB *dcb, void *data)
 int
 dcb_count_by_usage(DCB_USAGE usage)
 {
-    struct dcb_usage_count val = {.count = 0, .type = usage};
+    struct dcb_usage_count val = {};
+    val.count = 0;
+    val.type = usage;
 
     dcb_foreach(count_by_usage_cb, &val);
 

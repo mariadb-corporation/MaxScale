@@ -348,7 +348,8 @@ static void add_monitor_defaults(MXS_MONITOR *monitor)
 {
     /** Inject the default module parameters in case we only deleted
      * a parameter */
-    CONFIG_CONTEXT ctx = {.object = (char*)""};
+    CONFIG_CONTEXT ctx = {};
+    ctx.object = (char*)"";
     const MXS_MODULE *mod = get_module(monitor->module_name, MODULE_MONITOR);
 
     if (mod)
@@ -427,7 +428,9 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
 
             if (value[0])
             {
-                MXS_CONFIG_PARAMETER p = {.name = key, .value = value};
+                MXS_CONFIG_PARAMETER p = {};
+                p.name = key;
+                p.value = value;
                 monitorAddParameters(monitor, &p);
             }
 
