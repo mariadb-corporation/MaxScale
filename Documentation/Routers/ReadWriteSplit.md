@@ -68,7 +68,7 @@ master_failure_mode=fail_on_write
 ### `connection_keepalive`
 
 Send keepalive pings to backend servers. This feature was introduced in MaxScale
-2.1.2 and is disabled by default.
+2.2.0 and is disabled by default.
 
 The parameter value is the interval in seconds between each keepalive ping. A
 keepalive ping will be sent to a backend server if the connection is idle and it
