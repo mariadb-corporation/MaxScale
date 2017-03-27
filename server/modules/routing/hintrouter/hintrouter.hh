@@ -23,7 +23,10 @@ public:
     static HintRouter* create(SERVICE* pService, char** pzOptions);
     HintRouterSession* newSession(MXS_SESSION *pSession);
     void diagnostics(DCB* pOut);
-    uint64_t getCapabilities();
+    uint64_t getCapabilities() const
+    {
+        return RCAP_TYPE_NONE;
+    }
     HINT_TYPE get_default_action() const
     {
         return m_default_action;
@@ -48,4 +51,7 @@ private:
 private:
     HintRouter(const HintRouter&);
     HintRouter& operator = (const HintRouter&);
+
+    static Dcb connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
+                                  HintRouterSession::BackendMap* all_backends);
 };

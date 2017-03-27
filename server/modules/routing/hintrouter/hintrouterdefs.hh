@@ -19,7 +19,7 @@
 
 #if defined(SS_DEBUG)
 #define DEBUG_HINTROUTER
-//#undef DEBUG_HINTROUTER
+#undef DEBUG_HINTROUTER
 #else
 #undef DEBUG_HINTROUTER
 #endif

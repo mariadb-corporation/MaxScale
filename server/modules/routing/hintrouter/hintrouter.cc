@@ -106,23 +106,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
     if (master_ref)
     {
         // Connect to master
-        HR_DEBUG("Connecting to %s.", master_ref->server->unique_name);
-        DCB* master_conn = dcb_connect(master_ref->server, pSession, master_ref->server->protocol);
-
-        if (master_conn)
-        {
-            HR_DEBUG("Connected.");
-            atomic_add(&master_ref->connections, 1);
-            master_conn->service = pSession->service;
-
-            master_Dcb = Dcb(master_conn);
-            string name(master_conn->server->unique_name);
-            all_backends.insert(HintRouterSession::MapElement(name, master_Dcb));
-        }
-        else
-        {
-            HR_DEBUG("Connection failed.");
-        }
+        master_Dcb = connect_to_backend(pSession, master_ref, &all_backends);
     }
 
     /* Different sessions may use different slaves if the 'max_session_slaves'-
@@ -142,34 +126,22 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
              current++)
         {
             SERVER_REF* slave_ref = slave_refs.at(current % size);
-            // Connect to a slave
-            HR_DEBUG("Connecting to %s.", slave_ref->server->unique_name);
-            DCB* slave_conn = dcb_connect(slave_ref->server, pSession, slave_ref->server->protocol);
-
-            if (slave_conn)
+            Dcb slave_conn = connect_to_backend(pSession, slave_ref, &all_backends);
+            if (slave_conn.get())
             {
-                HR_DEBUG("Connected.");
-                atomic_add(&slave_ref->connections, 1);
-                slave_conn->service = pSession->service;
-                Dcb slave_Dcb(slave_conn);
-                slave_arr.push_back(slave_Dcb);
-
-                string name(slave_conn->server->unique_name);
-                all_backends.insert(HintRouterSession::MapElement(name, slave_Dcb));
+                slave_arr.push_back(slave_conn);
                 slave_conns++;
-            }
-            else
-            {
-                HR_DEBUG("Connection failed.");
             }
         }
         m_total_slave_conns += slave_conns;
     }
+
+    HintRouterSession* rval = NULL;
     if (all_backends.size() != 0)
     {
-        return new HintRouterSession(pSession, this, all_backends);
+        rval = new HintRouterSession(pSession, this, all_backends);
     }
-    return NULL;
+    return rval;
 }
 
 void HintRouter::diagnostics(DCB* pOut)
@@ -191,10 +163,28 @@ void HintRouter::diagnostics(DCB* pOut)
     dcb_printf(pOut, "\tQueries routed to all servers: %d\n", m_routed_to_all);
 }
 
-uint64_t HintRouter::getCapabilities()
+Dcb HintRouter::connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
+                                   HintRouterSession::BackendMap* all_backends)
 {
-    HR_ENTRY();
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT;
+    Dcb result(NULL);
+    HR_DEBUG("Connecting to %s.", sref->server->unique_name);
+    DCB* new_connection = dcb_connect(sref->server, session, sref->server->protocol);
+
+    if (new_connection)
+    {
+        HR_DEBUG("Connected.");
+        atomic_add(&sref->connections, 1);
+        new_connection->service = session->service;
+
+        result = Dcb(new_connection);
+        string name(new_connection->server->unique_name);
+        all_backends->insert(HintRouterSession::MapElement(name, result));
+    }
+    else
+    {
+        HR_DEBUG("Connection failed.");
+    }
+    return result;
 }
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
