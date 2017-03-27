@@ -42,20 +42,19 @@ public:
 
 protected:
     friend class SchemaRouterSession;
-    schemarouter_config_t schemarouter_config;  /*< expanded config info from SERVICE */
 
-    ShardManager          shard_manager;        /*< Shard maps hashed by user name */
-    SERVICE*              service;              /*< Pointer to service                 */
-    SPINLOCK              lock;                 /*< Lock for the instance data         */
-    int                   schemarouter_version; /*< version number for router's config */
-    ROUTER_STATS          stats;                /*< Statistics for this router         */
-    set<string>           ignored_dbs;          /*< List of databases to ignore when the
-                                                 * database mapping finds multiple servers
-                                                 * with the same database */
-    pcre2_code*           ignore_regex;         /*< Databases matching this regex will
-                                                 * not cause the session to be terminated
-                                                 * if they are found on more than one server. */
-    pcre2_match_data*     ignore_match_data;
+    schemarouter_config_t m_config;        /*< expanded config info from SERVICE */
+    ShardManager          m_shard_manager; /*< Shard maps hashed by user name */
+    SERVICE*              m_service;       /*< Pointer to service */
+    SPINLOCK              m_lock;          /*< Lock for the instance data */
+    ROUTER_STATS          m_stats;         /*< Statistics for this router */
+    set<string>           m_ignored_dbs;   /*< List of databases to ignore when the
+                                            * database mapping finds multiple servers
+                                            * with the same database */
+    pcre2_code*           m_ignore_regex;  /*< Databases matching this regex will
+                                            * not cause the session to be terminated
+                                            * if they are found on more than one server. */
+    pcre2_match_data*     m_ignore_match_data;
 
     SchemaRouter(SERVICE *service, char **options);
 };

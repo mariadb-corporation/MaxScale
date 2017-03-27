@@ -47,23 +47,23 @@ SchemaRouter::SchemaRouter(SERVICE *service, char **options):
     MXS_CONFIG_PARAMETER* param;
 
     /** Add default system databases to ignore */
-    this->ignored_dbs.insert("mysql");
-    this->ignored_dbs.insert("information_schema");
-    this->ignored_dbs.insert("performance_schema");
-    this->service = service;
-    this->stats.longest_sescmd = 0;
-    this->stats.n_hist_exceeded = 0;
-    this->stats.n_queries = 0;
-    this->stats.n_sescmd = 0;
-    this->stats.ses_longest = 0;
-    this->stats.ses_shortest = (double)((unsigned long)(~0));
-    spinlock_init(&this->lock);
+    this->m_ignored_dbs.insert("mysql");
+    this->m_ignored_dbs.insert("information_schema");
+    this->m_ignored_dbs.insert("performance_schema");
+    this->m_service = service;
+    this->m_stats.longest_sescmd = 0;
+    this->m_stats.n_hist_exceeded = 0;
+    this->m_stats.n_queries = 0;
+    this->m_stats.n_sescmd = 0;
+    this->m_stats.ses_longest = 0;
+    this->m_stats.ses_shortest = (double)((unsigned long)(~0));
+    spinlock_init(&this->m_lock);
 
     conf = service->svc_config_param;
 
-    this->schemarouter_config.refresh_databases = config_get_bool(conf, "refresh_databases");
-    this->schemarouter_config.refresh_min_interval = config_get_integer(conf, "refresh_interval");
-    this->schemarouter_config.debug = config_get_bool(conf, "debug");
+    this->m_config.refresh_databases = config_get_bool(conf, "refresh_databases");
+    this->m_config.refresh_min_interval = config_get_integer(conf, "refresh_interval");
+    this->m_config.debug = config_get_bool(conf, "debug");
 
     if ((config_get_param(conf, "auth_all_servers")) == NULL)
     {
@@ -96,8 +96,8 @@ SchemaRouter::SchemaRouter(SERVICE *service, char **options):
             throw std::bad_alloc();
         }
 
-        this->ignore_regex = re;
-        this->ignore_match_data = match_data;
+        this->m_ignore_regex = re;
+        this->m_ignore_match_data = match_data;
     }
 
     if ((param = config_get_param(conf, "ignore_databases")))
@@ -111,7 +111,7 @@ SchemaRouter::SchemaRouter(SERVICE *service, char **options):
 
         while (tok)
         {
-            this->ignored_dbs.insert(tok);
+            this->m_ignored_dbs.insert(tok);
             tok = strtok_r(NULL, sep, &sptr);
         }
     }
@@ -142,15 +142,15 @@ SchemaRouter::SchemaRouter(SERVICE *service, char **options):
         }
         else if (strcmp(options[i], "refresh_databases") == 0)
         {
-            this->schemarouter_config.refresh_databases = config_truth_value(value);
+            this->m_config.refresh_databases = config_truth_value(value);
         }
         else if (strcmp(options[i], "refresh_interval") == 0)
         {
-            this->schemarouter_config.refresh_min_interval = atof(value);
+            this->m_config.refresh_min_interval = atof(value);
         }
         else if (strcmp(options[i], "debug") == 0)
         {
-            this->schemarouter_config.debug = config_truth_value(value);
+            this->m_config.debug = config_truth_value(value);
         }
         else
         {
@@ -168,14 +168,14 @@ SchemaRouter::SchemaRouter(SERVICE *service, char **options):
 
 SchemaRouter::~SchemaRouter()
 {
-    if (this->ignore_regex)
+    if (this->m_ignore_regex)
     {
-        pcre2_code_free(this->ignore_regex);
+        pcre2_code_free(this->m_ignore_regex);
     }
 
-    if (this->ignore_match_data)
+    if (this->m_ignore_match_data)
     {
-        pcre2_match_data_free(this->ignore_match_data);
+        pcre2_match_data_free(this->m_ignore_match_data);
     }
 }
 
@@ -191,32 +191,32 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 
 void SchemaRouter::diagnostics(DCB* dcb)
 {
-    double sescmd_pct = this->stats.n_sescmd != 0 ?
-                        100.0 * ((double)this->stats.n_sescmd / (double)this->stats.n_queries) :
+    double sescmd_pct = this->m_stats.n_sescmd != 0 ?
+                        100.0 * ((double)this->m_stats.n_sescmd / (double)this->m_stats.n_queries) :
                         0.0;
 
     /** Session command statistics */
     dcb_printf(dcb, "\n\33[1;4mSession Commands\33[0m\n");
     dcb_printf(dcb, "Total number of queries: %d\n",
-               this->stats.n_queries);
+               this->m_stats.n_queries);
     dcb_printf(dcb, "Percentage of session commands: %.2f\n",
                sescmd_pct);
     dcb_printf(dcb, "Longest chain of stored session commands: %d\n",
-               this->stats.longest_sescmd);
+               this->m_stats.longest_sescmd);
     dcb_printf(dcb, "Session command history limit exceeded: %d times\n",
-               this->stats.n_hist_exceeded);
+               this->m_stats.n_hist_exceeded);
 
     /** Session time statistics */
 
-    if (this->stats.sessions > 0)
+    if (this->m_stats.sessions > 0)
     {
         dcb_printf(dcb, "\n\33[1;4mSession Time Statistics\33[0m\n");
-        dcb_printf(dcb, "Longest session: %.2lf seconds\n", this->stats.ses_longest);
-        dcb_printf(dcb, "Shortest session: %.2lf seconds\n", this->stats.ses_shortest);
-        dcb_printf(dcb, "Average session length: %.2lf seconds\n", this->stats.ses_average);
+        dcb_printf(dcb, "Longest session: %.2lf seconds\n", this->m_stats.ses_longest);
+        dcb_printf(dcb, "Shortest session: %.2lf seconds\n", this->m_stats.ses_shortest);
+        dcb_printf(dcb, "Average session length: %.2lf seconds\n", this->m_stats.ses_average);
     }
-    dcb_printf(dcb, "Shard map cache hits: %d\n", this->stats.shmap_cache_hit);
-    dcb_printf(dcb, "Shard map cache misses: %d\n", this->stats.shmap_cache_miss);
+    dcb_printf(dcb, "Shard map cache hits: %d\n", this->m_stats.shmap_cache_hit);
+    dcb_printf(dcb, "Shard map cache misses: %d\n", this->m_stats.shmap_cache_miss);
     dcb_printf(dcb, "\n");
 }
 

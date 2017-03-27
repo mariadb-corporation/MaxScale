@@ -56,12 +56,12 @@ typedef enum bref_state
     BREF_DB_MAPPED        = 0x10
 } bref_state_t;
 
-#define BREF_IS_NOT_USED(s)         ((s)->bref_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->bref_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->bref_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->bref_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
-#define BREF_IS_MAPPED(s)           ((s)->bref_mapped)
+#define BREF_IS_NOT_USED(s)         ((s)->state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           ((s)->state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   ((s)->num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     ((s)->state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           ((s)->state & BREF_CLOSED)
+#define BREF_IS_MAPPED(s)           ((s)->mapped)
 
 #define SCHEMA_ERR_DUPLICATEDB 5000
 #define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
@@ -94,13 +94,12 @@ typedef struct backend_ref_st
 {
     int                n_mapping_eof;
     GWBUF*             map_queue;
-    SERVER_REF*        bref_backend;         /*< Backend server */
-    DCB*               bref_dcb;             /*< Backend DCB */
-    int                bref_state;           /*< State of the backend */
-    bool               bref_mapped;          /*< Whether the backend has been mapped */
-    bool               last_sescmd_replied;
-    int                bref_num_result_wait; /*< Number of not yet received results */
-    GWBUF*             bref_pending_cmd;     /*< Pending commands */
+    SERVER_REF*        backend;         /**< Backend server */
+    DCB*               dcb;             /**< Backend DCB */
+    int                state;           /**< State of the backend */
+    bool               mapped;          /**< Whether the backend has been mapped */
+    int                num_result_wait; /**< Number of not yet received results */
+    GWBUF*             pending_cmd;     /**< Pending commands */
 
     SessionCommandList session_commands;     /**< List of session commands that are
                                               * to be executed on this backend server */
@@ -157,42 +156,37 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 private:
-    bool                   closed;             /*< true when closeSession is called      */
-    DCB*                   rses_client_dcb;
-    MYSQL_session*         rses_mysql_session; /*< Session client data (username, password, SHA1). */
-    backend_ref_t*         rses_backend_ref;   /*< Pointer to backend reference array */
-    schemarouter_config_t  rses_config;        /*< Copied config info from router instance */
-    int                    rses_nbackends;     /*< Number of backends */
-    SchemaRouter&          m_router;             /*< The router instance */
-    Shard                  shardmap;           /**< Database hash containing names of the databases
-                                                * mapped to the servers that contain them */
-    string                 connect_db;         /*< Database the user was trying to connect to */
-    string                 current_db;         /*< Current active database */
-    int                    state;              /*< Initialization state bitmask */
-    GWBUF*                 queue;              /*< Query that was received before the session was ready */
-    ROUTER_STATS           stats;              /*< Statistics for this router         */
-
-    uint64_t               sent_sescmd;        /**< The latest session command being executed */
-    uint64_t               replied_sescmd;     /**< The last session command reply that was sent to the client */
+    bool                  m_closed;         /**< True if session closed */
+    DCB*                  m_client;         /**< The client DCB */
+    MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
+    backend_ref_t*        m_backends;       /**< Pointer to backend reference array */
+    schemarouter_config_t m_config;         /**< Copied config info from router instance */
+    int                   m_backend_count;  /**< Number of backends */
+    SchemaRouter&         m_router;         /**< The router instance */
+    Shard                 m_shard;          /**< Database to server mapping */
+    string                m_connect_db;     /**< Database the user was trying to connect to */
+    string                m_current_db;     /**< Current active database */
+    int                   m_state;          /**< Initialization state bitmask */
+    GWBUF*                m_queue;          /**< Query that was received before the session was ready */
+    ROUTER_STATS          m_stats;          /**< Statistics for this router */
+    uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
+    uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
 
     /** Internal functions */
-    void synchronize_shard_map();
-
-    int inspect_backend_mapping_states(backend_ref_t *bref, GWBUF** wbuf);
-
-    bool route_session_write(GWBUF* querybuf, uint8_t command);
-
-    bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
-    void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
-    int process_show_shards();
-    bool handle_default_db();
-    void route_queued_query();
-    bool get_shard_dcb(DCB** dcb, char* name);
     SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
     backend_ref_t* get_bref_from_dcb(DCB* dcb);
+    bool execute_sescmd_in_backend(backend_ref_t* backend_ref);
+    bool get_shard_dcb(DCB** dcb, char* name);
+    bool handle_default_db();
+    bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
     bool have_servers();
+    bool route_session_write(GWBUF* querybuf, uint8_t command);
     bool send_database_list();
     int gen_databaselist();
+    int inspect_backend_mapping_states(backend_ref_t *bref, GWBUF** wbuf);
+    int process_show_shards();
     showdb_response_t parse_showdb_response(backend_ref_t* bref, GWBUF** buffer);
-    bool execute_sescmd_in_backend(backend_ref_t* backend_ref);
+    void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
+    void route_queued_query();
+    void synchronize_shard_map();
 };
