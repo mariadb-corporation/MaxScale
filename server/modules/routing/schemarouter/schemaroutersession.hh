@@ -207,4 +207,5 @@ private:
     Stats                 m_stats;          /**< Statistics for this router */
     uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
     uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
+    Backend*              m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
 };
