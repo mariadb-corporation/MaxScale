@@ -123,7 +123,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
     m_closed(false),
     m_client(session->client_dcb),
     m_mysql_session((MYSQL_session*)session->client_dcb->data),
-    m_config(&m_router->m_config),
+    m_config(&router->m_config),
     m_router(router),
     m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config->refresh_min_interval)),
     m_state(0),
@@ -394,6 +394,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
     if (m_state & (INIT_MAPPING | INIT_USE_DB))
     {
         m_queue.push_back(pPacket);
+        ret = 1;
 
         if (m_state  == (INIT_READY | INIT_USE_DB))
         {
@@ -401,12 +402,11 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
              * This state is possible if a client connects with a default database
              * and the shard map was found from the router cache
              */
-            if (handle_default_db())
+            if (!handle_default_db())
             {
-                ret = 1;
+                ret = 0;
             }
         }
-
         return ret;
     }
 
@@ -543,9 +543,9 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
     gwbuf_free(pPacket);
     return ret;
 }
-void SchemaRouterSession::handle_mapping_reply(Backend* bref, GWBUF* pPacket)
+void SchemaRouterSession::handle_mapping_reply(Backend* bref, GWBUF** pPacket)
 {
-    int rc = inspect_backend_mapping_states(bref, &pPacket);
+    int rc = inspect_backend_mapping_states(bref, pPacket);
 
     if (rc == 1)
     {
@@ -634,7 +634,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
 
     if (m_state & INIT_MAPPING)
     {
-        handle_mapping_reply(bref, pPacket);
+        handle_mapping_reply(bref, &pPacket);
     }
     else if (m_state & INIT_USE_DB)
     {

@@ -79,9 +79,9 @@ enum route_target
 
 /** Helper macros for route target type */
 #define TARGET_IS_UNDEFINED(t)    (t == TARGET_UNDEFINED)
-#define TARGET_IS_NAMED_SERVER(t) (t & TARGET_NAMED_SERVER)
-#define TARGET_IS_ALL(t)          (t & TARGET_ALL)
-#define TARGET_IS_ANY(t)          (t & TARGET_ANY)
+#define TARGET_IS_NAMED_SERVER(t) (t == TARGET_NAMED_SERVER)
+#define TARGET_IS_ALL(t)          (t == TARGET_ALL)
+#define TARGET_IS_ANY(t)          (t == TARGET_ANY)
 
 /**
  * Reference to BACKEND.
@@ -186,7 +186,7 @@ private:
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     void route_queued_query();
     void synchronize_shard_map();
-    void handle_mapping_reply(Backend* bref, GWBUF* pPacket);
+    void handle_mapping_reply(Backend* bref, GWBUF** pPacket);
     void process_response(Backend* bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
