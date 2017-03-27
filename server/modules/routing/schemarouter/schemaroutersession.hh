@@ -93,28 +93,31 @@ class Backend
 public:
     Backend(SERVER_REF *ref);
     ~Backend();
+    bool execute_sescmd();
+    void clear_state(enum bref_state state);
+    void set_state(enum bref_state state);
 
-    SERVER_REF*        backend;         /**< Backend server */
-    DCB*               dcb;             /**< Backend DCB */
-    GWBUF*             map_queue;
-    bool               mapped;          /**< Whether the backend has been mapped */
-    int                n_mapping_eof;
-    int                num_result_wait; /**< Number of not yet received results */
-    GWBUF*             pending_cmd;     /**< Pending commands */
-    int                state;           /**< State of the backend */
-    SessionCommandList session_commands;     /**< List of session commands that are
+    SERVER_REF*        m_backend;         /**< Backend server */
+    DCB*               m_dcb;             /**< Backend DCB */
+    GWBUF*             m_map_queue;
+    bool               m_mapped;          /**< Whether the backend has been mapped */
+    int                m_num_mapping_eof;
+    int                m_num_result_wait; /**< Number of not yet received results */
+    GWBUF*             m_pending_cmd;     /**< Pending commands */
+    int                m_state;           /**< State of the backend */
+    SessionCommandList m_session_commands;     /**< List of session commands that are
                                               * to be executed on this backend server */
 };
 
 typedef list<Backend> BackendList;
 
 // TODO: Move these as member functions, currently they operate on iterators
-#define BREF_IS_NOT_USED(s)         ((s)->state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->state & BREF_CLOSED)
-#define BREF_IS_MAPPED(s)           ((s)->mapped)
+#define BREF_IS_NOT_USED(s)         ((s)->m_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           ((s)->m_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   ((s)->m_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     ((s)->m_state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           ((s)->m_state & BREF_CLOSED)
+#define BREF_IS_MAPPED(s)           ((s)->m_mapped)
 
 class SchemaRouter;
 
@@ -170,7 +173,6 @@ private:
     /** Internal functions */
     SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
     Backend* get_bref_from_dcb(DCB* dcb);
-    bool execute_sescmd_in_backend(Backend& backend_ref);
     bool get_shard_dcb(DCB** dcb, char* name);
     bool handle_default_db();
     bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
