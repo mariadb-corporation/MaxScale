@@ -13,26 +13,42 @@
  */
 
 #include "hintrouterdefs.hh"
+
 #include <deque>
+#include <tr1/unordered_map>
+#include <vector>
+#include <string>
+
 #include <maxscale/router.hh>
 #include "dcb.hh"
+
+using std::string;
 
 class HintRouter;
 
 class HintRouterSession : public maxscale::RouterSession
 {
 public:
-    typedef std::deque<Dcb> Backends;
+    typedef std::tr1::unordered_map<string, Dcb> BackendMap; // All backends, indexed by name
+    typedef std::vector<Dcb> BackendArray;
+    typedef std::vector<SERVER_REF*> RefArray;
+    typedef BackendMap::value_type MapElement;
+    typedef BackendArray::size_type size_type;
 
     HintRouterSession(MXS_SESSION*    pSession,
                       HintRouter*     pRouter,
-                      const Backends& backends);
+                      const BackendMap& backends
+                     );
 
     ~HintRouterSession();
 
     void close();
 
     int32_t routeQuery(GWBUF* pPacket);
+    bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
+
+    bool route_to_slave(GWBUF* pPacket);
+
 
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
@@ -41,13 +57,17 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 
-private:
-    HintRouterSession(const HintRouterSession&);
-    HintRouterSession& operator = (const HintRouterSession&);
+    void update_connections();
 
 private:
-    HintRouter* m_pRouter;
-    Backends    m_backends;
-    size_t      m_surplus_replies;
+    HintRouterSession(const HintRouterSession&); // denied
+    HintRouterSession& operator = (const HintRouterSession&); // denied
+private:
+    HintRouter* m_router;
+    BackendMap m_backends; // all connections
+    Dcb m_master; // connection to master
+    BackendArray m_slaves; // connections to slaves
+    size_type m_n_routed_to_slave; // packets routed to a single slave, used for rr
+    size_t      m_surplus_replies; // how many replies should be ignored
 
 };

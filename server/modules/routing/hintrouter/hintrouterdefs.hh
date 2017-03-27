@@ -13,6 +13,8 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 
 #define DEBUG_HINTROUTER
