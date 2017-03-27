@@ -190,6 +190,7 @@ private:
     void process_response(Backend* bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
+    bool ignore_duplicate_database(const char* data);
 
     /** Member variables */
     bool                  m_closed;         /**< True if session closed */

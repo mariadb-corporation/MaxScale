@@ -1393,6 +1393,33 @@ char* get_lenenc_str(void* data)
     return rval;
 }
 
+bool SchemaRouterSession::ignore_duplicate_database(const char* data)
+{
+    bool rval = false;
+
+    if (m_config->ignored_dbs.find(data) != m_config->ignored_dbs.end())
+    {
+        rval = true;
+    }
+    else if (m_config->ignore_regex)
+    {
+        pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(m_config->ignore_regex, NULL);
+
+        if (match_data == NULL)
+        {
+            throw std::bad_alloc();
+        }
+
+        if (pcre2_match(m_config->ignore_regex, (PCRE2_SPTR) data,
+                        PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL) >= 0)
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
 /**
  * Parses a response set to a SHOW DATABASES query and inserts them into the
  * router client session's database hashtable. The name of the database is used
@@ -1469,19 +1496,14 @@ enum showdb_response SchemaRouterSession::parse_showdb_response(Backend* bref, G
             }
             else
             {
-                if (!(m_router->m_ignored_dbs.find(data) != m_router->m_ignored_dbs.end() ||
-                      (m_router->m_ignore_regex &&
-                       pcre2_match(m_router->m_ignore_regex, (PCRE2_SPTR)data,
-                                   PCRE2_ZERO_TERMINATED, 0, 0,
-                                   m_router->m_ignore_match_data, NULL) >= 0)))
+                if (!ignore_duplicate_database(data))
                 {
                     duplicate_found = true;
                     SERVER *duplicate = m_shard.get_location(data);
 
                     MXS_ERROR("Database '%s' found on servers '%s' and '%s' for user %s@%s.",
                               data, target->unique_name, duplicate->unique_name,
-                              m_client->user,
-                              m_client->remote);
+                              m_client->user, m_client->remote);
                 }
             }
             MXS_FREE(data);
