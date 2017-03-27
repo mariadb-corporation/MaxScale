@@ -45,10 +45,6 @@ public:
     void close();
 
     int32_t routeQuery(GWBUF* pPacket);
-    bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
-
-    bool route_to_slave(GWBUF* pPacket);
-
 
     void clientReply(GWBUF* pPacket, DCB* pBackend);
 
@@ -57,17 +53,18 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 
-    void update_connections();
-
 private:
     HintRouterSession(const HintRouterSession&); // denied
     HintRouterSession& operator = (const HintRouterSession&); // denied
 private:
+    bool route_by_hint(GWBUF* pPacket, HINT* current_hint, bool ignore_errors);
+    bool route_to_slave(GWBUF* pPacket, bool print_errors);
+    void update_connections();
+
     HintRouter* m_router;
     BackendMap m_backends; // all connections
     Dcb m_master; // connection to master
     BackendArray m_slaves; // connections to slaves
     size_type m_n_routed_to_slave; // packets routed to a single slave, used for rr
-    size_t      m_surplus_replies; // how many replies should be ignored
-
+    size_type m_surplus_replies; // how many replies should be ignored
 };

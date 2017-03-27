@@ -32,6 +32,11 @@ public:
     {
         return m_default_server;
     };
+    /* Simple, approximate statistics */
+    volatile unsigned int m_routed_to_master;
+    volatile unsigned int m_routed_to_slave;
+    volatile unsigned int m_routed_to_named;
+    volatile unsigned int m_routed_to_all;
 private:
     HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server,
                int max_slaves);
@@ -40,7 +45,6 @@ private:
     string m_default_server;
     int m_max_slaves;
     volatile int m_total_slave_conns;
-
 private:
     HintRouter(const HintRouter&);
     HintRouter& operator = (const HintRouter&);

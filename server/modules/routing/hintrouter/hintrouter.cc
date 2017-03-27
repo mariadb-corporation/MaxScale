@@ -24,8 +24,8 @@ static const MXS_ENUM_VALUE default_action_values[] =
 {
     {"master", HINT_ROUTE_TO_MASTER},
     {"slave", HINT_ROUTE_TO_SLAVE},
-    {"named_server", HINT_ROUTE_TO_NAMED_SERVER},
-    {"route_to_all", HINT_ROUTE_TO_ALL},
+    {"named", HINT_ROUTE_TO_NAMED_SERVER},
+    {"all", HINT_ROUTE_TO_ALL},
     {NULL} /* Last must be NULL */
 };
 static const char DEFAULT_ACTION[] = "default_action";
@@ -35,6 +35,10 @@ static const char MAX_SLAVES[] = "max_slaves";
 HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server,
                        int max_slaves)
     : maxscale::Router<HintRouter, HintRouterSession>(pService),
+      m_routed_to_master(0),
+      m_routed_to_slave(0),
+      m_routed_to_named(0),
+      m_routed_to_all(0),
       m_default_action(default_action),
       m_default_server(default_server),
       m_max_slaves(max_slaves),
@@ -42,7 +46,8 @@ HintRouter::HintRouter(SERVICE* pService, HINT_TYPE default_action, string& defa
 {
     HR_ENTRY();
     if (m_max_slaves < 0)
-    { // set a reasonable default value
+    {
+        // set a reasonable default value
         m_max_slaves = pService->n_dbref - 1;
     }
     MXS_NOTICE("Hint router [%s] created.", pService->name);
@@ -101,7 +106,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
     if (master_ref)
     {
         // Connect to master
-        HR_DEBUG("Connecting to %s.", master_ref->server->name);
+        HR_DEBUG("Connecting to %s.", master_ref->server->unique_name);
         DCB* master_conn = dcb_connect(master_ref->server, pSession, master_ref->server->protocol);
 
         if (master_conn)
@@ -138,7 +143,7 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
         {
             SERVER_REF* slave_ref = slave_refs.at(current % size);
             // Connect to a slave
-            HR_DEBUG("Connecting to %s.", slave_ref->server->name);
+            HR_DEBUG("Connecting to %s.", slave_ref->server->unique_name);
             DCB* slave_conn = dcb_connect(slave_ref->server, pSession, slave_ref->server->protocol);
 
             if (slave_conn)
@@ -170,6 +175,20 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION *pSession)
 void HintRouter::diagnostics(DCB* pOut)
 {
     HR_ENTRY();
+    for (int i = 0; default_action_values[i].name; i++)
+    {
+        if (default_action_values[i].enum_value == m_default_action)
+        {
+            dcb_printf(pOut, "\tDefault action: route to %s\n", default_action_values[i].name);
+        }
+    }
+    dcb_printf(pOut, "\tDefault server: %s\n", m_default_server.c_str());
+    dcb_printf(pOut, "\tMaximum slave connections/session: %d\n", m_max_slaves);
+    dcb_printf(pOut, "\tTotal cumulative slave connections: %d\n", m_total_slave_conns);
+    dcb_printf(pOut, "\tQueries routed to master: %d\n", m_routed_to_master);
+    dcb_printf(pOut, "\tQueries routed to single slave: %d\n", m_routed_to_slave);
+    dcb_printf(pOut, "\tQueries routed to named server: %d\n", m_routed_to_named);
+    dcb_printf(pOut, "\tQueries routed to all servers: %d\n", m_routed_to_all);
 }
 
 uint64_t HintRouter::getCapabilities()
