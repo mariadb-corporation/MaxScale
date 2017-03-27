@@ -25,6 +25,8 @@
 
 using std::string;
 using std::list;
+using schemarouter::Config;
+using schemarouter::Stats;
 
 /**
  * Bitmask values for the router session's initialization. These values are used
@@ -186,7 +188,7 @@ private:
     DCB*                  m_client;         /**< The client DCB */
     MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
     backend_ref_t*        m_backends;       /**< Pointer to backend reference array */
-    schemarouter_config_t m_config;         /**< Copied config info from router instance */
+    Config*               m_config;         /**< Pointer to router config */
     int                   m_backend_count;  /**< Number of backends */
     SchemaRouter*         m_router;         /**< The router instance */
     Shard                 m_shard;          /**< Database to server mapping */
@@ -194,7 +196,7 @@ private:
     string                m_current_db;     /**< Current active database */
     int                   m_state;          /**< Initialization state bitmask */
     list<Buffer>          m_queue;          /**< Query that was received before the session was ready */
-    ROUTER_STATS          m_stats;          /**< Statistics for this router */
+    Stats                 m_stats;          /**< Statistics for this router */
     uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
     uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
 };

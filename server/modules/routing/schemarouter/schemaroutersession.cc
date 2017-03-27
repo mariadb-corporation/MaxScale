@@ -42,10 +42,10 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
     m_client(session->client_dcb),
     m_mysql_session((MYSQL_session*)session->client_dcb->data),
     m_backends(NULL),
-    m_config(m_router->m_config),
+    m_config(&m_router->m_config),
     m_backend_count(0),
     m_router(router),
-    m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config.refresh_min_interval)),
+    m_shard(m_router->m_shard_manager.get_shard(m_client->user, m_config->refresh_min_interval)),
     m_state(0),
     m_sent_sescmd(0),
     m_replied_sescmd(0)
@@ -107,6 +107,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session, SchemaRouter* rou
 
     if (!connect_backend_servers(backend_ref, router_nservers, session))
     {
+        // TODO: Figure out how to avoid this throw
         throw std::runtime_error("Failed to connect to backend servers");
     }
 
@@ -395,7 +396,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
             char errbuf[128 + MYSQL_DATABASE_MAXLEN];
             snprintf(errbuf, sizeof(errbuf), "Unknown database: %s", db);
 
-            if (m_config.debug)
+            if (m_config->debug)
             {
                 sprintf(errbuf + strlen(errbuf),
                         " ([%lu]: DB change failed)",
@@ -1148,7 +1149,7 @@ bool SchemaRouterSession::handle_default_db()
         MXS_INFO("Connecting to a non-existent database '%s'", m_connect_db.c_str());
         char errmsg[128 + MYSQL_DATABASE_MAXLEN + 1];
         sprintf(errmsg, "Unknown database '%s'", m_connect_db.c_str());
-        if (m_config.debug)
+        if (m_config->debug)
         {
             sprintf(errmsg + strlen(errmsg), " ([%lu]: DB not found on connect)",
                     m_client->session->ses_id);
