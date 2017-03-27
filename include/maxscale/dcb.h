@@ -218,7 +218,7 @@ typedef struct dcb
     void            *authenticator_data; /**< The authenticator data for this DCB */
     DCBMM           memdata;        /**< The data related to DCB memory management */
     DCB_CALLBACK    *callbacks;     /**< The list of callbacks for the DCB */
-    long            last_read;      /*< Last time the DCB received data */
+    int64_t         last_read;      /*< Last time the DCB received data */
     struct server   *server;        /**< The associated backend server */
     SSL*            ssl;            /*< SSL struct for connection */
     bool            ssl_read_want_read;    /*< Flag */
@@ -234,13 +234,6 @@ typedef struct dcb
     } thread;
     skygw_chk_t     dcb_chk_tail;
 } DCB;
-
-#define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, \
-    .evq = DCBEVENTQ_INIT, .ip = {0}, .func = {0}, .authfunc = {0}, \
-    .stats = {0}, .memdata = DCBMM_INIT, \
-    .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
-    .state = DCB_STATE_ALLOC, .dcb_chk_tail = CHK_NUM_DCB, \
-    .authenticator_data = NULL, .thread = {0}}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason

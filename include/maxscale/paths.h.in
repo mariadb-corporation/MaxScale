@@ -31,6 +31,7 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_CONFIG_SUBPATH "@DEFAULT_CONFIG_SUBPATH@"
 #define MXS_DEFAULT_CONFIG_PERSIST_SUBPATH "@DEFAULT_CONFIG_PERSIST_SUBPATH@"
 #define MXS_DEFAULT_MODULE_CONFIG_SUBPATH "@DEFAULT_MODULE_CONFIG_SUBPATH@"
+#define MXS_DEFAULT_CONNECTOR_PLUGIN_SUBPATH "@DEFAULT_CONNECTOR_PLUGIN_SUBPATH@"
 
 /** Default file locations, configured by CMake */
 #define MXS_DEFAULT_CONFIGDIR         "@DEFAULT_CONFIGDIR@"
@@ -43,6 +44,7 @@ MXS_BEGIN_DECLS
 #define MXS_DEFAULT_EXECDIR           "@DEFAULT_EXECDIR@"
 #define MXS_DEFAULT_CONFIG_PERSISTDIR "@DEFAULT_CONFIG_PERSISTDIR@"
 #define MXS_DEFAULT_MODULE_CONFIGDIR  "@DEFAULT_MODULE_CONFIGDIR@"
+#define MXS_DEFAULT_CONNECTOR_PLUGINDIR "@DEFAULT_CONNECTOR_PLUGINDIR@"
 
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = MXS_DEFAULT_CONFIGDIR;
@@ -59,6 +61,7 @@ static const char* default_langdir  = MXS_DEFAULT_LANGDIR;
 static const char* default_execdir  = MXS_DEFAULT_EXECDIR;
 static const char* default_config_persistdir = MXS_DEFAULT_CONFIG_PERSISTDIR;
 static const char* default_module_configdir = MXS_DEFAULT_MODULE_CONFIGDIR;
+static const char* default_connector_plugindir  = MXS_DEFAULT_CONNECTOR_PLUGINDIR;
 
 static char* configdir = NULL; /*< Where the config file is found e.g. /etc/ */
 static char* config_persistdir = NULL;/*< Persisted configs e.g. /var/lib/maxscale/maxscale.cnf.d/ */
@@ -71,6 +74,7 @@ static char* processdatadir = NULL; /*< Process specific data directory */
 static char* langdir = NULL;
 static char* piddir = NULL;
 static char* execdir = NULL;
+static char* connector_plugindir = NULL;
 
 void set_libdir(char* param);
 void set_datadir(char* param);
@@ -83,6 +87,7 @@ void set_logdir(char* param);
 void set_langdir(char* param);
 void set_piddir(char* param);
 void set_execdir(char* param);
+void set_connector_plugindir(char* param);
 char* get_libdir();
 char* get_datadir();
 char* get_process_datadir();
@@ -94,5 +99,6 @@ char* get_piddir();
 char* get_logdir();
 char* get_langdir();
 char* get_execdir();
+char* get_connector_plugindir();
 
 MXS_END_DECLS

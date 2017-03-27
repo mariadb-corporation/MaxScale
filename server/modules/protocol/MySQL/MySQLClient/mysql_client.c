@@ -125,6 +125,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_PROTOCOL_VERSION,
         "The client to MaxScale MySQL protocol implementation",
         "V1.1.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         process_init,
         process_finish,
@@ -1458,7 +1459,7 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 
                     if (MYSQL_GET_COMMAND(data) == MYSQL_COM_QUERY)
                     {
-                        uint32_t type = qc_get_type_mask(packetbuf);
+                        uint32_t type = qc_get_trx_type_mask(packetbuf);
 
                         if (type & QUERY_TYPE_BEGIN_TRX)
                         {

@@ -314,10 +314,10 @@ int main(int argc, char** argv)
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(lib, NULL) && qc_process_init())
+            if (qc_setup(lib, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 rc = run(input_name, expected_name);
-                qc_process_end();
+                qc_process_end(QC_INIT_BOTH);
             }
             else
             {

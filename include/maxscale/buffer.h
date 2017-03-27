@@ -58,7 +58,8 @@ typedef enum
     GWBUF_TYPE_SESCMD_RESPONSE = 0x08,
     GWBUF_TYPE_RESPONSE_END    = 0x10,
     GWBUF_TYPE_SESCMD          = 0x20,
-    GWBUF_TYPE_HTTP            = 0x40
+    GWBUF_TYPE_HTTP            = 0x40,
+    GWBUF_TYPE_IGNORABLE       = 0x80
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -68,6 +69,7 @@ typedef enum
 #define GWBUF_IS_TYPE_SESCMD_RESPONSE(b) (b->gwbuf_type & GWBUF_TYPE_SESCMD_RESPONSE)
 #define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
 #define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
+#define GWBUF_IS_IGNORABLE(b)            (b->gwbuf_type & GWBUF_TYPE_IGNORABLE)
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
@@ -127,8 +129,8 @@ typedef struct gwbuf
     void            *end;   /*< First byte after the valid data */
     SHARED_BUF      *sbuf;  /*< The shared buffer with the real data */
     buffer_object_t *gwbuf_bufobj; /*< List of objects referred to by GWBUF */
-    gwbuf_info_t    gwbuf_info; /*< Info bits */
-    gwbuf_type_t    gwbuf_type; /*< buffer's data type information */
+    uint32_t        gwbuf_info; /*< Info bits; mask of gwbuf_info_t values. */
+    uint32_t        gwbuf_type; /*< Type bits; mask of gwbuf_type_t values. */
     HINT            *hint;  /*< Hint data for this buffer */
     BUF_PROPERTY    *properties; /*< Buffer properties */
     struct server   *server; /*< The target server where the buffer is executed */
@@ -141,7 +143,7 @@ typedef struct gwbuf
 #define GWBUF_DATA(b)           ((uint8_t*)(b)->start)
 
 /*< Number of bytes in the individual buffer */
-#define GWBUF_LENGTH(b)         ((char *)(b)->end - (char *)(b)->start)
+#define GWBUF_LENGTH(b)         ((size_t)((char *)(b)->end - (char *)(b)->start))
 
 /*< Return the byte at offset byte from the start of the unconsumed portion of the buffer */
 #define GWBUF_DATA_CHAR(b, byte)    (GWBUF_LENGTH(b) < ((byte)+1) ? -1 : *(((char *)(b)->start)+4))
@@ -326,9 +328,9 @@ extern GWBUF *gwbuf_split(GWBUF **buf, size_t length);
  * Set given type to all buffers on the list.
  * *
  * @param buf   The shared buffer
- * @param type  Type to be added
+ * @param type  Type to be added, mask of @c gwbuf_type_t values.
  */
-extern void gwbuf_set_type(GWBUF *head, gwbuf_type_t type);
+extern void gwbuf_set_type(GWBUF *head, uint32_t type);
 
 /**
  * Add a property to a buffer.

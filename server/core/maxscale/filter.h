@@ -44,6 +44,8 @@ MXS_DOWNSTREAM *filter_apply(MXS_FILTER_DEF *filter_def, MXS_SESSION *session, M
 void filter_free(MXS_FILTER_DEF *filter_def);
 bool filter_load(MXS_FILTER_DEF *filter_def);
 int filter_standard_parameter(const char *name);
-MXS_UPSTREAM *filter_upstream(MXS_FILTER_DEF *filter_def, void *fsession, MXS_UPSTREAM *upstream);
+MXS_UPSTREAM *filter_upstream(MXS_FILTER_DEF *filter_def,
+                              MXS_FILTER_SESSION *fsession,
+                              MXS_UPSTREAM *upstream);
 
 MXS_END_DECLS

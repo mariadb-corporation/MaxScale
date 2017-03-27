@@ -275,6 +275,8 @@ typedef struct rwsplit_config_st
     enum failure_mode master_failure_mode; /**< Master server failure handling mode.
                                                * @see enum failure_mode */
     bool              retry_failed_reads; /**< Retry failed reads on other servers */
+    int               connection_keepalive; /**< Send pings to servers that have
+                                             * been idle for too long */
 } rwsplit_config_t;
 
 #if defined(PREP_STMT_CACHING)

@@ -38,7 +38,7 @@
 MXS_BEGIN_DECLS
 
 struct server;
-struct router;
+struct mxs_router;
 struct mxs_router_object;
 struct users;
 
@@ -126,7 +126,7 @@ typedef struct service
     char *routerModule;                /**< Name of router module to use */
     char **routerOptions;              /**< Router specific option strings */
     struct mxs_router_object *router;  /**< The router we are using */
-    void *router_instance;             /**< The router instance for this service */
+    struct mxs_router *router_instance;/**< The router instance for this service */
     char *version_string;              /**< version string for this service listeners */
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */
@@ -145,12 +145,13 @@ typedef struct service
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     MXS_FILTER_DEF **filters;          /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
-    uint64_t conn_idle_timeout;            /**< Session timeout in seconds */
+    int64_t conn_idle_timeout;         /**< Session timeout in seconds */
     char *weightby;                    /**< Service weighting parameter name */
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
     uint64_t capabilities;             /**< The capabilities of the service. */
+    int max_retry_interval;            /**< Maximum retry interval */
 } SERVICE;
 
 typedef enum count_spec_t
@@ -240,6 +241,14 @@ bool serviceHasBackend(SERVICE *service, SERVER *server);
  */
 bool serviceHasListener(SERVICE *service, const char *protocol,
                         const char* address, unsigned short port);
+
+/**
+ * @brief Check if a MaxScale service listens on a port
+ *
+ * @param port The port to check
+ * @return True if a MaxScale service uses the port
+ */
+bool service_port_is_used(unsigned short port);
 
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
 int   serviceSetUser(SERVICE *service, char *user, char *auth);

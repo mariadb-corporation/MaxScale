@@ -827,6 +827,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "Firewall Filter",
         "V1.2.0",
+        RCAP_TYPE_STMT_INPUT,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -2005,7 +2006,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        qc_parse_result_t parse_result = qc_parse(queue);
+        qc_parse_result_t parse_result = qc_parse(queue, QC_COLLECT_ALL);
 
         if (parse_result == QC_QUERY_INVALID)
         {
@@ -2505,5 +2506,5 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_STMT_INPUT;
+    return RCAP_TYPE_NONE;
 }

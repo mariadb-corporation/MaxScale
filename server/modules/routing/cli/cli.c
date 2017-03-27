@@ -91,6 +91,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "The admin user interface",
         "V1.0.0",
+        RCAP_TYPE_NO_AUTH,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -271,6 +272,8 @@ execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
         queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
     }
 
+    MXS_INFO("MaxAdmin: %s", session->cmdbuf);
+
     execute_cmd(session);
     return 1;
 }
@@ -289,5 +292,5 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
 
 static uint64_t getCapabilities(MXS_ROUTER *instance)
 {
-    return 0;
+    return RCAP_TYPE_NONE;
 }

@@ -41,7 +41,7 @@ typedef enum
 MXS_MONITOR *monitor_alloc(char *, char *);
 void monitor_free(MXS_MONITOR *);
 
-void monitorStart(MXS_MONITOR *, void*);
+void monitorStart(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 void monitorStop(MXS_MONITOR *);
 void monitorStopAll();
 void monitorStartAll();

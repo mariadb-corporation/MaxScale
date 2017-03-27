@@ -51,7 +51,9 @@ typedef struct mxs_filter_session
 
 /**
  * @verbatim
- * The "module object" structure for a filter module
+ * The "module object" structure for a filter module. All entry points
+ * marked with `(optional)` are optional entry points which can be set to NULL
+ * if no implementation is required.
  *
  * The entry points are:
  *      createInstance   Called by the service to create a new instance of the filter
@@ -61,10 +63,10 @@ typedef struct mxs_filter_session
  *      setDownstream    Sets the downstream component of the filter pipline
  *      setUpstream      Sets the upstream component of the filter pipline
  *      routeQuery       Called on each query that requires routing
- *      clientReply      Called for each reply packet
+ *      clientReply      Called for each reply packet (optional)
  *      diagnostics      Called for diagnostic output
- *      getCapabilities  Called to obtain the capabilities of the filter
- *      destroyInstance  Called for destroying a filter instance
+ *      getCapabilities  Called to obtain the capabilities of the filter (optional)
+ *      destroyInstance  Called for destroying a filter instance (optional)
  *
  * @endverbatim
  *
@@ -97,7 +99,7 @@ typedef struct mxs_filter_object
      * @c setDownstream and @c setUpstream functions.
      *
      * @param instance Filter instance
-     * @param session Client SESSION object
+     * @param session Client MXS_SESSION object
      *
      * @return New filter session or NULL on error
      */

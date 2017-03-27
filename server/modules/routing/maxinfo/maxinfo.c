@@ -116,6 +116,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "The MaxScale Information Schema",
         "V1.0.0",
+        RCAP_TYPE_NO_AUTH,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -381,7 +382,7 @@ diagnostics(MXS_ROUTER *instance, DCB *dcb)
 static uint64_t
 getCapabilities(MXS_ROUTER* instance)
 {
-    return 0;
+    return RCAP_TYPE_NONE;
 }
 
 

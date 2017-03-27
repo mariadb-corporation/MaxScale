@@ -58,7 +58,7 @@ typedef struct ssl_listener
     SSL_METHOD *method;                 /*<  SSLv3 or TLS1.0/1.1/1.2 methods
                                          * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
     int ssl_cert_verify_depth;          /*< SSL certificate verification depth */
-    int ssl_method_type;                /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
+    ssl_method_type_t ssl_method_type;  /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
     char *ssl_cert;                     /*< SSL certificate */
     char *ssl_key;                      /*< SSL private key */
     char *ssl_ca_cert;                  /*< SSL CA certificate */

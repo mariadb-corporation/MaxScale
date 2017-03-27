@@ -16,7 +16,7 @@
 
 #include "../../server/core/maxscale/config.h"
 
-int32_t qc_dummy_parse(GWBUF* querybuf, int32_t* pResult)
+int32_t qc_dummy_parse(GWBUF* querybuf, uint32_t collect, int32_t* pResult)
 {
     *pResult = QC_QUERY_INVALID;
     return QC_RESULT_OK;
@@ -148,6 +148,7 @@ extern "C"
             QUERY_CLASSIFIER_VERSION,
             "Dummy Query Classifier",
             "V1.0.0",
+            MXS_NO_MODULE_CAPABILITIES,
             &qc,
             qc_dummy_process_init,
             qc_dummy_process_end,

@@ -53,6 +53,8 @@
 #include <maxscale/alloc.h>
 #include <maxscale/debug.h>
 
+#define DEFAULT_JOURNAL_MAX_AGE "28800"
+
 /** Column positions for SHOW SLAVE STATUS */
 #define MYSQL55_STATUS_BINLOG_POS 5
 #define MYSQL55_STATUS_BINLOG_NAME 6
@@ -114,6 +116,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MONITOR_VERSION,
         "A MySQL Master/Slave replication monitor",
         "V1.5.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -128,6 +131,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"detect_standalone_master", MXS_MODULE_PARAM_BOOL, "false"},
             {"failcount", MXS_MODULE_PARAM_COUNT, "5"},
             {"allow_cluster_recovery", MXS_MODULE_PARAM_BOOL, "true"},
+            {"journal_max_age", MXS_MODULE_PARAM_COUNT, DEFAULT_JOURNAL_MAX_AGE},
             {
                 "script",
                 MXS_MODULE_PARAM_PATH,
@@ -269,6 +273,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->shutdown = 0;
         handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
+        handle->load_journal = true;
         spinlock_init(&handle->lock);
     }
 
@@ -285,6 +290,13 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
     handle->mysql51_replication = config_get_bool(params, "mysql51_replication");
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
+    handle->journal_max_age = config_get_integer(params, "journal_max_age");
+
+    if (journal_is_stale(monitor, handle->journal_max_age))
+    {
+        MXS_WARNING("Removing stale journal file.");
+        remove_server_journal(monitor);
+    }
 
     bool error = false;
 
@@ -1015,9 +1027,10 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
                 handle->warn_failover = false;
             }
 
-            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER);
-            monitor_set_pending_status(db, SERVER_MASTER);
+            server_clear_set_status(db->server, SERVER_SLAVE, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_set_pending_status(db, SERVER_MASTER | SERVER_STALE_STATUS);
             monitor_clear_pending_status(db, SERVER_SLAVE);
+            handle->master = db;
         }
         else if (!handle->allow_cluster_recovery)
         {
@@ -1097,6 +1110,12 @@ monitorMain(void *arg)
 
         lock_monitor_servers(mon);
         servers_status_pending_to_current(mon);
+
+        if (handle->load_journal)
+        {
+            handle->load_journal = false;
+            load_server_journal(mon);
+        }
 
         /* start from the first server in the list */
         ptr = mon->databases;
@@ -1375,6 +1394,7 @@ monitorMain(void *arg)
 
         mon_hangup_failed_servers(mon);
         servers_status_current_to_pending(mon);
+        store_server_journal(mon);
         release_monitor_servers(mon);
     } /*< while (1) */
 }

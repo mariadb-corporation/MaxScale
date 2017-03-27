@@ -18,6 +18,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/log_manager.h>
 #include "storagefactory.hh"
+#include "cache.hh"
 #include "cache_storage_api.hh"
 #include "tester.hh"
 
@@ -60,7 +61,7 @@ int test(StorageFactory& factory, istream& in)
             if (pQuery)
             {
                 CACHE_KEY key;
-                cache_result_t result = factory.get_key(NULL, pQuery, &key);
+                cache_result_t result = Cache::get_default_key(NULL, pQuery, &key);
 
                 if (result == CACHE_RESULT_OK)
                 {
@@ -127,7 +128,7 @@ int main(int argc, char* argv[])
     {
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_setup(NULL, NULL) && qc_process_init())
+            if (qc_setup(NULL, NULL) && qc_process_init(QC_INIT_BOTH))
             {
                 const char* zModule = argv[1];
 
@@ -158,7 +159,7 @@ int main(int argc, char* argv[])
                     cerr << "error: Could not initialize factory." << endl;
                 }
 
-                qc_process_end();
+                qc_process_end(QC_INIT_BOTH);
             }
             else
             {

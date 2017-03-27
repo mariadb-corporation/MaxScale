@@ -607,6 +607,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,      /* Implemented module API version */
         "A simple round robin router", /* Description */
         "V1.1.0", /* Module version */
+        RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT,
         &entryPoints, /* Defined above */
         process_init, /* Process init, can be null */
         process_finish, /* Process finish, can be null */
@@ -819,7 +820,7 @@ static uint64_t getCapabilities(MXS_ROUTER *instance)
      * For output, parsing is not required but counting SQL replies is. RCAP_TYPE_RESULTSET_OUTPUT
      * should be sufficient.
      */
-    return RCAP_TYPE_CONTIGUOUS_INPUT | RCAP_TYPE_RESULTSET_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /**

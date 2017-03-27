@@ -1,6 +1,7 @@
 add_library(hintrouter SHARED
   hintrouter.cc
   hintroutersession.cc
+  dcb.cc
   )
 
 target_link_libraries(hintrouter maxscale-common)

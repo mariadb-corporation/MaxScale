@@ -25,8 +25,12 @@ namespace
 
 const char CAPABILITIES_PARAM[] = "capabilities";
 
-MXS_ENUM_VALUE capability_values[] =
+const char*    DEFAULT_RCAP_TYPE_NAME  = "RCAP_TYPE_NONE";
+const uint64_t DEFAULT_RCAP_TYPE_VALUE = 0;
+
+const MXS_ENUM_VALUE capability_values[] =
 {
+    { DEFAULT_RCAP_TYPE_NAME,           DEFAULT_RCAP_TYPE_VALUE },
     { "RCAP_TYPE_STMT_INPUT",           RCAP_TYPE_STMT_INPUT },
     { "RCAP_TYPE_CONTIGUOUS_INPUT",     RCAP_TYPE_CONTIGUOUS_INPUT },
     { "RCAP_TYPE_TRANSACTION_TRACKING", RCAP_TYPE_TRANSACTION_TRACKING },
@@ -35,6 +39,9 @@ MXS_ENUM_VALUE capability_values[] =
     { "RCAP_TYPE_RESULTSET_OUTPUT",     RCAP_TYPE_RESULTSET_OUTPUT },
     { NULL, 0 }
 };
+
+size_t RCAP_TYPE_NAME_MAXLEN = 30; // strlen(RCAP_TYPE_TRANSACTION_TRACKING)
+size_t RCAP_TYPE_COUNT = sizeof(capability_values)/sizeof(capability_values[0]);
 
 }
 
@@ -53,13 +60,20 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A null filter that does nothing.",
         VERSION_STRING,
+        MXS_NO_MODULE_CAPABILITIES,
         &NullFilter::s_object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
         NULL, /* Thread init. */
         NULL, /* Thread finish. */
         {
-            { CAPABILITIES_PARAM, MXS_MODULE_PARAM_ENUM, NULL, MXS_MODULE_OPT_REQUIRED, capability_values },
+            {
+                CAPABILITIES_PARAM,
+                MXS_MODULE_PARAM_ENUM,
+                DEFAULT_RCAP_TYPE_NAME,
+                MXS_MODULE_OPT_NONE,
+                capability_values
+            },
             { MXS_END_MODULE_PARAMS }
         }
     };
@@ -74,7 +88,37 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 NullFilter::NullFilter(const char* zName, uint64_t capabilities)
     : m_capabilities(capabilities)
 {
-    MXS_NOTICE("Null filter [%s] created.", zName);
+    const char format[] = "Null filter [%s] created, capabilities: ";
+
+    char message[sizeof(format) + strlen(zName) + (RCAP_TYPE_NAME_MAXLEN + 1) * RCAP_TYPE_COUNT + 1];
+
+    sprintf(message, format, zName);
+
+    if (m_capabilities)
+    {
+        const MXS_ENUM_VALUE* i = capability_values;
+        const MXS_ENUM_VALUE* end = i + RCAP_TYPE_COUNT;
+
+        while (i != end)
+        {
+            if (i->enum_value != 0)
+            {
+                if ((m_capabilities & i->enum_value) == i->enum_value)
+                {
+                    strcat(message, " ");
+                    strcat(message, i->name);
+                }
+            }
+
+            ++i;
+        }
+    }
+    else
+    {
+        strcat(message, " (none)");
+    }
+
+    MXS_NOTICE("%s", message);
 }
 
 NullFilter::~NullFilter()

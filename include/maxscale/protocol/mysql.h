@@ -305,7 +305,7 @@ typedef struct
     uint32_t               extra_capabilities;           /*< MariaDB 10.2 capabilities */
     unsigned long          tid;                          /*< MySQL Thread ID, in handshake */
     unsigned int           charset;                      /*< MySQL character set at connect time */
-    bool                   ignore_reply;                 /*< If the reply should be discarded */
+    int                    ignore_replies;                 /*< How many replies should be discarded */
     GWBUF*                 stored_query;                 /*< Temporarily stored queries */
 #if defined(SS_DEBUG)
     skygw_chk_t            protocol_chk_tail;

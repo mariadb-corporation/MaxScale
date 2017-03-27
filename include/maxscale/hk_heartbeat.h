@@ -21,6 +21,6 @@ MXS_BEGIN_DECLS
  * every 100 milliseconds and may be used for crude timing etc.
  */
 
-extern long hkheartbeat;
+extern int64_t hkheartbeat;
 
 MXS_END_DECLS

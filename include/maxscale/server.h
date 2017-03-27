@@ -254,13 +254,22 @@ void server_add_parameter(SERVER *server, const char *name, const char *value);
  */
 bool server_remove_parameter(SERVER *server, const char *name);
 
+/**
+ * @brief Check if a server points to a local MaxScale service
+ *
+ * @param server Server to check
+ * @return True if the server points to a local MaxScale service
+ */
+bool server_is_mxs_service(const SERVER *server);
+
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
+extern int server_find_by_unique_names(char **server_names, int size, SERVER*** output);
 extern SERVER *server_find(const char *servname, unsigned short port);
 extern char *server_status(const SERVER *);
-extern void server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
-extern void server_set_status_nolock(SERVER *server, int bit);
-extern void server_clear_status_nolock(SERVER *server, int bit);
+extern void server_clear_set_status(SERVER *server, unsigned specified_bits, unsigned bits_to_set);
+extern void server_set_status_nolock(SERVER *server, unsigned bit);
+extern void server_clear_status_nolock(SERVER *server, unsigned bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
 extern const char *server_get_parameter(const SERVER *server, char *name);

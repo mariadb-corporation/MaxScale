@@ -69,6 +69,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_ROUTER_VERSION,
         "A test router - not for use in real systems",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -151,7 +152,7 @@ diagnostic(MXS_ROUTER *instance, DCB *dcb)
 
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return 0;
+    return RCAP_TYPE_NONE;
 }
 
 

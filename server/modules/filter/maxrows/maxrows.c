@@ -88,6 +88,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_FILTER_VERSION,
         "A filter that is capable of limiting the resultset number of rows.",
         "V1.0.0",
+        RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT,
         &object,
         NULL, /* Process init. */
         NULL, /* Process finish. */
@@ -422,7 +423,7 @@ static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dc
  */
 static uint64_t getCapabilities(MXS_FILTER* instance)
 {
-    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT;
+    return RCAP_TYPE_NONE;
 }
 
 /* API END */

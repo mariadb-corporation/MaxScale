@@ -14,10 +14,18 @@
 #define MXS_MODULE_NAME "cache"
 #include "cache.hh"
 #include <new>
+#include <set>
+#include <string>
+#include <zlib.h>
 #include <maxscale/alloc.h>
+#include <maxscale/buffer.h>
+#include <maxscale/modutil.h>
+#include <maxscale/query_classifier.h>
 #include <maxscale/paths.h>
 #include "storagefactory.hh"
 #include "storage.hh"
+
+using namespace std;
 
 Cache::Cache(const std::string&  name,
              const CACHE_CONFIG* pConfig,
@@ -100,6 +108,46 @@ void Cache::show(DCB* pDcb) const
         // So as not to upset anyone expecting a JSON object.
         dcb_printf(pDcb, "{\n}\n");
     }
+}
+
+cache_result_t Cache::get_key(const char* zDefault_db,
+                              const GWBUF* pQuery,
+                              CACHE_KEY* pKey) const
+{
+    // TODO: Take config into account.
+    return get_default_key(zDefault_db, pQuery, pKey);
+}
+
+//static
+cache_result_t Cache::get_default_key(const char* zDefault_db,
+                                      const GWBUF* pQuery,
+                                      CACHE_KEY* pKey)
+{
+    ss_dassert(GWBUF_IS_CONTIGUOUS(pQuery));
+
+    char *pSql;
+    int length;
+
+    modutil_extract_SQL(const_cast<GWBUF*>(pQuery), &pSql, &length);
+
+    uint64_t crc1 = crc32(0, Z_NULL, 0);
+
+    const Bytef* pData;
+
+    if (zDefault_db)
+    {
+        pData = reinterpret_cast<const Bytef*>(zDefault_db);
+        crc1 = crc32(crc1, pData, strlen(zDefault_db));
+    }
+
+    pData = reinterpret_cast<const Bytef*>(pSql);
+
+    crc1 = crc32(crc1, pData, length);
+    uint64_t crc2 = crc32(crc1, pData, length);
+
+    pKey->data = (crc1 << 32 | crc2);
+
+    return CACHE_RESULT_OK;
 }
 
 bool Cache::should_store(const char* zDefaultDb, const GWBUF* pQuery)

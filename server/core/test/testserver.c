@@ -39,8 +39,8 @@
 #include <maxscale/paths.h>
 
 // This is pretty ugly but it's required to test internal functions
-#include "../config.c"
-#include "../server.c"
+#include "../config.cc"
+#include "../server.cc"
 
 /**
  * test1    Allocate a server and do lots of other things

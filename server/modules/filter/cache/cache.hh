@@ -87,11 +87,31 @@ public:
     virtual void refreshed(const CACHE_KEY& key,  const CacheFilterSession* pSession) = 0;
 
     /**
-     * See @Storage::get_key
+     * Returns a key for the statement. Takes the current config into account.
+     *
+     * @param zDefault_db  The default database, can be NULL.
+     * @param pQuery       A statement.
+     * @param pKey         On output a key.
+     *
+     * @return CACHE_RESULT_OK if a key could be created.
      */
-    virtual cache_result_t get_key(const char* zDefaultDb,
-                                   const GWBUF* pQuery,
-                                   CACHE_KEY* pKey) const = 0;
+    cache_result_t get_key(const char* zDefault_db,
+                           const GWBUF* pQuery,
+                           CACHE_KEY* pKey) const;
+
+    /**
+     * Returns a key for the statement. Does not take the current config
+     * into account.
+     *
+     * @param zDefault_db  The default database, can be NULL.
+     * @param pQuery       A statement.
+     * @param pKey         On output a key.
+     *
+     * @return CACHE_RESULT_OK if a key could be created.
+     */
+    static cache_result_t get_default_key(const char* zDefault_db,
+                                          const GWBUF* pQuery,
+                                          CACHE_KEY* pKey);
 
     /**
      * See @Storage::get_value

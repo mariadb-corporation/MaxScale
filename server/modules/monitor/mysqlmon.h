@@ -79,7 +79,39 @@ typedef struct
                                    down before failover is initiated */
     bool allow_cluster_recovery; /**< Allow failed servers to rejoin the cluster */
     bool warn_failover; /**< Log a warning when failover happens */
+    bool load_journal; /**< Whether journal file should be loaded */
+    time_t journal_max_age; /**< Maximum age of journal file */
 } MYSQL_MONITOR;
+
+/**
+ * @brief Store a journal of server states
+ *
+ * @param monitor Monitor to journal
+ */
+void store_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Load a journal of server states
+ *
+ * @param monitor Monitor where journal is loaded
+ */
+void load_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Remove stored journal file
+ *
+ * @param monitor Monitor whose journal is removed
+ */
+void remove_server_journal(MXS_MONITOR *monitor);
+
+/**
+ * @brief Check whether the journal is too old
+ *
+ * @param monitor Monitor to check
+ * @return True if journal is stale or an error occurred while reading the file.
+ * False if the file is still valid.
+ */
+bool journal_is_stale(MXS_MONITOR *monitor, time_t max_age);
 
 MXS_END_DECLS
 

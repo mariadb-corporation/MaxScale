@@ -16,7 +16,7 @@
 #define SS_DEBUG
 #endif
 
-#include "../config.c"
+#include "../config.cc"
 
 #define TEST(a) do{if(!(a)){printf("Error: `" #a "` was not true\n");return 1;}}while(false)
 

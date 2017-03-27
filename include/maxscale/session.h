@@ -31,6 +31,9 @@ MXS_BEGIN_DECLS
 struct dcb;
 struct service;
 struct mxs_filter_def;
+struct mxs_filter;
+struct mxs_filter_session;
+struct mxs_router_session;
 struct server;
 
 typedef enum
@@ -86,19 +89,22 @@ typedef struct
 typedef struct
 {
     struct mxs_filter_def *filter;
-    void *instance;
-    void *session;
+    struct mxs_filter *instance;
+    struct mxs_filter_session *session;
 } SESSION_FILTER;
 
 /**
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
+struct mxs_filter;
+struct mxs_filter_session;
+
 typedef struct mxs_downstream
 {
-    void *instance;
-    void *session;
-    int32_t (*routeQuery)(void *instance, void *session, GWBUF *request);
+    struct mxs_filter *instance;
+    struct mxs_filter_session *session;
+    int32_t (*routeQuery)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *request);
 } MXS_DOWNSTREAM;
 
 /**
@@ -107,9 +113,9 @@ typedef struct mxs_downstream
  */
 typedef struct mxs_upstream
 {
-    void *instance;
-    void *session;
-    int32_t (*clientReply)(void *instance, void *session, GWBUF *response);
+    struct mxs_filter *instance;
+    struct mxs_filter_session *session;
+    int32_t (*clientReply)(struct mxs_filter *instance, struct mxs_filter_session *session, GWBUF *response);
     int32_t (*error)(void *instance, void *session, void *);
 } MXS_UPSTREAM;
 
@@ -129,7 +135,7 @@ typedef struct session
     mxs_session_state_t     state;            /*< Current descriptor state */
     size_t                  ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
-    void                    *router_session;  /*< The router instance data */
+    struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
     struct service          *service;         /*< The service this session is using */
     int                     n_filters;        /*< Number of filter sessions */

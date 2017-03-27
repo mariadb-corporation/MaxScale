@@ -65,6 +65,22 @@ disable_sescmd_history=true
 master_failure_mode=fail_on_write
 ```
 
+### `connection_keepalive`
+
+Send keepalive pings to backend servers. This feature was introduced in MaxScale
+2.1.2 and is disabled by default.
+
+The parameter value is the interval in seconds between each keepalive ping. A
+keepalive ping will be sent to a backend server if the connection is idle and it
+has not been used within `n` seconds where `n` is greater than or equal to the
+value of _connection_keepalive_. The keepalive pings are only sent when the
+client executes a query.
+
+This functionality allows the readwritesplit module to keep all backend
+connections alive even if they are not used. This is a common problem if the
+backend servers have a low _wait_timeout_ value and the client connections live
+for a long time.
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options. All the options are parameter-value pairs. All parameters listed in this section must be configured as a value in `router_options`.

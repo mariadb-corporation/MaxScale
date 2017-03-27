@@ -181,6 +181,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_AUTHENTICATOR_VERSION,
         "The MySQL MaxScale to backend server authenticator",
         "V1.0.0",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

@@ -80,6 +80,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         MXS_MONITOR_VERSION,
         "A Multi-Master Multi Master monitor",
         "V1.1.1",
+        MXS_NO_MODULE_CAPABILITIES,
         &MyObject,
         NULL, /* Process init. */
         NULL, /* Process finish. */

@@ -22,6 +22,8 @@
 #include <maxscale/server.h>
 #include <maxscale/service.h>
 
+MXS_BEGIN_DECLS
+
 /**
  * @brief Create a new server
  *
@@ -176,3 +178,5 @@ bool runtime_create_monitor(const char *name, const char *module);
  * @return True if monitor was destroyed
  */
 bool runtime_destroy_monitor(MXS_MONITOR *monitor);
+
+MXS_END_DECLS

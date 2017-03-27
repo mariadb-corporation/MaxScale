@@ -20,6 +20,29 @@ MXS_BEGIN_DECLS
 #define QUERY_CLASSIFIER_VERSION {1, 1, 0}
 
 /**
+ * qc_init_kind_t specifies what kind of initialization should be performed.
+ */
+typedef enum qc_init_kind
+{
+    QC_INIT_SELF   = 0x01, /*< Initialize/finalize the query classifier itself. */
+    QC_INIT_PLUGIN = 0x02, /*< Initialize/finalize the plugin. */
+    QC_INIT_BOTH   = 0x03
+} qc_init_kind_t;
+
+/**
+ * @c qc_collect_info_t specifies what information should be collected during parsing.
+ */
+typedef enum qc_collect_info
+{
+    QC_COLLECT_ESSENTIALS = 0x00, /*< Collect only the base minimum. */
+    QC_COLLECT_TABLES     = 0x01, /*< Collect table names. */
+    QC_COLLECT_DATABASES  = 0x02, /*< Collect database names. */
+    QC_COLLECT_FIELDS     = 0x04, /*< Collect field information. */
+    QC_COLLECT_FUNCTIONS  = 0x08, /*< Collect function information. */
+
+    QC_COLLECT_ALL = (QC_COLLECT_TABLES|QC_COLLECT_DATABASES|QC_COLLECT_FIELDS|QC_COLLECT_FUNCTIONS)
+} qc_collect_info_t;
+/**
  * qc_query_type_t defines bits that provide information about a
  * particular statement.
  *
@@ -186,13 +209,16 @@ typedef struct query_classifier
     /**
      * Called to explicitly parse a statement.
      *
-     * @param stmt    The statement to be parsed.
-     * @param result  On return, the parse result, if @c QC_RESULT_OK is returned.
+     * @param stmt     The statement to be parsed.
+     * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+     *                 should be collected. Only a hint and must not restrict what information
+     *                 later can be queried.
+     * @param result   On return, the parse result, if @c QC_RESULT_OK is returned.
      *
      * @return QC_RESULT_OK, if the parsing was not aborted due to resource
      *         exhaustion or equivalent.
      */
-    int32_t (*qc_parse)(GWBUF* stmt, int32_t* result);
+    int32_t (*qc_parse)(GWBUF* stmt, uint32_t collect, int32_t* result);
 
     /**
      * Reports the type of the statement.
@@ -377,11 +403,14 @@ bool qc_setup(const char* plugin_name, const char* plugin_args);
  *
  * MaxScale calls this functions, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True, if the process wide initialization could be performed.
  *
  * @see qc_process_end qc_thread_init
  */
-bool qc_process_init(void);
+bool qc_process_init(uint32_t kind);
 
 /**
  * Finalizes the query classifier.
@@ -390,9 +419,12 @@ bool qc_process_init(void);
  * by a call to this function. MaxScale calls this function, so plugins
  * should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_process_init qc_thread_end
  */
-void qc_process_end(void);
+void qc_process_end(uint32_t kind);
 
 /**
  * Loads a particular query classifier.
@@ -426,11 +458,14 @@ void qc_unload(QUERY_CLASSIFIER* classifier);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of initialization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @return True if the initialization succeeded, false otherwise.
  *
  * @see qc_thread_end
  */
-bool qc_thread_init(void);
+bool qc_thread_init(uint32_t kind);
 
 /**
  * Performs thread finalization needed by the query classifier.
@@ -439,9 +474,12 @@ bool qc_thread_init(void);
  *
  * MaxScale calls this function, so plugins should not do that.
  *
+ * @param kind  What kind of finalization should be performed.
+ *              Combination of qc_init_kind_t.
+ *
  * @see qc_thread_init
  */
-void qc_thread_end(void);
+void qc_thread_end(uint32_t kind);
 
 /**
  * Parses the statement in the provided buffer and returns a value specifying
@@ -454,11 +492,17 @@ void qc_thread_end(void);
  * already then this function will only return the result of that parsing;
  * the statement will not be parsed again.
  *
- * @param stmt  A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
+ * @param stmt     A buffer containing an COM_QUERY or COM_STMT_PREPARE packet.
+ * @param collect  A bitmask of @c qc_collect_info_t values. Specifies what information
+ *                 should be collected.
+ *
+ *                 Note that this is merely a hint and does not restrict what
+ *                 information can be queried for. If necessary, the statement
+ *                 will transparently be reparsed.
  *
  * @return To what extent the statement could be parsed.
  */
-qc_parse_result_t qc_parse(GWBUF* stmt);
+qc_parse_result_t qc_parse(GWBUF* stmt, uint32_t collect);
 
 /**
  * Convert a qc_field_usage_t enum to corresponding string.
@@ -622,6 +666,30 @@ char** qc_get_table_names(GWBUF* stmt, int* size, bool fullnames);
  * @see qc_query_is_type
  */
 uint32_t qc_get_type_mask(GWBUF* stmt);
+
+/**
+ * Returns the type bitmask of transaction related statements.
+ *
+ * If the statement starts a transaction, ends a transaction or
+ * changes the autocommit state, the returned bitmap will be a
+ * combination of:
+ *
+ *    QUERY_TYPE_BEGIN_TRX
+ *    QUERY_TYPE_COMMIT
+ *    QUERY_TYPE_ROLLBACK
+ *    QUERY_TYPE_ENABLE_AUTOCOMMIT
+ *    QUERY_TYPE_DISABLE_AUTOCOMMIT
+ *    QUERY_TYPE_READ  (explicitly read only transaction)
+ *    QUERY_TYPE_WRITE (explicitly read write transaction)
+ *
+ * Otherwise the result will be 0.
+ *
+ * @param stmt A COM_QUERY or COM_STMT_PREPARE packet.
+ *
+ * @return The relevant type bits if the statement is transaction
+ *         related, otherwise 0.
+ */
+uint32_t qc_get_trx_type_mask(GWBUF* stmt);
 
 /**
  * Returns whether the statement is a DROP TABLE statement.

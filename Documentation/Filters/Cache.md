@@ -10,17 +10,36 @@ The cache filter is a simple cache that is capable of caching the result of
 SELECTs, so that subsequent identical SELECTs are served directly by MaxScale,
 without the queries being routed to any server.
 
-SELECTs using the following functions will not be cached: `BENCHMARK`,
-`CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
-`CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
-`IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
-`MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
-`SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
+The cache will be used and populated in the following circumstances:
+* There is _no_ explicit transaction active, that is, _autocommit_ is used,
+* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
+  READ ONLY`) active, or
+* there is a transaction active and _no_ statement that modifies the database
+  has been performed.
 
-Note that installing the cache causes all statements to be parsed. The
-implication of that is that unless statements _already_ need to be parsed,
-e.g. due to the presence of another filter or the chosen router, then adding
-the cache will not necessarily improve the performance, but may decrease it.
+In practice, the last bullet point basically means that if a transaction has
+been started with `BEGIN`, `START TRANSACTION` or `START TRANSACTION READ
+WRITE`, then the cache will be used and populated until the first `UPDATE`,
+`INSERT` or `DELETE` statement is encountered.
+
+By default, it is *ensured* that the cache is **not** used in the following
+circumstances:
+
+* The `SELECT` uses any of the following functions: `BENCHMARK`,
+  `CONNECTION_ID`, `CONVERT_TZ`, `CURDATE`, `CURRENT_DATE`, `CURRENT_TIMESTAMP`,
+  `CURTIME`, `DATABASE`, `ENCRYPT`, `FOUND_ROWS`, `GET_LOCK`, `IS_FREE_LOCK`,
+  `IS_USED_LOCK`, `LAST_INSERT_ID`, `LOAD_FILE`, `LOCALTIME`, `LOCALTIMESTAMP`,
+  `MASTER_POS_WAIT`, `NOW`, `RAND`, `RELEASE_LOCK`, `SESSION_USER`, `SLEEP`,
+  `SYSDATE`, `SYSTEM_USER`, `UNIX_TIMESTAMP`, `USER`, `UUID`, `UUID_SHORT`.
+* The `SELECT` accesses any of the following fields: `CURRENT_DATE`,
+  `CURRENT_TIMESTAMP`, `LOCALTIME`, `LOCALTIMESTAMP`
+* The `SELECT` uses system or user variables.
+
+In order to ensure that, all `SELECT` statements have to be parsed, which
+carries a _significant_ performance cost. If it is known that there are no
+such statements or that it does not matter even if they are cached, that
+safety measure can be turned off. Please read [performance](#performance)
+for more details.
 
 ## Limitations
 
@@ -31,24 +50,6 @@ Currently there is **no** cache invalidation, apart from _time-to-live_.
 
 ### Prepared Statements
 Resultsets of prepared statements are **not** cached.
-
-### Transactions
-The cache will be used and populated in the following circumstances:
-
-* There is _no_ explicit transaction active, that is, _autocommit_ is used,
-* there is an _explicitly_ read-only transaction (that is,`START TRANSACTION
-  READ ONLY`) active, or
-* there is a transaction active and _no_ statement that modify the database
-  has been performed.
-
-In practice, the last bullet point basically means that if a transaction has
-been started with `BEGIN` or `START TRANSACTION READ WRITE`, then the cache
-will be used and populated until the first `UPDATE`, `INSERT` or `DELETE`
-statement is encountered.
-
-### Variables
-If user or system variables are used in the _SELECT_ statement, the result
-will not be cached.
 
 ### Security
 The cache is **not** aware of grants.
@@ -71,8 +72,6 @@ type=filter
 module=cache
 hard_ttl=30
 soft_ttl=20
-storage=...
-storage_options=...
 rules=...
 ...
 
@@ -95,10 +94,10 @@ sharing.
 
 ### Filter Parameters
 
-The cache filter has one mandatory parameter - `storage` - and a few
-optional ones. Note that it is advisable to specify `max_size` to prevent
-the cache from using up all memory there is, in case there is very litte
-overlap among the queries.
+The cache filter has no mandatory parameters but a range of optional ones.
+Note that it is advisable to specify `max_size` to prevent the cache from
+using up all memory there is, in case there is very litte overlap among the
+queries.
 
 #### `storage`
 
@@ -108,6 +107,8 @@ argument. For instance:
 ```
 storage=storage_inmemory
 ```
+The default is `storage_inmemory`.
+
 See [Storage](#storage-1) for what storage modules are available.
 
 #### `storage_options`
@@ -226,6 +227,29 @@ cached_data=thread_specific
 
 Default is `shared`. See `max_count` and `max_size` what implication changing
 this setting to `thread_specific` has.
+
+#### `selects`
+
+An enumeration option specifying what approach the cache should take with
+respect to `SELECT` statements. The allowed values are:
+
+   * `assume_cacheable`: The cache can assume that all `SELECT` statements,
+     without exceptions, are cacheable.
+   * `verify_cacheable`: The cache can *not* assume that all `SELECT`
+     statements are cacheable, but must verify that.
+
+```
+select=assume_cacheable
+```
+
+Default is `verify_cacheable`. In this case, the `SELECT` statements will be
+parsed and only those that are safe for caching - e.g. do *not* call any
+non-cacheable functions or access any non-cacheable variables - will be
+subject to caching.
+
+If `assume_cacheable` is specified, then all `SELECT` statements are
+assumed to be cacheable and will be parsed *only* if some specific rule
+requires that.
 
 #### `debug`
 
@@ -678,3 +702,99 @@ The rules specify that the data of the table `sbtest` should be cached.
     ]
 }
 ```
+
+# Performance
+
+Perhaps the most significant factor affecting the performance of the cache is
+whether the statements need to be parsed or not. By default, all statements are
+parsed in order to exclude `SELECT` statements that use non-cacheable functions,
+access non-cacheable variables or refer to system or user variables.
+
+If it is known that no such statements are used or if it does not matter if the
+results are cached, that safety measure can be turned off. To do that, add the
+following line to the cache configuration:
+```
+[MyCache]
+...
+selects=assume_cacheable
+```
+
+With that configuration, the cache itself will not cause the statements to be
+parsed.
+
+But note that even with `assume_cacheable` configured, a rule referring
+specifically to a _database_, _table_ or _column_ will still cause the
+statement to be parsed.
+
+For instance, a simple rule like
+```
+{
+    "store": [
+        {
+            "attribute": "database",
+            "op": "=",
+            "value": "db1"
+        }
+    ]
+}
+```
+cannot be fulfilled without parsing the statement.
+
+If the rule is instead expressed using a regular expression
+```
+{
+    "store": [
+        {
+            "attribute": "query",
+            "op": "like",
+            "value": "FROM db1\\..*"
+        }
+    ]
+}
+```
+then the statement will again not be parsed.
+
+However, even if regular expression matching performance wise is cheaper
+than parsing, it still carries a cost. In the following is a table with numbers
+giving a rough picture of the relative cost of different approaches.
+
+In the table, _regexp match_ means that the cacheable statements
+were picked out using a rule like
+```
+{
+    "attribute": "query",
+    "op": "like",
+    "value": "FROM dbname"
+}
+```
+while _exact match_ means that the cacheable statements were picked out using a
+rule like
+```
+{
+    "attribute": "database",
+    "op": "=",
+    "value": "dbname"
+}
+```
+The exact match rule requires all statements to be parsed.
+
+Note that the qps figures are only indicative.
+
+| `selects`          | Rule           | qps |
+| -------------------| ---------------|-----|
+| `assume_cacheable` | none           | 100 |
+| `assume_cacheable` | _regexp match_ |  98 |
+| `assume_cacheable` | _exact match_  |  60 |
+| `verify_cacheable` | none           |  60 |
+| `verify_cacheable` | _regexp match_ |  58 |
+| `verify_cacheable` | _exact match_  |  58 |
+
+## Summary
+
+For maximum performance:
+* Arrange the situation so that `selects=assume_cacheable` can be
+  configured, and use _no_ rules.
+* If `selects=assume_cacheable` has been configured, use _only_
+  regexp based rules.
+* If `selects=verify_cacheable` has been configured non-regex based
+  matching can be used.
