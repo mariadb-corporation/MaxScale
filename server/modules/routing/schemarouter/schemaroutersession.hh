@@ -16,12 +16,16 @@
 #include "schemarouter.hh"
 
 #include <string>
+#include <list>
 
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/router.hh>
 
 #include "shard_map.hh"
 #include "session_command.hh"
+
+using std::string;
+using std::list;
 
 /**
  * Bitmask values for the router session's initialization. These values are used
@@ -167,7 +171,7 @@ private:
     string                m_connect_db;     /**< Database the user was trying to connect to */
     string                m_current_db;     /**< Current active database */
     int                   m_state;          /**< Initialization state bitmask */
-    GWBUF*                m_queue;          /**< Query that was received before the session was ready */
+    list<Buffer>          m_queue;          /**< Query that was received before the session was ready */
     ROUTER_STATS          m_stats;          /**< Statistics for this router */
     uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
     uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
@@ -184,9 +188,13 @@ private:
     bool send_database_list();
     int gen_databaselist();
     int inspect_backend_mapping_states(backend_ref_t *bref, GWBUF** wbuf);
-    int process_show_shards();
+    bool process_show_shards();
     showdb_response_t parse_showdb_response(backend_ref_t* bref, GWBUF** buffer);
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     void route_queued_query();
     void synchronize_shard_map();
+    void handle_mapping_reply(backend_ref_t* bref, GWBUF* pPacket);
+    void process_response(backend_ref_t* bref, GWBUF** ppPacket);
+    SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
+                                 route_target_t& route_target);
 };
