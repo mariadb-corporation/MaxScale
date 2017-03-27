@@ -15,47 +15,34 @@
 #include <maxscale/atomic.h>
 #include <maxscale/service.h>
 
-
 Dcb::Dcb(DCB* pDcb)
-    : m_pDcb(pDcb)
-    , m_pRefs(NULL)
+    : m_sInner()
 {
-    try
+    // A null value for m_pDcb is allowed as a special non-existing dcb
+    if (pDcb)
     {
-        m_pRefs = new int (1);
+        try
+        {
+            m_sInner = SDCB(pDcb, Dcb::deleter);
+        }
+        catch (const std::exception&)
+        {
+            dcb_close(pDcb);
+            throw;
+        }
     }
-    catch (const std::exception&)
-    {
-        dcb_close(pDcb);
-        throw;
-    }
 }
 
-Dcb::Dcb(const Dcb& rhs)
-    : m_pDcb(rhs.m_pDcb)
-    , m_pRefs(rhs.m_pRefs)
+void Dcb::deleter(DCB* dcb)
 {
-    ++(*m_pRefs);
-}
-
-Dcb& Dcb::operator = (Dcb rhs)
-{
-    swap(rhs);
-    return *this;
-}
-
-void Dcb::dec()
-{
-    ss_dassert(*m_pRefs > 0);
-
-    if (--(*m_pRefs) == 0)
+    if (dcb)
     {
         HR_DEBUG("CLOSING dcb");
         // TODO: You should not need to manually adjust any
         // TODO: connections number, dcb_close should handle that.
-        SERVER_REF* pSref = m_pDcb->service->dbref;
+        SERVER_REF* pSref = dcb->service->dbref;
 
-        while (pSref && (pSref->server != m_pDcb->server))
+        while (pSref && (pSref->server != dcb->server))
         {
             pSref = pSref->next;
         }
@@ -64,9 +51,6 @@ void Dcb::dec()
         {
             atomic_add(&pSref->connections, -1);
         }
-
-        dcb_close(m_pDcb);
-
-        delete m_pRefs;
+        dcb_close(dcb);
     }
 }
