@@ -32,34 +32,34 @@ using schemarouter::Stats;
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.
  */
-typedef enum init_mask
+enum init_mask
 {
     INIT_READY   = 0x00,
     INIT_MAPPING = 0x01,
     INIT_USE_DB  = 0x02,
     INIT_UNINT   = 0x04,
     INIT_FAILED  = 0x08
-} init_mask_t;
+};
 
-typedef enum showdb_response
+enum showdb_response
 {
     SHOWDB_FULL_RESPONSE,
     SHOWDB_PARTIAL_RESPONSE,
     SHOWDB_DUPLICATE_DATABASES,
     SHOWDB_FATAL_ERROR
-} showdb_response_t;
+};
 
 /**
  * The state of the backend server reference
  */
-typedef enum bref_state
+enum bref_state
 {
     BREF_IN_USE           = 0x01,
     BREF_WAITING_RESULT   = 0x02, /**< for session commands only */
     BREF_QUERY_ACTIVE     = 0x04, /**< for other queries */
     BREF_CLOSED           = 0x08,
     BREF_DB_MAPPED        = 0x10
-} bref_state_t;
+};
 
 #define BREF_IS_NOT_USED(s)         ((s)->state & ~BREF_IN_USE)
 #define BREF_IS_IN_USE(s)           ((s)->state & BREF_IN_USE)
@@ -76,13 +76,13 @@ typedef enum bref_state
 /**
  * Route target types
  */
-typedef enum
+enum route_target
 {
-    TARGET_UNDEFINED    = (1 << 0),
-    TARGET_NAMED_SERVER = (1 << 1),
-    TARGET_ALL          = (1 << 2),
-    TARGET_ANY          = (1 << 3)
-} route_target_t;
+    TARGET_UNDEFINED,
+    TARGET_NAMED_SERVER,
+    TARGET_ALL,
+    TARGET_ANY
+};
 
 /** Helper macros for route target type */
 #define TARGET_IS_UNDEFINED(t)    (t == TARGET_UNDEFINED)
@@ -174,14 +174,14 @@ private:
     int gen_databaselist();
     int inspect_backend_mapping_states(backend_ref_t *bref, GWBUF** wbuf);
     bool process_show_shards();
-    showdb_response_t parse_showdb_response(backend_ref_t* bref, GWBUF** buffer);
+    enum showdb_response parse_showdb_response(backend_ref_t* bref, GWBUF** buffer);
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     void route_queued_query();
     void synchronize_shard_map();
     void handle_mapping_reply(backend_ref_t* bref, GWBUF* pPacket);
     void process_response(backend_ref_t* bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
-                                 route_target_t& route_target);
+                                 enum route_target& route_target);
 
     /** Member variables */
     bool                  m_closed;         /**< True if session closed */

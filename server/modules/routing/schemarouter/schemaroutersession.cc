@@ -24,12 +24,11 @@ bool connect_backend_servers(backend_ref_t* backend_ref,
                              int router_nservers,
                              MXS_SESSION* session);
 
-route_target_t get_shard_route_target(uint32_t qtype);
 bool execute_sescmd_in_backend(backend_ref_t* backend_ref);
+void bref_clear_state(backend_ref_t* bref, enum bref_state state);
+void bref_set_state(backend_ref_t* bref, enum bref_state state);
 
-void bref_clear_state(backend_ref_t* bref, bref_state_t state);
-void bref_set_state(backend_ref_t* bref, bref_state_t state);
-
+enum route_target get_shard_route_target(uint32_t qtype);
 bool change_current_db(string& dest, Shard& shard, GWBUF* buf);
 bool extract_database(GWBUF* buf, char* str);
 bool detect_show_shards(GWBUF* query);
@@ -259,7 +258,7 @@ static void inspect_query(GWBUF* pPacket, uint32_t* type, qc_query_op_t* op, uin
 SERVER* SchemaRouterSession::resolve_query_target(GWBUF* pPacket,
                                                   uint32_t type,
                                                   uint8_t command,
-                                                  route_target_t& route_target)
+                                                  enum route_target& route_target)
 {
     SERVER* target = NULL;
 
@@ -359,7 +358,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
     SERVER* target = NULL;
     uint32_t type = QUERY_TYPE_UNKNOWN;
     qc_query_op_t op = QUERY_OP_UNDEFINED;
-    route_target_t route_target = TARGET_UNDEFINED;
+    enum route_target route_target = TARGET_UNDEFINED;
 
     inspect_query(pPacket, &type, &op, &command);
 
@@ -1200,7 +1199,7 @@ int SchemaRouterSession::inspect_backend_mapping_states(backend_ref_t *bref,
                 writebuf = gwbuf_append(bref->map_queue, writebuf);
                 bref->map_queue = NULL;
             }
-            showdb_response_t rc = parse_showdb_response(&m_backends[i],
+            enum showdb_response rc = parse_showdb_response(&m_backends[i],
                                                          &writebuf);
             if (rc == SHOWDB_FULL_RESPONSE)
             {
@@ -1412,13 +1411,13 @@ char* get_lenenc_str(void* data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-showdb_response_t SchemaRouterSession::parse_showdb_response(backend_ref_t* bref, GWBUF** buffer)
+enum showdb_response SchemaRouterSession::parse_showdb_response(backend_ref_t* bref, GWBUF** buffer)
 {
     unsigned char* ptr;
     SERVER* target = bref->backend->server;
     GWBUF* buf;
     bool duplicate_found = false;
-    showdb_response_t rval = SHOWDB_PARTIAL_RESPONSE;
+    enum showdb_response rval = SHOWDB_PARTIAL_RESPONSE;
 
     if (buffer == NULL || *buffer == NULL)
     {
@@ -1761,9 +1760,9 @@ return_succp:
  *  @return bitfield including the routing target, or the target server name
  *          if the query would otherwise be routed to slave.
  */
-route_target_t get_shard_route_target(uint32_t qtype)
+enum route_target get_shard_route_target(uint32_t qtype)
 {
-    route_target_t target = TARGET_UNDEFINED;
+    enum route_target target = TARGET_UNDEFINED;
 
     /**
      * These queries are not affected by hints
@@ -1844,7 +1843,7 @@ bool SchemaRouterSession::send_database_list()
     return rval;
 }
 
-void bref_clear_state(backend_ref_t* bref, bref_state_t state)
+void bref_clear_state(backend_ref_t* bref, enum bref_state state)
 {
     if (bref == NULL)
     {
@@ -1871,7 +1870,7 @@ void bref_clear_state(backend_ref_t* bref, bref_state_t state)
     }
 }
 
-void bref_set_state(backend_ref_t* bref, bref_state_t state)
+void bref_set_state(backend_ref_t* bref, enum bref_state state)
 {
     if (bref == NULL)
     {
