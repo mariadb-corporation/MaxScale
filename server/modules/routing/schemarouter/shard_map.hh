@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2016 MariaDB Corporation Ab
  *
@@ -10,8 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#pragma once
 
 #include <maxscale/cppdefs.hh>
 
