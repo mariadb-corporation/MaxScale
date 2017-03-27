@@ -17,12 +17,12 @@
 
 void SessionCommand::mark_reply_received()
 {
-    m_replySent = true;
+    m_reply_sent = true;
 }
 
 bool SessionCommand::is_reply_received() const
 {
-    return m_replySent;
+    return m_reply_sent;
 }
 
 uint8_t SessionCommand::get_command() const
@@ -44,7 +44,7 @@ SessionCommand::SessionCommand(GWBUF *buffer, uint64_t id):
     m_buffer(buffer),
     m_command(0),
     m_pos(id),
-    m_replySent(false)
+    m_reply_sent(false)
 {
     if (buffer)
     {
