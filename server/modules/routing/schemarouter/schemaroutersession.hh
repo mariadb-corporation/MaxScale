@@ -61,13 +61,6 @@ enum bref_state
     BREF_DB_MAPPED        = 0x10
 };
 
-#define BREF_IS_NOT_USED(s)         ((s)->state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->state & BREF_CLOSED)
-#define BREF_IS_MAPPED(s)           ((s)->mapped)
-
 #define SCHEMA_ERR_DUPLICATEDB 5000
 #define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
 #define SCHEMA_ERR_DBNOTFOUND 1049
@@ -95,20 +88,33 @@ enum route_target
  *
  * Owned by router client session.
  */
-typedef struct backend_ref_st
+class Backend
 {
-    int                n_mapping_eof;
-    GWBUF*             map_queue;
+public:
+    Backend(SERVER_REF *ref);
+    ~Backend();
+
     SERVER_REF*        backend;         /**< Backend server */
     DCB*               dcb;             /**< Backend DCB */
-    int                state;           /**< State of the backend */
+    GWBUF*             map_queue;
     bool               mapped;          /**< Whether the backend has been mapped */
+    int                n_mapping_eof;
     int                num_result_wait; /**< Number of not yet received results */
     GWBUF*             pending_cmd;     /**< Pending commands */
-
+    int                state;           /**< State of the backend */
     SessionCommandList session_commands;     /**< List of session commands that are
                                               * to be executed on this backend server */
-} backend_ref_t;
+};
+
+typedef list<Backend> BackendList;
+
+// TODO: Move these as member functions, currently they operate on iterators
+#define BREF_IS_NOT_USED(s)         ((s)->state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           ((s)->state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   ((s)->num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     ((s)->state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           ((s)->state & BREF_CLOSED)
+#define BREF_IS_MAPPED(s)           ((s)->mapped)
 
 class SchemaRouter;
 
@@ -163,8 +169,8 @@ public:
 private:
     /** Internal functions */
     SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
-    backend_ref_t* get_bref_from_dcb(DCB* dcb);
-    bool execute_sescmd_in_backend(backend_ref_t* backend_ref);
+    Backend* get_bref_from_dcb(DCB* dcb);
+    bool execute_sescmd_in_backend(Backend& backend_ref);
     bool get_shard_dcb(DCB** dcb, char* name);
     bool handle_default_db();
     bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
@@ -172,14 +178,14 @@ private:
     bool route_session_write(GWBUF* querybuf, uint8_t command);
     bool send_database_list();
     int gen_databaselist();
-    int inspect_backend_mapping_states(backend_ref_t *bref, GWBUF** wbuf);
+    int inspect_backend_mapping_states(Backend *bref, GWBUF** wbuf);
     bool process_show_shards();
-    enum showdb_response parse_showdb_response(backend_ref_t* bref, GWBUF** buffer);
+    enum showdb_response parse_showdb_response(Backend* bref, GWBUF** buffer);
     void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
     void route_queued_query();
     void synchronize_shard_map();
-    void handle_mapping_reply(backend_ref_t* bref, GWBUF* pPacket);
-    void process_response(backend_ref_t* bref, GWBUF** ppPacket);
+    void handle_mapping_reply(Backend* bref, GWBUF* pPacket);
+    void process_response(Backend* bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
 
@@ -187,9 +193,8 @@ private:
     bool                  m_closed;         /**< True if session closed */
     DCB*                  m_client;         /**< The client DCB */
     MYSQL_session*        m_mysql_session;  /**< Session client data (username, password, SHA1). */
-    backend_ref_t*        m_backends;       /**< Pointer to backend reference array */
+    BackendList           m_backends;       /**< Backend references */
     Config*               m_config;         /**< Pointer to router config */
-    int                   m_backend_count;  /**< Number of backends */
     SchemaRouter*         m_router;         /**< The router instance */
     Shard                 m_shard;          /**< Database to server mapping */
     string                m_connect_db;     /**< Database the user was trying to connect to */
