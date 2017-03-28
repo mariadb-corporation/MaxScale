@@ -21,13 +21,43 @@
 #include <maxscale/cdefs.h>
 
 #include <limits>
+#include <list>
 #include <set>
 #include <string>
+#include <tr1/memory>
 
+#include <maxscale/buffer.hh>
 #include <maxscale/pcre2.h>
+#include <maxscale/service.h>
 
+#include "session_command.hh"
+
+using std::list;
 using std::set;
 using std::string;
+using std::shared_ptr;
+
+using maxscale::Buffer;
+
+/**
+ * The state of the backend server reference
+ */
+enum bref_state
+{
+    BREF_IN_USE           = 0x01,
+    BREF_WAITING_RESULT   = 0x02, /**< for session commands only */
+    BREF_QUERY_ACTIVE     = 0x04, /**< for other queries */
+    BREF_CLOSED           = 0x08,
+    BREF_DB_MAPPED        = 0x10
+};
+
+// TODO: Move these as member functions, currently they operate on iterators
+#define BREF_IS_NOT_USED(s)         ((s)->m_state & ~BREF_IN_USE)
+#define BREF_IS_IN_USE(s)           ((s)->m_state & BREF_IN_USE)
+#define BREF_IS_WAITING_RESULT(s)   ((s)->m_num_result_wait > 0)
+#define BREF_IS_QUERY_ACTIVE(s)     ((s)->m_state & BREF_QUERY_ACTIVE)
+#define BREF_IS_CLOSED(s)           ((s)->m_state & BREF_CLOSED)
+#define BREF_IS_MAPPED(s)           ((s)->m_mapped)
 
 namespace schemarouter
 {
@@ -86,4 +116,34 @@ struct Stats
     {
     }
 };
+
+/**
+ * Reference to BACKEND.
+ *
+ * Owned by router client session.
+ */
+class Backend
+{
+public:
+    Backend(SERVER_REF *ref);
+    ~Backend();
+    bool execute_sescmd();
+    void clear_state(enum bref_state state);
+    void set_state(enum bref_state state);
+
+    SERVER_REF*        m_backend;          /**< Backend server */
+    DCB*               m_dcb;              /**< Backend DCB */
+    GWBUF*             m_map_queue;
+    bool               m_mapped;           /**< Whether the backend has been mapped */
+    int                m_num_mapping_eof;
+    int                m_num_result_wait;  /**< Number of not yet received results */
+    GWBUF*             m_pending_cmd;      /**< Pending commands */
+    int                m_state;            /**< State of the backend */
+    SessionCommandList m_session_commands; /**< List of session commands that are
+                                            * to be executed on this backend server */
+};
+
+typedef shared_ptr<Backend> SBackend;
+typedef list<SBackend> BackendList;
+
 }

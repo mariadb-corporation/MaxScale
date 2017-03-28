@@ -24,8 +24,7 @@
 
 using std::string;
 using std::set;
-using schemarouter::Config;
-using schemarouter::Stats;
+using namespace schemarouter;
 
 class SchemaRouterSession;
 

@@ -25,8 +25,8 @@
 
 using std::string;
 using std::list;
-using schemarouter::Config;
-using schemarouter::Stats;
+
+using namespace schemarouter;
 
 /**
  * Bitmask values for the router session's initialization. These values are used
@@ -47,18 +47,6 @@ enum showdb_response
     SHOWDB_PARTIAL_RESPONSE,
     SHOWDB_DUPLICATE_DATABASES,
     SHOWDB_FATAL_ERROR
-};
-
-/**
- * The state of the backend server reference
- */
-enum bref_state
-{
-    BREF_IN_USE           = 0x01,
-    BREF_WAITING_RESULT   = 0x02, /**< for session commands only */
-    BREF_QUERY_ACTIVE     = 0x04, /**< for other queries */
-    BREF_CLOSED           = 0x08,
-    BREF_DB_MAPPED        = 0x10
 };
 
 #define SCHEMA_ERR_DUPLICATEDB 5000
@@ -83,42 +71,6 @@ enum route_target
 #define TARGET_IS_ALL(t)          (t == TARGET_ALL)
 #define TARGET_IS_ANY(t)          (t == TARGET_ANY)
 
-/**
- * Reference to BACKEND.
- *
- * Owned by router client session.
- */
-class Backend
-{
-public:
-    Backend(SERVER_REF *ref);
-    ~Backend();
-    bool execute_sescmd();
-    void clear_state(enum bref_state state);
-    void set_state(enum bref_state state);
-
-    SERVER_REF*        m_backend;         /**< Backend server */
-    DCB*               m_dcb;             /**< Backend DCB */
-    GWBUF*             m_map_queue;
-    bool               m_mapped;          /**< Whether the backend has been mapped */
-    int                m_num_mapping_eof;
-    int                m_num_result_wait; /**< Number of not yet received results */
-    GWBUF*             m_pending_cmd;     /**< Pending commands */
-    int                m_state;           /**< State of the backend */
-    SessionCommandList m_session_commands;     /**< List of session commands that are
-                                              * to be executed on this backend server */
-};
-
-typedef list<Backend> BackendList;
-
-// TODO: Move these as member functions, currently they operate on iterators
-#define BREF_IS_NOT_USED(s)         ((s)->m_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->m_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->m_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->m_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->m_state & BREF_CLOSED)
-#define BREF_IS_MAPPED(s)           ((s)->m_mapped)
-
 class SchemaRouter;
 
 /**
@@ -128,7 +80,7 @@ class SchemaRouterSession: public mxs::RouterSession
 {
 public:
 
-    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router);
+    SchemaRouterSession(MXS_SESSION* session, SchemaRouter* router, BackendList& backends);
 
     /**
      * The RouterSession instance will be deleted when a client session
@@ -172,22 +124,22 @@ public:
 private:
     /** Internal functions */
     SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
-    Backend* get_bref_from_dcb(DCB* dcb);
+    SBackend get_bref_from_dcb(DCB* dcb);
     bool get_shard_dcb(DCB** dcb, char* name);
     bool handle_default_db();
-    bool handle_error_new_connection(DCB* backend_dcb, GWBUF* errmsg);
+    bool handle_error_new_connection(SBackend& bref, GWBUF* errmsg);
+    void handle_error_reply_client(SBackend& bref, GWBUF* errmsg);
     bool have_servers();
     bool route_session_write(GWBUF* querybuf, uint8_t command);
     bool send_database_list();
     int gen_databaselist();
-    int inspect_backend_mapping_states(Backend *bref, GWBUF** wbuf);
+    int inspect_backend_mapping_states(SBackend& bref, GWBUF** wbuf);
     bool process_show_shards();
-    enum showdb_response parse_showdb_response(Backend* bref, GWBUF** buffer);
-    void handle_error_reply_client(DCB* backend_dcb, GWBUF* errmsg);
+    enum showdb_response parse_showdb_response(SBackend& bref, GWBUF** buffer);
     void route_queued_query();
     void synchronize_shard_map();
-    void handle_mapping_reply(Backend* bref, GWBUF** pPacket);
-    void process_response(Backend* bref, GWBUF** ppPacket);
+    void handle_mapping_reply(SBackend& bref, GWBUF** pPacket);
+    void process_response(SBackend& bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
     bool ignore_duplicate_database(const char* data);
@@ -207,5 +159,5 @@ private:
     Stats                 m_stats;          /**< Statistics for this router */
     uint64_t              m_sent_sescmd;    /**< The latest session command being executed */
     uint64_t              m_replied_sescmd; /**< The last session command reply that was sent to the client */
-    Backend*              m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
+    SERVER*               m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
 };

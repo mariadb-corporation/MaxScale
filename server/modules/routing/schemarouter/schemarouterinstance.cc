@@ -170,9 +170,154 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService, char** pzOptions)
     return success ? new SchemaRouter(pService, config) : NULL;
 }
 
+/**
+ * @node Search all RUNNING backend servers and connect
+ *
+ * Parameters:
+ * @param backend_ref - in, use, out
+ *      Pointer to backend server reference object array.
+ *      NULL is not allowed.
+ *
+ * @param router_nservers - in, use
+ *      Number of backend server pointers pointed to by b.
+ *
+ * @param session - in, use
+ *      MaxScale session pointer used when connection to backend is established.
+ *
+ * @param  router - in, use
+ *      Pointer to router instance. Used when server states are qualified.
+ *
+ * @return true, if at least one master and one slave was found.
+ *
+ *
+ * @details It is assumed that there is only one available server.
+ *      There will be exactly as many backend references than there are
+ *      connections because all servers are supposed to be operational. It is,
+ *      however, possible that there are less available servers than expected.
+ */
+bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
+{
+    bool succp = false;
+    int servers_found = 0;
+    int servers_connected = 0;
+    int slaves_connected = 0;
+
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+    {
+        MXS_INFO("Servers and connection counts:");
+
+        for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+        {
+            SERVER_REF* b = (*it)->m_backend;
+
+            MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
+                     b->connections,
+                     b->server->stats.n_current,
+                     b->server->name,
+                     b->server->port,
+                     STRSRVSTATUS(b->server));
+        }
+    }
+    /**
+     * Scan server list and connect each of them. None should fail or session
+     * can't be established.
+     */
+    for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+    {
+        SERVER_REF* b = (*it)->m_backend;
+
+        if (SERVER_IS_RUNNING(b->server))
+        {
+            servers_found += 1;
+
+            /** Server is already connected */
+            if (BREF_IS_IN_USE((*it)))
+            {
+                slaves_connected += 1;
+            }
+            /** New server connection */
+            else
+            {
+                if (((*it)->m_dcb = dcb_connect(b->server, session, b->server->protocol)))
+                {
+                    servers_connected += 1;
+                    /**
+                     * When server fails, this callback
+                     * is called.
+                     * !!! Todo, routine which removes
+                     * corresponding entries from the hash
+                     * table.
+                     */
+
+                    (*it)->m_state = 0;
+                    (*it)->set_state(BREF_IN_USE);
+                    /**
+                     * Increase backend connection counter.
+                     * Server's stats are _increased_ in
+                     * dcb.c:dcb_alloc !
+                     * But decreased in the calling function
+                     * of dcb_close.
+                     */
+                    atomic_add(&b->connections, 1);
+                }
+                else
+                {
+                    succp = false;
+                    MXS_ERROR("Unable to establish "
+                              "connection with slave %s:%d",
+                              b->server->name,
+                              b->server->port);
+                    /* handle connect error */
+                    break;
+                }
+            }
+        }
+    }
+
+    if (servers_connected > 0)
+    {
+        succp = true;
+
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+        {
+            for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
+            {
+                SERVER_REF* b = (*it)->m_backend;
+
+                if (BREF_IS_IN_USE((*it)))
+                {
+                    MXS_INFO("Connected %s in \t%s:%d",
+                             STRSRVSTATUS(b->server),
+                             b->server->name,
+                             b->server->port);
+                }
+            }
+        }
+    }
+
+    return succp;
+}
+
 SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
 {
-    return new SchemaRouterSession(pSession, this);
+    BackendList backends;
+
+    for (SERVER_REF *ref = m_service->dbref; ref; ref = ref->next)
+    {
+        if (ref->active)
+        {
+            backends.push_back(SBackend(new Backend(ref)));
+        }
+    }
+
+    SchemaRouterSession* rval = NULL;
+
+    if (connect_backend_servers(backends, pSession))
+    {
+        rval = new SchemaRouterSession(pSession, this, backends);
+    }
+
+    return rval;
 }
 
 void SchemaRouter::diagnostics(DCB* dcb)
