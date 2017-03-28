@@ -127,8 +127,6 @@ private:
     SBackend get_bref_from_dcb(DCB* dcb);
     bool get_shard_dcb(DCB** dcb, char* name);
     bool handle_default_db();
-    bool handle_error_new_connection(SBackend& bref, GWBUF* errmsg);
-    void handle_error_reply_client(SBackend& bref, GWBUF* errmsg);
     bool have_servers();
     bool route_session_write(GWBUF* querybuf, uint8_t command);
     bool send_database_list();

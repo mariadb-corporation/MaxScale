@@ -597,11 +597,6 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
 {
     ss_dassert(pProblem->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     CHK_DCB(pProblem);
-    MXS_SESSION *session = pProblem->session;
-    ss_dassert(session);
-
-    CHK_SESSION(session);
-
     SBackend bref = get_bref_from_dcb(pProblem);
 
     if (bref.get() == NULL) // Should never happen
@@ -612,11 +607,21 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
     switch (action)
     {
     case ERRACT_NEW_CONNECTION:
-        *pSuccess = handle_error_new_connection(bref, pMessage);
+        if (BREF_IS_WAITING_RESULT(bref))
+        {
+            /** If the client is waiting for a reply, send an error. */
+            m_client->func.write(m_client, gwbuf_clone(pMessage));
+        }
+
+        *pSuccess = have_servers();
         break;
 
     case ERRACT_REPLY_CLIENT:
-        handle_error_reply_client(bref, pMessage);
+        if (m_client->session->state == SESSION_STATE_ROUTER_READY)
+        {
+            m_client->func.write(m_client, gwbuf_clone(pMessage));
+        }
+
         *pSuccess = false; /*< no new backend servers were made available */
         break;
 
@@ -625,7 +630,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
         break;
     }
 
-    dcb_close(pProblem);
+    bref->close();
 }
 
 /**
@@ -781,17 +786,6 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
     return succp;
 }
 
-void SchemaRouterSession::handle_error_reply_client(SBackend& bref, GWBUF* errmsg)
-{
-    bref->clear_state(BREF_IN_USE);
-    bref->set_state(BREF_CLOSED);
-
-    if (m_client->session->state == SESSION_STATE_ROUTER_READY)
-    {
-        m_client->func.write(m_client, gwbuf_clone(errmsg));
-    }
-}
-
 /**
  * Check if a router session has servers in use
  * @param rses Router client session
@@ -809,38 +803,6 @@ bool SchemaRouterSession::have_servers()
     }
 
     return false;
-}
-
-/**
- * Check if there is backend reference pointing at failed DCB, and reset its
- * flags. Then clear DCB's callback and finally try to reconnect.
- *
- * This must be called with router lock.
- *
- * @param inst          router instance
- * @param rses          router client session
- * @param dcb           failed DCB
- * @param errmsg        error message which is sent to client if it is waiting
- *
- * @return true if there are enough backend connections to continue, false if not
- */
-bool SchemaRouterSession::handle_error_new_connection(SBackend& bref, GWBUF* errmsg)
-{
-    if (BREF_IS_WAITING_RESULT(bref))
-    {
-        /**
-         * If query was sent through the bref and it is waiting for reply from
-         * the backend server it is necessary to send an error to the client
-         * because it is waiting for reply.
-         */
-        m_client->func.write(m_client, gwbuf_clone(errmsg));
-        bref->clear_state(BREF_WAITING_RESULT);
-    }
-
-    bref->clear_state(BREF_IN_USE);
-    bref->set_state(BREF_CLOSED);
-
-    return have_servers();
 }
 
 /**
