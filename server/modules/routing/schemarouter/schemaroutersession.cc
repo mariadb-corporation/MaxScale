@@ -527,7 +527,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 ret = 1;
             }
         }
-        else
+        else if (target == NULL)
         {
             target = resolve_query_target(pPacket, type, command, route_target);
         }
@@ -601,7 +601,7 @@ void SchemaRouterSession::handle_mapping_reply(Backend* bref, GWBUF** pPacket)
 
         if (m_queue.size() && rc != -1)
         {
-            ss_dassert(m_state == INIT_READY);
+            ss_dassert(m_state == INIT_READY || m_state == INIT_USE_DB);
             route_queued_query();
         }
     }
@@ -1726,21 +1726,21 @@ SERVER* SchemaRouterSession::get_shard_target(GWBUF* buffer, uint32_t qtype)
                 MXS_INFO("Routing hint found (%s)", rval->unique_name);
             }
         }
+    }
 
-        if (rval == NULL && !has_dbs && m_current_db.length())
+    if (rval == NULL && !has_dbs && m_current_db.length())
+    {
+        /**
+         * If the target name has not been found and the session has an
+         * active database, set is as the target
+         */
+
+        rval = m_shard.get_location(m_current_db);
+
+        if (rval)
         {
-            /**
-             * If the target name has not been found and the session has an
-             * active database, set is as the target
-             */
-
-            rval = m_shard.get_location(m_current_db);
-
-            if (rval)
-            {
-                MXS_INFO("Using active database '%s' on '%s'",
-                         m_current_db.c_str(), rval->unique_name);
-            }
+            MXS_INFO("Using active database '%s' on '%s'",
+                     m_current_db.c_str(), rval->unique_name);
         }
     }
 
