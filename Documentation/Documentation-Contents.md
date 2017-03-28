@@ -64,6 +64,7 @@ of their use.
  - [Schemarouter](Routers/SchemaRouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
  - [Avrorouter](Routers/Avrorouter.md)
+ - [HintRouter](Routers/HintRouter.md)
 
 There are also two diagnostic routing modules. The CLI is for MaxAdmin and
 the Debug CLI client for Telnet.
