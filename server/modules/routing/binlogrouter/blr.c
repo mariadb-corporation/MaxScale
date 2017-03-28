@@ -117,8 +117,7 @@ static void destroyInstance(MXS_ROUTER *instance);
 bool blr_extract_key(const char *linebuf, int nline, ROUTER_INSTANCE *router);
 bool blr_get_encryption_key(ROUTER_INSTANCE *router);
 int blr_parse_key_file(ROUTER_INSTANCE *router);
-static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in);
-static void mariadb_gtid_info_free(MARIADB_GTID_INFO *in);
+static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst);
 
 static void stats_func(void *);
 
@@ -390,6 +389,11 @@ createInstance(SERVICE *service, char **options)
                     defuuid[8], defuuid[9], defuuid[10], defuuid[11],
                     defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
         }
+        else
+        {
+            free_instance(inst);
+            return NULL;
+        }
     }
 
     /*
@@ -642,38 +646,6 @@ createInstance(SERVICE *service, char **options)
         return NULL;
     }
 
-    /* Enable MariaDB GTID repo */
-    if (inst->mariadb10_compat &&
-        inst->mariadb_gtid)
-    {
-        if (!inst->trx_safe)
-        {
-            MXS_ERROR("MariaDB GTID can be enabled only"
-                      " with Transaction Safety feature."
-                      " Please enable it with option 'transaction_safety = on'");
-            free_instance(inst);
-            return NULL;
-        }
-
-        if ((inst->gtid_repo = hashtable_alloc(1000,
-                                               hashtable_item_strhash,
-                                               hashtable_item_strcmp)) == NULL)
-        {
-            MXS_ERROR("Service %s, cannot allocate MariaDB GTID hashtable", service->name);
-            free_instance(inst);
-            return NULL;
-        }
-
-        hashtable_memory_fns(inst->gtid_repo,
-                             hashtable_item_strdup,
-                             (HASHCOPYFN)mariadb_gtid_info_dup,
-                             hashtable_item_free,
-                             (HASHFREEFN)mariadb_gtid_info_free);
-
-        MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
-                   service->name);
-    }
-
     if (inst->serverid <= 0)
     {
         MXS_ERROR("Service %s, server-id is not configured. "
@@ -712,6 +684,27 @@ createInstance(SERVICE *service, char **options)
         }
     }
 
+    /* Enable MariaDB the GTID maps store */
+    if (inst->mariadb10_compat &&
+        inst->mariadb_gtid)
+    {
+        if (!inst->trx_safe)
+        {
+            MXS_ERROR("MariaDB GTID can be enabled only"
+                      " with Transaction Safety feature."
+                      " Please enable it with option 'transaction_safety = on'");
+            free_instance(inst);
+            return NULL;
+        }
+
+        /* Create/Open R/W GTID sqlite3 storage */
+        if (!blr_open_gtid_maps_storage(inst))
+        {
+            free_instance(inst);
+            return NULL;
+        }
+    }
+
     /* Dynamically allocate master_host server struct, not written in any cnf file */
     if (service->dbref == NULL)
     {
@@ -724,6 +717,7 @@ createInstance(SERVICE *service, char **options)
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name);
 
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -736,7 +730,7 @@ createInstance(SERVICE *service, char **options)
 
             server_free(service->dbref->server);
             MXS_FREE(service->dbref);
-
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -828,7 +822,7 @@ createInstance(SERVICE *service, char **options)
                 server_free(service->dbref->server);
                 MXS_FREE(service->dbref);
                 service->dbref = NULL;
-
+                sqlite3_close_v2(inst->gtid_maps);
                 free_instance(inst);
                 return NULL;
             }
@@ -873,6 +867,7 @@ createInstance(SERVICE *service, char **options)
                 service->dbref = NULL;
             }
 
+            sqlite3_close_v2(inst->gtid_maps);
             free_instance(inst);
             return NULL;
         }
@@ -1043,6 +1038,8 @@ newSession(MXS_ROUTER *instance, MXS_SESSION *session)
     slave->lastEventReceived = 0;
     slave->encryption_ctx = NULL;
     slave->mariadb_gtid = NULL;
+
+    slave->gtid_maps = NULL;
 
     /**
      * Add this session to the list of active sessions.
@@ -2501,6 +2498,8 @@ destroyInstance(MXS_ROUTER *instance)
         inst->master_state = BLRM_SLAVE_STOPPED;
     }
 
+    spinlock_release(&inst->lock);
+
     if (inst->client)
     {
         if (inst->client->state == DCB_STATE_POLLING)
@@ -2525,10 +2524,8 @@ destroyInstance(MXS_ROUTER *instance)
                     inst->service->name, inst->binlog_name, inst->current_pos, inst->binlog_position);
     }
 
-    /* Free GTID hashtable */
-    hashtable_free(inst->gtid_repo);
-
-    spinlock_release(&inst->lock);
+    /* Close GTID maps database */
+    sqlite3_close_v2(inst->gtid_maps);
 }
 
 /**
@@ -2724,42 +2721,49 @@ int blr_parse_key_file(ROUTER_INSTANCE *router)
 }
 
 /**
- * Free routine for GTID repo hashtable
+ * Create / Open R/W GTID maps database
  *
- * @param    in    The data to free
  */
-static void mariadb_gtid_info_free(MARIADB_GTID_INFO *in)
+static bool blr_open_gtid_maps_storage(ROUTER_INSTANCE *inst)
 {
-    if (in)
-    {
-        MXS_FREE(in->gtid);
-        MXS_FREE(in->file);
-        MXS_FREE(in);
-    }
-}
+    char dbpath[PATH_MAX + 1];
+    snprintf(dbpath, sizeof(dbpath), "/%s/%s",
+             inst->binlogdir, GTID_MAPS_DB);
 
-/**
- * Copy routine for GTID repo hashtable
- *
- * @param     in    The data to copy
- * @return    New allocated value or NULL
- */
-static MARIADB_GTID_INFO *mariadb_gtid_info_dup(const MARIADB_GTID_INFO *in)
-{
-    MARIADB_GTID_INFO *rval = (MARIADB_GTID_INFO *) MXS_CALLOC(1, sizeof(MARIADB_GTID_INFO));
-    char *gtid = MXS_STRDUP(in->gtid);
-    char *file = MXS_STRDUP(in->file);
-    if (!gtid || !rval)
+    /* Open/Create the GTID maps database */
+    if (sqlite3_open_v2(dbpath,
+                        &inst->gtid_maps,
+                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                        NULL) != SQLITE_OK)
     {
-        MXS_FREE(rval);
-        MXS_FREE(gtid);
-        MXS_FREE(file);
-        return NULL;
+        MXS_ERROR("Failed to open GTID maps SQLite database '%s': %s", dbpath,
+                  sqlite3_errmsg(inst->gtid_maps));
+        return false;
     }
-    rval->gtid = gtid;
-    rval->file = file;
-    rval->start = in-> start;
-    rval->end = in->end;
 
-    return (void *) rval;
+    char* errmsg;
+    /* Create the gtid_maps table */
+    int rc = sqlite3_exec(inst->gtid_maps,
+                          "CREATE TABLE IF NOT EXISTS "
+                          "gtid_maps(gtid varchar(255), "
+                          "binlog_file varchar(255), "
+                          "start_pos bigint, "
+                          "end_pos bigint, "
+                          "primary key(gtid));",
+                          NULL, NULL, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+        MXS_ERROR("Service %s, failed to create GTID index table 'gtid_maps': %s",
+                  inst->service->name,
+                  sqlite3_errmsg(inst->gtid_maps));
+        sqlite3_free(errmsg);
+        /* Close GTID maps database */
+        sqlite3_close_v2(inst->gtid_maps);
+        return false;
+    }
+
+    MXS_NOTICE("%s: Service has MariaDB GTID otion set to ON",
+               inst->service->name);
+
+    return true;
 }

@@ -57,6 +57,7 @@
 #include <maxscale/thread.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/secrets.h>
+#include <maxscale/sqlite3.h>
 
 MXS_BEGIN_DECLS
 
@@ -92,6 +93,11 @@ MXS_BEGIN_DECLS
 /* MariaDB GTID string len */
 #define GTID_MAX_LEN 42
 
+/* GTID slite3 query buffer size */
+#define GTID_SQL_BUFFER_SIZE 1024
+
+/* GTID slite3 database name */
+#define GTID_MAPS_DB "gtid_maps.db"
 /**
  * Supported Encryption algorithms
  *
@@ -451,6 +457,7 @@ typedef struct router_slave
     void              *encryption_ctx; /*< Encryption context */
     bool              gtid_strict_mode;/*< MariaDB 10 Slave sets gtid_strict_mode */
     char              *mariadb_gtid;   /*< MariaDB 10 Slave connects with GTID */
+    sqlite3           *gtid_maps;      /*< GTID storage client handle, read only*/
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -637,6 +644,7 @@ typedef struct router_instance
                                              * This allows MariaDB 10 slave servers
                                              * connecting with GTID */
     HASHTABLE         *gtid_repo;           /*< Storage for MariaDB GTIDs */
+    sqlite3           *gtid_maps;           /*< GTID storage */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 
@@ -881,6 +889,9 @@ extern int blr_check_encryption_algorithm(char *);
 extern const char *blr_encryption_algorithm_list(void);
 extern bool blr_get_encryption_key(ROUTER_INSTANCE *);
 extern const char *blr_skip_leading_sql_comments(const char *);
+extern bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *,
+                                   const char *,
+                                   MARIADB_GTID_INFO *);
 
 MXS_END_DECLS
 

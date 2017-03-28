@@ -3297,7 +3297,14 @@ static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *out
  */
 bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
 {
+    static const char insert_tpl[] = "INSERT OR IGNORE INTO gtid_maps("
+                             "gtid, "
+                             "binlog_file, "
+                             "start_pos, end_pos) "
+                             "VALUES (\"%s\", \"%s\", %lu, %lu);";
     MARIADB_GTID_INFO gtid_info;
+    char *errmsg;
+    char insert_sql[GTID_SQL_BUFFER_SIZE];
 
     gtid_info.gtid = inst->pending_transaction.gtid;
     gtid_info.file = inst->binlog_name;
@@ -3305,41 +3312,107 @@ bool blr_save_mariadb_gtid(ROUTER_INSTANCE *inst)
     gtid_info.end = inst->pending_transaction.end_pos;
 
     /* Save GTID into repo */
-    if (!hashtable_add(inst->gtid_repo,
-                      inst->pending_transaction.gtid,
-                      &gtid_info))
-    {
-         MXS_ERROR("Service %s: error saving mariadb GTID %s into repo",
-                   inst->service->name,
-                   inst->pending_transaction.gtid);
-         return false;
-    }
+    snprintf(insert_sql,
+             GTID_SQL_BUFFER_SIZE,
+             insert_tpl,
+             gtid_info.gtid,
+             gtid_info.file,
+             gtid_info.start,
+             gtid_info.end);
 
-    MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu:%lu",
+    /* Save GTID into repo */
+    if (sqlite3_exec(inst->gtid_maps, insert_sql, NULL, NULL,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Service %s: failed to insert GTID %s for %s:%lu,%lu "
+                  "into gtid_maps database: %s",
+                  inst->service->name,
+                  gtid_info.gtid,
+                  gtid_info.file,
+                  gtid_info.start,
+                  gtid_info.end,
+                  errmsg);
+        return false;
+    }
+    sqlite3_free(errmsg);
+
+    MXS_DEBUG("Saved MariaDB GTID '%s', %s:%lu,%lu, insert SQL [%s]",
               gtid_info.gtid,
               inst->binlog_name,
               gtid_info.start,
-              gtid_info.end);
+              gtid_info.end,
+              insert_sql);
 
     return true;
 }
 
 /**
- * Get MariaDB GTID frim repo
+ * GTID select callbck for sqlite3 database
  *
- * @param    inst The router instance
- * @return   Found data or NULL
+ * @param data      Data pointer from caller
+ * @param cols      Number of columns
+ * @param values    The values
+ * @param names     The column names
+ *
+ * @return          0 on success, 1 otherwise
+ */
+static int gtid_select_cb(void *data, int cols, char** values, char** names)
+{
+    MARIADB_GTID_INFO *result = (MARIADB_GTID_INFO *)data;
+
+    ss_dassert(cols >= 4);
+
+    if (values[0] &&
+        values[1] &&
+        values[2] &&
+        values[3])
+    {
+        result->gtid = MXS_STRDUP_A(values[0]);
+        result->file = MXS_STRDUP_A(values[1]);
+        result->start = atol(values[2]);
+        result->end = atol(values[3]);
+    }
+
+    return 0;
+}
+
+/**
+ * Get MariaDB GTID from repo
+ *
+ * @param    slave   The current slave instance
+ * @param    gtid    The GTID to look for
+ * @param    result  The (allocated) ouput data to fill
+ * @return   True if with found GTID or false
  */
 
-MARIADB_GTID_INFO *blr_fetch_mariadb_gtid(ROUTER_INSTANCE *inst, char *gtid)
+bool blr_fetch_mariadb_gtid(ROUTER_SLAVE *slave,
+                            const char *gtid,
+                            MARIADB_GTID_INFO *result)
 {
-   if (!gtid)
-   {
-       return NULL;
-   }
-   else
-   {
-       return (MARIADB_GTID_INFO *)hashtable_fetch(inst->gtid_repo,
-                                                   gtid);
-   }
+    char *errmsg = NULL;
+    char select_query[GTID_SQL_BUFFER_SIZE];
+    static const char select_tpl[] = "SELECT gtid, binlog_file, start_pos, end_pos "
+                                     "FROM gtid_maps "
+                                     "WHERE gtid = '%s' LIMIT 1;";
+    ss_dassert(gtid != NULL);
+
+    snprintf(select_query,
+             GTID_SQL_BUFFER_SIZE,
+             select_tpl,
+             gtid);
+
+    /* Find the GTID */
+    if (sqlite3_exec(slave->gtid_maps,
+                     select_query,
+                     gtid_select_cb,
+                     result,
+                     &errmsg) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to select GTID %s from GTID maps DB: %s, select [%s]",
+                  gtid, errmsg, select_query);
+        sqlite3_free(errmsg);
+        return false;
+    }
+
+    return result->gtid ? true : false;
 }

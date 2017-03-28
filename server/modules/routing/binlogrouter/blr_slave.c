@@ -166,7 +166,6 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave
 static int blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *error_message);
 static int blr_slave_read_ste(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint32_t fde_end_pos);
 static GWBUF *blr_slave_read_fde(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
-extern MARIADB_GTID_INFO *blr_fetch_mariadb_gtid(ROUTER_INSTANCE *inst, char *gtid);
 static bool blr_handle_select_smt(ROUTER_INSTANCE *router,
                                   ROUTER_SLAVE *slave,
                                   char *select_stmt);
@@ -2118,7 +2117,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
             return 1;
         }
 
-        /* Set the received filename */
+        /* Set the received filename: it could be changed later */
         memcpy(slave->binlogfile, (char *)ptr, binlognamelen);
         slave->binlogfile[binlognamelen] = 0;
     }
@@ -2144,15 +2143,39 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
         }
         else
         {
-            /* TODO */
-            /* Shall we avoid the lookup if file & pos is set? */
+            MARIADB_GTID_INFO f_gtid = {};
+            char dbpath[PATH_MAX + 1];
+            snprintf(dbpath, sizeof(dbpath), "/%s/%s",
+                     router->binlogdir, GTID_MAPS_DB);
 
-            /* Fetch the GTID from the storage */
-            MARIADB_GTID_INFO *f_gtid = blr_fetch_mariadb_gtid(router,
-                                                               slave->mariadb_gtid);
+            /* Result set init */
+            f_gtid.gtid = NULL;
+
+            /* Open GTID maps read-only database */
+            if (sqlite3_open_v2(dbpath,
+                                &slave->gtid_maps,
+                                SQLITE_OPEN_READONLY,
+                                NULL) != SQLITE_OK)
+            {
+                MXS_ERROR("Slave %lu: failed to open GTID maps db '%s': %s",
+                          (unsigned long)slave->serverid,
+                          dbpath,
+                          sqlite3_errmsg(slave->gtid_maps));
+
+                slave->gtid_maps = NULL;
+            }
+            else
+            {
+                /* Fetch the GTID from the maps storage */
+                blr_fetch_mariadb_gtid(slave, slave->mariadb_gtid, &f_gtid);
+
+                /* Close GTID maps database */
+                sqlite3_close_v2(slave->gtid_maps);
+                slave->gtid_maps = NULL;
+            }
 
             /* Not Found */
-            if (!f_gtid)
+            if (!f_gtid.gtid)
             {
                 MXS_WARNING("Requested MariaDB GTID '%s' by server %lu"
                             " has not been found",
@@ -2178,7 +2201,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                 else
                 {
                     /**
-                     * Right now: use current router binlog file pos 4
+                     * Right now: just use current router binlog file pos 4
                      */
                 }
             }
@@ -2188,8 +2211,8 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                 MXS_INFO("Found GTID '%s' for slave %lu at %s:%lu",
                          slave->mariadb_gtid,
                          (unsigned long)slave->serverid,
-                         f_gtid->file,
-                         f_gtid->end);
+                         f_gtid.file,
+                         f_gtid.end);
 
                 /**
                  * Check whether GTID request has file & pos:
@@ -2201,30 +2224,46 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
                      */
 
                     /* Set binlog file to the GTID one */
-                    strcpy(slave->binlogfile, f_gtid->file);
+                    strcpy(slave->binlogfile, f_gtid.file);
 
                     /**
                      *  Set position to GTID event pos:
                      *  i.e the next pos of COMMIT)
                      */
-                    slave->binlog_pos = f_gtid->end;
+                    slave->binlog_pos = f_gtid.end;
                 }
                 else
                 {
                     /**
-                     * The slave has requested a GTID while
-                     * requesting a file & pos which can be different
-                     * from file @ pos of that GTID:
+                     * The slave has requested a GTID with
+                     * binlog file & position.
                      *
-                     * i.e: Log file is different (after rotate)
-                     * or other events (if any) could have been
-                     * written to binlog after GTID.
+                     * The log file which GTID belongs to
+                     * could be different: this could happen
+                     * after a rotate event or other non GTID events
+                     * could have been written to binlog after that GTID.
                      *
-                     * Binlog file is the requested one, so just set
-                     * the pos to the requested one
+                     * If the GTID file is the requested one, use GTID info,
+                     * otherwise just set the pos to the requested one.
+                     * In this case the file is the one from the request.
                      */
-                    slave->binlog_pos = requested_pos;
+                    if (strcmp(slave->binlogfile, f_gtid.file) == 0)
+                    {
+                        /* Set binlog file to the GTID one */
+                        strcpy(slave->binlogfile, f_gtid.file);
+                        /* Set position to GTID event next_pos */
+                        slave->binlog_pos = f_gtid.end;
+                    }
+                    else
+                    {
+                        /* Set the requested pos */
+                        slave->binlog_pos = requested_pos;
+                    }
                 }
+
+                /* Free gtid and file from result */
+                MXS_FREE(f_gtid.gtid);
+                MXS_FREE(f_gtid.file);
             }
         }
     }
