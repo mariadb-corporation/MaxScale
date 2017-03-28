@@ -456,15 +456,21 @@ void RRRouterSession::close()
          * of most API functions to quickly stop the processing of closed sessions.
          */
         m_closed = true;
-        int closed_conns = 0;
         for (unsigned int i = 0; i < m_backend_dcbs.size(); i++)
         {
             DCB* dcb = m_backend_dcbs[i];
             SERVER_REF* sref = dcb->service->dbref;
+            while (sref && (sref->server != dcb->server))
+            {
+                sref = sref->next;
+            }
+            if (sref)
+            {
+                atomic_add(&(sref->connections), -1);
+            }
             dcb_close(dcb);
-            closed_conns++;
-            atomic_add(&(sref->connections), -1);
         }
+        int closed_conns = m_backend_dcbs.size();
         m_backend_dcbs.clear();
         if (m_write_dcb)
         {
