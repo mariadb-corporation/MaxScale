@@ -818,11 +818,15 @@ bool CacheFilterSession::should_consult_cache(GWBUF* pPacket)
 
     if (qc_query_is_type(type_mask, QUERY_TYPE_BEGIN_TRX))
     {
+        if (log_decisions())
+        {
+            zReason = "transaction start";
+        }
+
         // When a transaction is started, we initially assume it is read-only.
         m_is_read_only = true;
     }
-
-    if (!session_trx_is_active(m_pSession))
+    else if (!session_trx_is_active(m_pSession))
     {
         if (log_decisions())
         {
