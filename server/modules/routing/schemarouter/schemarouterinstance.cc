@@ -208,7 +208,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
 
         for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
         {
-            SERVER_REF* b = (*it)->m_backend;
+            SERVER_REF* b = (*it)->backend();
 
             MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
                      b->connections,
@@ -224,7 +224,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
      */
     for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
     {
-        SERVER_REF* b = (*it)->m_backend;
+        SERVER_REF* b = (*it)->backend();
 
         if (SERVER_IS_RUNNING(b->server))
         {
@@ -238,27 +238,9 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
             /** New server connection */
             else
             {
-                if (((*it)->m_dcb = dcb_connect(b->server, session, b->server->protocol)))
+                if ((*it)->connect(session))
                 {
                     servers_connected += 1;
-                    /**
-                     * When server fails, this callback
-                     * is called.
-                     * !!! Todo, routine which removes
-                     * corresponding entries from the hash
-                     * table.
-                     */
-
-                    (*it)->m_state = 0;
-                    (*it)->set_state(BREF_IN_USE);
-                    /**
-                     * Increase backend connection counter.
-                     * Server's stats are _increased_ in
-                     * dcb.c:dcb_alloc !
-                     * But decreased in the calling function
-                     * of dcb_close.
-                     */
-                    atomic_add(&b->connections, 1);
                 }
                 else
                 {
@@ -282,7 +264,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
         {
             for (BackendList::iterator it = backends.begin(); it != backends.end(); it++)
             {
-                SERVER_REF* b = (*it)->m_backend;
+                SERVER_REF* b = (*it)->backend();
 
                 if (BREF_IS_IN_USE((*it)))
                 {

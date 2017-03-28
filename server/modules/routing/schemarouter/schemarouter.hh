@@ -130,14 +130,25 @@ public:
     bool execute_sescmd();
     void clear_state(enum bref_state state);
     void set_state(enum bref_state state);
+    SERVER_REF* backend() const;
+    bool connect(MXS_SESSION*);
+    void close();
+    DCB* dcb() const;
+    bool write(GWBUF* buffer);
+    void store_command(GWBUF* buffer);
+    bool write_stored_command();
 
+private:
+    bool               m_closed;           /**< True if a connection has been opened and closed */
     SERVER_REF*        m_backend;          /**< Backend server */
     DCB*               m_dcb;              /**< Backend DCB */
+
+public:
     GWBUF*             m_map_queue;
     bool               m_mapped;           /**< Whether the backend has been mapped */
     int                m_num_mapping_eof;
     int                m_num_result_wait;  /**< Number of not yet received results */
-    GWBUF*             m_pending_cmd;      /**< Pending commands */
+    Buffer             m_pending_cmd;      /**< Pending commands */
     int                m_state;            /**< State of the backend */
     SessionCommandList m_session_commands; /**< List of session commands that are
                                             * to be executed on this backend server */

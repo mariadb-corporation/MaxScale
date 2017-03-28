@@ -132,7 +132,7 @@ private:
     bool have_servers();
     bool route_session_write(GWBUF* querybuf, uint8_t command);
     bool send_database_list();
-    int gen_databaselist();
+    void gen_databaselist();
     int inspect_backend_mapping_states(SBackend& bref, GWBUF** wbuf);
     bool process_show_shards();
     enum showdb_response parse_showdb_response(SBackend& bref, GWBUF** buffer);
