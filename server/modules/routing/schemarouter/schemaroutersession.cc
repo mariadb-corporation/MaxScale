@@ -865,7 +865,7 @@ SBackend SchemaRouterSession::get_bref_from_dcb(DCB* dcb)
 
     // This should not happen
     ss_dassert(false);
-    return SBackend(NULL);
+    return SBackend(reinterpret_cast<Backend*>(NULL));
 }
 
 /**

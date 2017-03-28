@@ -35,7 +35,7 @@
 using std::list;
 using std::set;
 using std::string;
-using std::shared_ptr;
+using std::tr1::shared_ptr;
 
 using maxscale::Buffer;
 
