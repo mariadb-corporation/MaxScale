@@ -820,6 +820,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     {
         match_server_pairs = max_pairs;
     }
+    ss_dassert(match_server_pairs >= 25); // If this limit is modified, update documentation.
     /* Create parameter pair names */
     generate_param_names(match_server_pairs);
 
