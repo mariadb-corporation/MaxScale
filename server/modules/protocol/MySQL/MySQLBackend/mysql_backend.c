@@ -567,14 +567,11 @@ static void gw_reply_on_error(DCB *dcb, mxs_auth_state_t state)
     MXS_SESSION *session = dcb->session;
     CHK_SESSION(session);
 
-    if (session->router_session)
+    if (!dcb->dcb_errhandle_called)
     {
         do_handle_error(dcb, ERRACT_REPLY_CLIENT,
                         "Authentication with backend failed. Session will be closed.");
         session->state = SESSION_STATE_STOPPING;
-    }
-    else
-    {
         dcb->dcb_errhandle_called = true;
     }
 }

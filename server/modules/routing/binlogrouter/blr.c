@@ -1793,45 +1793,47 @@ errorReply(MXS_ROUTER *instance,
     mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
     errmsg = extract_message(message);
 
-    /** Check router state and set errno an message */
-    if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
+    if (action == ERRACT_REPLY_CLIENT)
     {
-        /* Authentication failed */
-        if (router->master_state == BLRM_TIMESTAMP)
+        /** Check router state and set errno an message */
+        if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
         {
-            spinlock_acquire(&router->lock);
-            /* set io error message */
-            if (router->m_errmsg)
+            /* Authentication failed */
+            if (router->master_state == BLRM_TIMESTAMP)
             {
-                free(router->m_errmsg);
+                spinlock_acquire(&router->lock);
+                /* set io error message */
+                if (router->m_errmsg)
+                {
+                    free(router->m_errmsg);
+                }
+                router->m_errmsg = mxs_strdup("#28000 Authentication with master server failed");
+                /* set mysql_errno */
+                router->m_errno = 1045;
+
+                /* Stop replication */
+                router->master_state = BLRM_SLAVE_STOPPED;
+                spinlock_release(&router->lock);
+
+                /* Force backend DCB close */
+                dcb_close(backend_dcb);
+
+                MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
+                          "%s while connecting to master %s:%d",
+                          router->service->name, router->m_errno, router->m_errmsg,
+                          blrm_states[BLRM_TIMESTAMP], msg,
+                          router->service->dbref->server->name,
+                          router->service->dbref->server->port);
             }
-            router->m_errmsg = mxs_strdup("#28000 Authentication with master server failed");
-            /* set mysql_errno */
-            router->m_errno = 1045;
-
-            /* Stop replication */
-            router->master_state = BLRM_SLAVE_STOPPED;
-            spinlock_release(&router->lock);
-
-            /* Force backend DCB close */
-            dcb_close(backend_dcb);
-
-            MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                      "%s while connecting to master %s:%d",
-                      router->service->name, router->m_errno, router->m_errmsg,
-                      blrm_states[BLRM_TIMESTAMP], msg,
-                      router->service->dbref->server->name,
-                      router->service->dbref->server->port);
         }
-    }
-    if (errmsg)
-    {
-        free(errmsg);
-    }
+        if (errmsg)
+        {
+            MXS_FREE(errmsg);
+        }
 
-    /** we optimistically assume that previous call succeed */
-    *succp = true;
-    return;
+        *succp = true;
+        return;
+    }
 
     len = sizeof(error);
     if (router->master &&
