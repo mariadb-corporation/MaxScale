@@ -762,14 +762,14 @@ static void clientReply(MXS_ROUTER *instance,
     {
         bool succp;
 
-        MXS_INFO("Backend %s:%d processed reply and starts to execute active cursor.",
+        MXS_INFO("Backend [%s]:%d processed reply and starts to execute active cursor.",
                  bref->ref->server->name, bref->ref->server->port);
 
         succp = execute_sescmd_in_backend(bref);
 
         if (!succp)
         {
-            MXS_INFO("Backend %s:%d failed to execute session command.",
+            MXS_INFO("Backend [%s]:%d failed to execute session command.",
                      bref->ref->server->name, bref->ref->server->port);
         }
     }
@@ -1087,7 +1087,7 @@ int router_handle_state_switch(DCB *dcb, DCB_REASON reason, void *data)
         goto return_rc;
     }
 
-    MXS_DEBUG("%lu [router_handle_state_switch] %s %s:%d in state %s",
+    MXS_DEBUG("%lu [router_handle_state_switch] %s [%s]:%d in state %s",
               pthread_self(), STRDCBREASON(reason), srv->name, srv->port,
               STRSRVSTATUS(srv));
     CHK_SESSION(((MXS_SESSION *)dcb->session));
@@ -1318,7 +1318,7 @@ static void handleError(MXS_ROUTER *instance,
                     }
                     else if (!SERVER_IS_MASTER(srv) && !srv->master_err_is_logged)
                     {
-                        MXS_ERROR("Server %s:%d lost the master status. Readwritesplit "
+                        MXS_ERROR("Server [%s]:%d lost the master status. Readwritesplit "
                                   "service can't locate the master. Client sessions "
                                   "will be closed.", srv->name, srv->port);
                         srv->master_err_is_logged = true;
@@ -1336,7 +1336,7 @@ static void handleError(MXS_ROUTER *instance,
                     }
                     else
                     {
-                        MXS_ERROR("Server %s:%d lost the master status but could not locate the "
+                        MXS_ERROR("Server [%s]:%d lost the master status but could not locate the "
                                   "corresponding backend ref.", srv->name, srv->port);
                     }
                 }

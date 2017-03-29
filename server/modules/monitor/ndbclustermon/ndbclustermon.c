@@ -348,7 +348,7 @@ monitorMain(void *arg)
             if (ptr->server->status != ptr->mon_prev_status ||
                 SERVER_IS_DOWN(ptr->server))
             {
-                MXS_DEBUG("Backend server %s:%d state : %s",
+                MXS_DEBUG("Backend server [%s]:%d state : %s",
                           ptr->server->name,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));

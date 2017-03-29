@@ -538,7 +538,7 @@ monitorMain(void *arg)
             if (mon_status_changed(ptr) ||
                 mon_print_fail_status(ptr))
             {
-                MXS_DEBUG("Backend server %s:%d state : %s",
+                MXS_DEBUG("Backend server [%s]:%d state : %s",
                           ptr->server->name,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));

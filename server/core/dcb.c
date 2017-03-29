@@ -692,7 +692,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
 
     if (fd == DCBFD_CLOSED)
     {
-        MXS_DEBUG("%lu [dcb_connect] Failed to connect to server %s:%d, "
+        MXS_DEBUG("%lu [dcb_connect] Failed to connect to server [%s]:%d, "
                   "from backend dcb %p, client dcp %p fd %d.",
                   pthread_self(),
                   server->name,
@@ -706,7 +706,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     }
     else
     {
-        MXS_DEBUG("%lu [dcb_connect] Connected to server %s:%d, "
+        MXS_DEBUG("%lu [dcb_connect] Connected to server [%s]:%d, "
                   "from backend dcb %p, client dcp %p fd %d.",
                   pthread_self(),
                   server->name,
@@ -3087,13 +3087,13 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
      */
     if (listen(listener_socket, INT_MAX) != 0)
     {
-        MXS_ERROR("Failed to start listening on '%s' with protocol '%s': %d, %s",
-                  config, protocol_name, errno, mxs_strerror(errno));
+        MXS_ERROR("Failed to start listening on '[%s]:%u' with protocol '%s': %d, %s",
+                  host, port, protocol_name, errno, mxs_strerror(errno));
         close(listener_socket);
         return -1;
     }
 
-    MXS_NOTICE("Listening for connections at %s with protocol %s", config, protocol_name);
+    MXS_NOTICE("Listening for connections at [%s]:%u with protocol %s", host, port, protocol_name);
 
     // assign listener_socket to dcb
     listener->fd = listener_socket;

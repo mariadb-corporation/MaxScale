@@ -349,7 +349,7 @@ mysql_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
+            MXS_WARNING("%s: login attempt for user '%s'@[%s]:%d, authentication failed.",
                         dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
 
             if (is_localhost_address(&dcb->ip) &&

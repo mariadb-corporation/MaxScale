@@ -277,7 +277,7 @@ bool select_connect_backend_servers(backend_ref_t **p_master_ref,
             {
                 if (BREF_IS_IN_USE((&backend_ref[i])))
                 {
-                    MXS_INFO("Selected %s in \t%s:%d",
+                    MXS_INFO("Selected %s in \t[%s]:%d",
                              STRSRVSTATUS(backend_ref[i].ref->server),
                              backend_ref[i].ref->server->name,
                              backend_ref[i].ref->server->port);
@@ -443,7 +443,7 @@ static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execu
         }
         else
         {
-            MXS_ERROR("Failed to execute session command in %s (%s:%d). See earlier "
+            MXS_ERROR("Failed to execute session command in %s ([%s]:%d). See earlier "
                       "errors for more details.",
                       bref->ref->server->unique_name,
                       bref->ref->server->name,
@@ -456,7 +456,7 @@ static bool connect_server(backend_ref_t *bref, MXS_SESSION *session, bool execu
     }
     else
     {
-        MXS_ERROR("Unable to establish connection with server %s:%d",
+        MXS_ERROR("Unable to establish connection with server [%s]:%d",
                   serv->name, serv->port);
     }
 
@@ -489,26 +489,26 @@ static void log_server_connections(select_criteria_t select_criteria,
             switch (select_criteria)
             {
             case LEAST_GLOBAL_CONNECTIONS:
-                MXS_INFO("MaxScale connections : %d in \t%s:%d %s",
+                MXS_INFO("MaxScale connections : %d in \t[%s]:%d %s",
                          b->server->stats.n_current, b->server->name,
                          b->server->port, STRSRVSTATUS(b->server));
                 break;
 
             case LEAST_ROUTER_CONNECTIONS:
-                MXS_INFO("RWSplit connections : %d in \t%s:%d %s",
+                MXS_INFO("RWSplit connections : %d in \t[%s]:%d %s",
                          b->connections, b->server->name,
                          b->server->port, STRSRVSTATUS(b->server));
                 break;
 
             case LEAST_CURRENT_OPERATIONS:
-                MXS_INFO("current operations : %d in \t%s:%d %s",
+                MXS_INFO("current operations : %d in \t[%s]:%d %s",
                          b->server->stats.n_current_ops,
                          b->server->name, b->server->port,
                          STRSRVSTATUS(b->server));
                 break;
 
             case LEAST_BEHIND_MASTER:
-                MXS_INFO("replication lag : %d in \t%s:%d %s",
+                MXS_INFO("replication lag : %d in \t[%s]:%d %s",
                          b->server->rlag, b->server->name,
                          b->server->port, STRSRVSTATUS(b->server));
             default:

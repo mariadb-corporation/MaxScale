@@ -369,7 +369,7 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
 
         ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
 
-        MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
+        MXS_ERROR("Failed to execute session command in [%s]:%d. Error was: %s %s",
                   bref->ref->server->name,
                   bref->ref->server->port, err, replystr);
         MXS_FREE(err);

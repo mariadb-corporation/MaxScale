@@ -547,7 +547,7 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             /* Set the Slave Role */
             if (ismaster)
             {
-                MXS_DEBUG("Master server found at %s:%d with %d slaves",
+                MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
                           database->server->name,
                           database->server->port,
                           nslaves);
@@ -1122,7 +1122,7 @@ monitorMain(void *arg)
                 if (SRV_MASTER_STATUS(ptr->mon_prev_status))
                 {
                     /** Master failed, can't recover */
-                    MXS_NOTICE("Server %s:%d lost the master status.",
+                    MXS_NOTICE("Server [%s]:%d lost the master status.",
                                ptr->server->name,
                                ptr->server->port);
                 }
@@ -1131,12 +1131,12 @@ monitorMain(void *arg)
             if (mon_status_changed(ptr))
             {
 #if defined(SS_DEBUG)
-                MXS_INFO("Backend server %s:%d state : %s",
+                MXS_INFO("Backend server [%s]:%d state : %s",
                          ptr->server->name,
                          ptr->server->port,
                          STRSRVSTATUS(ptr->server));
 #else
-                MXS_DEBUG("Backend server %s:%d state : %s",
+                MXS_DEBUG("Backend server [%s]:%d state : %s",
                           ptr->server->name,
                           ptr->server->port,
                           STRSRVSTATUS(ptr->server));

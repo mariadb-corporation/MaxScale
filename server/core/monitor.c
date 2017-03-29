@@ -467,7 +467,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
 
     for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
     {
-        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
+        dcb_printf(dcb, "%s[%s]:%d", sep, db->server->name, db->server->port);
         sep = ", ";
     }
 
@@ -685,7 +685,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
     {
         if (mon_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
         {
-            MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
+            MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                       " checking monitor user credentials and permissions: %s",
                       monitor->name, mondb->server->unique_name, mondb->server->name,
                       mondb->server->port, mysql_error(mondb->con));
@@ -965,7 +965,7 @@ static void mon_append_node_names(MXS_MONITOR_SERVERS* servers, char* dest, int 
     {
         if (status == 0 || servers->server->status & status)
         {
-            snprintf(arr, sizeof(arr), "%s%s:%d", separator, servers->server->name,
+            snprintf(arr, sizeof(arr), "%s[%s]:%d", separator, servers->server->name,
                      servers->server->port);
             separator = ",";
             int arrlen = strlen(arr);
@@ -1049,7 +1049,7 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
     if (externcmd_matches(cmd, "$INITIATOR"))
     {
         char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
-        snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+        snprintf(initiator, sizeof(initiator), "[%s]:%d", ptr->server->name, ptr->server->port);
         externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
     }
 
@@ -1221,8 +1221,8 @@ void
 mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-              "Monitor timed out when connecting to server %s:%d : \"%s\"" :
-              "Monitor was unable to connect to server %s:%d : \"%s\"",
+              "Monitor timed out when connecting to server [%s]:%d : \"%s\"" :
+              "Monitor was unable to connect to server [%s]:%d : \"%s\"",
               database->server->name, database->server->port,
               mysql_error(database->con));
 }

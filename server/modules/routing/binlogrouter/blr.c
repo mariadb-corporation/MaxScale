@@ -1129,7 +1129,7 @@ closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session)
 
         if (slave->state > 0)
         {
-            MXS_NOTICE("%s: Slave %s:%d, server id %d, disconnected after %ld seconds. "
+            MXS_NOTICE("%s: Slave [%s]:%d, server id %d, disconnected after %ld seconds. "
                        "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                        "last position %lu",
                        router->service->name, slave->dcb->remote, dcb_get_port(slave->dcb),
@@ -1532,7 +1532,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                 dcb_printf(dcb, "\t\tSlave UUID:                              %s\n", session->uuid);
             }
             dcb_printf(dcb,
-                       "\t\tSlave_host_port:                         %s:%d\n",
+                       "\t\tSlave_host_port:                         [%s]:%d\n",
                        session->dcb->remote, dcb_get_port(session->dcb));
             dcb_printf(dcb,
                        "\t\tUsername:                                %s\n",
@@ -1772,7 +1772,7 @@ errorReply(MXS_ROUTER *instance,
                 dcb_close(backend_dcb);
 
                 MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                          "%s while connecting to master %s:%d",
+                          "%s while connecting to master [%s]:%d",
                           router->service->name, router->m_errno, router->m_errmsg,
                           blrm_states[BLRM_TIMESTAMP], msg,
                           router->service->dbref->server->name,
@@ -1821,7 +1821,7 @@ errorReply(MXS_ROUTER *instance,
         spinlock_release(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master [%s]:%d",
                   router->service->name, mysql_errno, errmsg,
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
@@ -1830,7 +1830,7 @@ errorReply(MXS_ROUTER *instance,
     else
     {
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%s attempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master [%s]:%d",
                   router->service->name, router->m_errno,
                   router->m_errmsg ? router->m_errmsg : "(memory failure)",
                   blrm_states[router->master_state], msg,
@@ -2468,7 +2468,7 @@ destroyInstance(MXS_ROUTER *instance)
         }
     }
 
-    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master %s:%d, "
+    MXS_INFO("%s is being stopped by MaxScale shudown. Disconnecting from master [%s]:%d, "
              "read up to log %s, pos %lu, transaction safe pos %lu",
              inst->service->name,
              inst->service->dbref->server->name,

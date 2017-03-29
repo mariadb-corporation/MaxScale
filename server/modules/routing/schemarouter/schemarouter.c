@@ -2065,7 +2065,7 @@ static int routeQuery(MXS_ROUTER* instance,
         bref = get_bref_from_dcb(router_cli_ses, target_dcb);
         scur = &bref->bref_sescmd_cur;
 
-        MXS_INFO("Route query to \t%s:%d <",
+        MXS_INFO("Route query to \t[%s]:%d <",
                  bref->bref_backend->server->name,
                  bref->bref_backend->server->port);
         /**
@@ -2413,7 +2413,7 @@ static void clientReply(MXS_ROUTER* instance,
 
             ss_dassert(len + 4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
 
-            MXS_ERROR("Failed to execute %s in %s:%d. %s %s",
+            MXS_ERROR("Failed to execute %s in [%s]:%d. %s %s",
                       cmdstr,
                       bref->bref_backend->server->name,
                       bref->bref_backend->server->port,
@@ -2481,7 +2481,7 @@ static void clientReply(MXS_ROUTER* instance,
     if (sescmd_cursor_is_active(scur))
     {
 
-        MXS_INFO("Backend %s:%d processed reply and starts to execute "
+        MXS_INFO("Backend [%s]:%d processed reply and starts to execute "
                  "active cursor.",
                  bref->bref_backend->server->name,
                  bref->bref_backend->server->port);
@@ -2714,7 +2714,7 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
         {
             SERVER_REF* b = backend_ref[i].bref_backend;
 
-            MXS_INFO("MaxScale connections : %d (%d) in \t%s:%d %s",
+            MXS_INFO("MaxScale connections : %d (%d) in \t[%s]:%d %s",
                      b->connections,
                      b->server->stats.n_current,
                      b->server->name,
@@ -2782,7 +2782,7 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
                 {
                     succp = false;
                     MXS_ERROR("Unable to establish "
-                              "connection with slave %s:%d",
+                              "connection with slave [%s]:%d",
                               b->server->name,
                               b->server->port);
                     /* handle connect error */
@@ -2822,7 +2822,7 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
 
                 if (BREF_IS_IN_USE((&backend_ref[i])))
                 {
-                    MXS_INFO("Connected %s in \t%s:%d",
+                    MXS_INFO("Connected %s in \t[%s]:%d",
                              STRSRVSTATUS(b->server),
                              b->server->name,
                              b->server->port);
@@ -3381,7 +3381,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
-                MXS_INFO("Route query to %s\t%s:%d%s",
+                MXS_INFO("Route query to %s\t[%s]:%d%s",
                          (SERVER_IS_MASTER(backend_ref[i].bref_backend->server) ?
                           "master" : "slave"),
                          backend_ref[i].bref_backend->server->name,
@@ -3488,7 +3488,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
-                MXS_INFO("Route query to %s\t%s:%d%s",
+                MXS_INFO("Route query to %s\t[%s]:%d%s",
                          (SERVER_IS_MASTER(backend_ref[i].bref_backend->server) ?
                           "master" : "slave"),
                          backend_ref[i].bref_backend->server->name,
@@ -3513,7 +3513,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
             {
                 succp = true;
 
-                MXS_INFO("Backend %s:%d already executing sescmd.",
+                MXS_INFO("Backend [%s]:%d already executing sescmd.",
                          backend_ref[i].bref_backend->server->name,
                          backend_ref[i].bref_backend->server->port);
             }
@@ -3524,7 +3524,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
                 if (!succp)
                 {
                     MXS_ERROR("Failed to execute session "
-                              "command in %s:%d",
+                              "command in [%s]:%d",
                               backend_ref[i].bref_backend->server->name,
                               backend_ref[i].bref_backend->server->port);
                 }

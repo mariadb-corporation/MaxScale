@@ -203,7 +203,7 @@ blr_start_master(void* data)
     }
     router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
 
-    MXS_NOTICE("%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
+    MXS_NOTICE("%s: attempting to connect to master server [%s]:%d, binlog %s, pos %lu",
                router->service->name, router->service->dbref->server->name,
                router->service->dbref->server->port, router->binlog_name, router->current_pos);
 
@@ -706,7 +706,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         /* if semisync option is set, check for master semi-sync availability */
         if (router->request_semi_sync)
         {
-            MXS_NOTICE("%s: checking Semi-Sync replication capability for master server %s:%d",
+            MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
                        router->service->name,
                        router->service->dbref->server->name,
                        router->service->dbref->server->port);
@@ -739,7 +739,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
                 if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
                 {
                     /* not installed */
-                    MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync capability",
+                    MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
                                router->service->name,
                                router->service->dbref->server->name,
                                router->service->dbref->server->port);
@@ -753,7 +753,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
                     if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
                     {
                         /* Installed but not enabled,  right now */
-                        MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync enabled right now, "
+                        MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync enabled right now, "
                                    "Requesting Semi-Sync Replication",
                                    router->service->name,
                                    router->service->dbref->server->name,
@@ -762,7 +762,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
                     else
                     {
                         /* Installed and enabled */
-                        MXS_NOTICE("%s: master server %s:%d has semi_sync enabled, Requesting Semi-Sync Replication",
+                        MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled, Requesting Semi-Sync Replication",
                                    router->service->name,
                                    router->service->dbref->server->name,
                                    router->service->dbref->server->port);
@@ -803,7 +803,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
 
         router->master->func.write(router->master, buf);
         MXS_NOTICE("%s: Request binlog records from %s at "
-                   "position %lu from master server %s:%d",
+                   "position %lu from master server [%s]:%d",
                    router->service->name, router->binlog_name,
                    router->current_pos,
                    router->service->dbref->server->name,
@@ -1512,7 +1512,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                             MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
                                       "SEMI_SYNC_ACK_REQ and needs a Semi-Sync ACK packet to "
-                                      "be sent to the master server %s:%d",
+                                      "be sent to the master server [%s]:%d",
                                       router->service->name, router->binlog_name,
                                       router->current_pos,
                                       router->service->dbref->server->name,
@@ -2144,7 +2144,7 @@ blr_check_heartbeat(ROUTER_INSTANCE *router)
     {
         if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME))
         {
-            MXS_ERROR("No event received from master %s:%d in heartbeat period (%lu seconds), "
+            MXS_ERROR("No event received from master [%s]:%d in heartbeat period (%lu seconds), "
                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
                       "and reconnecting.",
                       router->service->dbref->server->name,
@@ -2408,7 +2408,7 @@ bool blr_send_event(blr_thread_role_t role,
     }
     else
     {
-        MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
+        MXS_ERROR("Failed to send an event of %u bytes to slave at [%s]:%d.",
                   hdr->event_size, slave->dcb->remote,
                   dcb_get_port(slave->dcb));
     }

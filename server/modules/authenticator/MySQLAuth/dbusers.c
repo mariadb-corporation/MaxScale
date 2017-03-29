@@ -494,7 +494,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     {
         int my_errno = mysql_errno(mysql);
 
-        MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
+        MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
                   service->name, server->unique_name, server->name, server->port,
                   my_errno, mysql_error(mysql));

@@ -2174,7 +2174,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 
     slave->state = BLRS_DUMPING;
 
-    MXS_NOTICE("%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
+    MXS_NOTICE("%s: Slave [%s]:%d, server id %d requested binlog file %s from position %lu",
                router->service->name, slave->dcb->remote,
                dcb_get_port(slave->dcb),
                slave->serverid,
@@ -2670,7 +2670,7 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
              * but the new binlog file has not yet been created. Therefore
              * we ignore these issues during the rotate processing.
              */
-            MXS_ERROR("%s: Slave %s:%d, server-id %d reached end of file for binlog file %s "
+            MXS_ERROR("%s: Slave [%s]:%d, server-id %d reached end of file for binlog file %s "
                       "at %lu which is not the file currently being downloaded. "
                       "Master binlog is %s, %lu. This may be caused by a "
                       "previous failure of the master.",
@@ -3468,7 +3468,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     spinlock_release(&router->lock);
 
-    MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, "
+    MXS_NOTICE("%s: STOP SLAVE executed by %s@%s. Disconnecting from master [%s]:%d, "
                "read up to log %s, pos %lu, transaction safe pos %lu",
                router->service->name,
                slave->dcb->user,
@@ -3626,7 +3626,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
     /** Start replication from master */
     blr_start_master(router);
 
-    MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, "
+    MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master [%s]:%d, "
                "binlog %s, pos %lu, transaction safe pos %lu",
                router->service->name,
                slave->dcb->user,

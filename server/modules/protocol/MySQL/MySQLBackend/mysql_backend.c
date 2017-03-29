@@ -280,7 +280,7 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
 
     if (so == -1)
     {
-        MXS_ERROR("Establishing connection to backend server %s:%d failed.", host, port);
+        MXS_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
         return rv;
     }
 
@@ -294,7 +294,7 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
         }
         else
         {
-            MXS_ERROR("Failed to connect backend server %s:%d due to: %d, %s.",
+            MXS_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
                       host, port, errno, mxs_strerror(errno));
             close(so);
             return rv;
@@ -303,7 +303,7 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
 
     *fd = so;
     MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
-              "%s:%d, fd %d.", pthread_self(), host, port, so);
+              "[%s]:%d, fd %d.", pthread_self(), host, port, so);
 
     return rv;
 

@@ -1159,7 +1159,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
              * Something matched the trigger, log the query
              */
 
-            MXS_INFO("Routing message to: %s:%d %s as %s/%s, exchange: %s<%s> key:%s queue:%s",
+            MXS_INFO("Routing message to: [%s]:%d %s as %s/%s, exchange: %s<%s> key:%s queue:%s",
                      my_instance->hostname, my_instance->port,
                      my_instance->vhost, my_instance->username,
                      my_instance->password, my_instance->exchange,
@@ -1490,7 +1490,7 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
 
     if (my_instance)
     {
-        dcb_printf(dcb, "Connecting to %s:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
+        dcb_printf(dcb, "Connecting to [%s]:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
                    my_instance->hostname, my_instance->port,
                    my_instance->username,
                    my_instance->vhost, my_instance->exchange,
