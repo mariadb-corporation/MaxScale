@@ -1071,7 +1071,7 @@ struct subcommand createoptions[] =
         "Create a new server from the following parameters.\n\n"
         "SERVICE       Service where this listener is added\n"
         "NAME          Listener name\n"
-        "HOST          Listener host address (default 0.0.0.0)\n"
+        "HOST          Listener host address (default [::])\n"
         "PORT          Listener port (default 3306)\n"
         "PROTOCOL      Listener protocol (default MySQLClient)\n"
         "AUTHENTICATOR Authenticator module name (default MySQLAuth)\n"

@@ -630,8 +630,8 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
     if (loaded < 0)
     {
-        MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
-                  port->name, port->address ? port->address : "0.0.0.0", port->port);
+        MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.", service->name,
+                  port->name, port->address ? port->address : "::", port->port);
 
         if (instance->inject_service_user)
         {

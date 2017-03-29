@@ -461,7 +461,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
     if (addr == NULL || strcasecmp(addr, "default") == 0)
     {
-        addr = "0.0.0.0";
+        addr = "::";
     }
     if (port == NULL || strcasecmp(port, "default") == 0)
     {
@@ -508,7 +508,7 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
 
         if (rval)
         {
-            const char *print_addr = addr ? addr : "0.0.0.0";
+            const char *print_addr = addr ? addr : "::";
             SERV_LISTENER *listener = serviceCreateListener(service, name, proto, addr,
                                                             u_port, auth, auth_opt, ssl);
 
