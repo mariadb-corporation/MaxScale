@@ -618,6 +618,12 @@ static inline bool expecting_resultset(MySQLProtocol *proto)
            proto->current_command == MYSQL_COM_STMT_FETCH;
 }
 
+static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
+{
+    return rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) ||
+           proto->collect_result;
+}
+
 /**
  * @brief With authentication completed, read new data and write to backend
  *
@@ -673,7 +679,10 @@ gw_read_and_write(DCB *dcb)
 
         read_buffer = tmp;
 
-        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT))
+        MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+        if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_OUTPUT) ||
+            proto->collect_result)
         {
             if ((tmp = gwbuf_make_contiguous(read_buffer)))
             {
@@ -687,10 +696,9 @@ gw_read_and_write(DCB *dcb)
                 return 0;
             }
 
-            MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
-
-            if (rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
-                expecting_resultset(proto) && mxs_mysql_is_result_set(read_buffer))
+            if (collecting_resultset(proto, capabilities) &&
+                expecting_resultset(proto) &&
+                mxs_mysql_is_result_set(read_buffer))
             {
                 int more = 0;
                 if (modutil_count_signal_packets(read_buffer, 0, 0, &more) != 2)
@@ -698,6 +706,9 @@ gw_read_and_write(DCB *dcb)
                     dcb->dcb_readqueue = read_buffer;
                     return 0;
                 }
+
+                // Collected the complete result
+                proto->collect_result = false;
             }
         }
     }
@@ -967,6 +978,10 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             {
                 /** Record the command to backend's protocol */
                 protocol_add_srv_command(backend_protocol, cmd);
+            }
+            else if (GWBUF_SHOULD_COLLECT_RESULT(queue))
+            {
+                backend_protocol->collect_result = true;
             }
 
             if (cmd == MYSQL_COM_QUIT && dcb->server->persistpoolmax)

@@ -56,7 +56,8 @@ typedef enum
     GWBUF_TYPE_RESPONSE_END    = 0x02,
     GWBUF_TYPE_SESCMD          = 0x04,
     GWBUF_TYPE_HTTP            = 0x08,
-    GWBUF_TYPE_IGNORABLE       = 0x10
+    GWBUF_TYPE_IGNORABLE       = 0x10,
+    GWBUF_TYPE_COLLECT_RESULT  = 0x20
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
@@ -64,6 +65,7 @@ typedef enum
 #define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
 #define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)
 #define GWBUF_IS_IGNORABLE(b)            (b->gwbuf_type & GWBUF_TYPE_IGNORABLE)
+#define GWBUF_SHOULD_COLLECT_RESULT(b)   (b->gwbuf_type & GWBUF_TYPE_COLLECT_RESULT)
 
 /**
  * A structure to encapsulate the data in a form that the data itself can be
