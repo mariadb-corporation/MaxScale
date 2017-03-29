@@ -14,17 +14,6 @@
 /**
  * @file maxadmin.c  - The MaxScale administration client
  *
- * @verbatim
- * Revision History
- *
- * Date        Who                   Description
- * 13/06/14    Mark Riddoch          Initial implementation
- * 15/06/14    Mark Riddoch          Addition of source command
- * 26/06/14    Mark Riddoch          Fix issue with final OK split across
- *                                   multiple reads
- * 17/05/16    Massimiliano Pinto    Addition of UNIX socket support
- *
- * @endverbatim
  */
 
 #include <assert.h>
@@ -297,15 +286,7 @@ main(int argc, char **argv)
                 strcat(cmd, argv[i]);
             }
         }
-
-        if (access(cmd, R_OK) == 0)
-        {
-            DoSource(so, cmd);
-        }
-        else
-        {
-            sendCommand(so, cmd);
-        }
+        sendCommand(so, cmd);
 
         free(cmd);
         exit(0);
