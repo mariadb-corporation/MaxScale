@@ -1004,7 +1004,6 @@ GWBUF* modutil_create_query(const char* query)
         *ptr++ = 0x0;
         *ptr++ = 0x03;
         memcpy(ptr, query, strlen(query));
-        gwbuf_set_type(rval, GWBUF_TYPE_MYSQL);
     }
 
     return rval;

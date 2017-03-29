@@ -943,7 +943,6 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
 
             return 0;
         }
-        gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
     }
 
     /**
@@ -1388,20 +1387,8 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
 {
     int rc;
     GWBUF* packetbuf;
-#if defined(SS_DEBUG)
-    GWBUF* tmpbuf;
-
-    tmpbuf = *p_readbuf;
-    while (tmpbuf != NULL)
-    {
-        ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
-        tmpbuf = tmpbuf->next;
-    }
-#endif
     do
     {
-        ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
-
         /**
          * Collect incoming bytes to a buffer until complete packet has
          * arrived and then return the buffer.
@@ -1412,7 +1399,6 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
         if (packetbuf != NULL)
         {
             CHK_GWBUF(packetbuf);
-            ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
             /**
              * This means that buffer includes exactly one MySQL
              * statement.
@@ -1425,8 +1411,6 @@ static int route_by_statement(MXS_SESSION* session, uint64_t capabilities, GWBUF
              * Set it here instead of gw_read_client_event to make
              * sure it is set to each (MySQL) packet.
              */
-            gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
-
             if (rcap_type_required(capabilities, RCAP_TYPE_CONTIGUOUS_INPUT))
             {
                 if (!GWBUF_IS_CONTIGUOUS(packetbuf))

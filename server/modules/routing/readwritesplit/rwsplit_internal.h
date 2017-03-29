@@ -47,7 +47,6 @@ do{ \
 bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                        GWBUF *querybuf);
 void closed_session_reply(GWBUF *querybuf);
-void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses);
 void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb);
 void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend_ref_t *bref);
 bool execute_sescmd_in_backend(backend_ref_t *backend_ref);

@@ -52,20 +52,14 @@ typedef struct buf_property
 typedef enum
 {
     GWBUF_TYPE_UNDEFINED       = 0x00,
-    GWBUF_TYPE_PLAINSQL        = 0x01,
-    GWBUF_TYPE_MYSQL           = 0x02,
-    GWBUF_TYPE_SINGLE_STMT     = 0x04,
-    GWBUF_TYPE_SESCMD_RESPONSE = 0x08,
-    GWBUF_TYPE_RESPONSE_END    = 0x10,
-    GWBUF_TYPE_SESCMD          = 0x20,
-    GWBUF_TYPE_HTTP            = 0x40,
-    GWBUF_TYPE_IGNORABLE       = 0x80
+    GWBUF_TYPE_SESCMD_RESPONSE = 0x01,
+    GWBUF_TYPE_RESPONSE_END    = 0x02,
+    GWBUF_TYPE_SESCMD          = 0x04,
+    GWBUF_TYPE_HTTP            = 0x08,
+    GWBUF_TYPE_IGNORABLE       = 0x10
 } gwbuf_type_t;
 
 #define GWBUF_IS_TYPE_UNDEFINED(b)       (b->gwbuf_type == 0)
-#define GWBUF_IS_TYPE_PLAINSQL(b)        (b->gwbuf_type & GWBUF_TYPE_PLAINSQL)
-#define GWBUF_IS_TYPE_MYSQL(b)           (b->gwbuf_type & GWBUF_TYPE_MYSQL)
-#define GWBUF_IS_TYPE_SINGLE_STMT(b)     (b->gwbuf_type & GWBUF_TYPE_SINGLE_STMT)
 #define GWBUF_IS_TYPE_SESCMD_RESPONSE(b) (b->gwbuf_type & GWBUF_TYPE_SESCMD_RESPONSE)
 #define GWBUF_IS_TYPE_RESPONSE_END(b)    (b->gwbuf_type & GWBUF_TYPE_RESPONSE_END)
 #define GWBUF_IS_TYPE_SESCMD(b)          (b->gwbuf_type & GWBUF_TYPE_SESCMD)

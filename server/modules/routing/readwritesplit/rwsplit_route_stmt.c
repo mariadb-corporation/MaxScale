@@ -96,7 +96,6 @@ bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     bool non_empty_packet;
 
     ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
-    ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
 
     /* packet_type is a problem as it is MySQL specific */
     packet_type = determine_packet_type(querybuf, &non_empty_packet);

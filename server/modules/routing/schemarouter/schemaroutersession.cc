@@ -266,8 +266,6 @@ static bool is_empty_packet(GWBUF* pPacket)
 
 int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 {
-    ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(pPacket));
-
     if (m_closed)
     {
         return 0;
@@ -959,7 +957,6 @@ bool SchemaRouterSession::handle_default_db()
         {
             uint8_t *data = GWBUF_DATA(buffer);
             gw_mysql_set_byte3(data, qlen + 1);
-            gwbuf_set_type(buffer, GWBUF_TYPE_MYSQL);
             data[3] = 0x0;
             data[4] = 0x2;
             memcpy(data + 5, m_connect_db.c_str(), qlen);
@@ -1129,7 +1126,6 @@ void create_error_reply(char* fail_str, DCB* dcb)
         return;
     }
     /** Set flags that help router to identify session commands reply */
-    gwbuf_set_type(errbuf, GWBUF_TYPE_MYSQL);
     gwbuf_set_type(errbuf, GWBUF_TYPE_SESCMD_RESPONSE);
     gwbuf_set_type(errbuf, GWBUF_TYPE_RESPONSE_END);
 

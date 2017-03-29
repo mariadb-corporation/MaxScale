@@ -564,13 +564,9 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     {
         closed_session_reply(querybuf);
     }
-    else
+    else if (route_single_stmt(inst, rses, querybuf))
     {
-        live_session_reply(&querybuf, rses);
-        if (route_single_stmt(inst, rses, querybuf))
-        {
-            rval = 1;
-        }
+        rval = 1;
     }
 
     if (querybuf != NULL)

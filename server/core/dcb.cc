@@ -1273,67 +1273,13 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
 static void
 dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 {
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_DEBUG))
-    {
-        if (eno == EPIPE)
-        {
-            MXS_DEBUG("%lu [dcb_write] Write to dcb "
-                      "%p in state %s fd %d failed "
-                      "due errno %d, %s",
-                      pthread_self(),
-                      dcb,
-                      STRDCBSTATE(dcb->state),
-                      dcb->fd,
-                      eno,
-                      mxs_strerror(eno));
-        }
-    }
-
-    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR))
-    {
-        if (eno != EPIPE &&
-            eno != EAGAIN &&
-            eno != EWOULDBLOCK)
-        {
-            MXS_ERROR("Write to dcb %p in "
-                      "state %s fd %d failed due "
-                      "errno %d, %s",
-                      dcb,
-                      STRDCBSTATE(dcb->state),
-                      dcb->fd,
-                      eno,
-                     mxs_strerror(eno));
-
-        }
-
-    }
-
-    bool dolog = true;
-
-    if (eno != 0           &&
-        eno != EAGAIN      &&
+    if (eno != EPIPE &&
+        eno != EAGAIN &&
         eno != EWOULDBLOCK)
     {
-        /**
-         * Do not log if writing COM_QUIT to backend failed.
-         */
-        if (GWBUF_IS_TYPE_MYSQL(queue))
-        {
-            uint8_t* data = GWBUF_DATA(queue);
+        MXS_ERROR("Write to dcb %p in state %s fd %d failed: %d, %s",
+                  dcb, STRDCBSTATE(dcb->state), dcb->fd, eno, mxs_strerror(eno));
 
-            if (data[4] == 0x01)
-            {
-                dolog = false;
-            }
-        }
-        if (dolog)
-        {
-            MXS_DEBUG("%lu [dcb_write] Writing to %s socket failed due %d, %s.",
-                      pthread_self(),
-                      DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role ? "client" : "backend server",
-                      eno,
-                     mxs_strerror(eno));
-        }
     }
 }
 

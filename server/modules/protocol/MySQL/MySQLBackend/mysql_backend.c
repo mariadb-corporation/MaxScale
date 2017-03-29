@@ -781,7 +781,6 @@ gw_read_and_write(DCB *dcb)
 
         if (session_ok_to_route(dcb))
         {
-            gwbuf_set_type(stmt, GWBUF_TYPE_MYSQL);
             session->service->router->clientReply(session->service->router_instance,
                                                   session->router_session,
                                                   stmt, dcb);
@@ -964,8 +963,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              * Server commands are stored to MySQLProtocol structure
              * if buffer always includes a single statement.
              */
-            if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
-                GWBUF_IS_TYPE_SESCMD(queue))
+            if (GWBUF_IS_TYPE_SESCMD(queue))
             {
                 /** Record the command to backend's protocol */
                 protocol_add_srv_command(backend_protocol, cmd);
@@ -1004,8 +1002,7 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
              * In case of session commands, store command to DCB's
              * protocol struct.
              */
-            if (GWBUF_IS_TYPE_SINGLE_STMT(queue) &&
-                GWBUF_IS_TYPE_SESCMD(queue))
+            if (GWBUF_IS_TYPE_SESCMD(queue))
             {
                 uint8_t* ptr = GWBUF_DATA(queue);
                 mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
@@ -1130,7 +1127,6 @@ static int gw_backend_close(DCB *dcb)
 
     /** Send COM_QUIT to the backend being closed */
     GWBUF* quitbuf = mysql_create_com_quit(NULL, 0);
-    gwbuf_set_type(quitbuf, GWBUF_TYPE_MYSQL);
     mysql_send_com_quit(dcb, 0, quitbuf);
 
     /** Free protocol data */
@@ -1623,7 +1619,6 @@ gw_create_change_user_packet(MYSQL_session*  mses,
     char* user;
     uint8_t* pwd;
     GWBUF* buffer;
-    int compress = 0;
     uint8_t* payload = NULL;
     uint8_t* payload_start = NULL;
     long bytes;
@@ -1648,13 +1643,6 @@ gw_create_change_user_packet(MYSQL_session*  mses,
 
     /* get charset the client sent and use it for connection auth */
     charset = protocol->charset;
-
-    if (compress)
-    {
-#ifdef DEBUG_MYSQL_CONN
-        fprintf(stderr, ">>>> Backend Connection with compression\n");
-#endif
-    }
 
     /**
      * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
@@ -1695,7 +1683,7 @@ gw_create_change_user_packet(MYSQL_session*  mses,
      * Set correct type to GWBUF so that it will be handled like session
      * commands
      */
-    buffer->gwbuf_type = GWBUF_TYPE_MYSQL | GWBUF_TYPE_SINGLE_STMT | GWBUF_TYPE_SESCMD;
+    buffer->gwbuf_type = GWBUF_TYPE_SESCMD;
     payload = GWBUF_DATA(buffer);
     memset(payload, '\0', bytes);
     payload_start = payload;

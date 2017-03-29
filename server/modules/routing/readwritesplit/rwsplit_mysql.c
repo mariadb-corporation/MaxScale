@@ -313,37 +313,6 @@ void closed_session_reply(GWBUF *querybuf)
 }
 
 /*
- * Probably MySQL specific because of modutil function
- */
-/**
- * @brief First step to handle request in a live session
- *
- * Used when a request is about to be routed. Note that the query buffer is
- * passed by name and is likely to be modified by this function.
- *
- * @param querybuf      Query buffer containing packet
- * @param rses          Router session
- */
-void live_session_reply(GWBUF **querybuf, ROUTER_CLIENT_SES *rses)
-{
-    GWBUF *tmpbuf = *querybuf;
-    if (GWBUF_IS_TYPE_UNDEFINED(tmpbuf))
-    {
-        /* Note that many modutil functions are MySQL specific */
-        *querybuf = modutil_get_complete_packets(&tmpbuf);
-        if (tmpbuf)
-        {
-            rses->client_dcb->dcb_readqueue = gwbuf_append(rses->client_dcb->dcb_readqueue, tmpbuf);
-        }
-        *querybuf = gwbuf_make_contiguous(*querybuf);
-
-        /** Mark buffer to as MySQL type */
-        gwbuf_set_type(*querybuf, GWBUF_TYPE_MYSQL);
-        gwbuf_set_type(*querybuf, GWBUF_TYPE_SINGLE_STMT);
-    }
-}
-
-/*
  * Uses MySQL specific mechanisms
  */
 /**
