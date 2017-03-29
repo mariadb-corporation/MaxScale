@@ -13,6 +13,7 @@
  */
 
 #include "hintrouterdefs.hh"
+
 #include <maxscale/router.hh>
 #include "hintroutersession.hh"
 
@@ -20,16 +21,30 @@ class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
 {
 public:
     static HintRouter* create(SERVICE* pService, char** pzOptions);
-
     HintRouterSession* newSession(MXS_SESSION *pSession);
-
     void diagnostics(DCB* pOut);
-
     uint64_t getCapabilities();
-
+    HINT_TYPE get_default_action() const
+    {
+        return m_default_action;
+    };
+    const string& get_default_server() const
+    {
+        return m_default_server;
+    };
+    /* Simple, approximate statistics */
+    volatile unsigned int m_routed_to_master;
+    volatile unsigned int m_routed_to_slave;
+    volatile unsigned int m_routed_to_named;
+    volatile unsigned int m_routed_to_all;
 private:
-    HintRouter(SERVICE* pService);
+    HintRouter(SERVICE* pService, HINT_TYPE default_action, string& default_server,
+               int max_slaves);
 
+    HINT_TYPE m_default_action;
+    string m_default_server;
+    int m_max_slaves;
+    volatile int m_total_slave_conns;
 private:
     HintRouter(const HintRouter&);
     HintRouter& operator = (const HintRouter&);

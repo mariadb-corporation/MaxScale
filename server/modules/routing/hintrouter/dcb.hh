@@ -13,53 +13,46 @@
  */
 
 #include "hintrouterdefs.hh"
-#include <algorithm>
+
+#include <tr1/memory>
+
 #include <maxscale/dcb.h>
 
 class Dcb
 {
 public:
-    explicit Dcb(DCB* pDcb);
-    Dcb(const Dcb& rhs);
-    ~Dcb()
-    {
-        dec();
-    }
+    typedef std::tr1::shared_ptr<DCB> SDCB;
 
-    Dcb& operator = (Dcb rhs);
+    explicit Dcb(DCB* pDcb);
+
+    Dcb(const Dcb& rhs)
+        : m_sInner(rhs.m_sInner)
+    {};
+
+    Dcb& operator = (Dcb rhs)
+    {
+        m_sInner.swap(rhs.m_sInner);
+        return *this;
+    }
 
     struct server* server() const
     {
-        return m_pDcb->server;
+        return (this->m_sInner.get()) ? m_sInner.get()->server : NULL;
     }
 
     DCB* get() const
     {
-        return m_pDcb;
+        return m_sInner.get();
     }
 
-    bool write(GWBUF* pPacket)
+    bool write(GWBUF* pPacket) const
     {
-        ss_dassert(m_pDcb);
-        return m_pDcb->func.write(m_pDcb, pPacket) == 1;
+        ss_dassert(m_sInner.get());
+        return m_sInner.get()->func.write(m_sInner.get(), pPacket) == 1;
     }
 
 private:
-    void inc()
-    {
-        ++(*m_pRefs);
-    }
-
-    void dec();
-
-    void swap(Dcb& rhs)
-    {
-        std::swap(m_pDcb, rhs.m_pDcb);
-        std::swap(m_pRefs, rhs.m_pRefs);
-    }
-
-private:
-    DCB* m_pDcb;
-    int* m_pRefs;
+    static void deleter(DCB* dcb);
+    SDCB m_sInner;
 };
 

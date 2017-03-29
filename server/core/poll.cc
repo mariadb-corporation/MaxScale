@@ -595,10 +595,6 @@ poll_resolve_error(DCB *dcb, int errornum, bool adding)
     return -1;
 }
 
-#define BLOCKINGPOLL 0  /*< Set BLOCKING POLL to 1 if using a single thread and to make
-                         *  debugging easier.
-                         */
-
 /**
  * The main polling loop
  *
@@ -665,10 +661,6 @@ poll_waitevents(void *arg)
     while (1)
     {
         atomic_add(&n_waiting, 1);
-#if BLOCKINGPOLL
-        nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-        atomic_add(&n_waiting, -1);
-#else /* BLOCKINGPOLL */
 #if MUTEX_EPOLL
         simple_mutex_lock(&epoll_wait_mutex, TRUE);
 #endif
@@ -723,7 +715,6 @@ poll_waitevents(void *arg)
 #if MUTEX_EPOLL
         simple_mutex_unlock(&epoll_wait_mutex);
 #endif
-#endif /* BLOCKINGPOLL */
         if (nfds > 0)
         {
             ts_stats_set(pollStats.evq_length, nfds, thread_id);

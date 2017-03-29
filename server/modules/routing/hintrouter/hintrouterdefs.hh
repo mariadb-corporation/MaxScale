@@ -13,10 +13,16 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <maxscale/dcb.h>
 #include <maxscale/log_manager.h>
 
+#if defined(SS_DEBUG)
 #define DEBUG_HINTROUTER
 //#undef DEBUG_HINTROUTER
+#else
+#undef DEBUG_HINTROUTER
+#endif
 
 #ifdef DEBUG_HINTROUTER
 #define HR_DEBUG(msg, ...) MXS_NOTICE(msg, ##__VA_ARGS__)
