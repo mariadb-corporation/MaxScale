@@ -194,7 +194,7 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
         return;
     }
 
-    mxs_connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         server_clear_status_nolock(database->server, SERVER_RUNNING);

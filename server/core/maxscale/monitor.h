@@ -25,6 +25,7 @@ MXS_BEGIN_DECLS
 #define DEFAULT_CONNECT_TIMEOUT 3
 #define DEFAULT_READ_TIMEOUT 1
 #define DEFAULT_WRITE_TIMEOUT 2
+#define DEFAULT_CONNECTION_ATTEMPTS 1
 
 #define MONITOR_DEFAULT_INTERVAL 10000 // in milliseconds
 
@@ -35,7 +36,8 @@ typedef enum
 {
     MONITOR_CONNECT_TIMEOUT = 0,
     MONITOR_READ_TIMEOUT    = 1,
-    MONITOR_WRITE_TIMEOUT   = 2
+    MONITOR_WRITE_TIMEOUT   = 2,
+    MONITOR_CONNECT_ATTEMPTS = 3
 } monitor_timeouts_t;
 
 MXS_MONITOR *monitor_alloc(char *, char *);

@@ -301,4 +301,6 @@ void config_disable_feedback_task(void);
  */
 bool config_reload(void);
 
+static const char BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
+
 MXS_END_DECLS

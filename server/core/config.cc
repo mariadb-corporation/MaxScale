@@ -173,6 +173,7 @@ static const char *monitor_params[] =
     "backend_connect_timeout",
     "backend_read_timeout",
     "backend_write_timeout",
+    BACKEND_CONNECT_ATTEMPTS,
     NULL
 };
 
@@ -3014,6 +3015,16 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
             if (!monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
             {
                 MXS_ERROR("Failed to set backend_write_timeout");
+                error_count++;
+            }
+        }
+
+        char *connect_attempts = config_get_value(obj->parameters, BACKEND_CONNECT_ATTEMPTS);
+        if (connect_attempts)
+        {
+            if (!monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, atoi(connect_attempts)))
+            {
+                MXS_ERROR("Failed to set '%s'.", BACKEND_CONNECT_ATTEMPTS);
                 error_count++;
             }
         }

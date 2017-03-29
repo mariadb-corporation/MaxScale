@@ -154,6 +154,7 @@ struct mxs_monitor
     MXS_MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
     monitor_state_t state;        /**< The state of the monitor */
     int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
+    int connect_attempts;      /**< How many times a connection is attempted */
     int read_timeout;             /**< Timeout in seconds to read from the server.
                                    * There are retries and the total effective timeout
                                    * value is three times the option value.
@@ -216,7 +217,7 @@ void servers_status_current_to_pending(MXS_MONITOR *monitor);
 bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv);
 bool mon_print_fail_status(MXS_MONITOR_SERVERS* mon_srv);
 
-mxs_connect_result_t mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
+mxs_connect_result_t mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database);
 void mon_log_connect_error(MXS_MONITOR_SERVERS* database, mxs_connect_result_t rval);
 
 void lock_monitor_servers(MXS_MONITOR *monitor);

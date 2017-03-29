@@ -416,6 +416,15 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
+    else if (strcmp(key, BACKEND_CONNECT_ATTEMPTS) == 0)
+    {
+        long ival = get_positive_int(value);
+        if (ival)
+        {
+            valid = true;
+            monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_ATTEMPTS, ival);
+        }
+    }
     else
     {
         /** We're modifying module specific parameters and we need to stop the monitor */

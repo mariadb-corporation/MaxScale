@@ -268,7 +268,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
     /** Store previous status */
     database->mon_prev_status = database->server->status;
 
-    mxs_connect_result_t rval = mon_connect_to_db(mon, database);
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)

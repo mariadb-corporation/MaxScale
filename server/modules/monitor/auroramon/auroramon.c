@@ -51,7 +51,7 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
         database->mon_prev_status = database->server->status;
 
         /** Try to connect to or ping the database */
-        mxs_connect_result_t rval = mon_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
 
         if (rval == MONITOR_CONN_OK)
         {

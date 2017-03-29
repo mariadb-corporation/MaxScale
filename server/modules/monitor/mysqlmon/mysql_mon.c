@@ -625,54 +625,52 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
     /** Store previous status */
     database->mon_prev_status = database->server->status;
 
-    if (database->con == NULL || mysql_ping(database->con) != 0)
+    mxs_connect_result_t rval = mon_ping_or_connect_to_db(mon, database);
+    if (rval == MONITOR_CONN_OK)
     {
-        mxs_connect_result_t rval;
-        if ((rval = mon_connect_to_db(mon, database)) == MONITOR_CONN_OK)
-        {
-            server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
-            monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
-        }
-        else
-        {
-            /* The current server is not running
-             *
-             * Store server NOT running in server and monitor server pending struct
-             *
-             */
-            if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
-            {
-                server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
-                monitor_set_pending_status(database, SERVER_AUTH_ERROR);
-            }
-            server_clear_status_nolock(database->server, SERVER_RUNNING);
-            monitor_clear_pending_status(database, SERVER_RUNNING);
-
-            /* Also clear M/S state in both server and monitor server pending struct */
-            server_clear_status_nolock(database->server, SERVER_SLAVE);
-            server_clear_status_nolock(database->server, SERVER_MASTER);
-            server_clear_status_nolock(database->server, SERVER_RELAY_MASTER);
-            monitor_clear_pending_status(database, SERVER_SLAVE);
-            monitor_clear_pending_status(database, SERVER_MASTER);
-            monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
-
-            /* Clean addition status too */
-            server_clear_status_nolock(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-            server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
-            server_clear_status_nolock(database->server, SERVER_STALE_SLAVE);
-            monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-            monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-            monitor_clear_pending_status(database, SERVER_STALE_SLAVE);
-
-            /* Log connect failure only once */
-            if (mon_status_changed(database) && mon_print_fail_status(database))
-            {
-                mon_log_connect_error(database, rval);
-            }
-
-            return;
-        }
+        server_clear_status_nolock(database->server, SERVER_AUTH_ERROR);
+        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
     }
+    else
+    {
+        /* The current server is not running
+         *
+         * Store server NOT running in server and monitor server pending struct
+         *
+         */
+        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        {
+            server_set_status_nolock(database->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+        }
+        server_clear_status_nolock(database->server, SERVER_RUNNING);
+        monitor_clear_pending_status(database, SERVER_RUNNING);
+
+        /* Also clear M/S state in both server and monitor server pending struct */
+        server_clear_status_nolock(database->server, SERVER_SLAVE);
+        server_clear_status_nolock(database->server, SERVER_MASTER);
+        server_clear_status_nolock(database->server, SERVER_RELAY_MASTER);
+        monitor_clear_pending_status(database, SERVER_SLAVE);
+        monitor_clear_pending_status(database, SERVER_MASTER);
+        monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
+
+        /* Clean addition status too */
+        server_clear_status_nolock(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+        server_clear_status_nolock(database->server, SERVER_STALE_STATUS);
+        server_clear_status_nolock(database->server, SERVER_STALE_SLAVE);
+        monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+        monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+        monitor_clear_pending_status(database, SERVER_STALE_SLAVE);
+
+        /* Log connect failure only once */
+        if (mon_status_changed(database) && mon_print_fail_status(database))
+        {
+            mon_log_connect_error(database, rval);
+        }
+
+        return;
+    }
+
     /* Store current status in both server and monitor server pending struct */
     server_set_status_nolock(database->server, SERVER_RUNNING);
     monitor_set_pending_status(database, SERVER_RUNNING);
@@ -2061,7 +2059,7 @@ void check_maxscale_schema_replication(MXS_MONITOR *monitor)
 
     while (database)
     {
-        mxs_connect_result_t rval = mon_connect_to_db(monitor, database);
+        mxs_connect_result_t rval = mon_ping_or_connect_to_db(monitor, database);
         if (rval == MONITOR_CONN_OK)
         {
             if (!check_replicate_ignore_table(database) ||

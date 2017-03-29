@@ -103,6 +103,7 @@ monitor_alloc(char *name, char *module)
     mon->read_timeout = DEFAULT_READ_TIMEOUT;
     mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
     mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+    mon->connect_attempts = DEFAULT_CONNECTION_ATTEMPTS;
     mon->interval = MONITOR_DEFAULT_INTERVAL;
     mon->parameters = NULL;
     mon->created_online = false;
@@ -461,6 +462,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
     dcb_printf(dcb, "Connect Timeout:   %i seconds\n", monitor->connect_timeout);
     dcb_printf(dcb, "Read Timeout:      %i seconds\n", monitor->read_timeout);
     dcb_printf(dcb, "Write Timeout:     %i seconds\n", monitor->write_timeout);
+    dcb_printf(dcb, "Connect attempts:  %i \n", monitor->connect_attempts);
     dcb_printf(dcb, "Monitored servers: ");
 
     const char *sep = "";
@@ -582,6 +584,10 @@ monitorSetNetworkTimeout(MXS_MONITOR *mon, int type, int value)
             mon->write_timeout = value;
             break;
 
+        case MONITOR_CONNECT_ATTEMPTS:
+            mon->connect_attempts = value;
+            break;
+
         default:
             MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
             rval = false;
@@ -683,7 +689,7 @@ bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query)
 
     for (MXS_MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
     {
-        if (mon_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
+        if (mon_ping_or_connect_to_db(monitor, mondb) != MONITOR_CONN_OK)
         {
             MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
                       " checking monitor user credentials and permissions: %s",
@@ -1145,22 +1151,21 @@ monitor_launch_script(MXS_MONITOR* mon, MXS_MONITOR_SERVERS* ptr, const char* sc
 }
 
 /**
- * Connect to a database. This will always leave a valid database handle in the
- * database->con pointer. This allows the user to call MySQL C API functions to
- * find out the reason of the failure.
+ * Ping or, if connection does not exist or ping fails, connect to a database. This
+ * will always leave a valid database handle in the database->con pointer, allowing
+ * the user to call MySQL C API functions to find out the reason of the failure.
+ *
  * @param mon Monitor
  * @param database Monitored database
- * @return MONITOR_CONN_OK if the connection is OK else the reason for the failure
+ * @return MONITOR_CONN_OK if the connection is OK, else the reason for the failure
  */
 mxs_connect_result_t
-mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
+mon_ping_or_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 {
-    mxs_connect_result_t rval = MONITOR_CONN_OK;
-
     /** Return if the connection is OK */
     if (database->con && mysql_ping(database->con) == 0)
     {
-        return rval;
+        return MONITOR_CONN_OK;
     }
 
     if (database->con)
@@ -1168,6 +1173,7 @@ mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
         mysql_close(database->con);
     }
 
+    mxs_connect_result_t rval = MONITOR_CONN_REFUSED;
     if ((database->con = mysql_init(NULL)))
     {
         char *uname = mon->user;
@@ -1185,27 +1191,28 @@ mon_connect_to_db(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
         mysql_optionsv(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
         mysql_optionsv(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
         mysql_optionsv(database->con, MYSQL_PLUGIN_DIR, get_connector_plugindir());
-        time_t start = time(NULL);
-        bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
-        time_t end = time(NULL);
 
-        if (!result)
+        time_t start = 0;
+        time_t end = 0;
+        for (int i = 0; i < mon->connect_attempts; i++)
         {
-            if ((int) difftime(end, start) >= mon->connect_timeout)
+            start = time(NULL);
+            bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
+            end = time(NULL);
+
+            if (result)
             {
-                rval = MONITOR_CONN_TIMEOUT;
-            }
-            else
-            {
-                rval = MONITOR_CONN_REFUSED;
+                rval = MONITOR_CONN_OK;
+                break;
             }
         }
 
+        if (rval == MONITOR_CONN_REFUSED &&
+            (int)difftime(end, start) >= mon->connect_timeout)
+        {
+            rval = MONITOR_CONN_TIMEOUT;
+        }
         MXS_FREE(dpwd);
-    }
-    else
-    {
-        rval = MONITOR_CONN_REFUSED;
     }
 
     return rval;
@@ -1337,6 +1344,8 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
     dprintf(file, "backend_connect_timeout=%d\n", monitor->connect_timeout);
     dprintf(file, "backend_write_timeout=%d\n", monitor->write_timeout);
     dprintf(file, "backend_read_timeout=%d\n", monitor->read_timeout);
+    dprintf(file, "%s=%d\n", BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
+
     close(file);
 
     return true;
