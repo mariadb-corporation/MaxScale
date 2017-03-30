@@ -282,7 +282,7 @@ handle_target_is_all(route_target_t route_target,
 
     if (result)
     {
-        atomic_add(&inst->stats.n_all, 1);
+        atomic_add_uint64(&inst->stats.n_all, 1);
     }
     return result;
 }

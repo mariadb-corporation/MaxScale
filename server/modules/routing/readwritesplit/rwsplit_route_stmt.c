@@ -1069,7 +1069,7 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
      */
     if (rwsplit_get_dcb(target_dcb, rses, BE_SLAVE, NULL, rlag_max))
     {
-        atomic_add(&inst->stats.n_slave, 1);
+        atomic_add_uint64(&inst->stats.n_slave, 1);
         return true;
     }
     else
@@ -1157,14 +1157,14 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (succp && master_dcb == curr_master_dcb)
     {
-        atomic_add(&inst->stats.n_master, 1);
+        atomic_add_uint64(&inst->stats.n_master, 1);
         *target_dcb = master_dcb;
     }
     else
     {
         if (succp && master_dcb == curr_master_dcb)
         {
-            atomic_add(&inst->stats.n_master, 1);
+            atomic_add_uint64(&inst->stats.n_master, 1);
             *target_dcb = master_dcb;
         }
         else
@@ -1253,7 +1253,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
         backend_ref_t *bref;
 
-        atomic_add(&inst->stats.n_queries, 1);
+        atomic_add_uint64(&inst->stats.n_queries, 1);
         /**
          * Add one query response waiter to backend reference
          */
