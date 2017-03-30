@@ -212,7 +212,7 @@ some minimal details of the commands available.
 Command history is available on platforms that support the libedit library. This
 allows the use of the up and down arrow keys to recall previous commands that
 have been executed by MaxAdmin. The default edit mode for the history is to
-emulate the vi commands, the behavior of libedit may however be customized using
+emulate *emacs* commands, the behavior of libedit may however be customized using
 the .editrc file. To obtain the history of commands that have been executed use
 the inbuilt history command.
 
@@ -270,18 +270,17 @@ execution of the MariaDB MaxScale command.
     -bash-4.1$
 ```
 
-Command files may be executed by either calling MaxAdmin with the name of the
-file that contains the commands
+Command files may be executed by redirecting them to MaxAdmin.
 
 ```
-maxadmin listall.ms
+maxadmin < listall.ms
 ```
 
-Or by using the #! mechanism to make the command file executable from the
-shell. To do this add a line at the start of your command file that contains the
-#! directive with the path of the MaxAdmin executable. Command options may also
-be given in this line. For example to create a script file that runs a set of
-list commands
+Another option is to use the #! mechanism to make the command file executable
+from the shell. To do this add a line at the start of your command file that
+contains the #! directive with the path of the MaxAdmin executable. Command
+options may also be given in this line. For example to create a script file that
+runs a set of list commands
 
 ```
 #!/usr/bin/maxadmin

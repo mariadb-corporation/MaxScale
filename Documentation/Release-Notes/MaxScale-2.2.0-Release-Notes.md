@@ -13,7 +13,8 @@ report at [Jira](https://jira.mariadb.org).
 ### NamedServerFilter
 
 This filter now uses the PCRE2-libarary to match queries. Previously, it used
-the POSIX-version of PCRE2.
+the POSIX-version of PCRE2. The filter also accepts multiple match-server pairs.
+Please see the NamedServerFilter documentation for details.
 
 ## Dropped Features
 
@@ -32,6 +33,11 @@ The following commands have been deprecated:
 * `disable sessionlog-priority <session-id> [debug|info|notice|warning]`
 
 The commands can be issued, but have no effect.
+
+MaxAdmin no longer attempts to interpret additional command line parameters as a
+file name to load commands from  (e.g. `maxadmin mycommands.txt`). The shell
+indirection operator `<` should be used to achieve the same effect (`maxadmin <
+mycommands.txt`).
 
 ## New Features
 
