@@ -57,7 +57,7 @@ The following substitutions will be made to the parameter value:
 For example, the previous example will be executed as:
 
 ```
-/home/user/myscript.sh initiator=192.168.0.10:3306 event=master_down live_nodes=192.168.0.201:3306,192.168.0.121:3306
+/home/user/myscript.sh initiator=[192.168.0.10]:3306 event=master_down live_nodes=[192.168.0.201]:3306,[192.168.0.121]:3306
 ```
 
 ### `events`
@@ -72,20 +72,19 @@ events=master_down,slave_down
 
 Here is a table of all possible event types and their descriptions that the monitors can be called with.
 
-Event Name|Description
-----------|----------
-master_down|A Master server has gone down
-master_up|A Master server has come up
-slave_down|A Slave server has gone down
-slave_up|A Slave server has come up
-server_down|A server with no assigned role has gone down
-server_up|A server with no assigned role has come up
-ndb_down|A MySQL Cluster node has gone down
-ndb_up|A MySQL Cluster node has come up
-lost_master|A server lost Master status
-lost_slave|A server lost Slave status
-lost_ndb|A MySQL Cluster node lost node membership
-new_master|A new Master was detected
-new_slave|A new Slave was detected
-new_ndb|A new MySQL Cluster node was found
-
+Event Name  |Description
+------------|----------
+master_down |A Master server has gone down
+master_up   |A Master server has come up
+slave_down  |A Slave server has gone down
+slave_up    |A Slave server has come up
+server_down |A server with no assigned role has gone down
+server_up   |A server with no assigned role has come up
+ndb_down    |A MySQL Cluster node has gone down
+ndb_up      |A MySQL Cluster node has come up
+lost_master |A server lost Master status
+lost_slave  |A server lost Slave status
+lost_ndb    |A MySQL Cluster node lost node membership
+new_master  |A new Master was detected
+new_slave   |A new Slave was detected
+new_ndb     |A new MySQL Cluster node was found
