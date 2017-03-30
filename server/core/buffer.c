@@ -640,7 +640,7 @@ gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
     if (GWBUF_EMPTY(head))
     {
         rval = head->next;
-        gwbuf_free(head);
+        gwbuf_free_one(head);
     }
     return rval;
 }
