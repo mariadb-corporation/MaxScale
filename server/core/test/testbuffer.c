@@ -394,6 +394,53 @@ void test_compare()
     gwbuf_free(rhs);
 }
 
+
+
+void test_clone()
+{
+    GWBUF* original = gwbuf_alloc_and_load(1, "1");
+
+    original = gwbuf_append(original, gwbuf_alloc_and_load(1,  "1"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(2,  "12"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(3,  "123"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(5,  "12345"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(8,  "12345678"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(13, "1234567890123"));
+    original = gwbuf_append(original, gwbuf_alloc_and_load(21, "123456789012345678901"));
+
+    GWBUF* clone = gwbuf_clone(original);
+
+    GWBUF* o = original;
+    GWBUF* c = clone;
+
+    ss_dassert(gwbuf_length(o) == gwbuf_length(c));
+
+    while (o)
+    {
+        ss_dassert(c);
+        ss_dassert(GWBUF_LENGTH(o) == GWBUF_LENGTH(c));
+
+        const char* i = (char*)GWBUF_DATA(o);
+        const char* end = i + GWBUF_LENGTH(o);
+        const char* j = (char*)GWBUF_DATA(c);
+
+        while (i != end)
+        {
+            ss_dassert(*i == *j);
+            ++i;
+            ++j;
+        }
+
+        o = o->next;
+        c = c->next;
+    }
+
+    ss_dassert(c == NULL);
+
+    gwbuf_free(clone);
+    gwbuf_free(original);
+}
+
 /**
  * test1    Allocate a buffer and do lots of things
  *
@@ -514,6 +561,7 @@ test1()
     test_load_and_copy();
     test_consume();
     test_compare();
+    test_clone();
 
     return 0;
 }
