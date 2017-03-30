@@ -11,29 +11,23 @@
  * Public License.
  */
 
+#include <maxscale/atomic.h>
+
 /**
  * @file atomic.c  - Implementation of atomic operations for MaxScale
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 10/06/13     Mark Riddoch    Initial implementation
- *
- * @endverbatim
  */
 
-int
-atomic_add(int *variable, int value)
+int atomic_add(int *variable, int value)
 {
-#ifdef __GNUC__
-    return (int) __sync_fetch_and_add (variable, value);
-#else
-    asm volatile(
-        "lock; xaddl %%eax, %2;"
-        :"=a" (value)
-        : "a" (value), "m" (*variable)
-        : "memory" );
-    return value;
-#endif
+    return __sync_fetch_and_add(variable, value);
+}
+
+int64_t atomic_add_int64(int64_t *variable, int64_t value)
+{
+    return __sync_fetch_and_add(variable, value);
+}
+
+uint64_t atomic_add_uint64(uint64_t *variable, int64_t value)
+{
+    return __sync_fetch_and_add(variable, value);
 }

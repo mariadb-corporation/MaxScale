@@ -21,11 +21,7 @@
 MXS_BEGIN_DECLS
 
 /**
- * Implementation of an atomic add operation for the GCC environment, or the
- * X86 processor.  If we are working within GNU C then we can use the GCC
- * atomic add built in function, which is portable across platforms that
- * implement GCC.  Otherwise, this function currently supports only X86
- * architecture (without further development).
+ * Implementation of an atomic add operations for the GCC environment.
  *
  * Adds a value to the contents of a location pointed to by the first parameter.
  * The add operation is atomic and the return value is the value stored in the
@@ -36,7 +32,9 @@ MXS_BEGIN_DECLS
  * @param value         Value to be added
  * @return              The value of variable before the add occurred
  */
-int atomic_add(int *variable, int value);
+int      atomic_add(int *variable, int value);
+int64_t  atomic_add_int64(int64_t *variable, int64_t value);
+uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
 
 /**
  * @brief Impose a full memory barrier
