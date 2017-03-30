@@ -339,7 +339,7 @@ GWBUF* gwbuf_clone(GWBUF* buf)
         while (clonebuf && buf->next)
         {
             buf = buf->next;
-            clonebuf->next = gwbuf_clone(buf);
+            clonebuf->next = gwbuf_clone_one(buf);
             clonebuf = clonebuf->next;
         }
 
