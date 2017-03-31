@@ -778,11 +778,6 @@ gw_read_and_write(DCB *dcb)
                 return 0;
             }
         }
-        else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) &&
-                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
-        {
-            stmt = modutil_get_next_MySQL_packet(&read_buffer);
-        }
         else
         {
             stmt = read_buffer;
