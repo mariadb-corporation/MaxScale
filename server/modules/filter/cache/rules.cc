@@ -537,6 +537,7 @@ static CACHE_RULE *cache_rule_create_regexp(cache_rule_attribute_t attribute,
         pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
 
         int n_threads = config_threadcount();
+        ss_dassert(n_threads > 0);
 
         pcre2_match_data **datas = alloc_match_datas(n_threads, code);
 
