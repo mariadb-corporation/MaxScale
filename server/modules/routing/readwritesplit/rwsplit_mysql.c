@@ -365,38 +365,29 @@ void check_session_command_reply(GWBUF *writebuf, sescmd_cursor_t *scur, backend
  */
 bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
 {
-    DCB *dcb;
-    bool succp;
-    int rc = 0;
-    sescmd_cursor_t *scur;
-    GWBUF *buf;
-    if (backend_ref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
+    ss_dassert(backend_ref);
+    CHK_BACKEND_REF(backend_ref);
+    bool succp = false;
+
     if (BREF_IS_CLOSED(backend_ref))
     {
-        succp = false;
-        goto return_succp;
+        return succp;
     }
-    dcb = backend_ref->bref_dcb;
 
+    DCB *dcb = backend_ref->bref_dcb;
     CHK_DCB(dcb);
-    CHK_BACKEND_REF(backend_ref);
 
     /**
      * Get cursor pointer and copy of command buffer to cursor.
      */
-    scur = &backend_ref->bref_sescmd_cur;
+    sescmd_cursor_t *scur = &backend_ref->bref_sescmd_cur;
 
     /** Return if there are no pending ses commands */
     if (sescmd_cursor_get_command(scur) == NULL)
     {
         succp = true;
         MXS_INFO("Cursor had no pending session commands.");
-
-        goto return_succp;
+        return succp;
     }
 
     if (!sescmd_cursor_is_active(scur))
@@ -404,6 +395,9 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
         /** Cursor is left active when function returns. */
         sescmd_cursor_set_active(scur, true);
     }
+
+    int rc = 0;
+    GWBUF *buf;
 
     switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
     {
@@ -418,12 +412,14 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
         {
             /**
              * Record database name and store to session.
+             *
+             * TODO: Do this in the client protocol module
              */
             GWBUF *tmpbuf;
-            MYSQL_session *data;
+            MYSQL_session* data;
             unsigned int qlen;
 
-            data = dcb->session->client_dcb->data;
+            data = (MYSQL_session*)dcb->session->client_dcb->data;
             *data->db = 0;
             tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
             qlen = MYSQL_GET_PAYLOAD_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
@@ -458,12 +454,11 @@ bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
     if (rc == 1)
     {
         succp = true;
+        ss_dassert(backend_ref->reply_state == REPLY_STATE_DONE);
+        LOG_RS(backend_ref, REPLY_STATE_START);
+        backend_ref->reply_state = REPLY_STATE_START;
     }
-    else
-    {
-        succp = false;
-    }
-return_succp:
+
     return succp;
 }
 

@@ -321,16 +321,11 @@ GWBUF *sescmd_cursor_clone_querybuf(sescmd_cursor_t *scur)
 
 bool execute_sescmd_history(backend_ref_t *bref)
 {
-    bool succp = true;
-    sescmd_cursor_t *scur;
-    if (bref == NULL)
-    {
-        MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
-        return false;
-    }
+    ss_dassert(bref);
     CHK_BACKEND_REF(bref);
+    bool succp = true;
 
-    scur = &bref->bref_sescmd_cur;
+    sescmd_cursor_t *scur = &bref->bref_sescmd_cur;
     CHK_SESCMD_CUR(scur);
 
     if (!sescmd_cursor_history_empty(scur))

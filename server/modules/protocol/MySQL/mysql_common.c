@@ -1562,3 +1562,9 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
 
     return rval;
 }
+
+mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session)
+{
+    MySQLProtocol* proto = (MySQLProtocol*)session->client_dcb->protocol;
+    return proto->current_command;
+}

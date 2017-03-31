@@ -234,6 +234,39 @@ typedef struct sescmd_cursor_st
 #endif
 } sescmd_cursor_t;
 
+/** Enum for tracking client reply state */
+typedef enum
+{
+    REPLY_STATE_START,       /**< Query sent to backend */
+    REPLY_STATE_DONE,        /**< Complete reply received */
+    REPLY_STATE_RSET_COLDEF, /**< Resultset response, waiting for column definitions */
+    REPLY_STATE_RSET_ROWS    /**< Resultset response, waiting for rows */
+} reply_state_t;
+
+/**
+ * Helper function to convert reply_state_t to string
+ */
+static inline const char* rstostr(reply_state_t state)
+{
+    switch (state)
+    {
+    case REPLY_STATE_START:
+        return "REPLY_STATE_START";
+
+    case REPLY_STATE_DONE:
+        return "REPLY_STATE_DONE";
+
+    case REPLY_STATE_RSET_COLDEF:
+        return "REPLY_STATE_RSET_COLDEF";
+
+    case REPLY_STATE_RSET_ROWS:
+        return "REPLY_STATE_RSET_ROWS";
+    }
+
+    ss_dassert(false);
+    return "UNKNOWN";
+}
+
 /**
  * Reference to BACKEND.
  *
@@ -249,9 +282,9 @@ typedef struct backend_ref_st
     bref_state_t    bref_state;
     int             bref_num_result_wait;
     sescmd_cursor_t bref_sescmd_cur;
-    GWBUF*          bref_pending_cmd; /**< For stmt which can't be routed due active sescmd execution */
     unsigned char   reply_cmd;  /**< The reply the backend server sent to a session command.
                                  * Used to detect slaves that fail to execute session command. */
+    reply_state_t   reply_state; /**< Reply state of the current query */
 #if defined(SS_DEBUG)
     skygw_chk_t     bref_chk_tail;
 #endif
@@ -322,6 +355,8 @@ struct router_client_session
     DCB*             client_dcb;
     int              pos_generator;
     backend_ref_t    *forced_node; /*< Current server where all queries should be sent */
+    int              expected_responses; /**< Number of expected responses to the current query */
+    GWBUF*           query_queue; /**< Queued commands waiting to be executed */
 #if defined(PREP_STMT_CACHING)
     HASHTABLE*       rses_prep_stmt[2];
 #endif
@@ -358,6 +393,22 @@ typedef struct router_instance
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
+
+/**
+ * @brief Route a stored query
+ *
+ * When multiple queries are executed in a pipeline fashion, the readwritesplit
+ * stores the extra queries in a queue. This queue is emptied after reading a
+ * reply from the backend server.
+ *
+ * @param rses Router client session
+ * @return True if a stored query was routed successfully
+ */
+bool route_stored_query(ROUTER_CLIENT_SES *rses);
+
+/** Reply state change debug logging */
+#define LOG_RS(a, b) MXS_DEBUG("[%s]:%d %s -> %s", (a)->ref->server->name, \
+    (a)->ref->server->port, rstostr((a)->reply_state), rstostr(b));
 
 MXS_END_DECLS
 

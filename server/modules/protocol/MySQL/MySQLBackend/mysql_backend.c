@@ -756,7 +756,7 @@ gw_read_and_write(DCB *dcb)
          * If protocol has session command set, concatenate whole
          * response into one buffer.
          */
-        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != MYSQL_COM_UNDEFINED)
+        if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, true) != MYSQL_COM_UNDEFINED)
         {
             stmt = process_response_data(dcb, &read_buffer, gwbuf_length(read_buffer));
             /**

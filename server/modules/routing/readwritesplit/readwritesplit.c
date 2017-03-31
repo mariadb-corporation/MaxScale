@@ -334,6 +334,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     client_rses->client_dcb = session->client_dcb;
     client_rses->have_tmp_tables = false;
     client_rses->forced_node = NULL;
+    client_rses->expected_responses = 0;
+    client_rses->query_queue = NULL;
     memcpy(&client_rses->rses_config, &router->rwsplit_config, sizeof(client_rses->rses_config));
 
     int router_nservers = router->service->n_dbref;
@@ -532,12 +534,44 @@ void close_failed_bref(backend_ref_t *bref, bool fatal)
     {
         sescmd_cursor_set_active(&bref->bref_sescmd_cur, false);
     }
+}
 
-    if (bref->bref_pending_cmd)
+bool route_stored_query(ROUTER_CLIENT_SES *rses)
+{
+    bool rval = true;
+
+    if (rses->query_queue)
     {
-        gwbuf_free(bref->bref_pending_cmd);
-        bref->bref_pending_cmd = NULL;
+        GWBUF* query_queue = modutil_get_next_MySQL_packet(&rses->query_queue);
+        query_queue = gwbuf_make_contiguous(query_queue);
+
+        /** Store the query queue locally for the duration of the routeQuery call.
+         * This prevents recursive calls into this function. */
+        GWBUF *temp_storage = rses->query_queue;
+        rses->query_queue = NULL;
+
+        if (!routeQuery((MXS_ROUTER*)rses->router, (MXS_ROUTER_SESSION*)rses, query_queue))
+        {
+            rval = false;
+            char* sql = modutil_get_SQL(query_queue);
+
+            if (sql)
+            {
+                MXS_ERROR("Routing query \"%s\" failed.", sql);
+                MXS_FREE(sql);
+            }
+            else
+            {
+                MXS_ERROR("Failed to route query.");
+            }
+            gwbuf_free(query_queue);
+        }
+
+        ss_dassert(rses->query_queue == NULL);
+        rses->query_queue = temp_storage;
     }
+
+    return rval;
 }
 
 /**
@@ -565,9 +599,25 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     {
         closed_session_reply(querybuf);
     }
-    else if (route_single_stmt(inst, rses, querybuf))
+    else
     {
-        rval = 1;
+        if (rses->expected_responses || rses->query_queue)
+        {
+            /** We are already processing a request from the client. Store the
+             * new query and wait for the previous one to complete. */
+            rses->query_queue = gwbuf_append(rses->query_queue, querybuf);
+            querybuf = NULL;
+            rval = 1;
+
+            if (rses->expected_responses == 0 && !route_stored_query(rses))
+            {
+                rval = 0;
+            }
+        }
+        else if (route_single_stmt(inst, rses, querybuf))
+        {
+            rval = 1;
+        }
     }
 
     if (querybuf != NULL)
@@ -652,6 +702,57 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 }
 
 /**
+ * @brief Check if we have received a complete reply from the backend
+ *
+ * @param bref   Backend reference
+ * @param buffer Buffer containing the response
+ *
+ * @return True if the complete response has been received
+ */
+bool reply_is_complete(backend_ref_t* bref, GWBUF *buffer)
+{
+
+    if (bref->reply_state == REPLY_STATE_START &&
+        !mxs_mysql_is_result_set(buffer))
+    {
+        /** Not a result set, we have the complete response */
+        LOG_RS(bref, REPLY_STATE_DONE);
+        bref->reply_state = REPLY_STATE_DONE;
+    }
+    else
+    {
+        int more;
+        int n_eof = bref->reply_state == REPLY_STATE_RSET_ROWS ? 1 : 0;
+        n_eof += modutil_count_signal_packets(buffer, 0, n_eof, &more);
+
+        mysql_server_cmd_t cmd = mxs_mysql_current_command(bref->bref_dcb->session);
+
+        if (n_eof == 0)
+        {
+            /** Waiting for the EOF packet after the column definitions */
+            LOG_RS(bref, REPLY_STATE_RSET_COLDEF);
+            bref->reply_state = REPLY_STATE_RSET_COLDEF;
+        }
+        else if (n_eof == 1 && cmd != MYSQL_COM_FIELD_LIST)
+        {
+            /** Waiting for the EOF packet after the rows */
+            LOG_RS(bref, REPLY_STATE_RSET_ROWS);
+            bref->reply_state = REPLY_STATE_RSET_ROWS;
+        }
+        else
+        {
+            /** We either have a complete result set or a response to
+             * a COM_FIELD_LIST command */
+            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MYSQL_COM_FIELD_LIST));
+            LOG_RS(bref, REPLY_STATE_DONE);
+            bref->reply_state = REPLY_STATE_DONE;
+        }
+    }
+
+    return bref->reply_state == REPLY_STATE_DONE;
+}
+
+/**
  * @brief Client Reply routine (API)
  *
  * The routine will reply to client for session change with master server data
@@ -698,7 +799,15 @@ static void clientReply(MXS_ROUTER *instance,
 
     /** Statement was successfully executed, free the stored statement */
     session_clear_stmt(backend_dcb->session);
+    ss_dassert(bref->reply_state != REPLY_STATE_DONE);
 
+    if (reply_is_complete(bref, writebuf))
+    {
+        /** Got a complete reply, decrement expected response count */
+        router_cli_ses->expected_responses--;
+        ss_dassert(router_cli_ses->expected_responses >= 0);
+        ss_dassert(bref->reply_state == REPLY_STATE_DONE);
+    }
     /**
      * Active cursor means that reply is from session command
      * execution.
@@ -750,61 +859,37 @@ static void clientReply(MXS_ROUTER *instance,
         bref_clear_state(bref, BREF_WAITING_RESULT);
     }
 
+    bool queue_routed = false;
+
+    if (router_cli_ses->expected_responses == 0)
+    {
+        for (int i = 0; i < router_cli_ses->rses_nbackends; i++)
+        {
+            ss_dassert(router_cli_ses->rses_backend_ref[i].reply_state == REPLY_STATE_DONE);
+        }
+
+        queue_routed = router_cli_ses->query_queue != NULL;
+        route_stored_query(router_cli_ses);
+    }
+    else
+    {
+        ss_dassert(router_cli_ses->expected_responses > 0);
+    }
     if (writebuf != NULL && client_dcb != NULL)
     {
         /** Write reply to client DCB */
         MXS_SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
-
     /** There is one pending session command to be executed. */
-    if (sescmd_cursor_is_active(scur))
+    else if (!queue_routed && sescmd_cursor_is_active(scur))
     {
-        bool succp;
-
         MXS_INFO("Backend [%s]:%d processed reply and starts to execute active cursor.",
                  bref->ref->server->name, bref->ref->server->port);
 
-        succp = execute_sescmd_in_backend(bref);
-
-        if (!succp)
+        if (execute_sescmd_in_backend(bref))
         {
-            MXS_INFO("Backend [%s]:%d failed to execute session command.",
-                     bref->ref->server->name, bref->ref->server->port);
+            router_cli_ses->expected_responses++;
         }
-    }
-    else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
-    {
-        int ret;
-
-        CHK_GWBUF(bref->bref_pending_cmd);
-
-        if ((ret = bref->bref_dcb->func.write(bref->bref_dcb,
-                                              gwbuf_clone(bref->bref_pending_cmd))) == 1)
-        {
-            ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
-            atomic_add_uint64(&inst->stats.n_queries, 1);
-            /**
-             * Add one query response waiter to backend reference
-             */
-            bref_set_state(bref, BREF_QUERY_ACTIVE);
-            bref_set_state(bref, BREF_WAITING_RESULT);
-        }
-        else
-        {
-            char* sql = modutil_get_SQL(bref->bref_pending_cmd);
-
-            if (sql)
-            {
-                MXS_ERROR("Routing query \"%s\" failed.", sql);
-                MXS_FREE(sql);
-            }
-            else
-            {
-                MXS_ERROR("Failed to route query.");
-            }
-        }
-        gwbuf_free(bref->bref_pending_cmd);
-        bref->bref_pending_cmd = NULL;
     }
 }
 
@@ -820,7 +905,7 @@ static void clientReply(MXS_ROUTER *instance,
  */
 static uint64_t getCapabilities(MXS_ROUTER* instance)
 {
-    return RCAP_TYPE_NONE;
+    return RCAP_TYPE_STMT_INPUT | RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_STMT_OUTPUT;
 }
 
 /*
@@ -1374,6 +1459,10 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, backend_ref_t *old
                 if (bref->bref_dcb->func.write(bref->bref_dcb, stored))
                 {
                     MXS_INFO("Retrying failed read at '%s'.", bref->ref->server->unique_name);
+                    ss_dassert(bref->reply_state == REPLY_STATE_DONE);
+                    LOG_RS(bref, REPLY_STATE_START);
+                    bref->reply_state = REPLY_STATE_START;
+                    rses->expected_responses++;
                     success = true;
                     break;
                 }
@@ -1391,6 +1480,10 @@ static bool reroute_stored_statement(ROUTER_CLIENT_SES *rses, backend_ref_t *old
             if (bref->bref_dcb->func.write(bref->bref_dcb, stored))
             {
                 MXS_INFO("Retrying failed read at '%s'.", bref->ref->server->unique_name);
+                LOG_RS(bref, REPLY_STATE_START);
+                ss_dassert(bref->reply_state == REPLY_STATE_DONE);
+                bref->reply_state = REPLY_STATE_START;
+                rses->expected_responses++;
                 success = true;
             }
         }
@@ -1441,14 +1534,14 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
     }
     CHK_BACKEND_REF(bref);
 
-    /**
-     * If query was sent through the bref and it is waiting for reply from
-     * the backend server it is necessary to send an error to the client
-     * because it is waiting for reply.
-     */
     if (BREF_IS_WAITING_RESULT(bref))
     {
-        GWBUF *stored;
+        /**
+         * A query was sent through the backend and it is waiting for a reply.
+         * Try to reroute the statement to a working server or send an error
+         * to the client.
+         */
+        GWBUF *stored = NULL;
         const SERVER *target;
 
         if (!session_take_stmt(backend_dcb->session, &stored, &target) ||
@@ -1457,12 +1550,31 @@ static bool handle_error_new_connection(ROUTER_INSTANCE *inst,
         {
             /**
              * We failed to route the stored statement or no statement was
-             * stored for this server. Either way we can safely free the buffer.
+             * stored for this server. Either way we can safely free the buffer
+             * and decrement the expected response count.
              */
             gwbuf_free(stored);
+            myrses->expected_responses--;
 
-            DCB *client_dcb = ses->client_dcb;
-            client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+            if (!sescmd_cursor_is_active(&bref->bref_sescmd_cur))
+            {
+                /**
+                 * The backend was executing a command that requires a reply.
+                 * Send an error to the client to let it know the query has
+                 * failed.
+                 */
+                DCB *client_dcb = ses->client_dcb;
+                client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
+            }
+
+            if (myrses->expected_responses == 0)
+            {
+                /**
+                 * The response from this server was the last one, try to
+                 * route any stored queries
+                 */
+                route_stored_query(myrses);
+            }
         }
     }
 
@@ -1605,6 +1717,7 @@ static bool create_backends(ROUTER_CLIENT_SES *rses, backend_ref_t** dest, int* 
 #endif
             backend_ref[i].bref_state = 0;
             backend_ref[i].ref = sref;
+            backend_ref[i].reply_state = REPLY_STATE_DONE;
             /** store pointers to sescmd list to both cursors */
             backend_ref[i].bref_sescmd_cur.scmd_cur_rses = rses;
             backend_ref[i].bref_sescmd_cur.scmd_cur_active = false;
