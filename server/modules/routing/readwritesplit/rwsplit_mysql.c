@@ -162,21 +162,29 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
 {
     if (!rses->rses_load_active)
     {
-        uint8_t *packet = GWBUF_DATA(querybuf);
-        unsigned char ptype = packet[4];
-        size_t len = MXS_MIN(GWBUF_LENGTH(querybuf),
-                             MYSQL_GET_PAYLOAD_LEN((unsigned char *)querybuf->start) - 1);
-        char *data = (char *)&packet[5];
-        char *contentstr = strndup(data, MXS_MIN(len, RWSPLIT_TRACE_MSG_LEN));
+        unsigned char command = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
         char *qtypestr = qc_typemask_to_string(qtype);
+
+        char *sql;
+        int len = 0;
+        modutil_extract_SQL(querybuf, &sql, &len);
+
+        if (len > RWSPLIT_TRACE_MSG_LEN)
+        {
+            len = RWSPLIT_TRACE_MSG_LEN;
+        }
+
         MXS_SESSION *ses = rses->client_dcb->session;
-        MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %s%s %s",
-                 (session_is_autocommit(ses) ? "[enabled]" : "[disabled]"),
-                 (session_trx_is_active(ses) ? "[open]" : "[not open]"),
-                 STRPACKETTYPE(ptype), (qtypestr == NULL ? "N/A" : qtypestr),
-                 contentstr, (querybuf->hint == NULL ? "" : ", Hint:"),
-                 (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
-        MXS_FREE(contentstr);
+        const char *autocommit = session_is_autocommit(ses) ? "[enabled]" : "[disabled]";
+        const char *transaction = session_trx_is_active(ses) ? "[open]" : "[not open]";
+        const char *querytype = qtypestr == NULL ? "N/A" : qtypestr;
+        const char *hint = querybuf->hint == NULL ? "" : ", Hint:";
+        const char *hint_type = querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type);
+
+        MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, stmt: %.*s%s %s",
+                 autocommit, transaction, STRPACKETTYPE(command), querytype, len,
+                 sql, hint, hint_type);
+
         MXS_FREE(qtypestr);
     }
     else
