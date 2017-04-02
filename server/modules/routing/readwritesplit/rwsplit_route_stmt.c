@@ -1230,6 +1230,13 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     return succp;
 }
 
+static inline bool query_creates_reply(mysql_server_cmd_t cmd)
+{
+    return cmd != MYSQL_COM_QUIT &&
+        cmd != MYSQL_COM_STMT_SEND_LONG_DATA &&
+        cmd != MYSQL_COM_STMT_CLOSE;
+}
+
 /**
  * @brief Handle got a target
  *
@@ -1279,22 +1286,26 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
             MXS_ERROR("Failed to store current statement, it won't be retried if it fails.");
         }
 
-        backend_ref_t *bref;
-
         atomic_add_uint64(&inst->stats.n_queries, 1);
-        /**
-         * Add one query response waiter to backend reference
-         */
-        bref = get_bref_from_dcb(rses, target_dcb);
-        bref_set_state(bref, BREF_QUERY_ACTIVE);
-        bref_set_state(bref, BREF_WAITING_RESULT);
 
-        ss_dassert(bref->reply_state == REPLY_STATE_DONE);
-        LOG_RS(bref, REPLY_STATE_START);
-        bref->reply_state = REPLY_STATE_START;
-        rses->expected_responses++;
+        mysql_server_cmd_t cmd = mxs_mysql_current_command(rses->client_dcb->session);
+
+        if (query_creates_reply(cmd))
+        {
+            /** The server will reply to this command */
+            ss_dassert(bref->reply_state == REPLY_STATE_DONE);
+
+            bref = get_bref_from_dcb(rses, target_dcb);
+            bref_set_state(bref, BREF_QUERY_ACTIVE);
+            bref_set_state(bref, BREF_WAITING_RESULT);
+
+            LOG_RS(bref, REPLY_STATE_START);
+            bref->reply_state = REPLY_STATE_START;
+            rses->expected_responses++;
+        }
+
         /**
-         * If a READ ONLYtransaction is ending set forced_node to NULL
+         * If a READ ONLY transaction is ending set forced_node to NULL
          */
         if (rses->forced_node &&
             session_trx_is_read_only(rses->client_dcb->session) &&
