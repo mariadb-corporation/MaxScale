@@ -114,6 +114,22 @@ MXS_BEGIN_DECLS
 #define MYSQL_DATABASE_MAXLEN 128
 #define MYSQL_TABLE_MAXLEN    64
 
+/** Response packet status bits for OK and EOF packets */
+#define MXS_MYSQL_STATUS_IN_TRANS             0x0001
+#define MXS_MYSQL_STATUS_AUTOCOMMIT           0x0002
+#define MXS_MYSQL_MORE_RESULTS_EXISTS         0x0008
+#define MXS_MYSQL_STATUS_NO_GOOD_INDEX_USED   0x0010
+#define MXS_MYSQL_STATUS_NO_INDEX_USED        0x0020
+#define MXS_MYSQL_STATUS_CURSOR_EXISTS        0x0040
+#define MXS_MYSQL_STATUS_LAST_ROW_SENT        0x0080
+#define MXS_MYSQL_STATUS_DB_DROPPED           0x0100
+#define MXS_MYSQL_STATUS_NO_BACKSLASH_ESCAPES 0x0200
+#define MXS_MYSQL_STATUS_METADATA_CHANGED     0x0400
+#define MXS_MYSQL_QUERY_WAS_SLOW              0x0800
+#define MXS_MYSQL_PS_OUT_PARAMS               0x1000
+#define MXS_MYSQL_STATUS_IN_TRANS_READONLY    0x2000
+#define MXS_MYSQL_SESSION_STATE_CHANGED       0x4000
+
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4
@@ -427,8 +443,25 @@ int mxs_mysql_send_ok(DCB *dcb, int sequence, uint8_t affected_rows, const char*
 /** Check for OK packet */
 bool mxs_mysql_is_ok_packet(GWBUF *buffer);
 
-/** Check for result set */
-bool mxs_mysql_is_result_set(GWBUF *buffer);
+/**
+ * @brief Check if a buffer contains a result set
+ *
+ * @param buffer Buffer to check
+ * @param offset Offset into the buffer
+ *
+ * @return True if the @c buffer at @c offset contains the start of a result set
+ */
+bool mxs_mysql_is_result_set(GWBUF *buffer, size_t offset);
+
+/**
+ * @brief Check if the OK packet is followed by another result
+ *
+ * @param buffer Buffer to check
+ * @param offset Offset into the buffer
+ *
+ * @return True if more results are expected
+ */
+bool mxs_mysql_more_results_after_ok(GWBUF *buffer, size_t extra_offset);
 
 /** Get current command for a session */
 mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session);

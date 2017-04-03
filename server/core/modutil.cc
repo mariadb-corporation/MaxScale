@@ -633,83 +633,45 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-/**
- * Count the number of EOF, OK or ERR packets in the buffer. Only complete
- * packets are inspected and the buffer is assumed to only contain whole packets.
- * If partial packets are in the buffer, they are ignored. The caller must handle the
- * detection of partial packets in buffers.
- * @param reply Buffer to use
- * @param use_ok Whether the DEPRECATE_EOF flag is set
- * @param n_found If there were previous packets found
- * @return Number of EOF packets
- */
-int
-modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* offset)
 {
-    unsigned char* ptr = (unsigned char*) reply->start;
-    unsigned char* end = (unsigned char*) reply->end;
-    unsigned char* prev = ptr;
-    int pktlen, eof = 0, err = 0;
-    int errlen = 0, eoflen = 0;
-    int iserr = 0, iseof = 0;
-    bool moreresults = false;
-    while (ptr < end)
-    {
-        pktlen = MYSQL_GET_PAYLOAD_LEN(ptr) + 4;
+    unsigned int len = gwbuf_length(reply);
+    int eof = 0;
+    int err = 0;
 
-        if ((iserr = PTR_IS_ERR(ptr)) || (iseof = PTR_IS_EOF(ptr)))
+    while (*offset < len)
+    {
+        uint8_t header[MYSQL_HEADER_LEN + 5]; // Maximum size of an EOF packet
+
+        gwbuf_copy_data(reply, *offset, MYSQL_HEADER_LEN + 1, header);
+
+        unsigned int pktlen = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
+
+        if (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_ERR)
         {
-            if (iserr)
-            {
-                err++;
-                errlen = pktlen;
-            }
-            else if (iseof)
-            {
-                eof++;
-                eoflen = pktlen;
-            }
+            err++;
+        }
+        else if (MYSQL_GET_COMMAND(header) == MYSQL_REPLY_EOF &&
+                 pktlen == 5 + MYSQL_HEADER_LEN)
+        {
+            eof++;
         }
 
-        if ((ptr + pktlen) > end || (eof + n_found) >= 2)
+        if (*offset + pktlen >= len || (eof + err + n_found) >= 2)
         {
-            moreresults = PTR_EOF_MORE_RESULTS(ptr);
-            ptr = prev;
+            gwbuf_copy_data(reply, *offset, sizeof(header), header);
+            uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
+            *more = ((*status) & MXS_MYSQL_MORE_RESULTS_EXISTS);
+            *offset += pktlen;
             break;
         }
 
-        prev = ptr;
-        ptr += pktlen;
+        *offset += pktlen;
     }
 
+    int total = err + eof + n_found;
 
-    /*
-     * If there were new EOF/ERR packets found, make sure that they are the last
-     * packet in the buffer.
-     */
-    if ((eof || err) && n_found)
-    {
-        if (err)
-        {
-            ptr -= errlen;
-            if (!PTR_IS_ERR(ptr))
-            {
-                err = 0;
-            }
-        }
-        else
-        {
-            ptr -= eoflen;
-            if (!PTR_IS_EOF(ptr))
-            {
-                eof = 0;
-            }
-        }
-    }
-
-    *more = moreresults;
-
-    return (eof + err);
+    return total;
 }
 
 /**

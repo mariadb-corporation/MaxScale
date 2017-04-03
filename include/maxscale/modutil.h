@@ -30,8 +30,6 @@ MXS_BEGIN_DECLS
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
 #define IS_FULL_RESPONSE(buf) (modutil_count_signal_packets(buf,0,0) == 2)
-#define PTR_EOF_MORE_RESULTS(b) ((PTR_IS_EOF(b) && ptr[7] & 0x08))
-
 
 extern int      modutil_is_SQL(GWBUF *);
 extern int      modutil_is_SQL_prepare(GWBUF *);
@@ -54,7 +52,23 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              const char      *statemsg,
                                              const char      *msg);
 
-int modutil_count_signal_packets(GWBUF*, int, int, int*);
+/**
+ * @brief Count the number of EOF and ERR packets in the buffer.
+ *
+ * Only complete packets are inspected and the buffer is assumed to only contain
+ * whole packets. If partial packets are in the buffer, they are ignored.
+ * The caller must handle the detection of partial packets in buffers.
+ *
+ * @param reply      Buffer to use
+ * @param n_found    Number of previous found packets
+ * @param more       Set to true of more results exist
+ * @param offset_out Initial offset into the buffer. This offset is set to point
+ *                   to the first byte after the last packet in the buffer.
+ *
+ * @return Total number of EOF and ERR packets including the ones already found
+ */
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* offset_out);
+
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
 
 /**
