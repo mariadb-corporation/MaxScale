@@ -605,6 +605,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
         {
             /** We are already processing a request from the client. Store the
              * new query and wait for the previous one to complete. */
+            MXS_DEBUG("Storing query, expecting %d replies", rses->expected_responses);
             rses->query_queue = gwbuf_append(rses->query_queue, querybuf);
             querybuf = NULL;
             rval = 1;
@@ -711,41 +712,66 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
  */
 bool reply_is_complete(backend_ref_t* bref, GWBUF *buffer)
 {
+    size_t offset = 0;
+    size_t len = gwbuf_length(buffer);
 
-    if (bref->reply_state == REPLY_STATE_START &&
-        !mxs_mysql_is_result_set(buffer))
+    while (offset < len)
     {
-        /** Not a result set, we have the complete response */
-        LOG_RS(bref, REPLY_STATE_DONE);
-        bref->reply_state = REPLY_STATE_DONE;
-    }
-    else
-    {
-        int more;
-        int n_eof = bref->reply_state == REPLY_STATE_RSET_ROWS ? 1 : 0;
-        n_eof += modutil_count_signal_packets(buffer, 0, n_eof, &more);
-
-        mysql_server_cmd_t cmd = mxs_mysql_current_command(bref->bref_dcb->session);
-
-        if (n_eof == 0)
+        if (bref->reply_state == REPLY_STATE_START &&
+            !mxs_mysql_is_result_set(buffer, offset))
         {
-            /** Waiting for the EOF packet after the column definitions */
-            LOG_RS(bref, REPLY_STATE_RSET_COLDEF);
-            bref->reply_state = REPLY_STATE_RSET_COLDEF;
-        }
-        else if (n_eof == 1 && cmd != MYSQL_COM_FIELD_LIST)
-        {
-            /** Waiting for the EOF packet after the rows */
-            LOG_RS(bref, REPLY_STATE_RSET_ROWS);
-            bref->reply_state = REPLY_STATE_RSET_ROWS;
+            if (!mxs_mysql_more_results_after_ok(buffer, offset))
+            {
+                /** Not a result set, we have the complete response */
+                LOG_RS(bref, REPLY_STATE_DONE);
+                bref->reply_state = REPLY_STATE_DONE;
+                break;
+            }
+
+            uint8_t header[MYSQL_HEADER_LEN];
+            gwbuf_copy_data(buffer, offset, sizeof(header), header);
+            offset += MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
         }
         else
         {
-            /** We either have a complete result set or a response to
-             * a COM_FIELD_LIST command */
-            ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MYSQL_COM_FIELD_LIST));
-            LOG_RS(bref, REPLY_STATE_DONE);
-            bref->reply_state = REPLY_STATE_DONE;
+            bool more = false;
+            int old_eof = bref->reply_state == REPLY_STATE_RSET_ROWS ? 1 : 0;
+
+            int n_eof = modutil_count_signal_packets(buffer, old_eof, &more, &offset);
+            mysql_server_cmd_t cmd = mxs_mysql_current_command(bref->bref_dcb->session);
+
+            if (n_eof == 0)
+            {
+                /** Waiting for the EOF packet after the column definitions */
+                LOG_RS(bref, REPLY_STATE_RSET_COLDEF);
+                bref->reply_state = REPLY_STATE_RSET_COLDEF;
+            }
+            else if (n_eof == 1 && cmd != MYSQL_COM_FIELD_LIST)
+            {
+                /** Waiting for the EOF packet after the rows */
+                LOG_RS(bref, REPLY_STATE_RSET_ROWS);
+                bref->reply_state = REPLY_STATE_RSET_ROWS;
+            }
+            else
+            {
+                /** We either have a complete result set or a response to
+                 * a COM_FIELD_LIST command */
+                ss_dassert(n_eof == 2 || (n_eof == 1 && cmd == MYSQL_COM_FIELD_LIST));
+                LOG_RS(bref, REPLY_STATE_DONE);
+                bref->reply_state = REPLY_STATE_DONE;
+
+                if (more)
+                {
+                    /** The server will send more resultsets */
+                    LOG_RS(bref, REPLY_STATE_START);
+                    bref->reply_state = REPLY_STATE_START;
+                }
+                else
+                {
+                    ss_dassert(offset == len);
+                    break;
+                }
+            }
         }
     }
 
@@ -808,6 +834,11 @@ static void clientReply(MXS_ROUTER *instance,
         ss_dassert(router_cli_ses->expected_responses >= 0);
         ss_dassert(bref->reply_state == REPLY_STATE_DONE);
     }
+    else
+    {
+        MXS_DEBUG("Reply not yet complete, waiting for %d replies", router_cli_ses->expected_responses);
+    }
+
     /**
      * Active cursor means that reply is from session command
      * execution.

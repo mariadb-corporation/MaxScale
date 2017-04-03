@@ -218,80 +218,46 @@ log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t
  * @param qtype         Query type
  * @return bool indicating whether the session can continue
  */
-bool
-handle_target_is_all(route_target_t route_target,
-                     ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
-                     GWBUF *querybuf, int packet_type, qc_query_type_t qtype)
+bool handle_target_is_all(route_target_t route_target, ROUTER_INSTANCE *inst,
+                          ROUTER_CLIENT_SES *rses, GWBUF *querybuf,
+                          int packet_type, qc_query_type_t qtype)
 {
-    bool result;
+    bool result = false;
 
-    /** Multiple, conflicting routing target. Return error */
     if (TARGET_IS_MASTER(route_target) || TARGET_IS_SLAVE(route_target))
     {
-        backend_ref_t *bref = rses->rses_backend_ref;
+        /**
+         * Conflicting routing targets. Return an error to the client.
+         */
 
-        /* NOTE: modutil_get_query is MySQL specific */
         char *query_str = modutil_get_query(querybuf);
         char *qtype_str = qc_typemask_to_string(qtype);
 
-        /* NOTE: packet_type is MySQL specific */
         MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with session data "
                   "modification is not supported if configuration parameter "
                   "use_sql_variables_in=all .", STRPACKETTYPE(packet_type),
                   qtype_str, (query_str == NULL ? "(empty)" : query_str));
 
-        MXS_INFO("Unable to route the query without losing session data "
-                 "modification from other servers. <");
+        GWBUF *errbuf = modutil_create_mysql_err_msg(1, 0, 1064, "42000",
+                                                     "Routing query to backend failed. "
+                                                     "See the error log for further details.");
 
-        while (bref != NULL && !BREF_IS_IN_USE(bref))
+        if (errbuf)
         {
-            bref++;
-        }
-
-        if (bref != NULL && BREF_IS_IN_USE(bref))
-        {
-            /** Create and add MySQL error to eventqueue */
-            modutil_reply_parse_error(bref->bref_dcb,
-                                      MXS_STRDUP_A("Routing query to backend failed. "
-                                                   "See the error log for further "
-                                                   "details."), 0);
+            rses->client_dcb->func.write(rses->client_dcb, errbuf);
             result = true;
         }
-        else
-        {
-            /**
-             * If there were no available backend references
-             * available return false - session will be closed
-             */
-            MXS_ERROR("Sending error message to client "
-                      "failed. Router doesn't have any "
-                      "available backends. Session will be "
-                      "closed.");
-            result = false;
-        }
-        /* Test shouldn't be needed */
-        if (query_str)
-        {
-            MXS_FREE(query_str);
-        }
-        if (qtype_str)
-        {
-            MXS_FREE(qtype_str);
-        }
-        return result;
-    }
-    /**
-     * It is not sure if the session command in question requires
-     * response. Statement is examined in route_session_write.
-     * Router locking is done inside the function.
-     */
-    result = route_session_write(rses, gwbuf_clone(querybuf), inst,
-                                 packet_type, qtype);
 
-    if (result)
+        MXS_FREE(query_str);
+        MXS_FREE(qtype_str);
+    }
+    else if (route_session_write(rses, gwbuf_clone(querybuf), inst, packet_type, qtype))
     {
+
+        result = true;
         atomic_add_uint64(&inst->stats.n_all, 1);
     }
+
     return result;
 }
 
