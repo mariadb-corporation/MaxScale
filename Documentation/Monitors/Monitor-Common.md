@@ -36,6 +36,17 @@ This parameter controls the timeout for reading from a monitored server. It is i
 backend_read_timeout=2
 ```
 
+### `backend_connect_attempts`
+
+This parameter defines the maximum times a backend connection is attempted every
+monitoring loop. The default is 1. Every attempt may take up to
+`backend_connect_timeout` seconds to perform. If none of the attempts are
+successful, the backend is considered to be unreachable and down.
+
+```
+backend_connect_attempts=3
+```
+
 ### `script`
 
 This command will be executed when a server changes its state. The parameter should be an absolute path to a command or the command should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
@@ -88,4 +99,3 @@ lost_ndb|A MySQL Cluster node lost node membership
 new_master|A new Master was detected
 new_slave|A new Slave was detected
 new_ndb|A new MySQL Cluster node was found
-
