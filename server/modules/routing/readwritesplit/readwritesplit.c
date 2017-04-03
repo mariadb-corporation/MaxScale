@@ -336,6 +336,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *router_inst, MXS_SESSION *sess
     client_rses->forced_node = NULL;
     client_rses->expected_responses = 0;
     client_rses->query_queue = NULL;
+    client_rses->load_data_state = LOAD_DATA_INACTIVE;
     memcpy(&client_rses->rses_config, &router->rwsplit_config, sizeof(client_rses->rses_config));
 
     int router_nservers = router->service->n_dbref;
@@ -601,8 +602,18 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
     }
     else
     {
-        if (rses->expected_responses || rses->query_queue)
+        if ((rses->expected_responses == 0 && rses->query_queue == NULL) ||
+            rses->load_data_state == LOAD_DATA_ACTIVE)
         {
+            /** No active or pending queries */
+            if (route_single_stmt(inst, rses, querybuf))
+            {
+                rval = 1;
+            }
+        }
+        else
+        {
+            ss_dassert(rses->expected_responses || rses->query_queue);
             /** We are already processing a request from the client. Store the
              * new query and wait for the previous one to complete. */
             MXS_DEBUG("Storing query, expecting %d replies", rses->expected_responses);
@@ -614,10 +625,6 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
             {
                 rval = 0;
             }
-        }
-        else if (route_single_stmt(inst, rses, querybuf))
-        {
-            rval = 1;
         }
     }
 

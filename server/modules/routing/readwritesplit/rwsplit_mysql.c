@@ -160,7 +160,7 @@ is_packet_a_one_way_message(int packet_type)
 void
 log_transaction_status(ROUTER_CLIENT_SES *rses, GWBUF *querybuf, qc_query_type_t qtype)
 {
-    if (!rses->rses_load_active)
+    if (rses->load_data_state == LOAD_DATA_INACTIVE)
     {
         unsigned char command = MYSQL_GET_COMMAND(GWBUF_DATA(querybuf));
         char *qtypestr = qc_typemask_to_string(qtype);

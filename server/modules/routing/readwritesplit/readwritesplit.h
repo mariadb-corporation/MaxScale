@@ -334,6 +334,15 @@ typedef struct prep_stmt_st
 
 #endif /*< PREP_STMT_CACHING */
 
+/** States of a LOAD DATA LOCAL INFILE */
+enum ld_state
+{
+    LOAD_DATA_INACTIVE, /**< Not active */
+    LOAD_DATA_START,    /**< Current query starts a load */
+    LOAD_DATA_ACTIVE,   /**< Load is active */
+    LOAD_DATA_END       /**< Current query contains an empty packet that ends the load */
+};
+
 /**
  * The client session structure used within this router.
  */
@@ -349,7 +358,7 @@ struct router_client_session
     rwsplit_config_t rses_config;    /*< copied config info from router instance */
     int              rses_nbackends;
     int              rses_nsescmd;  /*< Number of executed session commands */
-    bool             rses_load_active; /*< If LOAD DATA LOCAL INFILE is being currently executed */
+    enum ld_state    load_data_state; /*< Current load data state */
     bool             have_tmp_tables;
     uint64_t         rses_load_data_sent; /*< How much data has been sent */
     DCB*             client_dcb;
