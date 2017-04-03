@@ -89,11 +89,19 @@ static int test2()
     test_assert(result == MXS_PCRE2_MATCH, "Substitution should substitute");
     test_assert(strcmp(dest, expected) == 0, "Replaced text should match expected text");
 
+    size = 1000;
+    dest = MXS_REALLOC(dest, size);
     result = mxs_pcre2_substitute(re2, subject, good_replace, &dest, &size);
     test_assert(result == MXS_PCRE2_NOMATCH, "Non-matching substitution should not substitute");
 
+    size = 1000;
+    dest = MXS_REALLOC(dest, size);
     result = mxs_pcre2_substitute(re, subject, bad_replace, &dest, &size);
     test_assert(result == MXS_PCRE2_ERROR, "Bad substitution should return an error");
+
+    MXS_FREE(dest);
+    pcre2_code_free(re);
+    pcre2_code_free(re2);
     return 0;
 }
 
