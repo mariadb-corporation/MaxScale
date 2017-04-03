@@ -432,6 +432,11 @@ int RegexToServers::add_servers(string server_names, bool legacy_mode)
             m_targets.push_back(names_arr[0]);
             m_htype = HINT_ROUTE_TO_SLAVE;
         }
+        else if (strcmp(names_arr[0], "->all") == 0)
+        {
+            m_targets.push_back(names_arr[0]);
+            m_htype = HINT_ROUTE_TO_ALL;
+        }
         else
         {
             error = true;

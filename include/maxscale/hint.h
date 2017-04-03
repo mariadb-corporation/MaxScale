@@ -29,8 +29,8 @@ typedef enum
     HINT_ROUTE_TO_MASTER = 1,
     HINT_ROUTE_TO_SLAVE,
     HINT_ROUTE_TO_NAMED_SERVER,
-    HINT_ROUTE_TO_UPTODATE_SERVER,
-    HINT_ROUTE_TO_ALL, /*< not implemented yet */
+    HINT_ROUTE_TO_UPTODATE_SERVER, /*< not supported by RWSplit and HintRouter */
+    HINT_ROUTE_TO_ALL, /*< not supported by RWSplit, supported by HintRouter */
     HINT_PARAMETER
 } HINT_TYPE;
 

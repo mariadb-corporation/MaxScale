@@ -66,10 +66,14 @@ match01=^SELECT
 
 This is the hint which will be attached to the queries matching the regex. If a
 compatible router is used in the service the query will be routed accordingly.
-The target can be a server name, a list of server names (comma-separated),
-`->master` or `->slave`. The server names add the names as hints (one name per
-hint). `->master` adds a *route-to-master*- hint and `->slave` adds a
-*route-to-slave*-hint.
+The target can be one of the following:
+
+ * a server name (adds a `HINT_ROUTE_TO_NAMED_SERVER` hint)
+ * a list of server names, comma-separated (adds several
+ `HINT_ROUTE_TO_NAMED_SERVER` hints)
+ * `->master` (adds a `HINT_ROUTE_TO_MASTER` hint)
+ * `->slave` (adds a `HINT_ROUTE_TO_SLAVE` hint)
+ * `->all` (adds a `HINT_ROUTE_TO_ALL` hint)
 
 ```
 target01=MyServer2
