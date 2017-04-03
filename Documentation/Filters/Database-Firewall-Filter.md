@@ -139,13 +139,13 @@ This rule blocks all queries that use the wildcard character *.
 #### `columns`
 
 This rule expects a list of values after the `columns` keyword. These values are
-interpreted as column names and if a query targets any of these, it is blocked.
+interpreted as column names and if a query targets any of these, it is matched.
 
 #### `function`
 
 This rule expects a list of values after the `function` keyword. These values
 are interpreted as function names and if a query uses any of these, it is
-blocked. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
+matched. The symbolic comparison operators (`<`, `>`, `>=` etc.) are also
 considered functions whereas the text versions (`NOT`, `IS`, `IS NOT` etc.) are
 not considered functions.
 
@@ -220,9 +220,9 @@ list of users and networks the keyword match is expected.
 
 After this either the keyword `any` `all` or `strict_all` is expected. This
 defined how the rules are matched. If `any` is used when the first rule is
-matched the query is considered blocked and the rest of the rules are
+matched the query is considered as matched and the rest of the rules are
 skipped. If instead the `all` keyword is used all rules must match for the query
-to be blocked. The `strict_all` is the same as `all` but it checks the rules
+to be considered as matched. The `strict_all` is the same as `all` but it checks the rules
 from left to right in the order they were listed. If one of these does not
 match, the rest of the rules are not checked. This could be useful in situations
 where you would for example combine `limit_queries` and `regex` rules. By using
