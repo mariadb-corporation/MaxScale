@@ -4,6 +4,12 @@ This document lists known issues and limitations in MariaDB MaxScale and its
 plugins. Since limitations are related to specific plugins, this document is
 divided into several sections.
 
+## Configuration limitations
+
+In versions 2.1.2 and earlier, the configuration files are limited to 1024
+characters per line. This limitation was increased to 16384 characters in
+MaxScale 2.1.3.
+
 ## Protocol limitations
 
 ### Limitations with MySQL Protocol support (MySQLClient)
