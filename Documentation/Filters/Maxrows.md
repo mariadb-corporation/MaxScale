@@ -55,6 +55,28 @@ max_resultset_size=128
 ```
 The default value is 64.
 
+#### `max_resultset_return`
+
+Specifies what the filter sends to the client when the
+rows or size limit is hit, possible values:
+
+- an empty result set
+- an error packet with input SQL
+- an OK packet
+
+
+```
+max_resultset_size=empty|error|ok
+```
+The default result type is 'empty'
+
+Example output with ERR packet:
+
+```
+MariaDB [(test)]> select * from test.t4;
+ERROR 1415 (0A000): Row limit/size exceeded for query: select * from test.t4
+```
+
 #### `debug`
 
 An integer value, using which the level of debug logging made by the maxrows
