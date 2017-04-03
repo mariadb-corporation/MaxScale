@@ -163,6 +163,8 @@ number of allowed queries during the time period. The second is the time period
 in seconds and the third is the amount of time for which the rule is considered
 active and blocking.
 
+**WARNING:** Using `limit_queries` in `action=allow` is not supported.
+
 #### `no_where_clause`
 
 This rule inspects the query and blocks it if it has no WHERE clause. For
