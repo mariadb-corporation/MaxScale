@@ -131,7 +131,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 "max_resultset_size",
-                MXS_MODULE_PARAM_COUNT,
+                MXS_MODULE_PARAM_SIZE,
                 MAXROWS_DEFAULT_MAX_RESULTSET_SIZE
             },
             {
@@ -244,8 +244,8 @@ static MXS_FILTER *createInstance(const char *name,
         cinstance->name = name;
         cinstance->config.max_resultset_rows = config_get_integer(params,
                                                                   "max_resultset_rows");
-        cinstance->config.max_resultset_size = config_get_integer(params,
-                                                                  "max_resultset_size");
+        cinstance->config.max_resultset_size = config_get_size(params,
+                                                               "max_resultset_size");
         cinstance->config.m_return = config_get_enum(params,
                                                      "max_resultset_return",
                                                      return_option_values);
@@ -1226,6 +1226,7 @@ static int send_maxrows_reply_limit(MAXROWS_SESSION_DATA *csdata)
         default:
             MXS_ERROR("MaxRows config value not expected!");
             ss_dassert(!true);
+            return 0;
             break;
     }
 }

@@ -46,14 +46,16 @@ The default value is `-1`.
 
 #### `max_resultset_size`
 
-Specifies the maximum size a resultset can have, measured in kibibytes,
-in order to be sent to the client. A resultset larger than this, will
+Specifies the maximum size a resultset can have in order
+to be sent to the client. A resultset larger than this, will
 not be sent: an empty resultset will be sent instead.
+The size can be specified as described
+[here](../Getting-Started/Configuration-Guide.md#sizes).
 
 ```
-max_resultset_size=128
+max_resultset_size=128Ki
 ```
-The default value is 64.
+The default value is 64Ki
 
 #### `max_resultset_return`
 
