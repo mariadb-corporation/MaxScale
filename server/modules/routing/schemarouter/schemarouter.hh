@@ -127,11 +127,36 @@ public:
     ~Backend();
 
     /**
-     * @brief Execute the next session command
+     * @brief Execute the next session command in the queue
      *
      * @return True if the command was executed successfully
      */
-    bool execute_sescmd();
+    bool execute_session_command();
+
+    /**
+     * @brief Add a new session command to the tail of the command queue
+     *
+     * @param buffer   Session command to add
+     * @param sequence Sequence identifier of this session command, returned when
+     *                 the session command is completed
+     */
+    void add_session_command(GWBUF* buffer, uint64_t sequence);
+
+    /**
+     * @brief Mark the current session command as successfully executed
+     *
+     * This should be called when the response to the command is received
+     *
+     * @return The sequence identifier for this session command
+     */
+    uint64_t complete_session_command();
+
+    /**
+     * @brief Check if backend has session commands
+     *
+     * @return True if backend has session commands
+     */
+    size_t session_command_count() const;
 
     /**
      * @brief Clear state
@@ -232,6 +257,13 @@ public:
     bool is_closed() const;
 
     /**
+     * @brief Set the mapping state of the backend
+     *
+     * @param value Value to set
+     */
+    void set_mapped(bool value);
+
+    /**
      * @brief Check if the backend has been mapped
      *
      * @return True if the backend has been mapped
@@ -242,11 +274,7 @@ private:
     bool               m_closed;           /**< True if a connection has been opened and closed */
     SERVER_REF*        m_backend;          /**< Backend server */
     DCB*               m_dcb;              /**< Backend DCB */
-
-public:
-    GWBUF*             m_map_queue;
     bool               m_mapped;           /**< Whether the backend has been mapped */
-    int                m_num_mapping_eof;
     int                m_num_result_wait;  /**< Number of not yet received results */
     Buffer             m_pending_cmd;      /**< Pending commands */
     int                m_state;            /**< State of the backend */

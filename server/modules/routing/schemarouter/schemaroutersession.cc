@@ -426,7 +426,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
         MXS_INFO("Route query to \t%s:%d <", bref->backend()->server->name, bref->backend()->server->port);
 
-        if (bref->m_session_commands.size() > 0)
+        if (bref->session_command_count())
         {
             /** Store current statement if execution of the previous
              * session command hasn't been completed. */
@@ -486,13 +486,14 @@ void SchemaRouterSession::handle_mapping_reply(SBackend& bref, GWBUF** pPacket)
 
 void SchemaRouterSession::process_response(SBackend& bref, GWBUF** ppPacket)
 {
-    if (bref->m_session_commands.size() > 0)
+    if (bref->session_command_count())
     {
         /** We are executing a session command */
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE((*ppPacket)))
         {
-            if (m_replied_sescmd < m_sent_sescmd &&
-                bref->m_session_commands.front().get_position() == m_replied_sescmd + 1)
+            uint64_t id = bref->complete_session_command();
+
+            if (m_replied_sescmd < m_sent_sescmd && id == m_replied_sescmd + 1)
             {
                 /** First reply to this session command, route it to the client */
                 ++m_replied_sescmd;
@@ -504,8 +505,6 @@ void SchemaRouterSession::process_response(SBackend& bref, GWBUF** ppPacket)
                 gwbuf_free(*ppPacket);
                 *ppPacket = NULL;
             }
-
-            bref->m_session_commands.pop_front();
         }
 
         if (*ppPacket)
@@ -572,7 +571,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
             pPacket = NULL;
         }
 
-        if (bref->execute_sescmd())
+        if (bref->execute_session_command())
         {
             MXS_INFO("Backend %s:%d processed reply and starts to execute active cursor.",
                      bref->backend()->server->name, bref->backend()->server->port);
@@ -732,7 +731,8 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
         if ((*it)->in_use())
         {
             GWBUF *buffer = gwbuf_clone(querybuf);
-            (*it)->m_session_commands.push_back(SessionCommand(buffer, m_sent_sescmd));
+
+            (*it)->add_session_command(buffer, m_sent_sescmd);
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
@@ -742,7 +742,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                          (*it)->backend()->server->port);
             }
 
-            if ((*it)->m_session_commands.size() == 1)
+            if ((*it)->session_command_count() == 1)
             {
                 /** Only one command, execute it */
                 switch (command)
@@ -757,7 +757,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
                     break;
                 }
 
-                if ((*it)->execute_sescmd())
+                if ((*it)->execute_session_command())
                 {
                     succp = true;
                 }
@@ -771,7 +771,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
             }
             else
             {
-                ss_dassert((*it)->m_session_commands.size() > 1);
+                ss_dassert((*it)->session_command_count() > 1);
                 /** The server is already executing a session command */
                 MXS_INFO("Backend %s:%d already executing sescmd.",
                          (*it)->backend()->server->name,

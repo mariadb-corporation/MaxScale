@@ -21,9 +21,7 @@ Backend::Backend(SERVER_REF *ref):
     m_closed(false),
     m_backend(ref),
     m_dcb(NULL),
-    m_map_queue(NULL),
     m_mapped(false),
-    m_num_mapping_eof(0),
     m_num_result_wait(0),
     m_state(0)
 {
@@ -37,8 +35,6 @@ Backend::~Backend()
     {
         close();
     }
-
-    gwbuf_free(m_map_queue);
 }
 
 void Backend::close()
@@ -71,9 +67,9 @@ void Backend::close()
     }
 }
 
-bool Backend::execute_sescmd()
+bool Backend::execute_session_command()
 {
-    if (is_closed() || m_session_commands.size() == 0)
+    if (is_closed() || !session_command_count())
     {
         return false;
     }
@@ -81,13 +77,6 @@ bool Backend::execute_sescmd()
     CHK_DCB(m_dcb);
 
     int rc = 0;
-
-    /** Return if there are no pending ses commands */
-    if (m_session_commands.size() == 0)
-    {
-        MXS_INFO("Cursor had no pending session commands.");
-        return false;
-    }
 
     SessionCommandList::iterator iter = m_session_commands.begin();
     GWBUF *buffer = iter->copy_buffer().release();
@@ -112,6 +101,23 @@ bool Backend::execute_sescmd()
     }
 
     return rc == 1;
+}
+
+void Backend::add_session_command(GWBUF* buffer, uint64_t sequence)
+{
+    m_session_commands.push_back(SessionCommand(buffer, sequence));
+}
+
+uint64_t Backend::complete_session_command()
+{
+    uint64_t rval = m_session_commands.front().get_position();
+    m_session_commands.pop_front();
+    return rval;
+}
+
+size_t Backend::session_command_count() const
+{
+    return m_session_commands.size();
 }
 
 void Backend::clear_state(enum bref_state state)
@@ -211,6 +217,11 @@ bool Backend::is_query_active() const
 bool Backend::is_closed() const
 {
     return m_state & BREF_CLOSED;
+}
+
+void Backend::set_mapped(bool value)
+{
+    m_mapped = value;
 }
 
 bool Backend::is_mapped() const
