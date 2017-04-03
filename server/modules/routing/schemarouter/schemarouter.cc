@@ -47,12 +47,12 @@ void Backend::close()
     {
         m_closed = true;
 
-        if (BREF_IS_IN_USE(this))
+        if (in_use())
         {
             CHK_DCB(m_dcb);
 
             /** Clean operation counter in bref and in SERVER */
-            while (BREF_IS_WAITING_RESULT(this))
+            while (is_waiting_result())
             {
                 clear_state(BREF_WAITING_RESULT);
             }
@@ -73,7 +73,7 @@ void Backend::close()
 
 bool Backend::execute_sescmd()
 {
-    if (BREF_IS_CLOSED(this) || m_session_commands.size() == 0)
+    if (is_closed() || m_session_commands.size() == 0)
     {
         return false;
     }
@@ -191,4 +191,29 @@ bool Backend::write_stored_command()
     }
 
     return rval;
+}
+
+bool Backend::in_use() const
+{
+    return m_state & BREF_IN_USE;
+}
+
+bool Backend::is_waiting_result() const
+{
+    return m_num_result_wait > 0;
+}
+
+bool Backend::is_query_active() const
+{
+    return m_state & BREF_QUERY_ACTIVE;
+}
+
+bool Backend::is_closed() const
+{
+    return m_state & BREF_CLOSED;
+}
+
+bool Backend::is_mapped() const
+{
+    return m_mapped;
 }

@@ -513,7 +513,7 @@ void SchemaRouterSession::process_response(SBackend& bref, GWBUF** ppPacket)
             bref->clear_state(BREF_WAITING_RESULT);
         }
     }
-    else if (BREF_IS_QUERY_ACTIVE(bref))
+    else if (bref->is_query_active())
     {
         bref->clear_state(BREF_QUERY_ACTIVE);
         /** Set response status as replied */
@@ -605,7 +605,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
     switch (action)
     {
     case ERRACT_NEW_CONNECTION:
-        if (BREF_IS_WAITING_RESULT(bref))
+        if (bref->is_waiting_result())
         {
             /** If the client is waiting for a reply, send an error. */
             m_client->func.write(m_client, gwbuf_clone(pMessage));
@@ -729,7 +729,7 @@ bool SchemaRouterSession::route_session_write(GWBUF* querybuf, uint8_t command)
 
     for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if (BREF_IS_IN_USE(*it))
+        if ((*it)->in_use())
         {
             GWBUF *buffer = gwbuf_clone(querybuf);
             (*it)->m_session_commands.push_back(SessionCommand(buffer, m_sent_sescmd));
@@ -794,7 +794,7 @@ bool SchemaRouterSession::have_servers()
 {
     for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if (BREF_IS_IN_USE(*it) && !BREF_IS_CLOSED(*it))
+        if ((*it)->in_use() && !(*it)->is_closed())
         {
             return true;
         }
@@ -1030,7 +1030,7 @@ int SchemaRouterSession::inspect_backend_mapping_states(SBackend& bref,
 
     for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if (bref->dcb() == (*it)->dcb() && !BREF_IS_MAPPED(*it))
+        if (bref->dcb() == (*it)->dcb() && !(*it)->is_mapped())
         {
             if (bref->m_map_queue)
             {
@@ -1099,7 +1099,7 @@ int SchemaRouterSession::inspect_backend_mapping_states(SBackend& bref,
             }
         }
 
-        if (BREF_IS_IN_USE(*it) && !BREF_IS_MAPPED(*it))
+        if ((*it)->in_use() && !(*it)->is_mapped())
         {
             mapped = false;
             MXS_DEBUG("Still waiting for reply to SHOW DATABASES from %s for session %p",
@@ -1416,7 +1416,7 @@ void SchemaRouterSession::gen_databaselist()
 
     for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
     {
-        if (BREF_IS_IN_USE(*it) && !BREF_IS_CLOSED(*it) &
+        if ((*it)->in_use() && !(*it)->is_closed() &
             SERVER_IS_RUNNING((*it)->backend()->server))
         {
             clone = gwbuf_clone(buffer);
@@ -1577,7 +1577,7 @@ bool SchemaRouterSession::get_shard_dcb(DCB** p_dcb, char* name)
          * backend must be in use, name must match, and
          * the backend state must be RUNNING
          */
-        if (BREF_IS_IN_USE((*it)) &&
+        if ((*it)->in_use() &&
             (strncasecmp(name, b->server->unique_name, PATH_MAX) == 0) &&
             SERVER_IS_RUNNING(b->server))
         {

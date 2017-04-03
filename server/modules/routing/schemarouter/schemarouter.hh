@@ -51,14 +51,6 @@ enum bref_state
     BREF_DB_MAPPED        = 0x10
 };
 
-// TODO: Move these as member functions, currently they operate on iterators
-#define BREF_IS_NOT_USED(s)         ((s)->m_state & ~BREF_IN_USE)
-#define BREF_IS_IN_USE(s)           ((s)->m_state & BREF_IN_USE)
-#define BREF_IS_WAITING_RESULT(s)   ((s)->m_num_result_wait > 0)
-#define BREF_IS_QUERY_ACTIVE(s)     ((s)->m_state & BREF_QUERY_ACTIVE)
-#define BREF_IS_CLOSED(s)           ((s)->m_state & BREF_CLOSED)
-#define BREF_IS_MAPPED(s)           ((s)->m_mapped)
-
 namespace schemarouter
 {
 /**
@@ -125,18 +117,126 @@ struct Stats
 class Backend
 {
 public:
+    /**
+     * @brief Create new Backend
+     *
+     * @param ref Server reference used by this backend
+     */
     Backend(SERVER_REF *ref);
+
     ~Backend();
+
+    /**
+     * @brief Execute the next session command
+     *
+     * @return True if the command was executed successfully
+     */
     bool execute_sescmd();
+
+    /**
+     * @brief Clear state
+     *
+     * @param state State to clear
+     */
     void clear_state(enum bref_state state);
+
+    /**
+     * @brief Set state
+     *
+     * @param state State to set
+     */
     void set_state(enum bref_state state);
+
+    /**
+     * @brief Get pointer to server reference
+     *
+     * @return Pointer to server reference
+     */
     SERVER_REF* backend() const;
-    bool connect(MXS_SESSION*);
+
+    /**
+     * @brief Create a new connection
+     *
+     * @param session The session to which the connection is linked
+     *
+     * @return True if connection was successfully created
+     */
+    bool connect(MXS_SESSION* session);
+
+    /**
+     * @brief Close the backend
+     *
+     * This will close all active connections created by the backend.
+     */
     void close();
+
+    /**
+     * @brief Get a pointer to the internal DCB
+     *
+     * @return Pointer to internal DCB
+     */
     DCB* dcb() const;
+
+    /**
+     * @brief Write data to the backend server
+     *
+     * @param buffer Buffer containing the data to write
+     *
+     * @return True if data was written successfully
+     */
     bool write(GWBUF* buffer);
+
+    /**
+     * @brief Store a command
+     *
+     * The command is stored and executed once the session can execute
+     * the next command.
+     *
+     * @param buffer Buffer to store
+     */
     void store_command(GWBUF* buffer);
+
+    /**
+     * @brief Write the stored command to the backend server
+     *
+     * @return True if command was written successfully
+     */
     bool write_stored_command();
+
+    /**
+     * @brief Check if backend is in use
+     *
+     * @return True if backend is in use
+     */
+    bool in_use() const;
+
+    /**
+     * @brief Check if backend is waiting for a result
+     *
+     * @return True if backend is waiting for a result
+     */
+    bool is_waiting_result() const;
+
+    /**
+     * @brief Check if a query is active
+     *
+     * @return True if a query is active
+     */
+    bool is_query_active() const;
+
+    /**
+     * @brief Check if the backend is closed
+     *
+     * @return True if the backend is closed
+     */
+    bool is_closed() const;
+
+    /**
+     * @brief Check if the backend has been mapped
+     *
+     * @return True if the backend has been mapped
+     */
+    bool is_mapped() const;
 
 private:
     bool               m_closed;           /**< True if a connection has been opened and closed */

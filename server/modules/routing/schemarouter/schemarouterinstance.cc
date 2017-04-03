@@ -231,7 +231,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
             servers_found += 1;
 
             /** Server is already connected */
-            if (BREF_IS_IN_USE((*it)))
+            if ((*it)->in_use())
             {
                 slaves_connected += 1;
             }
@@ -266,7 +266,7 @@ bool connect_backend_servers(BackendList& backends, MXS_SESSION* session)
             {
                 SERVER_REF* b = (*it)->backend();
 
-                if (BREF_IS_IN_USE((*it)))
+                if ((*it)->in_use())
                 {
                     MXS_INFO("Connected %s in \t%s:%d",
                              STRSRVSTATUS(b->server),
