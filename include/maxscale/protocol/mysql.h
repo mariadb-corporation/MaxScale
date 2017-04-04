@@ -62,6 +62,7 @@
 #include <maxscale/housekeeper.h>
 #include <maxscale/utils.h>
 #include <mysql.h>
+#include <mysql_com.h>
 
 MXS_BEGIN_DECLS
 
@@ -113,22 +114,6 @@ MXS_BEGIN_DECLS
 #define MYSQL_HOST_MAXLEN     60
 #define MYSQL_DATABASE_MAXLEN 128
 #define MYSQL_TABLE_MAXLEN    64
-
-/** Response packet status bits for OK and EOF packets */
-#define MXS_MYSQL_STATUS_IN_TRANS             0x0001
-#define MXS_MYSQL_STATUS_AUTOCOMMIT           0x0002
-#define MXS_MYSQL_MORE_RESULTS_EXISTS         0x0008
-#define MXS_MYSQL_STATUS_NO_GOOD_INDEX_USED   0x0010
-#define MXS_MYSQL_STATUS_NO_INDEX_USED        0x0020
-#define MXS_MYSQL_STATUS_CURSOR_EXISTS        0x0040
-#define MXS_MYSQL_STATUS_LAST_ROW_SENT        0x0080
-#define MXS_MYSQL_STATUS_DB_DROPPED           0x0100
-#define MXS_MYSQL_STATUS_NO_BACKSLASH_ESCAPES 0x0200
-#define MXS_MYSQL_STATUS_METADATA_CHANGED     0x0400
-#define MXS_MYSQL_QUERY_WAS_SLOW              0x0800
-#define MXS_MYSQL_PS_OUT_PARAMS               0x1000
-#define MXS_MYSQL_STATUS_IN_TRANS_READONLY    0x2000
-#define MXS_MYSQL_SESSION_STATE_CHANGED       0x4000
 
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 #define SMALL_CHUNK 1024

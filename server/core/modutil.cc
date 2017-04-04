@@ -24,13 +24,15 @@
  *
  * @endverbatim
  */
-#include <maxscale/buffer.h>
+
 #include <string.h>
+#include <strings.h>
+
+#include <maxscale/buffer.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <maxscale/modutil.h>
-#include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
 static SPINLOCK re_lock = SPINLOCK_INIT;
@@ -661,7 +663,7 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* 
         {
             gwbuf_copy_data(reply, *offset, sizeof(header), header);
             uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
-            *more = ((*status) & MXS_MYSQL_MORE_RESULTS_EXISTS);
+            *more = ((*status) & SERVER_MORE_RESULTS_EXIST);
             *offset += pktlen;
             break;
         }

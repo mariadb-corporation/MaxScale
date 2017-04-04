@@ -42,11 +42,12 @@
  *
  */
 
+#include <netinet/tcp.h>
+
 #include <maxscale/utils.h>
 #include <maxscale/protocol/mysql.h>
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
-#include <netinet/tcp.h>
 #include <maxscale/modutil.h>
 #include <maxscale/mysql_utils.h>
 
@@ -1592,7 +1593,7 @@ bool mxs_mysql_more_results_after_ok(GWBUF *buffer, size_t extra_offset)
             ptr += mxs_leint_bytes(ptr);
             ptr += mxs_leint_bytes(ptr);
             uint16_t* status = (uint16_t*)ptr;
-            rval = (*status) & MXS_MYSQL_MORE_RESULTS_EXISTS;
+            rval = (*status) & SERVER_MORE_RESULTS_EXIST;
         }
         else
         {
