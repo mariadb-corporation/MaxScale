@@ -274,7 +274,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
     if (m_shard.empty())
     {
         /* Generate database list */
-        gen_databaselist();
+        query_databases();
     }
 
     int ret = 0;
@@ -328,7 +328,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         /** Create the response to the SHOW DATABASES from the mapped databases */
         if (qc_query_is_type(type, QUERY_TYPE_SHOW_DATABASES))
         {
-            if (send_database_list())
+            if (send_databases())
             {
                 ret = 1;
             }
@@ -338,7 +338,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
         }
         else if (detect_show_shards(pPacket))
         {
-            if (process_show_shards())
+            if (send_shards())
             {
                 ret = 1;
             }
@@ -452,11 +452,11 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
 }
 void SchemaRouterSession::handle_mapping_reply(SBackend& bref, GWBUF** pPacket)
 {
-    int rc = inspect_backend_mapping_states(bref, pPacket);
+    int rc = inspect_mapping_states(bref, pPacket);
 
     if (rc == 1)
     {
-        synchronize_shard_map();
+        synchronize_shards();
         m_state &= ~INIT_MAPPING;
 
         /* Check if the session is reconnecting with a database name
@@ -484,7 +484,7 @@ void SchemaRouterSession::handle_mapping_reply(SBackend& bref, GWBUF** pPacket)
     }
 }
 
-void SchemaRouterSession::process_response(SBackend& bref, GWBUF** ppPacket)
+void SchemaRouterSession::process_sescmd_response(SBackend& bref, GWBUF** ppPacket)
 {
     if (bref->session_command_count())
     {
@@ -563,7 +563,7 @@ void SchemaRouterSession::clientReply(GWBUF* pPacket, DCB* pDcb)
     }
     else
     {
-        process_response(bref, &pPacket);
+        process_sescmd_response(bref, &pPacket);
 
         if (pPacket)
         {
@@ -646,7 +646,7 @@ void SchemaRouterSession::handleError(GWBUF* pMessage,
  * is discarded and the router's shard map is used.
  * @param client Router session
  */
-void SchemaRouterSession::synchronize_shard_map()
+void SchemaRouterSession::synchronize_shards()
 {
     m_router->m_stats.shmap_cache_miss++;
     m_router->m_shard_manager.update_shard(m_shard, m_client->user);
@@ -892,7 +892,7 @@ RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
  * @param rses Router client session
  * @return 0 on success, -1 on error
  */
-bool SchemaRouterSession::process_show_shards()
+bool SchemaRouterSession::send_shards()
 {
     bool rval = false;
 
@@ -1022,8 +1022,8 @@ void SchemaRouterSession::route_queued_query()
  * @param router_cli_ses Router client session
  * @return 1 if mapping is done, 0 if it is still ongoing and -1 on error
  */
-int SchemaRouterSession::inspect_backend_mapping_states(SBackend& bref,
-                                                        GWBUF** wbuf)
+int SchemaRouterSession::inspect_mapping_states(SBackend& bref,
+                                                GWBUF** wbuf)
 {
     bool mapped = true;
     GWBUF* writebuf = *wbuf;
@@ -1032,7 +1032,7 @@ int SchemaRouterSession::inspect_backend_mapping_states(SBackend& bref,
     {
         if (bref->dcb() == (*it)->dcb() && !(*it)->is_mapped())
         {
-            enum showdb_response rc = parse_showdb_response(*it, &writebuf);
+            enum showdb_response rc = parse_mapping_response(*it, &writebuf);
 
             if (rc == SHOWDB_FULL_RESPONSE)
             {
@@ -1262,7 +1262,7 @@ bool SchemaRouterSession::ignore_duplicate_database(const char* data)
  * @return 1 if a complete response was received, 0 if a partial response was received
  * and -1 if a database was found on more than one server.
  */
-enum showdb_response SchemaRouterSession::parse_showdb_response(SBackend& bref, GWBUF** buffer)
+enum showdb_response SchemaRouterSession::parse_mapping_response(SBackend& bref, GWBUF** buffer)
 {
     unsigned char* ptr;
     SERVER* target = bref->backend()->server;
@@ -1378,7 +1378,7 @@ enum showdb_response SchemaRouterSession::parse_showdb_response(SBackend& bref, 
  * @param session Router client session
  * @return 1 if all writes to backends were succesful and 0 if one or more errors occurred
  */
-void SchemaRouterSession::gen_databaselist()
+void SchemaRouterSession::query_databases()
 {
 
     for (BackendList::iterator it = m_backends.begin(); it != m_backends.end(); it++)
@@ -1645,7 +1645,7 @@ RESULT_ROW *result_set_cb(struct resultset * rset, void *data)
  * @param client Router client session
  * @return True if the sending of the database list was successful, otherwise false
  */
-bool SchemaRouterSession::send_database_list()
+bool SchemaRouterSession::send_databases()
 {
     bool rval = false;
 

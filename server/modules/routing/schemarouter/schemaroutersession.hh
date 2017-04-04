@@ -122,25 +122,33 @@ public:
                      mxs_error_action_t action,
                      bool*              pSuccess);
 private:
-    /** Internal functions */
-    SERVER* get_shard_target(GWBUF* buffer, uint32_t qtype);
+    /**
+     * Internal functions
+     */
+
+    /** Helper functions */
+    SERVER*  get_shard_target(GWBUF* buffer, uint32_t qtype);
     SBackend get_bref_from_dcb(DCB* dcb);
-    bool get_shard_dcb(DCB** dcb, char* name);
-    bool handle_default_db();
-    bool have_servers();
-    bool route_session_write(GWBUF* querybuf, uint8_t command);
-    bool send_database_list();
-    void gen_databaselist();
-    int inspect_backend_mapping_states(SBackend& bref, GWBUF** wbuf);
-    bool process_show_shards();
-    enum showdb_response parse_showdb_response(SBackend& bref, GWBUF** buffer);
-    void route_queued_query();
-    void synchronize_shard_map();
-    void handle_mapping_reply(SBackend& bref, GWBUF** pPacket);
-    void process_response(SBackend& bref, GWBUF** ppPacket);
+    bool     get_shard_dcb(DCB** dcb, char* name);
+    bool     have_servers();
+    bool     handle_default_db();
+    bool     ignore_duplicate_database(const char* data);
+
+    /** Routing functions */
+    bool    route_session_write(GWBUF* querybuf, uint8_t command);
+    void    process_sescmd_response(SBackend& bref, GWBUF** ppPacket);
     SERVER* resolve_query_target(GWBUF* pPacket, uint32_t type, uint8_t command,
                                  enum route_target& route_target);
-    bool ignore_duplicate_database(const char* data);
+
+    /** Shard mapping functions */
+    bool                 send_databases();
+    bool                 send_shards();
+    void                 query_databases();
+    int                  inspect_mapping_states(SBackend& bref, GWBUF** wbuf);
+    enum showdb_response parse_mapping_response(SBackend& bref, GWBUF** buffer);
+    void                 route_queued_query();
+    void                 synchronize_shards();
+    void                 handle_mapping_reply(SBackend& bref, GWBUF** pPacket);
 
     /** Member variables */
     bool                  m_closed;         /**< True if session closed */
