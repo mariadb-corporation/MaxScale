@@ -607,12 +607,6 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
-
-    if (port->users == NULL && !check_service_permissions(port->service))
-    {
-        return MXS_AUTH_LOADUSERS_FATAL;
-    }
-
     bool skip_local = false;
 
     if (instance->handle == NULL)
@@ -620,7 +614,8 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         skip_local = true;
         char path[PATH_MAX];
         get_database_path(port, path, sizeof(path));
-        if (!open_instance_database(path, &instance->handle))
+        if (!check_service_permissions(port->service) ||
+            !open_instance_database(path, &instance->handle))
         {
             return MXS_AUTH_LOADUSERS_FATAL;
         }
