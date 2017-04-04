@@ -506,9 +506,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
     ptr += (ncolumns + 7) / 8;
     ss_dassert(ptr < end);
 
-    for (long i = 0; i < map->columns && npresent < ncolumns; i++)
+    for (long i = 0; i < map->columns && i < create->columns && npresent < ncolumns; i++)
     {
-        ss_dassert(create->columns == map->columns);
         ss_debug(int rc = )avro_value_get_by_name(record, create->column_names[i], &field, NULL);
         ss_dassert(rc == 0);
 
