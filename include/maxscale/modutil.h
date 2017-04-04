@@ -62,12 +62,10 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
  * @param reply      Buffer to use
  * @param n_found    Number of previous found packets
  * @param more       Set to true of more results exist
- * @param offset_out Initial offset into the buffer. This offset is set to point
- *                   to the first byte after the last packet in the buffer.
  *
  * @return Total number of EOF and ERR packets including the ones already found
  */
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* offset_out);
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more);
 
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
 

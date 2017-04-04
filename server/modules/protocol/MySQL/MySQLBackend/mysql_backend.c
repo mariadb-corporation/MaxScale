@@ -701,8 +701,7 @@ gw_read_and_write(DCB *dcb)
                 mxs_mysql_is_result_set(read_buffer))
             {
                 bool more = false;
-                size_t offset = 0;
-                if (modutil_count_signal_packets(read_buffer, 0, &more, &offset) != 2)
+                if (modutil_count_signal_packets(read_buffer, 0, &more) != 2)
                 {
                     dcb->dcb_readqueue = read_buffer;
                     return 0;

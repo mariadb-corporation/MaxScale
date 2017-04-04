@@ -635,17 +635,18 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     return complete;
 }
 
-int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* offset)
+int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more)
 {
     unsigned int len = gwbuf_length(reply);
     int eof = 0;
     int err = 0;
+    size_t offset = 0;
 
-    while (*offset < len)
+    while (offset < len)
     {
         uint8_t header[MYSQL_HEADER_LEN + 5]; // Maximum size of an EOF packet
 
-        gwbuf_copy_data(reply, *offset, MYSQL_HEADER_LEN + 1, header);
+        gwbuf_copy_data(reply, offset, MYSQL_HEADER_LEN + 1, header);
 
         unsigned int pktlen = MYSQL_GET_PAYLOAD_LEN(header) + MYSQL_HEADER_LEN;
 
@@ -659,16 +660,16 @@ int modutil_count_signal_packets(GWBUF *reply, int n_found, bool* more, size_t* 
             eof++;
         }
 
-        if (*offset + pktlen >= len || (eof + err + n_found) >= 2)
+        if (offset + pktlen >= len || (eof + err + n_found) >= 2)
         {
-            gwbuf_copy_data(reply, *offset, sizeof(header), header);
+            gwbuf_copy_data(reply, offset, sizeof(header), header);
             uint16_t* status = (uint16_t*)(header + MYSQL_HEADER_LEN + 1 + 2); // Skip command and warning count
             *more = ((*status) & SERVER_MORE_RESULTS_EXIST);
-            *offset += pktlen;
+            offset += pktlen;
             break;
         }
 
-        *offset += pktlen;
+        offset += pktlen;
     }
 
     int total = err + eof + n_found;

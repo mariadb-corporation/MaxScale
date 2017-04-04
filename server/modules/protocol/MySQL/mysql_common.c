@@ -1539,12 +1539,12 @@ bool mxs_mysql_is_ok_packet(GWBUF *buffer)
     return rval;
 }
 
-bool mxs_mysql_is_result_set(GWBUF *buffer, size_t offset)
+bool mxs_mysql_is_result_set(GWBUF *buffer)
 {
     bool rval = false;
     uint8_t cmd;
 
-    if (gwbuf_copy_data(buffer, offset + MYSQL_HEADER_LEN, 1, &cmd))
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd))
     {
         switch (cmd)
         {
@@ -1565,48 +1565,28 @@ bool mxs_mysql_is_result_set(GWBUF *buffer, size_t offset)
     return rval;
 }
 
-bool mxs_mysql_more_results_after_ok(GWBUF *buffer, size_t extra_offset)
+bool mxs_mysql_more_results_after_ok(GWBUF *buffer)
 {
     bool rval = false;
-    size_t buflen = gwbuf_length(buffer);
-    size_t offset = extra_offset;
 
-    while (offset < buflen)
+    // Copy the header
+    uint8_t header[MYSQL_HEADER_LEN + 1];
+    gwbuf_copy_data(buffer, 0, sizeof(header), header);
+
+    if (header[4] == MYSQL_REPLY_OK)
     {
-        // Copy the header
-        uint8_t header[MYSQL_HEADER_LEN + 1];
-
-        if (gwbuf_copy_data(buffer, offset, sizeof(header), header) != sizeof(header))
-        {
-            break;
-        }
-
+        // Copy the payload without the command byte
         size_t len = gw_mysql_get_byte3(header);
+        uint8_t data[len - 1];
+        gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, sizeof(data), data);
 
-        if (header[4] == MYSQL_REPLY_OK)
-        {
-            // Copy the payload without the command byte
-            uint8_t data[len - 1];
-            gwbuf_copy_data(buffer, offset + MYSQL_HEADER_LEN + 1, sizeof(data), data);
-
-            uint8_t* ptr = data;
-            ptr += mxs_leint_bytes(ptr);
-            ptr += mxs_leint_bytes(ptr);
-            uint16_t* status = (uint16_t*)ptr;
-            rval = (*status) & SERVER_MORE_RESULTS_EXIST;
-        }
-        else
-        {
-            break;
-        }
-
-        offset += len + MYSQL_HEADER_LEN;
-
-        if (offset < buflen)
-        {
-            MXS_DEBUG("More data after an OK packet, expecting results: %s", rval ? "YES" : "NO");
-        }
+        uint8_t* ptr = data;
+        ptr += mxs_leint_bytes(ptr);
+        ptr += mxs_leint_bytes(ptr);
+        uint16_t* status = (uint16_t*)ptr;
+        rval = (*status) & SERVER_MORE_RESULTS_EXIST;
     }
+
     return rval;
 }
 

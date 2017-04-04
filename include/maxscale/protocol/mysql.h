@@ -432,21 +432,19 @@ bool mxs_mysql_is_ok_packet(GWBUF *buffer);
  * @brief Check if a buffer contains a result set
  *
  * @param buffer Buffer to check
- * @param offset Offset into the buffer
  *
- * @return True if the @c buffer at @c offset contains the start of a result set
+ * @return True if the @c buffer contains the start of a result set
  */
-bool mxs_mysql_is_result_set(GWBUF *buffer, size_t offset);
+bool mxs_mysql_is_result_set(GWBUF *buffer);
 
 /**
  * @brief Check if the OK packet is followed by another result
  *
  * @param buffer Buffer to check
- * @param offset Offset into the buffer
  *
  * @return True if more results are expected
  */
-bool mxs_mysql_more_results_after_ok(GWBUF *buffer, size_t extra_offset);
+bool mxs_mysql_more_results_after_ok(GWBUF *buffer);
 
 /** Get current command for a session */
 mysql_server_cmd_t mxs_mysql_current_command(MXS_SESSION* session);
