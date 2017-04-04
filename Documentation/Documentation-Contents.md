@@ -19,10 +19,6 @@
 ## Upgrading MariaDB MaxScale
 
 - [Upgrading MariaDB MaxScale from 1.4 to 2.0](Upgrading/Upgrading-To-MaxScale-2.0.md)
-- [Upgrading MariaDB MaxScale from 1.3 to 1.4](Upgrading/Upgrading-To-MaxScale-1.4.md)
-- [Upgrading MariaDB MaxScale from 1.2 to 1.3](Upgrading/Upgrading-To-MaxScale-1.3.md)
-- [Upgrading MariaDB MaxScale from 1.1.1 to 1.2](Upgrading/Upgrading-To-MaxScale-1.2.md)
-- [Upgrading MariaDB MaxScale from 1.0.5 to 1.1.0](Upgrading/Upgrading-To-MaxScale-1.1.0.md)
 
 ## Reference
 
@@ -115,21 +111,3 @@ Documentation for MaxScale protocol modules.
  - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
  - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
-
-## Earlier Release Notes
-
- - [MariaDB MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
- - [MariaDB MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
- - [MariaDB MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
- - [MariaDB MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
- - [MariaDB MaxScale 1.3.0 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
- - [MariaDB MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
- - [MariaDB MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
- - [MariaDB MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
- - [MariaDB MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
- - [MariaDB MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
- - [MariaDB MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
- - [MariaDB MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
- - [MariaDB MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
- - [MariaDB MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
-
