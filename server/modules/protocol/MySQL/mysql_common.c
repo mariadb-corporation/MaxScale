@@ -1562,11 +1562,9 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
         case MYSQL_REPLY_EOF:
             /** Not a result set */
             break;
+
         default:
-            if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN + 1, 1, &cmd) && cmd > 1)
-            {
-                rval = true;
-            }
+            rval = true;
             break;
         }
     }
