@@ -3369,9 +3369,11 @@ static int gtid_select_cb(void *data, int cols, char** values, char** names)
     {
         result->gtid = MXS_STRDUP_A(values[0]);
         result->file = MXS_STRDUP_A(values[1]);
-        result->start = atol(values[2]);
-        result->end = atol(values[3]);
+        result->start = atoll(values[2]);
+        result->end = atoll(values[3]);
     }
+
+    ss_dassert(result->start > 0 && result->end > result->start);
 
     return 0;
 }

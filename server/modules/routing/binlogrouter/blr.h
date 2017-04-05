@@ -559,6 +559,14 @@ typedef struct mariadb_gtid_info
     uint64_t end;      /** The next_pos in COMMIT event*/
 } MARIADB_GTID_INFO;
 
+/** MariaDB GTID elements */
+typedef struct mariadb_gtid_elems
+{
+    uint32_t domain_id;   /*< The replication domain */
+    uint32_t server_id;   /*< The serverid */
+    uint64_t seq_no;      /*< The sequence number */
+} MARIADB_GTID_ELEMS;
+
 /**
  * The per instance data for the router.
  */
