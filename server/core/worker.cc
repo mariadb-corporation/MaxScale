@@ -59,10 +59,6 @@ typedef struct worker_message
 } WORKER_MESSAGE;
 
 
-static MXS_WORKER* worker_create(int worker_id);
-static void worker_free(MXS_WORKER* worker);
-static uint32_t worker_poll_handler(MXS_POLL_DATA *data, int worker_id, uint32_t events);
-
 static bool modules_thread_init();
 static void modules_thread_finish();
 
@@ -82,7 +78,7 @@ Worker::Worker(int id, int read_fd, int write_fd)
 void Worker::init()
 {
     this_unit.n_workers = config_threadcount();
-    this_unit.ppWorkers = new (std::nothrow) Worker* (); // Zero initialized array
+    this_unit.ppWorkers = new (std::nothrow) Worker* [this_unit.n_workers] (); // Zero initialized array
 
     if (!this_unit.ppWorkers)
     {
@@ -108,11 +104,6 @@ void Worker::init()
     MXS_NOTICE("Workers created!");
 }
 
-void mxs_worker_init()
-{
-    Worker::init();
-}
-
 void Worker::finish()
 {
     for (int i = 0; i < this_unit.n_workers; ++i)
@@ -122,11 +113,6 @@ void Worker::finish()
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
     }
-}
-
-void mxs_worker_finish()
-{
-    Worker::finish();
 }
 
 Worker* Worker::get(int worker_id)
@@ -143,16 +129,16 @@ MXS_WORKER* mxs_worker_get(int worker_id)
 
 MXS_WORKER* mxs_worker_get_current()
 {
-    MXS_WORKER* worker = NULL;
+    Worker* pWorker = NULL;
 
     int worker_id = this_thread.current_worker_id;
 
     if (worker_id != WORKER_ABSENT_ID)
     {
-        worker = mxs_worker_get(worker_id);
+        pWorker = Worker::get(worker_id);
     }
 
-    return worker;
+    return pWorker;
 }
 
 int mxs_worker_get_current_id()
@@ -163,7 +149,10 @@ int mxs_worker_get_current_id()
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
-    WORKER_MESSAGE message = { .id = msg_id, .arg1 = arg1, .arg2 = arg2 };
+    WORKER_MESSAGE message = {};
+    message.id = msg_id;
+    message.arg1 = arg1;
+    message.arg2 = arg2;
 
     ssize_t n = write(m_write_fd, &message, sizeof(message));
 
@@ -208,11 +197,6 @@ void Worker::run()
     MXS_NOTICE("Worker %d has shut down.", m_id);
 }
 
-void mxs_worker_main(MXS_WORKER* pWorker)
-{
-    return static_cast<Worker*>(pWorker)->run();
-}
-
 bool Worker::start()
 {
     m_started = true;
@@ -225,11 +209,6 @@ bool Worker::start()
     return m_started;
 }
 
-bool mxs_worker_start(MXS_WORKER* pWorker)
-{
-    return static_cast<Worker*>(pWorker)->start();
-}
-
 void Worker::join()
 {
     if (m_started)
@@ -239,11 +218,6 @@ void Worker::join()
         MXS_NOTICE("Waited for worker %d.", m_id);
         m_started = false;
     }
-}
-
-void mxs_worker_join(MXS_WORKER* pWorker)
-{
-    static_cast<Worker*>(pWorker)->join();
 }
 
 void Worker::shutdown()
@@ -259,11 +233,6 @@ void Worker::shutdown()
     }
 }
 
-void mxs_worker_shutdown(MXS_WORKER* pWorker)
-{
-    static_cast<Worker*>(pWorker)->shutdown();
-}
-
 void Worker::shutdown_all()
 {
     // NOTE: No logging here, this function must be signal safe.
@@ -274,11 +243,6 @@ void Worker::shutdown_all()
 
         pWorker->shutdown();
     }
-}
-
-void mxs_worker_shutdown_workers()
-{
-    return Worker::shutdown_all();
 }
 
 /**
@@ -325,11 +289,6 @@ Worker* Worker::create(int worker_id)
     return pWorker;
 }
 
-/**
- * Frees a worker instance.
- *
- * @param worker The worker instance to be freed.
- */
 Worker::~Worker()
 {
     ss_dassert(!m_started);
@@ -342,7 +301,6 @@ Worker::~Worker()
 /**
  * The worker message handler.
  *
- * @param worker  The worker receiving the message.
  * @param msg_id  The message id.
  * @param arg1    Message specific first argument.
  * @param arg2    Message specific second argument.
@@ -382,9 +340,8 @@ void Worker::handle_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 }
 
 /**
- * Handler for poll events related to the read descriptor of the worker.
+ * Worker poll handler.
  *
- * @param data       Pointer to the MXS_POLL_DATA member of the MXS_WORKER.
  * @param thread_id  Id of the thread; same as id of the relevant worker.
  * @param events     Epoll events.
  *
@@ -437,6 +394,15 @@ uint32_t Worker::poll(uint32_t events)
     return rc;
 }
 
+/**
+ * Handler for poll events related to the read descriptor of the worker.
+ *
+ * @param pData      The MXS_POLL_DATA of the worker in question.
+ * @param thread_id  Id of the thread; same as id of the relevant worker.
+ * @param events     Epoll events.
+ *
+ * @return What events the handler handled.
+ */
 //static
 uint32_t Worker::poll_handler(MXS_POLL_DATA* pData, int thread_id, uint32_t events)
 {

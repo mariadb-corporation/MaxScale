@@ -76,7 +76,9 @@
 #include "maxscale/poll.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
-#include "maxscale/worker.h"
+#include "maxscale/worker.hh"
+
+using maxscale::Worker;
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -1284,7 +1286,7 @@ int main(int argc, char **argv)
     void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
     MXS_CONFIG* cnf = NULL;
     int numlocks = 0;
-    MXS_WORKER* worker;
+    Worker* worker;
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1908,7 +1910,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    mxs_worker_init();
+    Worker::init();
 
     /* Init MaxScale modules */
     if (!modules_process_init())
@@ -1974,10 +1976,10 @@ int main(int argc, char **argv)
      */
     for (i = 1; i < n_threads; i++)
     {
-        MXS_WORKER* worker = mxs_worker_get(i);
+        worker = Worker::get(i);
         ss_dassert(worker);
 
-        if (!mxs_worker_start(worker))
+        if (!worker->start())
         {
             const char* logerr = "Failed to start worker thread.";
             print_log_n_stderr(true, true, logerr, logerr, 0);
@@ -1999,9 +2001,9 @@ int main(int argc, char **argv)
     /*<
      * Run worker 0 in the main thread.
      */
-    worker = mxs_worker_get(0);
+    worker = Worker::get(0);
     ss_dassert(worker);
-    mxs_worker_main(worker);
+    worker->run();
 
     /*<
      * Wait for the housekeeper to finish.
@@ -2013,13 +2015,13 @@ int main(int argc, char **argv)
      */
     for (i = 1; i < n_threads; i++)
     {
-        MXS_WORKER *worker = mxs_worker_get(i);
+        worker = Worker::get(i);
         ss_dassert(worker);
 
-        mxs_worker_join(worker);
+        worker->join();
     }
 
-    mxs_worker_finish();
+    Worker::finish();
 
     /*<
      * Destroy the router and filter instances of all services.
@@ -2089,7 +2091,7 @@ int maxscale_shutdown()
     if (n == 0)
     {
         service_shutdown();
-        mxs_worker_shutdown_workers();
+        Worker::shutdown_all();
         hkshutdown();
         log_flush_shutdown();
     }
