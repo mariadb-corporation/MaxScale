@@ -98,7 +98,9 @@
 #include "maxscale/session.h"
 #include "maxscale/modules.h"
 #include "maxscale/queuemanager.h"
-#include "maxscale/worker.h"
+#include "maxscale/worker.hh"
+
+using maxscale::Worker;
 
 /* A DCB with null values, used for initialization */
 static DCB dcb_initialized;
@@ -2267,7 +2269,7 @@ dcb_hangup_foreach(struct server* server)
     intptr_t arg1 = (intptr_t)dcb_hangup_foreach_worker;
     intptr_t arg2 = (intptr_t)server;
 
-    mxs_worker_broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
+    Worker::broadcast_message(MXS_WORKER_MSG_CALL, arg1, arg2);
 }
 
 /**
@@ -3075,7 +3077,7 @@ void dcb_add_to_list(DCB *dcb)
          * as that part is done in the final zombie processing.
          */
 
-        int worker_id = mxs_worker_get_current_id();
+        int worker_id = Worker::get_current_id();
 
         if (worker_id == dcb->poll.thread.id)
         {
@@ -3092,13 +3094,13 @@ void dcb_add_to_list(DCB *dcb)
         }
         else
         {
-            MXS_WORKER* worker = mxs_worker_get(dcb->poll.thread.id);
+            Worker* worker = Worker::get(dcb->poll.thread.id);
             ss_dassert(worker);
 
             intptr_t arg1 = (intptr_t)dcb_add_to_worker_list;
             intptr_t arg2 = (intptr_t)dcb;
 
-            if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+            if (!worker->post_message(MXS_WORKER_MSG_CALL, arg1, arg2))
             {
                 MXS_ERROR("Could not post DCB to worker.");
             }
@@ -3113,7 +3115,7 @@ void dcb_add_to_list(DCB *dcb)
  */
 static void dcb_remove_from_list(DCB *dcb)
 {
-    ss_dassert(mxs_worker_get_current_id() == dcb->poll.thread.id);
+    ss_dassert(Worker::get_current_id() == dcb->poll.thread.id);
 
     if (dcb == all_dcbs[dcb->poll.thread.id])
     {

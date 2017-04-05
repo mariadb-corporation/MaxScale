@@ -127,11 +127,11 @@ MXS_WORKER* mxs_worker_get(int worker_id)
     return Worker::get(worker_id);
 }
 
-MXS_WORKER* mxs_worker_get_current()
+Worker* Worker::get_current()
 {
     Worker* pWorker = NULL;
 
-    int worker_id = this_thread.current_worker_id;
+    int worker_id = get_current_id();
 
     if (worker_id != WORKER_ABSENT_ID)
     {
@@ -141,7 +141,7 @@ MXS_WORKER* mxs_worker_get_current()
     return pWorker;
 }
 
-int mxs_worker_get_current_id()
+int Worker::get_current_id()
 {
     return this_thread.current_worker_id;
 }
@@ -226,7 +226,7 @@ void Worker::shutdown()
 
     if (!m_shutdown_initiated)
     {
-        if (mxs_worker_post_message(this, MXS_WORKER_MSG_SHUTDOWN, 0, 0))
+        if (post_message(MXS_WORKER_MSG_SHUTDOWN, 0, 0))
         {
             m_shutdown_initiated = true;
         }
