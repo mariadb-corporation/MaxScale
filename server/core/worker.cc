@@ -14,6 +14,7 @@
 #include "maxscale/worker.hh"
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <maxscale/alloc.h>
@@ -26,6 +27,9 @@
 #define WORKER_ABSENT_ID -1
 
 using maxscale::Worker;
+
+namespace
+{
 
 /**
  * Unit variables.
@@ -58,12 +62,73 @@ typedef struct worker_message
     intptr_t arg2; /*< Message specific second argument. */
 } WORKER_MESSAGE;
 
+/**
+ * Check error returns from epoll_ctl; impossible ones lead to crash.
+ *
+ * @param wid        Worker id.
+ * @param errornum   The errno set by epoll_ctl
+ * @param op         Either EPOLL_CTL_ADD or EPOLL_CTL_DEL.
+ */
+void poll_resolve_error(int wid, int fd, int errornum, int op)
+{
+    if (op == EPOLL_CTL_ADD)
+    {
+        if (EEXIST == errornum)
+        {
+            MXS_ERROR("File descriptor %d already added to epoll instance of worker %d.", fd, wid);
+            return;
+        }
+
+        if (ENOSPC == errornum)
+        {
+            MXS_ERROR("The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
+                      "reached when trying to add file descriptor %d to epoll instance "
+                      "of worker %d.", fd, wid);
+            return;
+        }
+    }
+    else
+    {
+        ss_dassert(op == EPOLL_CTL_DEL);
+
+        /* Must be removing */
+        if (ENOENT == errornum)
+        {
+            MXS_ERROR("File descriptor %d was not found in epoll instance of worker %d.", fd, wid);
+            return;
+        }
+    }
+
+    /* Common checks for add or remove - crash MaxScale */
+    if (EBADF == errornum)
+    {
+        raise(SIGABRT);
+    }
+    if (EINVAL == errornum)
+    {
+        raise(SIGABRT);
+    }
+    if (ENOMEM == errornum)
+    {
+        raise(SIGABRT);
+    }
+    if (EPERM == errornum)
+    {
+        raise(SIGABRT);
+    }
+
+    /* Undocumented error number */
+    raise(SIGABRT);
+}
+
+}
 
 static bool modules_thread_init();
 static void modules_thread_finish();
 
-Worker::Worker(int id, int read_fd, int write_fd)
+Worker::Worker(int id, int epoll_fd, int read_fd, int write_fd)
     : m_id(id)
+    , m_epoll_fd(epoll_fd)
     , m_read_fd(read_fd)
     , m_write_fd(write_fd)
 {
@@ -73,6 +138,16 @@ Worker::Worker(int id, int read_fd, int write_fd)
     m_started = false;
     m_should_shutdown = false;
     m_shutdown_initiated = false;
+}
+
+Worker::~Worker()
+{
+    ss_dassert(!m_started);
+
+    poll_remove_fd_from_worker(m_id, m_read_fd);
+    close(m_read_fd);
+    close(m_write_fd);
+    close(m_epoll_fd);
 }
 
 // static
@@ -114,6 +189,43 @@ void Worker::finish()
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
     }
+}
+
+bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
+{
+    bool rv = true;
+
+    events |= EPOLLET;
+
+    struct epoll_event ev;
+
+    ev.events = events;
+    ev.data.ptr = pData;
+
+    pData->thread.id = m_id;
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev) != 0)
+    {
+        poll_resolve_error(m_id, fd, errno, EPOLL_CTL_ADD);
+        rv = false;
+    }
+
+    return rv;
+}
+
+bool Worker::remove_fd(int fd)
+{
+    bool rv = true;
+
+    struct epoll_event ev = {};
+
+    if (epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, &ev) != 0)
+    {
+        poll_resolve_error(m_id, fd, errno, EPOLL_CTL_DEL);
+        rv = false;
+    }
+
+    return rv;
 }
 
 int mxs_worker_id(MXS_WORKER* pWorker)
@@ -271,42 +383,48 @@ Worker* Worker::create(int worker_id)
 {
     Worker* pWorker = NULL;
 
-    int fds[2];
+    int epoll_fd = epoll_create(MAX_EVENTS);
 
-    // We create the pipe in message mode (O_DIRECT), so that we do
-    // not need to deal with partial messages.
-    if (pipe2(fds, O_DIRECT | O_NONBLOCK | O_CLOEXEC) == 0)
+    if (epoll_fd != -1)
     {
-        int read_fd = fds[0];
-        int write_fd = fds[1];
+        int fds[2];
 
-        pWorker = new (std::nothrow) Worker(worker_id, read_fd, write_fd);
-
-        if (pWorker)
+        // We create the pipe in message mode (O_DIRECT), so that we do
+        // not need to deal with partial messages.
+        if (pipe2(fds, O_DIRECT | O_NONBLOCK | O_CLOEXEC) == 0)
         {
-            if (poll_add_fd_to_worker(worker_id, read_fd, EPOLLIN, &pWorker->m_poll) != 0)
+            int read_fd = fds[0];
+            int write_fd = fds[1];
+
+            pWorker = new (std::nothrow) Worker(worker_id, epoll_fd, read_fd, write_fd);
+
+            if (pWorker)
             {
-                MXS_ERROR("Could not add read descriptor of worker to poll set: %s", mxs_strerror(errno));
-                delete pWorker;
-                pWorker = NULL;
+                if (poll_add_fd_to_worker(worker_id, read_fd, EPOLLIN, &pWorker->m_poll) != 0)
+                {
+                    MXS_ERROR("Could not add read descriptor of worker to poll set: %s", mxs_strerror(errno));
+                    delete pWorker;
+                    pWorker = NULL;
+                }
             }
+            else
+            {
+                close(read_fd);
+                close(write_fd);
+                close(epoll_fd);
+            }
+        }
+        else
+        {
+            MXS_ERROR("Could not create pipe for worker: %s", mxs_strerror(errno));
         }
     }
     else
     {
-        MXS_ERROR("Could not create pipe for worker: %s", mxs_strerror(errno));
+        MXS_ERROR("Could not create epoll-instance for worker: %s", mxs_strerror(errno));
     }
 
     return pWorker;
-}
-
-Worker::~Worker()
-{
-    ss_dassert(!m_started);
-
-    poll_remove_fd_from_worker(m_id, m_read_fd);
-    close(m_read_fd);
-    close(m_write_fd);
 }
 
 /**
