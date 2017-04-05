@@ -185,7 +185,7 @@ static GWBUF *dcb_basic_read_SSL(DCB *dcb, int *nsingleread);
 static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static int gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing);
 static int gw_write_SSL(DCB *dcb, GWBUF *writeq, bool *stop_writing);
-static int dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret);
+static int dcb_log_errors_SSL (DCB *dcb, int ret);
 static int dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn);
 static int dcb_listen_create_socket_inet(const char *host, uint16_t port);
 static int dcb_listen_create_socket_unix(const char *path);
@@ -349,7 +349,7 @@ dcb_final_free(DCB *dcb)
     if (DCB_POLL_BUSY(dcb))
     {
         /* Check if DCB has outstanding poll events */
-        MXS_ERROR("dcb_final_free: DCB %p has outstanding events.", dcb);
+        MXS_ERROR("DCB %p has outstanding events.", dcb);
     }
 
     if (dcb->session)
@@ -503,13 +503,9 @@ dcb_process_victim_queue(int threadid)
         {
             if (dcb->state == DCB_STATE_LISTENING)
             {
-                MXS_ERROR("%lu [%s] Error : Removing DCB %p but was in state %s "
-                          "which is not expected for a call to dcb_close, although it"
-                          "should be processed correctly. ",
-                          pthread_self(),
-                          __func__,
-                          dcb,
-                          STRDCBSTATE(dcb->state));
+                MXS_ERROR("Removing DCB %p but was in state %s which is not expected"
+                          " for a call to dcb_close, although it should be processed"
+                          " correctly. ", dcb, STRDCBSTATE(dcb->state));
             }
             else
             {
@@ -577,23 +573,14 @@ dcb_process_victim_queue(int threadid)
             {
                 int eno = errno;
                 errno = 0;
-                MXS_ERROR("%lu [dcb_process_victim_queue] Error : Failed to close "
-                          "socket %d on dcb %p due error %d, %s.",
-                          pthread_self(),
-                          dcb->fd,
-                          dcb,
-                          eno,
-                          mxs_strerror(eno));
+                MXS_ERROR("Failed to close socket %d on dcb %p: %d, %s",
+                          dcb->fd, dcb, eno, mxs_strerror(eno));
             }
             else
             {
                 dcb->fd = DCBFD_CLOSED;
 
-                MXS_DEBUG("%lu [dcb_process_victim_queue] Closed socket "
-                          "%d on dcb %p.",
-                          pthread_self(),
-                          dcb->fd,
-                          dcb);
+                MXS_DEBUG("Closed socket %d on dcb %p.", dcb->fd, dcb);
             }
         }
 
@@ -651,8 +638,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     user = session_get_user(session);
     if (user && strlen(user))
     {
-        MXS_DEBUG("%lu [dcb_connect] Looking for persistent connection DCB "
-                  "user %s protocol %s\n", pthread_self(), user, protocol);
+        MXS_DEBUG("Looking for persistent connection DCB user %s protocol %s", user, protocol);
         dcb = server_get_persistent(server, user, protocol, session->client_dcb->poll.thread.id);
         if (dcb)
         {
@@ -661,22 +647,17 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
              */
             if (!session_link_dcb(session, dcb))
             {
-                MXS_DEBUG("%lu [dcb_connect] Failed to link to session, the "
-                          "session has been removed.\n",
-                          pthread_self());
                 dcb_close(dcb);
                 return NULL;
             }
-            MXS_DEBUG("%lu [dcb_connect] Reusing a persistent connection, dcb %p\n",
-                      pthread_self(), dcb);
+            MXS_DEBUG("Reusing a persistent connection, dcb %p", dcb);
             dcb->persistentstart = 0;
             dcb->was_persistent = true;
             return dcb;
         }
         else
         {
-            MXS_DEBUG("%lu [dcb_connect] Failed to find a reusable persistent connection.\n",
-                      pthread_self());
+            MXS_DEBUG("Failed to find a reusable persistent connection");
         }
     }
 
@@ -690,9 +671,7 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
     {
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_final_free(dcb);
-        MXS_ERROR("Failed to load protocol module for %s, free dcb %p\n",
-                  protocol,
-                  dcb);
+        MXS_ERROR("Failed to load protocol module '%s'", protocol);
         return NULL;
     }
     memcpy(&(dcb->func), funcs, sizeof(MXS_PROTOCOL));
@@ -703,11 +682,11 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
                                 dcb->func.auth_default() : "NullAuthDeny";
 
     MXS_AUTHENTICATOR *authfuncs = (MXS_AUTHENTICATOR*)load_module(authenticator,
-                                                               MODULE_AUTHENTICATOR);
+                                                                   MODULE_AUTHENTICATOR);
     if (authfuncs == NULL)
     {
 
-        MXS_ERROR("Failed to load authenticator module '%s'.", authenticator);
+        MXS_ERROR("Failed to load authenticator module '%s'", authenticator);
         dcb_close(dcb);
         return NULL;
     }
@@ -719,9 +698,6 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
      */
     if (!session_link_dcb(session, dcb))
     {
-        MXS_DEBUG("%lu [dcb_connect] Failed to link to session, the "
-                  "session has been removed.",
-                  pthread_self());
         dcb_final_free(dcb);
         return NULL;
     }
@@ -729,28 +705,16 @@ dcb_connect(SERVER *server, MXS_SESSION *session, const char *protocol)
 
     if (fd == DCBFD_CLOSED)
     {
-        MXS_DEBUG("%lu [dcb_connect] Failed to connect to server [%s]:%d, "
-                  "from backend dcb %p, client dcp %p fd %d.",
-                  pthread_self(),
-                  server->name,
-                  server->port,
-                  dcb,
-                  session->client_dcb,
-                  session->client_dcb->fd);
+        MXS_DEBUG("Failed to connect to server [%s]:%d, from backend dcb %p, client dcp %p fd %d",
+                  server->name, server->port, dcb, session->client_dcb, session->client_dcb->fd);
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_final_free(dcb);
         return NULL;
     }
     else
     {
-        MXS_DEBUG("%lu [dcb_connect] Connected to server [%s]:%d, "
-                  "from backend dcb %p, client dcp %p fd %d.",
-                  pthread_self(),
-                  server->name,
-                  server->port,
-                  dcb,
-                  session->client_dcb,
-                  session->client_dcb->fd);
+        MXS_DEBUG("Connected to server [%s]:%d, from backend dcb %p, client dcp %p fd %d.",
+                  server->name, server->port, dcb, session->client_dcb, session->client_dcb->fd);
     }
     /**
      * Successfully connected to backend. Assign file descriptor to dcb
@@ -842,11 +806,8 @@ int dcb_read(DCB   *dcb,
 
     if (dcb->fd <= 0)
     {
-        /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
-        MXS_ERROR("%lu [dcb_read] Error : Read failed, dcb is %s.",
-                  pthread_self(),
-                  dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not readable");
-        /* </editor-fold> */
+        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
+                  "closed" : "cloned, not readable");
         return 0;
     }
 
@@ -870,15 +831,9 @@ int dcb_read(DCB   *dcb,
             if (buffer)
             {
                 nreadtotal += nsingleread;
-                /* <editor-fold defaultstate="collapsed" desc=" Debug Logging "> */
-                MXS_DEBUG("%lu [dcb_read] Read %d bytes from dcb %p in state %s "
-                          "fd %d.",
-                          pthread_self(),
-                          nsingleread,
-                          dcb,
-                          STRDCBSTATE(dcb->state),
-                          dcb->fd);
-                /* </editor-fold> */
+                MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
+                          nsingleread, dcb, STRDCBSTATE(dcb->state), dcb->fd);
+
                 /*< Assign the target server for the gwbuf */
                 buffer->server = dcb->server;
                 /*< Append read data to the gwbuf */
@@ -907,16 +862,8 @@ dcb_bytes_readable(DCB *dcb)
 
     if (-1 == ioctl(dcb->fd, FIONREAD, &bytesavailable))
     {
-        /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
-        MXS_ERROR("%lu [dcb_read] Error : ioctl FIONREAD for dcb %p in "
-                  "state %s fd %d failed due error %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd,
-                  errno,
-                  mxs_strerror(errno));
-        /* </editor-fold> */
+        MXS_ERROR("ioctl FIONREAD for dcb %p in state %s fd %d failed: %d, %s",
+                  dcb, STRDCBSTATE(dcb->state), dcb->fd, errno, mxs_strerror(errno));
         return -1;
     }
     else
@@ -980,19 +927,6 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
 
     if ((buffer = gwbuf_alloc(bufsize)) == NULL)
     {
-        /*<
-         * This is a fatal error which should cause shutdown.
-         * Todo shutdown if memory allocation fails.
-         */
-        /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
-        MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
-                  "for dcb %p fd %d, due %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  errno,
-                  mxs_strerror(errno));
-        /* </editor-fold> */
         *nsingleread = -1;
     }
     else
@@ -1004,16 +938,9 @@ dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *
         {
             if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
             {
-                /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
-                MXS_ERROR("%lu [dcb_read] Error : Read failed, dcb %p in state "
-                          "%s fd %d, due %d, %s.",
-                          pthread_self(),
-                          dcb,
-                          STRDCBSTATE(dcb->state),
-                          dcb->fd,
-                          errno,
-                          mxs_strerror(errno));
-                /* </editor-fold> */
+                MXS_ERROR("Read failed, dcb %p in state %s fd %d: %d, %s",
+                          dcb, STRDCBSTATE(dcb->state), dcb->fd,
+                          errno, mxs_strerror(errno));
             }
             gwbuf_free(buffer);
             buffer = NULL;
@@ -1043,8 +970,8 @@ dcb_read_SSL(DCB *dcb, GWBUF **head)
 
     if (dcb->fd <= 0)
     {
-        MXS_ERROR("Read failed, dcb is %s.",
-                  dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not readable");
+        MXS_ERROR("Read failed, dcb is %s.", dcb->fd == DCBFD_CLOSED ?
+                  "closed" : "cloned, not readable");
         return -1;
     }
 
@@ -1098,29 +1025,10 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
     {
     case SSL_ERROR_NONE:
         /* Successful read */
-        MXS_DEBUG("%lu [%s] Read %d bytes from dcb %p in state %s "
-                  "fd %d.",
-                  pthread_self(),
-                  __func__,
-                  *nsingleread,
-                  dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd);
+        MXS_DEBUG("Read %d bytes from dcb %p in state %s fd %d.",
+                  *nsingleread, dcb, STRDCBSTATE(dcb->state), dcb->fd);
         if (*nsingleread && (buffer = gwbuf_alloc_and_load(*nsingleread, (void *)temp_buffer)) == NULL)
         {
-            /*<
-             * This is a fatal error which should cause shutdown.
-             * Todo shutdown if memory allocation fails.
-             */
-            /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
-            MXS_ERROR("%lu [dcb_read] Error : Failed to allocate read buffer "
-                      "for dcb %p fd %d, due %d, %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      errno,
-                      mxs_strerror(errno));
-            /* </editor-fold> */
             *nsingleread = -1;
             return NULL;
         }
@@ -1136,20 +1044,14 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
 
     case SSL_ERROR_ZERO_RETURN:
         /* react to the SSL connection being closed */
-        MXS_DEBUG("%lu [%s] SSL connection appears to have hung up",
-                  pthread_self(),
-                  __func__
-                 );
+        MXS_DEBUG("SSL connection appears to have hung up");
         poll_fake_hangup_event(dcb);
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_WANT_READ:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        MXS_DEBUG("%lu [%s] SSL connection want read",
-                  pthread_self(),
-                  __func__
-                 );
+        MXS_DEBUG("SSL connection want read");
         dcb->ssl_read_want_write = false;
         dcb->ssl_read_want_read = true;
         *nsingleread = 0;
@@ -1157,21 +1059,18 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
 
     case SSL_ERROR_WANT_WRITE:
         /* Prevent SSL I/O on connection until retried, return to poll loop */
-        MXS_DEBUG("%lu [%s] SSL connection want write",
-                  pthread_self(),
-                  __func__
-                 );
+        MXS_DEBUG("SSL connection want write");
         dcb->ssl_read_want_write = true;
         dcb->ssl_read_want_read = false;
         *nsingleread = 0;
         break;
 
     case SSL_ERROR_SYSCALL:
-        *nsingleread = dcb_log_errors_SSL(dcb, __func__, *nsingleread);
+        *nsingleread = dcb_log_errors_SSL(dcb, *nsingleread);
         break;
 
     default:
-        *nsingleread = dcb_log_errors_SSL(dcb, __func__, *nsingleread);
+        *nsingleread = dcb_log_errors_SSL(dcb, *nsingleread);
         break;
     }
     return buffer;
@@ -1181,12 +1080,11 @@ dcb_basic_read_SSL(DCB *dcb, int *nsingleread)
  * Log errors from an SSL operation
  *
  * @param dcb       The DCB of the client
- * @param called_by Name of the calling function
  * @param ret       Return code from SSL operation if error is SSL_ERROR_SYSCALL
  * @return          -1 if an error found, 0 if no error found
  */
 static int
-dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret)
+dcb_log_errors_SSL (DCB *dcb, int ret)
 {
     char errbuf[MXS_STRERROR_BUFLEN];
     unsigned long ssl_errno;
@@ -1198,13 +1096,9 @@ dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret)
     }
     if (ret || ssl_errno)
     {
-        MXS_ERROR("SSL operation failed in %s, dcb %p in state "
+        MXS_ERROR("SSL operation failed, dcb %p in state "
                   "%s fd %d return code %d. More details may follow.",
-                  called_by,
-                  dcb,
-                  STRDCBSTATE(dcb->state),
-                  dcb->fd,
-                  ret);
+                  dcb, STRDCBSTATE(dcb->state), dcb->fd, ret);
     }
     if (ret && !ssl_errno)
     {
@@ -1285,11 +1179,8 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
             dcb->state != DCB_STATE_LISTENING &&
             dcb->state != DCB_STATE_NOPOLLING)
         {
-            MXS_DEBUG("%lu [dcb_write] Write aborted to dcb %p because "
-                      "it is in state %s",
-                      pthread_self(),
-                      dcb,
-                      STRDCBSTATE(dcb->state));
+            MXS_DEBUG("Write aborted to dcb %p because it is in state %s",
+                      dcb, STRDCBSTATE(dcb->state));
             gwbuf_free(queue);
             return false;
         }
@@ -1403,9 +1294,9 @@ static void log_illegal_dcb(DCB *dcb)
         break;
     }
 
-    MXS_ERROR("[dcb_close] Error : Removing DCB %p but it is in state %s "
-              "which is not legal for a call to dcb_close. The DCB is connected to: %s",
-              dcb, STRDCBSTATE(dcb->state), connected_to);
+    MXS_ERROR("Removing DCB %p but it is in state %s which is not legal for "
+              "a call to dcb_close. The DCB is connected to: %s", dcb,
+              STRDCBSTATE(dcb->state), connected_to);
 }
 
 /**
@@ -1500,9 +1391,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         && dcb->server->stats.n_persistent < dcb->server->persistpoolmax)
     {
         DCB_CALLBACK *loopcallback;
-        MXS_DEBUG("%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
-                  pthread_self(),
-                  dcb->user);
+        MXS_DEBUG("Adding DCB to persistent pool, user %s.", dcb->user);
         dcb->was_persistent = false;
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
@@ -1534,12 +1423,10 @@ dcb_maybe_add_persistent(DCB *dcb)
     }
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER && dcb->server)
     {
-        MXS_DEBUG("%lu [dcb_maybe_add_persistent] Not adding DCB %p to persistent pool, "
+        MXS_DEBUG("Not adding DCB %p to persistent pool, "
                   "user %s, max for pool %ld, error handle called %s, hung flag %s, "
-                  "server status %d, pool count %d.\n",
-                  pthread_self(),
-                  dcb,
-                  dcb->user ? dcb->user : "",
+                  "server status %d, pool count %d.",
+                  dcb, dcb->user ? dcb->user : "",
                   dcb->server->persistpoolmax,
                   dcb->dcb_errhandle_called ? "true" : "false",
                   (dcb->flags & DCBF_HUNG) ? "true" : "false",
@@ -2015,7 +1902,7 @@ gw_write_SSL(DCB *dcb, GWBUF *writeq, bool *stop_writing)
 
     case SSL_ERROR_SYSCALL:
         *stop_writing = true;
-        if (dcb_log_errors_SSL(dcb, __func__, written) < 0)
+        if (dcb_log_errors_SSL(dcb, written) < 0)
         {
             poll_fake_hangup_event(dcb);
         }
@@ -2024,7 +1911,7 @@ gw_write_SSL(DCB *dcb, GWBUF *writeq, bool *stop_writing)
     default:
         /* Report error(s) and shutdown the connection */
         *stop_writing = true;
-        if (dcb_log_errors_SSL(dcb, __func__, written) < 0)
+        if (dcb_log_errors_SSL(dcb, written) < 0)
         {
             poll_fake_hangup_event(dcb);
         }
@@ -2073,13 +1960,9 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
             saved_errno != EPIPE)
 #endif
         {
-            MXS_ERROR("Write to %s %s in state %s failed due errno %d, %s",
+            MXS_ERROR("Write to %s %s in state %s failed: %d, %s",
                       DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
                       saved_errno, mxs_strerror(saved_errno));
-            MXS_DEBUG("Write to %s %s in state %s failed due errno %d, %s (at %p, fd %d)",
-                      DCB_STRTYPE(dcb), dcb->remote, STRDCBSTATE(dcb->state),
-                      saved_errno, mxs_strerror(saved_errno),
-                      dcb, dcb->fd);
         }
     }
     else
@@ -2219,11 +2102,6 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
         if (cb->reason == reason)
         {
             nextcb = cb->next;
-
-            MXS_DEBUG("%lu [dcb_call_callback] %s",
-                      pthread_self(),
-                      STRDCBREASON(reason));
-
             cb->cb(dcb, reason, cb->userdata);
             cb = nextcb;
         }
@@ -2522,13 +2400,13 @@ int dcb_accept_SSL(DCB* dcb)
 
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
-        dcb_log_errors_SSL(dcb, __func__, 0);
+        dcb_log_errors_SSL(dcb, 0);
         poll_fake_hangup_event(dcb);
         return 0;
 
     case SSL_ERROR_SYSCALL:
         MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
             dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
@@ -2541,7 +2419,7 @@ int dcb_accept_SSL(DCB* dcb)
 
     default:
         MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
-        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
             dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
@@ -2599,7 +2477,7 @@ int dcb_connect_SSL(DCB* dcb)
 
     case SSL_ERROR_ZERO_RETURN:
         MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", dcb->remote);
-        if (dcb_log_errors_SSL(dcb, __func__, 0) < 0)
+        if (dcb_log_errors_SSL(dcb, 0) < 0)
         {
             poll_fake_hangup_event(dcb);
         }
@@ -2608,7 +2486,7 @@ int dcb_connect_SSL(DCB* dcb)
 
     case SSL_ERROR_SYSCALL:
         MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->remote);
-        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
             dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
@@ -2622,7 +2500,7 @@ int dcb_connect_SSL(DCB* dcb)
 
     default:
         MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->remote);
-        if (dcb_log_errors_SSL(dcb, __func__, ssl_rval) < 0)
+        if (dcb_log_errors_SSL(dcb, ssl_rval) < 0)
         {
             dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
@@ -2662,24 +2540,20 @@ dcb_accept(DCB *listener)
     if ((c_sock = dcb_accept_one_connection(listener, (struct sockaddr *)&client_conn)) >= 0)
     {
         listener->stats.n_accepts++;
-        MXS_DEBUG("%lu [gw_MySQLAccept] Accepted fd %d.",
-                  pthread_self(),
-                  c_sock);
+
         /* set nonblocking  */
         sendbuf = MXS_CLIENT_SO_SNDBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen) != 0)
         {
-            MXS_ERROR("Failed to set socket options. Error %d: %s",
-                      errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to set socket options: %d, %s", errno, mxs_strerror(errno));
         }
 
         sendbuf = MXS_CLIENT_SO_RCVBUF;
 
         if (setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen) != 0)
         {
-            MXS_ERROR("Failed to set socket options. Error %d: %s",
-                      errno, mxs_strerror(errno));
+            MXS_ERROR("Failed to set socket options: %d, %s", errno, mxs_strerror(errno));
         }
         setnonblocking(c_sock);
 
@@ -2738,14 +2612,12 @@ dcb_accept(DCB *listener)
                 authenticator_name = client_dcb->func.auth_default();
             }
             if ((authfuncs = (MXS_AUTHENTICATOR *)load_module(authenticator_name,
-                                                            MODULE_AUTHENTICATOR)) == NULL)
+                                                              MODULE_AUTHENTICATOR)) == NULL)
             {
                 if ((authfuncs = (MXS_AUTHENTICATOR *)load_module("NullAuthDeny",
-                                                                MODULE_AUTHENTICATOR)) == NULL)
+                                                                  MODULE_AUTHENTICATOR)) == NULL)
                 {
-                    MXS_ERROR("Failed to load authenticator module for %s, free dcb %p\n",
-                              authenticator_name,
-                              client_dcb);
+                    MXS_ERROR("Failed to load authenticator module '%s'", authenticator_name);
                     dcb_close(client_dcb);
                     return NULL;
                 }
@@ -2757,7 +2629,7 @@ dcb_accept(DCB *listener)
                 (client_dcb->authenticator_data = client_dcb->authfunc.create(
                                                       client_dcb->listener->auth_instance)) == NULL)
             {
-                MXS_ERROR("Failed to create authenticator for client DCB.");
+                MXS_ERROR("Failed to create authenticator for client DCB");
                 dcb_close(client_dcb);
                 return NULL;
             }
@@ -2828,17 +2700,12 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
                  * Exceeded system's (ENFILE) or processes
                  * (EMFILE) max. number of files limit.
                  */
-                MXS_DEBUG("%lu [dcb_accept_one_connection] Error %d, %s. ",
-                          pthread_self(),
-                          eno,
-                         mxs_strerror(eno));
 
                 /* Log an error the first time this happens */
                 if (i == 0)
                 {
-                    MXS_ERROR("Error %d, %s. Failed to accept new client connection.",
-                              eno,
-                             mxs_strerror(eno));
+                    MXS_ERROR("Failed to accept new client connection: %d, %s",
+                              eno, mxs_strerror(eno));
                 }
                 nanosecs = (long long)1000000 * 100 * i * i;
                 ts1.tv_sec = nanosecs / 1000000000;
@@ -2852,9 +2719,8 @@ dcb_accept_one_connection(DCB *listener, struct sockaddr *client_conn)
                 /**
                  * Other error, log it then break out of loop for return of -1.
                  */
-                MXS_ERROR("Failed to accept new client connection due to %d, %s.",
-                          eno,
-                         mxs_strerror(eno));
+                MXS_ERROR("Failed to accept new client connection: %d, %s",
+                          eno, mxs_strerror(eno));
                 break;
             }
         }
@@ -2924,7 +2790,7 @@ int dcb_listen(DCB *listener, const char *config, const char *protocol_name)
      */
     if (listen(listener_socket, INT_MAX) != 0)
     {
-        MXS_ERROR("Failed to start listening on '[%s]:%u' with protocol '%s': %d, %s",
+        MXS_ERROR("Failed to start listening on [%s]:%u with protocol '%s': %d, %s",
                   host, port, protocol_name, errno, mxs_strerror(errno));
         close(listener_socket);
         return -1;
@@ -3002,7 +2868,7 @@ dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_
 {
     if (setsockopt(sockfd, level, optname, optval, optlen) != 0)
     {
-        MXS_ERROR("Failed to set socket options. Error %d: %s",
+        MXS_ERROR("Failed to set socket options: %d, %s",
                   errno, mxs_strerror(errno));
         return -1;
     }
