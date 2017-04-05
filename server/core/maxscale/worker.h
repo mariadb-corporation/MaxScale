@@ -90,7 +90,7 @@ void mxs_worker_shutdown_workers();
  */
 static inline bool mxs_worker_should_shutdown(MXS_WORKER* worker)
 {
-    return worker->should_shutdown;
+    return worker->m_should_shutdown;
 }
 
 MXS_END_DECLS
