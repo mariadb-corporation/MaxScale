@@ -458,11 +458,8 @@ int mysql_send_auth_error(DCB        *dcb,
 
     if (dcb->state != DCB_STATE_POLLING)
     {
-        MXS_DEBUG("%lu [mysql_send_auth_error] dcb %p is in a state %s, "
-                  "and it is not in epoll set anymore. Skip error sending.",
-                  pthread_self(),
-                  dcb,
-                  STRDCBSTATE(dcb->state));
+        MXS_DEBUG("dcb %p is in a state %s, and it is not in epoll set anymore. Skip error sending.",
+                  dcb, STRDCBSTATE(dcb->state));
         return 0;
     }
     mysql_error_msg = "Access denied!";
@@ -792,10 +789,7 @@ mysql_server_cmd_t protocol_get_srv_command(MySQLProtocol* p,
     {
         protocol_remove_srv_command(p);
     }
-    MXS_DEBUG("%lu [protocol_get_srv_command] Read command %s for fd %d.",
-              pthread_self(),
-              STRPACKETTYPE(cmd),
-              p->owner_dcb->fd);
+    MXS_DEBUG("Read command %s for fd %d.", STRPACKETTYPE(cmd), p->owner_dcb->fd);
     return cmd;
 }
 
@@ -1045,9 +1039,8 @@ bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     else
     {
         ss_dassert(false);
-        MXS_ERROR("%lu [gw_get_shared_session_auth_info] Couldn't get "
-                  "session authentication info. Session in a wrong state %d.",
-                  pthread_self(), dcb->session->state);
+        MXS_ERROR("Couldn't get session authentication info. Session in a wrong state %s.",
+                  STRSESSIONSTATE(dcb->session->state));
         rval = false;
     }
 

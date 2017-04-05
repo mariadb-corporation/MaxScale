@@ -179,9 +179,6 @@ static int gw_create_backend_connection(DCB *backend_dcb,
 
     if (protocol == NULL)
     {
-        MXS_DEBUG("%lu [gw_create_backend_connection] Failed to create "
-                  "protocol object for backend connection.",
-                  pthread_self());
         MXS_ERROR("Failed to create protocol object for backend connection.");
         goto return_fd;
     }
@@ -213,10 +210,9 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         ss_dassert(fd > 0);
         protocol->fd = fd;
         protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
-        MXS_DEBUG("%lu [gw_create_backend_connection] Established "
+        MXS_DEBUG("Established "
                   "connection to %s:%i, protocol fd %d client "
                   "fd %d.",
-                  pthread_self(),
                   server->name,
                   server->port,
                   protocol->fd,
@@ -230,9 +226,8 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         ss_dassert(fd > 0);
         protocol->protocol_auth_state = MXS_AUTH_STATE_PENDING_CONNECT;
         protocol->fd = fd;
-        MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
+        MXS_DEBUG("Connection "
                   "pending to %s:%i, protocol fd %d client fd %d.",
-                  pthread_self(),
                   server->name,
                   server->port,
                   protocol->fd,
@@ -243,13 +238,6 @@ static int gw_create_backend_connection(DCB *backend_dcb,
         /* Failure - the state reverts to its initial value */
         ss_dassert(fd == -1);
         ss_dassert(protocol->protocol_auth_state == MXS_AUTH_STATE_INIT);
-        MXS_DEBUG("%lu [gw_create_backend_connection] Connection "
-                  "failed to %s:%i, protocol fd %d client fd %d.",
-                  pthread_self(),
-                  server->name,
-                  server->port,
-                  protocol->fd,
-                  session->client_dcb->fd);
         break;
     } /*< switch */
 
@@ -303,8 +291,7 @@ static int gw_do_connect_to_backend(char *host, int port, int *fd)
     }
 
     *fd = so;
-    MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
-              "[%s]:%d, fd %d.", pthread_self(), host, port, so);
+    MXS_DEBUG("Connected to backend server [%s]:%d, fd %d.", host, port, so);
 
     return rv;
 
@@ -444,9 +431,8 @@ gw_read_backend_event(DCB *dcb)
     MySQLProtocol *proto = (MySQLProtocol *)dcb->protocol;
     CHK_PROTOCOL(proto);
 
-    MXS_DEBUG("%lu [gw_read_backend_event] Read dcb %p fd %d protocol state %d, %s.",
-              pthread_self(), dcb, dcb->fd, proto->protocol_auth_state,
-              STRPROTOCOLSTATE(proto->protocol_auth_state));
+    MXS_DEBUG("Read dcb %p fd %d protocol state %d, %s.", dcb, dcb->fd,
+              proto->protocol_auth_state, STRPROTOCOLSTATE(proto->protocol_auth_state));
 
     int rc = 0;
     if (proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
@@ -772,10 +758,8 @@ gw_read_and_write(DCB *dcb)
 
             if (!stmt)
             {
-                MXS_ERROR("%lu [gw_read_backend_event] "
-                          "Read buffer unexpectedly null, even though response "
-                          "not marked as complete. User: %s",
-                          pthread_self(), dcb->session->client_dcb->user);
+                MXS_ERROR("Read buffer unexpectedly null, even though response "
+                          "not marked as complete. User: %s", dcb->session->client_dcb->user);
                 return 0;
             }
         }
@@ -844,9 +828,8 @@ static int gw_write_backend_event(DCB *dcb)
         }
         else
         {
-            MXS_DEBUG("%lu [gw_write_backend_event] Dcb %p in state %s "
-                      "but there's nothing to write either.",
-                      pthread_self(), dcb, STRDCBSTATE(dcb->state));
+            MXS_DEBUG("Dcb %p in state %s but there's nothing to write either.",
+                      dcb, STRDCBSTATE(dcb->state));
         }
     }
     else
@@ -862,8 +845,7 @@ static int gw_write_backend_event(DCB *dcb)
             dcb_drain_writeq(dcb);
         }
 
-        MXS_DEBUG("%lu [gw_write_backend_event] wrote to dcb %p fd %d, return %d",
-                  pthread_self(), dcb, dcb->fd, rc);
+        MXS_DEBUG("wrote to dcb %p fd %d, return %d", dcb, dcb->fd, rc);
     }
 
     return rc;
@@ -959,12 +941,8 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
                 backend_protocol->current_command = client_proto->current_command;
             }
 
-            MXS_DEBUG("%lu [gw_MySQLWrite_backend] write to dcb %p "
-                      "fd %d protocol state %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+            MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
+                      dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
 
             /**
@@ -1007,12 +985,8 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     default:
         {
-            MXS_DEBUG("%lu [gw_MySQLWrite_backend] delayed write to "
-                      "dcb %p fd %d protocol state %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
+            MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
+                      dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
             /**
              * In case of session commands, store command to DCB's
              * protocol struct.
@@ -1463,11 +1437,7 @@ static GWBUF* process_response_data(DCB* dcb,
 
         srvcmd = protocol_get_srv_command(p, false);
 
-        MXS_DEBUG("%lu [process_response_data] Read command %s for DCB %p fd %d.",
-                  pthread_self(),
-                  STRPACKETTYPE(srvcmd),
-                  dcb,
-                  dcb->fd);
+        MXS_DEBUG("Read command %s for DCB %p fd %d.", STRPACKETTYPE(srvcmd), dcb, dcb->fd);
         /**
          * Read values from protocol structure, fails if values are
          * uninitialized.
@@ -1565,9 +1535,8 @@ static GWBUF* process_response_data(DCB* dcb,
                  wait for more data from the backend server.*/
                 if (*readbuf == NULL || gwbuf_length(*readbuf) < 3)
                 {
-                    MXS_DEBUG("%lu [%s] Read %d packets. Waiting for %d more "
-                              "packets for a total of %d packets.",
-                              pthread_self(), __FUNCTION__,
+                    MXS_DEBUG("[%s] Read %d packets. Waiting for %d more "
+                              "packets for a total of %d packets.", __FUNCTION__,
                               initial_packets - npackets_left,
                               npackets_left, initial_packets);
 
