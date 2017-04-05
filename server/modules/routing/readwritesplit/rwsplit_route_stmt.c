@@ -245,7 +245,7 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) &&
                 BREF_IS_IN_USE((&backend_ref[i])))
             {
-                MXS_INFO("Route query to %s \t%s:%d%s",
+                MXS_INFO("Route query to %s \t[%s]:%d%s",
                          (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
                          backend_ref[i].ref->server->name,
@@ -352,7 +352,7 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
 
             if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
-                MXS_INFO("Route query to %s \t%s:%d%s",
+                MXS_INFO("Route query to %s \t[%s]:%d%s",
                          (SERVER_IS_MASTER(backend_ref[i].ref->server)
                           ? "master" : "slave"),
                          backend_ref[i].ref->server->name,
@@ -375,7 +375,7 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
             if (sescmd_cursor_is_active(scur) && &backend_ref[i] != router_cli_ses->rses_master_ref)
             {
                 nsucc += 1;
-                MXS_INFO("Backend %s:%d already executing sescmd.",
+                MXS_INFO("Backend [%s]:%d already executing sescmd.",
                          backend_ref[i].ref->server->name,
                          backend_ref[i].ref->server->port);
             }
@@ -387,7 +387,7 @@ bool route_session_write(ROUTER_CLIENT_SES *router_cli_ses,
                 }
                 else
                 {
-                    MXS_ERROR("Failed to execute session command in %s:%d",
+                    MXS_ERROR("Failed to execute session command in [%s]:%d",
                               backend_ref[i].ref->server->name,
                               backend_ref[i].ref->server->port);
                 }
@@ -643,7 +643,7 @@ bool rwsplit_get_dcb(DCB **p_dcb, ROUTER_CLIENT_SES *rses, backend_type_t btype,
                 }
                 else
                 {
-                    MXS_INFO("Server %s:%d is too much behind the master, %d s. and can't be chosen.",
+                    MXS_INFO("Server [%s]:%d is too much behind the master, %d s. and can't be chosen.",
                              b->server->name, b->server->port, b->server->rlag);
                 }
             }
@@ -1105,7 +1105,7 @@ bool handle_slave_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
      */
     if (rwsplit_get_dcb(target_dcb, rses, BE_SLAVE, NULL, rlag_max))
     {
-        atomic_add(&inst->stats.n_slave, 1);
+        atomic_add_uint64(&inst->stats.n_slave, 1);
         return true;
     }
     else
@@ -1193,14 +1193,14 @@ bool handle_master_is_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     if (succp && master_dcb == curr_master_dcb)
     {
-        atomic_add(&inst->stats.n_master, 1);
+        atomic_add_uint64(&inst->stats.n_master, 1);
         *target_dcb = master_dcb;
     }
     else
     {
         if (succp && master_dcb == curr_master_dcb)
         {
-            atomic_add(&inst->stats.n_master, 1);
+            atomic_add_uint64(&inst->stats.n_master, 1);
             *target_dcb = master_dcb;
         }
         else
@@ -1266,7 +1266,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
     ss_dassert(target_dcb != NULL);
 
-    MXS_INFO("Route query to %s \t%s:%d <",
+    MXS_INFO("Route query to %s \t[%s]:%d <",
              (SERVER_IS_MASTER(bref->ref->server) ? "master"
               : "slave"), bref->ref->server->name, bref->ref->server->port);
     /**
@@ -1289,7 +1289,7 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
 
         backend_ref_t *bref;
 
-        atomic_add(&inst->stats.n_queries, 1);
+        atomic_add_uint64(&inst->stats.n_queries, 1);
         /**
          * Add one query response waiter to backend reference
          */

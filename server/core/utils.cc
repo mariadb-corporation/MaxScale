@@ -545,7 +545,7 @@ strip_escape_chars(char* val)
     return true;
 }
 
-#define BUFFER_GROWTH_RATE 1.2
+#define BUFFER_GROWTH_RATE 2.0
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
                                                   "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
@@ -573,18 +573,19 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
     char* output = *dest;
     size_t orig_len = *srcsize;
     size_t len = output ? *destsize : orig_len;
-
     if (orig_len > 0)
     {
         if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
         {
+            size_t len_tmp = len;
             while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
+                char* tmp = (char*) realloc(output, len_tmp);
                 if (tmp == NULL)
                 {
                     free(output);
@@ -592,6 +593,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
                     break;
                 }
                 output = tmp;
+                len = len_tmp;
             }
             pcre2_match_data_free(mdata);
         }
@@ -645,12 +647,14 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
         if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
         {
+            size_t len_tmp = len;
             while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
+                char* tmp = (char*) realloc(output, len_tmp);
                 if (tmp == NULL)
                 {
                     free(output);
@@ -658,6 +662,7 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
                     break;
                 }
                 output = tmp;
+                len = len_tmp;
             }
             pcre2_match_data_free(mdata);
         }
@@ -796,12 +801,14 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
         if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
         {
+            size_t len_tmp = len;
             while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
-                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+                                    (PCRE2_UCHAR8*) output, &len_tmp) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
+                len_tmp = (size_t) (len * BUFFER_GROWTH_RATE + 1);
+                char* tmp = (char*) realloc(output, len_tmp);
                 if (tmp == NULL)
                 {
                     free(output);
@@ -809,6 +816,7 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
                     break;
                 }
                 output = tmp;
+                len = len_tmp;
             }
             pcre2_match_data_free(mdata);
         }

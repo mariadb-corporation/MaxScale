@@ -293,12 +293,14 @@ char* config_clean_string_list(const char* str)
 
         const char *replace = "$1,";
         int rval = 0;
+        size_t destsize_tmp = destsize;
         while ((rval = pcre2_substitute(re, (PCRE2_SPTR) str, PCRE2_ZERO_TERMINATED, 0,
                                         PCRE2_SUBSTITUTE_GLOBAL, data, NULL,
                                         (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                        (PCRE2_UCHAR*) dest, &destsize)) == PCRE2_ERROR_NOMEMORY)
+                                        (PCRE2_UCHAR*) dest, &destsize_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
-            char* tmp = (char*)MXS_REALLOC(dest, destsize * 2);
+            destsize_tmp = 2 * destsize;
+            char* tmp = (char*)MXS_REALLOC(dest, destsize_tmp);
             if (tmp == NULL)
             {
                 MXS_FREE(dest);
@@ -306,7 +308,7 @@ char* config_clean_string_list(const char* str)
                 break;
             }
             dest = tmp;
-            destsize *= 2;
+            destsize = destsize_tmp;
         }
 
         /** Remove the trailing comma */

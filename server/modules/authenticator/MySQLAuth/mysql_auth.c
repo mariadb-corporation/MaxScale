@@ -350,7 +350,7 @@ mysql_auth_authenticate(DCB *dcb)
         }
         else if (dcb->service->log_auth_warnings)
         {
-            MXS_WARNING("%s: login attempt for user '%s'@%s:%d, authentication failed.",
+            MXS_WARNING("%s: login attempt for user '%s'@[%s]:%d, authentication failed.",
                         dcb->service->name, client_data->user, dcb->remote, dcb_get_port(dcb));
 
             if (is_localhost_address(&dcb->ip) &&
@@ -608,12 +608,6 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
     int rc = MXS_AUTH_LOADUSERS_OK;
     SERVICE *service = port->listener->service;
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
-
-    if (port->users == NULL && !check_service_permissions(port->service))
-    {
-        return MXS_AUTH_LOADUSERS_FATAL;
-    }
-
     bool skip_local = false;
 
     if (instance->handle == NULL)
@@ -621,7 +615,8 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
         skip_local = true;
         char path[PATH_MAX];
         get_database_path(port, path, sizeof(path));
-        if (!open_instance_database(path, &instance->handle))
+        if (!check_service_permissions(port->service) ||
+            !open_instance_database(path, &instance->handle))
         {
             return MXS_AUTH_LOADUSERS_FATAL;
         }
@@ -631,8 +626,8 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
     if (loaded < 0)
     {
-        MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
-                  port->name, port->address ? port->address : "0.0.0.0", port->port);
+        MXS_ERROR("[%s] Unable to load users for listener %s listening at [%s]:%d.", service->name,
+                  port->name, port->address ? port->address : "::", port->port);
 
         if (instance->inject_service_user)
         {

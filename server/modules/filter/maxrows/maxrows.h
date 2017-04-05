@@ -36,5 +36,7 @@ MXS_BEGIN_DECLS
 #define MAXROWS_DEFAULT_MAX_RESULTSET_SIZE "65536"
 // Integer value
 #define MAXROWS_DEFAULT_DEBUG              "0"
+// Max size of copied input SQL
+#define MAXROWS_INPUT_SQL_MAX_LEN         1024
 
 MXS_END_DECLS

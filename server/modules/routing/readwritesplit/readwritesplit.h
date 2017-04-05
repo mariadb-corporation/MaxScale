@@ -337,11 +337,11 @@ struct router_client_session
  */
 typedef struct
 {
-    int     n_sessions; /*< Number sessions created */
-    int     n_queries;  /*< Number of queries forwarded */
-    int     n_master;   /*< Number of stmts sent to master */
-    int     n_slave;    /*< Number of stmts sent to slave */
-    int     n_all;      /*< Number of stmts sent to all */
+    uint64_t n_sessions; /*< Number sessions created */
+    uint64_t n_queries;  /*< Number of queries forwarded */
+    uint64_t n_master;   /*< Number of stmts sent to master */
+    uint64_t n_slave;    /*< Number of stmts sent to slave */
+    uint64_t n_all;      /*< Number of stmts sent to all */
 } ROUTER_STATS;
 
 /**

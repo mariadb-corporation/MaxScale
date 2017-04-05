@@ -216,7 +216,7 @@ GWBUF *sescmd_cursor_process_replies(GWBUF *replybuf,
                             RW_CLOSE_BREF(&ses->rses_backend_ref[i]);
                         }
                         *reconnect = true;
-                        MXS_INFO("Disabling slave %s:%d, result differs from "
+                        MXS_INFO("Disabling slave [%s]:%d, result differs from "
                                  "master's result. Master: %d Slave: %d",
                                  ses->rses_backend_ref[i].ref->server->name,
                                  ses->rses_backend_ref[i].ref->server->port,

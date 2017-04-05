@@ -337,7 +337,7 @@ GWBUF* gwbuf_clone(GWBUF* buf)
         while (clonebuf && buf->next)
         {
             buf = buf->next;
-            clonebuf->next = gwbuf_clone(buf);
+            clonebuf->next = gwbuf_clone_one(buf);
             clonebuf = clonebuf->next;
         }
 
@@ -638,7 +638,7 @@ gwbuf_rtrim(GWBUF *head, unsigned int n_bytes)
     if (GWBUF_EMPTY(head))
     {
         rval = head->next;
-        gwbuf_free(head);
+        gwbuf_free_one(head);
     }
     return rval;
 }

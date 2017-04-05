@@ -236,6 +236,9 @@ int main()
 
     if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
     {
+        MXS_CONFIG* pConfig = config_get_global_options();
+        pConfig->n_threads = 1;
+
         set_libdir(MXS_STRDUP_A("../../../../../query_classifier/qc_sqlite/"));
         if (qc_setup("qc_sqlite", "") && qc_process_init(QC_INIT_BOTH))
         {

@@ -315,7 +315,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     }
     else
     {
-        sprintf(config_bind, "0.0.0.0|%d", port->port);
+        sprintf(config_bind, "::|%d", port->port);
     }
 
     /** Load the authentication users before before starting the listener */
@@ -1339,7 +1339,7 @@ printService(SERVICE *service)
     printf("\tBackend databases\n");
     while (ptr)
     {
-        printf("\t\t%s:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
+        printf("\t\t[%s]:%d  Protocol: %s\n", ptr->server->name, ptr->server->port, ptr->server->protocol);
         ptr = ptr->next;
     }
     if (service->n_filters)
@@ -1452,7 +1452,7 @@ void dprintService(DCB *dcb, SERVICE *service)
     {
         if (SERVER_REF_IS_ACTIVE(server))
         {
-            dcb_printf(dcb, "\t\t%s:%d    Protocol: %s    Name: %s\n",
+            dcb_printf(dcb, "\t\t[%s]:%d    Protocol: %s    Name: %s\n",
                        server->server->name, server->server->port,
                        server->server->protocol, server->server->unique_name);
         }

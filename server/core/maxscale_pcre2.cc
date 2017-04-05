@@ -41,7 +41,7 @@
  * @param subject Subject string
  * @param replace Replacement string
  * @param dest Destination buffer
- * @param size Size of the desination buffer
+ * @param size Size of the destination buffer
  * @return MXS_PCRE2_MATCH if replacements were made, MXS_PCRE2_NOMATCH if nothing
  * was replaced or MXS_PCRE2_ERROR if memory reallocation failed
  */
@@ -54,18 +54,20 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, con
 
     if (mdata)
     {
+        size_t size_tmp = *size;
         while ((rc = pcre2_substitute(re, (PCRE2_SPTR) subject, PCRE2_ZERO_TERMINATED, 0,
                                       PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                       (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
-                                      (PCRE2_UCHAR*) *dest, size)) == PCRE2_ERROR_NOMEMORY)
+                                      (PCRE2_UCHAR*) *dest, &size_tmp)) == PCRE2_ERROR_NOMEMORY)
         {
-            char *tmp = (char*)MXS_REALLOC(*dest, *size * 2);
+            size_tmp = 2 * (*size);
+            char *tmp = (char*)MXS_REALLOC(*dest, size_tmp);
             if (tmp == NULL)
             {
                 break;
             }
             *dest = tmp;
-            *size *= 2;
+            *size = size_tmp;
         }
 
         if (rc > 0)

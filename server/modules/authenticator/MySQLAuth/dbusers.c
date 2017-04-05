@@ -202,6 +202,20 @@ int validate_mysql_user(sqlite3 *handle, DCB *dcb, MYSQL_session *session,
         sqlite3_free(err);
     }
 
+    /** Check for IPv6 mapped IPv4 address */
+    if (!res.ok && strchr(dcb->remote, ':') && strchr(dcb->remote, '.'))
+    {
+        const char *ipv4 = strrchr(dcb->remote, ':') + 1;
+        sprintf(sql, mysqlauth_validate_user_query, session->user, ipv4, ipv4,
+                session->db, session->db);
+
+        if (sqlite3_exec(handle, sql, auth_cb, &res, &err) != SQLITE_OK)
+        {
+            MXS_ERROR("Failed to execute auth query: %s", err);
+            sqlite3_free(err);
+        }
+    }
+
     if (!res.ok)
     {
         /**
@@ -494,7 +508,7 @@ static bool check_server_permissions(SERVICE *service, SERVER* server,
     {
         int my_errno = mysql_errno(mysql);
 
-        MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
+        MXS_ERROR("[%s] Failed to connect to server '%s' ([%s]:%d) when"
                   " checking authentication user credentials and permissions: %d %s",
                   service->name, server->unique_name, server->name, server->port,
                   my_errno, mysql_error(mysql));

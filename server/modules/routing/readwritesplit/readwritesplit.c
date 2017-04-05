@@ -13,6 +13,7 @@
 
 #include "readwritesplit.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <strings.h>
 #include <string.h>
@@ -619,17 +620,17 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
         all_pct = ((double)router->stats.n_all / (double)router->stats.n_queries) * 100.0;
     }
 
-    dcb_printf(dcb, "\tNumber of router sessions:           	%d\n",
+    dcb_printf(dcb, "\tNumber of router sessions:           	%" PRIu64 "\n",
                router->stats.n_sessions);
     dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n",
                router->service->stats.n_current);
-    dcb_printf(dcb, "\tNumber of queries forwarded:          	%d\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded:          	%" PRIu64 "\n",
                router->stats.n_queries);
-    dcb_printf(dcb, "\tNumber of queries forwarded to master:	%d (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to master:	%" PRIu64 " (%.2f%%)\n",
                router->stats.n_master, master_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%d (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%" PRIu64 " (%.2f%%)\n",
                router->stats.n_slave, slave_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%d (%.2f%%)\n",
+    dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
                router->stats.n_all, all_pct);
 
     if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
@@ -760,14 +761,14 @@ static void clientReply(MXS_ROUTER *instance,
     {
         bool succp;
 
-        MXS_INFO("Backend %s:%d processed reply and starts to execute active cursor.",
+        MXS_INFO("Backend [%s]:%d processed reply and starts to execute active cursor.",
                  bref->ref->server->name, bref->ref->server->port);
 
         succp = execute_sescmd_in_backend(bref);
 
         if (!succp)
         {
-            MXS_INFO("Backend %s:%d failed to execute session command.",
+            MXS_INFO("Backend [%s]:%d failed to execute session command.",
                      bref->ref->server->name, bref->ref->server->port);
         }
     }
@@ -781,7 +782,7 @@ static void clientReply(MXS_ROUTER *instance,
                                               gwbuf_clone(bref->bref_pending_cmd))) == 1)
         {
             ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *)instance;
-            atomic_add(&inst->stats.n_queries, 1);
+            atomic_add_uint64(&inst->stats.n_queries, 1);
             /**
              * Add one query response waiter to backend reference
              */

@@ -127,7 +127,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value);
  *
  * @param service     Service where the listener is added
  * @param name        Name of the listener
- * @param addr        Listening address, NULL for default of 0.0.0.0
+ * @param addr        Listening address, NULL for default of ::
  * @param port        Listening port, NULL for default of 3306
  * @param proto       Listener protocol, NULL for default of "MySQLClient"
  * @param auth        Listener authenticator, NULL for protocol default authenticator

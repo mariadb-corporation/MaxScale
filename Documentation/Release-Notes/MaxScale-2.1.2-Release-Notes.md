@@ -15,6 +15,25 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Formatting of IP Addresses and Ports
+
+All messaging that contains both the address and the port are now printed in an
+IPv6 compatible format. The output uses the format defined in
+[RFC 3986] (https://www.ietf.org/rfc/rfc3986.txt) and
+[STD 66] (https://www.rfc-editor.org/std/std66.txt).
+
+In practice this means that the address is enclosed by brackets. The port is
+separated from the address by a colon. Here is an example of the new format:
+
+```
+[192.168.0.201]:3306
+[fe80::fa16:54ff:fe8f:7e56]:3306
+[localhost]:3306
+```
+
+The first is an IPv4 address, the second an IPv6 address and the last one is a
+hostname. All of the addresses use port 3306.
+
 ### Cache
 
 * The storage `storage_inmemory` is now the default, so the parameter
