@@ -63,11 +63,12 @@ static bool modules_thread_init();
 static void modules_thread_finish();
 
 Worker::Worker(int id, int read_fd, int write_fd)
+    : m_id(id)
+    , m_read_fd(read_fd)
+    , m_write_fd(write_fd)
 {
     m_poll.handler = &Worker::poll_handler;
-    m_id = id;
-    m_read_fd = read_fd;
-    m_write_fd = write_fd;
+
     m_thread = 0;
     m_started = false;
     m_should_shutdown = false;
@@ -113,6 +114,16 @@ void Worker::finish()
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
     }
+}
+
+int mxs_worker_id(MXS_WORKER* pWorker)
+{
+    return static_cast<Worker*>(pWorker)->id();
+}
+
+bool mxs_worker_should_shutdown(MXS_WORKER* pWorker)
+{
+    return static_cast<Worker*>(pWorker)->should_shutdown();
 }
 
 Worker* Worker::get(int worker_id)

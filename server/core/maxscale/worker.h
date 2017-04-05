@@ -23,9 +23,6 @@ MXS_BEGIN_DECLS
  *
  * @return True, if the worker should shut down, false otherwise.
  */
-static inline bool mxs_worker_should_shutdown(MXS_WORKER* worker)
-{
-    return worker->m_should_shutdown;
-}
+bool mxs_worker_should_shutdown(MXS_WORKER* worker);
 
 MXS_END_DECLS

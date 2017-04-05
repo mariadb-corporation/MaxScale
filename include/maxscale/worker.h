@@ -21,13 +21,6 @@ MXS_BEGIN_DECLS
 typedef struct mxs_worker
 {
     MXS_POLL_DATA m_poll;               /*< The poll data used by the polling mechanism. */
-    int           m_id;                 /*< The id of the worker. */
-    int           m_read_fd;            /*< The file descriptor the worked reads from. */
-    int           m_write_fd;           /*< The file descriptor used for sending data to the worker. */
-    THREAD        m_thread;             /*< The thread handle of the worker. */
-    bool          m_started;            /*< Whether the thread has been started or not. */
-    bool          m_should_shutdown;    /*< Whether shutdown should be performed. */
-    bool          m_shutdown_initiated; /*< Whether shutdown has been initated. */
 } MXS_WORKER;
 
 enum mxs_worker_msg_id
@@ -75,10 +68,7 @@ MXS_WORKER* mxs_worker_get(int worker_id);
  *
  * @return The id of the worker.
  */
-static inline int mxs_worker_id(MXS_WORKER* pWorker)
-{
-    return pWorker->m_id;
-}
+int mxs_worker_id(MXS_WORKER* pWorker);
 
 /**
  * Post a message to a worker.
