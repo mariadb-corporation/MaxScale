@@ -89,6 +89,8 @@ test2()
     filter_add_parameter(f1, "name1", "value1");
     filter_add_parameter(f1, "name2", "value2");
     filter_add_parameter(f1, "name3", "value3");
+
+    filter_free(f1);
     return 0;
 }
 
