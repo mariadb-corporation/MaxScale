@@ -149,7 +149,7 @@ void HintRouter::diagnostics(DCB* pOut)
     HR_ENTRY();
     for (int i = 0; default_action_values[i].name; i++)
     {
-        if (default_action_values[i].enum_value == m_default_action)
+        if (default_action_values[i].enum_value == (uint64_t)m_default_action)
         {
             dcb_printf(pOut, "\tDefault action: route to %s\n", default_action_values[i].name);
         }
