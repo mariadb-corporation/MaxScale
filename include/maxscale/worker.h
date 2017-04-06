@@ -20,7 +20,6 @@ MXS_BEGIN_DECLS
 
 typedef struct mxs_worker
 {
-    MXS_POLL_DATA m_poll;               /*< The poll data used by the polling mechanism. */
 } MXS_WORKER;
 
 enum mxs_worker_msg_id

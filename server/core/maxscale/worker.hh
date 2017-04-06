@@ -13,12 +13,14 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include "messagequeue.hh"
 #include "worker.h"
 
 namespace maxscale
 {
 
 class Worker : public MXS_WORKER
+             , private MessageQueue::Handler
 {
     Worker(const Worker&);
     Worker& operator = (const Worker&);
@@ -195,27 +197,23 @@ public:
     static int get_current_id();
 
 private:
-    Worker(int id, int epoll_fd, int read_fd, int write_fd);
-    ~Worker();
+    Worker(int id, int epoll_fd);
+    virtual ~Worker();
 
     static Worker* create(int id);
 
-    uint32_t poll(uint32_t events);
-    static uint32_t poll_handler(MXS_POLL_DATA* pData, int worker_id, uint32_t events);
-
-    void handle_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
+    void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
     static void thread_main(void* arg);
 
 private:
-    int    m_id;                 /*< The id of the worker. */
-    int    m_epoll_fd;           /*< The epoll file descriptor. */
-    int    m_read_fd;            /*< The file descriptor the worker reads from. */
-    int    m_write_fd;           /*< The file descriptor used for sending data to the worker. */
-    THREAD m_thread;             /*< The thread handle of the worker. */
-    bool   m_started;            /*< Whether the thread has been started or not. */
-    bool   m_should_shutdown;    /*< Whether shutdown should be performed. */
-    bool   m_shutdown_initiated; /*< Whether shutdown has been initated. */
+    int           m_id;                 /*< The id of the worker. */
+    int           m_epoll_fd;           /*< The epoll file descriptor. */
+    MessageQueue* m_pQueue;             /*< The message queue of the worker. */
+    THREAD        m_thread;             /*< The thread handle of the worker. */
+    bool          m_started;            /*< Whether the thread has been started or not. */
+    bool          m_should_shutdown;    /*< Whether shutdown should be performed. */
+    bool          m_shutdown_initiated; /*< Whether shutdown has been initated. */
 };
 
 }
