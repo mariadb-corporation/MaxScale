@@ -3607,9 +3607,7 @@ int poll_add_dcb(DCB *dcb)
         worker_id = MXS_WORKER_ANY;
     }
 
-    rc = poll_add_fd_to_worker(worker_id, dcb->fd, events, (MXS_POLL_DATA*)dcb);
-
-    if (0 == rc)
+    if (poll_add_fd_to_worker(worker_id, dcb->fd, events, (MXS_POLL_DATA*)dcb))
     {
         dcb_add_to_list(dcb);
 
@@ -3617,10 +3615,12 @@ int poll_add_dcb(DCB *dcb)
                   pthread_self(),
                   dcb,
                   STRDCBSTATE(dcb->state));
+        rc = 0;
     }
     else
     {
         dcb->state = old_state;
+        rc = -1;
     }
     return rc;
 }
@@ -3673,7 +3673,14 @@ int poll_remove_dcb(DCB *dcb)
             worker_id = dcb->poll.thread.id;
         }
 
-        rc = poll_remove_fd_from_worker(worker_id, dcbfd);
+        if (poll_remove_fd_from_worker(worker_id, dcbfd))
+        {
+            rc = 0;
+        }
+        else
+        {
+            rc = -1;
+        }
     }
     return rc;
 }

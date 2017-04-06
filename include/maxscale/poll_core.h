@@ -83,9 +83,9 @@ typedef struct mxs_poll_data
  *
  * @attention The provided file descriptor *must* be non-blocking.
  *
- * @return 0 on success, non-zero on failure.
+ * @return True on success, false on failure.
  */
-int poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data);
+bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data);
 
 
 /**
@@ -95,8 +95,8 @@ int poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
  *                 the poll set of all workers; otherwise the id of a worker.
  * @param fd       The file descriptor to be removed.
  *
- * @return 0 on success, non-zero on failure.
+ * @return True on success, false on failure.
  */
-int poll_remove_fd_from_worker(int wid, int fd);
+bool poll_remove_fd_from_worker(int wid, int fd);
 
 MXS_END_DECLS

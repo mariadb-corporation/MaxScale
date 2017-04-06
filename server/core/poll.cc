@@ -289,7 +289,7 @@ poll_init()
     max_poll_sleep = config_pollsleep();
 }
 
-static int add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
+static bool add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
 {
     ss_dassert((wid >= 0) && (wid <= n_threads));
 
@@ -308,10 +308,10 @@ static int add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* dat
         rc = poll_resolve_error(fd, errno, EPOLL_CTL_ADD);
     }
 
-    return rc;
+    return rc == 0;
 }
 
-static int add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
+static bool add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
 {
     events |= EPOLLET;
 
@@ -345,42 +345,34 @@ static int add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
         rc = poll_resolve_error(fd, stored_errno, EPOLL_CTL_ADD);
     }
 
-    return rc;
+    return rc == 0;
 }
 
-int poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
+bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
 {
-    int rc;
+    bool rv;
 
     if (wid == MXS_WORKER_ANY)
     {
         wid = (int)atomic_add(&next_epoll_fd, 1) % n_threads;
 
-        rc = add_fd_to_worker(wid, fd, events, data);
+        rv = add_fd_to_worker(wid, fd, events, data);
     }
     else if (wid == MXS_WORKER_ALL)
     {
-        rc = add_fd_to_workers(fd, events, data);
+        rv = add_fd_to_workers(fd, events, data);
     }
     else
     {
         ss_dassert((wid >= 0) && (wid < n_threads));
 
-        if ((wid >= 0) && (wid < n_threads))
-        {
-            rc = add_fd_to_worker(wid, fd, events, data);
-        }
-        else
-        {
-            errno = EINVAL;
-            rc = -1;
-        }
+        rv = add_fd_to_worker(wid, fd, events, data);
     }
 
-    return rc;
+    return rv;
 }
 
-static int remove_fd_from_worker(int wid, int fd)
+static bool remove_fd_from_worker(int wid, int fd)
 {
     ss_dassert((wid >= 0) && (wid < n_threads));
 
@@ -393,10 +385,10 @@ static int remove_fd_from_worker(int wid, int fd)
         rc = poll_resolve_error(fd, errno, EPOLL_CTL_DEL);
     }
 
-    return rc;
+    return rc == 0;
 }
 
-static int remove_fd_from_workers(int fd)
+static bool remove_fd_from_workers(int fd)
 {
     int rc;
 
@@ -407,23 +399,23 @@ static int remove_fd_from_workers(int fd)
         remove_fd_from_worker(i, fd);
     }
 
-    return 0;
+    return true;
 }
 
-int poll_remove_fd_from_worker(int wid, int fd)
+bool poll_remove_fd_from_worker(int wid, int fd)
 {
-    int rc;
+    bool rv;
 
     if (wid == MXS_WORKER_ALL)
     {
-        rc = remove_fd_from_workers(fd);
+        rv = remove_fd_from_workers(fd);
     }
     else
     {
-        rc = remove_fd_from_worker(wid, fd);
+        rv = remove_fd_from_worker(wid, fd);
     }
 
-    return rc;
+    return rv;
 }
 
 /**

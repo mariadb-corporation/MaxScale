@@ -400,7 +400,7 @@ Worker* Worker::create(int worker_id)
 
             if (pWorker)
             {
-                if (poll_add_fd_to_worker(worker_id, read_fd, EPOLLIN, &pWorker->m_poll) != 0)
+                if (!poll_add_fd_to_worker(worker_id, read_fd, EPOLLIN, &pWorker->m_poll))
                 {
                     MXS_ERROR("Could not add read descriptor of worker to poll set: %s", mxs_strerror(errno));
                     delete pWorker;
