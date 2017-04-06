@@ -78,13 +78,6 @@ int max_poll_sleep;
  * @endverbatim
  */
 
-/**
- * Control the use of mutexes for the epoll_wait call. Setting to 1 will
- * cause the epoll_wait calls to be moved under a mutex. This may be useful
- * for debugging purposes but should be avoided in general use.
- */
-#define MUTEX_EPOLL     0
-
 thread_local int current_thread_id; /**< This thread's ID */
 static int *epoll_fd;    /*< The epoll file descriptor */
 static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
@@ -95,9 +88,6 @@ static volatile int     *poll_msg;
 static void    *poll_msg_data = NULL;
 static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
 
-#if MUTEX_EPOLL
-static simple_mutex_t epoll_wait_mutex; /*< serializes calls to epoll_wait */
-#endif
 static int n_waiting = 0;    /*< No. of threads in epoll_wait */
 
 static void poll_check_message(void);
@@ -265,10 +255,6 @@ poll_init()
         MXS_OOM_MESSAGE("FATAL: Could not allocate statistics data.");
         exit(-1);
     }
-
-#if MUTEX_EPOLL
-    simple_mutex_init(&epoll_wait_mutex, "epoll_wait_mutex");
-#endif
 
     hktask_add("Load Average", poll_loadav, NULL, POLL_LOAD_FREQ);
     n_avg_samples = 15 * 60 / POLL_LOAD_FREQ;
@@ -561,9 +547,6 @@ poll_waitevents(MXS_WORKER *worker)
     while (!mxs_worker_should_shutdown(worker))
     {
         atomic_add(&n_waiting, 1);
-#if MUTEX_EPOLL
-        simple_mutex_lock(&epoll_wait_mutex, TRUE);
-#endif
         thread_data[thread_id].state = THREAD_POLLING;
 
         ts_stats_increment(pollStats.n_polls, thread_id);
@@ -612,9 +595,7 @@ poll_waitevents(MXS_WORKER *worker)
         {
             ts_stats_increment(pollStats.n_nothreads, thread_id);
         }
-#if MUTEX_EPOLL
-        simple_mutex_unlock(&epoll_wait_mutex);
-#endif
+
         if (nfds > 0)
         {
             ts_stats_set(pollStats.evq_length, nfds, thread_id);
