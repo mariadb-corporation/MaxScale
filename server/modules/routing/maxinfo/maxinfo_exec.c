@@ -44,6 +44,7 @@
 #include <log_manager.h>
 #include <resultset.h>
 #include <maxconfig.h>
+#include <inttypes.h>
 
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
@@ -995,7 +996,7 @@ maxinfo_zombie_dcbs()
 /**
  * Interface to poll stats for reads
  */
-static int
+static int64_t
 maxinfo_read_events()
 {
     return poll_get_stat(POLL_STAT_READ);
@@ -1004,7 +1005,7 @@ maxinfo_read_events()
 /**
  * Interface to poll stats for writes
  */
-static int
+static int64_t
 maxinfo_write_events()
 {
     return poll_get_stat(POLL_STAT_WRITE);
@@ -1013,7 +1014,7 @@ maxinfo_write_events()
 /**
  * Interface to poll stats for errors
  */
-static int
+static int64_t
 maxinfo_error_events()
 {
     return poll_get_stat(POLL_STAT_ERROR);
@@ -1022,7 +1023,7 @@ maxinfo_error_events()
 /**
  * Interface to poll stats for hangup
  */
-static int
+static int64_t
 maxinfo_hangup_events()
 {
     return poll_get_stat(POLL_STAT_HANGUP);
@@ -1031,7 +1032,7 @@ maxinfo_hangup_events()
 /**
  * Interface to poll stats for accepts
  */
-static int
+static int64_t
 maxinfo_accept_events()
 {
     return poll_get_stat(POLL_STAT_ACCEPT);
@@ -1040,7 +1041,7 @@ maxinfo_accept_events()
 /**
  * Interface to poll stats for event queue length
  */
-static int
+static int64_t
 maxinfo_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_LEN);
@@ -1049,7 +1050,7 @@ maxinfo_event_queue_length()
 /**
  * Interface to poll stats for event pending queue length
  */
-static int
+static int64_t
 maxinfo_event_pending_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_PENDING);
@@ -1058,7 +1059,7 @@ maxinfo_event_pending_queue_length()
 /**
  * Interface to poll stats for max event queue length
  */
-static int
+static int64_t
 maxinfo_max_event_queue_length()
 {
     return poll_get_stat(POLL_STAT_EVQ_MAX);
@@ -1067,7 +1068,7 @@ maxinfo_max_event_queue_length()
 /**
  * Interface to poll stats for max queue time
  */
-static int
+static int64_t
 maxinfo_max_event_queue_time()
 {
     return poll_get_stat(POLL_STAT_MAX_QTIME);
@@ -1076,7 +1077,7 @@ maxinfo_max_event_queue_time()
 /**
  * Interface to poll stats for max event execution time
  */
-static int
+static int64_t
 maxinfo_max_event_exec_time()
 {
     return poll_get_stat(POLL_STAT_MAX_EXECTIME);
@@ -1149,8 +1150,8 @@ status_row(RESULTSET *result, void *data)
                                   (char *)(*status[context->index].func)());
                 break;
             case VT_INT:
-                snprintf(buf, 80, "%ld",
-                         (long)(*status[context->index].func)());
+                snprintf(buf, 80, "%" PRId64,
+                         (int64_t)(*status[context->index].func)());
                 resultset_row_set(row, 1, buf);
                 break;
             default:

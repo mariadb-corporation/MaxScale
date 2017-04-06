@@ -26,9 +26,13 @@
  * @endverbatim
  */
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" int atomic_add(int *variable, int value);
+extern "C" int64_t atomic_add_int64(int64_t *variable, int64_t value);
 #else
 extern int atomic_add(int *variable, int value);
+extern int64_t atomic_add_int64(int64_t *variable, int64_t value);
 #endif
 #endif

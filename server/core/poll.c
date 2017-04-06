@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <sys/epoll.h>
 #include <errno.h>
 #include <maxscale/poll.h>
@@ -162,11 +163,11 @@ static struct
     ts_stats_t *n_pollev;       /*< Number of polls returning events */
     ts_stats_t *n_nbpollev;     /*< Number of polls returning events */
     ts_stats_t *n_nothreads;    /*< Number of times no threads are polling */
-    int n_fds[MAXNFDS];         /*< Number of wakeups with particular n_fds value */
-    int evq_length;             /*< Event queue length */
-    int evq_pending;            /*< Number of pending descriptors in event queue */
-    int evq_max;                /*< Maximum event queue length */
-    int wake_evqpending;        /*< Woken from epoll_wait with pending events in queue */
+    int32_t n_fds[MAXNFDS];     /*< Number of wakeups with particular n_fds value */
+    int64_t evq_length;         /*< Event queue length */
+    int64_t evq_pending;        /*< Number of pending descriptors in event queue */
+    int64_t evq_max;            /*< Maximum event queue length */
+    int64_t wake_evqpending;    /*< Woken from epoll_wait with pending events in queue */
     ts_stats_t *blockingpolls;  /*< Number of epoll_waits with a timeout specified */
 } pollStats;
 
@@ -615,7 +616,7 @@ poll_waitevents(void *arg)
                               (max_poll_sleep * timeout_bias) / 10);
             if (nfds == 0 && pollStats.evq_pending)
             {
-                atomic_add(&pollStats.wake_evqpending, 1);
+                atomic_add_int64(&pollStats.wake_evqpending, 1);
                 poll_spins = 0;
             }
         }
@@ -1254,42 +1255,42 @@ dprintPollStats(DCB *dcb)
     int i;
 
     dcb_printf(dcb, "\nPoll Statistics.\n\n");
-    dcb_printf(dcb, "No. of epoll cycles:                           %d\n",
+    dcb_printf(dcb, "No. of epoll cycles:                           %" PRId64 "\n",
                ts_stats_sum(pollStats.n_polls));
-    dcb_printf(dcb, "No. of epoll cycles with wait:                         %d\n",
+    dcb_printf(dcb, "No. of epoll cycles with wait:                 %" PRId64 "\n",
                ts_stats_sum(pollStats.blockingpolls));
-    dcb_printf(dcb, "No. of epoll calls returning events:           %d\n",
+    dcb_printf(dcb, "No. of epoll calls returning events:           %" PRId64 "\n",
                ts_stats_sum(pollStats.n_pollev));
-    dcb_printf(dcb, "No. of non-blocking calls returning events:    %d\n",
+    dcb_printf(dcb, "No. of non-blocking calls returning events:    %" PRId64 "\n",
                ts_stats_sum(pollStats.n_nbpollev));
-    dcb_printf(dcb, "No. of read events:                            %d\n",
+    dcb_printf(dcb, "No. of read events:                            %" PRId64 "\n",
                ts_stats_sum(pollStats.n_read));
-    dcb_printf(dcb, "No. of write events:                           %d\n",
+    dcb_printf(dcb, "No. of write events:                           %" PRId64 "\n",
                ts_stats_sum(pollStats.n_write));
-    dcb_printf(dcb, "No. of error events:                           %d\n",
+    dcb_printf(dcb, "No. of error events:                           %" PRId64 "\n",
                ts_stats_sum(pollStats.n_error));
-    dcb_printf(dcb, "No. of hangup events:                          %d\n",
+    dcb_printf(dcb, "No. of hangup events:                          %" PRId64 "\n",
                ts_stats_sum(pollStats.n_hup));
-    dcb_printf(dcb, "No. of accept events:                          %d\n",
+    dcb_printf(dcb, "No. of accept events:                          %" PRId64 "\n",
                ts_stats_sum(pollStats.n_accept));
-    dcb_printf(dcb, "No. of times no threads polling:               %d\n",
+    dcb_printf(dcb, "No. of times no threads polling:               %" PRId64 "\n",
                ts_stats_sum(pollStats.n_nothreads));
-    dcb_printf(dcb, "Current event queue length:                    %d\n",
+    dcb_printf(dcb, "Current event queue length:                    %" PRId64 "\n",
                pollStats.evq_length);
-    dcb_printf(dcb, "Maximum event queue length:                    %d\n",
+    dcb_printf(dcb, "Maximum event queue length:                    %" PRId64 "\n",
                pollStats.evq_max);
-    dcb_printf(dcb, "No. of DCBs with pending events:               %d\n",
+    dcb_printf(dcb, "No. of DCBs with pending events:               %" PRId64 "\n",
                pollStats.evq_pending);
-    dcb_printf(dcb, "No. of wakeups with pending queue:             %d\n",
+    dcb_printf(dcb, "No. of wakeups with pending queue:             %" PRId64 "\n",
                pollStats.wake_evqpending);
 
     dcb_printf(dcb, "No of poll completions with descriptors\n");
     dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
     for (i = 0; i < MAXNFDS - 1; i++)
     {
-        dcb_printf(dcb, "\t%2d\t\t\t%d\n", i + 1, pollStats.n_fds[i]);
+        dcb_printf(dcb, "\t%2d\t\t\t%" PRId32 "\n", i + 1, pollStats.n_fds[i]);
     }
-    dcb_printf(dcb, "\t>= %d\t\t\t%d\n", MAXNFDS,
+    dcb_printf(dcb, "\t>= %d\t\t\t%" PRId32 "\n", MAXNFDS,
                pollStats.n_fds[MAXNFDS - 1]);
 
 #if SPINLOCK_PROFILE
@@ -1802,8 +1803,8 @@ dShowEventStats(DCB *pdcb)
     dcb_printf(pdcb, "\nEvent statistics.\n");
     dcb_printf(pdcb, "Maximum queue time:           %3lu00ms\n", queueStats.maxqtime);
     dcb_printf(pdcb, "Maximum execution time:       %3lu00ms\n", queueStats.maxexectime);
-    dcb_printf(pdcb, "Maximum event queue length:   %3d\n", pollStats.evq_max);
-    dcb_printf(pdcb, "Current event queue length:   %3d\n", pollStats.evq_length);
+    dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n", pollStats.evq_max);
+    dcb_printf(pdcb, "Current event queue length:   %3" PRId64 "\n", pollStats.evq_length);
     dcb_printf(pdcb, "\n");
     dcb_printf(pdcb, "               |    Number of events\n");
     dcb_printf(pdcb, "Duration       | Queued     | Executed\n");
@@ -1825,8 +1826,7 @@ dShowEventStats(DCB *pdcb)
  * @param stat  The required statistic
  * @return      The value of that statistic
  */
-int
-poll_get_stat(POLL_STAT stat)
+int64_t poll_get_stat(POLL_STAT stat)
 {
     switch (stat)
     {
@@ -1847,9 +1847,9 @@ poll_get_stat(POLL_STAT stat)
     case POLL_STAT_EVQ_MAX:
         return pollStats.evq_max;
     case POLL_STAT_MAX_QTIME:
-        return (int)queueStats.maxqtime;
+        return (int64_t)queueStats.maxqtime;
     case POLL_STAT_MAX_EXECTIME:
-        return (int)queueStats.maxexectime;
+        return (int64_t)queueStats.maxexectime;
     }
     return 0;
 }

@@ -23,6 +23,7 @@
  * 21/01/16     Markus Makela    Initial implementation
  * @endverbatim
  */
+#include <stdint.h>
 
 typedef void* ts_stats_t;
 
@@ -37,8 +38,8 @@ void ts_stats_set_thread_id(int id);
 
 ts_stats_t ts_stats_alloc();
 void ts_stats_free(ts_stats_t stats);
-void ts_stats_add(ts_stats_t stats, int value);
-void ts_stats_set(ts_stats_t stats, int value);
-int ts_stats_sum(ts_stats_t stats);
+void ts_stats_add(ts_stats_t stats, int64_t value);
+void ts_stats_set(ts_stats_t stats, int64_t value);
+int64_t ts_stats_sum(ts_stats_t stats);
 
 #endif

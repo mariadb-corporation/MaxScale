@@ -47,7 +47,7 @@ void ts_stats_end()
 ts_stats_t ts_stats_alloc()
 {
     ss_dassert(initialized);
-    return calloc(thread_count, sizeof(int));
+    return calloc(thread_count, sizeof(int64_t));
 }
 
 /**
@@ -79,10 +79,10 @@ void ts_stats_set_thread_id(int id)
  * @param stats Statistics to add to
  * @param value Value to add
  */
-void ts_stats_add(ts_stats_t stats, int value)
+void ts_stats_add(ts_stats_t stats, int64_t value)
 {
     ss_dassert(initialized);
-    ((int*)stats)[current_thread_id] += value;
+    ((int64_t*)stats)[current_thread_id] += value;
 }
 
 /**
@@ -92,10 +92,10 @@ void ts_stats_add(ts_stats_t stats, int value)
  * @param stats Statistics to set
  * @param value Value to set to
  */
-void ts_stats_set(ts_stats_t stats, int value)
+void ts_stats_set(ts_stats_t stats, int64_t value)
 {
     ss_dassert(initialized);
-    ((int*)stats)[current_thread_id] = value;
+    ((int64_t*)stats)[current_thread_id] = value;
 }
 
 /**
@@ -104,13 +104,13 @@ void ts_stats_set(ts_stats_t stats, int value)
  * @param stats Statistics to read
  * @return Value of statistics
  */
-int ts_stats_sum(ts_stats_t stats)
+int64_t ts_stats_sum(ts_stats_t stats)
 {
     ss_dassert(initialized);
-    int sum = 0;
+    int64_t sum = 0;
     for (int i = 0; i < thread_count; i++)
     {
-        sum += ((int*)stats)[i];
+        sum += ((int64_t*)stats)[i];
     }
     return sum;
 }

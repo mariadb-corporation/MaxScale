@@ -61,7 +61,7 @@ extern  void            dShowThreads(DCB *dcb);
 extern  void            poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
 extern  void            dShowEventQ(DCB *dcb);
 extern  void            dShowEventStats(DCB *dcb);
-extern  int             poll_get_stat(POLL_STAT stat);
+extern  int64_t         poll_get_stat(POLL_STAT stat);
 extern  RESULTSET       *eventTimesGetList();
 extern  void            poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev);
 extern  void            poll_fake_hangup_event(DCB *dcb);
