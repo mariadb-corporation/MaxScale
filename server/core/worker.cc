@@ -311,10 +311,20 @@ size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg
     return Worker::broadcast_message(msg_id, arg1, arg2);
 }
 
+namespace
+{
+
+bool should_shutdown(void* pData)
+{
+    return static_cast<Worker*>(pData)->should_shutdown();
+}
+
+}
+
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
-    poll_waitevents(this);
+    poll_waitevents(m_epoll_fd, m_id, ::should_shutdown, this);
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 
     MXS_NOTICE("Worker %d has shut down.", m_id);
@@ -400,7 +410,7 @@ Worker* Worker::create(int worker_id)
 
             if (pWorker)
             {
-                if (!poll_add_fd_to_worker(worker_id, read_fd, EPOLLIN, &pWorker->m_poll))
+                if (!pWorker->add_fd(read_fd, EPOLLIN, &pWorker->m_poll))
                 {
                     MXS_ERROR("Could not add read descriptor of worker to poll set: %s", mxs_strerror(errno));
                     delete pWorker;
