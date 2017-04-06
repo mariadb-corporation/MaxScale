@@ -18,6 +18,7 @@ add_library(maxscale-common SHARED
   maxscale_pcre2.cc
   misc.cc
   mlist.cc
+  messagequeue.cc
   modulecmd.cc
   modutil.cc
   monitor.cc

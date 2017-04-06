@@ -31,25 +31,24 @@ typedef enum mxs_poll_action
     MXS_POLL_ERROR  = 0x10,
 } mxs_poll_action_t;
 
+struct mxs_poll_data;
+/** Pointer to function that knows how to handle events for a particular
+ *  'struct mxs_poll_data' structure.
+ *
+ * @param data    The `mxs_poll_data` instance that contained this pointer.
+ * @param wid     The worker thread id.
+ * @param events  The epoll events.
+ *
+ * @return A combination of mxs_poll_action_t enumeration values.
+ */
+typedef uint32_t (*mxs_poll_handler_t)(struct mxs_poll_data* data, int wid, uint32_t events);
+
 typedef struct mxs_poll_data
 {
-    /** Pointer to function that knows how to handle events for this particular
-     *  'struct mxs_poll_data' structure.
-     *
-     * @param data    The `mxs_poll_data` instance that contained this pointer.
-     * @param wid     The worker thread id.
-     * @param events  The epoll events.
-     *
-     * @return A combination of mxs_poll_action_t enumeration values.
-     */
-    uint32_t (*handler)(struct mxs_poll_data *data, int wid, uint32_t events);
-
+    mxs_poll_handler_t handler; /*< Handler for this particular kind of mxs_poll_data. */
     struct
     {
-        /**
-         * The id of the worker thread
-         */
-        int id;
+        int id;                 /*< The id of the worker thread. */
     } thread;
 } MXS_POLL_DATA;
 
