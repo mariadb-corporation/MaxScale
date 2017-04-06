@@ -111,33 +111,6 @@ static int n_avg_samples;
 static int n_threads;      /*< No. of threads */
 
 /**
- * Internal MaxScale thread states
- */
-typedef enum
-{
-    THREAD_STOPPED,
-    THREAD_IDLE,
-    THREAD_POLLING,
-    THREAD_PROCESSING,
-    THREAD_ZPROCESSING
-} THREAD_STATE;
-
-/**
- * Thread data used to report the current state and activity related to
- * a thread
- */
-typedef struct
-{
-    THREAD_STATE   state;       /*< Current thread state */
-    int            n_fds;       /*< No. of descriptors thread is processing */
-    MXS_POLL_DATA *cur_data;    /*< Current MXS_POLL_DATA being processed */
-    uint32_t       event;       /*< Current event being processed */
-    uint64_t       cycle_start; /*< The time when the poll loop was started */
-} THREAD_DATA;
-
-static THREAD_DATA *thread_data = NULL;    /*< Status of each thread */
-
-/**
  * The number of buckets used to gather statistics about how many
  * descriptors where processed on each epoll completion.
  *
@@ -207,16 +180,6 @@ poll_init()
 
     memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
-    thread_data = (THREAD_DATA *)MXS_MALLOC(n_threads * sizeof(THREAD_DATA));
-    if (!thread_data)
-    {
-        exit(-1);
-    }
-
-    for (int i = 0; i < n_threads; i++)
-    {
-        thread_data[i].state = THREAD_STOPPED;
-    }
 
     if ((pollStats.n_read = ts_stats_alloc()) == NULL ||
         (pollStats.n_write = ts_stats_alloc()) == NULL ||
@@ -376,12 +339,14 @@ bool poll_remove_fd_from_worker(int wid, int fd)
  *
  * @param epoll_fd         The epoll descriptor.
  * @param thread_id        The id of the calling thread.
+ * @param thread_data      The thread data of the calling thread.
  * @param should_shutdown  Pointer to function returning true if the polling should
  *                         be terminated.
  * @param data             Data provided to the @c should_shutdown function.
  */
 void poll_waitevents(int epoll_fd,
                      int thread_id,
+                     THREAD_DATA* thread_data,
                      bool (*should_shutdown)(void* data),
                      void* data)
 {
@@ -391,12 +356,12 @@ void poll_waitevents(int epoll_fd,
     int i, nfds, timeout_bias = 1;
     int poll_spins = 0;
 
-    thread_data[thread_id].state = THREAD_IDLE;
+    thread_data->state = THREAD_IDLE;
 
     while (!should_shutdown(data))
     {
         atomic_add(&n_waiting, 1);
-        thread_data[thread_id].state = THREAD_POLLING;
+        thread_data->state = THREAD_POLLING;
 
         ts_stats_increment(pollStats.n_polls, thread_id);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
@@ -461,10 +426,10 @@ void poll_waitevents(int epoll_fd,
                       nfds);
             ts_stats_increment(pollStats.n_pollev, thread_id);
 
-            thread_data[thread_id].n_fds = nfds;
-            thread_data[thread_id].cur_data = NULL;
-            thread_data[thread_id].event = 0;
-            thread_data[thread_id].state = THREAD_PROCESSING;
+            thread_data->n_fds = nfds;
+            thread_data->cur_data = NULL;
+            thread_data->event = 0;
+            thread_data->state = THREAD_PROCESSING;
 
             pollStats.n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
 
@@ -484,14 +449,14 @@ void poll_waitevents(int epoll_fd,
              */
         }
 
-        thread_data[thread_id].cycle_start = hkheartbeat;
+        thread_data->cycle_start = hkheartbeat;
 
         /* Process of the queue of waiting requests */
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
             uint64_t started = hkheartbeat;
-            uint64_t qtime = started - thread_data[thread_id].cycle_start;
+            uint64_t qtime = started - thread_data->cycle_start;
 
             if (qtime > N_QUEUE_TIMES)
             {
@@ -505,9 +470,9 @@ void poll_waitevents(int epoll_fd,
             ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
-            thread_data[thread_id].cur_data = data;
+            thread_data->cur_data = data;
 
-            thread_data[thread_id].event = events[i].events;
+            thread_data->event = events[i].events;
             uint32_t actions = data->handler(data, thread_id, events[i].events);
 
             if (actions & MXS_POLL_ACCEPT)
@@ -552,17 +517,17 @@ void poll_waitevents(int epoll_fd,
 
         dcb_process_idle_sessions(thread_id);
 
-        thread_data[thread_id].state = THREAD_ZPROCESSING;
+        thread_data->state = THREAD_ZPROCESSING;
 
         /** Process closed DCBs */
         dcb_process_zombies(thread_id);
 
         poll_check_message();
 
-        thread_data[thread_id].state = THREAD_IDLE;
+        thread_data->state = THREAD_IDLE;
     } /*< while(1) */
 
-    thread_data[thread_id].state = THREAD_STOPPED;
+    thread_data->state = THREAD_STOPPED;
 }
 
 /**

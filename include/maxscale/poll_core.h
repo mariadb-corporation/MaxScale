@@ -52,6 +52,35 @@ typedef struct mxs_poll_data
     } thread;
 } MXS_POLL_DATA;
 
+// TODO: Temporarily moved here.
+/**
+ * Internal MaxScale thread states
+ */
+typedef enum
+{
+    THREAD_STOPPED,
+    THREAD_IDLE,
+    THREAD_POLLING,
+    THREAD_PROCESSING,
+    THREAD_ZPROCESSING
+} THREAD_STATE;
+
+// TODO: Temporarily moved here.
+/**
+ * Thread data used to report the current state and activity related to
+ * a thread
+ */
+typedef struct
+{
+    THREAD_STATE   state;       /*< Current thread state */
+    int            n_fds;       /*< No. of descriptors thread is processing */
+    MXS_POLL_DATA *cur_data;    /*< Current MXS_POLL_DATA being processed */
+    uint32_t       event;       /*< Current event being processed */
+    uint64_t       cycle_start; /*< The time when the poll loop was started */
+} THREAD_DATA;
+
+extern THREAD_DATA *thread_data;
+
 /**
  * A file descriptor should be added to the poll set of all workers.
  */
