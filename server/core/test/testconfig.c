@@ -108,7 +108,7 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p8", "d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,d", &ctx));
     TEST(!config_param_is_valid(params, "p8", "a,b,c,d", &ctx));
-
+    config_parameter_free(svc.parameters);
     return 0;
 }
 
@@ -174,7 +174,9 @@ int test_add_parameter()
     TEST(val == 5);
     TEST(strcmp(config_get_string(ctx.parameters, "p6"), "/dev/null") == 0);
     TEST(strcmp(config_get_string(ctx.parameters, "p7"), "some-service") == 0);
-
+    config_parameter_free(ctx.parameters);
+    config_parameter_free(svc1.parameters);
+    config_parameter_free(svc2.parameters);
     return 0;
 }
 
@@ -201,7 +203,7 @@ int test_required_parameters()
     config_add_param(&ctx, "p2", "1");
     config_add_param(&ctx, "p3", "1");
     TEST(!missing_required_parameters(params, ctx.parameters));
-
+    config_parameter_free(ctx.parameters);
     return 0;
 }
 
