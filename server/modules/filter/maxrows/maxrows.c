@@ -186,6 +186,7 @@ typedef struct maxrows_response_state
     size_t n_rows;        /**< How many rows we have received. */
     size_t offset;        /**< Where we are in the response buffer. */
     size_t rows_offset;   /**< Offset to first row in result set */
+    size_t length;        /**< Buffer size. */
 } MAXROWS_RESPONSE_STATE;
 
 static void maxrows_response_state_reset(MAXROWS_RESPONSE_STATE *state);
@@ -353,6 +354,8 @@ static int routeQuery(MXS_FILTER *instance,
     csdata->state = MAXROWS_IGNORING_RESPONSE;
     csdata->large_packet = false;
     csdata->discard_resultset = false;
+    // Set buffer size to 0
+    csdata->res.length = 0;
 
     switch ((int)MYSQL_GET_COMMAND(data))
     {
@@ -413,23 +416,25 @@ static int clientReply(MXS_FILTER *instance,
     if (csdata->res.data)
     {
         gwbuf_append(csdata->res.data, data);
+        csdata->res.length += gwbuf_length(data);
     }
     else
     {
         csdata->res.data = data;
+        csdata->res.length = gwbuf_length(data);
     }
 
     if (csdata->state != MAXROWS_IGNORING_RESPONSE)
     {
         if (!csdata->discard_resultset)
         {
-            if (gwbuf_length(csdata->res.data) > csdata->instance->config.max_resultset_size)
+            if (csdata->res.length > csdata->instance->config.max_resultset_size)
             {
                 if (csdata->instance->config.debug & MAXROWS_DEBUG_DISCARDING)
                 {
-                    MXS_NOTICE("Current size %uB of resultset, at least as much "
+                    MXS_NOTICE("Current size %luB of resultset, at least as much "
                                "as maximum allowed size %uKiB. Not returning data.",
-                               gwbuf_length(csdata->res.data),
+                               csdata->res.length,
                                csdata->instance->config.max_resultset_size / 1024);
                 }
 
@@ -572,7 +577,7 @@ static int handle_expecting_fields(MAXROWS_SESSION_DATA *csdata)
 
     bool insufficient = false;
 
-    size_t buflen = gwbuf_length(csdata->res.data);
+    size_t buflen = csdata->res.length;
 
     while (!insufficient && (buflen - csdata->res.offset >= MYSQL_HEADER_LEN))
     {
@@ -649,7 +654,7 @@ static int handle_expecting_response(MAXROWS_SESSION_DATA *csdata)
     ss_dassert(csdata->res.data);
 
     int rv = 1;
-    size_t buflen = gwbuf_length(csdata->res.data);
+    size_t buflen = csdata->res.length;
 
     // Reset field counters
     csdata->res.n_fields = 0;
@@ -769,7 +774,7 @@ static int handle_rows(MAXROWS_SESSION_DATA *csdata)
 
     int rv = 1;
     bool insufficient = false;
-    size_t buflen = gwbuf_length(csdata->res.data);
+    size_t buflen = csdata->res.length;
 
     while (!insufficient && (buflen - csdata->res.offset >= MYSQL_HEADER_LEN))
     {
