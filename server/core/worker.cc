@@ -32,6 +32,8 @@ using maxscale::Worker;
 THREAD_DATA *thread_data = NULL;
 // TODO: Temporarily moved here.
 POLL_STATS *pollStats = NULL;
+// TODO: Temporarily moved here.
+QUEUE_STATS* queueStats = NULL;
 
 namespace
 {
@@ -131,11 +133,16 @@ void poll_resolve_error(int wid, int fd, int errornum, int op)
 static bool modules_thread_init();
 static void modules_thread_finish();
 
-Worker::Worker(int id, int epoll_fd, THREAD_DATA* pThread_data, POLL_STATS* pPoll_stats)
+Worker::Worker(int id,
+               int epoll_fd,
+               THREAD_DATA* pThread_data,
+               POLL_STATS* pPoll_stats,
+               QUEUE_STATS* pQueue_stats)
     : m_id(id)
     , m_epoll_fd(epoll_fd)
     , m_pThread_data(pThread_data)
     , m_pPoll_stats(pPoll_stats)
+    , m_pQueue_stats(pQueue_stats)
     , m_pQueue(NULL)
     , m_thread(0)
     , m_started(false)
@@ -169,6 +176,16 @@ void Worker::init()
     }
 
     pollStats = (POLL_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(POLL_STATS));
+    if (!pollStats)
+    {
+        exit(-1);
+    }
+
+    queueStats = (QUEUE_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(QUEUE_STATS));
+    if (!queueStats)
+    {
+        exit(-1);
+    }
 
     this_unit.ppWorkers = new (std::nothrow) Worker* [this_unit.n_workers] (); // Zero initialized array
 
@@ -180,7 +197,7 @@ void Worker::init()
 
     for (int i = 0; i < this_unit.n_workers; ++i)
     {
-        Worker* pWorker = Worker::create(i, &thread_data[i], &pollStats[i]);
+        Worker* pWorker = Worker::create(i, &thread_data[i], &pollStats[i], &queueStats[i]);
 
         if (pWorker)
         {
@@ -335,7 +352,9 @@ bool should_shutdown(void* pData)
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
-    poll_waitevents(m_epoll_fd, m_id, m_pThread_data, m_pPoll_stats, ::should_shutdown, this);
+    poll_waitevents(m_epoll_fd, m_id,
+                    m_pThread_data, m_pPoll_stats, m_pQueue_stats,
+                    ::should_shutdown, this);
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 
     MXS_NOTICE("Worker %d has shut down.", m_id);
@@ -398,11 +417,15 @@ void Worker::shutdown_all()
  * @param worker_id     The id of the worker.
  * @param pThread_data  The thread data of the worker.
  * @param pPoll_stats   The poll statistics of the worker.
+ * @param pQueue_stats  The queue statistics of the worker.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 //static
-Worker* Worker::create(int worker_id, THREAD_DATA* pThread_data, POLL_STATS* pPoll_stats)
+Worker* Worker::create(int worker_id,
+                       THREAD_DATA* pThread_data,
+                       POLL_STATS* pPoll_stats,
+                       QUEUE_STATS* pQueue_stats)
 {
     Worker* pThis = NULL;
 
@@ -410,7 +433,7 @@ Worker* Worker::create(int worker_id, THREAD_DATA* pThread_data, POLL_STATS* pPo
 
     if (epoll_fd != -1)
     {
-        pThis = new (std::nothrow) Worker(worker_id, epoll_fd, pThread_data, pPoll_stats);
+        pThis = new (std::nothrow) Worker(worker_id, epoll_fd, pThread_data, pPoll_stats, pQueue_stats);
 
         if (pThis)
         {

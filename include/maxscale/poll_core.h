@@ -114,6 +114,24 @@ typedef struct
 // TODO: Temporarily moved here.
 extern POLL_STATS* pollStats;
 
+// TODO: Temporarily moved here.
+#define N_QUEUE_TIMES   30
+
+// TODO: Temporarily moved here.
+/**
+ * The event queue statistics
+ */
+typedef struct
+{
+    uint32_t qtimes[N_QUEUE_TIMES + 1];
+    uint32_t exectimes[N_QUEUE_TIMES + 1];
+    int64_t  maxqtime;
+    int64_t  maxexectime;
+} QUEUE_STATS;
+
+// TODO: Temporarily moved here.
+extern QUEUE_STATS* queueStats;
+
 /**
  * A file descriptor should be added to the poll set of all workers.
  */

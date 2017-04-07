@@ -110,18 +110,6 @@ static int n_avg_samples;
 /* Thread statistics data */
 static int n_threads;      /*< No. of threads */
 
-#define N_QUEUE_TIMES   30
-/**
- * The event queue statistics
- */
-static struct
-{
-    uint32_t qtimes[N_QUEUE_TIMES + 1];
-    uint32_t exectimes[N_QUEUE_TIMES + 1];
-    ts_stats_t maxqtime;
-    ts_stats_t maxexectime;
-} queueStats;
-
 /**
  * How frequently to call the poll_loadav function used to monitor the load
  * average of the poll subsystem.
@@ -144,15 +132,6 @@ poll_init()
 
     if ((poll_msg = (int*)MXS_CALLOC(n_threads, sizeof(int))) == NULL)
     {
-        exit(-1);
-    }
-
-    memset(&queueStats, 0, sizeof(queueStats));
-
-    if ((queueStats.maxqtime = ts_stats_alloc()) == NULL ||
-        (queueStats.maxexectime = ts_stats_alloc()) == NULL)
-    {
-        MXS_OOM_MESSAGE("FATAL: Could not allocate statistics data.");
         exit(-1);
     }
 
@@ -296,6 +275,8 @@ bool poll_remove_fd_from_worker(int wid, int fd)
  * @param epoll_fd         The epoll descriptor.
  * @param thread_id        The id of the calling thread.
  * @param thread_data      The thread data of the calling thread.
+ * @param poll_stats       The polling stats of the calling thread.
+ * @param queue_stats      The queue stats of the calling thread.
  * @param should_shutdown  Pointer to function returning true if the polling should
  *                         be terminated.
  * @param data             Data provided to the @c should_shutdown function.
@@ -304,6 +285,7 @@ void poll_waitevents(int epoll_fd,
                      int thread_id,
                      THREAD_DATA* thread_data,
                      POLL_STATS* poll_stats,
+                     QUEUE_STATS* queue_stats,
                      bool (*should_shutdown)(void* data),
                      void* data)
 {
@@ -412,19 +394,19 @@ void poll_waitevents(int epoll_fd,
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
-            uint64_t started = hkheartbeat;
-            uint64_t qtime = started - thread_data->cycle_start;
+            int64_t started = hkheartbeat;
+            int64_t qtime = started - thread_data->cycle_start;
 
             if (qtime > N_QUEUE_TIMES)
             {
-                queueStats.qtimes[N_QUEUE_TIMES]++;
+                queue_stats->qtimes[N_QUEUE_TIMES]++;
             }
             else
             {
-                queueStats.qtimes[qtime]++;
+                queue_stats->qtimes[qtime]++;
             }
 
-            ts_stats_set_max(queueStats.maxqtime, qtime, thread_id);
+            queue_stats->maxqtime = MXS_MAX(queue_stats->maxqtime, qtime);
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
             thread_data->cur_data = data;
@@ -462,14 +444,14 @@ void poll_waitevents(int epoll_fd,
 
             if (qtime > N_QUEUE_TIMES)
             {
-                queueStats.exectimes[N_QUEUE_TIMES]++;
+                queue_stats->exectimes[N_QUEUE_TIMES]++;
             }
             else
             {
-                queueStats.exectimes[qtime % N_QUEUE_TIMES]++;
+                queue_stats->exectimes[qtime % N_QUEUE_TIMES]++;
             }
 
-            ts_stats_set_max(queueStats.maxexectime, qtime, thread_id);
+            queue_stats->maxexectime = MXS_MAX(queue_stats->maxexectime, qtime);
         }
 
         dcb_process_idle_sessions(thread_id);
@@ -785,16 +767,18 @@ spin_reporter(void *dcb, char *desc, int value)
     dcb_printf((DCB *)dcb, "\t%-40s  %d\n", desc, value);
 }
 
-static int64_t poll_stats_get(int64_t POLL_STATS::*what, enum ts_stats_type type)
+namespace
+{
+
+template<class T>
+int64_t stats_get(T* ts, int64_t T::*what, enum ts_stats_type type)
 {
     int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
 
-    size_t n_threads = config_threadcount();
-
-    for (size_t i = 0; i < n_threads; ++i)
+    for (int i = 0; i < n_threads; ++i)
     {
-        POLL_STATS* pollStat = &pollStats[i];
-        int64_t value = pollStat->*what;
+        T* t = &ts[i];
+        int64_t value = t->*what;
 
         switch (type)
         {
@@ -822,6 +806,17 @@ static int64_t poll_stats_get(int64_t POLL_STATS::*what, enum ts_stats_type type
     return type == TS_STATS_AVG ? best / n_threads : best;
 }
 
+inline int64_t poll_stats_get(int64_t POLL_STATS::*what, enum ts_stats_type type)
+{
+    return stats_get(pollStats, what, type);
+}
+
+inline int64_t queue_stats_get(int64_t QUEUE_STATS::*what, enum ts_stats_type type)
+{
+    return stats_get(queueStats, what, type);
+}
+
+}
 
 /**
  * Debug routine to print the polling statistics
@@ -863,7 +858,6 @@ dprintPollStats(DCB *dcb)
 
     dcb_printf(dcb, "No of poll completions with descriptors\n");
     dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
-    int n_threads = config_threadcount();
     for (i = 0; i < MAXNFDS - 1; i++)
     {
         int64_t v = 0;
@@ -1100,6 +1094,29 @@ poll_loadav(void *data)
     }
 }
 
+namespace
+{
+
+void get_queue_times(int index, int32_t* qtimes, int32_t* exectimes)
+{
+    int64_t q = 0;
+    int64_t e = 0;
+
+    for (int j = 0; j < n_threads; ++j)
+    {
+        q += queueStats[j].qtimes[index];
+        e += queueStats[j].exectimes[index];
+    }
+
+    q /= n_threads;
+    e /= n_threads;
+
+    *qtimes = q;
+    *exectimes = e;
+}
+
+}
+
 /**
  * Print the event queue statistics
  *
@@ -1111,29 +1128,35 @@ dShowEventStats(DCB *pdcb)
     int i;
 
     dcb_printf(pdcb, "\nEvent statistics.\n");
-    dcb_printf(pdcb, "Maximum queue time:           %3" PRId64 "00ms\n", ts_stats_get(queueStats.maxqtime,
-                                                                                      TS_STATS_MAX));
-    dcb_printf(pdcb, "Maximum execution time:       %3" PRId64 "00ms\n", ts_stats_get(queueStats.maxexectime,
-                                                                                      TS_STATS_MAX));
-    dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_max,
-                                                                                  TS_STATS_MAX));
-    dcb_printf(pdcb, "Total event queue length:     %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_length,
-                                                                                  TS_STATS_SUM));
-    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_length,
-                                                                                  TS_STATS_AVG));
+    dcb_printf(pdcb, "Maximum queue time:           %3" PRId64 "00ms\n",
+               queue_stats_get(&QUEUE_STATS::maxqtime, TS_STATS_MAX));
+    dcb_printf(pdcb, "Maximum execution time:       %3" PRId64 "00ms\n",
+               queue_stats_get(&QUEUE_STATS::maxexectime, TS_STATS_MAX));
+    dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n",
+               poll_stats_get(&POLL_STATS::evq_max, TS_STATS_MAX));
+    dcb_printf(pdcb, "Total event queue length:     %3" PRId64 "\n",
+               poll_stats_get(&POLL_STATS::evq_length, TS_STATS_SUM));
+    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n",
+               poll_stats_get(&POLL_STATS::evq_length, TS_STATS_AVG));
     dcb_printf(pdcb, "\n");
     dcb_printf(pdcb, "               |    Number of events\n");
     dcb_printf(pdcb, "Duration       | Queued     | Executed\n");
     dcb_printf(pdcb, "---------------+------------+-----------\n");
-    dcb_printf(pdcb, " < 100ms       | %-10d | %-10d\n",
-               queueStats.qtimes[0], queueStats.exectimes[0]);
+
+    int32_t qtimes;
+    int32_t exectimes;
+
+    get_queue_times(0, &qtimes, &exectimes);
+    dcb_printf(pdcb, " < 100ms       | %-10d | %-10d\n", qtimes, exectimes);
+
     for (i = 1; i < N_QUEUE_TIMES; i++)
     {
-        dcb_printf(pdcb, " %2d00 - %2d00ms | %-10d | %-10d\n", i, i + 1,
-                   queueStats.qtimes[i], queueStats.exectimes[i]);
+        get_queue_times(i, &qtimes, &exectimes);
+        dcb_printf(pdcb, " %2d00 - %2d00ms | %-10d | %-10d\n", i, i + 1, qtimes, exectimes);
     }
-    dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES,
-               queueStats.qtimes[N_QUEUE_TIMES], queueStats.exectimes[N_QUEUE_TIMES]);
+
+    get_queue_times(N_QUEUE_TIMES, &qtimes, &exectimes);
+    dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES, qtimes, exectimes);
 }
 
 /**
@@ -1162,9 +1185,9 @@ poll_get_stat(POLL_STAT stat)
     case POLL_STAT_EVQ_MAX:
         return poll_stats_get(&POLL_STATS::evq_max, TS_STATS_MAX);
     case POLL_STAT_MAX_QTIME:
-        return ts_stats_get(queueStats.maxqtime, TS_STATS_MAX);
+        return queue_stats_get(&QUEUE_STATS::maxqtime, TS_STATS_MAX);
     case POLL_STAT_MAX_EXECTIME:
-        return ts_stats_get(queueStats.maxexectime, TS_STATS_MAX);
+        return queue_stats_get(&QUEUE_STATS::maxexectime, TS_STATS_MAX);
     default:
         ss_dassert(false);
         break;
@@ -1208,10 +1231,13 @@ eventTimesRowCallback(RESULTSET *set, void *data)
         buf[39] = '\0';
         resultset_row_set(row, 0, buf);
     }
-    snprintf(buf, 39, "%u", queueStats.qtimes[*rowno]);
+    int32_t qtimes;
+    int32_t exectimes;
+    get_queue_times(*rowno, &qtimes, &exectimes);
+    snprintf(buf, 39, "%u", qtimes);
     buf[39] = '\0';
     resultset_row_set(row, 1, buf);
-    snprintf(buf, 39, "%u", queueStats.exectimes[*rowno]);
+    snprintf(buf, 39, "%u", exectimes);
     buf[39] = '\0';
     resultset_row_set(row, 2, buf);
     (*rowno)++;

@@ -197,10 +197,17 @@ public:
     static int get_current_id();
 
 private:
-    Worker(int id, int epoll_fd, THREAD_DATA* pThread_data, POLL_STATS* pPoll_stats);
+    Worker(int id,
+           int epoll_fd,
+           THREAD_DATA* pThread_data,
+           POLL_STATS* pPoll_stats,
+           QUEUE_STATS* pQueue_stats);
     virtual ~Worker();
 
-    static Worker* create(int id, THREAD_DATA* pThread_data, POLL_STATS* pPoll_stats);
+    static Worker* create(int id,
+                          THREAD_DATA* pThread_data,
+                          POLL_STATS* pPoll_stats,
+                          QUEUE_STATS* pQueue_stats);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
@@ -211,6 +218,7 @@ private:
     int           m_epoll_fd;           /*< The epoll file descriptor. */
     THREAD_DATA*  m_pThread_data;       /*< The thread data of the worker. */
     POLL_STATS*   m_pPoll_stats;        /*< Statistics for worker. */
+    QUEUE_STATS*  m_pQueue_stats;       /*< Statistics for queue. */
     MessageQueue* m_pQueue;             /*< The message queue of the worker. */
     THREAD        m_thread;             /*< The thread handle of the worker. */
     bool          m_started;            /*< Whether the thread has been started or not. */
