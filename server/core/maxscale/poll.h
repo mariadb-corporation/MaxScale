@@ -53,6 +53,7 @@ void            poll_init();
 void            poll_waitevents(int epoll_fd,
                                 int thread_id,
                                 THREAD_DATA* thread_data,
+                                POLL_STATS* pollStats,
                                 bool (*should_terminate)(void* data),
                                 void* data);
 void            poll_set_maxwait(unsigned int);

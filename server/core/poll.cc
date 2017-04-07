@@ -110,37 +110,6 @@ static int n_avg_samples;
 /* Thread statistics data */
 static int n_threads;      /*< No. of threads */
 
-/**
- * The number of buckets used to gather statistics about how many
- * descriptors where processed on each epoll completion.
- *
- * An array of wakeup counts is created, with the number of descriptors used
- * to index that array. Each time a completion occurs the n_fds - 1 value is
- * used to index this array and increment the count held there.
- * If n_fds - 1 >= MAXFDS then the count at MAXFDS -1 is incremented.
- */
-#define MAXNFDS 10
-
-/**
- * The polling statistics
- */
-static struct
-{
-    ts_stats_t n_read;         /*< Number of read events   */
-    ts_stats_t n_write;        /*< Number of write events  */
-    ts_stats_t n_error;        /*< Number of error events  */
-    ts_stats_t n_hup;          /*< Number of hangup events */
-    ts_stats_t n_accept;       /*< Number of accept events */
-    ts_stats_t n_polls;        /*< Number of poll cycles   */
-    ts_stats_t n_pollev;       /*< Number of polls returning events */
-    ts_stats_t n_nbpollev;     /*< Number of polls returning events */
-    ts_stats_t n_nothreads;    /*< Number of times no threads are polling */
-    int32_t n_fds[MAXNFDS];    /*< Number of wakeups with particular n_fds value */
-    ts_stats_t evq_length;     /*< Event queue length */
-    ts_stats_t evq_max;        /*< Maximum event queue length */
-    ts_stats_t blockingpolls;  /*< Number of epoll_waits with a timeout specified */
-} pollStats;
-
 #define N_QUEUE_TIMES   30
 /**
  * The event queue statistics
@@ -178,23 +147,10 @@ poll_init()
         exit(-1);
     }
 
-    memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
 
-    if ((pollStats.n_read = ts_stats_alloc()) == NULL ||
-        (pollStats.n_write = ts_stats_alloc()) == NULL ||
-        (pollStats.n_error = ts_stats_alloc()) == NULL ||
-        (pollStats.n_hup = ts_stats_alloc()) == NULL ||
-        (pollStats.n_accept = ts_stats_alloc()) == NULL ||
-        (pollStats.n_polls = ts_stats_alloc()) == NULL ||
-        (pollStats.n_pollev = ts_stats_alloc()) == NULL ||
-        (pollStats.n_nbpollev = ts_stats_alloc()) == NULL ||
-        (pollStats.n_nothreads = ts_stats_alloc()) == NULL ||
-        (pollStats.evq_length = ts_stats_alloc()) == NULL ||
-        (pollStats.evq_max = ts_stats_alloc()) == NULL ||
-        (queueStats.maxqtime = ts_stats_alloc()) == NULL ||
-        (queueStats.maxexectime = ts_stats_alloc()) == NULL ||
-        (pollStats.blockingpolls = ts_stats_alloc()) == NULL)
+    if ((queueStats.maxqtime = ts_stats_alloc()) == NULL ||
+        (queueStats.maxexectime = ts_stats_alloc()) == NULL)
     {
         MXS_OOM_MESSAGE("FATAL: Could not allocate statistics data.");
         exit(-1);
@@ -347,6 +303,7 @@ bool poll_remove_fd_from_worker(int wid, int fd)
 void poll_waitevents(int epoll_fd,
                      int thread_id,
                      THREAD_DATA* thread_data,
+                     POLL_STATS* poll_stats,
                      bool (*should_shutdown)(void* data),
                      void* data)
 {
@@ -363,7 +320,7 @@ void poll_waitevents(int epoll_fd,
         atomic_add(&n_waiting, 1);
         thread_data->state = THREAD_POLLING;
 
-        ts_stats_increment(pollStats.n_polls, thread_id);
+        atomic_add_int64(&poll_stats->n_polls, 1);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
             atomic_add(&n_waiting, -1);
@@ -390,7 +347,7 @@ void poll_waitevents(int epoll_fd,
             {
                 timeout_bias++;
             }
-            ts_stats_increment(pollStats.blockingpolls, thread_id);
+            atomic_add_int64(&poll_stats->blockingpolls, 1);
             nfds = epoll_wait(epoll_fd,
                               events,
                               MAX_EVENTS,
@@ -407,31 +364,31 @@ void poll_waitevents(int epoll_fd,
 
         if (n_waiting == 0)
         {
-            ts_stats_increment(pollStats.n_nothreads, thread_id);
+            atomic_add_int64(&poll_stats->n_nothreads, 1);
         }
 
         if (nfds > 0)
         {
-            ts_stats_set(pollStats.evq_length, nfds, thread_id);
-            ts_stats_set_max(pollStats.evq_max, nfds, thread_id);
+            poll_stats->evq_length = nfds;
+            poll_stats->evq_max = nfds;
 
             timeout_bias = 1;
             if (poll_spins <= number_poll_spins + 1)
             {
-                ts_stats_increment(pollStats.n_nbpollev, thread_id);
+                atomic_add_int64(&poll_stats->n_nbpollev, 1);
             }
             poll_spins = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
-            ts_stats_increment(pollStats.n_pollev, thread_id);
+            atomic_add_int64(&poll_stats->n_pollev, 1);
 
             thread_data->n_fds = nfds;
             thread_data->cur_data = NULL;
             thread_data->event = 0;
             thread_data->state = THREAD_PROCESSING;
 
-            pollStats.n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
+            poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
 
             load_average = (load_average * load_samples + nfds) / (load_samples + 1);
             atomic_add(&load_samples, 1);
@@ -477,27 +434,27 @@ void poll_waitevents(int epoll_fd,
 
             if (actions & MXS_POLL_ACCEPT)
             {
-                ts_stats_increment(pollStats.n_accept, thread_id);
+                atomic_add_int64(&poll_stats->n_accept, 1);
             }
 
             if (actions & MXS_POLL_READ)
             {
-                ts_stats_increment(pollStats.n_read, thread_id);
+                atomic_add_int64(&poll_stats->n_read, 1);
             }
 
             if (actions & MXS_POLL_WRITE)
             {
-                ts_stats_increment(pollStats.n_write, thread_id);
+                atomic_add_int64(&poll_stats->n_write, 1);
             }
 
             if (actions & MXS_POLL_HUP)
             {
-                ts_stats_increment(pollStats.n_hup, thread_id);
+                atomic_add_int64(&poll_stats->n_hup, 1);
             }
 
             if (actions & MXS_POLL_ERROR)
             {
-                ts_stats_increment(pollStats.n_error, thread_id);
+                atomic_add_int64(&poll_stats->n_error, 1);
             }
 
             /** Calculate event execution statistics */
@@ -828,6 +785,44 @@ spin_reporter(void *dcb, char *desc, int value)
     dcb_printf((DCB *)dcb, "\t%-40s  %d\n", desc, value);
 }
 
+static int64_t poll_stats_get(int64_t POLL_STATS::*what, enum ts_stats_type type)
+{
+    int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
+
+    size_t n_threads = config_threadcount();
+
+    for (size_t i = 0; i < n_threads; ++i)
+    {
+        POLL_STATS* pollStat = &pollStats[i];
+        int64_t value = pollStat->*what;
+
+        switch (type)
+        {
+        case TS_STATS_MAX:
+            if (value > best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_MIX:
+            if (value < best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_AVG:
+        case TS_STATS_SUM:
+            best += value;
+            break;
+        }
+    }
+
+    return type == TS_STATS_AVG ? best / n_threads : best;
+}
+
+
 /**
  * Debug routine to print the polling statistics
  *
@@ -840,40 +835,51 @@ dprintPollStats(DCB *dcb)
 
     dcb_printf(dcb, "\nPoll Statistics.\n\n");
     dcb_printf(dcb, "No. of epoll cycles:                           %" PRId64 "\n",
-               ts_stats_get(pollStats.n_polls, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_polls, TS_STATS_SUM));
     dcb_printf(dcb, "No. of epoll cycles with wait:                 %" PRId64 "\n",
-               ts_stats_get(pollStats.blockingpolls, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::blockingpolls, TS_STATS_SUM));
     dcb_printf(dcb, "No. of epoll calls returning events:           %" PRId64 "\n",
-               ts_stats_get(pollStats.n_pollev, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_pollev, TS_STATS_SUM));
     dcb_printf(dcb, "No. of non-blocking calls returning events:    %" PRId64 "\n",
-               ts_stats_get(pollStats.n_nbpollev, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_nbpollev, TS_STATS_SUM));
     dcb_printf(dcb, "No. of read events:                            %" PRId64 "\n",
-               ts_stats_get(pollStats.n_read, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_read, TS_STATS_SUM));
     dcb_printf(dcb, "No. of write events:                           %" PRId64 "\n",
-               ts_stats_get(pollStats.n_write, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_write, TS_STATS_SUM));
     dcb_printf(dcb, "No. of error events:                           %" PRId64 "\n",
-               ts_stats_get(pollStats.n_error, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_error, TS_STATS_SUM));
     dcb_printf(dcb, "No. of hangup events:                          %" PRId64 "\n",
-               ts_stats_get(pollStats.n_hup, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_hup, TS_STATS_SUM));
     dcb_printf(dcb, "No. of accept events:                          %" PRId64 "\n",
-               ts_stats_get(pollStats.n_accept, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_accept, TS_STATS_SUM));
     dcb_printf(dcb, "No. of times no threads polling:               %" PRId64 "\n",
-               ts_stats_get(pollStats.n_nothreads, TS_STATS_SUM));
+               poll_stats_get(&POLL_STATS::n_nothreads, TS_STATS_SUM));
     dcb_printf(dcb, "Total event queue length:                      %" PRId64 "\n",
-               ts_stats_get(pollStats.evq_length, TS_STATS_AVG));
+               poll_stats_get(&POLL_STATS::evq_length, TS_STATS_AVG));
     dcb_printf(dcb, "Average event queue length:                    %" PRId64 "\n",
-               ts_stats_get(pollStats.evq_length, TS_STATS_AVG));
+               poll_stats_get(&POLL_STATS::evq_length, TS_STATS_AVG));
     dcb_printf(dcb, "Maximum event queue length:                    %" PRId64 "\n",
-               ts_stats_get(pollStats.evq_max, TS_STATS_MAX));
+               poll_stats_get(&POLL_STATS::evq_max, TS_STATS_MAX));
 
     dcb_printf(dcb, "No of poll completions with descriptors\n");
     dcb_printf(dcb, "\tNo. of descriptors\tNo. of poll completions.\n");
+    int n_threads = config_threadcount();
     for (i = 0; i < MAXNFDS - 1; i++)
     {
-        dcb_printf(dcb, "\t%2d\t\t\t%" PRId32 "\n", i + 1, pollStats.n_fds[i]);
+        int64_t v = 0;
+        for (int j = 0; j < n_threads; ++j)
+        {
+            v += pollStats[j].n_fds[i];
+        }
+
+        dcb_printf(dcb, "\t%2d\t\t\t%" PRId64 "\n", i + 1, v);
     }
-    dcb_printf(dcb, "\t>= %d\t\t\t%" PRId32 "\n", MAXNFDS,
-               pollStats.n_fds[MAXNFDS - 1]);
+    int64_t v = 0;
+    for (int j = 0; j < n_threads; ++j)
+    {
+        v += pollStats[j].n_fds[MAXNFDS - 1];
+    }
+    dcb_printf(dcb, "\t>= %d\t\t\t%" PRId64 "\n", MAXNFDS, v);
 
 }
 
@@ -1109,11 +1115,11 @@ dShowEventStats(DCB *pdcb)
                                                                                       TS_STATS_MAX));
     dcb_printf(pdcb, "Maximum execution time:       %3" PRId64 "00ms\n", ts_stats_get(queueStats.maxexectime,
                                                                                       TS_STATS_MAX));
-    dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n", ts_stats_get(pollStats.evq_max,
+    dcb_printf(pdcb, "Maximum event queue length:   %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_max,
                                                                                   TS_STATS_MAX));
-    dcb_printf(pdcb, "Total event queue length:     %3" PRId64 "\n", ts_stats_get(pollStats.evq_length,
+    dcb_printf(pdcb, "Total event queue length:     %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_length,
                                                                                   TS_STATS_SUM));
-    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n", ts_stats_get(pollStats.evq_length,
+    dcb_printf(pdcb, "Average event queue length:   %3" PRId64 "\n", poll_stats_get(&POLL_STATS::evq_length,
                                                                                   TS_STATS_AVG));
     dcb_printf(pdcb, "\n");
     dcb_printf(pdcb, "               |    Number of events\n");
@@ -1142,19 +1148,19 @@ poll_get_stat(POLL_STAT stat)
     switch (stat)
     {
     case POLL_STAT_READ:
-        return ts_stats_get(pollStats.n_read, TS_STATS_SUM);
+        return poll_stats_get(&POLL_STATS::n_read, TS_STATS_SUM);
     case POLL_STAT_WRITE:
-        return ts_stats_get(pollStats.n_write, TS_STATS_SUM);
+        return poll_stats_get(&POLL_STATS::n_write, TS_STATS_SUM);
     case POLL_STAT_ERROR:
-        return ts_stats_get(pollStats.n_error, TS_STATS_SUM);
+        return poll_stats_get(&POLL_STATS::n_error, TS_STATS_SUM);
     case POLL_STAT_HANGUP:
-        return ts_stats_get(pollStats.n_hup, TS_STATS_SUM);
+        return poll_stats_get(&POLL_STATS::n_hup, TS_STATS_SUM);
     case POLL_STAT_ACCEPT:
-        return ts_stats_get(pollStats.n_accept, TS_STATS_SUM);
+        return poll_stats_get(&POLL_STATS::n_accept, TS_STATS_SUM);
     case POLL_STAT_EVQ_LEN:
-        return ts_stats_get(pollStats.evq_length, TS_STATS_AVG);
+        return poll_stats_get(&POLL_STATS::evq_length, TS_STATS_AVG);
     case POLL_STAT_EVQ_MAX:
-        return ts_stats_get(pollStats.evq_max, TS_STATS_MAX);
+        return poll_stats_get(&POLL_STATS::evq_max, TS_STATS_MAX);
     case POLL_STAT_MAX_QTIME:
         return ts_stats_get(queueStats.maxqtime, TS_STATS_MAX);
     case POLL_STAT_MAX_EXECTIME:
