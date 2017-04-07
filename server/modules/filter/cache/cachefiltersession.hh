@@ -35,6 +35,7 @@ public:
     struct CACHE_RESPONSE_STATE
     {
         GWBUF* pData;        /**< Response data, possibly incomplete. */
+        size_t length;       /**< Length of pData. */
         size_t nTotalFields; /**< The number of fields a resultset contains. */
         size_t nFields;      /**< How many fields we have received, <= n_totalfields. */
         size_t nRows;        /**< How many rows we have received. */

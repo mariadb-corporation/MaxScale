@@ -386,21 +386,23 @@ int CacheFilterSession::clientReply(GWBUF* pData)
     if (m_res.pData)
     {
         gwbuf_append(m_res.pData, pData);
+        m_res.length += gwbuf_length(pData); // pData may be a chain, so not GWBUF_LENGTH().
     }
     else
     {
         m_res.pData = pData;
+        m_res.length = gwbuf_length(pData);
     }
 
     if (m_state != CACHE_IGNORING_RESPONSE)
     {
-        if (cache_max_resultset_size_exceeded(m_pCache->config(), gwbuf_length(m_res.pData)))
+        if (cache_max_resultset_size_exceeded(m_pCache->config(), m_res.length))
         {
             if (log_decisions())
             {
-                MXS_NOTICE("Current size %uB of resultset, at least as much "
+                MXS_NOTICE("Current size %luB of resultset, at least as much "
                            "as maximum allowed size %luKiB. Not caching.",
-                           gwbuf_length(m_res.pData),
+                           m_res.length,
                            m_pCache->config().max_resultset_size / 1024);
             }
 
@@ -466,7 +468,8 @@ int CacheFilterSession::handle_expecting_fields()
 
     bool insufficient = false;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
@@ -528,7 +531,8 @@ int CacheFilterSession::handle_expecting_response()
 
     int rv = 1;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
     {
@@ -601,7 +605,8 @@ int CacheFilterSession::handle_expecting_rows()
 
     bool insufficient = false;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     while (!insufficient && (buflen - m_res.offset >= MYSQL_HEADER_LEN))
     {
@@ -661,7 +666,8 @@ int CacheFilterSession::handle_expecting_use_response()
 
     int rv = 1;
 
-    size_t buflen = gwbuf_length(m_res.pData);
+    size_t buflen = m_res.length;
+    ss_dassert(m_res.length == gwbuf_length(m_res.pData));
 
     if (buflen >= MYSQL_HEADER_LEN + 1) // We need the command byte.
     {
@@ -733,6 +739,7 @@ int CacheFilterSession::send_upstream()
 void CacheFilterSession::reset_response_state()
 {
     m_res.pData = NULL;
+    m_res.length = 0;
     m_res.nTotalFields = 0;
     m_res.nFields = 0;
     m_res.nRows = 0;
