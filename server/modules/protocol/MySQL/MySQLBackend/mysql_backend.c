@@ -604,6 +604,36 @@ static inline bool expecting_resultset(MySQLProtocol *proto)
            proto->current_command == MYSQL_COM_STMT_FETCH;
 }
 
+static inline bool expecting_ps_response(MySQLProtocol *proto)
+{
+    return proto->current_command == MYSQL_COM_STMT_PREPARE;
+}
+
+static inline bool complete_ps_response(GWBUF *buffer)
+{
+    ss_dassert(GWBUF_IS_CONTIGUOUS(buffer));
+    uint16_t cols = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_COLS_OFFSET);
+    uint16_t params = gw_mysql_get_byte2(GWBUF_DATA(buffer) + MYSQL_PS_PARAMS_OFFSET);
+    int expected_eof = 0;
+
+    if (cols > 0)
+    {
+        expected_eof++;
+    }
+
+    if (params > 0)
+    {
+        expected_eof++;
+    }
+
+    bool more;
+    int n_eof = modutil_count_signal_packets(buffer, 0, &more);
+
+    MXS_DEBUG("Expecting %u EOF, have %u", n_eof, expected_eof);
+
+    return n_eof == expected_eof;
+}
+
 static inline bool collecting_resultset(MySQLProtocol *proto, uint64_t capabilities)
 {
     return rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) ||
@@ -649,6 +679,7 @@ gw_read_and_write(DCB *dcb)
 
     /** Ask what type of output the router/filter chain expects */
     uint64_t capabilities = service_get_capabilities(session->service);
+    bool result_collected = false;
 
     if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT))
     {
@@ -682,19 +713,35 @@ gw_read_and_write(DCB *dcb)
                 return 0;
             }
 
-            if (collecting_resultset(proto, capabilities) &&
-                expecting_resultset(proto) &&
-                mxs_mysql_is_result_set(read_buffer))
+            if (collecting_resultset(proto, capabilities))
             {
-                bool more = false;
-                if (modutil_count_signal_packets(read_buffer, 0, &more) != 2)
+                if (expecting_resultset(proto) &&
+                    mxs_mysql_is_result_set(read_buffer))
                 {
-                    dcb->dcb_readqueue = read_buffer;
-                    return 0;
-                }
+                    bool more = false;
+                    if (modutil_count_signal_packets(read_buffer, 0, &more) != 2)
+                    {
+                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        return 0;
+                    }
 
-                // Collected the complete result
-                proto->collect_result = false;
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
+                }
+                else if (expecting_ps_response(proto) &&
+                         mxs_mysql_is_prep_stmt_ok(read_buffer))
+                {
+                    if (!complete_ps_response(read_buffer))
+                    {
+                        dcb->dcb_readqueue = gwbuf_append(read_buffer, dcb->dcb_readqueue);
+                        return 0;
+                    }
+
+                    // Collected the complete result
+                    proto->collect_result = false;
+                    result_collected = true;
+                }
             }
         }
     }
@@ -764,7 +811,8 @@ gw_read_and_write(DCB *dcb)
             }
         }
         else if (rcap_type_required(capabilities, RCAP_TYPE_STMT_OUTPUT) &&
-                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT))
+                 !rcap_type_required(capabilities, RCAP_TYPE_RESULTSET_OUTPUT) &&
+                 !result_collected)
         {
             stmt = modutil_get_next_MySQL_packet(&read_buffer);
         }

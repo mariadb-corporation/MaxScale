@@ -1558,6 +1558,20 @@ bool mxs_mysql_is_result_set(GWBUF *buffer)
     return rval;
 }
 
+bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer)
+{
+    bool rval = false;
+    uint8_t cmd;
+
+    if (gwbuf_copy_data(buffer, MYSQL_HEADER_LEN, 1, &cmd) &&
+        cmd == MYSQL_REPLY_OK)
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
 bool mxs_mysql_more_results_after_ok(GWBUF *buffer)
 {
     bool rval = false;

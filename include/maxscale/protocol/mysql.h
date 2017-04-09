@@ -95,6 +95,21 @@ MXS_BEGIN_DECLS
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
+/**
+ * Prepared statement payload response offsets for a COM_STMT_PREPARE response:
+ *
+ * [0]     OK (1)            -- always 0x00
+ * [1-4]   statement_id (4)  -- statement-id
+ * [5-6]   num_columns (2)   -- number of columns
+ * [7-8]   num_params (2)    -- number of parameters
+ * [9]     filler
+ * [10-11] warning_count (2) -- number of warnings
+ */
+#define MYSQL_PS_ID_OFFSET     MYSQL_HEADER_LEN + 1
+#define MYSQL_PS_COLS_OFFSET   MYSQL_HEADER_LEN + 5
+#define MYSQL_PS_PARAMS_OFFSET MYSQL_HEADER_LEN + 7
+#define MYSQL_PS_WARN_OFFSET   MYSQL_HEADER_LEN + 10
+
 /** Name of the default server side authentication plugin */
 #define DEFAULT_MYSQL_AUTH_PLUGIN "mysql_native_password"
 
@@ -436,6 +451,15 @@ bool mxs_mysql_is_ok_packet(GWBUF *buffer);
  * @return True if the @c buffer contains the start of a result set
  */
 bool mxs_mysql_is_result_set(GWBUF *buffer);
+
+/**
+ * @brief Check if the buffer contains a prepared statement OK packet
+ *
+ * @param buffer Buffer to check
+ *
+ * @return True if the @c buffer contains a prepared statement OK packet
+ */
+bool mxs_mysql_is_prep_stmt_ok(GWBUF *buffer);
 
 /**
  * @brief Check if the OK packet is followed by another result
