@@ -381,6 +381,37 @@ mxs_auth_state_t handle_server_response(DCB *dcb, GWBUF *buffer)
     return rval;
 }
 
+/**
+ * @brief Prepare protocol for a write
+ *
+ * This prepares both the buffer and the protocol itself for writing a query
+ * to the backend.
+ *
+ * @param dcb    The backend DCB to write to
+ * @param buffer Buffer that will be written
+ */
+static inline void prepare_for_write(DCB *dcb, GWBUF *buffer)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+
+    /** Copy the current command being executed to this backend */
+    if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
+    {
+        MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
+        proto->current_command = client_proto->current_command;
+    }
+
+    if (GWBUF_IS_TYPE_SESCMD(buffer))
+    {
+        mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(GWBUF_DATA(buffer));
+        protocol_add_srv_command(proto, cmd);
+    }
+    if (GWBUF_SHOULD_COLLECT_RESULT(buffer))
+    {
+        proto->collect_result = true;
+    }
+}
+
 /*******************************************************************************
  *******************************************************************************
  *
@@ -493,6 +524,7 @@ gw_read_backend_event(DCB *dcb)
                 if (localq)
                 {
                     /** Send the queued commands to the backend */
+                    prepare_for_write(dcb, localq);
                     rc = backend_write_delayqueue(dcb, localq);
                 }
             }
@@ -982,33 +1014,10 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
             uint8_t* ptr = GWBUF_DATA(queue);
             mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
 
-            /** Copy the current command being executed to this backend */
-            if (dcb->session->client_dcb && dcb->session->client_dcb->protocol)
-            {
-                MySQLProtocol *client_proto = (MySQLProtocol*)dcb->session->client_dcb->protocol;
-                backend_protocol->current_command = client_proto->current_command;
-            }
-
             MXS_DEBUG("write to dcb %p fd %d protocol state %s.",
                       dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
 
-
-            /**
-             * Statement type is used in readwrite split router.
-             * Command is *not* set for readconn router.
-             *
-             * Server commands are stored to MySQLProtocol structure
-             * if buffer always includes a single statement.
-             */
-            if (GWBUF_IS_TYPE_SESCMD(queue))
-            {
-                /** Record the command to backend's protocol */
-                protocol_add_srv_command(backend_protocol, cmd);
-            }
-            else if (GWBUF_SHOULD_COLLECT_RESULT(queue))
-            {
-                backend_protocol->collect_result = true;
-            }
+            prepare_for_write(dcb, queue);
 
             if (cmd == MYSQL_COM_QUIT && dcb->server->persistpoolmax)
             {
@@ -1035,24 +1044,10 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         {
             MXS_DEBUG("delayed write to dcb %p fd %d protocol state %s.",
                       dcb, dcb->fd, STRPROTOCOLSTATE(backend_protocol->protocol_auth_state));
-            /**
-             * In case of session commands, store command to DCB's
-             * protocol struct.
-             */
-            if (GWBUF_IS_TYPE_SESCMD(queue))
-            {
-                uint8_t* ptr = GWBUF_DATA(queue);
-                mysql_server_cmd_t cmd = MYSQL_GET_COMMAND(ptr);
 
-                /** Record the command to backend's protocol */
-                protocol_add_srv_command(backend_protocol, cmd);
-            }
-            /*<
-             * Now put the incoming data to the delay queue unless backend is
-             * connected with auth ok
-             */
+            /** Store data until authentication is complete */
+            prepare_for_write(dcb, queue);
             backend_set_delayqueue(dcb, queue);
-
             rc = 1;
         }
         break;
