@@ -1280,6 +1280,12 @@ handle_got_target(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
     /** The session command cursor must not be active */
     ss_dassert(!sescmd_cursor_is_active(&bref->bref_sescmd_cur));
 
+    /** We only want the complete response to the preparation */
+    if (MYSQL_GET_COMMAND(GWBUF_DATA(querybuf)) == MYSQL_COM_STMT_PREPARE)
+    {
+        gwbuf_set_type(querybuf, GWBUF_TYPE_COLLECT_RESULT);
+    }
+
     if (target_dcb->func.write(target_dcb, gwbuf_clone(querybuf)) == 1)
     {
         if (store && !session_store_stmt(rses->client_dcb->session, querybuf, target_dcb->server))
