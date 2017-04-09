@@ -159,6 +159,47 @@ char* maxavro_read_string(MAXAVRO_FILE* file, size_t* size)
     return key;
 }
 
+
+/**
+ * @brief Read an Avro string
+ *
+ * The strings are encoded as one Avro integer followed by that many bytes of
+ * data.
+ * @param file File to read from
+ * @return Pointer to newly allocated string or NULL if an error occurred
+ *
+ * @see maxavro_get_error
+ */
+char* maxavro_read_string_from_file(MAXAVRO_FILE* file, size_t* size)
+{
+    char *key = NULL;
+    uint64_t len;
+
+    if (maxavro_read_integer_from_file(file, &len))
+    {
+        key = MXS_MALLOC(len + 1);
+        if (key)
+        {
+            if (fread(key, 1, len, file->file) == len)
+            {
+                key[len] = '\0';
+                *size = len;
+            }
+            else
+            {
+                file->last_error = MAXAVRO_ERR_IO;
+                MXS_FREE(key);
+                key = NULL;
+            }
+        }
+        else
+        {
+            file->last_error = MAXAVRO_ERR_MEMORY;
+        }
+    }
+    return key;
+}
+
 /**
  * @bref Skip an Avro string
  *
@@ -285,7 +326,7 @@ MAXAVRO_MAP* maxavro_read_map_from_file(MAXAVRO_FILE *file)
         {
             size_t size;
             MAXAVRO_MAP* val = calloc(1, sizeof(MAXAVRO_MAP));
-            if (val && (val->key = maxavro_read_string(file, &size)) && (val->value = maxavro_read_string(file, &size)))
+            if (val && (val->key = maxavro_read_string_from_file(file, &size)) && (val->value = maxavro_read_string_from_file(file, &size)))
             {
                 val->next = rval;
                 rval = val;
