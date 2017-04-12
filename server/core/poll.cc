@@ -359,22 +359,10 @@ void poll_waitevents(int epoll_fd,
             load_average = (load_average * load_samples + nfds) / (load_samples + 1);
             atomic_add(&load_samples, 1);
             atomic_add(&load_nfds, nfds);
-
-            /*
-             * Process every DCB that has a new event and add
-             * it to the poll queue.
-             * If the DCB is currently being processed then we
-             * or in the new eent bits to the pending event bits
-             * and leave it in the queue.
-             * If the DCB was not already in the queue then it was
-             * idle and is added to the queue to process after
-             * setting the event bits.
-             */
         }
 
         uint64_t cycle_start = hkheartbeat;
 
-        /* Process of the queue of waiting requests */
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
@@ -664,41 +652,7 @@ process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
 #endif
     return rc;
 }
-#ifdef CRAP
-static uint32_t dcb_poll_handler(MXS_POLL_DATA *data, int wid, uint32_t events)
-{
-    uint32_t rc = process_pollq_dcb((DCB*)data, wid, events);
 
-    // Since this loop is now here, it will be processed once per extracted epoll
-    // event and not once per extraction of events, but as this is temporary code
-    // that's ok. Once it'll be possible to send cross-thread messages, the need
-    // for the fake event list will disappear.
-
-    fake_event_t *event = NULL;
-
-    /** It is very likely that the queue is empty so to avoid hitting the
-     * spinlock every time we receive events, we only do a dirty read. Currently,
-     * only the monitors inject fake events from external threads. */
-    if (fake_events[wid])
-    {
-        spinlock_acquire(&fake_event_lock[wid]);
-        event = fake_events[wid];
-        fake_events[wid] = NULL;
-        spinlock_release(&fake_event_lock[wid]);
-    }
-
-    while (event)
-    {
-        event->dcb->dcb_fakequeue = event->data;
-        process_pollq_dcb(event->dcb, wid, event->event);
-        fake_event_t *tmp = event;
-        event = event->next;
-        MXS_FREE(tmp);
-    }
-
-    return rc;
-}
-#endif
 /**
  *
  * Check that the DCB has a session link before processing.
@@ -725,15 +679,6 @@ poll_dcb_session_check(DCB *dcb, const char *function)
                   function);
         return false;
     }
-}
-
-/**
- * Shutdown the polling loop
- */
-void
-poll_shutdown()
-{
-    do_shutdown = 1;
 }
 
 /**
@@ -855,65 +800,6 @@ dprintPollStats(DCB *dcb)
     }
     dcb_printf(dcb, "\t>= %d\t\t\t%" PRId64 "\n", MAXNFDS, v);
 
-}
-
-/**
- * Convert an EPOLL event mask into a printable string
- *
- * @param       event   The event mask
- * @return      A string representation, the caller must free the string
- */
-static char *
-event_to_string(uint32_t event)
-{
-    char *str;
-
-    str = (char*)MXS_MALLOC(22);       // 22 is max returned string length
-    if (str == NULL)
-    {
-        return NULL;
-    }
-    *str = 0;
-    if (event & EPOLLIN)
-    {
-        strcat(str, "IN");
-    }
-    if (event & EPOLLOUT)
-    {
-        if (*str)
-        {
-            strcat(str, "|");
-        }
-        strcat(str, "OUT");
-    }
-    if (event & EPOLLERR)
-    {
-        if (*str)
-        {
-            strcat(str, "|");
-        }
-        strcat(str, "ERR");
-    }
-    if (event & EPOLLHUP)
-    {
-        if (*str)
-        {
-            strcat(str, "|");
-        }
-        strcat(str, "HUP");
-    }
-#ifdef EPOLLRDHUP
-    if (event & EPOLLRDHUP)
-    {
-        if (*str)
-        {
-            strcat(str, "|");
-        }
-        strcat(str, "RDHUP");
-    }
-#endif
-
-    return str;
 }
 
 /**
