@@ -29,8 +29,6 @@
 using maxscale::Worker;
 
 // TODO: Temporarily moved here.
-THREAD_DATA *thread_data = NULL;
-// TODO: Temporarily moved here.
 POLL_STATS *pollStats = NULL;
 // TODO: Temporarily moved here.
 QUEUE_STATS* queueStats = NULL;
@@ -135,12 +133,10 @@ static void modules_thread_finish();
 
 Worker::Worker(int id,
                int epoll_fd,
-               THREAD_DATA* pThread_data,
                POLL_STATS* pPoll_stats,
                QUEUE_STATS* pQueue_stats)
     : m_id(id)
     , m_epoll_fd(epoll_fd)
-    , m_pThread_data(pThread_data)
     , m_pPoll_stats(pPoll_stats)
     , m_pQueue_stats(pQueue_stats)
     , m_pQueue(NULL)
@@ -164,21 +160,15 @@ void Worker::init()
 {
     this_unit.n_workers = config_threadcount();
 
-    thread_data = (THREAD_DATA*)MXS_CALLOC(this_unit.n_workers, sizeof(THREAD_DATA));
-    if (!thread_data)
+    pollStats = (POLL_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(POLL_STATS));
+    if (!pollStats)
     {
         exit(-1);
     }
 
     for (int i = 0; i < this_unit.n_workers; i++)
     {
-        thread_data[i].state = THREAD_STOPPED;
-    }
-
-    pollStats = (POLL_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(POLL_STATS));
-    if (!pollStats)
-    {
-        exit(-1);
+        pollStats[i].thread_state = THREAD_STOPPED;
     }
 
     queueStats = (QUEUE_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(QUEUE_STATS));
@@ -197,7 +187,7 @@ void Worker::init()
 
     for (int i = 0; i < this_unit.n_workers; ++i)
     {
-        Worker* pWorker = Worker::create(i, &thread_data[i], &pollStats[i], &queueStats[i]);
+        Worker* pWorker = Worker::create(i, &pollStats[i], &queueStats[i]);
 
         if (pWorker)
         {
@@ -353,7 +343,7 @@ void Worker::run()
 {
     this_thread.current_worker_id = m_id;
     poll_waitevents(m_epoll_fd, m_id,
-                    m_pThread_data, m_pPoll_stats, m_pQueue_stats,
+                    m_pPoll_stats, m_pQueue_stats,
                     ::should_shutdown, this);
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 
@@ -415,7 +405,6 @@ void Worker::shutdown_all()
  * - Adds the read descriptor to the polling mechanism.
  *
  * @param worker_id     The id of the worker.
- * @param pThread_data  The thread data of the worker.
  * @param pPoll_stats   The poll statistics of the worker.
  * @param pQueue_stats  The queue statistics of the worker.
  *
@@ -423,7 +412,6 @@ void Worker::shutdown_all()
  */
 //static
 Worker* Worker::create(int worker_id,
-                       THREAD_DATA* pThread_data,
                        POLL_STATS* pPoll_stats,
                        QUEUE_STATS* pQueue_stats)
 {
@@ -433,7 +421,7 @@ Worker* Worker::create(int worker_id,
 
     if (epoll_fd != -1)
     {
-        pThis = new (std::nothrow) Worker(worker_id, epoll_fd, pThread_data, pPoll_stats, pQueue_stats);
+        pThis = new (std::nothrow) Worker(worker_id, epoll_fd, pPoll_stats, pQueue_stats);
 
         if (pThis)
         {

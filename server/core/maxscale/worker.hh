@@ -199,13 +199,11 @@ public:
 private:
     Worker(int id,
            int epoll_fd,
-           THREAD_DATA* pThread_data,
            POLL_STATS* pPoll_stats,
            QUEUE_STATS* pQueue_stats);
     virtual ~Worker();
 
     static Worker* create(int id,
-                          THREAD_DATA* pThread_data,
                           POLL_STATS* pPoll_stats,
                           QUEUE_STATS* pQueue_stats);
 
@@ -216,7 +214,6 @@ private:
 private:
     int           m_id;                 /*< The id of the worker. */
     int           m_epoll_fd;           /*< The epoll file descriptor. */
-    THREAD_DATA*  m_pThread_data;       /*< The thread data of the worker. */
     POLL_STATS*   m_pPoll_stats;        /*< Statistics for worker. */
     QUEUE_STATS*  m_pQueue_stats;       /*< Statistics for queue. */
     MessageQueue* m_pQueue;             /*< The message queue of the worker. */

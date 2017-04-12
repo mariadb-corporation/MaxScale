@@ -52,7 +52,6 @@ void            poll_init();
 
 void            poll_waitevents(int epoll_fd,
                                 int thread_id,
-                                THREAD_DATA* thread_data,
                                 POLL_STATS* poll_stats,
                                 QUEUE_STATS* queue_stats,
                                 bool (*should_terminate)(void* data),

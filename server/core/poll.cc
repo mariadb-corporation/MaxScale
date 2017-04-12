@@ -272,7 +272,6 @@ bool poll_remove_fd_from_worker(int wid, int fd)
  *
  * @param epoll_fd         The epoll descriptor.
  * @param thread_id        The id of the calling thread.
- * @param thread_data      The thread data of the calling thread.
  * @param poll_stats       The polling stats of the calling thread.
  * @param queue_stats      The queue stats of the calling thread.
  * @param should_shutdown  Pointer to function returning true if the polling should
@@ -281,7 +280,6 @@ bool poll_remove_fd_from_worker(int wid, int fd)
  */
 void poll_waitevents(int epoll_fd,
                      int thread_id,
-                     THREAD_DATA* thread_data,
                      POLL_STATS* poll_stats,
                      QUEUE_STATS* queue_stats,
                      bool (*should_shutdown)(void* data),
@@ -293,11 +291,11 @@ void poll_waitevents(int epoll_fd,
     int i, nfds, timeout_bias = 1;
     int poll_spins = 0;
 
-    thread_data->state = THREAD_IDLE;
+    poll_stats->thread_state = THREAD_IDLE;
 
     while (!should_shutdown(data))
     {
-        thread_data->state = THREAD_POLLING;
+        poll_stats->thread_state = THREAD_POLLING;
 
         atomic_add_int64(&poll_stats->n_polls, 1);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
@@ -354,7 +352,7 @@ void poll_waitevents(int epoll_fd,
                       nfds);
             atomic_add_int64(&poll_stats->n_pollev, 1);
 
-            thread_data->state = THREAD_PROCESSING;
+            poll_stats->thread_state = THREAD_PROCESSING;
 
             poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
 
@@ -440,17 +438,17 @@ void poll_waitevents(int epoll_fd,
 
         dcb_process_idle_sessions(thread_id);
 
-        thread_data->state = THREAD_ZPROCESSING;
+        poll_stats->thread_state = THREAD_ZPROCESSING;
 
         /** Process closed DCBs */
         dcb_process_zombies(thread_id);
 
         poll_check_message();
 
-        thread_data->state = THREAD_IDLE;
+        poll_stats->thread_state = THREAD_IDLE;
     } /*< while(1) */
 
-    thread_data->state = THREAD_STOPPED;
+    poll_stats->thread_state = THREAD_STOPPED;
 }
 
 /**
@@ -984,7 +982,7 @@ dShowThreads(DCB *dcb)
     dcb_printf(dcb, "----+------------\n");
     for (i = 0; i < n_threads; i++)
     {
-        switch (thread_data[i].state)
+        switch (pollStats[i].thread_state)
         {
         case THREAD_STOPPED:
             state = "Stopped";

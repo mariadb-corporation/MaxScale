@@ -67,18 +67,6 @@ typedef enum
 
 // TODO: Temporarily moved here.
 /**
- * Thread data used to report the current state and activity related to
- * a thread
- */
-typedef struct
-{
-    THREAD_STATE state;       /*< Current thread state */
-} THREAD_DATA;
-
-extern THREAD_DATA *thread_data;
-
-// TODO: Temporarily moved here.
-/**
  * The number of buckets used to gather statistics about how many
  * descriptors where processed on each epoll completion.
  *
@@ -92,6 +80,7 @@ extern THREAD_DATA *thread_data;
 // TODO: Temporarily moved here.
 typedef struct
 {
+    THREAD_STATE thread_state; /*< The thread state. */
     int64_t n_read;         /*< Number of read events   */
     int64_t n_write;        /*< Number of write events  */
     int64_t n_error;        /*< Number of error events  */
