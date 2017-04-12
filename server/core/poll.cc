@@ -338,7 +338,10 @@ void poll_waitevents(int epoll_fd,
         if (nfds > 0)
         {
             poll_stats->evq_length = nfds;
-            poll_stats->evq_max = nfds;
+            if (nfds > poll_stats->evq_max)
+            {
+                poll_stats->evq_max = nfds;
+            }
 
             timeout_bias = 1;
             if (poll_spins <= number_poll_spins + 1)
