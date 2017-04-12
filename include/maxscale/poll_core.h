@@ -104,7 +104,6 @@ typedef struct
     int64_t n_polls;        /*< Number of poll cycles   */
     int64_t n_pollev;       /*< Number of polls returning events */
     int64_t n_nbpollev;     /*< Number of polls returning events */
-    int64_t n_nothreads;    /*< Number of times no threads are polling */
     int32_t n_fds[MAXNFDS]; /*< Number of wakeups with particular n_fds value */
     int64_t evq_length;     /*< Event queue length */
     int64_t evq_max;        /*< Maximum event queue length */

@@ -89,8 +89,6 @@ static volatile int     *poll_msg;
 static void    *poll_msg_data = NULL;
 static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
 
-static int n_waiting = 0;    /*< No. of threads in epoll_wait */
-
 static void poll_check_message(void);
 static bool poll_dcb_session_check(DCB *dcb, const char *function);
 
@@ -299,13 +297,11 @@ void poll_waitevents(int epoll_fd,
 
     while (!should_shutdown(data))
     {
-        atomic_add(&n_waiting, 1);
         thread_data->state = THREAD_POLLING;
 
         atomic_add_int64(&poll_stats->n_polls, 1);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
-            atomic_add(&n_waiting, -1);
             int eno = errno;
             errno = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait returned "
@@ -313,7 +309,6 @@ void poll_waitevents(int epoll_fd,
                       pthread_self(),
                       nfds,
                       eno);
-            atomic_add(&n_waiting, -1);
         }
         /*
          * If there are no new descriptors from the non-blocking call
@@ -338,15 +333,6 @@ void poll_waitevents(int epoll_fd,
             {
                 poll_spins = 0;
             }
-        }
-        else
-        {
-            atomic_add(&n_waiting, -1);
-        }
-
-        if (n_waiting == 0)
-        {
-            atomic_add_int64(&poll_stats->n_nothreads, 1);
         }
 
         if (nfds > 0)
@@ -847,8 +833,6 @@ dprintPollStats(DCB *dcb)
                poll_stats_get(&POLL_STATS::n_hup, TS_STATS_SUM));
     dcb_printf(dcb, "No. of accept events:                          %" PRId64 "\n",
                poll_stats_get(&POLL_STATS::n_accept, TS_STATS_SUM));
-    dcb_printf(dcb, "No. of times no threads polling:               %" PRId64 "\n",
-               poll_stats_get(&POLL_STATS::n_nothreads, TS_STATS_SUM));
     dcb_printf(dcb, "Total event queue length:                      %" PRId64 "\n",
                poll_stats_get(&POLL_STATS::evq_length, TS_STATS_AVG));
     dcb_printf(dcb, "Average event queue length:                    %" PRId64 "\n",
