@@ -101,7 +101,6 @@ static int load_samples = 0;
 static int load_nfds = 0;
 static double current_avg = 0.0;
 static double *avg_samples = NULL;
-static int *evqp_samples = NULL;
 static int next_sample = 0;
 static int n_avg_samples;
 
@@ -140,12 +139,6 @@ poll_init()
     for (int i = 0; i < n_avg_samples; i++)
     {
         avg_samples[i] = 0.0;
-    }
-    evqp_samples = (int *)MXS_MALLOC(sizeof(int) * n_avg_samples);
-    MXS_ABORT_IF_NULL(evqp_samples);
-    for (int i = 0; i < n_avg_samples; i++)
-    {
-        evqp_samples[i] = 0.0;
     }
 
     number_poll_spins = config_nbpolls();
@@ -813,7 +806,6 @@ dShowThreads(DCB *dcb)
     int i, j, n;
     const char *state;
     double avg1 = 0.0, avg5 = 0.0, avg15 = 0.0;
-    double qavg1 = 0.0, qavg5 = 0.0, qavg15 = 0.0;
 
     dcb_printf(dcb, "Polling Threads.\n\n");
     dcb_printf(dcb, "Historic Thread Load Average: %.2f.\n", load_average);
@@ -823,10 +815,8 @@ dShowThreads(DCB *dcb)
     for (i = 0; i < n_avg_samples; i++)
     {
         avg15 += avg_samples[i];
-        qavg15 += evqp_samples[i];
     }
     avg15 = avg15 / n_avg_samples;
-    qavg15 = qavg15 / n_avg_samples;
 
     /* Average the last third of the samples to get the 5 minute average */
     n = 5 * 60 / POLL_LOAD_FREQ;
@@ -838,10 +828,8 @@ dShowThreads(DCB *dcb)
     for (j = i; j < i + n; j++)
     {
         avg5 += avg_samples[j % n_avg_samples];
-        qavg5 += evqp_samples[j % n_avg_samples];
     }
     avg5 = (3 * avg5) / (n_avg_samples);
-    qavg5 = (3 * qavg5) / (n_avg_samples);
 
     /* Average the last 15th of the samples to get the 1 minute average */
     n =  60 / POLL_LOAD_FREQ;
@@ -853,16 +841,12 @@ dShowThreads(DCB *dcb)
     for (j = i; j < i + n; j++)
     {
         avg1 += avg_samples[j % n_avg_samples];
-        qavg1 += evqp_samples[j % n_avg_samples];
     }
     avg1 = (15 * avg1) / (n_avg_samples);
-    qavg1 = (15 * qavg1) / (n_avg_samples);
 
     dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
                "1 Minute Average: %.2f\n\n", avg15, avg5, avg1);
     dcb_printf(dcb, "Pending event queue length averages:\n");
-    dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
-               "1 Minute Average: %.2f\n\n", qavg15, qavg5, qavg1);
 
     dcb_printf(dcb, " ID | State      \n");
     dcb_printf(dcb, "----+------------\n");
