@@ -72,11 +72,7 @@ typedef enum
  */
 typedef struct
 {
-    THREAD_STATE   state;       /*< Current thread state */
-    int            n_fds;       /*< No. of descriptors thread is processing */
-    MXS_POLL_DATA *cur_data;    /*< Current MXS_POLL_DATA being processed */
-    uint32_t       event;       /*< Current event being processed */
-    uint64_t       cycle_start; /*< The time when the poll loop was started */
+    THREAD_STATE state;       /*< Current thread state */
 } THREAD_DATA;
 
 extern THREAD_DATA *thread_data;

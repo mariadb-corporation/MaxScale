@@ -354,9 +354,6 @@ void poll_waitevents(int epoll_fd,
                       nfds);
             atomic_add_int64(&poll_stats->n_pollev, 1);
 
-            thread_data->n_fds = nfds;
-            thread_data->cur_data = NULL;
-            thread_data->event = 0;
             thread_data->state = THREAD_PROCESSING;
 
             poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
@@ -377,14 +374,14 @@ void poll_waitevents(int epoll_fd,
              */
         }
 
-        thread_data->cycle_start = hkheartbeat;
+        uint64_t cycle_start = hkheartbeat;
 
         /* Process of the queue of waiting requests */
         for (int i = 0; i < nfds; i++)
         {
             /** Calculate event queue statistics */
             int64_t started = hkheartbeat;
-            int64_t qtime = started - thread_data->cycle_start;
+            int64_t qtime = started - cycle_start;
 
             if (qtime > N_QUEUE_TIMES)
             {
@@ -398,9 +395,7 @@ void poll_waitevents(int epoll_fd,
             queue_stats->maxqtime = MXS_MAX(queue_stats->maxqtime, qtime);
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
-            thread_data->cur_data = data;
 
-            thread_data->event = events[i].events;
             uint32_t actions = data->handler(data, thread_id, events[i].events);
 
             if (actions & MXS_POLL_ACCEPT)
@@ -985,8 +980,8 @@ dShowThreads(DCB *dcb)
     dcb_printf(dcb, "15 Minute Average: %.2f, 5 Minute Average: %.2f, "
                "1 Minute Average: %.2f\n\n", qavg15, qavg5, qavg1);
 
-    dcb_printf(dcb, " ID | State      | # fds  | Descriptor       | Running  | Event\n");
-    dcb_printf(dcb, "----+------------+--------+------------------+----------+---------------\n");
+    dcb_printf(dcb, " ID | State      \n");
+    dcb_printf(dcb, "----+------------\n");
     for (i = 0; i < n_threads; i++)
     {
         switch (thread_data[i].state)
@@ -1007,43 +1002,8 @@ dShowThreads(DCB *dcb)
             state = "Collecting";
             break;
         }
-        if (thread_data[i].state != THREAD_PROCESSING)
-        {
-            dcb_printf(dcb,
-                       " %2d | %-10s |        |                  |          |\n",
-                       i, state);
-        }
-        else if (thread_data[i].cur_data == NULL)
-        {
-            dcb_printf(dcb,
-                       " %2d | %-10s | %6d |                  |          |\n",
-                       i, state, thread_data[i].n_fds);
-        }
-        else
-        {
-            char *event_string = event_to_string(thread_data[i].event);
-            bool from_heap;
 
-            if (event_string == NULL)
-            {
-                from_heap = false;
-                event_string = (char*)"??";
-            }
-            else
-            {
-                from_heap = true;
-            }
-            dcb_printf(dcb,
-                       " %2d | %-10s | %6d | %-16p | <%3lu00ms | %s\n",
-                       i, state, thread_data[i].n_fds,
-                       thread_data[i].cur_data, 1 + hkheartbeat - dcb->evq.started,
-                       event_string);
-
-            if (from_heap)
-            {
-                MXS_FREE(event_string);
-            }
-        }
+        dcb_printf(dcb, " %2d | %s\n", i, state);
     }
 }
 
