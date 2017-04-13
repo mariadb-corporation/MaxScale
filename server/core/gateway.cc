@@ -944,17 +944,18 @@ static void usage(void)
             "  -?, --help                  show this help\n"
             "\n"
             "Defaults paths:\n"
-            "  config file      : %s/%s\n"
-            "  configdir        : %s\n"
-            "  logdir           : %s\n"
-            "  cachedir         : %s\n"
-            "  libdir           : %s\n"
-            "  datadir          : %s\n"
-            "  execdir          : %s\n"
-            "  language         : %s\n"
-            "  piddir           : %s\n"
-            "  persistdir       : %s\n"
-            "  module configdir : %s\n"
+            "  config file       : %s/%s\n"
+            "  configdir         : %s\n"
+            "  logdir            : %s\n"
+            "  cachedir          : %s\n"
+            "  libdir            : %s\n"
+            "  datadir           : %s\n"
+            "  execdir           : %s\n"
+            "  language          : %s\n"
+            "  piddir            : %s\n"
+            "  persistdir        : %s\n"
+            "  module configdir  : %s\n"
+            "  connector plugins : %s\n"
             "\n"
             "If '--basedir' is provided then all other paths, including the default\n"
             "configuration file path, are defined relative to that. As an example,\n"
@@ -966,7 +967,7 @@ static void usage(void)
             get_configdir(), default_cnf_fname,
             get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
             get_datadir(), get_execdir(), get_langdir(), get_piddir(),
-            get_config_persistdir(), get_module_configdir());
+            get_config_persistdir(), get_module_configdir(), get_connector_plugindir());
 }
 
 
