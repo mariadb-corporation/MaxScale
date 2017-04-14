@@ -31,3 +31,33 @@ uint64_t atomic_add_uint64(uint64_t *variable, int64_t value)
 {
     return __sync_fetch_and_add(variable, value);
 }
+
+int atomic_read(int *variable)
+{
+    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
+}
+
+int64_t atomic_read_int64(int64_t *variable)
+{
+    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
+}
+
+uint64_t atomic_read_uint64(uint64_t *variable)
+{
+    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
+}
+
+void atomic_write(int *variable, int value)
+{
+    return __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+}
+
+void atomic_write_int64(int64_t *variable, int64_t value)
+{
+    return __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+}
+
+void atomic_write_uint64(uint64_t *variable, uint64_t value)
+{
+    return __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+}
