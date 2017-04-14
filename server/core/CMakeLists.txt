@@ -1,4 +1,6 @@
 add_library(maxscale-common SHARED
+  admin.cc
+  adminclient.cc
   adminusers.cc
   alloc.cc
   atomic.cc

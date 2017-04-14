@@ -267,7 +267,7 @@ hkthread(void *data)
         for (i = 0; i < 10; i++)
         {
             thread_millisleep(100);
-            hkheartbeat++;
+            atomic_add_int64(&hkheartbeat, 1);
         }
         now = time(0);
         spinlock_acquire(&tasklock);

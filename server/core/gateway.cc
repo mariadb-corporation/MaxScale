@@ -57,6 +57,7 @@
 #include "maxscale/poll.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
+#include "maxscale/admin.hh"
 #include "maxscale/worker.hh"
 
 using namespace maxscale;
@@ -1991,12 +1992,23 @@ int main(int argc, char **argv)
         write_child_exit_code(daemon_pipe[1], rc);
     }
 
+    if (!mxs_admin_init())
+    {
+        const char* logerr = "Failed to initialize admin interface";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /*<
      * Run worker 0 in the main thread.
      */
     worker = Worker::get(0);
     ss_dassert(worker);
     worker->run();
+
+    /** Stop administrative interface */
+    mxs_admin_shutdown();
 
     /*<
      * Wait for the housekeeper to finish.
