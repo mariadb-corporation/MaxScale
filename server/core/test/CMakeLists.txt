@@ -23,6 +23,7 @@ add_executable(testmaxscalepcre2 testmaxscalepcre2.cc)
 add_executable(testmodulecmd testmodulecmd.cc)
 add_executable(testconfig testconfig.cc)
 add_executable(trxboundaryparser_profile trxboundaryparser_profile.cc)
+add_executable(testhttp testhttp.cc)
 target_link_libraries(test_atomic maxscale-common)
 target_link_libraries(test_adminusers maxscale-common)
 target_link_libraries(test_buffer maxscale-common)
@@ -48,6 +49,7 @@ target_link_libraries(testmaxscalepcre2 maxscale-common)
 target_link_libraries(testmodulecmd maxscale-common)
 target_link_libraries(testconfig maxscale-common)
 target_link_libraries(trxboundaryparser_profile maxscale-common)
+target_link_libraries(testhttp maxscale-common)
 add_test(TestAtomic test_atomic)
 add_test(TestAdminUsers test_adminusers)
 add_test(TestBuffer test_buffer)
@@ -79,7 +81,7 @@ add_test(TestTrxCompare_Select test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../..
 add_test(TestTrxCompare_Set test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/set.test)
 add_test(TestTrxCompare_Update test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/update.test)
 add_test(TestTrxCompare_MaxScale test_trxcompare ${CMAKE_CURRENT_SOURCE_DIR}/../../../query_classifier/test/maxscale.test)
-
+add_test(TestHttp testhttp)
 
 # This test requires external dependencies and thus cannot be run
 # as a part of the core test set
