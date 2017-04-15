@@ -15,12 +15,16 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
+#include <deque>
 
 #include <maxscale/thread.h>
 
 #include "adminclient.hh"
 
+using std::deque;
 using std::string;
+
+typedef deque<SAdminClient> ClientList;
 
 /** The admin interface configuration */
 struct AdminConfig
@@ -50,13 +54,20 @@ public:
      */
     void stop();
 
+    /**
+     * Close timed out connections
+     */
+    void check_timeouts();
+
 private:
     void         handle_clients();
+    void         handle_timeouts();
     AdminClient* accept_client();
 
-    int    m_socket;  /**< The network socket we listen on */
-    int    m_active;  /**< Positive value if the admin is active */
-    int    m_timeout; /**< Network timeout in seconds */
+    int        m_socket;  /**< The network socket we listen on */
+    int        m_active;  /**< Positive value if the admin is active */
+    int        m_timeout; /**< Network timeout in seconds */
+    ClientList m_clients;
 };
 
 /**

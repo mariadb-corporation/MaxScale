@@ -12,6 +12,7 @@
  */
 
 #include "maxscale/admin.hh"
+#include "maxscale/hk_heartbeat.h"
 
 #include <climits>
 #include <new>
@@ -26,6 +27,7 @@
 
 static AdminListener* admin = NULL;
 static THREAD admin_thread;
+static THREAD timeout_thread;
 
 // TODO: Read values from the configuration
 static AdminConfig config = {DEFAULT_ADMIN_HOST, DEFAULT_ADMIN_PORT};
@@ -34,6 +36,12 @@ void admin_main(void* data)
 {
     AdminListener* admin = reinterpret_cast<AdminListener*>(data);
     admin->start();
+}
+
+void timeout_main(void *data)
+{
+    AdminListener* admin = reinterpret_cast<AdminListener*>(data);
+    admin->check_timeouts();
 }
 
 AdminConfig& mxs_admin_get_config()
@@ -56,12 +64,14 @@ bool mxs_admin_init()
 
             if (admin)
             {
-                if (thread_start(&admin_thread, admin_main, admin))
+                if (thread_start(&admin_thread, admin_main, admin) &&
+                    thread_start(&timeout_thread, timeout_main, admin))
                 {
                     rval = true;
                 }
                 else
                 {
+                    admin->stop();
                     delete admin;
                     admin = NULL;
                 }
@@ -87,6 +97,7 @@ void mxs_admin_shutdown()
     if (admin)
     {
         admin->stop();
+        thread_wait(timeout_thread);
         thread_wait(admin_thread);
         delete admin;
         admin = NULL;
@@ -95,7 +106,7 @@ void mxs_admin_shutdown()
 
 AdminListener::AdminListener(int sock):
     m_socket(sock),
-    m_active(0),
+    m_active(1),
     m_timeout(10)
 {
 }
@@ -111,15 +122,15 @@ void AdminListener::handle_clients()
 
     if (client)
     {
-        client->process();
-        delete client;
+        SAdminClient sclient(client);
+        ClientList::iterator it = m_clients.insert(m_clients.begin(), sclient);
+        sclient->process();
+        m_clients.erase(it);
     }
 }
 
 void AdminListener::start()
 {
-    atomic_write(&m_active, 1);
-
     while (atomic_read(&m_active))
     {
         MXS_EXCEPTION_GUARD(handle_clients());
@@ -140,7 +151,6 @@ AdminClient* AdminListener::accept_client()
 
     if (fd > -1)
     {
-        setnonblocking(fd);
         rval = new AdminClient(fd, addr, m_timeout);
     }
     else if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -154,4 +164,30 @@ AdminClient* AdminListener::accept_client()
     }
 
     return rval;
+}
+
+void AdminListener::handle_timeouts()
+{
+    int64_t now = hkheartbeat;
+
+    for (ClientList::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    {
+        SAdminClient& client = *it;
+
+        if (now - client->last_activity() > m_timeout * 10)
+        {
+            client->close_connection();
+        }
+    }
+
+    /** Sleep for roughly one housekeeper heartbeat */
+    thread_millisleep(100);
+}
+
+void AdminListener::check_timeouts()
+{
+    while (atomic_read(&m_active))
+    {
+        MXS_EXCEPTION_GUARD(handle_timeouts());
+    }
 }

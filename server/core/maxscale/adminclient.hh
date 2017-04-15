@@ -17,6 +17,12 @@
 
 #include <map>
 #include <sys/socket.h>
+#include <tr1/memory>
+
+#include <maxscale/atomic.h>
+#include <maxscale/spinlock.hh>
+
+using mxs::SpinLock;
 
 class AdminClient
 {
@@ -33,12 +39,30 @@ public:
     ~AdminClient();
 
     /**
-     * Process one request
+     * @brief Process one request
      */
     void process();
 
+    /**
+     *  @brief Close the connection
+     */
+    void close_connection();
+
+    /**
+     * @brief Get last activity timestamp
+     *
+     * @return The hkheartbeat of the last activity
+     */
+    int64_t last_activity()
+    {
+        return atomic_read_int64(&m_last_activity);
+    }
+
 private:
     int m_fd;                       /**< The client socket */
-    int m_timeout;                  /**< Network timeout for reads and writes */
+    int64_t m_last_activity;
     struct sockaddr_storage m_addr; /**< Network info for the client */
+    SpinLock m_lock;
 };
+
+typedef std::shared_ptr<AdminClient> SAdminClient;

@@ -12,90 +12,92 @@
  */
 
 #include "maxscale/adminclient.hh"
+#include "maxscale/httpparser.hh"
 
 #include <string>
+#include <sstream>
 
 #include <maxscale/atomic.h>
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
+#include <maxscale/thread.h>
+#include <maxscale/spinlock.hh>
 
 using std::string;
+using std::stringstream;
+using mxs::SpinLockGuard;
 
 AdminClient::AdminClient(int fd, const struct sockaddr_storage& addr, int timeout):
     m_fd(fd),
-    m_timeout(timeout),
+    m_last_activity(atomic_read_int64(&hkheartbeat)),
     m_addr(addr)
 {
+}
 
+void AdminClient::close_connection()
+{
+    SpinLockGuard guard(m_lock);
+
+    if (m_fd != -1)
+    {
+        close(m_fd);
+        m_fd = -1;
+    }
 }
 
 AdminClient::~AdminClient()
 {
-    close(m_fd);
+    close_connection();
 }
 
-static bool read_request_header(int fd, int timeout, string& output)
+static bool read_request(int fd, string& output)
 {
-    int64_t start = atomic_read_int64(&hkheartbeat);
-
-    while ((atomic_read_int64(&hkheartbeat) - start) / 10 < timeout)
+    while (true)
     {
         char buf[1024];
-        int rc = read(fd, buf, sizeof(buf));
+        int bufsize = sizeof(buf) - 1;
 
-        if (rc == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+        int rc = read(fd, buf, bufsize);
+
+        if (rc == -1)
         {
             return false;
         }
-        else if (rc > 0)
-        {
-            buf[rc] = '\0';
-            output += buf;
 
-            if (output.find("\r\n\r\n") != std::string::npos)
-            {
-                break;
-            }
+        buf[rc] = '\0';
+        output += buf;
+
+        if (rc < bufsize)
+        {
+            /** Complete request read */
+            break;
         }
     }
 
     return true;
 }
 
-static bool write_response(int fd, int timeout, string input)
+static bool write_response(int fd, string input)
 {
-    int64_t start = atomic_read_int64(&hkheartbeat);
-
-    while ((atomic_read_int64(&hkheartbeat) - start) / 10 < timeout && input.length() > 0)
-    {
-        int rc = write(fd, input.c_str(), input.length());
-
-        if (rc == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
-        {
-            return false;
-        }
-        else if (rc > 0)
-        {
-            input.erase(0, rc);
-        }
-    }
-
-    return true;
-
+    return write(fd, input.c_str(), input.length()) != -1;
 }
 
 void AdminClient::process()
 {
     string request;
+    atomic_write_int64(&m_last_activity, hkheartbeat);
 
-    if (read_request_header(m_fd, m_timeout, request))
+    if (read_request(m_fd, request))
     {
-        /** Send the Status-Line part of the response */
-        string response = "HTTP/1.1 200 OK\r\n";
+        SHttpParser parser(HttpParser::parse(request));
 
-        response += "\r\n";
+        string status = parser.get() ? "200 OK" : "400 Bad Request";
 
-        write_response(m_fd, m_timeout, response);
+        stringstream resp;
+        resp << "HTTP/1.1 " << status << "\r\n\r\n" << parser->get_body() << "\r\n";
+
+        atomic_write_int64(&m_last_activity, hkheartbeat);
+        write_response(m_fd, resp.str());
     }
     else
     {
