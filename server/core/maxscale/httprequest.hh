@@ -124,9 +124,9 @@ private:
     HttpRequest(const HttpRequest&);
     HttpRequest& operator = (const HttpRequest&);
 
-    map<string, string> m_headers;
-    Closer<json_t*>     m_json;
-    string              m_json_string;
-    string              m_resource;
-    enum http_verb      m_verb;
+    map<string, string> m_headers;     /**< Request headers */
+    Closer<json_t*>     m_json;        /**< Request body */
+    string              m_json_string; /**< String version of @c m_json */
+    string              m_resource;    /**< Requested resource */
+    enum http_verb      m_verb;        /**< Request method */
 };

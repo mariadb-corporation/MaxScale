@@ -15,6 +15,7 @@ add_library(maxscale-common SHARED
   hint.cc
   housekeeper.cc
   httprequest.cc
+  httpresponse.cc
   listener.cc
   load_utils.cc
   log_manager.cc
