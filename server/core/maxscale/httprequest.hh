@@ -18,11 +18,15 @@
 #include <map>
 #include <tr1/memory>
 
+#include <maxscale/jansson.hh>
+#include <maxscale/utils.hh>
+
 #include "http.hh"
 
 using std::shared_ptr;
 using std::string;
 using std::map;
+using mxs::Closer;
 
 class HttpRequest;
 
@@ -86,23 +90,23 @@ public:
     }
 
     /**
-     * @brief Check if body is defined
-     *
-     * @return True if body is defined
-     */
-    bool have_body() const
-    {
-        return m_body.length() != 0;
-    }
-
-    /**
      * @brief Return request body
      *
      * @return Request body or empty string if no body is defined
      */
-    const string& get_body() const
+    const string& get_json_str() const
     {
-        return m_body;
+        return m_json_string;
+    }
+
+    /**
+     * @brief Return raw JSON body
+     *
+     * @return Raw JSON body or NULL if no body is defined
+     */
+    const json_t* get_json() const
+    {
+        return m_json.get();
     }
 
     /**
@@ -121,7 +125,8 @@ private:
     HttpRequest& operator = (const HttpRequest&);
 
     map<string, string> m_headers;
-    string              m_body;
+    Closer<json_t*>     m_json;
+    string              m_json_string;
     string              m_resource;
     enum http_verb      m_verb;
 };

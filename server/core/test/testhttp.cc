@@ -159,12 +159,144 @@ int test_headers()
     return 0;
 }
 
+/**
+ The following JSON tests are imported from the Jansson test suite
+ */
+
+const char* body_pass[] =
+{
+    "{\"i\": [1]}",
+    "{\"i\": [1.8011670033376514e-308]}",
+    "{\"i\": [123.456e78]}",
+    "{\"i\": [-1]}",
+    "{\"i\": [-123]}",
+    "{\"i\": [\"\u0821 three-byte UTF-8\"]}",
+    "{\"i\": [123]}",
+    "{\"i\": [1E+2]}",
+    "{\"i\": [123e45]}",
+    "{\"i\": [false]}",
+    "{\"i\": [\"\u002c one-byte UTF-8\"]}",
+    "{\"i\": {\"a\":[]}}",
+    "{\"i\": [\"abcdefghijklmnopqrstuvwxyz1234567890 \"]}",
+    "{\"i\": [-0]}",
+    "{\"i\": [\"\"]}",
+    "{\"i\": [1,2,3,4]}",
+    "{\"i\": [\"a\", \"b\", \"c\"]}",
+    "{\"foo\": \"bar\", \"core\": \"dump\"}",
+    "{\"i\": [true, false, true, true, null, false]}",
+    "{\"b\": [\"a\"]}",
+    "{\"i\": [true]}",
+    "{\"i\": {}}",
+    "{\"i\": [{}]}",
+    "{\"i\": [0]}",
+    "{\"i\": [123.456789]}",
+    "{\"i\": [1e+2]}",
+    "{\"i\": [\"\u0123 two-byte UTF-8\"]}",
+    "{\"i\": [123e-10000000]}",
+    "{\"i\": [null]}",
+    "{\"i\": [\"€þıœəßð some utf-8 ĸʒ×ŋµåäö𝄞\"]}",
+    "{\"i\": [1e-2]}",
+    "{\"i\": [1E22]}",
+    "{\"i\": [1E-2]}",
+    "{\"i\": []}",
+
+    /** Additional tests */
+    "{\"this is\": \"a JSON value\"}",
+    NULL
+};
+
+const char* body_fail[] =
+{
+    "{{}",
+    "{[-123foo]}",
+    "{[1,}",
+    "{[troo}",
+    "{{\"a\"}",
+    "{[-123123123123123123123123123123]}",
+    "{{[}",
+    "{[1.]}",
+    "{[1ea]}",
+    "{['}",
+    "{[-012]}",
+    "{[012]}",
+    "{{\"a}",
+    "{[{}",
+    "{[123123123123123123123123123123]}",
+    "{[1,2,3]}",
+    "{foo}",
+    "{[\"\a <-- invalid escape\"]}",
+    "{[{}}",
+    "{[\"	 <-- tab character\"]}",
+    "{[\"a\"}",
+    "{{'a'}",
+    "{[,}",
+    "{{\"a\":}",
+    "{{\"a\":\"a}",
+    "{[-123123e100000]}",
+    "{[\"null escape \u0000 not allowed\"]}",
+    "{[1,}",
+    "{2,}",
+    "{3,}",
+    "{4,}",
+    "{5,}",
+    "{]}",
+    "{null}",
+    "{[-123.123foo]}",
+    "{[}",
+    "{aå}",
+    "{{\"foo\u0000bar\": 42}{\"a\":\"a\" 123}}",
+    "{[\"a}",
+    "{[123123e100000]}",
+    "{[1e]}",
+    "{[1,]}",
+    "{{,}",
+    "{[-foo]}",
+    "{å}",
+    "{{\"}",
+    "{[\"null byte  not allowed\"]}",
+    "{[}",
+    "{[1,2,3]foo}",
+
+    /** Additional tests */
+    "Hello World!",
+    "<p>I am a paragraph</p>",
+    "",
+    NULL
+};
+
+int test_message_body()
+{
+    for (int i = 0; body_pass[i]; i++)
+    {
+        stringstream ss;
+        ss << "GET / HTTP/1.1\r\n\r\n" << body_pass[i];
+        SHttpRequest parser(HttpRequest::parse(ss.str()));
+        TEST(parser.get() != NULL, "Valid request body should be parsed: %s",
+             ss.str().c_str());
+        TEST(parser->get_json(), "Body should be found");
+        TEST(parser->get_json_str() == body_pass[i], "Body value should be correct: %s",
+             parser->get_json_str().c_str());
+    }
+
+    for (int i = 0; body_pass[i]; i++)
+    {
+        stringstream ss;
+        ss << "GET / HTTP/1.1\r\n\r\n" << body_fail[i];
+        SHttpRequest parser(HttpRequest::parse(ss.str()));
+        TEST(parser.get() == NULL, "Invalid request body should not be parsed: %s",
+             ss.str().c_str());
+    }
+
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     int rc = 0;
 
     rc += test_basic();
     rc += test_headers();
+    rc += test_message_body();
 
     return rc;
 }

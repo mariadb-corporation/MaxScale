@@ -56,7 +56,23 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale-common ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl pthread crypt dl crypto inih z rt m stdc++)
+target_link_libraries(maxscale-common
+  ${MARIADB_CONNECTOR_LIBRARIES}
+  ${LZMA_LINK_FLAGS}
+  ${PCRE2_LIBRARIES}
+  ${CURL_LIBRARIES}
+  ${JANSSON_LIBRARIES}
+  ssl
+  pthread
+  crypt
+  dl
+  crypto
+  inih
+  z
+  rt
+  m
+  stdc++
+)
 
 add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")

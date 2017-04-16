@@ -99,7 +99,9 @@ void AdminClient::process()
         enum http_code status = parser.get() ? HTTP_200_OK : HTTP_400_BAD_REQUEST;
 
         atomic_write_int64(&m_last_activity, hkheartbeat);
-        write_response(m_fd, HTTP_200_OK, parser->get_body());
+
+        /** Echo the request body back */
+        write_response(m_fd, HTTP_200_OK, parser->get_json_str());
     }
     else
     {

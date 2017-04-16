@@ -20,14 +20,29 @@ namespace maxscale
 {
 static inline string& trim(string& str)
 {
-    while (isspace(*str.begin()))
+    if (str.length())
     {
-        str.erase(str.begin());
-    }
+        if (isspace(*str.begin()))
+        {
+            string::iterator it = str.begin();
 
-    while (isspace(*str.rbegin()))
-    {
-        str.erase(str.rbegin().base());
+            while (it != str.end() && isspace(*it))
+            {
+                it++;
+            }
+            str.erase(str.begin(), it);
+        }
+
+        if (isspace(*str.rbegin()))
+        {
+            string::reverse_iterator it = str.rbegin();
+            while (it != str.rend() && isspace(*it))
+            {
+                it++;
+            }
+
+            str.erase(it.base(), str.end());
+        }
     }
 
     return str;
@@ -76,22 +91,48 @@ HttpRequest* HttpRequest::parse(string data)
     /** The headers are now processed and consumed. The message body is
      * the only thing left in the request string. */
 
+    bool ok = false;
     HttpRequest* request = NULL;
     enum http_verb verb_value = string_to_http_verb(verb);
+    json_error_t json_error = {};
+    json_t* body = NULL;
+
+    /** Remove leading and trailing whitespace */
+    if (data.length())
+    {
+        mxs::trim(data);
+    }
 
     if (http_version == "HTTP/1.1" && verb_value != HTTP_UNKNOWN)
+    {
+        if (data.length() && (body = json_loads(data.c_str(), 0, &json_error)) == NULL)
+        {
+            MXS_DEBUG("JSON error in input on line %d column %d: %s (%s)",
+                      json_error.line, json_error.column, json_error.text,
+                      data.c_str());
+        }
+        else
+        {
+            ok = true;
+        }
+    }
+
+    if (ok)
     {
         request = new HttpRequest();
         request->m_verb = verb_value;
         request->m_resource = uri;
         request->m_headers = headers;
-        request->m_body = data;
+        request->m_json.reset(body);
+        request->m_json_string = data;
     }
 
     return request;
 }
 
-HttpRequest::HttpRequest()
+HttpRequest::HttpRequest():
+    m_json(NULL),
+    m_verb(HTTP_UNKNOWN)
 {
 
 }
