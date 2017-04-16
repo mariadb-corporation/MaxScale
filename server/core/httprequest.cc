@@ -11,41 +11,34 @@
  * Public License.
  */
 
-#include "maxscale/httpparser.hh"
+#include "maxscale/httprequest.hh"
 
 #include <ctype.h>
 
-static enum http_verb string_to_http_verb(string& verb)
+/** TODO: Move this to a C++ string utility header */
+namespace maxscale
 {
-    if (verb == "GET")
+static inline string& trim(string& str)
+{
+    while (isspace(*str.begin()))
     {
-        return HTTP_GET;
-    }
-    else if (verb == "POST")
-    {
-        return HTTP_POST;
-    }
-    else if (verb == "PUT")
-    {
-        return HTTP_PUT;
-    }
-    else if (verb == "PATCH")
-    {
-        return HTTP_PATCH;
-    }
-    else if (verb == "OPTIONS")
-    {
-        return HTTP_OPTIONS;
+        str.erase(str.begin());
     }
 
-    return HTTP_UNKNOWN;
+    while (isspace(*str.rbegin()))
+    {
+        str.erase(str.rbegin().base());
+    }
+
+    return str;
+}
 }
 
-HttpParser* HttpParser::parse(string request)
+HttpRequest* HttpRequest::parse(string data)
 {
-    size_t pos = request.find("\r\n");
-    string request_line = request.substr(0, pos);
-    request.erase(0, pos + 2);
+    size_t pos = data.find("\r\n");
+    string request_line = data.substr(0, pos);
+    data.erase(0, pos + 2);
 
     pos = request_line.find(" ");
     string verb = request_line.substr(0, pos);
@@ -61,10 +54,10 @@ HttpParser* HttpParser::parse(string request)
 
     map<string, string> headers;
 
-    while ((pos = request.find("\r\n")) != string::npos)
+    while ((pos = data.find("\r\n")) != string::npos)
     {
-        string header_line = request.substr(0, pos);
-        request.erase(0, pos + 2);
+        string header_line = data.substr(0, pos);
+        data.erase(0, pos + 2);
 
         if (header_line.length() == 0)
         {
@@ -76,37 +69,34 @@ HttpParser* HttpParser::parse(string request)
         {
             string key = header_line.substr(0, pos);
             header_line.erase(0, pos + 1);
-
-            while (isspace(header_line[0]))
-            {
-                header_line.erase(0, 1);
-            }
-
-            headers[key] = header_line;
+            headers[key] = mxs::trim(header_line);
         }
     }
 
-    HttpParser* parser = NULL;
+    /** The headers are now processed and consumed. The message body is
+     * the only thing left in the request string. */
+
+    HttpRequest* request = NULL;
     enum http_verb verb_value = string_to_http_verb(verb);
 
     if (http_version == "HTTP/1.1" && verb_value != HTTP_UNKNOWN)
     {
-        parser = new HttpParser();
-        parser->m_verb = verb_value;
-        parser->m_resource = uri;
-        parser->m_headers = headers;
-        parser->m_body = request;
+        request = new HttpRequest();
+        request->m_verb = verb_value;
+        request->m_resource = uri;
+        request->m_headers = headers;
+        request->m_body = data;
     }
 
-    return parser;
+    return request;
 }
 
-HttpParser::HttpParser()
+HttpRequest::HttpRequest()
 {
 
 }
 
-HttpParser::~HttpParser()
+HttpRequest::~HttpRequest()
 {
 
 }

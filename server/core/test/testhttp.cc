@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include "../maxscale/httpparser.hh"
+#include "../maxscale/httprequest.hh"
 
 #include <sstream>
 
@@ -88,7 +88,7 @@ int test_basic()
             {
                 stringstream ss;
                 ss << verbs_pass[i] << " " << paths_pass[j] << " " << proto_pass[k] << "\r\n\r\n";
-                SHttpParser parser(HttpParser::parse(ss.str()));
+                SHttpRequest parser(HttpRequest::parse(ss.str()));
                 TEST(parser.get() != NULL, "Valid HTTP request should be parsed: %s", ss.str().c_str());
                 TEST(parser->get_resource() == string(paths_pass[j]),
                      "The request path '%s' should be correct: %s",
@@ -106,7 +106,7 @@ int test_basic()
             {
                 stringstream ss;
                 ss << verbs_fail[i] << " " << paths_fail[j] << " " << proto_fail[k] << "\r\n\r\n";
-                SHttpParser parser(HttpParser::parse(ss.str()));
+                SHttpRequest parser(HttpRequest::parse(ss.str()));
                 TEST(parser.get() == NULL, "Invalid HTTP request should not be parsed: %s", ss.str().c_str());
             }
         }
@@ -148,8 +148,8 @@ int test_headers()
     {
         stringstream ss;
         ss <<  "GET / HTTP/1.1\r\n" << headers_pass[i].key << ": "
-            << headers_pass[i].value <<"\r\n\r\n";
-        SHttpParser parser(HttpParser::parse(ss.str()));
+           << headers_pass[i].value << "\r\n\r\n";
+        SHttpRequest parser(HttpRequest::parse(ss.str()));
         TEST(parser.get() != NULL, "Valid HTTP request should be parsed: %s", ss.str().c_str());
         TEST(parser->get_header(headers_pass[i].key).length() > 0, "Header should be found");
         TEST(parser->get_header(headers_pass[i].key) == string(headers_pass[i].value),

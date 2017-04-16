@@ -18,26 +18,18 @@
 #include <map>
 #include <tr1/memory>
 
+#include "http.hh"
+
 using std::shared_ptr;
 using std::string;
 using std::map;
 
-class HttpParser;
+class HttpRequest;
 
 /** Typedef for managed pointer */
-typedef std::shared_ptr<HttpParser> SHttpParser;
+typedef std::shared_ptr<HttpRequest> SHttpRequest;
 
-enum http_verb
-{
-    HTTP_UNKNOWN,
-    HTTP_GET,
-    HTTP_PUT,
-    HTTP_POST,
-    HTTP_OPTIONS,
-    HTTP_PATCH
-};
-
-class HttpParser
+class HttpRequest
 {
 public:
     /**
@@ -47,9 +39,9 @@ public:
      *
      * @return Parsed statement or NULL if request is not valid
      */
-    static HttpParser* parse(string request);
+    static HttpRequest* parse(string request);
 
-    ~HttpParser();
+    ~HttpRequest();
 
     /**
      * @brief Return request verb type
@@ -113,11 +105,6 @@ public:
         return m_body;
     }
 
-    void set_body(string body)
-    {
-        m_body = body;
-    }
-
     /**
      * @brief Get request resource
      *
@@ -129,9 +116,9 @@ public:
     }
 
 private:
-    HttpParser();
-    HttpParser(const HttpParser&);
-    HttpParser& operator = (const HttpParser&);
+    HttpRequest();
+    HttpRequest(const HttpRequest&);
+    HttpRequest& operator = (const HttpRequest&);
 
     map<string, string> m_headers;
     string              m_body;

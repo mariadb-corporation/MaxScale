@@ -12,7 +12,7 @@
  */
 
 #include "maxscale/adminclient.hh"
-#include "maxscale/httpparser.hh"
+#include "maxscale/httprequest.hh"
 
 #include <string>
 #include <sstream>
@@ -77,9 +77,14 @@ static bool read_request(int fd, string& output)
     return true;
 }
 
-static bool write_response(int fd, string input)
+static bool write_response(int fd, enum http_code code, const string& body)
 {
-    return write(fd, input.c_str(), input.length()) != -1;
+    string payload = "HTTP/1.1 ";
+    payload += http_code_to_string(code);
+    payload += "\r\n\r\n";
+    payload += body;
+
+    return write(fd, payload.c_str(), payload.length()) != -1;
 }
 
 void AdminClient::process()
@@ -89,15 +94,12 @@ void AdminClient::process()
 
     if (read_request(m_fd, request))
     {
-        SHttpParser parser(HttpParser::parse(request));
+        SHttpRequest parser(HttpRequest::parse(request));
 
-        string status = parser.get() ? "200 OK" : "400 Bad Request";
-
-        stringstream resp;
-        resp << "HTTP/1.1 " << status << "\r\n\r\n" << parser->get_body() << "\r\n";
+        enum http_code status = parser.get() ? HTTP_200_OK : HTTP_400_BAD_REQUEST;
 
         atomic_write_int64(&m_last_activity, hkheartbeat);
-        write_response(m_fd, resp.str());
+        write_response(m_fd, HTTP_200_OK, parser->get_body());
     }
     else
     {
