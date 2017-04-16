@@ -28,7 +28,8 @@ enum http_verb
     HTTP_PUT,
     HTTP_POST,
     HTTP_OPTIONS,
-    HTTP_PATCH
+    HTTP_PATCH,
+    HTTP_HEAD
 };
 
 /** Possible HTTP return codes */
@@ -101,6 +102,10 @@ static inline enum http_verb string_to_http_verb(string& verb)
     {
         return HTTP_OPTIONS;
     }
+    else if (verb == "HEAD")
+    {
+        return HTTP_HEAD;
+    }
 
     return HTTP_UNKNOWN;
 }
@@ -126,6 +131,8 @@ static inline const char* http_verb_to_string(enum http_verb verb)
         return "PATCH";
     case HTTP_OPTIONS:
         return "OPTIONS";
+    case HTTP_HEAD:
+        return "HEAD";
     default:
         return "UNKNOWN";
     }

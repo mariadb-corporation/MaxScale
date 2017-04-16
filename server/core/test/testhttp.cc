@@ -27,6 +27,7 @@ const char* verbs_pass[] =
     "POST",
     "OPTIONS",
     "PATCH",
+    "HEAD",
     NULL
 };
 
@@ -264,27 +265,42 @@ const char* body_fail[] =
     NULL
 };
 
+const char* body_verbs_pass[] =
+{
+    "PUT",
+    "POST",
+    "PATCH",
+    NULL
+};
+
 int test_message_body()
 {
     for (int i = 0; body_pass[i]; i++)
     {
-        stringstream ss;
-        ss << "GET / HTTP/1.1\r\n\r\n" << body_pass[i];
-        SHttpRequest parser(HttpRequest::parse(ss.str()));
-        TEST(parser.get() != NULL, "Valid request body should be parsed: %s",
-             ss.str().c_str());
-        TEST(parser->get_json(), "Body should be found");
-        TEST(parser->get_json_str() == body_pass[i], "Body value should be correct: %s",
-             parser->get_json_str().c_str());
+        for (int j = 0; body_verbs_pass[j]; j++)
+        {
+            /** Only PUT/POST/PATCH methods should have request bodies */
+            stringstream ss;
+            ss << body_verbs_pass[j] << " / HTTP/1.1\r\n\r\n" << body_pass[i];
+            SHttpRequest parser(HttpRequest::parse(ss.str()));
+            TEST(parser.get() != NULL, "Valid request body should be parsed: %s",
+                 ss.str().c_str());
+            TEST(parser->get_json(), "Body should be found");
+            TEST(parser->get_json_str() == body_pass[i], "Body value should be correct: %s",
+                 parser->get_json_str().c_str());
+        }
     }
 
     for (int i = 0; body_pass[i]; i++)
     {
-        stringstream ss;
-        ss << "GET / HTTP/1.1\r\n\r\n" << body_fail[i];
-        SHttpRequest parser(HttpRequest::parse(ss.str()));
-        TEST(parser.get() == NULL, "Invalid request body should not be parsed: %s",
-             ss.str().c_str());
+        for (int j = 0; verbs_pass[j]; j++)
+        {
+            stringstream ss;
+            ss << verbs_pass[j] << " / HTTP/1.1\r\n\r\n" << body_fail[i];
+            SHttpRequest parser(HttpRequest::parse(ss.str()));
+            TEST(parser.get() == NULL, "Invalid request body should not be parsed: %s",
+                 ss.str().c_str());
+        }
     }
 
     return 0;
