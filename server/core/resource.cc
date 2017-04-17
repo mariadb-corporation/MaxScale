@@ -139,10 +139,13 @@ class MonitorsResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+
         if (request.uri_part_count() == 1)
         {
+            Closer<json_t*> monitors(monitor_list_to_json());
             // Show all monitors
-            return HttpResponse(HTTP_200_OK);
+            return HttpResponse(HTTP_200_OK, mxs::json_dump(monitors, flags));
         }
         else
         {
@@ -150,8 +153,9 @@ protected:
 
             if (monitor)
             {
+                Closer<json_t*> monitor_js(monitor_to_json(monitor));
                 // Show one monitor
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(HTTP_200_OK, mxs::json_dump(monitor_js, flags));
             }
             else
             {

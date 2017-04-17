@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <mysqld_error.h>
@@ -47,6 +48,8 @@
 #include "maxscale/externcmd.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
+
+using std::string;
 
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
@@ -1507,4 +1510,85 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             }
         }
     }
+}
+
+static const char* monitor_state_to_string(int state)
+{
+    switch (state)
+    {
+    case MONITOR_STATE_RUNNING:
+        return "Running";
+
+    case MONITOR_STATE_STOPPING:
+        return "Stopping";
+
+    case MONITOR_STATE_STOPPED:
+        return "Stopped";
+
+    case MONITOR_STATE_ALLOC:
+        return "Allocated";
+
+    default:
+        ss_dassert(false);
+        return "Unknown";
+    }
+}
+
+json_t* monitor_to_json(const MXS_MONITOR* monitor)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "name", json_string(monitor->name));
+    json_object_set_new(rval, "state", json_string(monitor_state_to_string(monitor->state)));
+
+    json_object_set_new(rval, "monitor_interval", json_integer(monitor->interval));
+
+    json_object_set_new(rval, "connect_timeout", json_integer(monitor->connect_timeout));
+    json_object_set_new(rval, "read_timeout", json_integer(monitor->read_timeout));
+    json_object_set_new(rval, "write_timeout", json_integer(monitor->write_timeout));
+    json_object_set_new(rval, "connect_attempts", json_integer(monitor->connect_attempts));
+
+    if (monitor->databases)
+    {
+        json_t* arr = json_array();
+
+        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        {
+            string serv = "/servers/";
+            serv += db->server->unique_name;
+            json_array_append_new(arr, json_string(serv.c_str()));
+        }
+
+        json_object_set_new(rval, "servers", arr);
+    }
+
+
+    if (monitor->handle && monitor->module->diagnostics)
+    {
+        // TODO: Add monitor diagnostics
+        //monitor->module->diagnostics(dcb, monitor);
+    }
+
+    return rval;
+}
+
+json_t* monitor_list_to_json()
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        json_t *json = monitor_to_json(mon);
+
+        if (json)
+        {
+            json_array_append_new(rval, json);
+        }
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
 }

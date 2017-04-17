@@ -244,4 +244,20 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
  */
 void mon_hangup_failed_servers(MXS_MONITOR *monitor);
 
+/**
+ * @brief Convert monitor to JSON
+ *
+ * @param monitor Monitor to convert
+ *
+ * @return JSON representation of the monitor
+ */
+json_t* monitor_to_json(const MXS_MONITOR* monitor);
+
+/**
+ * @brief Convert all monitors to JSON
+ *
+ * @return JSON array containing all monitors
+ */
+json_t* monitor_list_to_json();
+
 MXS_END_DECLS
