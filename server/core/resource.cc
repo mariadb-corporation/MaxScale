@@ -16,6 +16,10 @@
 #include "maxscale/resource.hh"
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
+#include "maxscale/session.h"
+#include "maxscale/filter.h"
+#include "maxscale/monitor.h"
+#include "maxscale/service.h"
 
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
@@ -37,7 +41,25 @@ class ServersResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        if (request.uri_part_count() == 1)
+        {
+            // Show all servers
+            return HttpResponse(HTTP_200_OK);
+        }
+        else
+        {
+            SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+
+            if (server)
+            {
+                // Show one server
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_404_NOT_FOUND);
+            }
+        }
     }
 };
 
@@ -46,7 +68,25 @@ class ServicesResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        if (request.uri_part_count() == 1)
+        {
+            // Show all services
+            return HttpResponse(HTTP_200_OK);
+        }
+        else
+        {
+            SERVICE* service = service_find(request.uri_part(1).c_str());
+
+            if (service)
+            {
+                // Show one service
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_404_NOT_FOUND);
+            }
+        }
     }
 };
 
@@ -55,11 +95,85 @@ class FiltersResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        if (request.uri_part_count() == 1)
+        {
+            // Show all filters
+            return HttpResponse(HTTP_200_OK);
+        }
+        else
+        {
+            MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
+
+            if (filter)
+            {
+                // Show one filter
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_404_NOT_FOUND);
+            }
+        }
     }
 };
 
 class MonitorsResource: public Resource
+{
+protected:
+    HttpResponse handle(HttpRequest& request)
+    {
+        if (request.uri_part_count() == 1)
+        {
+            // Show all monitors
+            return HttpResponse(HTTP_200_OK);
+        }
+        else
+        {
+            MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+
+            if (monitor)
+            {
+                // Show one monitor
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_404_NOT_FOUND);
+            }
+        }
+    }
+};
+
+class SessionsResource: public Resource
+{
+protected:
+    HttpResponse handle(HttpRequest& request)
+    {
+        if (request.uri_part_count() == 1)
+        {
+            // Show all sessions
+            return HttpResponse(HTTP_200_OK);
+        }
+        else
+        {
+            int id = atoi(request.uri_part(1).c_str());
+            MXS_SESSION* session = session_get_by_id(id);
+
+            if (session)
+            {
+                session_put_ref(session);
+                // Show session statistics
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_404_NOT_FOUND);
+            }
+        }
+    }
+};
+
+class UsersResource: public Resource
 {
 protected:
     HttpResponse handle(HttpRequest& request)
@@ -73,24 +187,52 @@ class LogsResource : public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        if (request.uri_part(2) == "flush")
+        {
+            // Flush logs
+            if (mxs_log_rotate() == 0)
+            {
+                return HttpResponse(HTTP_200_OK);
+            }
+            else
+            {
+                return HttpResponse(HTTP_500_INTERNAL_SERVER_ERROR);
+            }
+        }
+        else
+        {
+            // Show log status
+            return HttpResponse(HTTP_200_OK);
+        }
     }
 };
 
-class SessionsResource: public Resource
+class ThreadsResource : public Resource
 {
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        // Show thread status
         return HttpResponse(HTTP_200_OK);
     }
 };
 
-class UsersResource: public Resource
+class TasksResource : public Resource
 {
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        // Show housekeeper tasks
+        return HttpResponse(HTTP_200_OK);
+    }
+};
+
+class ModulesResource : public Resource
+{
+protected:
+    HttpResponse handle(HttpRequest& request)
+    {
+        // Show modules
         return HttpResponse(HTTP_200_OK);
     }
 };
@@ -101,6 +243,9 @@ public:
     CoreResource()
     {
         m_children["logs"] = SResource(new LogsResource());
+        m_children["threads"] = SResource(new ThreadsResource());
+        m_children["tasks"] = SResource(new TasksResource());
+        m_children["modules"] = SResource(new ModulesResource());
     }
 
 protected:
