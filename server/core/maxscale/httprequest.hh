@@ -74,12 +74,32 @@ public:
      *
      * @param header Header to get
      *
-     * @return String value or empty string if no header found
+     * @return Header value or empty string if the header was not found
      */
-    const string get_header(const string header)
+    string get_header(const string header) const
     {
         string rval;
-        map<string, string>::iterator it = m_headers.find(header);
+        map<string, string>::const_iterator it = m_headers.find(header);
+
+        if (it != m_headers.end())
+        {
+            rval = it->second;
+        }
+
+        return rval;
+    }
+
+    /**
+     * @brief Get option value
+     *
+     * @param header Option to get
+     *
+     * @return Option value or empty string if the option was not found
+     */
+    string get_option(const string option) const
+    {
+        string rval;
+        map<string, string>::const_iterator it = m_options.find(option);
 
         if (it != m_headers.end())
         {
@@ -125,6 +145,7 @@ private:
     HttpRequest& operator = (const HttpRequest&);
 
     map<string, string> m_headers;     /**< Request headers */
+    map<string, string> m_options;     /**< Request options */
     Closer<json_t*>     m_json;        /**< Request body */
     string              m_json_string; /**< String version of @c m_json */
     string              m_resource;    /**< Requested resource */

@@ -42,18 +42,22 @@ const char* verbs_fail[] =
     NULL
 };
 
-const char* paths_pass[] =
+static struct
 {
-    "/",
-    "*",
-    "/test/",
-    "/test",
-    "/servers/list",
-    "/servers/list/",
-    "/?test=true",
-    "/test/?test=y",
-    "/?",
-    NULL
+    const char* input;
+    const char* output;
+} paths_pass[] =
+{
+    { "/", "/" },
+    { "*", "*" },
+    { "/test/", "/test/" },
+    { "/test", "/test" },
+    { "/servers/list", "/servers/list" },
+    { "/servers/list/", "/servers/list/" },
+    { "/?test=true", "/" },
+    { "/test/?test=y", "/test/" },
+    { "/?", "/" },
+    {}
 };
 
 const char* paths_fail[] =
@@ -84,17 +88,17 @@ int test_basic()
     /** Test parts that should pass */
     for (int i = 0; verbs_pass[i]; i++)
     {
-        for (int j = 0; paths_pass[j]; j++)
+        for (int j = 0; paths_pass[j].input; j++)
         {
             for (int k = 0; proto_pass[k]; k++)
             {
                 stringstream ss;
-                ss << verbs_pass[i] << " " << paths_pass[j] << " " << proto_pass[k] << "\r\n\r\n";
+                ss << verbs_pass[i] << " " << paths_pass[j].input << " " << proto_pass[k] << "\r\n\r\n";
                 SHttpRequest parser(HttpRequest::parse(ss.str()));
                 TEST(parser.get() != NULL, "Valid HTTP request should be parsed: %s", ss.str().c_str());
-                TEST(parser->get_resource() == string(paths_pass[j]),
+                TEST(parser->get_resource() == string(paths_pass[j].output),
                      "The request path '%s' should be correct: %s",
-                     paths_pass[j], parser->get_resource().c_str());
+                     paths_pass[j].output, parser->get_resource().c_str());
             }
         }
     }
@@ -302,6 +306,63 @@ int test_message_body()
             TEST(parser.get() == NULL, "Invalid request body should not be parsed: %s",
                  ss.str().c_str());
         }
+    }
+
+    return 0;
+}
+
+static struct
+{
+    const char* input;
+    const char* key;
+    const char* value;
+} options_pass[] =
+{
+    { "/", "", "" },
+    { "*", "", "" },
+    { "/?a=b", "a", "b" },
+    { "/?a=b,c=d", "a", "b" },
+    { "/?a=b,c=d", "c", "d" },
+    { "/test?q=w", "q", "w" },
+    { "/servers/list?all=false", "all", "false" },
+    { "/servers/list/?pretty=true", "pretty", "true"},
+    { "/?test=true", "test", "true" },
+    { "/test/?test=y", "test", "y" },
+    { "/?", "", "" },
+    {}
+};
+
+const char* options_fail[] =
+{
+    "/?,",
+    "/??",
+    "/test?/",
+    "/test/?a,b",
+    "/test?a,",
+    NULL
+};
+
+int test_options()
+{
+    for (int i = 0; options_pass[i].input; i++)
+    {
+        stringstream ss;
+        ss << "GET " << options_pass[i].input << " HTTP/1.1\r\n\r\n";
+        SHttpRequest parser(HttpRequest::parse(ss.str()));
+
+        TEST(parser.get() != NULL, "Valid option should be parsed: %s", ss.str().c_str());
+        TEST(parser->get_option(options_pass[i].key) == options_pass[i].value,
+             "The option value for '%s' should be '%s': %s",
+             options_pass[i].key, options_pass[i].value,
+             parser->get_option(options_pass[i].key).c_str());
+    }
+
+    for (int i = 0; options_fail[i]; i++)
+    {
+        stringstream ss;
+        ss << "GET " << options_fail[i] << " HTTP/1.1\r\n\r\n";
+        SHttpRequest parser(HttpRequest::parse(ss.str()));
+        TEST(parser.get() == NULL, "Invalid option should not be parsed: %s", ss.str().c_str());
     }
 
     return 0;
