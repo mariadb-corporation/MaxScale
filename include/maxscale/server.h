@@ -273,7 +273,7 @@ bool server_is_mxs_service(const SERVER *server);
  *
  * @return JSON representation of server or NULL if an error occurred
  */
-json_t* server_to_json(SERVER* server);
+json_t* server_to_json(const SERVER* server);
 
 /**
  * @brief Convert all servers into JSON format

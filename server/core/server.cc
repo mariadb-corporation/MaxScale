@@ -444,6 +444,7 @@ dprintAllServersJson(DCB *dcb)
     char* dump = json_dumps(all_servers, JSON_INDENT(4));
     dcb_printf(dcb, "%s", dump);
     MXS_FREE(dump);
+    json_decref(all_servers);
 }
 
 /**
@@ -1394,7 +1395,7 @@ json_t* server_list_to_json()
     return rval;
 }
 
-json_t* server_to_json(SERVER* server)
+json_t* server_to_json(const SERVER* server)
 {
     // TODO: Add error checks
     json_t* rval = json_object();
