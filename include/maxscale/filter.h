@@ -253,7 +253,7 @@ MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
  *
  * @return Filter converted to JSON format
  */
-json_t* filter_to_json(MXS_FILTER_DEF* filter);
+json_t* filter_to_json(const MXS_FILTER_DEF* filter);
 
 /**
  * @brief Convert all filters into JSON

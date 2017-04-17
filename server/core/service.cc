@@ -2352,21 +2352,21 @@ static const char* service_state_to_string(int state)
 {
     switch (state)
     {
-        case SERVICE_STATE_STARTED:
-            return "Started";
+    case SERVICE_STATE_STARTED:
+        return "Started";
 
-        case SERVICE_STATE_STOPPED:
-            return "Stopped";
+    case SERVICE_STATE_STOPPED:
+        return "Stopped";
 
-        case SERVICE_STATE_FAILED:
-            return "Failed";
+    case SERVICE_STATE_FAILED:
+        return "Failed";
 
-        case SERVICE_STATE_ALLOC:
-            return "Allocated";
+    case SERVICE_STATE_ALLOC:
+        return "Allocated";
 
-        default:
-            ss_dassert(false);
-            return "Unknown";
+    default:
+        ss_dassert(false);
+        return "Unknown";
     }
 }
 

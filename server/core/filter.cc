@@ -467,7 +467,7 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     return me;
 }
 
-json_t* filter_to_json(MXS_FILTER_DEF* filter)
+json_t* filter_to_json(const MXS_FILTER_DEF* filter)
 {
     json_t* rval = json_object();
     json_object_set_new(rval, "name", json_string(filter->name));
