@@ -436,99 +436,14 @@ dprintAllServers(DCB *dcb)
 
 /**
  * Print all servers in Json format to a DCB
- *
- * Designed to be called within a debugger session in order
- * to display all active servers within the gateway
  */
 void
 dprintAllServersJson(DCB *dcb)
 {
-    char *stat;
-    int len = 0;
-    int el = 1;
-
-    spinlock_acquire(&server_spin);
-    SERVER *server = next_active_server(allServers);
-    while (server)
-    {
-        server = next_active_server(server->next);
-        len++;
-    }
-
-    server = next_active_server(allServers);
-
-    dcb_printf(dcb, "[\n");
-    while (server)
-    {
-        dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
-                   server->name);
-        stat = server_status(server);
-        dcb_printf(dcb, "    \"status\": \"%s\",\n",
-                   stat);
-        MXS_FREE(stat);
-        dcb_printf(dcb, "    \"protocol\": \"%s\",\n",
-                   server->protocol);
-        dcb_printf(dcb, "    \"port\": \"%d\",\n",
-                   server->port);
-        if (server->server_string)
-        {
-            dcb_printf(dcb, "    \"version\": \"%s\",\n",
-                       server->server_string);
-        }
-        dcb_printf(dcb, "    \"nodeId\": \"%ld\",\n",
-                   server->node_id);
-        dcb_printf(dcb, "    \"masterId\": \"%ld\",\n",
-                   server->master_id);
-        if (server->slaves)
-        {
-            int i;
-            dcb_printf(dcb, "    \"slaveIds\": [ ");
-            for (i = 0; server->slaves[i]; i++)
-            {
-                if (i == 0)
-                {
-                    dcb_printf(dcb, "%li", server->slaves[i]);
-                }
-                else
-                {
-                    dcb_printf(dcb, ", %li ", server->slaves[i]);
-                }
-            }
-            dcb_printf(dcb, "],\n");
-        }
-        dcb_printf(dcb, "    \"replDepth\": \"%d\",\n",
-                   server->depth);
-        if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
-        {
-            if (server->rlag >= 0)
-            {
-                dcb_printf(dcb, "    \"slaveDelay\": \"%d\",\n", server->rlag);
-            }
-        }
-        if (server->node_ts > 0)
-        {
-            dcb_printf(dcb, "    \"lastReplHeartbeat\": \"%lu\",\n", server->node_ts);
-        }
-        dcb_printf(dcb, "    \"totalConnections\": \"%d\",\n",
-                   server->stats.n_connections);
-        dcb_printf(dcb, "    \"currentConnections\": \"%d\",\n",
-                   server->stats.n_current);
-        dcb_printf(dcb, "    \"currentOps\": \"%d\"\n",
-                   server->stats.n_current_ops);
-        if (el < len)
-        {
-            dcb_printf(dcb, "  },\n");
-        }
-        else
-        {
-            dcb_printf(dcb, "  }\n");
-        }
-        server = next_active_server(server->next);
-        el++;
-    }
-
-    dcb_printf(dcb, "]\n");
-    spinlock_release(&server_spin);
+    json_t* all_servers = server_list_to_json();
+    char* dump = json_dumps(all_servers, JSON_INDENT(4));
+    dcb_printf(dcb, "%s", dump);
+    MXS_FREE(dump);
 }
 
 /**
@@ -1447,6 +1362,91 @@ bool server_is_mxs_service(const SERVER *server)
             rval = true;
         }
     }
+
+    return rval;
+}
+
+json_t* server_list_to_json()
+{
+    json_t* rval = json_array();
+
+    if (rval)
+    {
+        spinlock_acquire(&server_spin);
+
+        for (SERVER* server = allServers; server; server = server->next)
+        {
+            json_t* srv_json = server_to_json(server);
+
+            if (srv_json == NULL)
+            {
+                json_decref(rval);
+                rval = NULL;
+                break;
+            }
+
+            json_array_append_new(rval, srv_json);
+        }
+
+        spinlock_release(&server_spin);
+    }
+
+    return rval;
+}
+
+json_t* server_to_json(SERVER* server)
+{
+    // TODO: Add error checks
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "name", json_string(server->unique_name));
+    json_object_set_new(rval, "address", json_string(server->name));
+    json_object_set_new(rval, "port", json_integer(server->port));
+
+    char* stat = server_status(server);
+    json_object_set_new(rval, "status", json_string(stat));
+    MXS_FREE(stat);
+
+    json_object_set_new(rval, "protocol", json_string(server->protocol));
+
+    if (server->server_string)
+    {
+        json_object_set_new(rval, "version", json_string(server->server_string));
+    }
+
+    json_object_set_new(rval, "node_id", json_integer(server->node_id));
+    json_object_set_new(rval, "master_id", json_integer(server->master_id));
+    json_object_set_new(rval, "replication_depth", json_integer(server->depth));
+
+    if (server->slaves)
+    {
+        json_t* slaves = json_array();
+
+        for (int i = 0; server->slaves[i]; i++)
+        {
+            json_array_append(slaves, json_integer(server->slaves[i]));
+        }
+
+        json_object_set_new(rval, "slaves", slaves);
+    }
+
+    if (server->rlag >= 0)
+    {
+        json_object_set_new(rval, "replication_lag", json_integer(server->rlag));
+    }
+
+    if (server->node_ts > 0)
+    {
+        json_object_set_new(rval, "last_heartbeat", json_integer(server->node_ts));
+    }
+
+    json_t* stats = json_object();
+
+    json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
+    json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
+    json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
+
+    json_object_set_new(rval, "statictics", stats);
 
     return rval;
 }

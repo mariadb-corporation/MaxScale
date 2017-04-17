@@ -21,6 +21,7 @@
 #include <maxscale/cdefs.h>
 #include <maxscale/dcb.h>
 #include <maxscale/resultset.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -264,6 +265,22 @@ bool server_remove_parameter(SERVER *server, const char *name);
  * @return True if the server points to a local MaxScale service
  */
 bool server_is_mxs_service(const SERVER *server);
+
+/**
+ * @brief Convert a server to JSON format
+ *
+ * @param server Server to convert
+ *
+ * @return JSON representation of server or NULL if an error occurred
+ */
+json_t* server_to_json(SERVER* server);
+
+/**
+ * @brief Convert all servers into JSON format
+ *
+ * @return JSON array of servers or NULL if an error occurred
+ */
+json_t* server_list_to_json();
 
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);
