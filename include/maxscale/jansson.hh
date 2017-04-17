@@ -13,8 +13,12 @@
  */
 
 #include <maxscale/cppdefs.hh>
+
+#include <string>
+
 #include <maxscale/jansson.h>
 #include <maxscale/utils.hh>
+#include <maxscale/alloc.h>
 
 namespace maxscale
 {
@@ -40,5 +44,31 @@ struct CloserTraits<json_t*>
         pJson = NULL;
     }
 };
+
+/**
+ * @brief Convenience function for dumping JSON into a string
+ *
+ * @param json JSON to dump
+ *
+ * @return The JSON in string format
+ */
+static inline std::string json_dump(const json_t* json, int flags = 0)
+{
+    std::string rval;
+    char* js = json_dumps(json, flags);
+
+    if (js)
+    {
+        rval = js;
+        MXS_FREE(js);
+    }
+
+    return rval;
+}
+
+static inline std::string json_dump(const Closer<json_t*>& json, int flags = 0)
+{
+    return json_dump(json.get(), flags);
+}
 
 }

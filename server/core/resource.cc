@@ -13,6 +13,9 @@
 
 #include <maxscale/spinlock.hh>
 
+#include <maxscale/alloc.h>
+#include <maxscale/jansson.hh>
+
 #include "maxscale/resource.hh"
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -41,10 +44,13 @@ class ServersResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+
         if (request.uri_part_count() == 1)
         {
-            // Show all servers
-            return HttpResponse(HTTP_200_OK);
+            // TODO: Generate this via the inter-thread messaging system
+            Closer<json_t*> servers(server_list_to_json());
+            return HttpResponse(HTTP_200_OK, mxs::json_dump(servers, flags));
         }
         else
         {
@@ -52,8 +58,10 @@ protected:
 
             if (server)
             {
+                // TODO: Generate this via the inter-thread messaging system
+                Closer<json_t*> server_js(server_to_json(server));
                 // Show one server
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(HTTP_200_OK, mxs::json_dump(server_js, flags));
             }
             else
             {
@@ -161,9 +169,12 @@ protected:
 
             if (session)
             {
+                int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+                // TODO: Generate this via the inter-thread messaging system
+                Closer<json_t*> ses_json(session_to_json(session));
                 session_put_ref(session);
                 // Show session statistics
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(HTTP_200_OK, mxs::json_dump(ses_json, flags));
             }
             else
             {
