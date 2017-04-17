@@ -71,7 +71,39 @@ enum http_code
     HTTP_507_INSUFFICIENT_STORAGE,
     HTTP_508_LOOP_DETECTED,
     HTTP_510_NOT_EXTENDED
+};
+
+/** Supported authentication types */
+enum http_auth
+{
+    HTTP_AUTH_NONE,
+    HTTP_AUTH_BASIC,
+    HTTP_AUTH_DIGEST
 } ;
+
+/**
+ * @brief Convert auth type to string
+ *
+ * @param auth Authentication value to convert
+ *
+ * @return Converted value in string format
+ */
+static inline const char* http_auth_to_string(enum http_auth auth)
+{
+    switch (auth)
+    {
+    case HTTP_AUTH_NONE:
+        return "None";
+    case HTTP_AUTH_BASIC:
+        return "Basic";
+    case HTTP_AUTH_DIGEST:
+        return "Digest";
+
+    default:
+        ss_dassert(false);
+        return "";
+    }
+}
 
 /**
  * @brief Convert string to HTTP verb
@@ -225,4 +257,21 @@ static inline const char* http_code_to_string(enum http_code code)
         ss_dassert(false);
         return "500 Internal Server Error";
     }
+}
+
+/**
+ * @brief Return the current HTTP-date
+ *
+ * @return The RFC 1123 compliant date
+ */
+static inline string get_http_date()
+{
+    time_t now = time(NULL);
+    struct tm tm;
+    char buf[200]; // Enough to store all dates
+
+    gmtime_r(&now, &tm);
+    strftime(buf, sizeof(buf), "%a, %d %b %y %T GMT", &tm);
+
+    return string(buf);
 }

@@ -19,6 +19,7 @@
 
 #include <maxscale/thread.h>
 
+#include "http.hh"
 #include "adminclient.hh"
 
 using std::deque;
@@ -29,8 +30,9 @@ typedef deque<SAdminClient> ClientList;
 /** The admin interface configuration */
 struct AdminConfig
 {
-    string   host;
-    uint16_t port;
+    string         host;
+    uint16_t       port;
+    enum http_auth auth;
 };
 
 class AdminListener

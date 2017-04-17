@@ -34,12 +34,12 @@ class HttpResponse
 {
 public:
     /**
-      * @brief Create a new HTTP response
-      *
-      * @param request Response body
-      */
-    static HttpResponse* create(string response = "", enum http_code code = HTTP_200_OK);
-    static HttpResponse* create(json_t* response, enum http_code code = HTTP_200_OK);
+     * @brief Create new HTTP response
+     *
+     * @param response Response body
+     * @param code     HTTP return code
+     */
+    HttpResponse(string response = "", enum http_code code = HTTP_200_OK);
 
     ~HttpResponse();
 
@@ -59,7 +59,6 @@ public:
     string get_response() const;
 
 private:
-    HttpResponse(string response, enum http_code code);
     HttpResponse(const HttpResponse&);
     HttpResponse& operator = (const HttpResponse&);
 

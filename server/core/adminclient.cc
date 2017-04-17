@@ -13,6 +13,7 @@
 
 #include "maxscale/adminclient.hh"
 #include "maxscale/httprequest.hh"
+#include "maxscale/httpresponse.hh"
 
 #include <string>
 #include <sstream>
@@ -77,14 +78,9 @@ static bool read_request(int fd, string& output)
     return true;
 }
 
-static bool write_response(int fd, enum http_code code, const string& body)
+static bool write_response(int fd, const string& body)
 {
-    string payload = "HTTP/1.1 ";
-    payload += http_code_to_string(code);
-    payload += "\r\n\r\n";
-    payload += body;
-
-    return write(fd, payload.c_str(), payload.length()) != -1;
+    return write(fd, body.c_str(), body.length()) != -1;
 }
 
 void AdminClient::process()
@@ -94,14 +90,24 @@ void AdminClient::process()
 
     if (read_request(m_fd, request))
     {
+        string response;
         SHttpRequest parser(HttpRequest::parse(request));
-
-        enum http_code status = parser.get() ? HTTP_200_OK : HTTP_400_BAD_REQUEST;
-
         atomic_write_int64(&m_last_activity, hkheartbeat);
 
-        /** Echo the request body back */
-        write_response(m_fd, HTTP_200_OK, parser->get_json_str());
+        if (parser.get())
+        {
+            /** Valid request */
+            response = HttpResponse(parser->get_json_str()).get_response();
+        }
+        else
+        {
+            request = HttpResponse("", HTTP_400_BAD_REQUEST).get_response();
+        }
+
+        if (!write_response(m_fd, response))
+        {
+            MXS_ERROR("Failed to write response to client: %d, %s", errno, mxs_strerror(errno));
+        }
     }
     else
     {

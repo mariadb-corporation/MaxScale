@@ -11,8 +11,7 @@
  * Public License.
  */
 
-#include "maxscale/admin.hh"
-#include "maxscale/hk_heartbeat.h"
+#include <maxscale/cppdefs.hh>
 
 #include <climits>
 #include <new>
@@ -22,15 +21,19 @@
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
 
+#include "maxscale/admin.hh"
+#include "maxscale/hk_heartbeat.h"
+
 #define DEFAULT_ADMIN_HOST "127.0.0.1"
 #define DEFAULT_ADMIN_PORT 8080
+#define DEFAULT_ADMIN_AUTH HTTP_AUTH_NONE
 
 static AdminListener* admin = NULL;
 static THREAD admin_thread;
 static THREAD timeout_thread;
 
 // TODO: Read values from the configuration
-static AdminConfig config = {DEFAULT_ADMIN_HOST, DEFAULT_ADMIN_PORT};
+static AdminConfig config = {DEFAULT_ADMIN_HOST, DEFAULT_ADMIN_PORT, DEFAULT_ADMIN_AUTH};
 
 void admin_main(void* data)
 {

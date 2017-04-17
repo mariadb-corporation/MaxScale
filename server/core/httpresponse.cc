@@ -12,8 +12,8 @@
  */
 
 #include "maxscale/httpresponse.hh"
+#include "maxscale/admin.hh"
 
-#include <new>
 #include <string>
 #include <sstream>
 
@@ -27,25 +27,19 @@ HttpResponse::HttpResponse(string response, enum http_code code):
     m_body(response),
     m_code(code)
 {
-}
+    m_headers["Date"] = get_http_date();
 
-HttpResponse* HttpResponse::create(json_t* response, enum http_code code)
-{
-    HttpResponse* rval = NULL;
-    char* json = json_dumps(response, 0);
+    // TODO: Add proper modification timestamps
+    m_headers["Last-Modified"] = m_headers["Date"];
+    // TODO: Add proper ETags
+    m_headers["ETag"] = "bm90LXlldC1pbXBsZW1lbnRlZAo=";
 
-    if (json)
+    enum http_auth auth = mxs_admin_get_config().auth;
+
+    if (auth != HTTP_AUTH_NONE)
     {
-        rval = HttpResponse::create(json, code);
-        MXS_FREE(json);
+        m_headers["WWW-Authenticate"] = http_auth_to_string(auth);
     }
-
-    return rval;
-}
-
-HttpResponse* HttpResponse::create(string response, enum http_code code)
-{
-    return new (std::nothrow) HttpResponse(response, code);
 }
 
 HttpResponse::~HttpResponse()

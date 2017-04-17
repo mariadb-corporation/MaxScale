@@ -12,6 +12,7 @@
  */
 
 #include "../maxscale/httprequest.hh"
+#include "../maxscale/httpresponse.hh"
 
 #include <sstream>
 
@@ -306,6 +307,23 @@ int test_message_body()
     return 0;
 }
 
+int test_response()
+{
+    TEST(HttpResponse().get_response().find("200 OK") != string::npos,
+         "Default constructor should return a 200 OK with no body");
+    TEST(HttpResponse("Test").get_response().find("\r\n\r\nTest") != string::npos,
+         "Custom payload should be found in the response");
+    TEST(HttpResponse("", HTTP_204_NO_CONTENT).get_response().find("204 No Content") != string::npos,
+         "Using custom header should generate correct response");
+
+    HttpResponse response("A Bad gateway", HTTP_502_BAD_GATEWAY);
+    TEST(response.get_response().find("\r\n\r\nA Bad gateway") != string::npos &&
+         response.get_response().find("502 Bad Gateway") != string::npos,
+         "Both custom response body and return code should be found");
+
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     int rc = 0;
@@ -313,6 +331,7 @@ int main(int argc, char** argv)
     rc += test_basic();
     rc += test_headers();
     rc += test_message_body();
+    rc += test_response();
 
     return rc;
 }
