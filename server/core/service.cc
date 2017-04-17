@@ -2375,9 +2375,6 @@ json_t* service_to_json(const SERVICE* service)
     // TODO: Handle errors
     json_t* rval = json_object();
 
-    struct tm result;
-    char timebuf[30];
-
     json_object_set_new(rval, "name", json_string(service->name));
     json_object_set_new(rval, "router", json_string(service->routerModule));
     json_object_set_new(rval, "state", json_string(service_state_to_string(service->state)));
@@ -2388,7 +2385,12 @@ json_t* service_to_json(const SERVICE* service)
         //service->router->diagnostics(service->router_instance, dcb);
     }
 
+    struct tm result;
+    char timebuf[30];
+
     asctime_r(localtime_r(&service->stats.started, &result), timebuf);
+    trim(timebuf);
+
     json_object_set_new(rval, "started", json_string(timebuf));
     json_object_set_new(rval, "enable_root", json_boolean(service->enable_root));
 
@@ -2448,7 +2450,7 @@ json_t* service_list_to_json()
 
     spinlock_acquire(&service_spin);
 
-    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    for (SERVICE *service = allServices; service; service = service->next)
     {
         json_t* svc = service_to_json(service);
 

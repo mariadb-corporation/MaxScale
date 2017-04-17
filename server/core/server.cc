@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
@@ -48,6 +49,7 @@
 #include <maxscale/ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
+#include <maxscale/utils.h>
 #include <maxscale/semaphore.hh>
 
 #include "maxscale/monitor.h"
@@ -1438,7 +1440,13 @@ json_t* server_to_json(const SERVER* server)
 
     if (server->node_ts > 0)
     {
-        json_object_set_new(rval, "last_heartbeat", json_integer(server->node_ts));
+        struct tm result;
+        char timebuf[30];
+        time_t tim = server->node_ts;
+        asctime_r(localtime_r(&tim, &result), timebuf);
+        trim(timebuf);
+
+        json_object_set_new(rval, "last_heartbeat", json_string(timebuf));
     }
 
     json_t* stats = json_object();

@@ -45,6 +45,7 @@
 #include <maxscale/router.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
@@ -1015,8 +1016,11 @@ json_t* session_to_json(const MXS_SESSION *session)
 
     struct tm result;
     char buf[60];
-    json_object_set_new(rval, "connected",
-                        json_string(asctime_r(localtime_r(&session->stats.connect, &result), buf)));
+
+    asctime_r(localtime_r(&session->stats.connect, &result), buf);
+    trim(buf);
+
+    json_object_set_new(rval, "connected", json_string(buf));
 
     if (session->client_dcb->state == DCB_STATE_POLLING)
     {
