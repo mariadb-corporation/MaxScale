@@ -115,6 +115,13 @@ HttpRequest* HttpRequest::parse(string data)
         }
     }
 
+    /** Clean up trailing slashes in requested resource */
+    while (uri.length() > 1 && *uri.rbegin() == '/')
+    {
+        pos = uri.find_last_of("/");
+        uri.erase(pos);
+    }
+
     pos = request_line.find("\r\n");
     string http_version = request_line.substr(0, pos);
     request_line.erase(0, pos + 2);

@@ -50,12 +50,12 @@ static struct
 {
     { "/", "/" },
     { "*", "*" },
-    { "/test/", "/test/" },
+    { "/test/", "/test" },
     { "/test", "/test" },
     { "/servers/list", "/servers/list" },
-    { "/servers/list/", "/servers/list/" },
+    { "/servers/list/", "/servers/list" },
     { "/?test=true", "/" },
-    { "/test/?test=y", "/test/" },
+    { "/test/?test=y", "/test" },
     { "/?", "/" },
     {}
 };
