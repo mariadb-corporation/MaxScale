@@ -50,6 +50,107 @@ static inline string& trim(string& str)
 }
 }
 
+static void process_uri(string& uri, deque<string>& uri_parts)
+{
+    /** Clean up trailing slashes in requested resource */
+    while (uri.length() > 1 && *uri.rbegin() == '/')
+    {
+        uri.erase(uri.find_last_of("/"));
+    }
+
+    string my_uri = uri;
+
+    while (my_uri.length() && *my_uri.begin() == '/')
+    {
+        my_uri.erase(my_uri.begin());
+    }
+
+    if (my_uri.length() == 0)
+    {
+        /** Special handling for the / resource */
+        uri_parts.push_back("");
+    }
+    else
+    {
+        while (my_uri.length() > 0)
+        {
+            size_t pos = my_uri.find("/");
+            string part = pos == string::npos ? my_uri : my_uri.substr(0, pos);
+            my_uri.erase(0, pos == string::npos ? pos : pos + 1);
+            uri_parts.push_back(part);
+        }
+    }
+}
+
+static bool process_options(string& uri, map<string, string>& options)
+{
+    size_t pos = uri.find("?");
+
+    if (pos != string::npos)
+    {
+        string optionstr = uri.substr(pos + 1);
+        uri.erase(pos);
+
+        char buf[optionstr.size() + 1];
+        strcpy(buf, optionstr.c_str());
+        char* saved;
+        char* tok = strtok_r(buf, ",", &saved);
+
+        while (tok && *tok)
+        {
+            string opt(tok);
+            pos = opt.find("=");
+
+            if (pos != string::npos)
+            {
+                string key = opt.substr(0, pos - 1);
+                string value = opt.substr(pos + 1);
+                options[key] = value;
+            }
+            else
+            {
+                /** Invalid option */
+                return false;
+            }
+
+            tok = strtok_r(NULL, ",", &saved);
+        }
+    }
+
+    return true;
+}
+
+static bool process_headers(string& data, map<string, string>& headers)
+{
+    size_t pos;
+
+    while ((pos = data.find("\r\n")) != string::npos)
+    {
+        string header_line = data.substr(0, pos);
+        data.erase(0, pos + 2);
+
+        if (header_line.length() == 0)
+        {
+            /** End of headers */
+            break;
+        }
+
+        if ((pos = header_line.find(":")) != string::npos)
+        {
+            string key = header_line.substr(0, pos);
+            header_line.erase(0, pos + 1);
+            headers[key] = mxs::trim(header_line);
+        }
+        else
+        {
+            /** Invalid header */
+            return false;
+        }
+    }
+
+    return true;
+}
+
 HttpRequest* HttpRequest::parse(string data)
 {
     size_t pos = data.find("\r\n");
@@ -80,76 +181,29 @@ HttpRequest* HttpRequest::parse(string data)
     string uri = request_line.substr(0, pos);
     request_line.erase(0, pos + 1);
 
-    /** Process request options */
-    pos = uri.find("?");
     map<string, string> options;
 
-    if (pos != string::npos)
+    /** Process request options */
+    if (!process_options(uri, options))
     {
-        string optionstr = uri.substr(pos + 1);
-        uri.erase(pos);
-
-        char buf[optionstr.size() + 1];
-        strcpy(buf, optionstr.c_str());
-        char* saved;
-        char* tok = strtok_r(buf, ",", &saved);
-
-        while (tok && *tok)
-        {
-            string opt(tok);
-            pos = opt.find("=");
-
-            if (pos != string::npos)
-            {
-                string key = opt.substr(0, pos - 1);
-                string value = opt.substr(pos + 1);
-                options[key] = value;
-            }
-            else
-            {
-                /** Invalid option */
-                return NULL;
-            }
-
-            tok = strtok_r(NULL, ",", &saved);
-        }
+        return NULL;
     }
 
-    /** Clean up trailing slashes in requested resource */
-    while (uri.length() > 1 && *uri.rbegin() == '/')
-    {
-        pos = uri.find_last_of("/");
-        uri.erase(pos);
-    }
+    /** Split the URI into separate parts */
+    deque<string> uri_parts;
+    process_uri(uri, uri_parts);
 
     pos = request_line.find("\r\n");
     string http_version = request_line.substr(0, pos);
     request_line.erase(0, pos + 2);
 
+
     map<string, string> headers;
 
-    while ((pos = data.find("\r\n")) != string::npos)
+    /** Process request headers */
+    if (!process_headers(data, headers))
     {
-        string header_line = data.substr(0, pos);
-        data.erase(0, pos + 2);
-
-        if (header_line.length() == 0)
-        {
-            /** End of headers */
-            break;
-        }
-
-        if ((pos = header_line.find(":")) != string::npos)
-        {
-            string key = header_line.substr(0, pos);
-            header_line.erase(0, pos + 1);
-            headers[key] = mxs::trim(header_line);
-        }
-        else
-        {
-            /** Invalid header */
-            return NULL;
-        }
+        return NULL;
     }
 
     /**
@@ -192,6 +246,7 @@ HttpRequest* HttpRequest::parse(string data)
         request->m_json.reset(body);
         request->m_json_string = data;
         request->m_resource = uri;
+        request->m_resource_parts = uri_parts;
         request->m_verb = verb_value;
     }
 

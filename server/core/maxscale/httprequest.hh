@@ -14,8 +14,9 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <string>
+#include <deque>
 #include <map>
+#include <string>
 #include <tr1/memory>
 
 #include <maxscale/jansson.hh>
@@ -26,6 +27,7 @@
 using std::shared_ptr;
 using std::string;
 using std::map;
+using std::deque;
 using mxs::Closer;
 
 class HttpRequest;
@@ -132,22 +134,32 @@ public:
     /**
      * @brief Get request resource
      *
-     * @return The request resoure
+     * @return The request resource
      */
     const string& get_resource() const
     {
         return m_resource;
     }
 
+    /**
+     * @brief Get request resource parts
+     *
+     * @return The request resource split into parts
+     */
+    const deque<string>& get_resource_parts() const
+    {
+        return m_resource_parts;
+    }
 private:
     HttpRequest();
     HttpRequest(const HttpRequest&);
     HttpRequest& operator = (const HttpRequest&);
 
-    map<string, string> m_headers;     /**< Request headers */
-    map<string, string> m_options;     /**< Request options */
-    Closer<json_t*>     m_json;        /**< Request body */
-    string              m_json_string; /**< String version of @c m_json */
-    string              m_resource;    /**< Requested resource */
-    enum http_verb      m_verb;        /**< Request method */
+    map<string, string> m_headers;        /**< Request headers */
+    map<string, string> m_options;        /**< Request options */
+    Closer<json_t*>     m_json;           /**< Request body */
+    string              m_json_string;    /**< String version of @c m_json */
+    string              m_resource;       /**< Requested resource */
+    deque<string>       m_resource_parts; /**< @c m_resource split into parts */
+    enum http_verb      m_verb;           /**< Request method */
 };

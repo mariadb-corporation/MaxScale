@@ -385,6 +385,73 @@ int test_response()
     return 0;
 }
 
+struct
+{
+    const char* input;
+    const char* value;
+    int offset;
+    size_t size;
+} resource_parts[] =
+{
+    {"/", "", 0, 1},
+    {"/?a=b", "", 0, 1},
+
+    {"/servers/", "servers", 0, 1},
+    {"/servers", "servers", 0, 1},
+    {"servers", "servers", 0, 1},
+
+    {"/servers/my-server", "servers", 0, 2},
+    {"/servers/my-server/", "servers", 0, 2},
+    {"servers/my-server", "servers", 0, 2},
+    {"/servers/my-server", "my-server", 1, 2},
+    {"/servers/my-server/", "my-server", 1, 2},
+    {"servers/my-server", "my-server", 1, 2},
+
+    {"/servers/my-server/user", "servers", 0, 3},
+    {"/servers/my-server/user", "servers", 0, 3},
+    {"servers/my-server/user", "servers", 0, 3},
+    {"/servers/my-server/user", "my-server", 1, 3},
+    {"/servers/my-server/user/", "my-server", 1, 3},
+    {"servers/my-server/user", "my-server", 1, 3},
+    {"/servers/my-server/user", "user", 2, 3},
+    {"/servers/my-server/user/", "user", 2, 3},
+    {"servers/my-server/user", "user", 2, 3},
+
+    {"/servers?a=b", "servers", 0, 1},
+    {"/servers/?a=b", "servers", 0, 1},
+    {"servers/?a=b", "servers", 0, 1},
+    {"/servers/my-server?a=b", "my-server", 1, 2},
+    {"/servers/my-server/?a=b", "my-server", 1, 2},
+    {"servers/my-server/?a=b", "my-server", 1, 2},
+    {"/servers/my-server/user?a=b", "user", 2, 3},
+    {"/servers/my-server/user/?a=b", "user", 2, 3},
+    {"servers/my-server/user?a=b", "user", 2, 3},
+
+    {}
+};
+
+int test_resource_parts()
+{
+    for (int i = 0; resource_parts[i].input; i++)
+    {
+        stringstream ss;
+        ss << "GET " << resource_parts[i].input << " HTTP/1.1\r\n\r\n";
+        SHttpRequest request(HttpRequest::parse(ss.str()));
+
+        TEST(request.get(), "Request should be OK: %s", ss.str().c_str());
+
+        TEST(request->get_resource_parts().size() == resource_parts[i].size,
+             "Request should have %lu parts: %lu", resource_parts[i].size,
+             request->get_resource_parts().size());
+
+        string value = request->get_resource_parts()[resource_parts[i].offset];
+        TEST(value == resource_parts[i].value,
+             "Request part at %d should be '%s': %s", resource_parts[i].offset,
+             resource_parts[i].value, value.c_str());
+    }
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     int rc = 0;
@@ -393,6 +460,7 @@ int main(int argc, char** argv)
     rc += test_headers();
     rc += test_message_body();
     rc += test_response();
+    rc += test_resource_parts();
 
     return rc;
 }
