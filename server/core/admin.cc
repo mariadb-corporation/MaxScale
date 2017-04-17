@@ -61,6 +61,8 @@ bool mxs_admin_init()
 
     if (sock > -1)
     {
+        setblocking(sock);
+
         if (listen(sock, INT_MAX) == 0)
         {
             admin = new (std::nothrow) AdminListener(sock);
@@ -121,9 +123,9 @@ AdminListener::~AdminListener()
 
 void AdminListener::handle_clients()
 {
-    AdminClient* client = accept_client();
+    AdminClient* client;
 
-    if (client)
+    while ((client = accept_client()))
     {
         SAdminClient sclient(client);
         ClientList::iterator it = m_clients.insert(m_clients.begin(), sclient);
@@ -155,11 +157,6 @@ AdminClient* AdminListener::accept_client()
     if (fd > -1)
     {
         rval = new AdminClient(fd, addr, m_timeout);
-    }
-    else if (errno == EAGAIN || errno == EWOULDBLOCK)
-    {
-        // TODO: Use epoll for this
-        thread_millisleep(1);
     }
     else
     {

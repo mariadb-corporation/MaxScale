@@ -104,7 +104,7 @@ public:
         string rval;
         map<string, string>::const_iterator it = m_options.find(option);
 
-        if (it != m_headers.end())
+        if (it != m_options.end())
         {
             rval = it->second;
         }

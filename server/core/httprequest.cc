@@ -103,9 +103,13 @@ static bool process_options(string& uri, map<string, string>& options)
 
             if (pos != string::npos)
             {
-                string key = opt.substr(0, pos - 1);
+                string key = opt.substr(0, pos);
                 string value = opt.substr(pos + 1);
-                options[key] = value;
+
+                if (key.length() && value.length())
+                {
+                    options[key] = value;
+                }
             }
             else
             {

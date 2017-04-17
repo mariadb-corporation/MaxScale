@@ -87,6 +87,7 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr,
                      const char *path);
 
 int setnonblocking(int fd);
+int setblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
 int gw_generate_random_str(char *output, int len);
