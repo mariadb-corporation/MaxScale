@@ -467,7 +467,53 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     return me;
 }
 
+json_t* filter_to_json(MXS_FILTER_DEF* filter)
+{
+    json_t* rval = json_object();
+    json_object_set_new(rval, "name", json_string(filter->name));
+    json_object_set_new(rval, "module", json_string(filter->module));
 
+    if (filter->options)
+    {
+        json_t* arr = json_array();
+
+        for (int i = 0; filter->options && filter->options[i]; i++)
+        {
+            json_array_append_new(arr, json_string(filter->options[i]));
+        }
+
+        json_object_set_new(rval, "options", arr);
+    }
+
+    if (filter->obj && filter->filter)
+    {
+        // TODO: Add filter diagnostics
+        //filter->obj->diagnostics(filter->filter, NULL, dcb);
+    }
+
+    return rval;
+}
+
+json_t* filter_list_to_json()
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&filter_spin);
+
+    for (MXS_FILTER_DEF* f = allFilters; f; f = f->next)
+    {
+        json_t* json = filter_to_json(f);
+
+        if (json)
+        {
+            json_array_append_new(rval, json);
+        }
+    }
+
+    spinlock_release(&filter_spin);
+
+    return rval;
+}
 
 namespace maxscale
 {

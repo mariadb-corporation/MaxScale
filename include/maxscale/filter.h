@@ -246,6 +246,22 @@ const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
  */
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
 
+/**
+ * @brief Convert a filter to JSON
+ *
+ * @param filter Filter to convert
+ *
+ * @return Filter converted to JSON format
+ */
+json_t* filter_to_json(MXS_FILTER_DEF* filter);
+
+/**
+ * @brief Convert all filters into JSON
+ *
+ * @return A JSON array containing all filters
+ */
+json_t* filter_list_to_json();
+
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, const MXS_FILTER_DEF *);
 void dListFilters(DCB *);

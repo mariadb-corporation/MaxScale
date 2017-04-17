@@ -38,7 +38,9 @@
  *
  * @endverbatim
  */
-#include <maxscale/service.h>
+
+#include <maxscale/cppdefs.hh>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,6 +50,9 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
+#include <string>
+
+#include <maxscale/service.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>
@@ -65,12 +70,15 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/jansson.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/modules.h"
 #include "maxscale/queuemanager.h"
 #include "maxscale/service.h"
+
+using std::string;
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
@@ -2333,6 +2341,121 @@ bool service_port_is_used(unsigned short port)
         }
 
         spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}
+
+static const char* service_state_to_string(int state)
+{
+    switch (state)
+    {
+        case SERVICE_STATE_STARTED:
+            return "Started";
+
+        case SERVICE_STATE_STOPPED:
+            return "Stopped";
+
+        case SERVICE_STATE_FAILED:
+            return "Failed";
+
+        case SERVICE_STATE_ALLOC:
+            return "Allocated";
+
+        default:
+            ss_dassert(false);
+            return "Unknown";
+    }
+}
+
+json_t* service_to_json(const SERVICE* service)
+{
+    // TODO: Handle errors
+    json_t* rval = json_object();
+
+    struct tm result;
+    char timebuf[30];
+
+    json_object_set_new(rval, "name", json_string(service->name));
+    json_object_set_new(rval, "router", json_string(service->routerModule));
+    json_object_set_new(rval, "state", json_string(service_state_to_string(service->state)));
+
+    if (service->router && service->router_instance)
+    {
+        // TODO: Add router diagnostics
+        //service->router->diagnostics(service->router_instance, dcb);
+    }
+
+    asctime_r(localtime_r(&service->stats.started, &result), timebuf);
+    json_object_set_new(rval, "started", json_string(timebuf));
+    json_object_set_new(rval, "enable_root", json_boolean(service->enable_root));
+
+    if (service->n_filters)
+    {
+        json_t* arr = json_array();
+
+        for (int i = 0; i < service->n_filters; i++)
+        {
+            string filter = "/filters/";
+            filter += service->filters[i]->name;
+            json_array_append_new(arr, json_string(filter.c_str()));
+        }
+
+        json_object_set_new(rval, "filters", arr);
+    }
+
+    bool active_servers = false;
+
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    {
+        if (SERVER_REF_IS_ACTIVE(ref))
+        {
+            active_servers = true;
+            break;
+        }
+    }
+
+    if (active_servers)
+    {
+        json_t* arr = json_array();
+
+        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        {
+            string serv = "/servers/";
+            serv += ref->server->unique_name;
+            json_array_append_new(arr, json_string(serv.c_str()));
+        }
+
+        json_object_set_new(rval, "servers", arr);
+    }
+
+    if (service->weightby)
+    {
+        json_object_set_new(rval, "weightby", json_string(service->weightby));
+    }
+
+    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
+    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+
+    return rval;
+}
+
+json_t* service_list_to_json()
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service && !rval; service = service->next)
+    {
+        json_t* svc = service_to_json(service);
+
+        if (svc)
+        {
+            json_array_append_new(rval, svc);
+        }
     }
 
     spinlock_release(&service_spin);

@@ -19,7 +19,13 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <time.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
+
 #include <maxscale/protocol.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
@@ -30,10 +36,7 @@
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
 #include <maxscale/queuemanager.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -275,6 +278,22 @@ int   service_refresh_users(SERVICE *service);
  * @param service The service to diagnose
  */
 void service_print_users(DCB *, const SERVICE *);
+
+/**
+ * @brief Convert a service to JSON
+ *
+ * @param service Service to convert
+ *
+ * @return JSON representation of the service
+ */
+json_t* service_to_json(const SERVICE* service);
+
+/**
+ * @brief Convert all services to JSON
+ *
+ * @return A JSON array with all services
+ */
+json_t* service_list_to_json();
 
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);

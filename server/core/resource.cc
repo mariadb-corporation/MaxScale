@@ -76,10 +76,14 @@ class ServicesResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+
         if (request.uri_part_count() == 1)
         {
+                            // TODO: Generate this via the inter-thread messaging system
+            Closer<json_t*> all_services(service_list_to_json());
             // Show all services
-            return HttpResponse(HTTP_200_OK);
+            return HttpResponse(HTTP_200_OK, mxs::json_dump(all_services, flags));
         }
         else
         {
@@ -87,8 +91,9 @@ protected:
 
             if (service)
             {
+                Closer<json_t*> service_js(service_to_json(service));
                 // Show one service
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(HTTP_200_OK, mxs::json_dump(service_js, flags));
             }
             else
             {
@@ -103,10 +108,13 @@ class FiltersResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
+        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+
         if (request.uri_part_count() == 1)
         {
+            Closer<json_t*> filters(filter_list_to_json());
             // Show all filters
-            return HttpResponse(HTTP_200_OK);
+            return HttpResponse(HTTP_200_OK, mxs::json_dump(filters, flags));
         }
         else
         {
@@ -114,8 +122,9 @@ protected:
 
             if (filter)
             {
+                Closer<json_t*> filter_js(filter_to_json(filter));
                 // Show one filter
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(HTTP_200_OK, mxs::json_dump(filter_js, flags));
             }
             else
             {
