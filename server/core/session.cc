@@ -994,3 +994,49 @@ uint32_t session_get_next_id()
 {
     return atomic_add_uint32(&next_session_id, 1);
 }
+
+json_t* session_to_json(const MXS_SESSION *session)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "id", json_integer(session->ses_id));
+    json_object_set_new(rval, "state", json_string(session_state(session->state)));
+    json_object_set_new(rval, "service", json_string(session->service->name));
+
+    if (session->client_dcb->user)
+    {
+        json_object_set_new(rval, "user", json_string(session->client_dcb->user));
+    }
+
+    if (session->client_dcb->remote)
+    {
+        json_object_set_new(rval, "remote", json_string(session->client_dcb->remote));
+    }
+
+    struct tm result;
+    char buf[60];
+    json_object_set_new(rval, "connected",
+                        json_string(asctime_r(localtime_r(&session->stats.connect, &result), buf)));
+
+    if (session->client_dcb->state == DCB_STATE_POLLING)
+    {
+        double idle = (hkheartbeat - session->client_dcb->last_read);
+        idle = idle > 0 ? idle / 10.f : 0;
+        json_object_set_new(rval, "idle", json_real(idle));
+    }
+
+    if (session->n_filters)
+    {
+        json_t* filters = json_array();
+
+        for (int i = 0; i < session->n_filters; i++)
+        {
+            json_array_append_new(filters, json_string(session->filters[i].filter->name));
+            // TODO: Add diagnostic output from filters
+        }
+
+        json_object_set_new(rval, "filters", filters);
+    }
+
+    return rval;
+}
