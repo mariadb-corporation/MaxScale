@@ -34,6 +34,7 @@ add_library(maxscale-common SHARED
   queuemanager.cc
   random_jkiss.cc
   resultset.cc
+  resource.cc
   router.cc
   secrets.cc
   semaphore.cc
