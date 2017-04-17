@@ -99,7 +99,9 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
 int gw_getsockerrno(int fd);
 char *create_hex_sha1_sha1_passwd(char *passwd);
 
+/** String formatting functions */
 char* trim(char *str);
+void replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
 bool strip_escape_chars(char*);
 

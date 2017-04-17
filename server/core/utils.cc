@@ -491,6 +491,22 @@ char* trim(char *str)
 }
 
 /**
+ * @brief Replace whitespace with hyphens
+ *
+ * @param str String to replace
+ */
+void replace_whitespace(char* str)
+{
+    for (char* s = str; *s; s++)
+    {
+        if (isspace(*s))
+        {
+            *s = '-';
+        }
+    }
+}
+
+/**
  * Replace all whitespace with spaces and squeeze repeating whitespace characters
  *
  * @param str String to squeeze

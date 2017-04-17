@@ -10,6 +10,13 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Changed Features
 
+### Whitespace in Object Names
+
+Significant whitespace in object names is now deprecated. All object names
+(services, servers, etc.) will be converted to a compatible format by
+squeezing repeating whitespace and replacing it with hyphens. If any
+object name conversions take place, a warning will be logged.
+
 ### NamedServerFilter
 
 This filter now uses the PCRE2-libarary to match queries. Previously, it used

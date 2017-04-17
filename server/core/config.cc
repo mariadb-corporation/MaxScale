@@ -56,6 +56,8 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <ini.h>
+#include <set>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/housekeeper.h>
@@ -73,6 +75,9 @@
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
 #include "maxscale/router.h"
+
+using std::set;
+using std::string;
 
 typedef struct duplicate_context
 {
@@ -340,6 +345,39 @@ CONFIG_CONTEXT* config_context_create(const char *section)
     return ctx;
 }
 
+/** A set that holds all the section names that contain whitespace */
+static std::set<string> warned_whitespace;
+
+/**
+ * @brief Fix section names
+ *
+ * Check that section names contain no whitespace. If the name contains
+ * whitespace, trim it, squeeze it and replace the remainig whitespace with
+ * hyphens. If a replacement was made, a warning is logged.
+ *
+ * @param section Section name
+ */
+void fix_section_name(char *section)
+{
+    for (char* s = section; *s; s++)
+    {
+        if (isspace(*s))
+        {
+            if (warned_whitespace.find(section) == warned_whitespace.end())
+            {
+                warned_whitespace.insert(section);
+                MXS_WARNING("Whitespace in object names is deprecated, "
+                            "converting to hyphens: %s", section);
+            }
+            break;
+        }
+    }
+
+    squeeze_whitespace(section);
+    trim(section);
+    replace_whitespace(section);
+}
+
 /**
  * Config item handler for the ini file reader
  *
@@ -369,19 +407,23 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
         return 0;
     }
 
+    char fixed_section[strlen(section) + 1];
+    strcpy(fixed_section, section);
+    fix_section_name(fixed_section);
+
     /*
      * If we already have some parameters for the object
      * add the parameters to that object. If not create
      * a new object.
      */
-    while (ptr && strcmp(ptr->object, section) != 0)
+    while (ptr && strcmp(ptr->object, fixed_section) != 0)
     {
         ptr = ptr->next;
     }
 
     if (!ptr)
     {
-        if ((ptr = config_context_create(section)) == NULL)
+        if ((ptr = config_context_create(fixed_section)) == NULL)
         {
             return 0;
         }
@@ -3095,7 +3137,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 int create_new_listener(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    char *service_name = config_get_value(obj->parameters, "service");
+    char *raw_service_name = config_get_value(obj->parameters, "service");
     char *port = config_get_value(obj->parameters, "port");
     char *address = config_get_value(obj->parameters, "address");
     char *protocol = config_get_value(obj->parameters, "protocol");
@@ -3103,8 +3145,12 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     char *authenticator = config_get_value(obj->parameters, "authenticator");
     char *authenticator_options = config_get_value(obj->parameters, "authenticator_options");
 
-    if (service_name && protocol && (socket || port))
+    if (raw_service_name && protocol && (socket || port))
     {
+        char service_name[strlen(raw_service_name) + 1];
+        strcpy(service_name, raw_service_name);
+        fix_section_name(service_name);
+
         SERVICE *service = service_find(service_name);
         if (service)
         {
@@ -3357,6 +3403,9 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                            const char *value, const CONFIG_CONTEXT *context)
 {
     bool valid = false;
+    char fixed_value[strlen(value) + 1];
+    strcpy(fixed_value, value);
+    fix_section_name(fixed_value);
 
     for (int i = 0; params[i].name && !valid; i++)
     {
@@ -3473,14 +3522,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if (context && config_contains_type(context, value, "service"))
+                if (context && config_contains_type(context, fixed_value, "service"))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if (context && config_contains_type(context, value, "server"))
+                if (context && config_contains_type(context, fixed_value, "server"))
                 {
                     valid = true;
                 }
@@ -3558,7 +3607,8 @@ int config_parse_server_list(const char *servers, char ***output_array)
     {
         char srv_name_tmp[strlen(s) + 1];
         strcpy(srv_name_tmp, s);
-        trim(srv_name_tmp);
+        fix_section_name(srv_name_tmp);
+
         if (strlen(srv_name_tmp) > 0)
         {
             results[output_ind] = MXS_STRDUP(srv_name_tmp);
