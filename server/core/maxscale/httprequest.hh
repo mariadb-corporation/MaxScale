@@ -18,6 +18,7 @@
 #include <map>
 #include <string>
 #include <tr1/memory>
+#include <cstdint>
 
 #include <maxscale/jansson.hh>
 #include <maxscale/utils.hh>
@@ -132,24 +133,37 @@ public:
     }
 
     /**
-     * @brief Get request resource
+     * @brief Get complete request URI
      *
-     * @return The request resource
+     * @return The complete request URI
      */
-    const string& get_resource() const
+    const string& get_uri() const
     {
         return m_resource;
     }
 
     /**
-     * @brief Get request resource parts
+     * @brief Get URI part
      *
-     * @return The request resource split into parts
+     * @param idx Zero indexed part number in URI
+     *
+     * @return The request URI part or empty string if no part was found
      */
-    const deque<string>& get_resource_parts() const
+    const string uri_part(uint32_t idx) const
     {
-        return m_resource_parts;
+        return m_resource_parts.size() > idx ? m_resource_parts[idx] : "";
     }
+
+    /**
+     * @brief Return how many parts are in the URI
+     *
+     * @return Number of URI parts
+     */
+    size_t uri_part_count() const
+    {
+        return m_resource_parts.size();
+    }
+
 private:
     HttpRequest();
     HttpRequest(const HttpRequest&);

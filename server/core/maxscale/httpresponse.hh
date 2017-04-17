@@ -39,7 +39,7 @@ public:
      * @param response Response body
      * @param code     HTTP return code
      */
-    HttpResponse(string response = "", enum http_code code = HTTP_200_OK);
+    HttpResponse(enum http_code code = HTTP_200_OK, string response = "");
 
     ~HttpResponse();
 
@@ -59,10 +59,7 @@ public:
     string get_response() const;
 
 private:
-    HttpResponse(const HttpResponse&);
-    HttpResponse& operator = (const HttpResponse&);
-
     string              m_body;    /**< Message body */
     map<string, string> m_headers; /**< Message headers */
-    http_code           m_code;    /**< The HTTP code for the response */
+    enum http_code      m_code;    /**< The HTTP code for the response */
 };

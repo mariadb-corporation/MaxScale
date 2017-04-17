@@ -12,8 +12,6 @@
  */
 
 #include "maxscale/adminclient.hh"
-#include "maxscale/httprequest.hh"
-#include "maxscale/httpresponse.hh"
 
 #include <string>
 #include <sstream>
@@ -23,6 +21,10 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/thread.h>
 #include <maxscale/spinlock.hh>
+
+#include "maxscale/httprequest.hh"
+#include "maxscale/httpresponse.hh"
+#include "maxscale/resource.hh"
 
 using std::string;
 using std::stringstream;
@@ -85,26 +87,21 @@ static bool write_response(int fd, const string& body)
 
 void AdminClient::process()
 {
-    string request;
+    string data;
     atomic_write_int64(&m_last_activity, hkheartbeat);
 
-    if (read_request(m_fd, request))
+    if (read_request(m_fd, data))
     {
-        string response;
-        SHttpRequest parser(HttpRequest::parse(request));
+        HttpResponse response(HTTP_400_BAD_REQUEST);
+        SHttpRequest request(HttpRequest::parse(data));
         atomic_write_int64(&m_last_activity, hkheartbeat);
 
-        if (parser.get())
+        if (request.get())
         {
-            /** Valid request */
-            response = HttpResponse(parser->get_json_str()).get_response();
-        }
-        else
-        {
-            request = HttpResponse("", HTTP_400_BAD_REQUEST).get_response();
+            response = resource_handle_request(*request);
         }
 
-        if (!write_response(m_fd, response))
+        if (!write_response(m_fd, response.get_response()))
         {
             MXS_ERROR("Failed to write response to client: %d, %s", errno, mxs_strerror(errno));
         }

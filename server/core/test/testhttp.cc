@@ -96,9 +96,9 @@ int test_basic()
                 ss << verbs_pass[i] << " " << paths_pass[j].input << " " << proto_pass[k] << "\r\n\r\n";
                 SHttpRequest parser(HttpRequest::parse(ss.str()));
                 TEST(parser.get() != NULL, "Valid HTTP request should be parsed: %s", ss.str().c_str());
-                TEST(parser->get_resource() == string(paths_pass[j].output),
+                TEST(parser->get_uri() == string(paths_pass[j].output),
                      "The request path '%s' should be correct: %s",
-                     paths_pass[j].output, parser->get_resource().c_str());
+                     paths_pass[j].output, parser->get_uri().c_str());
             }
         }
     }
@@ -372,12 +372,12 @@ int test_response()
 {
     TEST(HttpResponse().get_response().find("200 OK") != string::npos,
          "Default constructor should return a 200 OK with no body");
-    TEST(HttpResponse("Test").get_response().find("\r\n\r\nTest") != string::npos,
+    TEST(HttpResponse(HTTP_200_OK, "Test").get_response().find("\r\n\r\nTest") != string::npos,
          "Custom payload should be found in the response");
-    TEST(HttpResponse("", HTTP_204_NO_CONTENT).get_response().find("204 No Content") != string::npos,
+    TEST(HttpResponse(HTTP_204_NO_CONTENT).get_response().find("204 No Content") != string::npos,
          "Using custom header should generate correct response");
 
-    HttpResponse response("A Bad gateway", HTTP_502_BAD_GATEWAY);
+    HttpResponse response(HTTP_502_BAD_GATEWAY, "A Bad gateway");
     TEST(response.get_response().find("\r\n\r\nA Bad gateway") != string::npos &&
          response.get_response().find("502 Bad Gateway") != string::npos,
          "Both custom response body and return code should be found");
@@ -440,11 +440,11 @@ int test_resource_parts()
 
         TEST(request.get(), "Request should be OK: %s", ss.str().c_str());
 
-        TEST(request->get_resource_parts().size() == resource_parts[i].size,
+        TEST(request->uri_part_count() == resource_parts[i].size,
              "Request should have %lu parts: %lu", resource_parts[i].size,
-             request->get_resource_parts().size());
+             request->uri_part_count());
 
-        string value = request->get_resource_parts()[resource_parts[i].offset];
+        string value = request->uri_part(resource_parts[i].offset);
         TEST(value == resource_parts[i].value,
              "Request part at %d should be '%s': %s", resource_parts[i].offset,
              resource_parts[i].value, value.c_str());

@@ -264,7 +264,7 @@ static inline const char* http_code_to_string(enum http_code code)
  *
  * @return The RFC 1123 compliant date
  */
-static inline string get_http_date()
+static inline string http_get_date()
 {
     time_t now = time(NULL);
     struct tm tm;

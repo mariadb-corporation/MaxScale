@@ -23,11 +23,11 @@
 using std::string;
 using std::stringstream;
 
-HttpResponse::HttpResponse(string response, enum http_code code):
+HttpResponse::HttpResponse(enum http_code code, string response):
     m_body(response),
     m_code(code)
 {
-    m_headers["Date"] = get_http_date();
+    m_headers["Date"] = http_get_date();
 
     // TODO: Add proper modification timestamps
     m_headers["Last-Modified"] = m_headers["Date"];
@@ -54,7 +54,7 @@ void HttpResponse::add_header(string name, string value)
 string HttpResponse::get_response() const
 {
     stringstream response;
-    response << "HTTP/1.1 " << http_code_to_string(m_code);
+    response << "HTTP/1.1 " << http_code_to_string(m_code) << "\r\n";
 
     for (map<string, string>::const_iterator it = m_headers.begin();
          it != m_headers.end(); it++)
