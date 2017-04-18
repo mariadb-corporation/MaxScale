@@ -11,6 +11,10 @@
  * Public License.
  */
 
+/**
+ * @file poll.c  - Abstraction of the epoll functionality
+ */
+
 #include <maxscale/poll.h>
 
 #include <errno.h>
@@ -27,62 +31,21 @@
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
 #include <maxscale/config.h>
-#include <maxscale/dcb.h>
-#include <maxscale/housekeeper.h>
-#include <maxscale/log_manager.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/platform.h>
-#include <maxscale/query_classifier.h>
-#include <maxscale/resultset.h>
 #include <maxscale/server.h>
-#include <maxscale/session.h>
 #include <maxscale/statistics.h>
-#include <maxscale/thread.h>
-#include <maxscale/utils.h>
-
 #include "maxscale/poll.h"
 #include "maxscale/worker.hh"
 
-#define         PROFILE_POLL    0
-
 using maxscale::Worker;
 
-#if PROFILE_POLL
-extern unsigned long hkheartbeat;
-#endif
+static thread_local int current_thread_id; /*< This thread's ID */
+static int next_epoll_fd = 0;              /*< Which thread handles the next DCB */
+static int n_threads;                      /*< Number of threads */
+static int number_poll_spins;              /*< Maximum non-block polls */
+static int max_poll_sleep;                 /*< Maximum block time */
 
-int number_poll_spins;
-int max_poll_sleep;
-
-/**
- * @file poll.c  - Abstraction of the epoll functionality
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 19/06/13     Mark Riddoch    Initial implementation
- * 28/06/13     Mark Riddoch    Added poll mask support and DCB
- *                              zombie management
- * 29/08/14     Mark Riddoch    Addition of thread status data, load average
- *                              etc.
- * 23/09/14     Mark Riddoch    Make use of RDHUP conditional to allow CentOS 5
- *                              builds.
- * 24/09/14     Mark Riddoch    Introduction of the event queue for processing the
- *                              incoming events rather than processing them immediately
- *                              in the loop after the epoll_wait. This allows for better
- *                              thread utilisation and fairer scheduling of the event
- *                              processing.
- * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
- * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
- * 07/02/16     Martin Brampton Added a small piece of SSL logic to EPOLLIN
- * 15/06/16     Martin Brampton Changed ts_stats_add to inline ts_stats_increment
- *
- * @endverbatim
- */
-
-thread_local int current_thread_id; /**< This thread's ID */
-static int next_epoll_fd = 0; /*< Which thread handles the next DCB */
-static int do_shutdown = 0;  /*< Flag the shutdown of the poll subsystem */
 
 /** Poll cross-thread messaging variables */
 static volatile int     *poll_msg;
@@ -90,10 +53,6 @@ static void    *poll_msg_data = NULL;
 static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
 
 static void poll_check_message(void);
-static bool poll_dcb_session_check(DCB *dcb, const char *function);
-
-/* Thread statistics data */
-static int n_threads;      /*< No. of threads */
 
 /**
  * Initialise the polling system we are using for the gateway.
@@ -423,220 +382,6 @@ void
 poll_set_maxwait(unsigned int maxwait)
 {
     max_poll_sleep = maxwait;
-}
-
-/**
- * Process of the queue of DCB's that have outstanding events
- *
- * The first event on the queue will be chosen to be executed by this thread,
- * all other events will be left on the queue and may be picked up by other
- * threads. When the processing is complete the thread will take the DCB off the
- * queue if there are no pending events that have arrived since the thread started
- * to process the DCB. If there are pending events the DCB will be moved to the
- * back of the queue so that other DCB's will have a share of the threads to
- * execute events for them.
- *
- * Including session id to log entries depends on this function. Assumption is
- * that when maxscale thread starts processing of an event it processes one
- * and only one session until it returns from this function. Session id is
- * read to thread's local storage if LOG_MAY_BE_ENABLED(LOGFILE_TRACE) returns true
- * reset back to zero just before returning in LOG_IS_ENABLED(LOGFILE_TRACE) returns true.
- * Thread local storage (tls_log_info_t) follows thread and is accessed every
- * time log is written to particular log.
- *
- * @param thread_id     The thread ID of the calling thread
- * @return              0 if no DCB's have been processed
- */
-static uint32_t
-process_pollq_dcb(DCB *dcb, int thread_id, uint32_t ev)
-{
-    ss_dassert(dcb->poll.thread.id == thread_id || dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
-
-    CHK_DCB(dcb);
-
-    uint32_t rc = MXS_POLL_NOP;
-
-    /* It isn't obvious that this is impossible */
-    /* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
-    if (DCB_STATE_DISCONNECTED == dcb->state)
-    {
-        return rc;
-    }
-
-    MXS_DEBUG("%lu [poll_waitevents] event %d dcb %p "
-              "role %s",
-              pthread_self(),
-              ev,
-              dcb,
-              STRDCBROLE(dcb->dcb_role));
-
-    if (ev & EPOLLOUT)
-    {
-        int eno = 0;
-        eno = gw_getsockerrno(dcb->fd);
-
-        if (eno == 0)
-        {
-            rc |= MXS_POLL_WRITE;
-
-            if (poll_dcb_session_check(dcb, "write_ready"))
-            {
-                dcb->func.write_ready(dcb);
-            }
-        }
-        else
-        {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLOUT due %d, %s. "
-                      "dcb %p, fd %i",
-                      pthread_self(),
-                      eno,
-                      mxs_strerror(eno),
-                      dcb,
-                      dcb->fd);
-        }
-    }
-    if (ev & EPOLLIN)
-    {
-        if (dcb->state == DCB_STATE_LISTENING || dcb->state == DCB_STATE_WAITING)
-        {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "Accept in fd %d",
-                      pthread_self(),
-                      dcb->fd);
-            rc |= MXS_POLL_ACCEPT;
-
-            if (poll_dcb_session_check(dcb, "accept"))
-            {
-                dcb->func.accept(dcb);
-            }
-        }
-        else
-        {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "Read in dcb %p fd %d",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd);
-            rc |= MXS_POLL_READ;
-
-            if (poll_dcb_session_check(dcb, "read"))
-            {
-                int return_code = 1;
-                /** SSL authentication is still going on, we need to call dcb_accept_SSL
-                 * until it return 1 for success or -1 for error */
-                if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
-                {
-                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
-                                  dcb_accept_SSL(dcb) :
-                                  dcb_connect_SSL(dcb);
-                }
-                if (1 == return_code)
-                {
-                    dcb->func.read(dcb);
-                }
-            }
-        }
-    }
-    if (ev & EPOLLERR)
-    {
-        int eno = gw_getsockerrno(dcb->fd);
-        if (eno != 0)
-        {
-            MXS_DEBUG("%lu [poll_waitevents] "
-                      "EPOLLERR due %d, %s.",
-                      pthread_self(),
-                      eno,
-                      mxs_strerror(eno));
-        }
-        rc |= MXS_POLL_ERROR;
-
-        if (poll_dcb_session_check(dcb, "error"))
-        {
-            dcb->func.error(dcb);
-        }
-    }
-
-    if (ev & EPOLLHUP)
-    {
-        ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  eno,
-                  mxs_strerror(eno));
-
-        rc |= MXS_POLL_HUP;
-
-        if ((dcb->flags & DCBF_HUNG) == 0)
-        {
-            dcb->flags |= DCBF_HUNG;
-
-            if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
-            {
-                dcb->func.hangup(dcb);
-            }
-        }
-    }
-
-#ifdef EPOLLRDHUP
-    if (ev & EPOLLRDHUP)
-    {
-        ss_debug(int eno = gw_getsockerrno(dcb->fd));
-        MXS_DEBUG("%lu [poll_waitevents] "
-                  "EPOLLRDHUP on dcb %p, fd %d. "
-                  "Errno %d, %s.",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  eno,
-                  mxs_strerror(eno));
-
-        rc |= MXS_POLL_HUP;
-
-        if ((dcb->flags & DCBF_HUNG) == 0)
-        {
-            dcb->flags |= DCBF_HUNG;
-
-            if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
-            {
-                dcb->func.hangup(dcb);
-            }
-        }
-    }
-#endif
-    return rc;
-}
-
-/**
- *
- * Check that the DCB has a session link before processing.
- * If not, log an error.  Processing will be bypassed
- *
- * @param   dcb         The DCB to check
- * @param   function    The name of the function about to be called
- * @return  bool        Does the DCB have a non-null session link
- */
-static bool
-poll_dcb_session_check(DCB *dcb, const char *function)
-{
-    if (dcb->session)
-    {
-        return true;
-    }
-    else
-    {
-        MXS_ERROR("%lu [%s] The dcb %p that was about to be processed by %s does not "
-                  "have a non-null session pointer ",
-                  pthread_self(),
-                  __func__,
-                  dcb,
-                  function);
-        return false;
-    }
 }
 
 /**
