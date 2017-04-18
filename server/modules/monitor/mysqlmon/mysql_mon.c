@@ -13,36 +13,6 @@
 
 /**
  * @file mysql_mon.c - A MySQL replication cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 08/07/13 Mark Riddoch        Initial implementation
- * 11/07/13 Mark Riddoch        Addition of code to check replication status
- * 25/07/13 Mark Riddoch        Addition of decrypt for passwords and diagnostic interface
- * 20/05/14 Massimiliano Pinto  Addition of support for MariadDB multimaster replication setup.
- *                              New server field version_string is updated.
- * 28/05/14 Massimiliano Pinto  Added set Id and configuration options (setInverval)
- *                              Parameters are now printed in diagnostics
- * 03/06/14 Mark Ridoch         Add support for maintenance mode
- * 17/06/14 Massimiliano Pinto  Addition of getServerByNodeId routine and first implementation for
- *                              depth of replication for nodes.
- * 23/06/14 Massimiliano Pinto  Added replication consistency after replication tree computation
- * 27/06/14 Massimiliano Pinto  Added replication pending status in monitored server, storing there
- *                              the status to update in server status field before
- *                              starting the replication consistency check.
- *                              This will also give routers a consistent "status" of all servers
- * 28/08/14 Massimiliano Pinto  Added detectStaleMaster feature: previous detected master will be used again, even if the replication is stopped.
- *                              This means both IO and SQL threads are not working on slaves.
- *                              This option is not enabled by default.
- * 10/11/14 Massimiliano Pinto  Addition of setNetworkTimeout for connect, read, write
- * 18/11/14 Massimiliano Pinto  One server only in configuration becomes master. servers=server1 must
- *                              be present in mysql_mon and in router sections as well.
- * 08/05/15 Markus Makela       Added launchable scripts
- * 17/10/15 Martin Brampton     Change DCB callback to hangup
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "mysqlmon"
@@ -78,7 +48,7 @@ static void monitorMain(void *);
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics(const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *getServerByNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *getSlaveOfNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *, int);
@@ -341,40 +311,63 @@ stopMonitor(MXS_MONITOR *mon)
 }
 
 /**
- * Daignostic interface
+ * Diagnostic interface
  *
- * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+static json_t* diagnostics(const MXS_MONITOR *mon)
 {
+    json_t* rval = json_object();
+
     const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
+    json_object_set_new(rval, "monitor_id", json_integer(handle->id));
+    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
+    json_object_set_new(rval, "detect_stale_slave", json_boolean(handle->detectStaleSlave));
+    json_object_set_new(rval, "detect_replication_lag", json_boolean(handle->replicationHeartbeat));
+    json_object_set_new(rval, "multimaster", json_boolean(handle->multimaster));
+    json_object_set_new(rval, "detect_standalone_master", json_boolean(handle->detect_standalone_master));
+    json_object_set_new(rval, "failcount", json_integer(handle->failcount));
+    json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
+    json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
+    json_object_set_new(rval, "journal_max_age", json_integer(handle->journal_max_age));
 
-    dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
-    dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
-    dcb_printf(dcb, "Server information\n\n");
-
-    for (MXS_MONITOR_SERVERS *db = mon->databases; db; db = db->next)
+    if (handle->script)
     {
-        MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
-        dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
-        dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
-        dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
-        dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
-        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_io ? "YES" : "NO");
-        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_sql ? "YES" : "NO");
-        dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
-        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
-        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+        json_object_set_new(rval, "script", json_string(handle->script));
+    }
 
-        if (handle->multimaster)
+    if (mon->databases)
+    {
+        json_t* arr = json_array();
+
+        for (MXS_MONITOR_SERVERS *db = mon->databases; db; db = db->next)
         {
-            dcb_printf(dcb, "Master group: %d\n", serv_info->group);
+            json_t* srv = json_object();
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+            json_object_set_new(srv, "name", json_string(db->server->unique_name));
+            json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
+            json_object_set_new(srv, "master_id", json_integer(serv_info->master_id));
+
+            json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
+            json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
+            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_io));
+            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_sql));
+
+            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->binlog_name));
+            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->binlog_pos));
+
+            if (handle->multimaster)
+            {
+                json_object_set_new(srv, "master_group", json_integer(serv_info->group));
+            }
+
+            json_array_append(arr, srv);
         }
 
-        dcb_printf(dcb, "\n");
+        json_object_set_new(rval, "server_info", arr);
     }
+
+    return rval;
 }
 
 enum mysql_server_version

@@ -245,9 +245,9 @@ stopMonitor(MXS_MONITOR *mon)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+static json_t* diagnostics(const MXS_MONITOR *mon)
 {
+    return NULL;
 }
 
 /**

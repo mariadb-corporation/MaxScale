@@ -41,7 +41,7 @@ static void monitorMain(void *);
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
-static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics(const MXS_MONITOR *);
 bool isNdbEvent(mxs_monitor_event_t event);
 
 
@@ -170,9 +170,9 @@ stopMonitor(MXS_MONITOR *mon)
  * @param dcb   DCB to send output
  * @param arg   The monitor handle
  */
-static void
-diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+static json_t* diagnostics(const MXS_MONITOR *mon)
 {
+    return NULL;
 }
 
 /**
