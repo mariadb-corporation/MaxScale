@@ -86,7 +86,7 @@ if (!defined $MAXADMIN || length($MAXADMIN) == 0) {
 }
 
 if (defined $MAXADMIN_SOCKET && length($MAXADMIN_SOCKET) > 0) {
-        $MAXADMIN_SOCKET = ' -S $MAXADMIN_SOCKET';
+        $MAXADMIN_SOCKET = ' -S ' . $MAXADMIN_SOCKET;
 } else {
         $MAXADMIN_SOCKET = '';
 }
