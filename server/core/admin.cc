@@ -21,14 +21,11 @@
 #include <maxscale/debug.h>
 #include <maxscale/thread.h>
 #include <maxscale/utils.h>
+#include <maxscale/config.h>
+#include <maxscale/hk_heartbeat.h>
 
 #include "maxscale/admin.hh"
-#include "maxscale/hk_heartbeat.h"
 #include "maxscale/resource.hh"
-
-#define DEFAULT_ADMIN_HOST "127.0.0.1"
-#define DEFAULT_ADMIN_PORT 8080
-#define DEFAULT_ADMIN_AUTH HTTP_AUTH_NONE
 
 static struct MHD_Daemon* http_daemon = NULL;
 
@@ -42,6 +39,26 @@ int handle_client(void *cls,
                   void **con_cls)
 
 {
+    const char *admin_user = config_get_global_options()->admin_user;
+    const char *admin_pw = config_get_global_options()->admin_password;
+    bool admin_auth = config_get_global_options()->admin_auth;
+
+    char* pw = NULL;
+    char* user = MHD_basic_auth_get_username_password(connection, &pw);
+
+    if (admin_auth && (!user || !pw || strcmp(user, admin_user) || strcmp(pw, admin_pw)))
+    {
+        static char error_resp[] = "Access denied\r\n";
+        struct MHD_Response *resp;
+
+        resp = MHD_create_response_from_buffer(sizeof (error_resp) - 1, error_resp,
+                                               MHD_RESPMEM_PERSISTENT);
+
+        MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
+        MHD_destroy_response(resp);
+        return MHD_YES;
+    }
+
     string verb(method);
     json_t* json = NULL;
 
@@ -77,8 +94,10 @@ int handle_client(void *cls,
 bool mxs_admin_init()
 {
     http_daemon = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY | MHD_USE_DUAL_STACK,
-                                   DEFAULT_ADMIN_PORT, NULL, NULL,
-                                   handle_client, NULL, MHD_OPTION_END);
+                                   config_get_global_options()->admin_port,
+                                   NULL, NULL,
+                                   handle_client, NULL,
+                                   MHD_OPTION_END);
     return http_daemon != NULL;
 
 }

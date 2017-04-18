@@ -172,6 +172,29 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
+#### `admin_port`
+
+The port where the HTTP admin interface listens on. The default value is port
+8080.
+
+#### `admin_auth`
+
+Enable HTTP admin interface authentication using HTTP Basic Access
+authentication. This is not a secure method of authentication but it does add a
+small layer of security. This option id disabled by default.
+
+#### `admin_user`
+
+The HTTP admin interface username. This is the username which is used when
+_admin_auth_ is enabled. The default user for the HTTP admin interface is
+`admin`.
+
+#### `admin_password`
+
+The HTTP admin interface password. This is the which which is used when
+_admin_auth_ is enabled. The default password for the HTTP admin interface is
+`mariadb`.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds

@@ -59,6 +59,7 @@
 #include <set>
 #include <string>
 
+#include <maxscale/adminusers.h>
 #include <maxscale/alloc.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/limits.h>
@@ -1458,6 +1459,22 @@ handle_global_item(const char *name, const char *value)
             MXS_FREE(v);
         }
     }
+    else if (strcmp(name, "admin_user") == 0)
+    {
+        strcpy(gateway.admin_user, value);
+    }
+    else if (strcmp(name, "admin_password") == 0)
+    {
+        strcpy(gateway.admin_password, value);
+    }
+    else if (strcmp(name, "admin_port") == 0)
+    {
+        gateway.admin_port = atoi(value);
+    }
+    else if (strcmp(name, "admin_auth") == 0)
+    {
+        gateway.admin_auth = config_truth_value(value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1678,6 +1695,11 @@ global_defaults()
     gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     gateway.skip_permission_checks = false;
+    gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
+    gateway.admin_auth = false;
+    strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
+    strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
+
     if (version_string != NULL)
     {
         gateway.version_string = MXS_STRDUP_A(version_string);

@@ -11,6 +11,7 @@ requirements are as follows:
 * Bison 2.7 or later
 * Flex 2.5.35 or later
 * libuuid
+* libmicrohttpd
 
 ## Required packages
 
@@ -30,7 +31,8 @@ You can install the packages with the following commands.
 ```
 sudo yum install git gcc gcc-c++ ncurses-devel bison flex glibc-devel cmake \
      libgcc perl make libtool openssl openssl-devel libcurl-devel pcre-devel \
-     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite3 sqlite3-devel
+     tcl tcl-devel systemtap-sdt-devel libuuid libuuid-devel sqlite3 sqlite3-devel \
+      libmicrohttpd-devel
 ```
 
 ### Required packages on Ubuntu and Debian systems
@@ -40,7 +42,7 @@ require other packages in addition to these.
 
 ```
 git build-essential libssl-dev ncurses-dev bison flex cmake perl libtool \
-libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev
+libcurl4-openssl-dev libpcre3-dev tlc tcl-dev uuid uuid-dev sqlite3-dev libmicrohttpd-dev
 ```
 
 You can install the packages with the following command.
@@ -48,7 +50,7 @@ You can install the packages with the following command.
 ```
 sudo apt-get install git build-essential libssl-dev ncurses-dev bison flex \
      cmake perl libtool libcurl4-openssl-dev libpcre3-dev tcl tcl-dev uuid \
-     uuid-dev libsqlite3-dev
+     uuid-dev libsqlite3-dev libmicrohttpd-dev
 ```
 
 ## Preparing the MariaDB MaxScale build
