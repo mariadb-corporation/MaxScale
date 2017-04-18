@@ -94,7 +94,7 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MX
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
@@ -1482,28 +1482,26 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
  *
  * @param       instance        The filter instance
  * @param       fsession        Filter session, may be NULL
- * @param       dcb             The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static json_t*
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
 {
-    MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
+    MQ_INSTANCE *my_instance = (MQ_INSTANCE*)instance;
+    json_t* rval = json_object();
 
-    if (my_instance)
-    {
-        dcb_printf(dcb, "Connecting to [%s]:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
-                   my_instance->hostname, my_instance->port,
-                   my_instance->username,
-                   my_instance->vhost, my_instance->exchange,
-                   my_instance->key, my_instance->queue
-                  );
-        dcb_printf(dcb, "%-16s%-16s%-16s\n",
-                   "Messages", "Queued", "Sent");
-        dcb_printf(dcb, "%-16d%-16d%-16d\n",
-                   my_instance->stats.n_msg,
-                   my_instance->stats.n_queued,
-                   my_instance->stats.n_sent);
-    }
+    json_object_set_new(rval, "host", json_string(my_instance->hostname));
+    json_object_set_new(rval, "user", json_string(my_instance->username));
+    json_object_set_new(rval, "vhost", json_string(my_instance->vhost));
+    json_object_set_new(rval, "exchange", json_string(my_instance->exchange));
+    json_object_set_new(rval, "key", json_string(my_instance->key));
+    json_object_set_new(rval, "queue", json_string(my_instance->queue));
+
+    json_object_set_new(rval, "port", json_integer(my_instance->port));
+    json_object_set_new(rval, "messages", json_integer(my_instance->stats.n_msg));
+    json_object_set_new(rval, "queued", json_integer(my_instance->stats.n_queued));
+    json_object_set_new(rval, "sent", json_integer(my_instance->stats.n_sent));
+
+    return rval;
 }
 
 /**

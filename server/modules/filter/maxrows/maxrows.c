@@ -67,9 +67,8 @@ static int     routeQuery(MXS_FILTER *instance,
 static int     clientReply(MXS_FILTER *instance,
                            MXS_FILTER_SESSION *sdata,
                            GWBUF *queue);
-static void    diagnostics(MXS_FILTER *instance,
-                           MXS_FILTER_SESSION *sdata,
-                           DCB *dcb);
+static json_t* diagnostics(MXS_FILTER *instance,
+                           MXS_FILTER_SESSION *sdata);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 enum maxrows_return_mode
@@ -488,12 +487,9 @@ static int clientReply(MXS_FILTER *instance,
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb)
+static json_t* diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata)
 {
-    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
-    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
-
-    dcb_printf(dcb, "Maxrows filter is working\n");
+    return NULL;
 }
 
 

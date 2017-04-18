@@ -55,7 +55,7 @@ static  void   closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void   freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static  int    routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static  void   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static  json_t*   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 #define CCR_DEFAULT_TIME "60"
@@ -358,28 +358,29 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
 {
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
+    json_t* rval = json_object();
 
-    dcb_printf(dcb, "Configuration:\n\tCount: %d\n", my_instance->count);
-    dcb_printf(dcb, "\tTime: %d seconds\n", my_instance->time);
+    json_object_set(rval, "count", json_integer(my_instance->count));
+    json_object_set(rval, "time", json_integer(my_instance->time));
 
     if (my_instance->match)
     {
-        dcb_printf(dcb, "\tMatch regex: %s\n", my_instance->match);
+        json_object_set(rval, "match", json_string(my_instance->match));
     }
 
     if (my_instance->nomatch)
     {
-        dcb_printf(dcb, "\tExclude regex: %s\n", my_instance->nomatch);
+        json_object_set(rval, "nomatch", json_string(my_instance->nomatch));
     }
 
-    dcb_printf(dcb, "\nStatistics:\n");
-    dcb_printf(dcb, "\tNo. of data modifications: %d\n", my_instance->stats.n_modified);
-    dcb_printf(dcb, "\tNo. of hints added based on count: %d\n", my_instance->stats.n_add_count);
-    dcb_printf(dcb, "\tNo. of hints added based on time: %d\n",  my_instance->stats.n_add_time);
+    json_object_set(rval, "data_modifications", json_integer(my_instance->stats.n_modified));
+    json_object_set(rval, "hints_added_count", json_integer(my_instance->stats.n_add_count));
+    json_object_set(rval, "hints_added_time", json_integer(my_instance->stats.n_add_time));
+
+    return rval;
 }
 
 /**

@@ -569,8 +569,9 @@ int FilterSession::clientReply(GWBUF* pPacket)
     return m_up.clientReply(pPacket);
 }
 
-void FilterSession::diagnostics(DCB* pDcb)
+json_t* FilterSession::diagnostics()
 {
+    return NULL;
 }
 
 }

@@ -447,13 +447,13 @@ int CacheFilterSession::clientReply(GWBUF* pData)
     return rv;
 }
 
-void CacheFilterSession::diagnostics(DCB* pDcb)
+json_t* CacheFilterSession::diagnostics()
 {
     // Not printing anything. Session of the same instance share the same cache, in
     // which case the same information would be printed once per session, or all
     // threads (but not sessions) share the same cache, in which case the output
     // would be nonsensical.
-    dcb_printf(pDcb, "\n");
+    return NULL;
 }
 
 /**

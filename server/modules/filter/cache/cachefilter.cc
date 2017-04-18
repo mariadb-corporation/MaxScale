@@ -18,6 +18,7 @@
 #include <maxscale/modulecmd.h>
 #include "cachemt.hh"
 #include "cachept.hh"
+#include "maxscale/jansson.hh"
 
 using std::auto_ptr;
 using std::string;
@@ -97,7 +98,15 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     ss_dassert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
-    MXS_EXCEPTION_GUARD(pFilter->cache().show(pDcb));
+    json_t* json = NULL;
+
+    MXS_EXCEPTION_GUARD(json = pFilter->cache().show());
+
+    if (json)
+    {
+        string str = mxs::json_dump(json, JSON_INDENT(4));
+        dcb_printf(pDcb, "%s\n", str.c_str());
+    }
 
     return true;
 }
@@ -297,9 +306,9 @@ CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-void CacheFilter::diagnostics(DCB* pDcb)
+json_t* CacheFilter::diagnostics()
 {
-    m_sCache->show(pDcb);
+    return m_sCache->show();
 }
 
 uint64_t CacheFilter::getCapabilities()

@@ -144,10 +144,8 @@ public:
 
     /**
      * Called for obtaining diagnostics about the filter session.
-     *
-     * @param pDcb  The dcb where the diagnostics should be written.
      */
-    void diagnostics(DCB *pDcb);
+    json_t* diagnostics();
 
 protected:
     FilterSession(MXS_SESSION* pSession);
@@ -274,20 +272,24 @@ public:
         return rv;
     }
 
-    static void diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, DCB* pDcb)
+    static json_t* diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData)
     {
+        json_t* rval = NULL;
+
         if (pData)
         {
             FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
 
-            MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
+            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics());
         }
         else
         {
             FilterType* pFilter = static_cast<FilterType*>(pInstance);
 
-            MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
+            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics());
         }
+
+        return rval;
     }
 
     static uint64_t getCapabilities(MXS_FILTER* pInstance)
