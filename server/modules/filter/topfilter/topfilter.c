@@ -58,7 +58,7 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MX
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -573,55 +573,62 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
  *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
 {
-    TOPN_INSTANCE *my_instance = (TOPN_INSTANCE *) instance;
-    TOPN_SESSION *my_session = (TOPN_SESSION *) fsession;
-    int i;
+    TOPN_INSTANCE *my_instance = (TOPN_INSTANCE*)instance;
+    TOPN_SESSION *my_session = (TOPN_SESSION*)fsession;
 
-    dcb_printf(dcb, "\t\tReport size            %d\n",
-               my_instance->topN);
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "report_size", json_integer(my_instance->topN));
+
     if (my_instance->source)
     {
-        dcb_printf(dcb, "\t\tLimit logging to connections from  %s\n",
-                   my_instance->source);
+        json_object_set_new(rval, "source", json_string(my_instance->source));
     }
     if (my_instance->user)
     {
-        dcb_printf(dcb, "\t\tLimit logging to user      %s\n",
-                   my_instance->user);
+        json_object_set_new(rval, "user", json_string(my_instance->user));
     }
+
     if (my_instance->match)
     {
-        dcb_printf(dcb, "\t\tInclude queries that match     %s\n",
-                   my_instance->match);
+        json_object_set_new(rval, "match", json_string(my_instance->match));
     }
+
     if (my_instance->exclude)
     {
-        dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
-                   my_instance->exclude);
+        json_object_set_new(rval, "exclude", json_string(my_instance->exclude));
     }
+
     if (my_session)
     {
-        dcb_printf(dcb, "\t\tLogging to file %s.\n",
-                   my_session->filename);
-        dcb_printf(dcb, "\t\tCurrent Top %d:\n", my_instance->topN);
-        for (i = 0; i < my_instance->topN; i++)
+        json_object_set_new(rval, "session_filename", json_string(my_session->filename));
+
+        json_t* arr = json_array();
+
+        for (int i = 0; i < my_instance->topN; i++)
         {
             if (my_session->top[i]->sql)
             {
-                dcb_printf(dcb, "\t\t%d place:\n", i + 1);
-                dcb_printf(dcb, "\t\t\tExecution time: %.3f seconds\n",
-                           (double) ((my_session->top[i]->duration.tv_sec * 1000)
-                                     + (my_session->top[i]->duration.tv_usec / 1000)) / 1000);
-                dcb_printf(dcb, "\t\t\tSQL: %s\n",
-                           my_session->top[i]->sql);
+                double exec_time = ((my_session->top[i]->duration.tv_sec * 1000.0)
+                                    + (my_session->top[i]->duration.tv_usec / 1000.0)) / 1000.0;
+
+                json_t* obj = json_object();
+
+                json_object_set_new(obj, "rank", json_integer(i + 1));
+                json_object_set_new(obj, "time", json_real(exec_time));
+                json_object_set_new(obj, "sql", json_string(my_session->top[i]->sql));
+
+                json_array_append(arr, obj);
             }
         }
+
+        json_object_set_new(rval, "top_queries", arr);
     }
+
+    return rval;
 }
 
 /**

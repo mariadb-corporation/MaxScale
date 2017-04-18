@@ -138,9 +138,9 @@ MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-void MaskingFilter::diagnostics(DCB* pDcb)
+json_t* MaskingFilter::diagnostics()
 {
-    dcb_printf(pDcb, "Hello, World!\n");
+    return NULL;
 }
 
 // static

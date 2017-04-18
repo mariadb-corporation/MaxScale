@@ -48,7 +48,7 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
@@ -376,35 +376,34 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
- * @param   dcb     The DCB for diagnostic output
  */
-static void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
 {
-    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE *) instance;
-    REGEX_SESSION *my_session = (REGEX_SESSION *) fsession;
+    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE*)instance;
+    REGEX_SESSION *my_session = (REGEX_SESSION*)fsession;
 
-    dcb_printf(dcb, "\t\tSearch and replace:            s/%s/%s/\n",
-               my_instance->match, my_instance->replace);
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "match", json_string(my_instance->match));
+    json_object_set_new(rval, "replace", json_string(my_instance->replace));
+
     if (my_session)
     {
-        dcb_printf(dcb, "\t\tNo. of queries unaltered by filter:    %d\n",
-                   my_session->no_change);
-        dcb_printf(dcb, "\t\tNo. of queries altered by filter:      %d\n",
-                   my_session->replacements);
+        json_object_set_new(rval, "altered", json_integer(my_session->no_change));
+        json_object_set_new(rval, "unaltered", json_integer(my_session->replacements));
     }
+
     if (my_instance->source)
     {
-        dcb_printf(dcb,
-                   "\t\tReplacement limited to connections from     %s\n",
-                   my_instance->source);
+        json_object_set_new(rval, "source", json_string(my_instance->source));
     }
+
     if (my_instance->user)
     {
-        dcb_printf(dcb,
-                   "\t\tReplacement limit to user           %s\n",
-                   my_instance->user);
+        json_object_set_new(rval, "user", json_string(my_instance->user));
     }
+
+    return rval;
 }
 
 /**
