@@ -48,7 +48,7 @@ static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *sessio
 static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  json_t* diagnostics(MXS_ROUTER *instance);
 static  uint64_t getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION *cli);
@@ -284,10 +284,9 @@ execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static  void
-diagnostics(MXS_ROUTER *instance, DCB *dcb)
+static  json_t* diagnostics(MXS_ROUTER *instance)
 {
-    return; /* Nothing to do currently */
+    return NULL;
 }
 
 static uint64_t getCapabilities(MXS_ROUTER *instance)

@@ -93,7 +93,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics(MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
@@ -615,34 +615,23 @@ return_rc:
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static void
-diagnostics(MXS_ROUTER *router, DCB *dcb)
+static json_t* diagnostics(MXS_ROUTER *router)
 {
-    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
-    char *weightby;
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    json_t* rval = json_object();
 
-    dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
-               router_inst->stats.n_sessions);
-    dcb_printf(dcb, "\tCurrent no. of router sessions:	%d\n",
-               router_inst->service->stats.n_current);
-    dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
-               router_inst->stats.n_queries);
-    if ((weightby = serviceGetWeightingParameter(router_inst->service))
-        != NULL)
+    json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router_inst->service->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router_inst->stats.n_queries));
+
+    char *weightby = serviceGetWeightingParameter(router_inst->service);
+
+    if (weightby)
     {
-        dcb_printf(dcb, "\tConnection distribution based on %s "
-                   "server parameter.\n",
-                   weightby);
-        dcb_printf(dcb,
-                   "\t\tServer               Target %% Connections\n");
-        for (SERVER_REF *ref = router_inst->service->dbref; ref; ref = ref->next)
-        {
-            dcb_printf(dcb, "\t\t%-20s %3.1f%%     %d\n",
-                       ref->server->unique_name,
-                       (float) ref->weight / 10,
-                       ref->connections);
-        }
+        json_object_set_new(rval, "weightby", json_string(weightby));
     }
+
+    return rval;
 }
 
 /**

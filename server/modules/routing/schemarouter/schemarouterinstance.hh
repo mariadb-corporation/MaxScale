@@ -37,7 +37,7 @@ public:
     ~SchemaRouter();
     static SchemaRouter* create(SERVICE* pService, char** pzOptions);
     SchemaRouterSession* newSession(MXS_SESSION* pSession);
-    void diagnostics(DCB* pDcb);
+    json_t* diagnostics();
     uint64_t getCapabilities();
 
 private:

@@ -173,11 +173,15 @@ public:
         return rv;
     }
 
-    static void diagnostics(MXS_ROUTER* pInstance, DCB* pDcb)
+    static json_t* diagnostics(MXS_ROUTER* pInstance)
     {
         RouterType* pRouter = static_cast<RouterType*>(pInstance);
 
-        MXS_EXCEPTION_GUARD(pRouter->diagnostics(pDcb));
+        json_t* rval = NULL;
+
+        MXS_EXCEPTION_GUARD(rval = pRouter->diagnostics());
+
+        return rval;
     }
 
     static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket, DCB* pBackend)

@@ -29,19 +29,15 @@
  * @endverbatim
  */
 
-
-static  MXS_FILTER  *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
-static  MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
-static  void    closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void    freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
-static  void    setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
-static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static MXS_FILTER *createInstance(const char *name, char **options, MXS_CONFIG_PARAMETER *params);
+static MXS_FILTER_SESSION *newSession(MXS_FILTER *instance, MXS_SESSION *session);
+static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
+static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
+static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 static void destroyInstance(MXS_FILTER *instance);
-
-
-
 
 /**
  * A dummy instance structure
@@ -225,18 +221,9 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static  void
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
 {
-    TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
-    TEST_SESSION    *my_session = (TEST_SESSION *)fsession;
-
-    if (my_session)
-        dcb_printf(dcb, "\t\tNo. of queries routed by filter: %d\n",
-                   my_session->count);
-    else
-        dcb_printf(dcb, "\t\tNo. of sessions created: %d\n",
-                   my_instance->sessions);
+    return NULL;
 }
 
 /**

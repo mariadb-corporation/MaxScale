@@ -74,7 +74,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
-static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics(MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
@@ -646,69 +646,47 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
+static json_t* diagnostics(MXS_ROUTER *instance)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
-    char *weightby;
-    double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
 
-    dcb_printf(dcb, "\n");
-    dcb_printf(dcb, "\tuse_sql_variables_in:      %s\n",
-               mxs_target_to_str(router->rwsplit_config.use_sql_variables_in));
-    dcb_printf(dcb, "\tslave_selection_criteria:  %s\n",
-               select_criteria_to_str(router->rwsplit_config.slave_selection_criteria));
-    dcb_printf(dcb, "\tmaster_failure_mode:       %s\n",
-               failure_mode_to_str(router->rwsplit_config.master_failure_mode));
-    dcb_printf(dcb, "\tmax_slave_replication_lag: %d\n",
-               router->rwsplit_config.max_slave_replication_lag);
-    dcb_printf(dcb, "\tretry_failed_reads:        %s\n",
-               router->rwsplit_config.retry_failed_reads ? "true" : "false");
-    dcb_printf(dcb, "\tstrict_multi_stmt:         %s\n",
-               router->rwsplit_config.strict_multi_stmt ? "true" : "false");
-    dcb_printf(dcb, "\tdisable_sescmd_history:    %s\n",
-               router->rwsplit_config.disable_sescmd_history ? "true" : "false");
-    dcb_printf(dcb, "\tmax_sescmd_history:        %d\n",
-               router->rwsplit_config.max_sescmd_history);
-    dcb_printf(dcb, "\tmaster_accept_reads:       %s\n",
-               router->rwsplit_config.master_accept_reads ? "true" : "false");
-    dcb_printf(dcb, "\n");
+    json_t* rval = json_object();
 
-    if (router->stats.n_queries > 0)
+    json_object_set_new(rval, "use_sql_variables_in",
+                        json_string(mxs_target_to_str(router->rwsplit_config.use_sql_variables_in)));
+    json_object_set_new(rval, "slave_selection_criteria",
+                        json_string(select_criteria_to_str(router->rwsplit_config.slave_selection_criteria)));
+    json_object_set_new(rval, "master_failure_mode",
+                        json_string(failure_mode_to_str(router->rwsplit_config.master_failure_mode)));
+    json_object_set_new(rval, "max_slave_replication_lag",
+                        json_integer(router->rwsplit_config.max_slave_replication_lag));
+    json_object_set_new(rval, "retry_failed_reads",
+                        json_boolean(router->rwsplit_config.retry_failed_reads));
+    json_object_set_new(rval, "strict_multi_stmt",
+                        json_boolean(router->rwsplit_config.strict_multi_stmt));
+    json_object_set_new(rval, "disable_sescmd_history",
+                        json_boolean(router->rwsplit_config.disable_sescmd_history));
+    json_object_set_new(rval, "max_sescmd_history",
+                        json_integer(router->rwsplit_config.max_sescmd_history));
+    json_object_set_new(rval, "master_accept_reads",
+                        json_boolean(router->rwsplit_config.master_accept_reads));
+
+
+    json_object_set_new(rval, "connections", json_integer(router->stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router->service->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router->stats.n_queries));
+    json_object_set_new(rval, "route_master", json_integer(router->stats.n_master));
+    json_object_set_new(rval, "route_slave", json_integer(router->stats.n_slave));
+    json_object_set_new(rval, "route_all", json_integer(router->stats.n_all));
+
+    char *weightby = serviceGetWeightingParameter(router->service);
+
+    if (weightby)
     {
-        master_pct = ((double)router->stats.n_master / (double)router->stats.n_queries) * 100.0;
-        slave_pct = ((double)router->stats.n_slave / (double)router->stats.n_queries) * 100.0;
-        all_pct = ((double)router->stats.n_all / (double)router->stats.n_queries) * 100.0;
+        json_object_set_new(rval, "weightby", json_string(weightby));
     }
 
-    dcb_printf(dcb, "\tNumber of router sessions:           	%" PRIu64 "\n",
-               router->stats.n_sessions);
-    dcb_printf(dcb, "\tCurrent no. of router sessions:      	%d\n",
-               router->service->stats.n_current);
-    dcb_printf(dcb, "\tNumber of queries forwarded:          	%" PRIu64 "\n",
-               router->stats.n_queries);
-    dcb_printf(dcb, "\tNumber of queries forwarded to master:	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_master, master_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to slave: 	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_slave, slave_pct);
-    dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
-               router->stats.n_all, all_pct);
-
-    if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
-    {
-        dcb_printf(dcb, "\tConnection distribution based on %s "
-                   "server parameter.\n",
-                   weightby);
-        dcb_printf(dcb, "\t\tServer               Target %%    Connections  "
-                   "Operations\n");
-        dcb_printf(dcb, "\t\t                               Global  Router\n");
-        for (SERVER_REF *ref = router->service->dbref; ref; ref = ref->next)
-        {
-            dcb_printf(dcb, "\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
-                       ref->server->unique_name, (float)ref->weight / 10,
-                       ref->server->stats.n_current, ref->connections,
-                       ref->server->stats.n_current_ops);
-        }
-    }
+    return rval;
 }
 
 /**

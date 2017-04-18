@@ -95,7 +95,7 @@ static  MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *sessio
 static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  json_t* diagnostics(MXS_ROUTER *instance);
 static  void clientReply(MXS_ROUTER *instance,
                          MXS_ROUTER_SESSION *router_session,
                          GWBUF *queue,
@@ -1287,9 +1287,12 @@ spin_reporter(void *dcb, char *desc, int value)
  * @param instance  Instance of the router
  * @param dcb       DCB to send diagnostics to
  */
-static void
-diagnostics(MXS_ROUTER *router, DCB *dcb)
+static json_t* diagnostics(MXS_ROUTER *router)
 {
+    // TODO: Fix this
+    return NULL;
+
+    DCB *dcb = NULL;
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
     ROUTER_SLAVE *session;
     int i = 0, j;
