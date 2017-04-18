@@ -50,12 +50,6 @@ enum poll_message
 void            poll_init();
 //void          poll_finish(); // TODO: Add this.
 
-void            poll_waitevents(int epoll_fd,
-                                int thread_id,
-                                POLL_STATS* poll_stats,
-                                QUEUE_STATS* queue_stats,
-                                bool (*should_terminate)(void* data),
-                                void* data);
 void            poll_set_maxwait(unsigned int);
 void            poll_set_nonblocking_polls(unsigned int);
 

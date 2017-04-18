@@ -25,15 +25,11 @@
 #include <maxscale/platform.h>
 #include "maxscale/modules.h"
 #include "maxscale/poll.h"
+#include "maxscale/statistics.h"
 
 #define WORKER_ABSENT_ID -1
 
 using maxscale::Worker;
-
-// TODO: Temporarily moved here.
-POLL_STATS *pollStats = NULL;
-// TODO: Temporarily moved here.
-QUEUE_STATS* queueStats = NULL;
 
 namespace
 {
@@ -137,14 +133,10 @@ static bool modules_thread_init();
 static void modules_thread_finish();
 
 Worker::Worker(int id,
-               int epoll_fd,
-               POLL_STATS* pPoll_stats,
-               QUEUE_STATS* pQueue_stats)
+               int epoll_fd)
     : m_id(id)
     , m_state(STOPPED)
     , m_epoll_fd(epoll_fd)
-    , m_pPoll_stats(pPoll_stats)
-    , m_pQueue_stats(pQueue_stats)
     , m_pQueue(NULL)
     , m_thread(0)
     , m_started(false)
@@ -168,18 +160,6 @@ void Worker::init()
     this_unit.number_poll_spins = config_nbpolls();
     this_unit.max_poll_sleep = config_pollsleep();
 
-    pollStats = (POLL_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(POLL_STATS));
-    if (!pollStats)
-    {
-        exit(-1);
-    }
-
-    queueStats = (QUEUE_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(QUEUE_STATS));
-    if (!queueStats)
-    {
-        exit(-1);
-    }
-
     this_unit.ppWorkers = new (std::nothrow) Worker* [this_unit.n_workers] (); // Zero initialized array
 
     if (!this_unit.ppWorkers)
@@ -190,7 +170,7 @@ void Worker::init()
 
     for (int i = 0; i < this_unit.n_workers; ++i)
     {
-        Worker* pWorker = Worker::create(i, &pollStats[i], &queueStats[i]);
+        Worker* pWorker = Worker::create(i);
 
         if (pWorker)
         {
@@ -215,6 +195,165 @@ void Worker::finish()
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
     }
+}
+
+namespace
+{
+
+int64_t one_stats_get(int64_t Worker::STATISTICS::*what, enum ts_stats_type type)
+{
+    int64_t best = type == TS_STATS_MAX ? LONG_MIN : (type == TS_STATS_MIX ? LONG_MAX : 0);
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        Worker* pWorker = Worker::get(i);
+        ss_dassert(pWorker);
+
+        const Worker::STATISTICS& s = pWorker->statistics();
+
+        int64_t value = s.*what;
+
+        switch (type)
+        {
+        case TS_STATS_MAX:
+            if (value > best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_MIX:
+            if (value < best)
+            {
+                best = value;
+            }
+            break;
+
+        case TS_STATS_AVG:
+        case TS_STATS_SUM:
+            best += value;
+            break;
+        }
+    }
+
+    return type == TS_STATS_AVG ? best / this_unit.n_workers : best;
+}
+
+}
+
+//static
+Worker::STATISTICS Worker::get_statistics()
+{
+    STATISTICS cs;
+
+    cs.n_read        = one_stats_get(&STATISTICS::n_read, TS_STATS_SUM);
+    cs.n_write       = one_stats_get(&STATISTICS::n_write, TS_STATS_SUM);
+    cs.n_error       = one_stats_get(&STATISTICS::n_error, TS_STATS_SUM);
+    cs.n_hup         = one_stats_get(&STATISTICS::n_hup, TS_STATS_SUM);
+    cs.n_accept      = one_stats_get(&STATISTICS::n_accept, TS_STATS_SUM);
+    cs.n_polls       = one_stats_get(&STATISTICS::n_polls, TS_STATS_SUM);
+    cs.n_pollev      = one_stats_get(&STATISTICS::n_pollev, TS_STATS_SUM);
+    cs.n_nbpollev    = one_stats_get(&STATISTICS::n_nbpollev, TS_STATS_SUM);
+    cs.evq_length    = one_stats_get(&STATISTICS::evq_length, TS_STATS_AVG);
+    cs.evq_max       = one_stats_get(&STATISTICS::evq_max, TS_STATS_MAX);
+    cs.blockingpolls = one_stats_get(&STATISTICS::blockingpolls, TS_STATS_SUM);
+    cs.maxqtime      = one_stats_get(&STATISTICS::maxqtime, TS_STATS_MAX);
+    cs.maxexectime   = one_stats_get(&STATISTICS::maxexectime, TS_STATS_MAX);
+
+    for (int i = 0; i < Worker::STATISTICS::MAXNFDS - 1; i++)
+    {
+        for (int j = 0; j < this_unit.n_workers; ++j)
+        {
+            Worker* pWorker = Worker::get(j);
+            ss_dassert(pWorker);
+
+            cs.n_fds[i] += pWorker->statistics().n_fds[i];
+        }
+    }
+
+    for (int i = 0; i <= Worker::STATISTICS::N_QUEUE_TIMES; ++i)
+    {
+        for (int j = 0; j < this_unit.n_workers; ++j)
+        {
+            Worker* pWorker = Worker::get(j);
+            ss_dassert(pWorker);
+
+            cs.qtimes[i] += pWorker->statistics().qtimes[i];
+            cs.exectimes[i] += pWorker->statistics().exectimes[i];
+        }
+
+        cs.qtimes[i] /= this_unit.n_workers;
+        cs.exectimes[i] /= this_unit.n_workers;
+    }
+
+    return cs;
+}
+
+//static
+int64_t Worker::get_one_statistic(POLL_STAT what)
+{
+    int64_t rv = 0;
+
+    int64_t Worker::STATISTICS::*member = NULL;
+    enum ts_stats_type approach;
+
+    switch (what)
+    {
+    case POLL_STAT_READ:
+        member = &Worker::STATISTICS::n_read;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_WRITE:
+        member = &Worker::STATISTICS::n_write;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_ERROR:
+        member = &Worker::STATISTICS::n_error;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_HANGUP:
+        member = &Worker::STATISTICS::n_hup;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_ACCEPT:
+        member = &Worker::STATISTICS::n_accept;
+        approach = TS_STATS_SUM;
+        break;
+
+    case POLL_STAT_EVQ_LEN:
+        member = &Worker::STATISTICS::evq_length;
+        approach = TS_STATS_AVG;
+        break;
+
+    case POLL_STAT_EVQ_MAX:
+        member = &Worker::STATISTICS::evq_max;
+        approach = TS_STATS_MAX;
+        break;
+
+    case POLL_STAT_MAX_QTIME:
+        member = &Worker::STATISTICS::maxqtime;
+        approach = TS_STATS_MAX;
+        break;
+
+    case POLL_STAT_MAX_EXECTIME:
+        member = &Worker::STATISTICS::maxexectime;
+        approach = TS_STATS_MAX;
+        break;
+
+    default:
+        ss_dassert(!true);
+    }
+
+    if (member)
+    {
+        rv = one_stats_get(member, approach);
+    }
+
+    return rv;
 }
 
 bool Worker::add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
@@ -344,20 +483,10 @@ size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg
     return Worker::broadcast_message(msg_id, arg1, arg2);
 }
 
-namespace
-{
-
-bool should_shutdown(void* pData)
-{
-    return static_cast<Worker*>(pData)->should_shutdown();
-}
-
-}
-
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
-    poll_waitevents(m_pPoll_stats, m_pQueue_stats);
+    poll_waitevents();
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 
     MXS_NOTICE("Worker %d has shut down.", m_id);
@@ -417,16 +546,12 @@ void Worker::shutdown_all()
  * - Creates a pipe.
  * - Adds the read descriptor to the polling mechanism.
  *
- * @param worker_id     The id of the worker.
- * @param pPoll_stats   The poll statistics of the worker.
- * @param pQueue_stats  The queue statistics of the worker.
+ * @param worker_id  The id of the worker.
  *
  * @return A worker instance if successful, otherwise NULL.
  */
 //static
-Worker* Worker::create(int worker_id,
-                       POLL_STATS* pPoll_stats,
-                       QUEUE_STATS* pQueue_stats)
+Worker* Worker::create(int worker_id)
 {
     Worker* pThis = NULL;
 
@@ -434,7 +559,7 @@ Worker* Worker::create(int worker_id,
 
     if (epoll_fd != -1)
     {
-        pThis = new (std::nothrow) Worker(worker_id, epoll_fd, pPoll_stats, pQueue_stats);
+        pThis = new (std::nothrow) Worker(worker_id, epoll_fd);
 
         if (pThis)
         {
@@ -538,11 +663,8 @@ void Worker::thread_main(void* pArg)
 
 /**
  * The main polling loop
- *
- * @param poll_stats       The polling stats of the calling thread.
- * @param queue_stats      The queue stats of the calling thread.
  */
-void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
+void Worker::poll_waitevents()
 {
     struct epoll_event events[MAX_EVENTS];
     int i, nfds, timeout_bias = 1;
@@ -554,7 +676,7 @@ void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
     {
         m_state = POLLING;
 
-        atomic_add_int64(&poll_stats->n_polls, 1);
+        atomic_add_int64(&m_statistics.n_polls, 1);
         if ((nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
             int eno = errno;
@@ -579,7 +701,7 @@ void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
             {
                 timeout_bias++;
             }
-            atomic_add_int64(&poll_stats->blockingpolls, 1);
+            atomic_add_int64(&m_statistics.blockingpolls, 1);
             nfds = epoll_wait(m_epoll_fd,
                               events,
                               MAX_EVENTS,
@@ -592,26 +714,26 @@ void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
 
         if (nfds > 0)
         {
-            poll_stats->evq_length = nfds;
-            if (nfds > poll_stats->evq_max)
+            m_statistics.evq_length = nfds;
+            if (nfds > m_statistics.evq_max)
             {
-                poll_stats->evq_max = nfds;
+                m_statistics.evq_max = nfds;
             }
 
             timeout_bias = 1;
             if (poll_spins <= this_unit.number_poll_spins + 1)
             {
-                atomic_add_int64(&poll_stats->n_nbpollev, 1);
+                atomic_add_int64(&m_statistics.n_nbpollev, 1);
             }
             poll_spins = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
-            atomic_add_int64(&poll_stats->n_pollev, 1);
+            atomic_add_int64(&m_statistics.n_pollev, 1);
 
             m_state = PROCESSING;
 
-            poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
+            m_statistics.n_fds[(nfds < STATISTICS::MAXNFDS ? (nfds - 1) : STATISTICS::MAXNFDS - 1)]++;
         }
 
         uint64_t cycle_start = hkheartbeat;
@@ -622,16 +744,16 @@ void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
             int64_t started = hkheartbeat;
             int64_t qtime = started - cycle_start;
 
-            if (qtime > N_QUEUE_TIMES)
+            if (qtime > STATISTICS::N_QUEUE_TIMES)
             {
-                queue_stats->qtimes[N_QUEUE_TIMES]++;
+                m_statistics.qtimes[STATISTICS::N_QUEUE_TIMES]++;
             }
             else
             {
-                queue_stats->qtimes[qtime]++;
+                m_statistics.qtimes[qtime]++;
             }
 
-            queue_stats->maxqtime = MXS_MAX(queue_stats->maxqtime, qtime);
+            m_statistics.maxqtime = MXS_MAX(m_statistics.maxqtime, qtime);
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
 
@@ -639,42 +761,42 @@ void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
 
             if (actions & MXS_POLL_ACCEPT)
             {
-                atomic_add_int64(&poll_stats->n_accept, 1);
+                atomic_add_int64(&m_statistics.n_accept, 1);
             }
 
             if (actions & MXS_POLL_READ)
             {
-                atomic_add_int64(&poll_stats->n_read, 1);
+                atomic_add_int64(&m_statistics.n_read, 1);
             }
 
             if (actions & MXS_POLL_WRITE)
             {
-                atomic_add_int64(&poll_stats->n_write, 1);
+                atomic_add_int64(&m_statistics.n_write, 1);
             }
 
             if (actions & MXS_POLL_HUP)
             {
-                atomic_add_int64(&poll_stats->n_hup, 1);
+                atomic_add_int64(&m_statistics.n_hup, 1);
             }
 
             if (actions & MXS_POLL_ERROR)
             {
-                atomic_add_int64(&poll_stats->n_error, 1);
+                atomic_add_int64(&m_statistics.n_error, 1);
             }
 
             /** Calculate event execution statistics */
             qtime = hkheartbeat - started;
 
-            if (qtime > N_QUEUE_TIMES)
+            if (qtime > STATISTICS::N_QUEUE_TIMES)
             {
-                queue_stats->exectimes[N_QUEUE_TIMES]++;
+                m_statistics.exectimes[STATISTICS::N_QUEUE_TIMES]++;
             }
             else
             {
-                queue_stats->exectimes[qtime % N_QUEUE_TIMES]++;
+                m_statistics.exectimes[qtime % STATISTICS::N_QUEUE_TIMES]++;
             }
 
-            queue_stats->maxexectime = MXS_MAX(queue_stats->maxexectime, qtime);
+            m_statistics.maxexectime = MXS_MAX(m_statistics.maxexectime, qtime);
         }
 
         dcb_process_idle_sessions(m_id);

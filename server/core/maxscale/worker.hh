@@ -15,10 +15,42 @@
 #include <maxscale/cppdefs.hh>
 #include <maxscale/platform.h>
 #include "messagequeue.hh"
+#include "poll.h"
 #include "worker.h"
 
 namespace maxscale
 {
+
+struct WORKER_STATISTICS
+{
+    WORKER_STATISTICS()
+    {
+        memset(this, 0, sizeof(WORKER_STATISTICS));
+    }
+
+    enum
+    {
+        MAXNFDS = 10,
+        N_QUEUE_TIMES = 30
+    };
+
+    int64_t  n_read;                      /*< Number of read events   */
+    int64_t  n_write;                     /*< Number of write events  */
+    int64_t  n_error;                     /*< Number of error events  */
+    int64_t  n_hup;                       /*< Number of hangup events */
+    int64_t  n_accept;                    /*< Number of accept events */
+    int64_t  n_polls;                     /*< Number of poll cycles   */
+    int64_t  n_pollev;                    /*< Number of polls returning events */
+    int64_t  n_nbpollev;                  /*< Number of polls returning events */
+    int64_t  n_fds[MAXNFDS];              /*< Number of wakeups with particular n_fds value */
+    int64_t  evq_length;                  /*< Event queue length */
+    int64_t  evq_max;                     /*< Maximum event queue length */
+    int64_t  blockingpolls;               /*< Number of epoll_waits with a timeout specified */
+    uint32_t qtimes[N_QUEUE_TIMES + 1];
+    uint32_t exectimes[N_QUEUE_TIMES + 1];
+    int64_t  maxqtime;
+    int64_t  maxexectime;
+};
 
 class Worker : public MXS_WORKER
              , private MessageQueue::Handler
@@ -27,6 +59,8 @@ class Worker : public MXS_WORKER
     Worker& operator = (const Worker&);
 
 public:
+    typedef WORKER_STATISTICS STATISTICS;
+
     enum state_t
     {
         STOPPED,
@@ -74,6 +108,38 @@ public:
     {
         return m_state;
     }
+
+    /**
+     * Returns statistics for this worker.
+     *
+     * @return The worker specific statistics.
+     *
+     * @attentions The statistics may change at any time.
+     */
+    const STATISTICS& statistics() const
+    {
+        return m_statistics;
+    }
+
+    /**
+     * Returns statistics for all workers.
+     *
+     * @return Combined statistics.
+     *
+     * @attentions The statistics may no longer be accurate by the time it has
+     *             been returned. The returned values may also not represent a
+     *             100% consistent set.
+     */
+    static STATISTICS get_statistics();
+
+    /**
+     * Return a specific combined statistic value.
+     *
+     * @param what  What to return.
+     *
+     * @return The corresponding value.
+     */
+    static int64_t get_one_statistic(POLL_STAT what);
 
     /**
      * Add a file descriptor to the epoll instance of the worker.
@@ -235,27 +301,22 @@ public:
 
 private:
     Worker(int id,
-           int epoll_fd,
-           POLL_STATS* pPoll_stats,
-           QUEUE_STATS* pQueue_stats);
+           int epoll_fd);
     virtual ~Worker();
 
-    static Worker* create(int id,
-                          POLL_STATS* pPoll_stats,
-                          QUEUE_STATS* pQueue_stats);
+    static Worker* create(int id);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
     static void thread_main(void* arg);
 
-    void poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats);
+    void poll_waitevents();
 
 private:
     int           m_id;                 /*< The id of the worker. */
     state_t       m_state;              /*< The state of the worker */
     int           m_epoll_fd;           /*< The epoll file descriptor. */
-    POLL_STATS*   m_pPoll_stats;        /*< Statistics for worker. */
-    QUEUE_STATS*  m_pQueue_stats;       /*< Statistics for queue. */
+    STATISTICS    m_statistics;         /*< Worker statistics. */
     MessageQueue* m_pQueue;             /*< The message queue of the worker. */
     THREAD        m_thread;             /*< The thread handle of the worker. */
     bool          m_started;            /*< Whether the thread has been started or not. */

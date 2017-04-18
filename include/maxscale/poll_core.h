@@ -52,56 +52,6 @@ typedef struct mxs_poll_data
     } thread;
 } MXS_POLL_DATA;
 
-// TODO: Temporarily moved here.
-/**
- * The number of buckets used to gather statistics about how many
- * descriptors where processed on each epoll completion.
- *
- * An array of wakeup counts is created, with the number of descriptors used
- * to index that array. Each time a completion occurs the n_fds - 1 value is
- * used to index this array and increment the count held there.
- * If n_fds - 1 >= MAXFDS then the count at MAXFDS -1 is incremented.
- */
-#define MAXNFDS 10
-
-// TODO: Temporarily moved here.
-typedef struct
-{
-    int64_t n_read;         /*< Number of read events   */
-    int64_t n_write;        /*< Number of write events  */
-    int64_t n_error;        /*< Number of error events  */
-    int64_t n_hup;          /*< Number of hangup events */
-    int64_t n_accept;       /*< Number of accept events */
-    int64_t n_polls;        /*< Number of poll cycles   */
-    int64_t n_pollev;       /*< Number of polls returning events */
-    int64_t n_nbpollev;     /*< Number of polls returning events */
-    int32_t n_fds[MAXNFDS]; /*< Number of wakeups with particular n_fds value */
-    int64_t evq_length;     /*< Event queue length */
-    int64_t evq_max;        /*< Maximum event queue length */
-    int64_t blockingpolls;  /*< Number of epoll_waits with a timeout specified */
-} POLL_STATS;
-
-// TODO: Temporarily moved here.
-extern POLL_STATS* pollStats;
-
-// TODO: Temporarily moved here.
-#define N_QUEUE_TIMES   30
-
-// TODO: Temporarily moved here.
-/**
- * The event queue statistics
- */
-typedef struct
-{
-    uint32_t qtimes[N_QUEUE_TIMES + 1];
-    uint32_t exectimes[N_QUEUE_TIMES + 1];
-    int64_t  maxqtime;
-    int64_t  maxexectime;
-} QUEUE_STATS;
-
-// TODO: Temporarily moved here.
-extern QUEUE_STATS* queueStats;
-
 /**
  * A file descriptor should be added to the poll set of all workers.
  */
