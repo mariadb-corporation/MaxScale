@@ -2415,7 +2415,9 @@ json_t* service_to_json(const SERVICE* service)
 
         for (int i = 0; i < service->n_filters; i++)
         {
-            json_array_append_new(arr, filter_to_json(service->filters[i]));
+            string filter = "/filters/";
+            filter += service->filters[i]->name;
+            json_array_append_new(arr, json_string(filter.c_str()));
         }
 
         json_object_set_new(rval, "filters", arr);
@@ -2427,28 +2429,7 @@ json_t* service_to_json(const SERVICE* service)
 
         for (SERV_LISTENER* p = service->ports; p; p = p->next)
         {
-            json_t* listener = json_object();
-            json_object_set_new(listener, "name", json_string(p->name));
-            json_object_set_new(listener, "address", json_string(p->address));
-            json_object_set_new(listener, "port", json_integer(p->port));
-            json_object_set_new(listener, "protocol", json_string(p->protocol));
-            json_object_set_new(listener, "authenticator", json_string(p->authenticator));
-            json_object_set_new(listener, "auth_options", json_string(p->auth_options));
-
-            if (p->ssl)
-            {
-                json_t* ssl = json_object();
-
-                const char* ssl_method = ssl_method_type_to_string(p->ssl->ssl_method_type);
-                json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
-                json_object_set_new(ssl, "ssl_cert", json_string(p->ssl->ssl_cert));
-                json_object_set_new(ssl, "ssl_ca_cert", json_string(p->ssl->ssl_ca_cert));
-                json_object_set_new(ssl, "ssl_key", json_string(p->ssl->ssl_key));
-
-                json_object_set_new(listener, "ssl", ssl);
-            }
-
-            json_array_append_new(arr, listener);
+            json_array_append_new(arr, listener_to_json(p));
         }
 
         json_object_set_new(rval, "listeners", arr);
@@ -2473,7 +2454,9 @@ json_t* service_to_json(const SERVICE* service)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                json_array_append_new(arr, server_to_json(ref->server));
+                string s = "/servers/";
+                s += ref->server->unique_name;
+                json_array_append_new(arr, json_string(s.c_str()));
             }
         }
 

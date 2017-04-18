@@ -20,6 +20,7 @@
 #include <maxscale/protocol.h>
 #include <maxscale/ssl.h>
 #include <maxscale/hashtable.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -60,6 +61,15 @@ typedef struct servlistener
  * @return True if the serialization of the listener was successful, false if it fails
  */
 bool listener_serialize(const SERV_LISTENER *listener);
+
+/**
+ * @brief Convert listener to JSON
+ *
+ * @param listener Listener to convert
+ *
+ * @return Converted listener
+ */
+json_t* listener_to_json(const SERV_LISTENER* listener);
 
 SERV_LISTENER* listener_alloc(struct service* service, const char* name, const char *protocol,
                               const char *address, unsigned short port, const char *authenticator,

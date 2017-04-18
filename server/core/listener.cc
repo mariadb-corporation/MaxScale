@@ -511,3 +511,29 @@ bool listener_serialize(const SERV_LISTENER *listener)
 
     return rval;
 }
+
+json_t* listener_to_json(const SERV_LISTENER* listener)
+{
+    json_t* rval = json_object();
+    json_object_set_new(rval, "name", json_string(listener->name));
+    json_object_set_new(rval, "address", json_string(listener->address));
+    json_object_set_new(rval, "port", json_integer(listener->port));
+    json_object_set_new(rval, "protocol", json_string(listener->protocol));
+    json_object_set_new(rval, "authenticator", json_string(listener->authenticator));
+    json_object_set_new(rval, "auth_options", json_string(listener->auth_options));
+
+    if (listener->ssl)
+    {
+        json_t* ssl = json_object();
+
+        const char* ssl_method = ssl_method_type_to_string(listener->ssl->ssl_method_type);
+        json_object_set_new(ssl, "ssl_version", json_string(ssl_method));
+        json_object_set_new(ssl, "ssl_cert", json_string(listener->ssl->ssl_cert));
+        json_object_set_new(ssl, "ssl_ca_cert", json_string(listener->ssl->ssl_ca_cert));
+        json_object_set_new(ssl, "ssl_key", json_string(listener->ssl->ssl_key));
+
+        json_object_set_new(rval, "ssl", ssl);
+    }
+
+    return rval;
+}
