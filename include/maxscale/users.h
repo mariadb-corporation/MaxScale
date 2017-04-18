@@ -115,10 +115,9 @@ int users_default_loadusers(SERV_LISTENER *port);
 /**
  * @brief Default authenticator diagnostic function
  *
- * @param dcb DCB where data is printed
  * @param port Port whose data is to be printed
  */
-void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port);
+json_t* users_default_diagnostic(SERV_LISTENER *port);
 
 /**
  * Print details of the users storage mechanism

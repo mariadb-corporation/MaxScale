@@ -58,7 +58,7 @@ static int mysql_auth_set_client_data(
     MySQLProtocol *protocol,
     GWBUF         *buffer);
 
-void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port);
+json_t* mysql_auth_diagnostic(SERV_LISTENER *port);
 
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
@@ -682,24 +682,28 @@ int mysql_auth_reauthenticate(DCB *dcb, const char *user,
 
 int diag_cb(void *data, int columns, char **row, char **field_names)
 {
-    DCB *dcb = (DCB*)data;
-    dcb_printf(dcb, "%s@%s ", row[0], row[1]);
+    json_t* obj = json_object();
+    json_object_set_new(obj, "user", json_string(row[0]));
+    json_object_set_new(obj, "host", json_string(row[1]));
+
+    json_t* arr = (json_t*)data;
+    json_array_append(arr, obj);
     return 0;
 }
 
-void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
+json_t* mysql_auth_diagnostic(SERV_LISTENER *port)
 {
-    dcb_printf(dcb, "User names: ");
+    json_t* rval = json_array();
 
     MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
     char *err;
 
     if (sqlite3_exec(instance->handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
-                     diag_cb, dcb, &err) != SQLITE_OK)
+                     diag_cb, rval, &err) != SQLITE_OK)
     {
-        dcb_printf(dcb, "Failed to print users: %s\n", err);
         MXS_ERROR("Failed to print users: %s", err);
         sqlite3_free(err);
     }
-    dcb_printf(dcb, "\n");
+
+    return rval;
 }

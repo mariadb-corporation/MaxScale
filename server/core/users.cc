@@ -109,32 +109,28 @@ void usersPrint(const USERS *users)
     hashtable_stats(users->data);
 }
 
-void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port)
+json_t* users_default_diagnostic(SERV_LISTENER *port)
 {
+    json_t* rval = json_array();
+
     if (port->users && port->users->data)
     {
         HASHITERATOR *iter = hashtable_iterator(port->users->data);
 
         if (iter)
         {
-            dcb_printf(dcb, "User names: ");
-            const char *sep = "";
-            void *user;
+            char* user;
 
-            while ((user = hashtable_next(iter)) != NULL)
+            while ((user = (char*)hashtable_next(iter)))
             {
-                dcb_printf(dcb, "%s%s", sep, (char *)user);
-                sep = ", ";
+                json_array_append(rval, json_string(user));
             }
 
-            dcb_printf(dcb, "\n");
             hashtable_iterator_free(iter);
         }
     }
-    else
-    {
-        dcb_printf(dcb, "Users table is empty\n");
-    }
+
+    return rval;
 }
 
 int users_default_loadusers(SERV_LISTENER *port)
