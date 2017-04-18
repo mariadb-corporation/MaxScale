@@ -54,19 +54,6 @@ typedef struct mxs_poll_data
 
 // TODO: Temporarily moved here.
 /**
- * Internal MaxScale thread states
- */
-typedef enum
-{
-    THREAD_STOPPED,
-    THREAD_IDLE,
-    THREAD_POLLING,
-    THREAD_PROCESSING,
-    THREAD_ZPROCESSING
-} THREAD_STATE;
-
-// TODO: Temporarily moved here.
-/**
  * The number of buckets used to gather statistics about how many
  * descriptors where processed on each epoll completion.
  *
@@ -80,7 +67,6 @@ typedef enum
 // TODO: Temporarily moved here.
 typedef struct
 {
-    THREAD_STATE thread_state; /*< The thread state. */
     int64_t n_read;         /*< Number of read events   */
     int64_t n_write;        /*< Number of write events  */
     int64_t n_error;        /*< Number of error events  */

@@ -141,6 +141,7 @@ Worker::Worker(int id,
                POLL_STATS* pPoll_stats,
                QUEUE_STATS* pQueue_stats)
     : m_id(id)
+    , m_state(STOPPED)
     , m_epoll_fd(epoll_fd)
     , m_pPoll_stats(pPoll_stats)
     , m_pQueue_stats(pQueue_stats)
@@ -171,11 +172,6 @@ void Worker::init()
     if (!pollStats)
     {
         exit(-1);
-    }
-
-    for (int i = 0; i < this_unit.n_workers; i++)
-    {
-        pollStats[i].thread_state = THREAD_STOPPED;
     }
 
     queueStats = (QUEUE_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(QUEUE_STATS));
@@ -361,9 +357,7 @@ bool should_shutdown(void* pData)
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
-    poll_waitevents(m_epoll_fd, m_id,
-                    m_pPoll_stats, m_pQueue_stats,
-                    ::should_shutdown, this);
+    poll_waitevents(m_pPoll_stats, m_pQueue_stats);
     this_thread.current_worker_id = WORKER_ABSENT_ID;
 
     MXS_NOTICE("Worker %d has shut down.", m_id);
@@ -545,34 +539,23 @@ void Worker::thread_main(void* pArg)
 /**
  * The main polling loop
  *
- * @param epoll_fd         The epoll descriptor.
- * @param thread_id        The id of the calling thread.
  * @param poll_stats       The polling stats of the calling thread.
  * @param queue_stats      The queue stats of the calling thread.
- * @param should_shutdown  Pointer to function returning true if the polling should
- *                         be terminated.
- * @param data             Data provided to the @c should_shutdown function.
  */
-//static
-void Worker::poll_waitevents(int epoll_fd,
-                             int thread_id,
-                             POLL_STATS* poll_stats,
-                             QUEUE_STATS* queue_stats,
-                             bool (*should_shutdown)(void* data),
-                             void* data)
+void Worker::poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats)
 {
     struct epoll_event events[MAX_EVENTS];
     int i, nfds, timeout_bias = 1;
     int poll_spins = 0;
 
-    poll_stats->thread_state = THREAD_IDLE;
+    m_state = IDLE;
 
-    while (!should_shutdown(data))
+    while (!should_shutdown())
     {
-        poll_stats->thread_state = THREAD_POLLING;
+        m_state = POLLING;
 
         atomic_add_int64(&poll_stats->n_polls, 1);
-        if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
+        if ((nfds = epoll_wait(m_epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
             int eno = errno;
             errno = 0;
@@ -597,7 +580,7 @@ void Worker::poll_waitevents(int epoll_fd,
                 timeout_bias++;
             }
             atomic_add_int64(&poll_stats->blockingpolls, 1);
-            nfds = epoll_wait(epoll_fd,
+            nfds = epoll_wait(m_epoll_fd,
                               events,
                               MAX_EVENTS,
                               (this_unit.max_poll_sleep * timeout_bias) / 10);
@@ -626,7 +609,7 @@ void Worker::poll_waitevents(int epoll_fd,
                       nfds);
             atomic_add_int64(&poll_stats->n_pollev, 1);
 
-            poll_stats->thread_state = THREAD_PROCESSING;
+            m_state = PROCESSING;
 
             poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
         }
@@ -652,7 +635,7 @@ void Worker::poll_waitevents(int epoll_fd,
 
             MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
 
-            uint32_t actions = data->handler(data, thread_id, events[i].events);
+            uint32_t actions = data->handler(data, m_id, events[i].events);
 
             if (actions & MXS_POLL_ACCEPT)
             {
@@ -694,20 +677,21 @@ void Worker::poll_waitevents(int epoll_fd,
             queue_stats->maxexectime = MXS_MAX(queue_stats->maxexectime, qtime);
         }
 
-        dcb_process_idle_sessions(thread_id);
+        dcb_process_idle_sessions(m_id);
 
-        poll_stats->thread_state = THREAD_ZPROCESSING;
+        m_state = ZPROCESSING;
 
         /** Process closed DCBs */
-        dcb_process_zombies(thread_id);
+        dcb_process_zombies(m_id);
 
         poll_check_message();
 
-        poll_stats->thread_state = THREAD_IDLE;
+        m_state = IDLE;
     } /*< while(1) */
 
-    poll_stats->thread_state = THREAD_STOPPED;
-        }
+    m_state = STOPPED;
+}
+
 /**
  * Calls thread_init on all loaded modules.
  *

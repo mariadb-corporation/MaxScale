@@ -354,23 +354,26 @@ dShowThreads(DCB *dcb)
     dcb_printf(dcb, "----+------------\n");
     for (int i = 0; i < n_threads; i++)
     {
+        Worker* worker = Worker::get(i);
+        ss_dassert(worker);
+
         const char *state = "Unknown";
 
-        switch (pollStats[i].thread_state)
+        switch (worker->state())
         {
-        case THREAD_STOPPED:
+        case Worker::STOPPED:
             state = "Stopped";
             break;
-        case THREAD_IDLE:
+        case Worker::IDLE:
             state = "Idle";
             break;
-        case THREAD_POLLING:
+        case Worker::POLLING:
             state = "Polling";
             break;
-        case THREAD_PROCESSING:
+        case Worker::PROCESSING:
             state = "Processing";
             break;
-        case THREAD_ZPROCESSING:
+        case Worker::ZPROCESSING:
             state = "Collecting";
             break;
 

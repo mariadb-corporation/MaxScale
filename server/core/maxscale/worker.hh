@@ -27,6 +27,15 @@ class Worker : public MXS_WORKER
     Worker& operator = (const Worker&);
 
 public:
+    enum state_t
+    {
+        STOPPED,
+        IDLE,
+        POLLING,
+        PROCESSING,
+        ZPROCESSING
+    };
+
     /**
      * Initialize the worker mechanism.
      *
@@ -52,6 +61,18 @@ public:
     int id() const
     {
         return m_id;
+    }
+
+    /**
+     * Returns the state of the worker.
+     *
+     * @return The current state.
+     *
+     * @attentions The state might have changed the moment after the function returns.
+     */
+    state_t state() const
+    {
+        return m_state;
     }
 
     /**
@@ -227,15 +248,11 @@ private:
 
     static void thread_main(void* arg);
 
-    static void poll_waitevents(int epoll_fd,
-                                int thread_id,
-                                POLL_STATS* poll_stats,
-                                QUEUE_STATS* queue_stats,
-                                bool (*should_shutdown)(void* data),
-                                void* data);
+    void poll_waitevents(POLL_STATS* poll_stats, QUEUE_STATS* queue_stats);
 
 private:
     int           m_id;                 /*< The id of the worker. */
+    state_t       m_state;              /*< The state of the worker */
     int           m_epoll_fd;           /*< The epoll file descriptor. */
     POLL_STATS*   m_pPoll_stats;        /*< Statistics for worker. */
     QUEUE_STATS*  m_pQueue_stats;       /*< Statistics for queue. */
