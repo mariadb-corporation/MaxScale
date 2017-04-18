@@ -1554,9 +1554,7 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor)
 
         for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
         {
-            string serv = "/servers/";
-            serv += db->server->unique_name;
-            json_array_append_new(arr, json_string(serv.c_str()));
+            json_array_append_new(arr, server_to_json(db->server));
         }
 
         json_object_set_new(rval, "servers", arr);
