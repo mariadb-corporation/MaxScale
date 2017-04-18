@@ -1486,10 +1486,10 @@ dListServices(DCB *dcb)
     if (service)
     {
         dcb_printf(dcb, "Services.\n");
-        dcb_printf(dcb, HORIZ_SEPARATOR);
+        dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
         dcb_printf(dcb, "%-25s | %-17s | #Users | Total Sessions | Backend databases\n",
                    "Service Name", "Router Module");
-        dcb_printf(dcb, HORIZ_SEPARATOR);
+        dcb_printf(dcb, "%s", HORIZ_SEPARATOR);
     }
     while (service)
     {
