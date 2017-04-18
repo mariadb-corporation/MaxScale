@@ -19,6 +19,7 @@
 #include <string>
 #include <tr1/memory>
 #include <cstdint>
+#include <microhttpd.h>
 
 #include <maxscale/jansson.hh>
 #include <maxscale/utils.hh>
@@ -36,6 +37,22 @@ class HttpRequest;
 /** Typedef for managed pointer */
 typedef std::shared_ptr<HttpRequest> SHttpRequest;
 
+static int value_iterator(void *cls,
+                          enum MHD_ValueKind kind,
+                          const char *key,
+                          const char *value)
+{
+    std::pair<string, string>* cmp = (std::pair<string, string>*)cls;
+
+    if (cmp->first == key)
+    {
+        cmp->second = value;
+        return MHD_NO;
+    }
+
+    return MHD_YES;
+}
+
 class HttpRequest
 {
 public:
@@ -46,7 +63,7 @@ public:
      *
      * @return Parsed statement or NULL if request is not valid
      */
-    static HttpRequest* parse(string request);
+    HttpRequest(struct MHD_Connection *connection, string url, string method, json_t* data);
 
     ~HttpRequest();
 
@@ -55,21 +72,9 @@ public:
      *
      * @return One of the HTTP verb values
      */
-    enum http_verb get_verb() const
+    const string& get_verb() const
     {
         return m_verb;
-    }
-
-    /**
-     * @brief Check if a request contains the specified header
-     *
-     * @param header Header to check
-     *
-     * @return True if header is in the request
-     */
-    bool have_header(const string& header) const
-    {
-        return m_headers.find(header) != m_headers.end();
     }
 
     /**
@@ -81,15 +86,13 @@ public:
      */
     string get_header(const string header) const
     {
-        string rval;
-        map<string, string>::const_iterator it = m_headers.find(header);
+        std::pair<string, string> p;
+        p.first = header;
 
-        if (it != m_headers.end())
-        {
-            rval = it->second;
-        }
+        MHD_get_connection_values(m_connection, MHD_HEADER_KIND,
+                                  value_iterator, &p);
 
-        return rval;
+        return p.second;
     }
 
     /**
@@ -101,15 +104,13 @@ public:
      */
     string get_option(const string option) const
     {
-        string rval;
-        map<string, string>::const_iterator it = m_options.find(option);
+        std::pair<string, string> p;
+        p.first = option;
 
-        if (it != m_options.end())
-        {
-            rval = it->second;
-        }
+        MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
+                                  value_iterator, &p);
 
-        return rval;
+        return p.second;
     }
 
     /**
@@ -165,15 +166,12 @@ public:
     }
 
 private:
-    HttpRequest();
-    HttpRequest(const HttpRequest&);
-    HttpRequest& operator = (const HttpRequest&);
 
-    map<string, string> m_headers;        /**< Request headers */
     map<string, string> m_options;        /**< Request options */
     Closer<json_t*>     m_json;           /**< Request body */
     string              m_json_string;    /**< String version of @c m_json */
     string              m_resource;       /**< Requested resource */
     deque<string>       m_resource_parts; /**< @c m_resource split into parts */
-    enum http_verb      m_verb;           /**< Request method */
+    string              m_verb;           /**< Request method */
+    struct MHD_Connection* m_connection;
 };

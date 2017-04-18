@@ -23,7 +23,7 @@
 using std::string;
 using std::stringstream;
 
-HttpResponse::HttpResponse(enum http_code code, string response):
+HttpResponse::HttpResponse(int code, string response):
     m_body(response),
     m_code(code)
 {
@@ -33,13 +33,6 @@ HttpResponse::HttpResponse(enum http_code code, string response):
     m_headers["Last-Modified"] = m_headers["Date"];
     // TODO: Add proper ETags
     m_headers["ETag"] = "bm90LXlldC1pbXBsZW1lbnRlZAo=";
-
-    enum http_auth auth = mxs_admin_get_config().auth;
-
-    if (auth != HTTP_AUTH_NONE)
-    {
-        m_headers["WWW-Authenticate"] = http_auth_to_string(auth);
-    }
 }
 
 HttpResponse::~HttpResponse()
@@ -50,20 +43,17 @@ void HttpResponse::add_header(string name, string value)
 {
     m_headers[name] = value;
 }
+const map<string, string>& HttpResponse::get_headers() const
+{
+    return m_headers;
+}
 
 string HttpResponse::get_response() const
 {
-    stringstream response;
-    response << "HTTP/1.1 " << http_code_to_string(m_code) << "\r\n";
+    return m_body;
+}
 
-    for (map<string, string>::const_iterator it = m_headers.begin();
-         it != m_headers.end(); it++)
-    {
-        response << it->first << ": " << it->second << "\r\n";
-    }
-
-    /** End of headers, add the body */
-    response << "\r\n" <<  m_body;
-
-    return response.str();
+int HttpResponse::get_code() const
+{
+    return m_code;
 }

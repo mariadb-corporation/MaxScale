@@ -1,6 +1,5 @@
 add_library(maxscale-common SHARED
   admin.cc
-  adminclient.cc
   adminusers.cc
   alloc.cc
   atomic.cc
@@ -74,6 +73,7 @@ target_link_libraries(maxscale-common
   rt
   m
   stdc++
+  microhttpd
 )
 
 add_dependencies(maxscale-common pcre2 connector-c)

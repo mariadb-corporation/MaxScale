@@ -17,6 +17,7 @@
 #include <map>
 #include <string>
 #include <tr1/memory>
+#include <microhttpd.h>
 
 #include <maxscale/jansson.hh>
 
@@ -39,7 +40,7 @@ public:
      * @param response Response body
      * @param code     HTTP return code
      */
-    HttpResponse(enum http_code code = HTTP_200_OK, string response = "");
+    HttpResponse(int code = MHD_HTTP_OK, string response = "");
 
     ~HttpResponse();
 
@@ -52,14 +53,28 @@ public:
     void add_header(string name, string value);
 
     /**
+     * @brief Get headers for this response
+     *
+     * @return Map of headers and values
+     */
+    const map<string, string>& get_headers() const;
+
+    /**
      * @brief Get the response in string format
      *
      * @return The complete response that can be sent to a client
      */
     string get_response() const;
 
+    /**
+     * @brief Get the HTTP response code
+     *
+     * @return The HTTP response code
+     */
+    int get_code() const;
+
 private:
     string              m_body;    /**< Message body */
     map<string, string> m_headers; /**< Message headers */
-    enum http_code      m_code;    /**< The HTTP code for the response */
+    int                 m_code;    /**< The HTTP code for the response */
 };

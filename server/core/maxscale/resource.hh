@@ -60,7 +60,7 @@ protected:
     virtual HttpResponse handle(HttpRequest& request)
     {
         ss_dassert(false);
-        return HttpResponse(HTTP_500_INTERNAL_SERVER_ERROR);
+        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
     };
 
     /**

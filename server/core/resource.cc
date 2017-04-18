@@ -50,7 +50,7 @@ protected:
         {
             // TODO: Generate this via the inter-thread messaging system
             Closer<json_t*> servers(server_list_to_json());
-            return HttpResponse(HTTP_200_OK, mxs::json_dump(servers, flags));
+            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(servers, flags));
         }
         else
         {
@@ -61,11 +61,11 @@ protected:
                 // TODO: Generate this via the inter-thread messaging system
                 Closer<json_t*> server_js(server_to_json(server));
                 // Show one server
-                return HttpResponse(HTTP_200_OK, mxs::json_dump(server_js, flags));
+                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(server_js, flags));
             }
             else
             {
-                return HttpResponse(HTTP_404_NOT_FOUND);
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
             }
         }
     }
@@ -80,10 +80,10 @@ protected:
 
         if (request.uri_part_count() == 1)
         {
-                            // TODO: Generate this via the inter-thread messaging system
+            // TODO: Generate this via the inter-thread messaging system
             Closer<json_t*> all_services(service_list_to_json());
             // Show all services
-            return HttpResponse(HTTP_200_OK, mxs::json_dump(all_services, flags));
+            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(all_services, flags));
         }
         else
         {
@@ -93,11 +93,11 @@ protected:
             {
                 Closer<json_t*> service_js(service_to_json(service));
                 // Show one service
-                return HttpResponse(HTTP_200_OK, mxs::json_dump(service_js, flags));
+                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(service_js, flags));
             }
             else
             {
-                return HttpResponse(HTTP_404_NOT_FOUND);
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
             }
         }
     }
@@ -114,7 +114,7 @@ protected:
         {
             Closer<json_t*> filters(filter_list_to_json());
             // Show all filters
-            return HttpResponse(HTTP_200_OK, mxs::json_dump(filters, flags));
+            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(filters, flags));
         }
         else
         {
@@ -124,11 +124,11 @@ protected:
             {
                 Closer<json_t*> filter_js(filter_to_json(filter));
                 // Show one filter
-                return HttpResponse(HTTP_200_OK, mxs::json_dump(filter_js, flags));
+                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(filter_js, flags));
             }
             else
             {
-                return HttpResponse(HTTP_404_NOT_FOUND);
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
             }
         }
     }
@@ -145,7 +145,7 @@ protected:
         {
             Closer<json_t*> monitors(monitor_list_to_json());
             // Show all monitors
-            return HttpResponse(HTTP_200_OK, mxs::json_dump(monitors, flags));
+            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(monitors, flags));
         }
         else
         {
@@ -155,11 +155,11 @@ protected:
             {
                 Closer<json_t*> monitor_js(monitor_to_json(monitor));
                 // Show one monitor
-                return HttpResponse(HTTP_200_OK, mxs::json_dump(monitor_js, flags));
+                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(monitor_js, flags));
             }
             else
             {
-                return HttpResponse(HTTP_404_NOT_FOUND);
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
             }
         }
     }
@@ -173,7 +173,7 @@ protected:
         if (request.uri_part_count() == 1)
         {
             // Show all sessions
-            return HttpResponse(HTTP_200_OK);
+            return HttpResponse(MHD_HTTP_OK);
         }
         else
         {
@@ -187,11 +187,11 @@ protected:
                 Closer<json_t*> ses_json(session_to_json(session));
                 session_put_ref(session);
                 // Show session statistics
-                return HttpResponse(HTTP_200_OK, mxs::json_dump(ses_json, flags));
+                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(ses_json, flags));
             }
             else
             {
-                return HttpResponse(HTTP_404_NOT_FOUND);
+                return HttpResponse(MHD_HTTP_NOT_FOUND);
             }
         }
     }
@@ -202,7 +202,7 @@ class UsersResource: public Resource
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
@@ -216,17 +216,17 @@ protected:
             // Flush logs
             if (mxs_log_rotate() == 0)
             {
-                return HttpResponse(HTTP_200_OK);
+                return HttpResponse(MHD_HTTP_OK);
             }
             else
             {
-                return HttpResponse(HTTP_500_INTERNAL_SERVER_ERROR);
+                return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
             }
         }
         else
         {
             // Show log status
-            return HttpResponse(HTTP_200_OK);
+            return HttpResponse(MHD_HTTP_OK);
         }
     }
 };
@@ -237,7 +237,7 @@ protected:
     HttpResponse handle(HttpRequest& request)
     {
         // Show thread status
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
@@ -247,7 +247,7 @@ protected:
     HttpResponse handle(HttpRequest& request)
     {
         // Show housekeeper tasks
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
@@ -257,7 +257,7 @@ protected:
     HttpResponse handle(HttpRequest& request)
     {
         // Show modules
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
@@ -275,7 +275,7 @@ public:
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
@@ -296,7 +296,7 @@ public:
 protected:
     HttpResponse handle(HttpRequest& request)
     {
-        return HttpResponse(HTTP_200_OK);
+        return HttpResponse(MHD_HTTP_OK);
     }
 };
 
