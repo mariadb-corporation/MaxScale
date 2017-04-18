@@ -1439,7 +1439,12 @@ void dprintService(DCB *dcb, SERVICE *service)
     }
     if (service->router && service->router_instance)
     {
-        service->router->diagnostics(service->router_instance, dcb);
+        json_t* json = service->router->diagnostics(service->router_instance);
+
+        if (json)
+        {
+            json_decref(json);
+        }
     }
     dcb_printf(dcb, "\tStarted:                             %s",
                asctime_r(localtime_r(&service->stats.started, &result), timebuf));
@@ -2317,7 +2322,12 @@ void service_print_users(DCB *dcb, const SERVICE *service)
     {
         if (port->listener && port->listener->authfunc.diagnostic)
         {
-            port->listener->authfunc.diagnostic(dcb, port);
+            json_t* json = port->listener->authfunc.diagnostic(port);
+
+            if (json)
+            {
+                json_decref(json);
+            }
         }
     }
 }
@@ -2382,8 +2392,12 @@ json_t* service_to_json(const SERVICE* service)
 
     if (service->router && service->router_instance)
     {
-        // TODO: Add router diagnostics
-        //service->router->diagnostics(service->router_instance, dcb);
+        json_t* diag = service->router->diagnostics(service->router_instance);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "router_diagnostics", diag);
+        }
     }
 
     struct tm result;

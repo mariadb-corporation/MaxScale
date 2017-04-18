@@ -23,6 +23,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/routing.h>
 #include <maxscale/session.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -174,9 +175,12 @@ typedef struct mxs_filter_object
      *
      * @param instance Filter instance
      * @param fsession Filter session, NULL if general information about the filter is queried
-     * @param dcb      DCB where the diagnostic information should be written
+     *
+     * @return JSON formatted information about the filter
+     *
+     * @see jansson.h
      */
-    void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+    json_t* (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter

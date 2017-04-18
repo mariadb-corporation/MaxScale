@@ -21,6 +21,7 @@
 #include <maxscale/cdefs.h>
 
 #include <maxscale/buffer.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -81,7 +82,20 @@ typedef struct mxs_authenticator
     void  (*free)(struct dcb *);
     void  (*destroy)(void *);
     int   (*loadusers)(struct servlistener *);
-    void  (*diagnostic)(struct dcb*, struct servlistener *);
+
+    /**
+     * @brief Return diagnostic information about the authenticator
+     *
+     * The authenticator module should return information about its internal
+     * state when this function is called.
+     *
+     * @params Listener object
+     *
+     * @return JSON representation of the listener
+     *
+     * @see jansson.h
+     */
+    json_t*  (*diagnostic)(struct servlistener *listener);
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */

@@ -206,7 +206,12 @@ dprintAllFilters(DCB *dcb)
         }
         if (ptr->obj && ptr->filter)
         {
-            ptr->obj->diagnostics(ptr->filter, NULL, dcb);
+            json_t* json = ptr->obj->diagnostics(ptr->filter, NULL);
+
+            if (json)
+            {
+                json_decref(json);
+            }
         }
         else
         {
@@ -241,7 +246,12 @@ dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
     }
     if (filter->obj && filter->filter)
     {
-        filter->obj->diagnostics(filter->filter, NULL, dcb);
+        json_t* json = filter->obj->diagnostics(filter->filter, NULL);
+
+        if (json)
+        {
+            json_decref(json);
+        }
     }
 }
 
@@ -487,8 +497,12 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter)
 
     if (filter->obj && filter->filter)
     {
-        // TODO: Add filter diagnostics
-        //filter->obj->diagnostics(filter->filter, NULL, dcb);
+        json_t* diag = filter->obj->diagnostics(filter->filter, NULL);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "filter_diagnostics", diag);
+        }
     }
 
     return rval;

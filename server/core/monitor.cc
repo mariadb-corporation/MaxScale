@@ -482,7 +482,12 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
     {
         if (monitor->module->diagnostics)
         {
-            monitor->module->diagnostics(dcb, monitor);
+            json_t* json = monitor->module->diagnostics(monitor);
+
+            if (json)
+            {
+                json_decref(json);
+            }
         }
         else
         {
@@ -1563,8 +1568,12 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor)
 
     if (monitor->handle && monitor->module->diagnostics)
     {
-        // TODO: Add monitor diagnostics
-        //monitor->module->diagnostics(dcb, monitor);
+        json_t* diag = monitor->module->diagnostics(monitor);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "monitor_diagnostics", diag);
+        }
     }
 
     return rval;

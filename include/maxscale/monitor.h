@@ -23,6 +23,7 @@
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/server.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -54,9 +55,38 @@ typedef struct mxs_monitor MXS_MONITOR;
  */
 typedef struct mxs_monitor_object
 {
+    /**
+     * @brief Start the monitor
+     *
+     * This entry point is called when the monitor is started. If the monitor
+     * requires polling of the servers, it should create a separate monitoring
+     * thread.
+     *
+     * @param monitor The monitor object
+     * @param params  Parameters for this monitor
+     *
+     * @return Pointer to the monitor specific data, stored in @c monitor->handle
+     */
     void *(*startMonitor)(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER *params);
+
+    /**
+     * @brief Stop the monitor
+     *
+     * This entry point is called when the monitor is stopped. If the monitor
+     * uses a polling thread, the thread should be stopped.
+     *
+     * @param monitor The monitor object
+     */
     void (*stopMonitor)(MXS_MONITOR *monitor);
-    void (*diagnostics)(DCB *, const MXS_MONITOR *);
+
+    /**
+     * @brief Return diagnostic information about the monitor
+     *
+     * @return A JSON object representing the state of the monitor
+     *
+     * @see jansson.h
+     */
+    json_t* (*diagnostics)(const MXS_MONITOR *monitor);
 } MXS_MONITOR_OBJECT;
 
 /**

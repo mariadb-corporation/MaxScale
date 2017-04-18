@@ -24,6 +24,7 @@
 #include <maxscale/routing.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -144,14 +145,16 @@ typedef struct mxs_router_object
      */
     int32_t  (*routeQuery)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 
-
     /**
      * @brief Called for diagnostic output
      *
      * @param instance Router instance
-     * @param dcb      DCB where the diagnostic information should be written
+     *
+     * @return Diagnostic information in JSON format
+     *
+     * @see jansson.h
      */
-    void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
+    json_t*     (*diagnostics)(MXS_ROUTER *instance);
 
     /**
      * @brief Called for each reply packet
