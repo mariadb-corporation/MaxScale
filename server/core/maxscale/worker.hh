@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <maxscale/platform.h>
 #include "messagequeue.hh"
 #include "worker.h"
 
@@ -196,6 +197,21 @@ public:
      */
     static int get_current_id();
 
+    /**
+     * Set the number of non-blocking poll cycles that will be done before
+     * a blocking poll will take place.
+     *
+     * @param nbpolls  Number of non-blocking polls to perform before blocking.
+     */
+    static void set_nonblocking_polls(unsigned int nbpolls);
+
+    /**
+     * Maximum time to block in epoll_wait.
+     *
+     * @param maxwait  Maximum wait time in millliseconds.
+     */
+    static void set_maxwait(unsigned int maxwait);
+
 private:
     Worker(int id,
            int epoll_fd,
@@ -210,6 +226,13 @@ private:
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
     static void thread_main(void* arg);
+
+    static void poll_waitevents(int epoll_fd,
+                                int thread_id,
+                                POLL_STATS* poll_stats,
+                                QUEUE_STATS* queue_stats,
+                                bool (*should_shutdown)(void* data),
+                                void* data);
 
 private:
     int           m_id;                 /*< The id of the worker. */

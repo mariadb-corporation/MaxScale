@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <maxscale/alloc.h>
+#include <maxscale/atomic.h>
 #include <maxscale/config.h>
+#include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/platform.h>
 #include "maxscale/modules.h"
@@ -41,8 +43,11 @@ namespace
  */
 static struct this_unit
 {
-    int      n_workers; // How many workers there are.
-    Worker** ppWorkers; // Array of worker instances.
+    int      n_workers;         // How many workers there are.
+    Worker** ppWorkers;         // Array of worker instances.
+    int      number_poll_spins; // Maximum non-block polls
+    int      max_poll_sleep;    // Maximum block time
+
 } this_unit =
 {
     0,
@@ -159,6 +164,8 @@ Worker::~Worker()
 void Worker::init()
 {
     this_unit.n_workers = config_threadcount();
+    this_unit.number_poll_spins = config_nbpolls();
+    this_unit.max_poll_sleep = config_pollsleep();
 
     pollStats = (POLL_STATS*)MXS_CALLOC(this_unit.n_workers, sizeof(POLL_STATS));
     if (!pollStats)
@@ -290,6 +297,18 @@ Worker* Worker::get_current()
 int Worker::get_current_id()
 {
     return this_thread.current_worker_id;
+}
+
+//static
+void Worker::set_nonblocking_polls(unsigned int nbpolls)
+{
+    this_unit.number_poll_spins = nbpolls;
+}
+
+//static
+void Worker::set_maxwait(unsigned int maxwait)
+{
+    this_unit.max_poll_sleep = maxwait;
 }
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
@@ -523,6 +542,172 @@ void Worker::thread_main(void* pArg)
     }
 }
 
+/**
+ * The main polling loop
+ *
+ * @param epoll_fd         The epoll descriptor.
+ * @param thread_id        The id of the calling thread.
+ * @param poll_stats       The polling stats of the calling thread.
+ * @param queue_stats      The queue stats of the calling thread.
+ * @param should_shutdown  Pointer to function returning true if the polling should
+ *                         be terminated.
+ * @param data             Data provided to the @c should_shutdown function.
+ */
+//static
+void Worker::poll_waitevents(int epoll_fd,
+                             int thread_id,
+                             POLL_STATS* poll_stats,
+                             QUEUE_STATS* queue_stats,
+                             bool (*should_shutdown)(void* data),
+                             void* data)
+{
+    struct epoll_event events[MAX_EVENTS];
+    int i, nfds, timeout_bias = 1;
+    int poll_spins = 0;
+
+    poll_stats->thread_state = THREAD_IDLE;
+
+    while (!should_shutdown(data))
+    {
+        poll_stats->thread_state = THREAD_POLLING;
+
+        atomic_add_int64(&poll_stats->n_polls, 1);
+        if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
+        {
+            int eno = errno;
+            errno = 0;
+            MXS_DEBUG("%lu [poll_waitevents] epoll_wait returned "
+                      "%d, errno %d",
+                      pthread_self(),
+                      nfds,
+                      eno);
+        }
+        /*
+         * If there are no new descriptors from the non-blocking call
+         * and nothing to process on the event queue then for do a
+         * blocking call to epoll_wait.
+         *
+         * We calculate a timeout bias to alter the length of the blocking
+         * call based on the time since we last received an event to process
+         */
+        else if (nfds == 0 && poll_spins++ > this_unit.number_poll_spins)
+        {
+            if (timeout_bias < 10)
+            {
+                timeout_bias++;
+            }
+            atomic_add_int64(&poll_stats->blockingpolls, 1);
+            nfds = epoll_wait(epoll_fd,
+                              events,
+                              MAX_EVENTS,
+                              (this_unit.max_poll_sleep * timeout_bias) / 10);
+            if (nfds == 0)
+            {
+                poll_spins = 0;
+            }
+        }
+
+        if (nfds > 0)
+        {
+            poll_stats->evq_length = nfds;
+            if (nfds > poll_stats->evq_max)
+            {
+                poll_stats->evq_max = nfds;
+            }
+
+            timeout_bias = 1;
+            if (poll_spins <= this_unit.number_poll_spins + 1)
+            {
+                atomic_add_int64(&poll_stats->n_nbpollev, 1);
+            }
+            poll_spins = 0;
+            MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
+                      pthread_self(),
+                      nfds);
+            atomic_add_int64(&poll_stats->n_pollev, 1);
+
+            poll_stats->thread_state = THREAD_PROCESSING;
+
+            poll_stats->n_fds[(nfds < MAXNFDS ? (nfds - 1) : MAXNFDS - 1)]++;
+        }
+
+        uint64_t cycle_start = hkheartbeat;
+
+        for (int i = 0; i < nfds; i++)
+        {
+            /** Calculate event queue statistics */
+            int64_t started = hkheartbeat;
+            int64_t qtime = started - cycle_start;
+
+            if (qtime > N_QUEUE_TIMES)
+            {
+                queue_stats->qtimes[N_QUEUE_TIMES]++;
+            }
+            else
+            {
+                queue_stats->qtimes[qtime]++;
+            }
+
+            queue_stats->maxqtime = MXS_MAX(queue_stats->maxqtime, qtime);
+
+            MXS_POLL_DATA *data = (MXS_POLL_DATA*)events[i].data.ptr;
+
+            uint32_t actions = data->handler(data, thread_id, events[i].events);
+
+            if (actions & MXS_POLL_ACCEPT)
+            {
+                atomic_add_int64(&poll_stats->n_accept, 1);
+            }
+
+            if (actions & MXS_POLL_READ)
+            {
+                atomic_add_int64(&poll_stats->n_read, 1);
+            }
+
+            if (actions & MXS_POLL_WRITE)
+            {
+                atomic_add_int64(&poll_stats->n_write, 1);
+            }
+
+            if (actions & MXS_POLL_HUP)
+            {
+                atomic_add_int64(&poll_stats->n_hup, 1);
+            }
+
+            if (actions & MXS_POLL_ERROR)
+            {
+                atomic_add_int64(&poll_stats->n_error, 1);
+            }
+
+            /** Calculate event execution statistics */
+            qtime = hkheartbeat - started;
+
+            if (qtime > N_QUEUE_TIMES)
+            {
+                queue_stats->exectimes[N_QUEUE_TIMES]++;
+            }
+            else
+            {
+                queue_stats->exectimes[qtime % N_QUEUE_TIMES]++;
+            }
+
+            queue_stats->maxexectime = MXS_MAX(queue_stats->maxexectime, qtime);
+        }
+
+        dcb_process_idle_sessions(thread_id);
+
+        poll_stats->thread_state = THREAD_ZPROCESSING;
+
+        /** Process closed DCBs */
+        dcb_process_zombies(thread_id);
+
+        poll_check_message();
+
+        poll_stats->thread_state = THREAD_IDLE;
+    } /*< while(1) */
+
+    poll_stats->thread_state = THREAD_STOPPED;
+        }
 /**
  * Calls thread_init on all loaded modules.
  *

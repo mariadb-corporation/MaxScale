@@ -162,4 +162,11 @@ bool poll_add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data
  */
 bool poll_remove_fd_from_worker(int wid, int fd);
 
+/**
+ * Check whether there are cross-thread messages for current thread.
+ *
+ * @attention Only to be called by the system.
+ */
+void poll_check_message(void);
+
 MXS_END_DECLS
