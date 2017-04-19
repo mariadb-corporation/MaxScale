@@ -34,6 +34,30 @@ MXS_BEGIN_DECLS
 #define MAX_ADMIN_PW_LEN        1024
 
 /**
+ * Common configuration parameters names
+ */
+extern const char CN_PASSWORD[];
+extern const char CN_USER[];
+extern const char CN_ADDRESS[];
+extern const char CN_NAME[];
+extern const char CN_PORT[];
+extern const char CN_MODULE[];
+extern const char CN_TYPE[];
+extern const char CN_PROTOCOL[];
+extern const char CN_DEFAULT[];
+extern const char CN_SERVERS[];
+
+extern const char CN_SSL[];
+extern const char CN_SSL_KEY[];
+extern const char CN_SSL_CERT[];
+extern const char CN_SSL_CA_CERT[];
+extern const char CN_SSL_VERSION[];
+extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+
+extern const char CN_AUTHENTICATOR[];
+extern const char CN_AUTHENTICATOR_OPTIONS[];
+
+/**
  * The config parameter
  */
 typedef struct config_parameter
@@ -309,7 +333,5 @@ void config_disable_feedback_task(void);
  * @return True if reloading was successful
  */
 bool config_reload(void);
-
-static const char BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 
 MXS_END_DECLS

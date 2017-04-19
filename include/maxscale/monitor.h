@@ -237,6 +237,17 @@ static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,sla
                                                       "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
                                                       "new_master,new_slave,new_synced,new_donor,new_ndb";
 
+/**
+ * Monitor configuration parameters names
+ */
+extern const char CN_BACKEND_CONNECT_ATTEMPTS[];
+extern const char CN_BACKEND_READ_TIMEOUT[];
+extern const char CN_BACKEND_WRITE_TIMEOUT[];
+extern const char CN_BACKEND_CONNECT_TIMEOUT[];
+extern const char CN_MONITOR_INTERVAL[];
+extern const char CN_SCRIPT[];
+extern const char CN_EVENTS[];
+
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
 void monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);

@@ -31,6 +31,15 @@ MXS_BEGIN_DECLS
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
+ * Server configuration parameters names
+ */
+extern const char CN_MONITORPW[];
+extern const char CN_MONITORUSER[];
+extern const char CN_PERSISTMAXTIME[];
+extern const char CN_PERSISTPOOLMAX[];
+extern const char CN_USE_PROXY_PROTOCOL[];
+
+/**
  * The server parameters used for weighting routing decissions
  */
 typedef struct server_params
@@ -191,8 +200,6 @@ enum
 #define SERVER_IS_RELAY_SERVER(server)                                  \
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
-
-extern const char USE_PROXY_PROTOCOL[];
 
 /**
  * @brief Allocate a new server

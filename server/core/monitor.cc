@@ -51,6 +51,14 @@
 
 using std::string;
 
+const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
+const char CN_BACKEND_READ_TIMEOUT[]     = "backend_read_timeout";
+const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
+const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
+const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
+const char CN_SCRIPT[]                   = "monitor_interval";
+const char CN_EVENTS[]                   = "monitor_interval";
+
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
@@ -1309,7 +1317,7 @@ static bool create_monitor_server_config(const MXS_MONITOR *monitor, const char 
 
     if (monitor->databases)
     {
-        dprintf(file, "servers=");
+        dprintf(file, "%s=", CN_SERVERS);
         for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
         {
             if (db != monitor->databases)
@@ -1344,15 +1352,15 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", monitor->name);
-    dprintf(file, "type=monitor\n");
-    dprintf(file, "module=%s\n", monitor->module_name);
-    dprintf(file, "user=%s\n", monitor->user);
-    dprintf(file, "password=%s\n", monitor->password);
-    dprintf(file, "monitor_interval=%lu\n", monitor->interval);
-    dprintf(file, "backend_connect_timeout=%d\n", monitor->connect_timeout);
-    dprintf(file, "backend_write_timeout=%d\n", monitor->write_timeout);
-    dprintf(file, "backend_read_timeout=%d\n", monitor->read_timeout);
-    dprintf(file, "%s=%d\n", BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
+    dprintf(file, "%s=monitor\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_MODULE, monitor->module_name);
+    dprintf(file, "%s=%s\n", CN_USER, monitor->user);
+    dprintf(file, "%s=%s\n", CN_PASSWORD, monitor->password);
+    dprintf(file, "%s=%lu\n", CN_MONITOR_INTERVAL, monitor->interval);
+    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_TIMEOUT, monitor->connect_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_WRITE_TIMEOUT, monitor->write_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_READ_TIMEOUT, monitor->read_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
 
     close(file);
 
@@ -1543,16 +1551,15 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "name", json_string(monitor->name));
-    json_object_set_new(rval, "module", json_string(monitor->module_name));
+    json_object_set_new(rval, CN_NAME, json_string(monitor->name));
+    json_object_set_new(rval, CN_MODULE, json_string(monitor->module_name));
+    json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
+    json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
+    json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
+    json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
+    json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
+
     json_object_set_new(rval, "state", json_string(monitor_state_to_string(monitor->state)));
-
-    json_object_set_new(rval, "monitor_interval", json_integer(monitor->interval));
-
-    json_object_set_new(rval, "connect_timeout", json_integer(monitor->connect_timeout));
-    json_object_set_new(rval, "read_timeout", json_integer(monitor->read_timeout));
-    json_object_set_new(rval, "write_timeout", json_integer(monitor->write_timeout));
-    json_object_set_new(rval, "connect_attempts", json_integer(monitor->connect_attempts));
 
     json_t* rel = json_object();
 

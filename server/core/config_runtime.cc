@@ -217,12 +217,12 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
 
     if (obj)
     {
-        if (config_add_param(obj, "ssl", "required") &&
-            config_add_param(obj, "ssl_key", key) &&
-            config_add_param(obj, "ssl_cert", cert) &&
-            config_add_param(obj, "ssl_ca_cert", ca) &&
-            (!version || config_add_param(obj, "ssl_version", version)) &&
-            (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)))
+        if (config_add_param(obj, CN_SSL, "required") &&
+            config_add_param(obj, CN_SSL_KEY, key) &&
+            config_add_param(obj, CN_SSL_CERT, cert) &&
+            config_add_param(obj, CN_SSL_CA_CERT, ca) &&
+            (!version || config_add_param(obj, CN_SSL_VERSION, version)) &&
+            (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth)))
         {
             int err = 0;
             SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
@@ -276,19 +276,19 @@ bool runtime_alter_server(SERVER *server, char *key, char *value)
     spinlock_acquire(&crt_lock);
     bool valid = true;
 
-    if (strcmp(key, "address") == 0)
+    if (strcmp(key, CN_ADDRESS) == 0)
     {
         server_update_address(server, value);
     }
-    else if (strcmp(key, "port") == 0)
+    else if (strcmp(key, CN_PORT) == 0)
     {
         server_update_port(server, atoi(value));
     }
-    else if (strcmp(key, "monuser") == 0)
+    else if (strcmp(key, CN_MONITORUSER) == 0)
     {
         server_update_credentials(server, value, server->monpw);
     }
-    else if (strcmp(key, "monpw") == 0)
+    else if (strcmp(key, CN_MONITORPW) == 0)
     {
         server_update_credentials(server, server->monuser, value);
     }
@@ -375,17 +375,17 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
     spinlock_acquire(&crt_lock);
     bool valid = false;
 
-    if (strcmp(key, "user") == 0)
+    if (strcmp(key, CN_USER) == 0)
     {
         valid = true;
         monitorAddUser(monitor, value, monitor->password);
     }
-    else if (strcmp(key, "password") == 0)
+    else if (strcmp(key, CN_PASSWORD) == 0)
     {
         valid = true;
         monitorAddUser(monitor, monitor->user, value);
     }
-    else if (strcmp(key, "monitor_interval") == 0)
+    else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -394,7 +394,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetInterval(monitor, ival);
         }
     }
-    else if (strcmp(key, "backend_connect_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -403,7 +403,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, "backend_write_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -412,7 +412,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, "backend_read_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -421,7 +421,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, BACKEND_CONNECT_ATTEMPTS) == 0)
+    else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -475,26 +475,26 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *ssl_version, const char *ssl_depth)
 {
 
-    if (addr == NULL || strcasecmp(addr, "default") == 0)
+    if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
     {
         addr = "::";
     }
-    if (port == NULL || strcasecmp(port, "default") == 0)
+    if (port == NULL || strcasecmp(port, CN_DEFAULT) == 0)
     {
         port = "3306";
     }
-    if (proto == NULL || strcasecmp(proto, "default") == 0)
+    if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
     {
         proto = "MySQLClient";
     }
 
-    if (auth && strcasecmp(auth, "default") == 0)
+    if (auth && strcasecmp(auth, CN_DEFAULT) == 0)
     {
         /** Set auth to NULL so the protocol default authenticator is used */
         auth = NULL;
     }
 
-    if (auth_opt && strcasecmp(auth_opt, "default") == 0)
+    if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) == 0)
     {
         /** Don't pass options to the authenticator */
         auth_opt = NULL;
@@ -735,9 +735,9 @@ static bool server_contains_required_fields(json_t* json)
 {
     json_t* value;
 
-    return (value = json_object_get(json, "name")) && json_is_string(value) &&
-        (value = json_object_get(json, "address")) && json_is_string(value) &&
-        (value = json_object_get(json, "port")) && json_is_integer(value);
+    return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
+        (value = json_object_get(json, CN_ADDRESS)) && json_is_string(value) &&
+        (value = json_object_get(json, CN_PORT)) && json_is_integer(value);
 }
 
 const char* server_relation_types[] =
@@ -791,18 +791,18 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
     if (server_contains_required_fields(json))
     {
-        const char* name = json_string_value(json_object_get(json, "name"));
-        const char* address = json_string_value(json_object_get(json, "address"));
+        const char* name = json_string_value(json_object_get(json, CN_NAME));
+        const char* address = json_string_value(json_object_get(json, CN_ADDRESS));
 
         /** The port needs to be in string format */
         char port[200]; // Enough to store any port value
-        int i = json_integer_value(json_object_get(json, "port"));
+        int i = json_integer_value(json_object_get(json, CN_PORT));
         snprintf(port, sizeof (port), "%d", i);
 
         /** Optional parameters */
-        const char* protocol = string_or_null(json, "protocol");
-        const char* authenticator = string_or_null(json, "authenticator");
-        const char* authenticator_options = string_or_null(json, "authenticator_options");
+        const char* protocol = string_or_null(json, CN_PROTOCOL);
+        const char* authenticator = string_or_null(json, CN_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, CN_AUTHENTICATOR_OPTIONS);
 
 
         set<string> relations;
@@ -828,8 +828,8 @@ static bool monitor_contains_required_fields(json_t* json)
 {
     json_t* value;
 
-    return (value = json_object_get(json, "name")) && json_is_string(value) &&
-        (value = json_object_get(json, "module")) && json_is_string(value);
+    return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
+        (value = json_object_get(json, CN_MODULE)) && json_is_string(value);
 }
 
 const char* monitor_relation_types[] =
@@ -886,8 +886,8 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 
     if (monitor_contains_required_fields(json))
     {
-        const char* name = json_string_value(json_object_get(json, "name"));
-        const char* module = json_string_value(json_object_get(json, "module"));
+        const char* name = json_string_value(json_object_get(json, CN_NAME));
+        const char* module = json_string_value(json_object_get(json, CN_MODULE));
 
         set<string> relations;
 

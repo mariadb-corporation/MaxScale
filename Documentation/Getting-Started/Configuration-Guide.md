@@ -1391,8 +1391,8 @@ The following list of service parameters can be updated at runtime.
 * max_slave_connections
 * max_slave_replication_lag
 
-In addition to these parameters, the server specific user credentials, _monuser_
-and _monpw_, can also be updated at runtime.
+In addition to these parameters, the server specific user credentials, _monitoruser_
+and _monitorpw_, can also be updated at runtime.
 
 ### Limitations
 

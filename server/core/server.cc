@@ -64,7 +64,11 @@ using maxscale::WorkerTask;
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
 
-const char USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
+const char CN_MONITORPW[]          = "monitorpw";
+const char CN_MONITORUSER[]        = "monitoruser";
+const char CN_PERSISTMAXTIME[]     = "persistmaxtime";
+const char CN_PERSISTPOOLMAX[]     = "persistpoolmax";
+const char CN_USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -1132,36 +1136,36 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     // TODO: Check for return values on all of the dprintf calls
     dprintf(file, "[%s]\n", server->unique_name);
-    dprintf(file, "type=server\n");
-    dprintf(file, "protocol=%s\n", server->protocol);
-    dprintf(file, "address=%s\n", server->name);
-    dprintf(file, "port=%u\n", server->port);
-    dprintf(file, "authenticator=%s\n", server->authenticator);
+    dprintf(file, "%s=server\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_PROTOCOL, server->protocol);
+    dprintf(file, "%s=%s\n", CN_ADDRESS, server->name);
+    dprintf(file, "%s=%u\n", CN_PORT, server->port);
+    dprintf(file, "%s=%s\n", CN_AUTHENTICATOR, server->authenticator);
 
     if (server->auth_options)
     {
-        dprintf(file, "authenticator_options=%s\n", server->auth_options);
+        dprintf(file, "%s=%s\n", CN_AUTHENTICATOR_OPTIONS, server->auth_options);
     }
 
     if (*server->monpw && *server->monuser)
     {
-        dprintf(file, "monitoruser=%s\n", server->monuser);
-        dprintf(file, "monitorpw=%s\n", server->monpw);
+        dprintf(file, "%s=%s\n", CN_MONITORUSER, server->monuser);
+        dprintf(file, "%s=%s\n", CN_MONITORPW, server->monpw);
     }
 
     if (server->persistpoolmax)
     {
-        dprintf(file, "persistpoolmax=%ld\n", server->persistpoolmax);
+        dprintf(file, "%s=%ld\n", CN_PERSISTPOOLMAX, server->persistpoolmax);
     }
 
     if (server->persistmaxtime)
     {
-        dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+        dprintf(file, "%s=%ld\n", CN_PERSISTMAXTIME, server->persistmaxtime);
     }
 
     if (server->use_proxy_protocol)
     {
-        dprintf(file, "%s=yes\n", USE_PROXY_PROTOCOL);
+        dprintf(file, "%s=yes\n", CN_USE_PROXY_PROTOCOL);
     }
 
     for (SERVER_PARAM *p = server->parameters; p; p = p->next)
@@ -1174,25 +1178,25 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     if (server->server_ssl)
     {
-        dprintf(file, "ssl=required\n");
+        dprintf(file, "%s=required\n", CN_SSL);
 
         if (server->server_ssl->ssl_cert)
         {
-            dprintf(file, "ssl_cert=%s\n", server->server_ssl->ssl_cert);
+            dprintf(file, "%s=%s\n", CN_SSL_CERT, server->server_ssl->ssl_cert);
         }
 
         if (server->server_ssl->ssl_key)
         {
-            dprintf(file, "ssl_key=%s\n", server->server_ssl->ssl_key);
+            dprintf(file, "%s=%s\n", CN_SSL_KEY, server->server_ssl->ssl_key);
         }
 
         if (server->server_ssl->ssl_ca_cert)
         {
-            dprintf(file, "ssl_ca_cert=%s\n", server->server_ssl->ssl_ca_cert);
+            dprintf(file, "%s=%s\n", CN_SSL_CA_CERT, server->server_ssl->ssl_ca_cert);
         }
         if (server->server_ssl->ssl_cert_verify_depth)
         {
-            dprintf(file, "ssl_cert_verify_depth=%d\n", server->server_ssl->ssl_cert_verify_depth);
+            dprintf(file, "%s=%d\n", CN_SSL_CERT_VERIFY_DEPTH, server->server_ssl->ssl_cert_verify_depth);
         }
 
         const char *version = NULL;
@@ -1222,7 +1226,7 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
         if (version)
         {
-            dprintf(file, "ssl_version=%s\n", version);
+            dprintf(file, "%s=%s\n", CN_SSL_VERSION, version);
         }
     }
 
@@ -1402,15 +1406,14 @@ json_t* server_to_json(const SERVER* server, const char* host)
     // TODO: Add error checks
     json_t* rval = json_object();
 
-    json_object_set_new(rval, "name", json_string(server->unique_name));
-    json_object_set_new(rval, "address", json_string(server->name));
-    json_object_set_new(rval, "port", json_integer(server->port));
+    json_object_set_new(rval, CN_NAME, json_string(server->unique_name));
+    json_object_set_new(rval, CN_ADDRESS, json_string(server->name));
+    json_object_set_new(rval, CN_PORT, json_integer(server->port));
+    json_object_set_new(rval, CN_PROTOCOL, json_string(server->protocol));
 
     char* stat = server_status(server);
     json_object_set_new(rval, "status", json_string(stat));
     MXS_FREE(stat);
-
-    json_object_set_new(rval, "protocol", json_string(server->protocol));
 
     if (server->server_string)
     {
