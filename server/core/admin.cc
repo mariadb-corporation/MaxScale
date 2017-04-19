@@ -74,17 +74,29 @@ int handle_client(void *cls,
     HttpRequest request(connection, url, method, json);
     HttpResponse reply = resource_handle_request(request);
 
-    string data = reply.get_response();
+    string data;
 
-    struct MHD_Response *response = MHD_create_response_from_buffer(data.size(),
-                                                                    (void*)data.c_str(),
-                                                                    MHD_RESPMEM_MUST_COPY);
+    json_t* js = reply.get_response();
 
-    for (map<string, string>::const_iterator it = reply.get_headers().begin();
-         it != reply.get_headers().end(); it++)
+    if (js)
     {
-        MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
+        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+        data = mxs::json_dump(js, flags);
     }
+
+    struct MHD_Response *response =
+        MHD_create_response_from_buffer(data.size(), (void*)data.c_str(),
+                                        MHD_RESPMEM_MUST_COPY);
+
+    string http_date = http_get_date();
+
+    MHD_add_response_header(response, "Date", http_date.c_str());
+
+    // TODO: calculate modification times
+    MHD_add_response_header(response, "Last-Modified", http_date.c_str());
+
+    // This ETag is the base64 encoding of `not-yet-implemented`
+    MHD_add_response_header(response, "ETag", "bm90LXlldC1pbXBsZW1lbnRlZAo");
 
     MHD_queue_response(connection, reply.get_code(), response);
     MHD_destroy_response(response);

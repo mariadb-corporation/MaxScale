@@ -23,32 +23,35 @@
 using std::string;
 using std::stringstream;
 
-HttpResponse::HttpResponse(int code, string response):
+HttpResponse::HttpResponse(int code, json_t* response):
     m_body(response),
     m_code(code)
 {
-    m_headers["Date"] = http_get_date();
+}
 
-    // TODO: Add proper modification timestamps
-    m_headers["Last-Modified"] = m_headers["Date"];
-    // TODO: Add proper ETags
-    m_headers["ETag"] = "bm90LXlldC1pbXBsZW1lbnRlZAo=";
+HttpResponse::HttpResponse(const HttpResponse& response):
+    m_body(response.m_body),
+    m_code(response.m_code)
+{
+    json_incref(m_body);
+}
+
+HttpResponse& HttpResponse::operator=(const HttpResponse& response)
+{
+    m_body = json_incref(response.m_body);
+    m_code = response.m_code;
+    return *this;
 }
 
 HttpResponse::~HttpResponse()
 {
+    if (m_body)
+    {
+        json_decref(m_body);
+    }
 }
 
-void HttpResponse::add_header(string name, string value)
-{
-    m_headers[name] = value;
-}
-const map<string, string>& HttpResponse::get_headers() const
-{
-    return m_headers;
-}
-
-string HttpResponse::get_response() const
+json_t* HttpResponse::get_response() const
 {
     return m_body;
 }

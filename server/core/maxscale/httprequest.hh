@@ -165,6 +165,10 @@ public:
         return m_resource_parts.size();
     }
 
+    const char* host() const
+    {
+        return m_hostname.c_str();
+    }
 private:
 
     map<string, string> m_options;        /**< Request options */
@@ -173,5 +177,6 @@ private:
     string              m_resource;       /**< Requested resource */
     deque<string>       m_resource_parts; /**< @c m_resource split into parts */
     string              m_verb;           /**< Request method */
+    string              m_hostname;       /**< The value of the Host header */
     struct MHD_Connection* m_connection;
 };

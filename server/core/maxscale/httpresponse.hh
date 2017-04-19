@@ -40,31 +40,18 @@ public:
      * @param response Response body
      * @param code     HTTP return code
      */
-    HttpResponse(int code = MHD_HTTP_OK, string response = "");
+    HttpResponse(int code = MHD_HTTP_OK, json_t* response = NULL);
+    HttpResponse(const HttpResponse& response);
+    HttpResponse& operator = (const HttpResponse& response);
 
     ~HttpResponse();
 
     /**
-     * @brief Add a header to the response
+     * @brief Get the response body
      *
-     * @param name  Header name
-     * @param value Header value
+     * @return The response body
      */
-    void add_header(string name, string value);
-
-    /**
-     * @brief Get headers for this response
-     *
-     * @return Map of headers and values
-     */
-    const map<string, string>& get_headers() const;
-
-    /**
-     * @brief Get the response in string format
-     *
-     * @return The complete response that can be sent to a client
-     */
-    string get_response() const;
+    json_t* get_response() const;
 
     /**
      * @brief Get the HTTP response code
@@ -74,7 +61,6 @@ public:
     int get_code() const;
 
 private:
-    string              m_body;    /**< Message body */
-    map<string, string> m_headers; /**< Message headers */
-    int                 m_code;    /**< The HTTP code for the response */
+    json_t* m_body;    /**< Message body */
+    int     m_code;    /**< The HTTP code for the response */
 };
