@@ -145,7 +145,7 @@ while ( <MAXSCALE> ) {
 
     next if (/--/ || $_ eq '');
 
-    if ( /\s+Name/) {
+    if ( /Name\:/) {
 
 	my $str;
 	my $perf_line;
@@ -156,47 +156,45 @@ while ( <MAXSCALE> ) {
 
     }
 
-	if (/(\s+Monitor )(.*)/) {
-		$monitor_data{$this_key}{'2state'}=$2;
-	}
+    if (/(State\:\s+)(.*)/) {
+        $monitor_data{$this_key}{'2state'}=$2;
+    }
 
-	if ( /Monitored servers\:/ ) {
-		my $server_list;
-	        my @data_row = split(':', $_);
-		shift(@data_row);
-		foreach my $name (@data_row) {
-			$name =~ s/^\s+|\s+$//g;
-			$name =~ s/ //g;
-			$server_list .= $name . ":";
-		}
-		chop($server_list);
-		$monitor_data{$this_key}{'3servers'}=$server_list;
-	}
+    if ( /Monitored servers\:/ ) {
+        my $server_list;
+        my @data_row = split(':', $_);
+        shift(@data_row);
+        foreach my $name (@data_row) {
+            $name =~ s/^\s+|\s+$//g;
+            $name =~ s/ //g;
+            $server_list .= $name . ":";
+        }
+        chop($server_list);
+        $monitor_data{$this_key}{'3servers'}=$server_list;
+    }
 
-	if ( /(Sampling interval\:)\s+(\d+) milliseconds/ ) {
-		$monitor_data{$this_key}{'4interval'}=$2;
-	}
+    if ( /(Sampling interval\:)\s+(\d+) milliseconds/ ) {
+        $monitor_data{$this_key}{'4interval'}=$2;
+    }
 
-	if ( /Replication lag\:/ ) {
-	        my @data_row = split(':', $_);
-		my $name = $data_row[1];
-		$name =~ s/^\s+|\s+$//g;
-		$monitor_data{$this_key}{'5repl_lag'}=$name;
-	}
+    if ( /Replication lag\:/ ) {
+        my @data_row = split(':', $_);
+        my $name = $data_row[1];
+        $name =~ s/^\s+|\s+$//g;
+        $monitor_data{$this_key}{'5repl_lag'}=$name;
+    }
 }
 
-
-   for my $key ( sort(keys %monitor_data) ) {
-	my $local_hash = {};
-	$performance_data .= " $key=";
-	$local_hash = $monitor_data{$key};
-	my %new_hash = %$local_hash;
-	foreach my $key (sort (keys (%new_hash))) {
-		$performance_data .= $new_hash{$key} . ";";
-    	}
-	chop($performance_data);
-  }
-
+for my $key ( sort(keys %monitor_data) ) {
+    my $local_hash = {};
+    $performance_data .= " $key=";
+    $local_hash = $monitor_data{$key};
+    my %new_hash = %$local_hash;
+    foreach my $key (sort (keys (%new_hash))) {
+        $performance_data .= $new_hash{$key} . ";";
+    }
+    chop($performance_data);
+}
 
 if ($n_monitors) {
 	printf "OK: %d monitors found |%s\n", $n_monitors, $performance_data;
@@ -207,4 +205,3 @@ if ($n_monitors) {
 	close(MAXSCALE);
 	exit 1;
 }
-
