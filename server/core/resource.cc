@@ -25,6 +25,7 @@
 #include "maxscale/filter.h"
 #include "maxscale/monitor.h"
 #include "maxscale/service.h"
+#include "maxscale/config_runtime.h"
 
 using std::list;
 
@@ -101,6 +102,23 @@ bool Resource::matching_variable_path(const string& path, const string& target)
     }
 
     return rval;
+}
+
+HttpResponse cb_create_server(HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json)
+    {
+        SERVER* server = runtime_create_server_from_json(json);
+
+        if (server)
+        {
+            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 HttpResponse cb_all_servers(HttpRequest& request)
@@ -262,12 +280,13 @@ public:
         m_get.push_back(Resource(cb_modules, 2, "maxscale", "modules"));
 
         m_post.push_back(Resource(cb_flush, 3, "maxscale", "logs", "flush"));
+        m_post.push_back(Resource(cb_create_server, 1, "servers"));
     }
 
     HttpResponse process_request_type(ResourceList& list, HttpRequest& request)
     {
-        for (ResourceList::iterator it = m_get.begin();
-             it != m_get.end(); it++)
+        for (ResourceList::iterator it = list.begin();
+             it != list.end(); it++)
         {
             if (it->match(request))
             {

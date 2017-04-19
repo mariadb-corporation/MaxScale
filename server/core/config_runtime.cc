@@ -13,6 +13,8 @@
 #include "maxscale/config_runtime.h"
 
 #include <strings.h>
+#include <string>
+#include <set>
 
 #include <maxscale/atomic.h>
 #include <maxscale/paths.h>
@@ -22,6 +24,9 @@
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
 #include "maxscale/service.h"
+
+using std::string;
+using std::set;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
@@ -657,5 +662,162 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     }
 
     spinlock_release(&crt_lock);
+    return rval;
+}
+
+static bool server_contains_required_fields(json_t* json)
+{
+    json_t* value;
+
+    return (value = json_object_get(json, "name")) && json_is_string(value) &&
+        (value = json_object_get(json, "address")) && json_is_string(value) &&
+        (value = json_object_get(json, "port")) && json_is_integer(value);
+}
+
+const char* server_relation_types[] =
+{
+    "services",
+    "monitors",
+    NULL
+};
+
+static bool server_relation_is_valid(string type, string value)
+{
+    return (type == "services" && service_find(value.c_str())) ||
+        (type == "monitors" && monitor_find(value.c_str()));
+}
+
+static bool unlink_server_relations(SERVER* server, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        if (!runtime_unlink_server(server, it->c_str()))
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
+static bool link_server_relations(SERVER* server, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        if (!runtime_link_server(server, it->c_str()))
+        {
+            unlink_server_relations(server, relations);
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+static bool extract_relations(json_t* json, set<string>& relations)
+{
+    bool rval = true;
+    json_t* rel;
+
+    if ((rel = json_object_get(json, "relationships")))
+    {
+        for (int i = 0; server_relation_types[i]; i++)
+        {
+            json_t* arr = json_object_get(rel, server_relation_types[i]);
+
+            if (arr)
+            {
+                size_t size = json_array_size(arr);
+
+                for (size_t j = 0; j < size; j++)
+                {
+                    json_t* t = json_array_get(arr, j);
+
+                    if (json_is_string(t))
+                    {
+                        string value = json_string_value(t);
+
+                        // Remove the link part
+                        size_t pos = value.find_last_of("/");
+                        if (pos != string::npos)
+                        {
+                            value.erase(0, pos + 1);
+                        }
+
+                        if (server_relation_is_valid(server_relation_types[i], value))
+                        {
+                            relations.insert(value);
+                        }
+                        else
+                        {
+                            rval = false;
+                        }
+                    }
+                    else
+                    {
+                        rval = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+static inline const char* string_or_null(json_t* json, const char* name)
+{
+    const char* rval = NULL;
+    json_t* value = json_object_get(json, name);
+
+    if (value && json_is_string(value))
+    {
+        rval = json_string_value(value);
+    }
+
+    return rval;
+}
+
+SERVER* runtime_create_server_from_json(json_t* json)
+{
+    SERVER* rval = NULL;
+
+    if (server_contains_required_fields(json))
+    {
+        const char* name = json_string_value(json_object_get(json, "name"));
+        const char* address = json_string_value(json_object_get(json, "address"));
+
+        /** The port needs to be in string format */
+        char port[200]; // Enough to store any port value
+        int i = json_integer_value(json_object_get(json, "port"));
+        snprintf(port, sizeof (port), "%d", i);
+
+        /** Optional parameters */
+        const char* protocol = string_or_null(json, "protocol");
+        const char* authenticator = string_or_null(json, "authenticator");
+        const char* authenticator_options = string_or_null(json, "authenticator_options");
+
+
+        set<string> relations;
+
+        if (extract_relations(json, relations) &&
+            runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
+        {
+            rval = server_find_by_unique_name(name);
+            ss_dassert(rval);
+
+            if (!link_server_relations(rval, relations))
+            {
+                runtime_destroy_server(rval);
+                rval = NULL;
+            }
+        }
+    }
+
     return rval;
 }

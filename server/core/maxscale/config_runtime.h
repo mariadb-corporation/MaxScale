@@ -179,4 +179,13 @@ bool runtime_create_monitor(const char *name, const char *module);
  */
 bool runtime_destroy_monitor(MXS_MONITOR *monitor);
 
+/**
+ * @brief Create a new server from JSON
+ *
+ * @param json JSON defining the server
+ *
+ * @return Created server or NULL on error
+ */
+SERVER* runtime_create_server_from_json(json_t* json);
+
 MXS_END_DECLS
