@@ -2380,7 +2380,7 @@ static const char* service_state_to_string(int state)
     }
 }
 
-json_t* service_to_json(const SERVICE* service)
+json_t* service_to_json(const SERVICE* service, const char* host)
 {
     spinlock_acquire(&service->spin);
     // TODO: Handle errors
@@ -2415,7 +2415,8 @@ json_t* service_to_json(const SERVICE* service)
 
         for (int i = 0; i < service->n_filters; i++)
         {
-            string filter = "/filters/";
+            string filter = host;
+            filter += "/filters/";
             filter += service->filters[i]->name;
             json_array_append_new(arr, json_string(filter.c_str()));
         }
@@ -2454,7 +2455,8 @@ json_t* service_to_json(const SERVICE* service)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                string s = "/servers/";
+                string s = host;
+                s += "/servers/";
                 s += ref->server->unique_name;
                 json_array_append_new(arr, json_string(s.c_str()));
             }
@@ -2476,7 +2478,7 @@ json_t* service_to_json(const SERVICE* service)
     return rval;
 }
 
-json_t* service_list_to_json()
+json_t* service_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
@@ -2484,7 +2486,7 @@ json_t* service_list_to_json()
 
     for (SERVICE *service = allServices; service; service = service->next)
     {
-        json_t* svc = service_to_json(service);
+        json_t* svc = service_to_json(service, host);
 
         if (svc)
         {

@@ -477,7 +477,7 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     return me;
 }
 
-json_t* filter_to_json(const MXS_FILTER_DEF* filter)
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
 {
     json_t* rval = json_object();
     json_object_set_new(rval, "name", json_string(filter->name));
@@ -508,7 +508,7 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter)
     return rval;
 }
 
-json_t* filter_list_to_json()
+json_t* filter_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
@@ -516,7 +516,7 @@ json_t* filter_list_to_json()
 
     for (MXS_FILTER_DEF* f = allFilters; f; f = f->next)
     {
-        json_t* json = filter_to_json(f);
+        json_t* json = filter_to_json(f, host);
 
         if (json)
         {

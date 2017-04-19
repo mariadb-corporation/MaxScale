@@ -283,17 +283,20 @@ void service_print_users(DCB *, const SERVICE *);
  * @brief Convert a service to JSON
  *
  * @param service Service to convert
+ * @param host    Hostname of this server
  *
  * @return JSON representation of the service
  */
-json_t* service_to_json(const SERVICE* service);
+json_t* service_to_json(const SERVICE* service, const char* host);
 
 /**
  * @brief Convert all services to JSON
  *
+ * @param host Hostname of this server
+ *
  * @return A JSON array with all services
  */
-json_t* service_list_to_json();
+json_t* service_list_to_json(const char* host);
 
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);

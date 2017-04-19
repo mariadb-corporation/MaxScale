@@ -278,16 +278,19 @@ void mon_hangup_failed_servers(MXS_MONITOR *monitor);
  * @brief Convert monitor to JSON
  *
  * @param monitor Monitor to convert
+ * @param host    Hostname of this server
  *
  * @return JSON representation of the monitor
  */
-json_t* monitor_to_json(const MXS_MONITOR* monitor);
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host);
 
 /**
  * @brief Convert all monitors to JSON
  *
+ * @param host    Hostname of this server
+ *
  * @return JSON array containing all monitors
  */
-json_t* monitor_list_to_json();
+json_t* monitor_list_to_json(const char* host);
 
 MXS_END_DECLS

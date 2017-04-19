@@ -417,9 +417,10 @@ void session_clear_stmt(MXS_SESSION *session);
  * @brief Convert a session to JSON
  *
  * @param session Session to convert
+ * @param host    Hostname of this server
  *
  * @return New JSON object or NULL on error
  */
-json_t* session_to_json(const MXS_SESSION *session);
+json_t* session_to_json(const MXS_SESSION *session, const char* host);
 
 MXS_END_DECLS

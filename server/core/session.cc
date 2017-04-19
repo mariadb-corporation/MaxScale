@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -49,6 +50,8 @@
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
+
+using std::string;
 
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
@@ -1000,13 +1003,17 @@ uint32_t session_get_next_id()
     return atomic_add_uint32(&next_session_id, 1);
 }
 
-json_t* session_to_json(const MXS_SESSION *session)
+json_t* session_to_json(const MXS_SESSION *session, const char *host)
 {
     json_t* rval = json_object();
 
     json_object_set_new(rval, "id", json_integer(session->ses_id));
     json_object_set_new(rval, "state", json_string(session_state(session->state)));
-    json_object_set_new(rval, "service", json_string(session->service->name));
+
+    string svc = host;
+    svc += "/services/";
+    svc += session->service->name;
+    json_object_set_new(rval, "service", json_string(svc.c_str()));
 
     if (session->client_dcb->user)
     {
@@ -1039,8 +1046,10 @@ json_t* session_to_json(const MXS_SESSION *session)
 
         for (int i = 0; i < session->n_filters; i++)
         {
-            json_array_append_new(filters, json_string(session->filters[i].filter->name));
-            // TODO: Add diagnostic output from filters
+            string fil = host;
+            fil += "/filters/";
+            fil += session->filters[i].filter->name;
+            json_array_append_new(filters, json_string(fil.c_str()));
         }
 
         json_object_set_new(rval, "filters", filters);

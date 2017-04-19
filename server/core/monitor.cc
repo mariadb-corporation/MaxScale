@@ -1539,7 +1539,7 @@ static const char* monitor_state_to_string(int state)
     }
 }
 
-json_t* monitor_to_json(const MXS_MONITOR* monitor)
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 {
     json_t* rval = json_object();
 
@@ -1559,7 +1559,8 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor)
 
         for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
         {
-            string s = "/servers/";
+            string s = host;
+            s += "/servers/";
             s += db->server->unique_name;
             json_array_append_new(arr, json_string(s.c_str()));
         }
@@ -1581,7 +1582,7 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor)
     return rval;
 }
 
-json_t* monitor_list_to_json()
+json_t* monitor_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
@@ -1589,7 +1590,7 @@ json_t* monitor_list_to_json()
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
-        json_t *json = monitor_to_json(mon);
+        json_t *json = monitor_to_json(mon, host);
 
         if (json)
         {

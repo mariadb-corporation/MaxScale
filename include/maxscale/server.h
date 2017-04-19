@@ -270,17 +270,20 @@ bool server_is_mxs_service(const SERVER *server);
  * @brief Convert a server to JSON format
  *
  * @param server Server to convert
+ * @param host    Hostname of this server
  *
  * @return JSON representation of server or NULL if an error occurred
  */
-json_t* server_to_json(const SERVER* server);
+json_t* server_to_json(const SERVER* server, const char* host);
 
 /**
  * @brief Convert all servers into JSON format
  *
+ * @param host    Hostname of this server
+ *
  * @return JSON array of servers or NULL if an error occurred
  */
-json_t* server_list_to_json();
+json_t* server_list_to_json(const char* host);
 
 extern int server_free(SERVER *server);
 extern SERVER *server_find_by_unique_name(const char *name);

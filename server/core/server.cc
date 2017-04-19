@@ -442,7 +442,7 @@ dprintAllServers(DCB *dcb)
 void
 dprintAllServersJson(DCB *dcb)
 {
-    json_t* all_servers = server_list_to_json();
+    json_t* all_servers = server_list_to_json("");
     char* dump = json_dumps(all_servers, JSON_INDENT(4));
     dcb_printf(dcb, "%s", dump);
     MXS_FREE(dump);
@@ -1369,7 +1369,7 @@ bool server_is_mxs_service(const SERVER *server)
     return rval;
 }
 
-json_t* server_list_to_json()
+json_t* server_list_to_json(const char* host)
 {
     json_t* rval = json_array();
 
@@ -1379,7 +1379,7 @@ json_t* server_list_to_json()
 
         for (SERVER* server = allServers; server; server = server->next)
         {
-            json_t* srv_json = server_to_json(server);
+            json_t* srv_json = server_to_json(server, host);
 
             if (srv_json == NULL)
             {
@@ -1397,7 +1397,7 @@ json_t* server_list_to_json()
     return rval;
 }
 
-json_t* server_to_json(const SERVER* server)
+json_t* server_to_json(const SERVER* server, const char* host)
 {
     // TODO: Add error checks
     json_t* rval = json_object();

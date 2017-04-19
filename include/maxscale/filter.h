@@ -254,17 +254,20 @@ MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
  * @brief Convert a filter to JSON
  *
  * @param filter Filter to convert
+ * @param host Hostname of this server
  *
  * @return Filter converted to JSON format
  */
-json_t* filter_to_json(const MXS_FILTER_DEF* filter);
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host);
 
 /**
  * @brief Convert all filters into JSON
  *
+ * @param host Hostname of this server
+ *
  * @return A JSON array containing all filters
  */
-json_t* filter_list_to_json();
+json_t* filter_list_to_json(const char* host);
 
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, const MXS_FILTER_DEF *);
