@@ -173,9 +173,9 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics(MXS_ROUTER* pInstance)
+    static json_t* diagnostics(const MXS_ROUTER* pInstance)
     {
-        RouterType* pRouter = static_cast<RouterType*>(pInstance);
+        const RouterType* pRouter = static_cast<const RouterType*>(pInstance);
 
         json_t* rval = NULL;
 

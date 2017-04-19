@@ -117,7 +117,7 @@ int users_default_loadusers(SERV_LISTENER *port);
  *
  * @param port Port whose data is to be printed
  */
-json_t* users_default_diagnostic(SERV_LISTENER *port);
+json_t* users_default_diagnostic(const SERV_LISTENER *port);
 
 /**
  * Print details of the users storage mechanism

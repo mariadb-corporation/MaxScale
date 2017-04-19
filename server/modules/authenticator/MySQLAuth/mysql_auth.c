@@ -58,7 +58,7 @@ static int mysql_auth_set_client_data(
     MySQLProtocol *protocol,
     GWBUF         *buffer);
 
-json_t* mysql_auth_diagnostic(SERV_LISTENER *port);
+json_t* mysql_auth_diagnostic(const SERV_LISTENER *port);
 
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
@@ -691,7 +691,7 @@ int diag_cb(void *data, int columns, char **row, char **field_names)
     return 0;
 }
 
-json_t* mysql_auth_diagnostic(SERV_LISTENER *port)
+json_t* mysql_auth_diagnostic(const SERV_LISTENER *port)
 {
     json_t* rval = json_array();
 

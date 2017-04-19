@@ -311,7 +311,7 @@ RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* 
  *
  * @param   dcb     The DCB for diagnostic output
  */
-json_t* RegexHintFSession::diagnostics()
+json_t* RegexHintFSession::diagnostics() const
 {
 
     json_t* rval = m_fil_inst.diagnostics(); /* Print overall diagnostics */
@@ -329,7 +329,7 @@ json_t* RegexHintFSession::diagnostics()
  *
  * @param   dcb     The DCB for diagnostic output
  */
-json_t* RegexHintFilter::diagnostics()
+json_t* RegexHintFilter::diagnostics() const
 {
     json_t* rval = json_object();
 
@@ -340,12 +340,12 @@ json_t* RegexHintFilter::diagnostics()
     {
         json_t* arr = json_array();
 
-        for (MappingArray::iterator it = m_mapping.begin(); it != m_mapping.end(); it++)
+        for (MappingArray::const_iterator it = m_mapping.begin(); it != m_mapping.end(); it++)
         {
             json_t* obj = json_object();
             json_t* targets = json_array();
 
-            for (StringArray::iterator it2 = it->m_targets.begin(); it2 != it->m_targets.end(); it2++)
+            for (StringArray::const_iterator it2 = it->m_targets.begin(); it2 != it->m_targets.end(); it2++)
             {
                 json_array_append_new(targets, json_string(it2->c_str()));
             }

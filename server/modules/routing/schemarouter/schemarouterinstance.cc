@@ -302,7 +302,7 @@ SchemaRouterSession* SchemaRouter::newSession(MXS_SESSION* pSession)
     return rval;
 }
 
-json_t* SchemaRouter::diagnostics()
+json_t* SchemaRouter::diagnostics() const
 {
     double sescmd_pct = m_stats.n_sescmd != 0 ?
         100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :

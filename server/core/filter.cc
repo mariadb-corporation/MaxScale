@@ -585,7 +585,7 @@ int FilterSession::clientReply(GWBUF* pPacket)
     return m_up.clientReply(pPacket);
 }
 
-json_t* FilterSession::diagnostics()
+json_t* FilterSession::diagnostics() const
 {
     return NULL;
 }

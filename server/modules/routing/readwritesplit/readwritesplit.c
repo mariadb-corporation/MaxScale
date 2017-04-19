@@ -74,7 +74,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
-static json_t* diagnostics(MXS_ROUTER *instance);
+static json_t* diagnostics(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
@@ -646,7 +646,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostics(MXS_ROUTER *instance)
+static json_t* diagnostics(const MXS_ROUTER *instance)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
 

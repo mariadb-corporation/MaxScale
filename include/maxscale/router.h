@@ -154,7 +154,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*     (*diagnostics)(MXS_ROUTER *instance);
+    json_t*  (*diagnostics)(const MXS_ROUTER *instance);
 
     /**
      * @brief Called for each reply packet

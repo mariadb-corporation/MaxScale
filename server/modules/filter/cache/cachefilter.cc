@@ -306,7 +306,7 @@ CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* CacheFilter::diagnostics()
+json_t* CacheFilter::diagnostics() const
 {
     return m_sCache->show();
 }

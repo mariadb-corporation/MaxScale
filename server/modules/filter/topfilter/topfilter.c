@@ -58,7 +58,7 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MX
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -574,7 +574,7 @@ clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *reply)
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     TOPN_INSTANCE *my_instance = (TOPN_INSTANCE*)instance;
     TOPN_SESSION *my_session = (TOPN_SESSION*)fsession;

@@ -142,7 +142,7 @@ NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* NullFilter::diagnostics()
+json_t* NullFilter::diagnostics() const
 {
     return NULL;
 }

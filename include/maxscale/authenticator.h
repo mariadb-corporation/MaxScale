@@ -95,7 +95,7 @@ typedef struct mxs_authenticator
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostic)(struct servlistener *listener);
+    json_t*  (*diagnostic)(const struct servlistener *listener);
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */

@@ -101,7 +101,7 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -2504,7 +2504,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   dcb     The DCB for diagnostic output
  */
 static json_t*
-diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
+diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     return rules_to_json(thr_rules);
 }

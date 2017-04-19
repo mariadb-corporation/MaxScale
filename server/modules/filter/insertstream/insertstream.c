@@ -37,7 +37,7 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream);
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply);
 static bool extract_insert_target(GWBUF *buffer, char* target, int len);
@@ -498,7 +498,7 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GW
  * @param   instance The filter instance
  * @param   fsession Filter session, may be NULL
  */
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     DS_INSTANCE *my_instance = (DS_INSTANCE*)instance;
 

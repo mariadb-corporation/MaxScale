@@ -180,7 +180,7 @@ typedef struct mxs_filter_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+    json_t* (*diagnostics)(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter

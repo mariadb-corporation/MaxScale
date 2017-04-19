@@ -83,7 +83,7 @@ public:
     /**
      * Print diagnostics of the session cache.
      */
-    json_t* diagnostics();
+    json_t* diagnostics() const;
 
 private:
     int handle_expecting_fields();

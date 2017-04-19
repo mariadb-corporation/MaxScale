@@ -109,7 +109,7 @@ void usersPrint(const USERS *users)
     hashtable_stats(users->data);
 }
 
-json_t* users_default_diagnostic(SERV_LISTENER *port)
+json_t* users_default_diagnostic(const SERV_LISTENER *port)
 {
     json_t* rval = json_array();
 

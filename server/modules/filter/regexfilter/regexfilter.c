@@ -48,7 +48,7 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession);
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
@@ -377,7 +377,7 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
-static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     REGEX_INSTANCE *my_instance = (REGEX_INSTANCE*)instance;
     REGEX_SESSION *my_session = (REGEX_SESSION*)fsession;

@@ -22,7 +22,7 @@ class HintRouter : public maxscale::Router<HintRouter, HintRouterSession>
 public:
     static HintRouter* create(SERVICE* pService, char** pzOptions);
     HintRouterSession* newSession(MXS_SESSION *pSession);
-    json_t* diagnostics();
+    json_t* diagnostics() const;
     uint64_t getCapabilities() const
     {
         return RCAP_TYPE_NONE;

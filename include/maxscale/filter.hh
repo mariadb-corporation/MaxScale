@@ -145,7 +145,7 @@ public:
     /**
      * Called for obtaining diagnostics about the filter session.
      */
-    json_t* diagnostics();
+    json_t* diagnostics() const;
 
 protected:
     FilterSession(MXS_SESSION* pSession);
@@ -272,19 +272,19 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData)
+    static json_t* diagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
 
         if (pData)
         {
-            FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
+            const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
 
             MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics());
         }
         else
         {
-            FilterType* pFilter = static_cast<FilterType*>(pInstance);
+            const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
 
             MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics());
         }

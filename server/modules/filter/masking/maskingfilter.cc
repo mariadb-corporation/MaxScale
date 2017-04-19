@@ -138,7 +138,7 @@ MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* MaskingFilter::diagnostics()
+json_t* MaskingFilter::diagnostics() const
 {
     return NULL;
 }

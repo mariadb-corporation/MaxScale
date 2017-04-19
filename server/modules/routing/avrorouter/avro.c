@@ -76,7 +76,7 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static json_t* diagnostics(MXS_ROUTER *instance);
+static json_t* diagnostics(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *message,
@@ -807,7 +807,7 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
  *
  * @param instance  Instance of the router
  */
-static json_t* diagnostics(MXS_ROUTER *router)
+static json_t* diagnostics(const MXS_ROUTER *router)
 {
     AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *)router;
 
