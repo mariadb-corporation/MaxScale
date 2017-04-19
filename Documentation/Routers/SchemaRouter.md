@@ -1,4 +1,4 @@
-#SchemaRouter Router
+# SchemaRouter Router
 
 The SchemaRouter router provides an easy and manageable sharding solution by building a single logical database server from multiple separate ones. Each database is shown to the client and queries targeting unique databases are routed to their respective servers. In addition to providing simple database-based sharding, the schemarouter router also enables cross-node session variable usage by routing all queries that modify the session to all nodes.
 
@@ -29,7 +29,7 @@ The list of databases is built by sending a SHOW DATABASES query to all the serv
 
 If you are connecting directly to a database or have different users on some of the servers, you need to get the authentication data from all the servers. You can control this with the `auth_all_servers` parameter. With this parameter, MariaDB MaxScale forms a union of all the users and their grants from all the servers. By default, the schemarouter will fetch the authentication data from all servers.
 
-For example, if two servers have the database 'shard' and the following rights are granted only on one server, all queries targeting the database 'shard' would be routed to the server where the grants were given.
+For example, if two servers have the database `shard` and the following rights are granted only on one server, all queries targeting the database `shard` would be routed to the server where the grants were given.
 
 ```
 # Execute this on both servers
@@ -68,6 +68,8 @@ refresh_interval=60
 
 ## Router Options
 
+**Note:** Router options for the Schemarouter were deprecated in MaxScale 2.1.
+
 The following options are options for the `router_options` parameter of the
 service. Multiple router options are given as a comma separated list of key
 value pairs.
@@ -87,7 +89,7 @@ will not be consistent anymore.
 ### `refresh_databases`
 
 Enable database map refreshing mid-session. These are triggered by a failure to
-change the database i.e. `USE ...``queries.
+change the database i.e. `USE ...` queries.
 
 ### `refresh_interval`
 
