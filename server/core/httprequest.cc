@@ -84,6 +84,7 @@ static void process_uri(string& uri, deque<string>& uri_parts)
 
 HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string method, json_t* data):
     m_json(data),
+    m_json_string(data ? mxs::json_dump(data, 0) : ""),
     m_resource(url),
     m_verb(method),
     m_connection(connection)

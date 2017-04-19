@@ -15,11 +15,49 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
-#include <deque>
+#include <microhttpd.h>
 
 #include <maxscale/thread.h>
 
-#include "http.hh"
+using std::string;
+
+class Client
+{
+public:
+
+    /**
+     * @brief Create a new client
+     *
+     * @param connection The connection handle for this client
+     */
+    Client(struct MHD_Connection *connection):
+        m_connection(connection)
+    {
+    }
+
+    ~Client()
+    {
+    }
+
+    /**
+     * @brief Process a client request
+     *
+     * This function can be called multiple times if a PUT/POST/PATCH
+     * uploads a large amount of data.
+     *
+     * @param url    Requested URL
+     * @param method Request method
+     * @param data   Pointer to request data
+     * @param size   Size of request data
+     *
+     * @return MHD_YES on success, MHD_NO on error
+     */
+    int process(string url, string method, const char* data, size_t *size);
+
+private:
+    struct MHD_Connection* m_connection; /**< Connection handle */
+    string                 m_data;       /**< Uploaded data */
+};
 
 /**
  * @brief Start the administrative interface

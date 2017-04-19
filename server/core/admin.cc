@@ -26,52 +26,63 @@
 
 #include "maxscale/admin.hh"
 #include "maxscale/resource.hh"
+#include "maxscale/http.hh"
 
 static struct MHD_Daemon* http_daemon = NULL;
 
-int handle_client(void *cls,
-                  struct MHD_Connection *connection,
-                  const char *url,
-                  const char *method,
-                  const char *version,
-                  const char *upload_data,
-                  size_t *upload_data_size,
-                  void **con_cls)
-
+int kv_iter(void *cls,
+            enum MHD_ValueKind kind,
+            const char *key,
+            const char *value)
 {
-    const char *admin_user = config_get_global_options()->admin_user;
-    const char *admin_pw = config_get_global_options()->admin_password;
-    bool admin_auth = config_get_global_options()->admin_auth;
+    size_t* rval = (size_t*) cls;
 
-    char* pw = NULL;
-    char* user = MHD_basic_auth_get_username_password(connection, &pw);
-
-    if (admin_auth && (!user || !pw || strcmp(user, admin_user) || strcmp(pw, admin_pw)))
+    if (strcmp(key, "Content-Length") == 0)
     {
-        static char error_resp[] = "Access denied\r\n";
-        struct MHD_Response *resp;
+        *rval = atoi(value);
+        return MHD_NO;
+    }
 
-        resp = MHD_create_response_from_buffer(sizeof (error_resp) - 1, error_resp,
-                                               MHD_RESPMEM_PERSISTENT);
+    return MHD_YES;
+}
 
-        MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
-        MHD_destroy_response(resp);
+static inline size_t request_data_length(struct MHD_Connection *connection)
+{
+    size_t rval = 0;
+    MHD_get_connection_values(connection, MHD_HEADER_KIND, kv_iter, &rval);
+    return rval;
+}
+
+static bool modifies_data(struct MHD_Connection *connection, string method)
+{
+    return (method == "POST" || method == "PUT" || method == "PATCH") &&
+           request_data_length(connection);
+}
+
+int Client::process(string url, string method, const char* upload_data, size_t *upload_size)
+{
+    json_t* json = NULL;
+
+    if (*upload_size)
+    {
+        m_data += upload_data;
+        *upload_size = 0;
         return MHD_YES;
     }
 
-    string verb(method);
-    json_t* json = NULL;
+    json_error_t err = {};
 
-    if (verb == "POST" || verb == "PUT" || verb == "PATCH")
+    if (m_data.length() &&
+        (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
     {
-        json_error_t err = {};
-        if ((json = json_loadb(upload_data, *upload_data_size, 0, &err)) == NULL)
-        {
-            return MHD_NO;
-        }
+        struct MHD_Response *response =
+            MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
+        MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
+        MHD_destroy_response(response);
+        return MHD_YES;
     }
 
-    HttpRequest request(connection, url, method, json);
+    HttpRequest request(m_connection, url, method, json);
     HttpResponse reply = resource_handle_request(request);
 
     string data;
@@ -98,9 +109,76 @@ int handle_client(void *cls,
     // This ETag is the base64 encoding of `not-yet-implemented`
     MHD_add_response_header(response, "ETag", "bm90LXlldC1pbXBsZW1lbnRlZAo");
 
-    MHD_queue_response(connection, reply.get_code(), response);
+    int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
-    return MHD_YES;
+
+    return rval;
+}
+
+void close_client(void *cls,
+                  struct MHD_Connection *connection,
+                  void **con_cls,
+                  enum MHD_RequestTerminationCode toe)
+{
+    Client* client = static_cast<Client*>(*con_cls);
+    delete client;
+}
+
+bool do_auth(struct MHD_Connection *connection)
+{
+    const char *admin_user = config_get_global_options()->admin_user;
+    const char *admin_pw = config_get_global_options()->admin_password;
+    bool admin_auth = config_get_global_options()->admin_auth;
+
+    char* pw = NULL;
+    char* user = MHD_basic_auth_get_username_password(connection, &pw);
+    bool rval = true;
+
+    if (admin_auth && (!user || !pw || strcmp(user, admin_user) || strcmp(pw, admin_pw)))
+    {
+        rval = false;
+        static char error_resp[] = "Access denied\r\n";
+        struct MHD_Response *resp =
+            MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
+                                            MHD_RESPMEM_PERSISTENT);
+
+        MHD_queue_basic_auth_fail_response(connection, "maxscale", resp);
+        MHD_destroy_response(resp);
+    }
+
+    return rval;
+}
+
+int handle_client(void *cls,
+                  struct MHD_Connection *connection,
+                  const char *url,
+                  const char *method,
+                  const char *version,
+                  const char *upload_data,
+                  size_t *upload_data_size,
+                  void **con_cls)
+
+{
+    if (!do_auth(connection))
+    {
+        return MHD_YES;
+    }
+
+    if (*con_cls == NULL)
+    {
+        if ((*con_cls = new (std::nothrow) Client(connection)) == NULL)
+        {
+            return MHD_NO;
+        }
+        else if (modifies_data(connection, method))
+        {
+            // The first call doesn't have any data
+            return MHD_YES;
+        }
+    }
+
+    Client* client = static_cast<Client*>(*con_cls);
+    return client->process(url, method, upload_data, upload_data_size);
 }
 
 bool mxs_admin_init()
@@ -109,6 +187,7 @@ bool mxs_admin_init()
                                    config_get_global_options()->admin_port,
                                    NULL, NULL,
                                    handle_client, NULL,
+                                   MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
                                    MHD_OPTION_END);
     return http_daemon != NULL;
 
