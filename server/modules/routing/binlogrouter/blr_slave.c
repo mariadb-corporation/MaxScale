@@ -277,6 +277,16 @@ static bool blr_parse_gtid(const char *gtid, MARIADB_GTID_ELEMS *info);
 static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
                                     ROUTER_SLAVE *slave,
                                     const char *maxwell_stmt);
+static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
+                                 ROUTER_SLAVE *slave,
+                                 char *show_stmt);
+static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
+                                ROUTER_SLAVE *slave,
+                                char *set_stmt);
+static bool blr_handle_admin_stmt(ROUTER_INSTANCE *router,
+                                  ROUTER_SLAVE *slave,
+                                  char *admin_stmt,
+                                  char *admin_options);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -594,178 +604,13 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     }
     else if (strcasecmp(word, "SHOW") == 0)
     {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete show query.",
-                      router->service->name);
-        }
-        else if (strcasecmp(word, "WARNINGS") == 0)
+        /* Handle SHOW */
+        if (blr_handle_show_stmt(router,
+                                 slave,
+                                 brkb))
         {
             MXS_FREE(query_text);
-            return blr_slave_show_warnings(router, slave);
-        }
-        else if (strcasecmp(word, "GLOBAL") == 0)
-        {
-            if (router->master_state == BLRM_UNCONFIGURED)
-            {
-                MXS_FREE(query_text);
-                return blr_slave_send_ok(router, slave);
-            }
-
-            if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-            {
-                MXS_ERROR("%s: Expected VARIABLES in SHOW GLOBAL",
-                          router->service->name);
-            }
-            else if (strcasecmp(word, "VARIABLES") == 0)
-            {
-                int rc = blr_slave_handle_variables(router, slave, brkb);
-
-                /* if no var found, send empty result set */
-                if (rc == 0)
-                {
-                    blr_slave_send_ok(router, slave);
-                }
-
-                if (rc >= 0)
-                {
-                    MXS_FREE(query_text);
-                    return 1;
-                }
-                else
-                {
-                    MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
-                              router->service->name);
-                }
-            }
-            else if (strcasecmp(word, "STATUS") == 0)
-            {
-                int rc = blr_slave_handle_status_variables(router, slave, brkb);
-
-                /* if no var found, send empty result set */
-                if (rc == 0)
-                {
-                    blr_slave_send_ok(router, slave);
-                }
-
-                if (rc >= 0)
-                {
-                    MXS_FREE(query_text);
-
-                    return 1;
-                }
-                else
-                {
-                    MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL STATUS.",
-                              router->service->name);
-                }
-            }
-        }
-        else if (strcasecmp(word, "VARIABLES") == 0)
-        {
-            int rc;
-            if (router->master_state == BLRM_UNCONFIGURED)
-            {
-                MXS_FREE(query_text);
-                return blr_slave_send_ok(router, slave);
-            }
-
-            rc = blr_slave_handle_variables(router, slave, brkb);
-
-            /* if no var found, send empty result set */
-            if (rc == 0)
-            {
-                blr_slave_send_ok(router, slave);
-            }
-
-            if (rc >= 0)
-            {
-                MXS_FREE(query_text);
-                return 1;
-            }
-            else
-            {
-                MXS_ERROR("%s: Expected LIKE clause in SHOW VARIABLES.",
-                          router->service->name);
-            }
-        }
-        else if (strcasecmp(word, "MASTER") == 0)
-        {
-            if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-            {
-                MXS_ERROR("%s: Expected SHOW MASTER STATUS command",
-                          router->service->name);
-            }
-            else if (strcasecmp(word, "STATUS") == 0)
-            {
-                MXS_FREE(query_text);
-
-                /* if state is BLRM_UNCONFIGURED return empty result */
-
-                if (router->master_state > BLRM_UNCONFIGURED)
-                {
-                    return blr_slave_send_master_status(router, slave);
-                }
-                else
-                {
-                    return blr_slave_send_ok(router, slave);
-                }
-            }
-        }
-        else if (strcasecmp(word, "SLAVE") == 0)
-        {
-            if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-            {
-                MXS_ERROR("%s: Expected SHOW SLAVE STATUS command",
-                          router->service->name);
-            }
-            else if (strcasecmp(word, "STATUS") == 0)
-            {
-                MXS_FREE(query_text);
-                /* if state is BLRM_UNCONFIGURED return empty result */
-                if (router->master_state > BLRM_UNCONFIGURED)
-                {
-                    return blr_slave_send_slave_status(router, slave);
-                }
-                else
-                {
-                    return blr_slave_send_ok(router, slave);
-                }
-            }
-            else if (strcasecmp(word, "HOSTS") == 0)
-            {
-                MXS_FREE(query_text);
-                /* if state is BLRM_UNCONFIGURED return empty result */
-                if (router->master_state > BLRM_UNCONFIGURED)
-                {
-                    return blr_slave_send_slave_hosts(router, slave);
-                }
-                else
-                {
-                    return blr_slave_send_ok(router, slave);
-                }
-            }
-        }
-        else if (strcasecmp(word, "STATUS") == 0)
-        {
-            int rc = blr_slave_handle_status_variables(router, slave, brkb);
-
-            /* if no var found, send empty result set */
-            if (rc == 0)
-            {
-                blr_slave_send_ok(router, slave);
-            }
-
-            if (rc >= 0)
-            {
-                MXS_FREE(query_text);
-
-                return 1;
-            }
-            else
-            {
-                MXS_ERROR("%s: Expected LIKE clause in SHOW STATUS.", router->service->name);
-            }
+            return 1;
         }
     }
     else if (strcasecmp(query_text, "SET") == 0)
@@ -7168,6 +7013,399 @@ static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
             MXS_ERROR("Error sending lower_case_tables query response");
         }
         return true;
+    }
+
+    return false;
+}
+
+/**
+ * Handle received SHOW statements from clients
+ *
+ * if a SHOW statement is one of suported one
+ * a proper reply to the connected client is done
+ *
+ * @param    router       Router instance
+ * @param    slave        Connected client/slave server
+ * @param    show_stmt    The SHOW statement
+ * @return                True for handled queries, False otherwise
+ */
+static bool blr_handle_show_stmt(ROUTER_INSTANCE *router,
+                                 ROUTER_SLAVE *slave,
+                                 char *show_stmt)
+{
+    char *word;
+    char *brkb;
+    char *sep = " \t,=";
+    if ((word = strtok_r(show_stmt, sep, &brkb)) == NULL)
+    {
+        MXS_ERROR("%s: Incomplete show query.", router->service->name);
+        return false;
+    }
+    else if (strcasecmp(word, "WARNINGS") == 0)
+    {
+        blr_slave_show_warnings(router, slave);
+        return true;
+    }
+    else if (strcasecmp(word, "GLOBAL") == 0)
+    {
+        if (router->master_state == BLRM_UNCONFIGURED)
+        {
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
+
+        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+        {
+            MXS_ERROR("%s: Expected VARIABLES in SHOW GLOBAL",
+                      router->service->name);
+            return false;
+        }
+        else if (strcasecmp(word, "VARIABLES") == 0)
+        {
+            int rc = blr_slave_handle_variables(router, slave, brkb);
+
+            /* if no var found, send empty result set */
+            if (rc == 0)
+            {
+                blr_slave_send_ok(router, slave);
+            }
+
+            if (rc >= 0)
+            {
+                return true;
+            }
+            else
+            {
+                MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
+                          router->service->name);
+                return false;
+            }
+        }
+        else if (strcasecmp(word, "STATUS") == 0)
+        {
+            int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+            /* if no var found, send empty result set */
+            if (rc == 0)
+            {
+                blr_slave_send_ok(router, slave);
+            }
+
+            if (rc >= 0)
+            {
+                return true;
+            }
+            else
+            {
+                MXS_ERROR("%s: Expected LIKE clause in SHOW GLOBAL STATUS.",
+                          router->service->name);
+                return false;
+            }
+        }
+    }
+    else if (strcasecmp(word, "VARIABLES") == 0)
+    {
+        int rc;
+        if (router->master_state == BLRM_UNCONFIGURED)
+        {
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
+
+        rc = blr_slave_handle_variables(router, slave, brkb);
+
+        /* if no var found, send empty result set */
+        if (rc == 0)
+        {
+            blr_slave_send_ok(router, slave);
+        }
+
+        if (rc >= 0)
+        {
+            return true;
+        }
+        else
+        {
+            MXS_ERROR("%s: Expected LIKE clause in SHOW VARIABLES.",
+                      router->service->name);
+            return false;
+        }
+    }
+    else if (strcasecmp(word, "MASTER") == 0)
+    {
+        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+        {
+            MXS_ERROR("%s: Expected SHOW MASTER STATUS command",
+                      router->service->name);
+            return false;
+        }
+        else if (strcasecmp(word, "STATUS") == 0)
+        {
+            /* if state is BLRM_UNCONFIGURED return empty result */
+
+            if (router->master_state > BLRM_UNCONFIGURED)
+            {
+                blr_slave_send_master_status(router, slave);
+            }
+            else
+            {
+                blr_slave_send_ok(router, slave);
+            }
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "SLAVE") == 0)
+    {
+        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+        {
+            MXS_ERROR("%s: Expected SHOW SLAVE STATUS command",
+                      router->service->name);
+            return false;
+        }
+        else if (strcasecmp(word, "STATUS") == 0)
+        {
+            /* if state is BLRM_UNCONFIGURED return empty result */
+            if (router->master_state > BLRM_UNCONFIGURED)
+            {
+                blr_slave_send_slave_status(router, slave);
+            }
+            else
+            {
+                blr_slave_send_ok(router, slave);
+            }
+            return true;
+        }
+        else if (strcasecmp(word, "HOSTS") == 0)
+        {
+            /* if state is BLRM_UNCONFIGURED return empty result */
+            if (router->master_state > BLRM_UNCONFIGURED)
+            {
+                blr_slave_send_slave_hosts(router, slave);
+            }
+            else
+            {
+                blr_slave_send_ok(router, slave);
+            }
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "STATUS") == 0)
+    {
+        int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+        /* if no var found, send empty result set */
+        if (rc == 0)
+        {
+            blr_slave_send_ok(router, slave);
+        }
+
+        if (rc >= 0)
+        {
+            return true;
+        }
+        else
+        {
+            MXS_ERROR("%s: Expected LIKE clause in SHOW STATUS.",
+                      router->service->name);
+            return false;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Handle received SET statements from clients
+ *
+ * if a SHOW statement is one of suported one
+ * a proper reply to the connected client is done
+ *
+ * @param    router      Router instance
+ * @param    slave       Connected client/slave server
+ * @param    set_stmt    The SET statement
+ * @return               True for handled queries, False otherwise
+ */
+static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
+                                ROUTER_SLAVE *slave,
+                                char *set_stmt)
+{
+    char *word;
+    char *brkb;
+    char *sep = " \t,=";
+
+    if ((word = strtok_r(set_stmt, sep, &brkb)) == NULL)
+    {
+        MXS_ERROR("%s: Incomplete set command.", router->service->name);
+        return false;
+    }
+    else if ((strcasecmp(word, "autocommit") == 0) || (strcasecmp(word, "@@session.autocommit") == 0))
+    {
+        blr_slave_send_ok(router, slave);
+        return true;
+    }
+    else if (strcasecmp(word, "@master_heartbeat_period") == 0)
+    {
+        int v_len = 0;
+        word = strtok_r(NULL, sep, &brkb);
+        if (word)
+        {
+            char *new_val;
+            v_len = strlen(word);
+            if (v_len > 6)
+            {
+                new_val = mxs_strndup_a(word, v_len - 6);
+                slave->heartbeat = atoi(new_val) / 1000;
+            }
+            else
+            {
+                new_val = mxs_strndup_a(word, v_len);
+                slave->heartbeat = atoi(new_val) / 1000000;
+            }
+
+            MXS_FREE(new_val);
+        }
+        blr_slave_replay(router, slave, router->saved_master.heartbeat);
+        return true;
+    }
+    else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
+    {
+        /* mariadb10 compatibility is set for the slave */
+        slave->mariadb10_compat = true;
+
+        if (router->mariadb10_compat)
+        {
+            blr_slave_replay(router, slave, router->saved_master.mariadb10);
+        }
+        else
+        {
+            blr_slave_send_ok(router, slave);
+        }
+        return true;
+    }
+    else if (strcasecmp(word, "@master_binlog_checksum") == 0)
+    {
+        word = strtok_r(NULL, sep, &brkb);
+        if (word && (strcasecmp(word, "'none'") == 0))
+        {
+            slave->nocrc = 1;
+        }
+        else if (word && (strcasecmp(word, "@@global.binlog_checksum") == 0))
+        {
+            slave->nocrc = !router->master_chksum;
+        }
+        else
+        {
+            slave->nocrc = 0;
+        }
+
+        blr_slave_replay(router, slave, router->saved_master.chksum1);
+        return true;
+    }
+    else if (strcasecmp(word, "@slave_uuid") == 0)
+    {
+        if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
+        {
+            int len = strlen(word);
+            char *word_ptr = word;
+            if (len)
+            {
+                if (word[len - 1] == '\'')
+                {
+                    word[len - 1] = '\0';
+                }
+                if (word[0] == '\'')
+                {
+                    word[0] = '\0';
+                    word_ptr++;
+                }
+            }
+            /* Free previous value */
+            MXS_FREE(slave->uuid);
+            slave->uuid = MXS_STRDUP_A(word_ptr);
+        }
+
+        if (router->saved_master.setslaveuuid)
+        {
+            blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
+        }
+        else
+        {
+            blr_slave_send_ok(router, slave);
+        }
+        return true;
+    }
+    else if (strstr(word, "@slave_connect_state") != NULL)
+    {
+        /* If not mariadb an error message will be returned */
+        if (slave->mariadb10_compat &&
+            router->mariadb_gtid &&
+            (word = strtok_r(NULL, sep, &brkb)) != NULL)
+        {
+            char heading[GTID_MAX_LEN + 1];
+
+            MXS_DEBUG("Received GTID request '%s' from slave %u",
+                      word,
+                      slave->serverid);
+
+            strcpy(heading, word + 1);
+            heading[strlen(heading) - 1] = '\0';
+
+            /**
+             * Set the GTID string, it could be an empty
+             * in case of a fresh new setup.
+             */
+             MXS_FREE(slave->mariadb_gtid);
+             slave->mariadb_gtid = MXS_STRDUP(heading);
+
+             blr_slave_send_ok(router, slave);
+             return true;
+        }
+    }
+    else if (strcasecmp(word, "@slave_gtid_strict_mode") == 0)
+    {
+        /* If not mariadb an error message will be returned */
+        if (slave->mariadb10_compat &&
+            router->mariadb_gtid &&
+            (word = strtok_r(NULL, sep, &brkb)) != NULL)
+        {
+            /* Set strict mode */
+            slave->gtid_strict_mode = atoi(word);
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "@slave_gtid_ignore_duplicates") == 0)
+    {
+        /* If not mariadb an error message will be returned */
+        if (slave->mariadb10_compat &&
+            router->mariadb_gtid)
+        {
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
+    }
+    else if (strcasecmp(word, "NAMES") == 0)
+    {
+        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+        {
+            MXS_ERROR("%s: Truncated SET NAMES command.", router->service->name);
+            return false;
+        }
+        else if (strcasecmp(word, "latin1") == 0)
+        {
+            blr_slave_replay(router, slave, router->saved_master.setnames);
+            return true;
+        }
+        else if (strcasecmp(word, "utf8") == 0)
+        {
+            blr_slave_replay(router, slave, router->saved_master.utf8);
+            return true;
+        }
+        else
+        {
+            blr_slave_send_ok(router, slave);
+            return true;
+        }
     }
 
     return false;
