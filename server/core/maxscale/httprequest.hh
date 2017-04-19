@@ -119,7 +119,7 @@ public:
      *
      * @return Raw JSON body or NULL if no body is defined
      */
-    json_t* get_json()
+    json_t* get_json() const
     {
         return m_json.get();
     }

@@ -28,13 +28,18 @@ HttpResponse::HttpResponse(int code, json_t* response):
     m_body(response),
     m_code(code)
 {
+    string http_date = http_get_date();
+    add_header(HTTP_RESPONSE_HEADER_DATE, http_date);
+    add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_date);
+    // This ETag is the base64 encoding of `not-yet-implemented`
+    add_header(HTTP_RESPONSE_HEADER_ETAG, "bm90LXlldC1pbXBsZW1lbnRlZAo");
 }
 
 HttpResponse::HttpResponse(const HttpResponse& response):
-    m_body(response.m_body),
-    m_code(response.m_code)
+    m_body(json_incref(response.m_body)),
+    m_code(response.m_code),
+    m_headers(response.m_headers)
 {
-    json_incref(m_body);
 }
 
 HttpResponse& HttpResponse::operator=(const HttpResponse& response)
@@ -42,6 +47,7 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& response)
     json_t* body = m_body;
     m_body = json_incref(response.m_body);
     m_code = response.m_code;
+    m_headers = response.m_headers;
     json_decref(body);
     return *this;
 }
@@ -59,7 +65,23 @@ json_t* HttpResponse::get_response() const
     return m_body;
 }
 
+void HttpResponse::drop_response()
+{
+    json_decref(m_body);
+    m_body = NULL;
+}
+
 int HttpResponse::get_code() const
 {
     return m_code;
+}
+
+void HttpResponse::add_header(const string& key, const string& value)
+{
+    m_headers[key] = value;
+}
+
+const Headers& HttpResponse::get_headers() const
+{
+    return m_headers;
 }

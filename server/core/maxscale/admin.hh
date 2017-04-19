@@ -19,8 +19,6 @@
 
 #include <maxscale/thread.h>
 
-using std::string;
-
 class Client
 {
 public:
@@ -30,7 +28,7 @@ public:
      *
      * @param connection The connection handle for this client
      */
-    Client(struct MHD_Connection *connection):
+    Client(MHD_Connection *connection):
         m_connection(connection)
     {
     }
@@ -52,11 +50,11 @@ public:
      *
      * @return MHD_YES on success, MHD_NO on error
      */
-    int process(string url, string method, const char* data, size_t *size);
+    int process(std::string url, std::string method, const char* data, size_t *size);
 
 private:
-    struct MHD_Connection* m_connection; /**< Connection handle */
-    string                 m_data;       /**< Uploaded data */
+    MHD_Connection* m_connection; /**< Connection handle */
+    std::string     m_data;       /**< Uploaded data */
 };
 
 /**

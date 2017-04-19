@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/cppdefs.hh>
+#include "maxscale/admin.hh"
 
 #include <climits>
 #include <new>
@@ -24,9 +24,10 @@
 #include <maxscale/config.h>
 #include <maxscale/hk_heartbeat.h>
 
-#include "maxscale/admin.hh"
 #include "maxscale/resource.hh"
 #include "maxscale/http.hh"
+
+using std::string;
 
 static struct MHD_Daemon* http_daemon = NULL;
 
@@ -35,7 +36,7 @@ int kv_iter(void *cls,
             const char *key,
             const char *value)
 {
-    size_t* rval = (size_t*) cls;
+    size_t* rval = (size_t*)cls;
 
     if (strcmp(key, "Content-Length") == 0)
     {
@@ -46,16 +47,17 @@ int kv_iter(void *cls,
     return MHD_YES;
 }
 
-static inline size_t request_data_length(struct MHD_Connection *connection)
+static inline size_t request_data_length(MHD_Connection *connection)
 {
     size_t rval = 0;
     MHD_get_connection_values(connection, MHD_HEADER_KIND, kv_iter, &rval);
     return rval;
 }
 
-static bool modifies_data(struct MHD_Connection *connection, string method)
+static bool modifies_data(MHD_Connection *connection, string method)
 {
-    return (method == "POST" || method == "PUT" || method == "PATCH") &&
+    return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT ||
+            method == MHD_HTTP_METHOD_PATCH || method == MHD_HTTP_METHOD_DELETE) &&
            request_data_length(connection);
 }
 
@@ -75,7 +77,7 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     if (m_data.length() &&
         (json = json_loadb(m_data.c_str(), m_data.size(), 0, &err)) == NULL)
     {
-        struct MHD_Response *response =
+        MHD_Response *response =
             MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
         MHD_queue_response(m_connection, MHD_HTTP_BAD_REQUEST, response);
         MHD_destroy_response(response);
@@ -95,19 +97,16 @@ int Client::process(string url, string method, const char* upload_data, size_t *
         data = mxs::json_dump(js, flags);
     }
 
-    struct MHD_Response *response =
+    MHD_Response *response =
         MHD_create_response_from_buffer(data.size(), (void*)data.c_str(),
                                         MHD_RESPMEM_MUST_COPY);
 
-    string http_date = http_get_date();
+    const Headers& headers = reply.get_headers();
 
-    MHD_add_response_header(response, "Date", http_date.c_str());
-
-    // TODO: calculate modification times
-    MHD_add_response_header(response, "Last-Modified", http_date.c_str());
-
-    // This ETag is the base64 encoding of `not-yet-implemented`
-    MHD_add_response_header(response, "ETag", "bm90LXlldC1pbXBsZW1lbnRlZAo");
+    for (Headers::const_iterator it = headers.begin(); it != headers.end(); it++)
+    {
+        MHD_add_response_header(response, it->first.c_str(), it->second.c_str());
+    }
 
     int rval = MHD_queue_response(m_connection, reply.get_code(), response);
     MHD_destroy_response(response);
@@ -116,7 +115,7 @@ int Client::process(string url, string method, const char* upload_data, size_t *
 }
 
 void close_client(void *cls,
-                  struct MHD_Connection *connection,
+                  MHD_Connection *connection,
                   void **con_cls,
                   enum MHD_RequestTerminationCode toe)
 {
@@ -124,7 +123,7 @@ void close_client(void *cls,
     delete client;
 }
 
-bool do_auth(struct MHD_Connection *connection)
+bool do_auth(MHD_Connection *connection)
 {
     const char *admin_user = config_get_global_options()->admin_user;
     const char *admin_pw = config_get_global_options()->admin_password;
@@ -138,7 +137,7 @@ bool do_auth(struct MHD_Connection *connection)
     {
         rval = false;
         static char error_resp[] = "Access denied\r\n";
-        struct MHD_Response *resp =
+        MHD_Response *resp =
             MHD_create_response_from_buffer(sizeof(error_resp) - 1, error_resp,
                                             MHD_RESPMEM_PERSISTENT);
 
@@ -150,7 +149,7 @@ bool do_auth(struct MHD_Connection *connection)
 }
 
 int handle_client(void *cls,
-                  struct MHD_Connection *connection,
+                  MHD_Connection *connection,
                   const char *url,
                   const char *method,
                   const char *version,

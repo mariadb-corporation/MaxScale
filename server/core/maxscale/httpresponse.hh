@@ -23,6 +23,16 @@
 
 #include "http.hh"
 
+/**
+ * A list of default headers that are generated with each response
+ */
+#define HTTP_RESPONSE_HEADER_DATE          "Date"
+#define HTTP_RESPONSE_HEADER_LAST_MODIFIED "Last-Modified"
+#define HTTP_RESPONSE_HEADER_ETAG          "ETag"
+#define HTTP_RESPONSE_HEADER_ACCEPT        "Accept"
+
+typedef std::map<std::string, std::string> Headers;
+
 class HttpResponse
 {
 public:
@@ -46,13 +56,36 @@ public:
     json_t* get_response() const;
 
     /**
+     * @brief Drop response body
+     *
+     * This discards the message body.
+     */
+    void drop_response();
+
+    /**
      * @brief Get the HTTP response code
      *
      * @return The HTTP response code
      */
     int get_code() const;
 
+    /**
+     * @brief Add an extra header to this response
+     *
+     * @param key   Header name
+     * @param value Header value
+     */
+    void add_header(const std::string& key, const std::string& value);
+
+    /**
+     * @brief Get request headers
+     *
+     * @return Headers of this request
+     */
+    const Headers& get_headers() const;
+
 private:
     json_t* m_body;    /**< Message body */
     int     m_code;    /**< The HTTP code for the response */
+    Headers m_headers; /**< Extra headers */
 };
