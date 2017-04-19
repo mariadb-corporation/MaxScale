@@ -55,7 +55,6 @@ test1()
     ss_dfprintf(stderr,
                 "testpoll : Initialise the polling system.");
     init_test_env(NULL);
-    poll_init();
     ss_dfprintf(stderr, "\t..done\nAdd a DCB");
     dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, &dummy);
 

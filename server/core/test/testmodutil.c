@@ -46,19 +46,21 @@ static int
 test1()
 {
     GWBUF   *buffer;
-    char    *(sql[100]);
+    char    *sql;
     int     result, length, residual;
 
     /* Poll tests */
     ss_dfprintf(stderr,
                 "testmodutil : Rudimentary tests.");
     buffer = gwbuf_alloc(100);
+    ss_info_dassert(GWBUF_IS_CONTIGUOUS(buffer), "Allocated buffer should be continuos");
+    memset(GWBUF_DATA(buffer), 0, GWBUF_LENGTH(buffer));
     ss_info_dassert(0 == modutil_is_SQL(buffer), "Default buffer should be diagnosed as not SQL");
     /* There would ideally be some straightforward way to create a SQL buffer? */
     ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer");
-    ss_info_dassert(0 == modutil_extract_SQL(buffer, sql, &length), "Default buffer should fail");
+    ss_info_dassert(0 == modutil_extract_SQL(buffer, &sql, &length), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
-    ss_info_dassert(0 == modutil_MySQL_Query(buffer, sql, &length, &residual), "Default buffer should fail");
+    ss_info_dassert(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nReplace SQL in buffer");
     ss_info_dassert(0 == modutil_replace_SQL(buffer, "select * from some_table;"), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nTidy up.");
@@ -166,6 +168,7 @@ void test_single_sql_packet1()
     ss_info_dassert(gwbuf_length(complete) == sizeof(ok), "Complete packet buffer should contain enough data");
     ss_info_dassert(memcmp(GWBUF_DATA(complete), ok, GWBUF_LENGTH(complete)) == 0,
                     "Complete packet buffer's data should be equal to original data");
+    gwbuf_free(complete);
 
     /** Partial single packet */
     buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
@@ -181,6 +184,7 @@ void test_single_sql_packet1()
     ss_info_dassert(complete, "Complete packet buffer should not be NULL");
     ss_info_dassert(complete->next, "The complete packet should be a chain of buffers");
     ss_info_dassert(gwbuf_length(complete) == sizeof(ok), "Buffer should contain all data");
+    gwbuf_free(complete);
 }
 
 void test_multiple_sql_packets1()
@@ -195,6 +199,7 @@ void test_multiple_sql_packets1()
                     "Complete packet buffer should contain enough data");
     ss_info_dassert(memcmp(GWBUF_DATA(complete), resultset, GWBUF_LENGTH(complete)) == 0,
                     "Complete packet buffer's data should be equal to original data");
+    gwbuf_free(complete);
 
     /** Partial data available with one complete packet */
     GWBUF* head = gwbuf_alloc_and_load(7, resultset);
@@ -204,14 +209,16 @@ void test_multiple_sql_packets1()
     ss_info_dassert(complete, "Complete buffer should not be NULL");
     ss_info_dassert(gwbuf_length(complete) == 5, "Complete buffer should contain first packet only");
     ss_info_dassert(gwbuf_length(head) == 2, "Complete buffer should contain first packet only");
+    gwbuf_free(complete);
 
     /** All packets are available */
     head = gwbuf_append(head, tail);
     complete = modutil_get_complete_packets(&head);
-    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
+    ss_info_dassert(head == NULL, "Old buffer should be NULL");
     ss_info_dassert(complete, "Complete packet buffer should not be NULL");
     ss_info_dassert(gwbuf_length(complete) == sizeof(resultset) - 5,
                     "Complete packet should be sizeof(resultset) - 5 bytes");
+    gwbuf_free(complete);
 
     /** Sliding cutoff of the buffer boundary */
     for (size_t i = 0; i < sizeof(resultset); i++)
@@ -228,6 +235,8 @@ void test_multiple_sql_packets1()
         gwbuf_copy_data(complete, 0, completelen, databuf);
         gwbuf_copy_data(head, 0, headlen, databuf + completelen);
         ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+        gwbuf_free(head);
+        gwbuf_free(complete);
     }
 
     /** Fragmented buffer chain */
@@ -285,6 +294,7 @@ void test_multiple_sql_packets1()
     ss_info_dassert(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                     "All data should be readable");
     ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+    gwbuf_free(complete);
 }
 
 //
@@ -412,6 +422,8 @@ void test_multiple_sql_packets2()
         gwbuf_copy_data(next, 0, nextlen, databuf);
         gwbuf_copy_data(head, 0, headlen, databuf + nextlen);
         ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+        gwbuf_free(head);
+        gwbuf_free(next);
     }
 
     /** Fragmented buffer chain */
@@ -575,6 +587,7 @@ void test_large_packets()
         ss_info_dassert(complete, "The complete buffer is not NULL");
         ss_info_dassert(gwbuf_length(complete) == 0xffffff + 4, "Length should be correct");
         gwbuf_free(buffer);
+        gwbuf_free(complete);
     }
 }
 

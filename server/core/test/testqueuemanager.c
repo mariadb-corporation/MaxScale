@@ -134,6 +134,7 @@ test1()
                             return 10;
                         }
                         output_counter++;
+                        MXS_FREE(entry.queued_object);
                     }
                     else
                     {
@@ -148,6 +149,7 @@ test1()
                                 return 6;
                             }
                             output_counter++;
+                            MXS_FREE(entry.queued_object);
                         }
                         else
                         {
@@ -172,6 +174,7 @@ test1()
                     return 8;
                 }
                 output_counter++;
+                MXS_FREE(entry.queued_object);
             }
             else
             {
@@ -188,7 +191,7 @@ test1()
     }
 
     ss_dfprintf(stderr, "Successfully ended test\n");
-
+    mxs_queue_free(queue);
     return 0;
 }
 
@@ -241,6 +244,7 @@ test2()
         ss_info_dassert((0 == err), "Must join threads successfully");
         ss_dfprintf(stderr, "\nThread %d ended with debug check fail at %d.\n", i, debug_check_fail);
     }
+    mxs_queue_free(thread_queue);
     return debug_check_fail ? 1 : 0;
 }
 

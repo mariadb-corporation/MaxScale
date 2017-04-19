@@ -29,11 +29,14 @@
 #if defined(NDEBUG)
 #undef NDEBUG
 #endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <maxscale/listener.h>
+
+#include <maxscale/config.h>
 #include <maxscale/dcb.h>
+#include <maxscale/listener.h>
 
 /**
  * test1    Allocate a dcb and do lots of other things
@@ -64,15 +67,15 @@ test1()
     dcb->state = DCB_STATE_POLLING;
     dcb_close(dcb);
     ss_dfprintf(stderr, "Freed original dcb");
-    ss_info_dassert(!dcb_isvalid(dcb), "Freed DCB must not be valid");
+    ss_info_dassert(!dcb_isvalid(dcb), "Closed DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\nMake clone DCB a zombie");
     clone->state = DCB_STATE_NOPOLLING;
     dcb_add_to_list(clone);
     dcb_close(clone);
+    ss_dfprintf(stderr, "\t..done\nCheck clone no longer valid");
+    ss_info_dassert(!dcb_isvalid(clone), "After closing, clone DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\nProcess the zombies list");
     dcb_process_zombies(0);
-    ss_dfprintf(stderr, "\t..done\nCheck clone no longer valid");
-    ss_info_dassert(!dcb_isvalid(clone), "After zombie processing, clone DCB must not be valid");
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;
@@ -81,6 +84,8 @@ test1()
 int main(int argc, char **argv)
 {
     int result = 0;
+    MXS_CONFIG* glob_conf = config_get_global_options();
+    glob_conf->n_threads = 1;
     dcb_global_init();
 
     result += test1();

@@ -22,6 +22,10 @@ namespace maxscale
 
 #define TBP_EXPECT_TOKEN(string_literal) string_literal, (sizeof(string_literal) - 1)
 
+// For debugging purposes.
+// #define TBP_LOG_UNEXPECTED_AND_EXHAUSTED
+#undef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
+
 /**
  * @class TrxBoundaryParser
  *
@@ -149,7 +153,7 @@ private:
 
     void log_unexpected()
     {
-#ifdef SS_DEBUG
+#ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Transaction tracking: In statement '%.*s', unexpected token at '%.*s'.",
                    (int)m_len, m_pSql, (int)(m_pEnd - m_pI), m_pI);
 #endif
@@ -157,7 +161,7 @@ private:
 
     void log_exhausted()
     {
-#ifdef SS_DEBUG
+#ifdef TBP_LOG_UNEXPECTED_AND_EXHAUSTED
         MXS_NOTICE("Transaction tracking: More tokens expected in statement '%.*s'.", (int)m_len, m_pSql);
 #endif
     }
