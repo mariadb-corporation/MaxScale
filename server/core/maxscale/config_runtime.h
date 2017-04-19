@@ -188,4 +188,13 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor);
  */
 SERVER* runtime_create_server_from_json(json_t* json);
 
+/**
+ * @brief Create a new monitor from JSON
+ *
+ * @param json JSON defining the monitor
+ *
+ * @return Created monitor or NULL on error
+ */
+MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
+
 MXS_END_DECLS

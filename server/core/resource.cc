@@ -120,6 +120,23 @@ HttpResponse cb_create_server(HttpRequest& request)
     return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
+HttpResponse cb_create_monitor(HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json)
+    {
+        MXS_MONITOR* monitor = runtime_create_monitor_from_json(json);
+
+        if (monitor)
+        {
+            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+}
+
 HttpResponse cb_all_servers(HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -283,6 +300,7 @@ public:
 
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
+        m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
     }
 
     ~RootResource()

@@ -665,6 +665,72 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     return rval;
 }
 
+static bool extract_relations(json_t* json, set<string>& relations,
+                              const char** relation_types,
+                              bool (*relation_check)(const string&, const string&))
+{
+    bool rval = true;
+    json_t* rel;
+
+    if ((rel = json_object_get(json, "relationships")))
+    {
+        for (int i = 0; relation_types[i]; i++)
+        {
+            json_t* arr = json_object_get(rel, relation_types[i]);
+
+            if (arr)
+            {
+                size_t size = json_array_size(arr);
+
+                for (size_t j = 0; j < size; j++)
+                {
+                    json_t* t = json_array_get(arr, j);
+
+                    if (json_is_string(t))
+                    {
+                        string value = json_string_value(t);
+
+                        // Remove the link part
+                        size_t pos = value.find_last_of("/");
+                        if (pos != string::npos)
+                        {
+                            value.erase(0, pos + 1);
+                        }
+
+                        if (relation_check(relation_types[i], value))
+                        {
+                            relations.insert(value);
+                        }
+                        else
+                        {
+                            rval = false;
+                        }
+                    }
+                    else
+                    {
+                        rval = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+static inline const char* string_or_null(json_t* json, const char* name)
+{
+    const char* rval = NULL;
+    json_t* value = json_object_get(json, name);
+
+    if (value && json_is_string(value))
+    {
+        rval = json_string_value(value);
+    }
+
+    return rval;
+}
+
 static bool server_contains_required_fields(json_t* json)
 {
     json_t* value;
@@ -681,7 +747,7 @@ const char* server_relation_types[] =
     NULL
 };
 
-static bool server_relation_is_valid(string type, string value)
+static bool server_relation_is_valid(const string& type, const string& value)
 {
     return (type == "services" && service_find(value.c_str())) ||
         (type == "monitors" && monitor_find(value.c_str()));
@@ -719,70 +785,6 @@ static bool link_server_relations(SERVER* server, set<string>& relations)
     return rval;
 }
 
-static bool extract_relations(json_t* json, set<string>& relations)
-{
-    bool rval = true;
-    json_t* rel;
-
-    if ((rel = json_object_get(json, "relationships")))
-    {
-        for (int i = 0; server_relation_types[i]; i++)
-        {
-            json_t* arr = json_object_get(rel, server_relation_types[i]);
-
-            if (arr)
-            {
-                size_t size = json_array_size(arr);
-
-                for (size_t j = 0; j < size; j++)
-                {
-                    json_t* t = json_array_get(arr, j);
-
-                    if (json_is_string(t))
-                    {
-                        string value = json_string_value(t);
-
-                        // Remove the link part
-                        size_t pos = value.find_last_of("/");
-                        if (pos != string::npos)
-                        {
-                            value.erase(0, pos + 1);
-                        }
-
-                        if (server_relation_is_valid(server_relation_types[i], value))
-                        {
-                            relations.insert(value);
-                        }
-                        else
-                        {
-                            rval = false;
-                        }
-                    }
-                    else
-                    {
-                        rval = false;
-                    }
-                }
-            }
-        }
-    }
-
-    return rval;
-}
-
-static inline const char* string_or_null(json_t* json, const char* name)
-{
-    const char* rval = NULL;
-    json_t* value = json_object_get(json, name);
-
-    if (value && json_is_string(value))
-    {
-        rval = json_string_value(value);
-    }
-
-    return rval;
-}
-
 SERVER* runtime_create_server_from_json(json_t* json)
 {
     SERVER* rval = NULL;
@@ -805,7 +807,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
         set<string> relations;
 
-        if (extract_relations(json, relations) &&
+        if (extract_relations(json, relations, server_relation_types, server_relation_is_valid) &&
             runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
         {
             rval = server_find_by_unique_name(name);
@@ -814,6 +816,90 @@ SERVER* runtime_create_server_from_json(json_t* json)
             if (!link_server_relations(rval, relations))
             {
                 runtime_destroy_server(rval);
+                rval = NULL;
+            }
+        }
+    }
+
+    return rval;
+}
+
+static bool monitor_contains_required_fields(json_t* json)
+{
+    json_t* value;
+
+    return (value = json_object_get(json, "name")) && json_is_string(value) &&
+        (value = json_object_get(json, "module")) && json_is_string(value);
+}
+
+const char* monitor_relation_types[] =
+{
+    "servers",
+    NULL
+};
+
+static bool monitor_relation_is_valid(const string& type, const string& value)
+{
+    return type == "servers" && server_find_by_unique_name(value.c_str());
+}
+
+static bool unlink_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        SERVER* server = server_find_by_unique_name(it->c_str());
+
+        if (!server || !runtime_unlink_server(server, monitor->name))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+static bool link_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        SERVER* server = server_find_by_unique_name(it->c_str());
+
+        if (!server || !runtime_link_server(server, monitor->name))
+        {
+            unlink_server_relations(server, relations);
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
+{
+    MXS_MONITOR* rval = NULL;
+
+    if (monitor_contains_required_fields(json))
+    {
+        const char* name = json_string_value(json_object_get(json, "name"));
+        const char* module = json_string_value(json_object_get(json, "module"));
+
+        set<string> relations;
+
+        if (extract_relations(json, relations, monitor_relation_types, monitor_relation_is_valid) &&
+            runtime_create_monitor(name, module))
+        {
+            rval = monitor_find(name);
+            ss_dassert(rval);
+
+            if (!link_monitor_relations(rval, relations))
+            {
+                runtime_destroy_monitor(rval);
                 rval = NULL;
             }
         }

@@ -1544,6 +1544,7 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
     json_t* rval = json_object();
 
     json_object_set_new(rval, "name", json_string(monitor->name));
+    json_object_set_new(rval, "module", json_string(monitor->module_name));
     json_object_set_new(rval, "state", json_string(monitor_state_to_string(monitor->state)));
 
     json_object_set_new(rval, "monitor_interval", json_integer(monitor->interval));
