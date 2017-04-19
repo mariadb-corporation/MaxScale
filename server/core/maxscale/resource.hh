@@ -18,7 +18,6 @@
 
 #include <string>
 #include <deque>
-#include <tr1/memory>
 
 #include <maxscale/server.h>
 
@@ -30,14 +29,12 @@
 #include "filter.h"
 #include "session.h"
 
-using std::string;
-using std::shared_ptr;
-using std::deque;
-
 typedef HttpResponse (*ResourceCallback)(HttpRequest& request);
 
 class Resource
 {
+    Resource(const Resource&);
+    Resource& operator = (const Resource&);
 public:
 
     Resource(ResourceCallback cb, int components, ...);
@@ -63,10 +60,10 @@ public:
 
 private:
 
-    bool matching_variable_path(const string& path, const string& target);
+    bool matching_variable_path(const std::string& path, const std::string& target);
 
     ResourceCallback m_cb; /**< Resource handler callback */
-    deque<string>    m_path; /**< Path components */
+    std::deque<std::string>    m_path; /**< Path components */
 };
 
 /**

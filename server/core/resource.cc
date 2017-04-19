@@ -10,15 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-#include <maxscale/spinlock.hh>
+#include "maxscale/resource.hh"
 
 #include <list>
 
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
+#include <maxscale/spinlock.hh>
 
-#include "maxscale/resource.hh"
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
 #include "maxscale/session.h"
@@ -28,7 +27,7 @@
 #include "maxscale/config_runtime.h"
 
 using std::list;
-
+using std::string;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
@@ -212,11 +211,13 @@ HttpResponse cb_get_session(HttpRequest& request)
 
 HttpResponse cb_maxscale(HttpRequest& request)
 {
+    // TODO: Show logs
     return HttpResponse(MHD_HTTP_OK);
 }
 
 HttpResponse cb_logs(HttpRequest& request)
 {
+    // TODO: Show logs
     return HttpResponse(MHD_HTTP_OK);
 }
 
@@ -235,62 +236,68 @@ HttpResponse cb_flush(HttpRequest& request)
 
 HttpResponse cb_threads(HttpRequest& request)
 {
-    // Show thread status
+    // TODO: Show thread status
     return HttpResponse(MHD_HTTP_OK);
 }
 
 HttpResponse cb_tasks(HttpRequest& request)
 {
-    // Show housekeeper tasks
+    // TODO: Show housekeeper tasks
     return HttpResponse(MHD_HTTP_OK);
 }
 
 HttpResponse cb_modules(HttpRequest& request)
 {
-    // Show modules
+    // TODO: Show modules
     return HttpResponse(MHD_HTTP_OK);
 }
 
 class RootResource
 {
 public:
-    typedef list<Resource> ResourceList;
+    typedef std::shared_ptr<Resource> SResource;
+    typedef list<SResource> ResourceList;
 
     RootResource()
     {
-        m_get.push_back(Resource(cb_all_servers, 1, "servers"));
-        m_get.push_back(Resource(cb_get_server, 2, "servers", ":server"));
+        m_get.push_back(SResource(new Resource(cb_all_servers, 1, "servers")));
+        m_get.push_back(SResource(new Resource(cb_get_server, 2, "servers", ":server")));
 
-        m_get.push_back(Resource(cb_all_services, 1, "services"));
-        m_get.push_back(Resource(cb_get_service, 2, "services", ":service"));
+        m_get.push_back(SResource(new Resource(cb_all_services, 1, "services")));
+        m_get.push_back(SResource(new Resource(cb_get_service, 2, "services", ":service")));
 
-        m_get.push_back(Resource(cb_all_filters, 1, "filters"));
-        m_get.push_back(Resource(cb_get_filter, 2, "filters", ":filter"));
+        m_get.push_back(SResource(new Resource(cb_all_filters, 1, "filters")));
+        m_get.push_back(SResource(new Resource(cb_get_filter, 2, "filters", ":filter")));
 
-        m_get.push_back(Resource(cb_all_monitors, 1, "monitors"));
-        m_get.push_back(Resource(cb_get_monitor, 2, "monitors", ":monitor"));
+        m_get.push_back(SResource(new Resource(cb_all_monitors, 1, "monitors")));
+        m_get.push_back(SResource(new Resource(cb_get_monitor, 2, "monitors", ":monitor")));
 
-        m_get.push_back(Resource(cb_all_sessions, 1, "sessions"));
-        m_get.push_back(Resource(cb_get_session, 2, "sessions", ":session"));
+        m_get.push_back(SResource(new Resource(cb_all_sessions, 1, "sessions")));
+        m_get.push_back(SResource(new Resource(cb_get_session, 2, "sessions", ":session")));
 
-        m_get.push_back(Resource(cb_maxscale, 1, "maxscale"));
-        m_get.push_back(Resource(cb_threads, 2, "maxscale", "threads"));
-        m_get.push_back(Resource(cb_logs, 2, "maxscale", "logs"));
-        m_get.push_back(Resource(cb_tasks, 2, "maxscale", "tasks"));
-        m_get.push_back(Resource(cb_modules, 2, "maxscale", "modules"));
+        m_get.push_back(SResource(new Resource(cb_maxscale, 1, "maxscale")));
+        m_get.push_back(SResource(new Resource(cb_threads, 2, "maxscale", "threads")));
+        m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
+        m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
+        m_get.push_back(SResource(new Resource(cb_modules, 2, "maxscale", "modules")));
 
-        m_post.push_back(Resource(cb_flush, 3, "maxscale", "logs", "flush"));
-        m_post.push_back(Resource(cb_create_server, 1, "servers"));
+        m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
+        m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
+    }
+
+    ~RootResource()
+    {
     }
 
     HttpResponse process_request_type(ResourceList& list, HttpRequest& request)
     {
-        for (ResourceList::iterator it = list.begin();
-             it != list.end(); it++)
+        for (ResourceList::iterator it = list.begin(); it != list.end(); it++)
         {
-            if (it->match(request))
+            Resource& r = *(*it);
+
+            if (r.match(request))
             {
-                return it->call(request);
+                return r.call(request);
             }
         }
 

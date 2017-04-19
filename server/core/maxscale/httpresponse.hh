@@ -23,14 +23,6 @@
 
 #include "http.hh"
 
-using std::map;
-using std::string;
-using std::shared_ptr;
-
-class HttpResponse;
-
-typedef shared_ptr<HttpResponse> SHttpResponse;
-
 class HttpResponse
 {
 public:

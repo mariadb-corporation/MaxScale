@@ -16,6 +16,9 @@
 #include <ctype.h>
 #include <string.h>
 
+using std::string;
+using std::deque;
+
 /** TODO: Move this to a C++ string utility header */
 namespace maxscale
 {
@@ -50,7 +53,7 @@ static inline string& trim(string& str)
 }
 }
 
-static void process_uri(string& uri, deque<string>& uri_parts)
+static void process_uri(string& uri, std::deque<string>& uri_parts)
 {
     /** Clean up trailing slashes in requested resource */
     while (uri.length() > 1 && *uri.rbegin() == '/')

@@ -26,23 +26,12 @@
 
 #include "http.hh"
 
-using std::shared_ptr;
-using std::string;
-using std::map;
-using std::deque;
-using mxs::Closer;
-
-class HttpRequest;
-
-/** Typedef for managed pointer */
-typedef std::shared_ptr<HttpRequest> SHttpRequest;
-
 static int value_iterator(void *cls,
                           enum MHD_ValueKind kind,
                           const char *key,
                           const char *value)
 {
-    std::pair<string, string>* cmp = (std::pair<string, string>*)cls;
+    std::pair<std::string, std::string>* cmp = (std::pair<std::string, std::string>*)cls;
 
     if (cmp->first == key)
     {
@@ -55,6 +44,8 @@ static int value_iterator(void *cls,
 
 class HttpRequest
 {
+    HttpRequest(const HttpRequest&);
+    HttpRequest& operator = (const HttpRequest);
 public:
     /**
      * @brief Parse a request
@@ -63,7 +54,7 @@ public:
      *
      * @return Parsed statement or NULL if request is not valid
      */
-    HttpRequest(struct MHD_Connection *connection, string url, string method, json_t* data);
+    HttpRequest(struct MHD_Connection *connection, std::string url, std::string method, json_t* data);
 
     ~HttpRequest();
 
@@ -72,7 +63,7 @@ public:
      *
      * @return One of the HTTP verb values
      */
-    const string& get_verb() const
+    const std::string& get_verb() const
     {
         return m_verb;
     }
@@ -84,9 +75,9 @@ public:
      *
      * @return Header value or empty string if the header was not found
      */
-    string get_header(const string header) const
+    std::string get_header(const std::string& header) const
     {
-        std::pair<string, string> p;
+        std::pair<std::string, std::string> p;
         p.first = header;
 
         MHD_get_connection_values(m_connection, MHD_HEADER_KIND,
@@ -102,9 +93,9 @@ public:
      *
      * @return Option value or empty string if the option was not found
      */
-    string get_option(const string option) const
+    std::string get_option(const std::string& option) const
     {
-        std::pair<string, string> p;
+        std::pair<std::string, std::string> p;
         p.first = option;
 
         MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND,
@@ -118,7 +109,7 @@ public:
      *
      * @return Request body or empty string if no body is defined
      */
-    const string& get_json_str() const
+    const std::string& get_json_str() const
     {
         return m_json_string;
     }
@@ -138,7 +129,7 @@ public:
      *
      * @return The complete request URI
      */
-    const string& get_uri() const
+    const std::string& get_uri() const
     {
         return m_resource;
     }
@@ -150,7 +141,7 @@ public:
      *
      * @return The request URI part or empty string if no part was found
      */
-    const string uri_part(uint32_t idx) const
+    const std::string uri_part(uint32_t idx) const
     {
         return m_resource_parts.size() > idx ? m_resource_parts[idx] : "";
     }
@@ -171,12 +162,12 @@ public:
     }
 private:
 
-    map<string, string> m_options;        /**< Request options */
-    Closer<json_t*>     m_json;           /**< Request body */
-    string              m_json_string;    /**< String version of @c m_json */
-    string              m_resource;       /**< Requested resource */
-    deque<string>       m_resource_parts; /**< @c m_resource split into parts */
-    string              m_verb;           /**< Request method */
-    string              m_hostname;       /**< The value of the Host header */
+    std::map<std::string, std::string> m_options;        /**< Request options */
+    mxs::Closer<json_t*>               m_json;           /**< Request body */
+    std::string                        m_json_string;    /**< String version of @c m_json */
+    std::string                        m_resource;       /**< Requested resource */
+    std::deque<std::string>            m_resource_parts; /**< @c m_resource split into parts */
+    std::string                        m_verb;           /**< Request method */
+    std::string                        m_hostname;       /**< The value of the Host header */
     struct MHD_Connection* m_connection;
 };

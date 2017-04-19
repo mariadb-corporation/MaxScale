@@ -12,13 +12,14 @@
  */
 
 #include "maxscale/httpresponse.hh"
-#include "maxscale/admin.hh"
 
 #include <string>
 #include <sstream>
 
 #include <maxscale/alloc.h>
 #include <sys/time.h>
+
+#include "maxscale/admin.hh"
 
 using std::string;
 using std::stringstream;

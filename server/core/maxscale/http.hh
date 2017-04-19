@@ -18,14 +18,12 @@
 
 #include <maxscale/debug.h>
 
-using std::string;
-
 /**
  * @brief Return the current HTTP-date
  *
  * @return The RFC 1123 compliant date
  */
-static inline string http_get_date()
+static inline std::string http_get_date()
 {
     time_t now = time(NULL);
     struct tm tm;
@@ -34,5 +32,5 @@ static inline string http_get_date()
     gmtime_r(&now, &tm);
     strftime(buf, sizeof(buf), "%a, %d %b %y %T GMT", &tm);
 
-    return string(buf);
+    return std::string(buf);
 }
