@@ -45,9 +45,9 @@ uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
  * @param variable      Pointer the the variable to load from
  * @return The stored value
  */
-int atomic_read(int *variable);
-int64_t atomic_read_int64(int64_t *variable);
-uint64_t atomic_read_uint64(uint64_t *variable);
+int atomic_load_int32(int *variable);
+int64_t atomic_load_int64(int64_t *variable);
+uint64_t atomic_load_uint64(uint64_t *variable);
 
 /**
  * Implementation of an atomic store operation for the GCC environment.
@@ -58,9 +58,9 @@ uint64_t atomic_read_uint64(uint64_t *variable);
  * @param variable      Pointer the the variable to store to
  * @param value         Value to be stored
  */
-void atomic_write(int *variable, int value);
-void atomic_write_int64(int64_t *variable, int64_t value);
-void atomic_write_uint64(uint64_t *variable, uint64_t value);
+void atomic_store_int32(int *variable, int value);
+void atomic_store_int64(int64_t *variable, int64_t value);
+void atomic_store_uint64(uint64_t *variable, uint64_t value);
 
 /**
  * @brief Impose a full memory barrier

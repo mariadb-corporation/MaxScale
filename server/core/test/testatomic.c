@@ -29,11 +29,11 @@ void test_add(void* data)
 {
     int id = (size_t)data;
 
-    while (atomic_read(&running))
+    while (atomic_load_int32(&running))
     {
         atomic_add(&expected, id);
         atomic_add(&expected, -id);
-        ss_dassert(atomic_read(&expected) >= 0);
+        ss_dassert(atomic_load_int32(&expected) >= 0);
     }
 }
 
@@ -42,9 +42,9 @@ void test_load_store(void* data)
 {
     int id = (size_t)data;
 
-    while (atomic_read(&running))
+    while (atomic_load_int32(&running))
     {
-        if (atomic_read(&expected) % NTHR == id)
+        if (atomic_load_int32(&expected) % NTHR == id)
         {
             ss_dassert(atomic_add(&expected, 1) % NTHR == id + 1);
         }
@@ -55,8 +55,8 @@ int run_test(void(*func)(void*))
 {
     THREAD threads[NTHR];
 
-    atomic_write(&expected, 0);
-    atomic_write(&running, 1);
+    atomic_store_int32(&expected, 0);
+    atomic_store_int32(&running, 1);
 
     for (int i = 0; i < NTHR; i++)
     {
@@ -67,14 +67,14 @@ int run_test(void(*func)(void*))
     }
 
     thread_millisleep(2500);
-    atomic_write(&running, 0);
+    atomic_store_int32(&running, 0);
 
     for (int i = 0; i < NTHR; i++)
     {
         thread_wait(threads[i]);
     }
 
-    return atomic_read(&expected);
+    return atomic_load_int32(&expected);
 }
 
 int main(int argc, char** argv)
