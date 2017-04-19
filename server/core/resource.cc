@@ -13,6 +13,8 @@
 
 #include <maxscale/spinlock.hh>
 
+#include <list>
+
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
 
@@ -24,280 +26,281 @@
 #include "maxscale/monitor.h"
 #include "maxscale/service.h"
 
+using std::list;
+
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
-HttpResponse Resource::process_request(HttpRequest& request, int depth)
+Resource::Resource(ResourceCallback cb, int components, ...):
+    m_cb(cb)
 {
-    ResourceMap::iterator it = m_children.find(request.uri_part(depth));
+    va_list args;
+    va_start(args, components);
 
-    if (it != m_children.end())
+    for (int i = 0; i < components; i++)
     {
-        return it->second->process_request(request, depth + 1);
+        string part = va_arg(args, const char*);
+        m_path.push_back(part);
     }
-
-    return handle(request);
+    va_end(args);
 }
 
-class ServersResource: public Resource
+Resource::~Resource() { }
+
+bool Resource::match(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    bool rval = false;
+
+    if (request.uri_part_count() == m_path.size())
     {
-        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
+        rval = true;
 
-        if (request.uri_part_count() == 1)
+        for (size_t i = 0; i < request.uri_part_count(); i++)
         {
-            // TODO: Generate this via the inter-thread messaging system
-            Closer<json_t*> servers(server_list_to_json());
-            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(servers, flags));
-        }
-        else
-        {
-            SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
-
-            if (server)
+            if (m_path[i] != request.uri_part(i) &&
+                !matching_variable_path(m_path[i], request.uri_part(i)))
             {
-                // TODO: Generate this via the inter-thread messaging system
-                Closer<json_t*> server_js(server_to_json(server));
-                // Show one server
-                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(server_js, flags));
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
+                rval = false;
+                break;
             }
         }
     }
+
+    return rval;
+}
+
+HttpResponse Resource::call(HttpRequest& request)
+{
+    return m_cb(request);
 };
 
-class ServicesResource: public Resource
+bool Resource::matching_variable_path(const string& path, const string& target)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    bool rval = false;
+
+    if (path[0] == ':')
     {
-        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
-
-        if (request.uri_part_count() == 1)
+        if ((path == ":service" && service_find(target.c_str())) ||
+            (path == ":server"  && server_find_by_unique_name(target.c_str())) ||
+            (path == ":filter"  && filter_def_find(target.c_str())) ||
+            (path == ":monitor" && monitor_find(target.c_str())))
         {
-            // TODO: Generate this via the inter-thread messaging system
-            Closer<json_t*> all_services(service_list_to_json());
-            // Show all services
-            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(all_services, flags));
+            rval = true;
         }
-        else
+        else if (path == ":session")
         {
-            SERVICE* service = service_find(request.uri_part(1).c_str());
+            size_t id = atoi(target.c_str());
+            MXS_SESSION* ses = session_get_by_id(id);
 
-            if (service)
+            if (ses)
             {
-                Closer<json_t*> service_js(service_to_json(service));
-                // Show one service
-                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(service_js, flags));
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
+                session_put_ref(ses);
+                rval = true;
             }
         }
     }
-};
 
-class FiltersResource: public Resource
+    return rval;
+}
+
+HttpResponse cb_all_servers(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
+}
+
+HttpResponse cb_get_server(HttpRequest& request)
+{
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+
+    if (server)
     {
-        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
-
-        if (request.uri_part_count() == 1)
-        {
-            Closer<json_t*> filters(filter_list_to_json());
-            // Show all filters
-            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(filters, flags));
-        }
-        else
-        {
-            MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
-
-            if (filter)
-            {
-                Closer<json_t*> filter_js(filter_to_json(filter));
-                // Show one filter
-                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(filter_js, flags));
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
-            }
-        }
+        return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
     }
-};
 
-class MonitorsResource: public Resource
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
+HttpResponse cb_all_services(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    return HttpResponse(MHD_HTTP_OK, service_list_to_json(request.host()));
+}
+
+HttpResponse cb_get_service(HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+
+    if (service)
     {
-        int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
-
-        if (request.uri_part_count() == 1)
-        {
-            Closer<json_t*> monitors(monitor_list_to_json());
-            // Show all monitors
-            return HttpResponse(MHD_HTTP_OK, mxs::json_dump(monitors, flags));
-        }
-        else
-        {
-            MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
-
-            if (monitor)
-            {
-                Closer<json_t*> monitor_js(monitor_to_json(monitor));
-                // Show one monitor
-                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(monitor_js, flags));
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
-            }
-        }
+        return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
     }
-};
 
-class SessionsResource: public Resource
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
+HttpResponse cb_all_filters(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    return HttpResponse(MHD_HTTP_OK, filter_list_to_json(request.host()));
+}
+
+HttpResponse cb_get_filter(HttpRequest& request)
+{
+    MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
+
+    if (filter)
     {
-        if (request.uri_part_count() == 1)
-        {
-            // Show all sessions
-            return HttpResponse(MHD_HTTP_OK);
-        }
-        else
-        {
-            int id = atoi(request.uri_part(1).c_str());
-            MXS_SESSION* session = session_get_by_id(id);
-
-            if (session)
-            {
-                int flags = request.get_option("pretty") == "true" ? JSON_INDENT(4) : 0;
-                // TODO: Generate this via the inter-thread messaging system
-                Closer<json_t*> ses_json(session_to_json(session));
-                session_put_ref(session);
-                // Show session statistics
-                return HttpResponse(MHD_HTTP_OK, mxs::json_dump(ses_json, flags));
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_NOT_FOUND);
-            }
-        }
+        return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
     }
-};
 
-class UsersResource: public Resource
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
+HttpResponse cb_all_monitors(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
+    return HttpResponse(MHD_HTTP_OK, monitor_list_to_json(request.host()));
+}
+
+HttpResponse cb_get_monitor(HttpRequest& request)
+{
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+
+    if (monitor)
+    {
+        return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
+HttpResponse cb_all_sessions(HttpRequest& request)
+{
+    // TODO: Implement this
+    return HttpResponse(MHD_HTTP_OK);
+}
+
+HttpResponse cb_get_session(HttpRequest& request)
+{
+    int id = atoi(request.uri_part(1).c_str());
+    MXS_SESSION* session = session_get_by_id(id);
+
+    if (session)
+    {
+        json_t* json = session_to_json(session, request.host());
+        session_put_ref(session);
+        return HttpResponse(MHD_HTTP_OK, json);
+    }
+
+    return HttpResponse(MHD_HTTP_NOT_FOUND);
+}
+
+HttpResponse cb_maxscale(HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK);
+}
+
+HttpResponse cb_logs(HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK);
+}
+
+HttpResponse cb_flush(HttpRequest& request)
+{
+    // Flush logs
+    if (mxs_log_rotate() == 0)
     {
         return HttpResponse(MHD_HTTP_OK);
     }
-};
-
-class LogsResource : public Resource
-{
-protected:
-    HttpResponse handle(HttpRequest& request)
+    else
     {
-        if (request.uri_part(2) == "flush")
-        {
-            // Flush logs
-            if (mxs_log_rotate() == 0)
-            {
-                return HttpResponse(MHD_HTTP_OK);
-            }
-            else
-            {
-                return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
-            }
-        }
-        else
-        {
-            // Show log status
-            return HttpResponse(MHD_HTTP_OK);
-        }
+        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
     }
-};
+}
 
-class ThreadsResource : public Resource
+HttpResponse cb_threads(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
-    {
-        // Show thread status
-        return HttpResponse(MHD_HTTP_OK);
-    }
-};
+    // Show thread status
+    return HttpResponse(MHD_HTTP_OK);
+}
 
-class TasksResource : public Resource
+HttpResponse cb_tasks(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
-    {
-        // Show housekeeper tasks
-        return HttpResponse(MHD_HTTP_OK);
-    }
-};
+    // Show housekeeper tasks
+    return HttpResponse(MHD_HTTP_OK);
+}
 
-class ModulesResource : public Resource
+HttpResponse cb_modules(HttpRequest& request)
 {
-protected:
-    HttpResponse handle(HttpRequest& request)
-    {
-        // Show modules
-        return HttpResponse(MHD_HTTP_OK);
-    }
-};
+    // Show modules
+    return HttpResponse(MHD_HTTP_OK);
+}
 
-class CoreResource: public Resource
+class RootResource
 {
 public:
-    CoreResource()
-    {
-        m_children["logs"] = SResource(new LogsResource());
-        m_children["threads"] = SResource(new ThreadsResource());
-        m_children["tasks"] = SResource(new TasksResource());
-        m_children["modules"] = SResource(new ModulesResource());
-    }
+    typedef list<Resource> ResourceList;
 
-protected:
-    HttpResponse handle(HttpRequest& request)
-    {
-        return HttpResponse(MHD_HTTP_OK);
-    }
-};
-
-class RootResource: public Resource
-{
-public:
     RootResource()
     {
-        m_children["servers"] = SResource(new ServersResource());
-        m_children["services"] = SResource(new ServicesResource());
-        m_children["filters"] = SResource(new FiltersResource());
-        m_children["monitors"] = SResource(new MonitorsResource());
-        m_children["maxscale"] = SResource(new CoreResource());
-        m_children["sessions"] = SResource(new SessionsResource());
-        m_children["users"] = SResource(new UsersResource());
+        m_get.push_back(Resource(cb_all_servers, 1, "servers"));
+        m_get.push_back(Resource(cb_get_server, 2, "servers", ":server"));
+
+        m_get.push_back(Resource(cb_all_services, 1, "services"));
+        m_get.push_back(Resource(cb_get_service, 2, "services", ":service"));
+
+        m_get.push_back(Resource(cb_all_filters, 1, "filters"));
+        m_get.push_back(Resource(cb_get_filter, 2, "filters", ":filter"));
+
+        m_get.push_back(Resource(cb_all_monitors, 1, "monitors"));
+        m_get.push_back(Resource(cb_get_monitor, 2, "monitors", ":monitor"));
+
+        m_get.push_back(Resource(cb_all_sessions, 1, "sessions"));
+        m_get.push_back(Resource(cb_get_session, 2, "sessions", ":session"));
+
+        m_get.push_back(Resource(cb_maxscale, 1, "maxscale"));
+        m_get.push_back(Resource(cb_threads, 2, "maxscale", "threads"));
+        m_get.push_back(Resource(cb_logs, 2, "maxscale", "logs"));
+        m_get.push_back(Resource(cb_tasks, 2, "maxscale", "tasks"));
+        m_get.push_back(Resource(cb_modules, 2, "maxscale", "modules"));
+
+        m_post.push_back(Resource(cb_flush, 3, "maxscale", "logs", "flush"));
     }
 
-protected:
-    HttpResponse handle(HttpRequest& request)
+    HttpResponse process_request_type(ResourceList& list, HttpRequest& request)
     {
-        return HttpResponse(MHD_HTTP_OK);
+        for (ResourceList::iterator it = m_get.begin();
+             it != m_get.end(); it++)
+        {
+            if (it->match(request))
+            {
+                return it->call(request);
+            }
+        }
+
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
     }
+
+    HttpResponse process_request(HttpRequest& request)
+    {
+        if (request.get_verb() == "GET")
+        {
+            return process_request_type(m_get, request);
+        }
+        else if (request.get_verb() == "PUT")
+        {
+            return process_request_type(m_put, request);
+        }
+        else if (request.get_verb() == "POST")
+        {
+            return process_request_type(m_post, request);
+        }
+
+        return HttpResponse(MHD_HTTP_METHOD_NOT_ALLOWED);
+    }
+
+private:
+
+    ResourceList m_get;  /**< GET request handlers */
+    ResourceList m_put;  /**< PUT request handlers */
+    ResourceList m_post; /**< POST request handlers */
 };
 
 static RootResource resources; /**< Core resource set */

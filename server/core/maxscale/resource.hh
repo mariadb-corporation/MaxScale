@@ -17,58 +17,56 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
-#include <map>
+#include <deque>
 #include <tr1/memory>
+
+#include <maxscale/server.h>
 
 #include "http.hh"
 #include "httprequest.hh"
 #include "httpresponse.hh"
+#include "monitor.h"
+#include "service.h"
+#include "filter.h"
+#include "session.h"
 
 using std::string;
 using std::shared_ptr;
-using std::map;
+using std::deque;
 
-class Resource;
-
-typedef shared_ptr<Resource>   SResource;
-typedef map<string, SResource> ResourceMap;
+typedef HttpResponse (*ResourceCallback)(HttpRequest& request);
 
 class Resource
 {
 public:
 
-    Resource() { }
+    Resource(ResourceCallback cb, int components, ...);
+    ~Resource();
 
-    virtual ~Resource() { }
-
-    HttpResponse process_request(HttpRequest& request)
-    {
-        return process_request(request, 0);
-    }
-
-protected:
+    /**
+     * @brief Check if a request matches this resource
+     *
+     * @param request Request to match
+     *
+     * @return True if this request matches this resource
+     */
+    bool match(HttpRequest& request);
 
     /**
      * @brief Handle a HTTP request
-     *
-     * This function should be overridden by the child classes.
      *
      * @param request Request to handle
      *
      * @return Response to the request
      */
-    virtual HttpResponse handle(HttpRequest& request)
-    {
-        ss_dassert(false);
-        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
-    };
+    HttpResponse call(HttpRequest& request);
 
-    /**
-     * Internal functions
-     */
-    HttpResponse process_request(HttpRequest& request, int depth);
+private:
 
-    ResourceMap m_children; /**< Child resources */
+    bool matching_variable_path(const string& path, const string& target);
+
+    ResourceCallback m_cb; /**< Resource handler callback */
+    deque<string>    m_path; /**< Path components */
 };
 
 /**
