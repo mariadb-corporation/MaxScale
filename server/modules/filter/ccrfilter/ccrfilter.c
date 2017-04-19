@@ -363,22 +363,22 @@ static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
     CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
     json_t* rval = json_object();
 
-    json_object_set(rval, "count", json_integer(my_instance->count));
-    json_object_set(rval, "time", json_integer(my_instance->time));
+    json_object_set_new(rval, "count", json_integer(my_instance->count));
+    json_object_set_new(rval, "time", json_integer(my_instance->time));
 
     if (my_instance->match)
     {
-        json_object_set(rval, "match", json_string(my_instance->match));
+        json_object_set_new(rval, "match", json_string(my_instance->match));
     }
 
     if (my_instance->nomatch)
     {
-        json_object_set(rval, "nomatch", json_string(my_instance->nomatch));
+        json_object_set_new(rval, "nomatch", json_string(my_instance->nomatch));
     }
 
-    json_object_set(rval, "data_modifications", json_integer(my_instance->stats.n_modified));
-    json_object_set(rval, "hints_added_count", json_integer(my_instance->stats.n_add_count));
-    json_object_set(rval, "hints_added_time", json_integer(my_instance->stats.n_add_time));
+    json_object_set_new(rval, "data_modifications", json_integer(my_instance->stats.n_modified));
+    json_object_set_new(rval, "hints_added_count", json_integer(my_instance->stats.n_add_count));
+    json_object_set_new(rval, "hints_added_time", json_integer(my_instance->stats.n_add_time));
 
     return rval;
 }

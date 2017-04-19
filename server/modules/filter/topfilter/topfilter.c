@@ -621,7 +621,7 @@ static json_t* diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession)
                 json_object_set_new(obj, "time", json_real(exec_time));
                 json_object_set_new(obj, "sql", json_string(my_session->top[i]->sql));
 
-                json_array_append(arr, obj);
+                json_array_append_new(arr, obj);
             }
         }
 

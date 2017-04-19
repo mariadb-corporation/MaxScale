@@ -1017,7 +1017,7 @@ json_t* session_to_json(const MXS_SESSION *session, const char *host)
     svc += "/services/";
     svc += session->service->name;
 
-    json_array_append(arr, json_string(svc.c_str()));
+    json_array_append_new(arr, json_string(svc.c_str()));
     json_object_set_new(rel, "services", arr);
     json_object_set_new(rval, "relationships", rel);
 

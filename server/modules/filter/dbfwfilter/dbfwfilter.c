@@ -298,7 +298,7 @@ static json_t* rules_to_json(RULE *rules)
 
     for (RULE *rule = rules; rule; rule = rule->next)
     {
-        json_array_append(rval, rule_to_json(rule));
+        json_array_append_new(rval, rule_to_json(rule));
     }
 
     return rval;

@@ -860,7 +860,7 @@ static json_t* diagnostics(MXS_ROUTER *router)
             snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", session->gtid.domain,
                      session->gtid.server_id, session->gtid.seq);
             json_object_set_new(client, "current_gtid", json_string(pathbuf));
-            json_array_append(arr, client);
+            json_array_append_new(arr, client);
         }
         spinlock_release(&router_inst->lock);
 

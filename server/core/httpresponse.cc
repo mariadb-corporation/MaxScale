@@ -39,8 +39,10 @@ HttpResponse::HttpResponse(const HttpResponse& response):
 
 HttpResponse& HttpResponse::operator=(const HttpResponse& response)
 {
+    json_t* body = m_body;
     m_body = json_incref(response.m_body);
     m_code = response.m_code;
+    json_decref(body);
     return *this;
 }
 

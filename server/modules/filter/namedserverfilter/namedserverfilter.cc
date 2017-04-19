@@ -347,7 +347,7 @@ json_t* RegexHintFilter::diagnostics()
 
             for (StringArray::iterator it2 = it->m_targets.begin(); it2 != it->m_targets.end(); it2++)
             {
-                json_array_append(targets, json_string(it2->c_str()));
+                json_array_append_new(targets, json_string(it2->c_str()));
             }
 
             json_object_set_new(obj, "match", json_string(it->m_match.c_str()));

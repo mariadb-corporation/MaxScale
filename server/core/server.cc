@@ -1427,7 +1427,7 @@ json_t* server_to_json(const SERVER* server, const char* host)
 
         for (int i = 0; server->slaves[i]; i++)
         {
-            json_array_append(slaves, json_integer(server->slaves[i]));
+            json_array_append_new(slaves, json_integer(server->slaves[i]));
         }
 
         json_object_set_new(rval, "slaves", slaves);

@@ -123,7 +123,7 @@ json_t* users_default_diagnostic(SERV_LISTENER *port)
 
             while ((user = (char*)hashtable_next(iter)))
             {
-                json_array_append(rval, json_string(user));
+                json_array_append_new(rval, json_string(user));
             }
 
             hashtable_iterator_free(iter);

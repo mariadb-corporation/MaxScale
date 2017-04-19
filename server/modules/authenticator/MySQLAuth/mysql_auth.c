@@ -687,7 +687,7 @@ int diag_cb(void *data, int columns, char **row, char **field_names)
     json_object_set_new(obj, "host", json_string(row[1]));
 
     json_t* arr = (json_t*)data;
-    json_array_append(arr, obj);
+    json_array_append_new(arr, obj);
     return 0;
 }
 

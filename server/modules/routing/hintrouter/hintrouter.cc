@@ -155,7 +155,7 @@ json_t* HintRouter::diagnostics()
     {
         if (default_action_values[i].enum_value == (uint64_t)m_default_action)
         {
-            json_array_append(arr, json_string(default_action_values[i].name));
+            json_array_append_new(arr, json_string(default_action_values[i].name));
         }
     }
 

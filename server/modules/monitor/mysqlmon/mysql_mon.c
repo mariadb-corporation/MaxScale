@@ -361,7 +361,7 @@ static json_t* diagnostics(const MXS_MONITOR *mon)
                 json_object_set_new(srv, "master_group", json_integer(serv_info->group));
             }
 
-            json_array_append(arr, srv);
+            json_array_append_new(arr, srv);
         }
 
         json_object_set_new(rval, "server_info", arr);

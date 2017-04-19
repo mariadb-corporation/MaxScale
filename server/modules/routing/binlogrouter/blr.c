@@ -1603,7 +1603,7 @@ static json_t* diagnostics(MXS_ROUTER *router)
 
             json_object_set_new(slave, "mode", json_string(mode));
 
-            json_array_append(arr, slave);
+            json_array_append_new(arr, slave);
         }
         spinlock_release(&router_inst->lock);
 
