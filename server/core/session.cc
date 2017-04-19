@@ -1010,10 +1010,16 @@ json_t* session_to_json(const MXS_SESSION *session, const char *host)
     json_object_set_new(rval, "id", json_integer(session->ses_id));
     json_object_set_new(rval, "state", json_string(session_state(session->state)));
 
+    json_t* rel = json_object();
+    json_t* arr = json_array();
+
     string svc = host;
     svc += "/services/";
     svc += session->service->name;
-    json_object_set_new(rval, "service", json_string(svc.c_str()));
+
+    json_array_append(arr, json_string(svc.c_str()));
+    json_object_set_new(rel, "services", arr);
+    json_object_set_new(rval, "relationships", rel);
 
     if (session->client_dcb->user)
     {

@@ -2409,6 +2409,28 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     json_object_set_new(rval, "started", json_string(timebuf));
     json_object_set_new(rval, "enable_root", json_boolean(service->enable_root));
 
+    if (service->weightby)
+    {
+        json_object_set_new(rval, "weightby", json_string(service->weightby));
+    }
+
+    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
+    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+
+    if (service->ports)
+    {
+        json_t* arr = json_array();
+
+        for (SERV_LISTENER* p = service->ports; p; p = p->next)
+        {
+            json_array_append_new(arr, listener_to_json(p));
+        }
+
+        json_object_set_new(rval, "listeners", arr);
+    }
+
+    json_t* rel = json_object();
+
     if (service->n_filters)
     {
         json_t* arr = json_array();
@@ -2421,19 +2443,7 @@ json_t* service_to_json(const SERVICE* service, const char* host)
             json_array_append_new(arr, json_string(filter.c_str()));
         }
 
-        json_object_set_new(rval, "filters", arr);
-    }
-
-    if (service->ports)
-    {
-        json_t* arr = json_array();
-
-        for (SERV_LISTENER* p = service->ports; p; p = p->next)
-        {
-            json_array_append_new(arr, listener_to_json(p));
-        }
-
-        json_object_set_new(rval, "listeners", arr);
+        json_object_set_new(rel, "filters", arr);
     }
 
     bool active_servers = false;
@@ -2462,16 +2472,10 @@ json_t* service_to_json(const SERVICE* service, const char* host)
             }
         }
 
-        json_object_set_new(rval, "servers", arr);
+        json_object_set_new(rel, "servers", arr);
     }
 
-    if (service->weightby)
-    {
-        json_object_set_new(rval, "weightby", json_string(service->weightby));
-    }
-
-    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
-    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+    json_object_set_new(rval, "relationships", rel);
 
     spinlock_release(&service->spin);
 

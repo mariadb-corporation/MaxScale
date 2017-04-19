@@ -1553,6 +1553,8 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
     json_object_set_new(rval, "write_timeout", json_integer(monitor->write_timeout));
     json_object_set_new(rval, "connect_attempts", json_integer(monitor->connect_attempts));
 
+    json_t* rel = json_object();
+
     if (monitor->databases)
     {
         json_t* arr = json_array();
@@ -1565,9 +1567,10 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
             json_array_append_new(arr, json_string(s.c_str()));
         }
 
-        json_object_set_new(rval, "servers", arr);
+        json_object_set_new(rel, "servers", arr);
     }
 
+    json_object_set_new(rval, "relationships", rel);
 
     if (monitor->handle && monitor->module->diagnostics)
     {
