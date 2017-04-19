@@ -1605,3 +1605,32 @@ json_t* monitor_list_to_json(const char* host)
 
     return rval;
 }
+
+json_t* monitor_relations_to_server(const SERVER* server, const char* host)
+{
+    json_t* arr = json_array();
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        spinlock_acquire(&mon->lock);
+
+        for (MXS_MONITOR_SERVERS* db = mon->databases; db; db = db->next)
+        {
+            if (db->server == server)
+            {
+                string m = host;
+                m += "/monitors/";
+                m += mon->name;
+                json_array_append_new(arr, json_string(m.c_str()));
+            }
+        }
+
+        spinlock_release(&mon->lock);
+    }
+
+    spinlock_release(&monLock);
+
+    return arr;
+}

@@ -2502,3 +2502,61 @@ json_t* service_list_to_json(const char* host)
 
     return rval;
 }
+
+static void add_service_relation(json_t* arr, const char* host, const SERVICE* service)
+{
+    string svc = host;
+    svc += "/services/";
+    svc += service->name;
+    json_array_append_new(arr, json_string(svc.c_str()));
+}
+
+json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
+{
+    json_t* arr = json_array();
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (int i = 0; i < service->n_filters; i++)
+        {
+            if (service->filters[i] == filter)
+            {
+                add_service_relation(arr, host, service);
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return arr;
+}
+
+json_t* service_relations_to_server(const SERVER* server, const char* host)
+{
+    json_t* arr = json_array();
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+        {
+            if (ref->server == server)
+            {
+                add_service_relation(arr, host, service);
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return arr;
+}

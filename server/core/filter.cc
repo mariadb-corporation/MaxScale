@@ -24,8 +24,9 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
-#include "maxscale/filter.h"
+#include <maxscale/service.h>
 
+#include "maxscale/filter.h"
 #include "maxscale/config.h"
 #include "maxscale/modules.h"
 
@@ -504,6 +505,21 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
             json_object_set_new(rval, "filter_diagnostics", diag);
         }
     }
+
+    json_t* rel = json_object();
+
+    json_t* arr = service_relations_to_filter(filter, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, "services", arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    json_object_set_new(rval, "relationships", rel);
 
     return rval;
 }

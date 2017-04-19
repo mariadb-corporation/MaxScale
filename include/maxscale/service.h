@@ -298,6 +298,26 @@ json_t* service_to_json(const SERVICE* service, const char* host);
  */
 json_t* service_list_to_json(const char* host);
 
+/**
+ * @brief Get links to services that relate to a server
+ *
+ * @param server Server to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_server(const SERVER* server, const char* host);
+
+/**
+ * @brief Get links to services that relate to a filter
+ *
+ * @param filter Filter to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
+
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);
 void       dListServices(DCB *dcb);

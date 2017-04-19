@@ -1457,5 +1457,31 @@ json_t* server_to_json(const SERVER* server, const char* host)
 
     json_object_set_new(rval, "statictics", stats);
 
+    json_t* rel = json_object();
+
+    json_t* arr = service_relations_to_server(server, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, "services", arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    arr = monitor_relations_to_server(server, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, "monitors", arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    json_object_set_new(rval, "relationships", rel);
+
     return rval;
 }

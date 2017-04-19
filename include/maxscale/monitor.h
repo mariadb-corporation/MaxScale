@@ -293,4 +293,14 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host);
  */
 json_t* monitor_list_to_json(const char* host);
 
+/**
+ * @brief Get links to monitors that relate to a server
+ *
+ * @param server Server to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of monitor links
+ */
+json_t* monitor_relations_to_server(const SERVER* server, const char* host);
+
 MXS_END_DECLS
