@@ -2254,6 +2254,12 @@ static void dcb_hangup_foreach_worker(int thread_id, struct server* server)
             dcb->server == server)
         {
             poll_fake_hangup_event(dcb);
+            // dcb_hangup_foreach_worker() is called via the message loop,
+            // so immediately after the hangup event has been added, we can
+            // also process it. Indeed, it is necessary to do that because
+            // otherwise, unless there is a real event for the DCB descriptor,
+            // the fake event would not be handled.
+            dcb_process_fake_events(dcb, thread_id);
         }
     }
 }
