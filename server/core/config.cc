@@ -12,38 +12,9 @@
  */
 
 /**
- * @file config.c  - Read the gateway.cnf configuration file
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 21/06/13     Mark Riddoch            Initial implementation
- * 08/07/13     Mark Riddoch            Addition on monitor module support
- * 23/07/13     Mark Riddoch            Addition on default monitor password
- * 06/02/14     Massimiliano Pinto      Added support for enable/disable root user in services
- * 14/02/14     Massimiliano Pinto      Added enable_root_user in the service_params list
- * 11/03/14     Massimiliano Pinto      Added Unix socket support
- * 11/05/14     Massimiliano Pinto      Added version_string support to service
- * 19/05/14     Mark Riddoch            Added unique names from section headers
- * 29/05/14     Mark Riddoch            Addition of filter definition
- * 23/05/14     Massimiliano Pinto      Added automatic set of maxscale-id: first listening ipv4_raw + port + pid
- * 28/05/14     Massimiliano Pinto      Added detect_replication_lag parameter
- * 28/08/14     Massimiliano Pinto      Added detect_stale_master parameter
- * 09/09/14     Massimiliano Pinto      Added localhost_match_wildcard_host parameter
- * 12/09/14     Mark Riddoch            Addition of checks on servers list and
- *                                      internal router suppression of messages
- * 30/10/14     Massimiliano Pinto      Added disable_master_failback parameter
- * 07/11/14     Massimiliano Pinto      Addition of monitor timeouts for connect/read/write
- * 20/02/15     Markus Mäkelä           Added connection_timeout parameter for services
- * 05/03/15     Massimiliano Pinto      Added notification_feedback support
- * 20/04/15     Guillaume Lefranc       Added available_when_donor parameter
- * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
- * 26/01/16     Martin Brampton         Transfer SSL processing to listener
- * 31/05/16     Martin Brampton         Implement connection throttling, initially no queue
- *
- * @endverbatim
+ * @file config.c Configuration file processing
  */
+
 #include <maxscale/config.h>
 
 #include <ctype.h>
@@ -80,26 +51,68 @@
 using std::set;
 using std::string;
 
-const char CN_PASSWORD[] = "password";
-const char CN_USER[]     = "user";
-const char CN_ADDRESS[]  = "address";
-const char CN_NAME[]     = "name";
-const char CN_PORT[]     = "port";
-const char CN_MODULE[]   = "module";
-const char CN_TYPE[]     = "type";
-const char CN_PROTOCOL[] = "protocol";
-const char CN_DEFAULT[]  = "default";
-const char CN_SERVERS[]  = "servers";
-
-const char CN_SSL[]                   = "ssl";
-const char CN_SSL_KEY[]               = "ssl_key";
-const char CN_SSL_CERT[]              = "ssl_cert";
-const char CN_SSL_CA_CERT[]           = "ssl_ca_cert";
-const char CN_SSL_VERSION[]           = "ssl_version";
-const char CN_SSL_CERT_VERIFY_DEPTH[] = "ssl_cert_verify_depth";
-
-const char CN_AUTHENTICATOR[]         = "authenticator";
-const char CN_AUTHENTICATOR_OPTIONS[] = "authenticator_options";
+const char CN_ADDRESS[]                       = "address";
+const char CN_ADMIN_AUTH[]                    = "admin_auth";
+const char CN_ADMIN_PASSWORD[]                = "admin_password";
+const char CN_ADMIN_PORT[]                    = "admin_port";
+const char CN_ADMIN_USER[]                    = "admin_user";
+const char CN_AUTHENTICATOR[]                 = "authenticator";
+const char CN_AUTHENTICATOR_OPTIONS[]         = "authenticator_options";
+const char CN_AUTH_ALL_SERVERS[]              = "auth_all_servers";
+const char CN_AUTH_CONNECT_TIMEOUT[]          = "auth_connect_timeout";
+const char CN_AUTH_READ_TIMEOUT[]             = "auth_read_timeout";
+const char CN_AUTH_WRITE_TIMEOUT[]            = "auth_write_timeout";
+const char CN_AUTO[]                          = "auto";
+const char CN_CONNECTION_TIMEOUT[]            = "connection_timeout";
+const char CN_DEFAULT[]                       = "default";
+const char CN_ENABLE_ROOT_USER[]              = "enable_root_user";
+const char CN_FEEDBACK[]                      = "feedback";
+const char CN_FILTERS[]                       = "filters";
+const char CN_FILTER[]                        = "filter";
+const char CN_GATEWAY[]                       = "gateway";
+const char CN_LISTENER[]                      = "listener";
+const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
+const char CN_LOG_AUTH_WARNINGS[]             = "log_auth_warnings";
+const char CN_LOG_THROTTLING[]                = "log_throttling";
+const char CN_MAXSCALE[]                      = "maxscale";
+const char CN_MAX_CONNECTIONS[]               = "max_connections";
+const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
+const char CN_MODULE[]                        = "module";
+const char CN_MONITORS[]                      = "monitors";
+const char CN_MONITOR[]                       = "monitor";
+const char CN_MS_TIMESTAMP[]                  = "ms_timestamp";
+const char CN_NAME[]                          = "name";
+const char CN_NON_BLOCKING_POLLS[]            = "non_blocking_polls";
+const char CN_OPTIONS[]                       = "options";
+const char CN_PASSWORD[]                      = "password";
+const char CN_POLL_SLEEP[]                    = "poll_sleep";
+const char CN_PORT[]                          = "port";
+const char CN_PROTOCOL[]                      = "protocol";
+const char CN_QUERY_CLASSIFIER[]              = "query_classifier";
+const char CN_QUERY_CLASSIFIER_ARGS[]         = "query_classifier_args";
+const char CN_RELATIONSHIPS[]                 = "relationships";
+const char CN_REQUIRED[]                      = "required";
+const char CN_RETRY_ON_FAILURE[]              = "retry_on_failure";
+const char CN_ROUTER[]                        = "router";
+const char CN_ROUTER_OPTIONS[]                = "router_options";
+const char CN_SERVERS[]                       = "servers";
+const char CN_SERVER[]                        = "server";
+const char CN_SERVICES[]                      = "services";
+const char CN_SERVICE[]                       = "service";
+const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
+const char CN_SOCKET[]                        = "socket";
+const char CN_SSL[]                           = "ssl";
+const char CN_SSL_CA_CERT[]                   = "ssl_ca_cert";
+const char CN_SSL_CERT[]                      = "ssl_cert";
+const char CN_SSL_CERT_VERIFY_DEPTH[]         = "ssl_cert_verify_depth";
+const char CN_SSL_KEY[]                       = "ssl_key";
+const char CN_SSL_VERSION[]                   = "ssl_version";
+const char CN_STRIP_DB_ESC[]                  = "strip_db_esc";
+const char CN_THREADS[]                       = "threads";
+const char CN_TYPE[]                          = "type";
+const char CN_USER[]                          = "user";
+const char CN_VERSION_STRING[]                = "version_string";
+const char CN_WEIGHTBY[]                      = "weightby";
 
 typedef struct duplicate_context
 {
@@ -143,27 +156,27 @@ static bool is_persisted_config = false; /**< True if a persisted configuration 
 static const char *service_params[] =
 {
     CN_TYPE,
-    "router",
-    "router_options",
+    CN_ROUTER,
+    CN_ROUTER_OPTIONS,
     CN_SERVERS,
-    "monitor",
+    CN_MONITOR,
     CN_USER,
     "passwd", // DEPRECATE: See config_get_password.
     CN_PASSWORD,
-    "enable_root_user",
-    "max_retry_interval",
-    "max_connections",
-    "max_queued_connections",
-    "queued_connection_timeout",
-    "connection_timeout",
-    "auth_all_servers",
-    "strip_db_esc",
-    "localhost_match_wildcard_host",
-    "version_string",
-    "filters",
-    "weightby",
-    "log_auth_warnings",
-    "retry_on_failure",
+    CN_ENABLE_ROOT_USER,
+    CN_MAX_RETRY_INTERVAL,
+    CN_MAX_CONNECTIONS,
+    "max_queued_connections", //TODO: Fix this
+    "queued_connection_timeout", // TODO: Fix this
+    CN_CONNECTION_TIMEOUT,
+    CN_AUTH_ALL_SERVERS,
+    CN_STRIP_DB_ESC,
+    CN_LOCALHOST_MATCH_WILDCARD_HOST,
+    CN_VERSION_STRING,
+    CN_FILTERS,
+    CN_WEIGHTBY,
+    CN_LOG_AUTH_WARNINGS,
+    CN_RETRY_ON_FAILURE,
     NULL
 };
 
@@ -171,11 +184,11 @@ static const char *listener_params[] =
 {
     CN_AUTHENTICATOR_OPTIONS,
     CN_TYPE,
-    "service",
+    CN_SERVICE,
     CN_PROTOCOL,
     CN_PORT,
     CN_ADDRESS,
-    "socket",
+    CN_SOCKET,
     CN_AUTHENTICATOR,
     CN_SSL_CERT,
     CN_SSL_CA_CERT,
@@ -415,11 +428,11 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
     CONFIG_CONTEXT   *cntxt = (CONFIG_CONTEXT *)userdata;
     CONFIG_CONTEXT   *ptr = cntxt;
 
-    if (strcmp(section, "gateway") == 0 || strcasecmp(section, "MaxScale") == 0)
+    if (strcmp(section, CN_GATEWAY) == 0 || strcasecmp(section, CN_MAXSCALE) == 0)
     {
         return handle_global_item(name, value);
     }
-    else if (strcasecmp(section, "feedback") == 0)
+    else if (strcasecmp(section, CN_FEEDBACK) == 0)
     {
         return handle_feedback_item(name, value);
     }
@@ -848,7 +861,7 @@ process_config_context(CONFIG_CONTEXT *context)
         char *type = config_get_value(obj->parameters, CN_TYPE);
         if (type)
         {
-            if (!strcmp(type, "service"))
+            if (!strcmp(type, CN_SERVICE))
             {
                 error_count += create_new_service(obj);
             }
@@ -882,19 +895,19 @@ process_config_context(CONFIG_CONTEXT *context)
             char *type = config_get_value(obj->parameters, CN_TYPE);
             if (type)
             {
-                if (!strcmp(type, "service"))
+                if (!strcmp(type, CN_SERVICE))
                 {
                     error_count += configure_new_service(context, obj);
                 }
-                else if (!strcmp(type, "listener"))
+                else if (!strcmp(type, CN_LISTENER))
                 {
                     error_count += create_new_listener(obj);
                 }
-                else if (!strcmp(type, "monitor"))
+                else if (!strcmp(type, CN_MONITOR))
                 {
                     error_count += create_new_monitor(context, obj, monitorhash);
                 }
-                else if (strcmp(type, "server") != 0 && strcmp(type, "filter") != 0)
+                else if (strcmp(type, CN_SERVER) != 0 && strcmp(type, CN_FILTER) != 0)
                 {
                     MXS_ERROR("Configuration object '%s' has an invalid type specified.",
                               obj->object);
@@ -1300,9 +1313,9 @@ static  int
 handle_global_item(const char *name, const char *value)
 {
     int i;
-    if (strcmp(name, "threads") == 0)
+    if (strcmp(name, CN_THREADS) == 0)
     {
-        if (strcmp(value, "auto") == 0)
+        if (strcmp(value, CN_AUTO) == 0)
         {
             if ((gateway.n_threads = get_processor_count()) > 1)
             {
@@ -1339,23 +1352,23 @@ handle_global_item(const char *name, const char *value)
             gateway.n_threads = MXS_MAX_THREADS;
         }
     }
-    else if (strcmp(name, "non_blocking_polls") == 0)
+    else if (strcmp(name, CN_NON_BLOCKING_POLLS) == 0)
     {
         gateway.n_nbpoll = atoi(value);
     }
-    else if (strcmp(name, "poll_sleep") == 0)
+    else if (strcmp(name, CN_POLL_SLEEP) == 0)
     {
         gateway.pollsleep = atoi(value);
     }
-    else if (strcmp(name, "ms_timestamp") == 0)
+    else if (strcmp(name, CN_MS_TIMESTAMP) == 0)
     {
         mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
-    else if (strcmp(name, "skip_permission_checks") == 0)
+    else if (strcmp(name, CN_SKIP_PERMISSION_CHECKS) == 0)
     {
         gateway.skip_permission_checks = config_truth_value((char*)value);
     }
-    else if (strcmp(name, "auth_connect_timeout") == 0)
+    else if (strcmp(name, CN_AUTH_CONNECT_TIMEOUT) == 0)
     {
         char* endptr;
         int intval = strtol(value, &endptr, 0);
@@ -1368,7 +1381,7 @@ handle_global_item(const char *name, const char *value)
             MXS_WARNING("Invalid timeout value for 'auth_connect_timeout': %s", value);
         }
     }
-    else if (strcmp(name, "auth_read_timeout") == 0)
+    else if (strcmp(name, CN_AUTH_READ_TIMEOUT) == 0)
     {
         char* endptr;
         int intval = strtol(value, &endptr, 0);
@@ -1381,7 +1394,7 @@ handle_global_item(const char *name, const char *value)
             MXS_ERROR("Invalid timeout value for 'auth_read_timeout': %s", value);
         }
     }
-    else if (strcmp(name, "auth_write_timeout") == 0)
+    else if (strcmp(name, CN_AUTH_WRITE_TIMEOUT) == 0)
     {
         char* endptr;
         int intval = strtol(value, &endptr, 0);
@@ -1394,7 +1407,7 @@ handle_global_item(const char *name, const char *value)
             MXS_ERROR("Invalid timeout value for 'auth_write_timeout': %s", value);
         }
     }
-    else if (strcmp(name, "query_classifier") == 0)
+    else if (strcmp(name, CN_QUERY_CLASSIFIER) == 0)
     {
         int len = strlen(value);
         int max_len = sizeof(gateway.qc_name) - 1;
@@ -1410,11 +1423,11 @@ handle_global_item(const char *name, const char *value)
             return 0;
         }
     }
-    else if (strcmp(name, "query_classifier_args") == 0)
+    else if (strcmp(name, CN_QUERY_CLASSIFIER_ARGS) == 0)
     {
         gateway.qc_args = MXS_STRDUP_A(value);
     }
-    else if (strcmp(name, "log_throttling") == 0)
+    else if (strcmp(name, CN_LOG_THROTTLING) == 0)
     {
         if (*value == 0)
         {
@@ -1480,19 +1493,19 @@ handle_global_item(const char *name, const char *value)
             MXS_FREE(v);
         }
     }
-    else if (strcmp(name, "admin_user") == 0)
+    else if (strcmp(name, CN_ADMIN_USER) == 0)
     {
         strcpy(gateway.admin_user, value);
     }
-    else if (strcmp(name, "admin_password") == 0)
+    else if (strcmp(name, CN_ADMIN_PASSWORD) == 0)
     {
         strcpy(gateway.admin_password, value);
     }
-    else if (strcmp(name, "admin_port") == 0)
+    else if (strcmp(name, CN_ADMIN_PORT) == 0)
     {
         gateway.admin_port = atoi(value);
     }
-    else if (strcmp(name, "admin_auth") == 0)
+    else if (strcmp(name, CN_ADMIN_AUTH) == 0)
     {
         gateway.admin_auth = config_truth_value(value);
     }
@@ -1552,7 +1565,7 @@ SSL_LISTENER* make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *e
 
     if (ssl)
     {
-        if (!strcmp(ssl, "required"))
+        if (!strcmp(ssl, CN_REQUIRED))
         {
             if ((new_ssl = (SSL_LISTENER*)MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
             {
@@ -1805,9 +1818,9 @@ process_config_update(CONFIG_CONTEXT *context)
         {
             MXS_ERROR("Configuration object %s has no type.", obj->object);
         }
-        else if (!strcmp(type, "service"))
+        else if (!strcmp(type, CN_SERVICE))
         {
-            char *router = config_get_value(obj->parameters, "router");
+            char *router = config_get_value(obj->parameters, CN_ROUTER);
             if (router)
             {
                 if ((service = service_find(obj->object)) != NULL)
@@ -1828,22 +1841,22 @@ process_config_update(CONFIG_CONTEXT *context)
                     char *version_string;
                     char *allow_localhost_match_wildcard_host;
 
-                    enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+                    enable_root_user = config_get_value(obj->parameters, CN_ENABLE_ROOT_USER);
 
-                    connection_timeout = config_get_value(obj->parameters, "connection_timeout");
-                    max_connections = config_get_value_string(obj->parameters, "max_connections");
+                    connection_timeout = config_get_value(obj->parameters, CN_CONNECTION_TIMEOUT);
+                    max_connections = config_get_value_string(obj->parameters, CN_MAX_CONNECTIONS);
                     max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
                     queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
                     user = config_get_value(obj->parameters, CN_USER);
                     auth = config_get_password(obj->parameters);
 
-                    auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
-                    strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
-                    version_string = config_get_value(obj->parameters, "version_string");
+                    auth_all_servers = config_get_value(obj->parameters, CN_AUTH_ALL_SERVERS);
+                    strip_db_esc = config_get_value(obj->parameters, CN_STRIP_DB_ESC);
+                    version_string = config_get_value(obj->parameters, CN_VERSION_STRING);
                     allow_localhost_match_wildcard_host =
-                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
+                        config_get_value(obj->parameters, CN_LOCALHOST_MATCH_WILDCARD_HOST);
 
-                    char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
+                    char *log_auth_warnings = config_get_value(obj->parameters, CN_LOG_AUTH_WARNINGS);
                     int truthval;
                     if (log_auth_warnings && (truthval = config_truth_value(log_auth_warnings)) != -1)
                     {
@@ -2017,23 +2030,23 @@ check_config_objects(CONFIG_CONTEXT *context)
 
         if (obj->parameters && (type = config_get_value(obj->parameters, CN_TYPE)))
         {
-            if (!strcmp(type, "service"))
+            if (!strcmp(type, CN_SERVICE))
             {
                 param_set = service_params;
-                module = config_get_value(obj->parameters, "router");
+                module = config_get_value(obj->parameters, CN_ROUTER);
                 module_type = MODULE_ROUTER;
             }
-            else if (!strcmp(type, "listener"))
+            else if (!strcmp(type, CN_LISTENER))
             {
                 param_set = listener_params;
             }
-            else if (!strcmp(type, "monitor"))
+            else if (!strcmp(type, CN_MONITOR))
             {
                 param_set = monitor_params;
                 module = config_get_value(obj->parameters, CN_MODULE);
                 module_type = MODULE_MONITOR;
             }
-            else if (!strcmp(type, "filter"))
+            else if (!strcmp(type, CN_FILTER))
             {
                 param_set = filter_params;
                 module = config_get_value(obj->parameters, CN_MODULE);
@@ -2623,7 +2636,7 @@ void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
  */
 int create_new_service(CONFIG_CONTEXT *obj)
 {
-    char *router = config_get_value(obj->parameters, "router");
+    char *router = config_get_value(obj->parameters, CN_ROUTER);
     if (router == NULL)
     {
         obj->element = NULL;
@@ -2640,19 +2653,19 @@ int create_new_service(CONFIG_CONTEXT *obj)
     int error_count = 0;
     MXS_CONFIG_PARAMETER* param;
 
-    char *retry = config_get_value(obj->parameters, "retry_on_failure");
+    char *retry = config_get_value(obj->parameters, CN_RETRY_ON_FAILURE);
     if (retry)
     {
         serviceSetRetryOnFailure(service, retry);
     }
 
-    char *enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+    char *enable_root_user = config_get_value(obj->parameters, CN_ENABLE_ROOT_USER);
     if (enable_root_user)
     {
         serviceEnableRootUser(service, config_truth_value(enable_root_user));
     }
 
-    char *max_retry_interval = config_get_value(obj->parameters, "max_retry_interval");
+    char *max_retry_interval = config_get_value(obj->parameters, CN_MAX_RETRY_INTERVAL);
 
     if (max_retry_interval)
     {
@@ -2670,13 +2683,13 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
-    char *connection_timeout = config_get_value(obj->parameters, "connection_timeout");
+    char *connection_timeout = config_get_value(obj->parameters, CN_CONNECTION_TIMEOUT);
     if (connection_timeout)
     {
         serviceSetTimeout(service, atoi(connection_timeout));
     }
 
-    const char *max_connections = config_get_value_string(obj->parameters, "max_connections");
+    const char *max_connections = config_get_value_string(obj->parameters, CN_MAX_CONNECTIONS);
     const char *max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
     const char *queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
     if (strlen(max_connections))
@@ -2685,25 +2698,25 @@ int create_new_service(CONFIG_CONTEXT *obj)
                                    atoi(max_queued_connections), atoi(queued_connection_timeout));
     }
 
-    char *auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
+    char *auth_all_servers = config_get_value(obj->parameters, CN_AUTH_ALL_SERVERS);
     if (auth_all_servers)
     {
         serviceAuthAllServers(service, config_truth_value(auth_all_servers));
     }
 
-    char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
+    char *strip_db_esc = config_get_value(obj->parameters, CN_STRIP_DB_ESC);
     if (strip_db_esc)
     {
         serviceStripDbEsc(service, config_truth_value(strip_db_esc));
     }
 
-    char *weightby = config_get_value(obj->parameters, "weightby");
+    char *weightby = config_get_value(obj->parameters, CN_WEIGHTBY);
     if (weightby)
     {
         serviceWeightBy(service, weightby);
     }
 
-    char *wildcard = config_get_value(obj->parameters, "localhost_match_wildcard_host");
+    char *wildcard = config_get_value(obj->parameters, CN_LOCALHOST_MATCH_WILDCARD_HOST);
     if (wildcard)
     {
         serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(wildcard));
@@ -2726,7 +2739,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
                   auth ? "" : "the 'password' or 'passwd' parameter");
     }
 
-    char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
+    char *log_auth_warnings = config_get_value(obj->parameters, CN_LOG_AUTH_WARNINGS);
     if (log_auth_warnings)
     {
         int truthval = config_truth_value(log_auth_warnings);
@@ -2740,7 +2753,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
-    char *version_string = config_get_value(obj->parameters, "version_string");
+    char *version_string = config_get_value(obj->parameters, CN_VERSION_STRING);
     if (version_string)
     {
         /** Add the 5.5.5- string to the start of the version string if
@@ -2914,10 +2927,10 @@ int create_new_server(CONFIG_CONTEXT *obj)
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    char *filters = config_get_value(obj->parameters, "filters");
+    char *filters = config_get_value(obj->parameters, CN_FILTERS);
     char *servers = config_get_value(obj->parameters, CN_SERVERS);
-    char *monitor = config_get_value(obj->parameters, "monitor");
-    char *roptions = config_get_value(obj->parameters, "router_options");
+    char *monitor = config_get_value(obj->parameters, CN_MONITOR);
+    char *roptions = config_get_value(obj->parameters, CN_ROUTER_OPTIONS);
     SERVICE *service = (SERVICE*)obj->element;
 
     if (service)
@@ -3180,11 +3193,11 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 int create_new_listener(CONFIG_CONTEXT *obj)
 {
     int error_count = 0;
-    char *raw_service_name = config_get_value(obj->parameters, "service");
+    char *raw_service_name = config_get_value(obj->parameters, CN_SERVICE);
     char *port = config_get_value(obj->parameters, CN_PORT);
     char *address = config_get_value(obj->parameters, CN_ADDRESS);
     char *protocol = config_get_value(obj->parameters, CN_PROTOCOL);
-    char *socket = config_get_value(obj->parameters, "socket");
+    char *socket = config_get_value(obj->parameters, CN_SOCKET);
     char *authenticator = config_get_value(obj->parameters, CN_AUTHENTICATOR);
     char *authenticator_options = config_get_value(obj->parameters, CN_AUTHENTICATOR_OPTIONS);
 
@@ -3267,7 +3280,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
         if ((obj->element = filter_alloc(obj->object, module)))
         {
             MXS_FILTER_DEF* filter_def = (MXS_FILTER_DEF*)obj->element;
-            char *options = config_get_value(obj->parameters, "options");
+            char *options = config_get_value(obj->parameters, CN_OPTIONS);
             if (options)
             {
                 char *lasts;
@@ -3319,7 +3332,7 @@ bool config_have_required_ssl_params(CONFIG_CONTEXT *obj)
            config_get_param(param, CN_SSL_KEY) &&
            config_get_param(param, CN_SSL_CERT) &&
            config_get_param(param, CN_SSL_CA_CERT) &&
-           strcmp(config_get_value_string(param, CN_SSL), "required") == 0;
+           strcmp(config_get_value_string(param, CN_SSL), CN_REQUIRED) == 0;
 }
 
 bool config_is_ssl_parameter(const char *key)
@@ -3565,14 +3578,14 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                 break;
 
             case MXS_MODULE_PARAM_SERVICE:
-                if (context && config_contains_type(context, fixed_value, "service"))
+                if (context && config_contains_type(context, fixed_value, CN_SERVICE))
                 {
                     valid = true;
                 }
                 break;
 
             case MXS_MODULE_PARAM_SERVER:
-                if (context && config_contains_type(context, fixed_value, "server"))
+                if (context && config_contains_type(context, fixed_value, CN_SERVER))
                 {
                     valid = true;
                 }
@@ -3590,7 +3603,7 @@ bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
                         for (int i = 0; i < n_serv; i++)
                         {
                             if (valid &&
-                                !config_contains_type(context, server_names[i], "server"))
+                                !config_contains_type(context, server_names[i], CN_SERVER))
                             {
                                 valid = false;
                             }

@@ -35,27 +35,73 @@ MXS_BEGIN_DECLS
 
 /**
  * Common configuration parameters names
+ *
+ * All of the constants resolve to a lowercase version without the CN_ prefix.
+ * For example CN_PASSWORD resolves to the static string "password". This means
+ * that the sizeof(CN_<name>) returns the actual size of that string.
  */
-extern const char CN_PASSWORD[];
-extern const char CN_USER[];
 extern const char CN_ADDRESS[];
-extern const char CN_NAME[];
-extern const char CN_PORT[];
-extern const char CN_MODULE[];
-extern const char CN_TYPE[];
-extern const char CN_PROTOCOL[];
-extern const char CN_DEFAULT[];
-extern const char CN_SERVERS[];
-
-extern const char CN_SSL[];
-extern const char CN_SSL_KEY[];
-extern const char CN_SSL_CERT[];
-extern const char CN_SSL_CA_CERT[];
-extern const char CN_SSL_VERSION[];
-extern const char CN_SSL_CERT_VERIFY_DEPTH[];
-
+extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_PASSWORD[];
+extern const char CN_ADMIN_PORT[];
+extern const char CN_ADMIN_USER[];
 extern const char CN_AUTHENTICATOR[];
 extern const char CN_AUTHENTICATOR_OPTIONS[];
+extern const char CN_AUTH_ALL_SERVERS[];
+extern const char CN_AUTH_CONNECT_TIMEOUT[];
+extern const char CN_AUTH_READ_TIMEOUT[];
+extern const char CN_AUTH_WRITE_TIMEOUT[];
+extern const char CN_AUTO[];
+extern const char CN_CONNECTION_TIMEOUT[];
+extern const char CN_DEFAULT[];
+extern const char CN_ENABLE_ROOT_USER[];
+extern const char CN_FEEDBACK[];
+extern const char CN_FILTERS[];
+extern const char CN_FILTER[];
+extern const char CN_GATEWAY[];
+extern const char CN_LISTENER[];
+extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
+extern const char CN_LOG_AUTH_WARNINGS[];
+extern const char CN_LOG_THROTTLING[];
+extern const char CN_MAXSCALE[];
+extern const char CN_MAX_CONNECTIONS[];
+extern const char CN_MAX_RETRY_INTERVAL[];
+extern const char CN_MODULE[];
+extern const char CN_MONITORS[];
+extern const char CN_MONITOR[];
+extern const char CN_MS_TIMESTAMP[];
+extern const char CN_NAME[];
+extern const char CN_NON_BLOCKING_POLLS[];
+extern const char CN_OPTIONS[];
+extern const char CN_PASSWORD[];
+extern const char CN_POLL_SLEEP[];
+extern const char CN_PORT[];
+extern const char CN_PROTOCOL[];
+extern const char CN_QUERY_CLASSIFIER[];
+extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_RELATIONSHIPS[];
+extern const char CN_REQUIRED[];
+extern const char CN_RETRY_ON_FAILURE[];
+extern const char CN_ROUTER[];
+extern const char CN_ROUTER_OPTIONS[];
+extern const char CN_SERVERS[];
+extern const char CN_SERVER[];
+extern const char CN_SERVICES[];
+extern const char CN_SERVICE[];
+extern const char CN_SKIP_PERMISSION_CHECKS[];
+extern const char CN_SOCKET[];
+extern const char CN_SSL[];
+extern const char CN_SSL_CA_CERT[];
+extern const char CN_SSL_CERT[];
+extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+extern const char CN_SSL_KEY[];
+extern const char CN_SSL_VERSION[];
+extern const char CN_STRIP_DB_ESC[];
+extern const char CN_THREADS[];
+extern const char CN_TYPE[];
+extern const char CN_USER[];
+extern const char CN_VERSION_STRING[];
+extern const char CN_WEIGHTBY[];
 
 /**
  * The config parameter

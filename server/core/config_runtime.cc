@@ -217,7 +217,7 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
 
     if (obj)
     {
-        if (config_add_param(obj, CN_SSL, "required") &&
+        if (config_add_param(obj, CN_SSL, CN_REQUIRED) &&
             config_add_param(obj, CN_SSL_KEY, key) &&
             config_add_param(obj, CN_SSL_CERT, cert) &&
             config_add_param(obj, CN_SSL_CA_CERT, ca) &&
@@ -672,7 +672,7 @@ static bool extract_relations(json_t* json, set<string>& relations,
     bool rval = true;
     json_t* rel;
 
-    if ((rel = json_object_get(json, "relationships")))
+    if ((rel = json_object_get(json, CN_RELATIONSHIPS)))
     {
         for (int i = 0; relation_types[i]; i++)
         {
@@ -742,15 +742,15 @@ static bool server_contains_required_fields(json_t* json)
 
 const char* server_relation_types[] =
 {
-    "services",
-    "monitors",
+    CN_SERVICES,
+    CN_MONITORS,
     NULL
 };
 
 static bool server_relation_is_valid(const string& type, const string& value)
 {
-    return (type == "services" && service_find(value.c_str())) ||
-        (type == "monitors" && monitor_find(value.c_str()));
+    return (type == CN_SERVICES && service_find(value.c_str())) ||
+        (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
 static bool unlink_server_relations(SERVER* server, set<string>& relations)
@@ -834,13 +834,13 @@ static bool monitor_contains_required_fields(json_t* json)
 
 const char* monitor_relation_types[] =
 {
-    "servers",
+    CN_SERVERS,
     NULL
 };
 
 static bool monitor_relation_is_valid(const string& type, const string& value)
 {
-    return type == "servers" && server_find_by_unique_name(value.c_str());
+    return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
 }
 
 static bool unlink_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
