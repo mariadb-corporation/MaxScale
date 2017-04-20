@@ -18,17 +18,20 @@ rabbitmq-server-3.3.4-1.noarch.rpm
 Please note, before installing RabbitMQ, you must install Erlang.
 
 Example:
-
+```
 yum install erlang
 Package erlang-R14B-04.3.el6.x86_64 already installed and latest version
+```
 
 ## Step 2 - Install and Start the Server
 
 Install the packages using your distribution's package manager and start the server:
 
+```
 yum install rabbitmq-server-3.3.4-1.noarch.rpm
 systemctl start rabbitmq-server.service
 
+```
 To configure your RabbitMQ server, please refer to the RabbitMQ website:
 [http://www.rabbitmq.com/](http://www.rabbitmq.com/ RabbitMQ website).
 
