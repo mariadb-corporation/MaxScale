@@ -2,7 +2,7 @@
 
 ## Overview
 
-The tee filter is a filter module for MariaDB MaxScale is a "plumbing" fitting in the MariaDB MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MariaDB MaxScale.
+The tee filter is a "plumbing" fitting in the MariaDB MaxScale filter toolkit. It can be used in a filter pipeline of a service to make copies of requests from the client and send the copies to another service within MariaDB MaxScale.
 
 ## Configuration
 
@@ -45,7 +45,7 @@ The tee filter requires a mandatory parameter to define the service to replicate
 
 ### Match
 
-An optional parameter that can be used to limit the queries that will be replicated by the tee filter. The parameter value is a regular expression that is used to match against the SQL text. Only SQL statements that matches the text passed as the value of this parameter will be sent to the service defined in the filter section.
+An optional parameter used to limit the queries that will be replicated by the tee filter. The parameter value is a regular expression that is used to match against the SQL text. Only SQL statements that matches the text passed as the value of this parameter will be sent to the service defined in the filter section.
 
 ```
 match=insert.*into.*order*
@@ -55,7 +55,7 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 ### Exclude
 
-An optional parameter that can be used to limit the queries that will be replicated by the tee filter. The parameter value is a regular expression that is used to match against the SQL text. SQL statements that match the text passed as the value of this parameter will be excluded from the replication stream.
+An optional parameter used to limit the queries that will be replicated by the tee filter. The parameter value is a regular expression that is used to match against the SQL text. SQL statements that match the text passed as the value of this parameter will be excluded from the replication stream.
 
 ```
 exclude=select
@@ -83,9 +83,9 @@ user=john
 
 ### Example 1 - Replicate all inserts into the orders table
 
-Assume an order processing system that has a table called orders. You also have another database server, the datamart server, that requires all inserts into orders to be replicated to it. Deletes and updates are not however required.
+Assume an order processing system that has a table called orders. You also have another database server, the datamart server, that requires all inserts into orders to be replicated to it. Deletes and updates are not, however, required.
 
-Set up a service in MariaDB MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk the datamart server, using the DataMart service. The tee filter would have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
+Set up a service in MariaDB MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk to the datamart server, using the DataMart service. The tee filter would have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
 
 ```
 [Orders]
