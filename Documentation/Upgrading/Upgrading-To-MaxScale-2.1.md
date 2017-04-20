@@ -14,6 +14,18 @@ For a complete list of changes in MaxScale 2.1.0, refer to the
 Before starting the upgrade, we **strongly** recommend you back up your current
 configuration file.
 
+## IPv6 Support
+
+MaxScale 2.1.2 added support for IPv6 addresses. The default interface that listeners bind to
+was changed from the IPv4 address `0.0.0.0` to the IPv6 address `::`. To bind to the old IPv4 address,
+add `address=0.0.0.0` to the listener definition.
+
+## Persisted Configuration Files
+
+Starting with MaxScale 2.1, any changes made with the newly added
+[runtime configuration change](../Reference/MaxAdmin.md#runtime-configuration-changes)
+will be persisted in a configuration file. These files are located in `/var/lib/maxscale/maxscale.cnf.d/`.
+
 ## MaxScale Log Files
 
 The name of the log file was changed from _maxscaleN.log_ to _maxscale.log_. The
