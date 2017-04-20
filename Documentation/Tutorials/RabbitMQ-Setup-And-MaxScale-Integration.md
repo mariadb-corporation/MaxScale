@@ -1,14 +1,17 @@
 # Rabbit MQ setup and MariaDB MaxScale Integration
 ## Introduction
-A step by step guide helps installing a RabbitMQ server and testing it before MariaDB MaxScale integration.
+A step by step guide helps installing a RabbitMQ server and testing it before
+MariaDB MaxScale integration.
 
-New plugin filter and a message consumer application need to be compiled and linked with an external C library, RabbitMQ-c, that provides AMQP protocol integration.
+New plugin filter and a message consumer application need to be compiled and
+linked with an external C library, RabbitMQ-c, that provides AMQP protocol integration.
 Custom configuration, with TCP/IP and Queue parameters, is also detailed here.
 The software install setup provides RPM and DEB packaging and traditional compilation steps.
 
 ## Step 1 - Get the RabbitMQ binaries
 
-On Centos 6.5 using fedora / RHEL rpm get the rpm from [http://www.rabbitmq.com/](http://www.rabbitmq.com/ "RabbitMQ")
+On Centos 6.5 using fedora / RHEL rpm get the rpm from
+[http://www.rabbitmq.com/](http://www.rabbitmq.com/ "RabbitMQ")
 
 rabbitmq-server-3.3.4-1.noarch.rpm
 
@@ -26,9 +29,11 @@ Install the packages using your distribution's package manager and start the ser
 yum install rabbitmq-server-3.3.4-1.noarch.rpm
 systemctl start rabbitmq-server.service
 
-To configure your RabbitMQ server, please refer to the RabbitMQ website: [http://www.rabbitmq.com/](http://www.rabbitmq.com/ RabbitMQ website).
+To configure your RabbitMQ server, please refer to the RabbitMQ website:
+[http://www.rabbitmq.com/](http://www.rabbitmq.com/ RabbitMQ website).
 
-rabbitmqctl is a command line tool for managing a RabbitMQ broker. It performs all actions by connecting to one of the broker's nodes.
+rabbitmqctl is a command line tool for managing a RabbitMQ broker.
+It performs all actions by connecting to one of the broker's nodes.
 
 ```
 rabbitmqctl list_queues
@@ -87,12 +92,14 @@ make
 make install
 ```
 
-Please note, this will install the packages to /usr. If you do not wish to install them to this location, provide a different value for the CMAKE_INSTALL_PREFIX variable.
+Please note, this will install the packages to /usr. If you do not wish to install
+them to this location, provide a different value for the CMAKE_INSTALL_PREFIX variable.
 
 
 ### Setup using the EPEL repository
 
-Check how to configure your distribution for the EPEL repository: [https://fedoraproject.org/wiki/EPEL](https://fedoraproject.org/wiki/EPEL EPEL)
+Check how to configure your distribution for the EPEL repository:
+[https://fedoraproject.org/wiki/EPEL](https://fedoraproject.org/wiki/EPEL EPEL)
 
 Configure your repositories and install the software:
 
@@ -114,7 +121,9 @@ yum install rabbitmq-server
 
 ### Basic tests with library
 
-The required library librabbitmq-c is now installed and we continue with basic operations with amqp_* tools, located  in the examples/ folder of the build directory, testing client server interaction.
+The required library librabbitmq-c is now installed and we continue with basic
+operations with amqp_* tools, located  in the examples/ folder of the build directory,
+testing client server interaction.
 
 Please note, those example applications may not be included in the RPM library packages.
 
@@ -185,7 +194,8 @@ port=5672
 logging_trigger=all
 ```
 
-Logging triggers define whether to log all or a subset of the incoming queries using these options:
+Logging triggers define whether to log all or a subset of the incoming queries
+using these options:
 
 ```
 # log only some elements or all
@@ -230,9 +240,13 @@ anything targeting my1 table is logged
 SELECT NOW(), SELECT MD5(“xyz)” are not logged
 ```
 
-Please note that if we want to log only the user ‘maxtest’ accessing the schema ‘test’ with target ‘my1’  the option logging_strict must be set to TRUE and if we want to include those selects without schema name the option logging_log_all must be set to TRUE.
+Please note that if we want to log only the user ‘maxtest’ accessing the
+schema ‘test’ with target ‘my1’  the option logging_strict must be set
+to TRUE and if we want to include those selects without schema name the
+option logging_log_all must be set to TRUE.
 
-The mqfilter logs into the MariaDB MaxScale TRACE log information about the matched logging triggers and the message delivering:
+The mqfilter logs into the MariaDB MaxScale TRACE log information about
+the matched logging triggers and the message delivering:
 
 ```
 2014 09/03 06:22:04   Trigger is TRG_SOURCE: user: testuser = testuser
@@ -288,7 +302,9 @@ and finally we can launch it:
 # ./consumer
 ```
 
-If the consumer.cnf file is not in the same directory as the binary file is, you can provide the location of the folder that it is in by passing it the -c flag followed by the path:
+If the consumer.cnf file is not in the same directory as the binary file is,
+you can provide the location of the folder that it is in by passing
+it the -c flag followed by the path:
 
 ```
 # ./consumer -c path/to/file
@@ -298,7 +314,8 @@ and start MariaDB MaxScale as well
 
 ## Step 5 - Test the filter and check collected data
 
-Assuming that MariaDB MaxScale and the message consumer are successfully running let’s connect to the service with an active mqfilter:
+Assuming that MariaDB MaxScale and the message consumer are successfully
+running let’s connect to the service with an active mqfilter:
 
 ```
 [root@maxscale-02 MaxScale]#  mysql -h 127.0.0.1 -P 4506 -uxxx -pyyy
@@ -347,8 +364,10 @@ MariaDB [mqpairs]> select * from pairs;
 7 rows in set (0.01 sec)
 ```
 
-The filter send queries to the RabbitMQ server in the canonical format, i.e select RAND(?), RAND(?).
-The queries Message Queue Consumer application gets from the server are stored with a counter that quickly shows how many times that normalized query was received:
+The filter send queries to the RabbitMQ server in the canonical format,
+i.e select RAND(?), RAND(?).
+The queries Message Queue Consumer application gets from the server
+are stored with a counter that quickly shows how many times that normalized query was received:
 
 ```
 | 01050106010701080109010a010b010c10d | select RAND(?), RAND(?)           | Columns: 2 | 2014-09-02 11:24:37 | 2014-09-02 11:29:15 |       3 |
