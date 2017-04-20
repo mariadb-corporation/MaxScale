@@ -13,6 +13,7 @@
 #include "maxscale/resource.hh"
 
 #include <list>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
@@ -28,6 +29,7 @@
 
 using std::list;
 using std::string;
+using std::stringstream;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
@@ -288,6 +290,11 @@ HttpResponse cb_modules(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK);
 }
 
+HttpResponse cb_send_ok(const HttpRequest& request)
+{
+    return HttpResponse(MHD_HTTP_OK);
+}
+
 class RootResource
 {
     RootResource(const RootResource&);
@@ -298,6 +305,10 @@ public:
 
     RootResource()
     {
+        // Special resources required by OPTION etc.
+        m_get.push_back(SResource(new Resource(cb_send_ok, 1, "/")));
+        m_get.push_back(SResource(new Resource(cb_send_ok, 1, "*")));
+
         m_get.push_back(SResource(new Resource(cb_all_servers, 1, "servers")));
         m_get.push_back(SResource(new Resource(cb_get_server, 2, "servers", ":server")));
 
@@ -330,34 +341,114 @@ public:
     {
     }
 
-    HttpResponse process_request_type(ResourceList& list, HttpRequest& request)
+    ResourceList::const_iterator find_resource(const ResourceList& list, const HttpRequest& request) const
     {
-        for (ResourceList::iterator it = list.begin(); it != list.end(); it++)
+        for (ResourceList::const_iterator it = list.begin(); it != list.end(); it++)
         {
             Resource& r = *(*it);
 
             if (r.match(request))
             {
-                return r.call(request);
+                return it;
             }
+        }
+
+        return list.end();
+    }
+
+    HttpResponse process_request_type(const ResourceList& list, const HttpRequest& request)
+    {
+        ResourceList::const_iterator it = find_resource(list, request);
+
+        if (it != list.end())
+        {
+            Resource& r = *(*it);
+            return r.call(request);
         }
 
         return HttpResponse(MHD_HTTP_NOT_FOUND);
     }
 
-    HttpResponse process_request(HttpRequest& request)
+    string get_supported_methods(const HttpRequest& request)
     {
-        if (request.get_verb() == "GET")
+        list<string> l;
+
+        if (find_resource(m_get, request) != m_get.end())
+        {
+            l.push_back(MHD_HTTP_METHOD_GET);
+        }
+        if (find_resource(m_put, request) != m_put.end())
+        {
+            l.push_back(MHD_HTTP_METHOD_PUT);
+        }
+        if (find_resource(m_post, request) != m_post.end())
+        {
+            l.push_back(MHD_HTTP_METHOD_POST);
+        }
+        if (find_resource(m_delete, request) != m_delete.end())
+        {
+            l.push_back(MHD_HTTP_METHOD_DELETE);
+        }
+        if (find_resource(m_patch, request) != m_patch.end())
+        {
+            l.push_back(MHD_HTTP_METHOD_PATCH);
+        }
+
+        stringstream rval;
+
+        if (l.size() > 0)
+        {
+            rval << l.front();
+            l.pop_front();
+        }
+
+        for (list<string>::iterator it = l.begin(); it != l.end(); it++)
+        {
+            rval << ", " << *it;
+        }
+
+        return rval.str();
+    }
+
+    HttpResponse process_request(const HttpRequest& request)
+    {
+        if (request.get_verb() == MHD_HTTP_METHOD_GET)
         {
             return process_request_type(m_get, request);
         }
-        else if (request.get_verb() == "PUT")
+        else if (request.get_verb() == MHD_HTTP_METHOD_PUT)
         {
             return process_request_type(m_put, request);
         }
-        else if (request.get_verb() == "POST")
+        else if (request.get_verb() == MHD_HTTP_METHOD_POST)
         {
             return process_request_type(m_post, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
+        {
+            return process_request_type(m_patch, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_DELETE)
+        {
+            return process_request_type(m_delete, request);
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_OPTIONS)
+        {
+            string methods = get_supported_methods(request);
+
+            if (methods.size() > 0)
+            {
+                HttpResponse response(MHD_HTTP_OK);
+                response.add_header(HTTP_RESPONSE_HEADER_ACCEPT, methods);
+                return response;
+            }
+        }
+        else if (request.get_verb() == MHD_HTTP_METHOD_HEAD)
+        {
+            /** Do a GET and just drop the body of the response */
+            HttpResponse response = process_request_type(m_get, request);
+            response.drop_response();
+            return response;
         }
 
         return HttpResponse(MHD_HTTP_METHOD_NOT_ALLOWED);
@@ -365,9 +456,11 @@ public:
 
 private:
 
-    ResourceList m_get;  /**< GET request handlers */
-    ResourceList m_put;  /**< PUT request handlers */
-    ResourceList m_post; /**< POST request handlers */
+    ResourceList m_get;    /**< GET request handlers */
+    ResourceList m_put;    /**< PUT request handlers */
+    ResourceList m_post;   /**< POST request handlers */
+    ResourceList m_delete; /**< DELETE request handlers */
+    ResourceList m_patch;  /**< PATCH request handlers */
 };
 
 static RootResource resources; /**< Core resource set */
