@@ -567,14 +567,14 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
      * to the slave.
      */
 
-    /* Check and handle possible Maxwell input statement */
+    /*  - 1 - Check and handle possible Maxwell input statement */
     if (blr_handle_maxwell_stmt(router,
                                 slave,
                                 query_text))
     {
         MXS_FREE(query_text);
         return 1;
-    }
+    } /* - 2 - Handle SELECT, SET, SHOW and Admin commands */
     else if ((word = strtok_r(query_text, sep, &brkb)) == NULL)
     {
         MXS_ERROR("%s: Incomplete query.", router->service->name);
@@ -623,301 +623,20 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             MXS_FREE(query_text);
             return 1;
         }
-    } /* RESET current configured master */
-    else if (strcasecmp(query_text, "RESET") == 0)
-    {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete RESET command.", router->service->name);
-        }
-        else if (strcasecmp(word, "SLAVE") == 0)
-        {
-            MXS_FREE(query_text);
-
-            if (router->master_state == BLRM_SLAVE_STOPPED)
-            {
-                char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
-                MASTER_SERVER_CFG *current_master = NULL;
-                int removed_cfg = 0;
-
-                /* save current replication parameters */
-                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
-                MXS_ABORT_IF_NULL(current_master);
-
-                if (!current_master)
-                {
-                    snprintf(error_string,
-                             BINLOG_ERROR_MSG_LEN, "error allocating memory for blr_master_get_config");
-                    MXS_ERROR("%s: %s", router->service->name, error_string);
-                    blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
-
-                    return 1;
-                }
-
-                /* get current data */
-                blr_master_get_config(router, current_master);
-
-                MXS_NOTICE("%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', "
-                           "MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, "
-                           "MASTER_USER='%s'",
-                           router->service->name,
-                           current_master->host,
-                           current_master->port,
-                           current_master->logfile,
-                           current_master->pos,
-                           current_master->user);
-
-                /* remove master.ini */
-                static const char MASTER_INI[] = "/master.ini";
-                char path[strlen(router->binlogdir) + sizeof(MASTER_INI)];
-
-                strcpy(path, router->binlogdir);
-                strcat(path, MASTER_INI);
-
-                /* remove master.ini */
-                removed_cfg = unlink(path);
-
-                if (removed_cfg == -1)
-                {
-                    snprintf(error_string, BINLOG_ERROR_MSG_LEN,
-                             "Error removing %s, %s, errno %u", path,
-                             mxs_strerror(errno), errno);
-                    MXS_ERROR("%s: %s", router->service->name, error_string);
-                }
-
-                spinlock_acquire(&router->lock);
-
-                /* Set the BLRM_UNCONFIGURED state */
-                router->master_state = BLRM_UNCONFIGURED;
-                blr_master_set_empty_config(router);
-                blr_master_free_config(current_master);
-
-                /* Remove any error message and errno */
-                free(router->m_errmsg);
-                router->m_errmsg = NULL;
-                router->m_errno = 0;
-
-                spinlock_release(&router->lock);
-
-                if (removed_cfg == -1)
-                {
-                    blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
-                    return 1;
-                }
-                else
-                {
-                    return blr_slave_send_ok(router, slave);
-                }
-            }
-            else
-            {
-                if (router->master_state == BLRM_UNCONFIGURED)
-                {
-                    blr_slave_send_ok(router, slave);
-                }
-                else
-                {
-                    blr_slave_send_error_packet(slave,
-                                                "This operation cannot be performed "
-                                                "with a running slave; run STOP SLAVE first",
-                                                (unsigned int)1198, NULL);
-                }
-                return 1;
-            }
-        }
     }
-    /* start replication from the current configured master */
-    else if (strcasecmp(query_text, "START") == 0)
-    {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete START command.",
-                      router->service->name);
-        }
-        else if (strcasecmp(word, "SLAVE") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_start_slave(router, slave);
-        }
-    }
-    /* stop replication from the current master*/
-    else if (strcasecmp(query_text, "STOP") == 0)
-    {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete STOP command.", router->service->name);
-        }
-        else if (strcasecmp(word, "SLAVE") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_stop_slave(router, slave);
-        }
-    }
-    /* Change the server to replicate from */
-    else if (strcasecmp(query_text, "CHANGE") == 0)
-    {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete CHANGE command.", router->service->name);
-        }
-        else if (strcasecmp(word, "MASTER") == 0)
-        {
-            if (router->master_state != BLRM_SLAVE_STOPPED && router->master_state != BLRM_UNCONFIGURED)
-            {
-                MXS_FREE(query_text);
-                blr_slave_send_error_packet(slave, "Cannot change master with a running slave; "
-                                            "run STOP SLAVE first",
-                                            (unsigned int)1198, NULL);
-                return 1;
-            }
-            else
-            {
-                int rc;
-                char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
-                MASTER_SERVER_CFG *current_master = NULL;
-
-                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
-
-                if (!current_master)
-                {
-                    MXS_FREE(query_text);
-                    blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
-
-                    return 1;
-                }
-
-                blr_master_get_config(router, current_master);
-
-                rc = blr_handle_change_master(router, brkb, error_string);
-
-                MXS_FREE(query_text);
-
-                if (rc < 0)
-                {
-                    /* CHANGE MASTER TO has failed */
-                    blr_slave_send_error_packet(slave, error_string, (unsigned int)1234, "42000");
-                    blr_master_free_config(current_master);
-
-                    return 1;
-                }
-                else
-                {
-                    int ret;
-                    char error[BINLOG_ERROR_MSG_LEN + 1];
-
-                    /* Write/Update master config into master.ini file */
-                    ret = blr_file_write_master_config(router, error);
-
-                    if (ret)
-                    {
-                        /* file operation failure: restore config */
-                        spinlock_acquire(&router->lock);
-
-                        blr_master_apply_config(router, current_master);
-                        blr_master_free_config(current_master);
-
-                        spinlock_release(&router->lock);
-
-                        snprintf(error_string, BINLOG_ERROR_MSG_LEN,
-                                 "Error writing into %s/master.ini: %s", router->binlogdir,
-                                 error);
-                        MXS_ERROR("%s: %s",
-                                  router->service->name, error_string);
-
-                        blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
-
-                        return 1;
-                    }
-
-                    /**
-                     * check if router is BLRM_UNCONFIGURED
-                     * and change state to BLRM_SLAVE_STOPPED
-                     */
-                    if (rc == 1 || router->master_state == BLRM_UNCONFIGURED)
-                    {
-                        spinlock_acquire(&router->lock);
-
-                        router->master_state = BLRM_SLAVE_STOPPED;
-
-                        spinlock_release(&router->lock);
-
-                        /*
-                         * The binlog server has just been configured
-                         * master.ini file written in router->binlogdir.
-                         * Now create the binlogfile specified in MASTER_LOG_FILE
-                         */
-
-                        if (blr_file_new_binlog(router, router->binlog_name))
-                        {
-                            MXS_INFO("%s: 'master.ini' created, binlog file '%s' created", router->service->name, router->binlog_name);
-                        }
-                        blr_master_free_config(current_master);
-                        return blr_slave_send_ok(router, slave);
-                    }
-
-                    if (router->trx_safe &&
-                        router->pending_transaction.state > BLRM_NO_TRANSACTION)
-                    {
-                        if (strcmp(router->binlog_name, router->prevbinlog) != 0)
-                        {
-                            char message[BINLOG_ERROR_MSG_LEN + 1] = "";
-                            snprintf(message, BINLOG_ERROR_MSG_LEN,
-                                     "1105:Partial transaction in file %s starting at pos %lu, "
-                                     "ending at pos %lu will be lost with next START SLAVE command",
-                                     current_master->logfile, current_master->safe_pos, current_master->pos);
-                            blr_master_free_config(current_master);
-
-                            return blr_slave_send_warning_message(router, slave, message);
-                        }
-                    }
-
-                    blr_master_free_config(current_master);
-
-                    /*
-                     * The CHAMGE MASTER command might specify a new binlog file.
-                     * Let's create the binlogfile specified in MASTER_LOG_FILE
-                     */
-
-                    if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name))
-                    {
-                        if (blr_file_new_binlog(router, router->binlog_name))
-                        {
-                            MXS_INFO("%s: created new binlog file '%s' by 'CHANGE MASTER TO' command",
-                                     router->service->name, router->binlog_name);
-                        }
-                    }
-                    return blr_slave_send_ok(router, slave);
-                }
-            }
-        }
-    }
-    else if (strcasecmp(query_text, "DISCONNECT") == 0)
-    {
-        if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-        {
-            MXS_ERROR("%s: Incomplete DISCONNECT command.", router->service->name);
-        }
-        else if (strcasecmp(word, "ALL") == 0)
-        {
-            MXS_FREE(query_text);
-            return blr_slave_disconnect_all(router, slave);
-        }
-        else if (strcasecmp(word, "SERVER") == 0)
-        {
-            if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-            {
-                MXS_ERROR("%s: Expected DISCONNECT SERVER $server_id",
-                          router->service->name);
-            }
-            else
-            {
-                int serverid = atoi(word);
-                MXS_FREE(query_text);
-                return blr_slave_disconnect_server(router, slave, serverid);
-            }
-        }
+    else
+    {    /* Handle ADMIN commands */
+         if (blr_handle_admin_stmt(router,
+                                   slave,
+                                   word,
+                                  brkb))
+         {
+             MXS_FREE(query_text);
+             return 1;
+         }
     }
 
+    /* - 3 - Handle unsuppored statements from client */
     MXS_FREE(query_text);
 
     query_text = strndup(qtext, query_len);
