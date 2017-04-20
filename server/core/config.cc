@@ -84,6 +84,7 @@ const char CN_MS_TIMESTAMP[]                  = "ms_timestamp";
 const char CN_NAME[]                          = "name";
 const char CN_NON_BLOCKING_POLLS[]            = "non_blocking_polls";
 const char CN_OPTIONS[]                       = "options";
+const char CN_PARAMETERS[]                    = "parameters";
 const char CN_PASSWORD[]                      = "password";
 const char CN_POLL_SLEEP[]                    = "poll_sleep";
 const char CN_PORT[]                          = "port";

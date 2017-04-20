@@ -117,7 +117,24 @@ HttpResponse cb_create_server(HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+}
+
+HttpResponse cb_alter_server(HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json)
+    {
+        SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+
+        if (server && runtime_alter_server_from_json(server, json))
+        {
+            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
 HttpResponse cb_create_monitor(HttpRequest& request)
@@ -134,7 +151,7 @@ HttpResponse cb_create_monitor(HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
 HttpResponse cb_all_servers(HttpRequest& request)
@@ -301,6 +318,8 @@ public:
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
+
+        m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
     }
 
     ~RootResource()

@@ -10,15 +10,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cppdefs.hh>
+
 #include "maxscale/config_runtime.h"
 
 #include <strings.h>
 #include <string>
 #include <set>
+#include <iterator>
+#include <algorithm>
 
 #include <maxscale/atomic.h>
 #include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/jansson.hh>
 
 #include "maxscale/config.h"
 #include "maxscale/monitor.h"
@@ -27,6 +33,7 @@
 
 using std::string;
 using std::set;
+using mxs::Closer;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
@@ -271,7 +278,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
     return rval;
 }
 
-bool runtime_alter_server(SERVER *server, char *key, char *value)
+bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
     spinlock_acquire(&crt_lock);
     bool valid = true;
@@ -736,8 +743,8 @@ static bool server_contains_required_fields(json_t* json)
     json_t* value;
 
     return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-        (value = json_object_get(json, CN_ADDRESS)) && json_is_string(value) &&
-        (value = json_object_get(json, CN_PORT)) && json_is_integer(value);
+           (value = json_object_get(json, CN_ADDRESS)) && json_is_string(value) &&
+           (value = json_object_get(json, CN_PORT)) && json_is_integer(value);
 }
 
 const char* server_relation_types[] =
@@ -750,7 +757,7 @@ const char* server_relation_types[] =
 static bool server_relation_is_valid(const string& type, const string& value)
 {
     return (type == CN_SERVICES && service_find(value.c_str())) ||
-        (type == CN_MONITORS && monitor_find(value.c_str()));
+           (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
 static bool unlink_server_relations(SERVER* server, set<string>& relations)
@@ -824,12 +831,71 @@ SERVER* runtime_create_server_from_json(json_t* json)
     return rval;
 }
 
+bool handle_alter_server_relations(SERVER* server, json_t* new_json)
+{
+    bool rval = false;
+    set<string> old_relations;
+    set<string> new_relations;
+    Closer<json_t*> old_json(server_to_json(server, ""));
+    ss_dassert(old_json.get());
+
+    if (extract_relations(old_json.get(), old_relations, server_relation_types, server_relation_is_valid) &&
+        extract_relations(new_json, new_relations, server_relation_types, server_relation_is_valid))
+    {
+        set<string> removed_relations;
+        set<string> added_relations;
+
+        std::set_difference(old_relations.begin(), old_relations.end(),
+                            new_relations.begin(), new_relations.end(),
+                            std::inserter(removed_relations, removed_relations.begin()));
+
+        std::set_difference(new_relations.begin(), new_relations.end(),
+                            old_relations.begin(), old_relations.end(),
+                            std::inserter(added_relations, added_relations.begin()));
+
+        if (link_server_relations(server, added_relations) &&
+            unlink_server_relations(server, removed_relations))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
+{
+    bool rval = false;
+
+    if (handle_alter_server_relations(server, new_json))
+    {
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+
+        if (parameters)
+        {
+            rval = true;
+            const char *key;
+            json_t *value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                if (!runtime_alter_server(server, key, mxs::json_to_string(value).c_str()))
+                {
+                    rval = false;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
 static bool monitor_contains_required_fields(json_t* json)
 {
     json_t* value;
 
     return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-        (value = json_object_get(json, CN_MODULE)) && json_is_string(value);
+           (value = json_object_get(json, CN_MODULE)) && json_is_string(value);
 }
 
 const char* monitor_relation_types[] =

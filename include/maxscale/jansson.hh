@@ -15,6 +15,7 @@
 #include <maxscale/cppdefs.hh>
 
 #include <string>
+#include <sstream>
 
 #include <maxscale/jansson.h>
 #include <maxscale/utils.hh>
@@ -71,4 +72,42 @@ static inline std::string json_dump(const Closer<json_t*>& json, int flags = 0)
     return json_dump(json.get(), flags);
 }
 
+/**
+ * @brief Convert JSON to string
+ *
+ * @param JSON to convert
+ *
+ * @return The JSON value converted to a string
+ */
+static inline std::string json_to_string(json_t* json)
+{
+    std::stringstream ss;
+
+    if (json_is_string(json))
+    {
+        ss << json_string_value(json);
+    }
+    else if (json_is_boolean(json))
+    {
+        ss << (json_boolean_value(json) ? "true" : "false");
+    }
+    else if (json_is_real(json))
+    {
+        ss << json_real_value(json);
+    }
+    else if (json_is_number(json))
+    {
+        ss << json_number_value(json);
+    }
+    else if (json_is_integer(json))
+    {
+        ss << json_integer_value(json);
+    }
+    else if (json_is_null(json))
+    {
+        ss << "";
+    }
+
+    return ss.str();
+}
 }

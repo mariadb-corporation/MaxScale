@@ -73,6 +73,7 @@ extern const char CN_MS_TIMESTAMP[];
 extern const char CN_NAME[];
 extern const char CN_NON_BLOCKING_POLLS[];
 extern const char CN_OPTIONS[];
+extern const char CN_PARAMETERS[];
 extern const char CN_PASSWORD[];
 extern const char CN_POLL_SLEEP[];
 extern const char CN_PORT[];

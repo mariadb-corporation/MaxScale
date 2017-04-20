@@ -14,23 +14,6 @@
 /**
  * @file server.c  - A representation of a backend server within the gateway.
  *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 18/06/13     Mark Riddoch            Initial implementation
- * 17/05/14     Mark Riddoch            Addition of unique_name
- * 20/05/14     Massimiliano Pinto      Addition of server_string
- * 21/05/14     Massimiliano Pinto      Addition of node_id
- * 28/05/14     Massimiliano Pinto      Addition of rlagd and node_ts fields
- * 20/06/14     Massimiliano Pinto      Addition of master_id, depth, slaves fields
- * 26/06/14     Mark Riddoch            Addition of server parameters
- * 30/08/14     Massimiliano Pinto      Addition of new service status description
- * 30/10/14     Massimiliano Pinto      Addition of SERVER_MASTER_STICKINESS description
- * 01/06/15     Massimiliano Pinto      Addition of server_update_address/port
- * 19/06/15     Martin Brampton         Extra code for persistent connections
- *
- * @endverbatim
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +22,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <maxscale/config.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
@@ -1403,14 +1387,25 @@ json_t* server_list_to_json(const char* host)
 
 json_t* server_to_json(const SERVER* server, const char* host)
 {
-    // TODO: Add error checks
     json_t* rval = json_object();
 
     json_object_set_new(rval, CN_NAME, json_string(server->unique_name));
-    json_object_set_new(rval, CN_ADDRESS, json_string(server->name));
-    json_object_set_new(rval, CN_PORT, json_integer(server->port));
-    json_object_set_new(rval, CN_PROTOCOL, json_string(server->protocol));
 
+    /** Store server parameters  */
+    json_t* params = json_object();
+
+    json_object_set_new(params, CN_ADDRESS, json_string(server->name));
+    json_object_set_new(params, CN_PORT, json_integer(server->port));
+    json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
+
+    for (SERVER_PARAM* p = server->parameters; p; p = p->next)
+    {
+        json_object_set_new(params, p->name, json_string(p->value));
+    }
+
+    json_object_set_new(rval, CN_PARAMETERS, params);
+
+    /** Store general information about the server state */
     char* stat = server_status(server);
     json_object_set_new(rval, "status", json_string(stat));
     MXS_FREE(stat);
@@ -1452,6 +1447,7 @@ json_t* server_to_json(const SERVER* server, const char* host)
         json_object_set_new(rval, "last_heartbeat", json_string(timebuf));
     }
 
+    /** Store statistics */
     json_t* stats = json_object();
 
     json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
@@ -1460,13 +1456,14 @@ json_t* server_to_json(const SERVER* server, const char* host)
 
     json_object_set_new(rval, "statictics", stats);
 
+    /** Store server relations to other objects */
     json_t* rel = json_object();
 
     json_t* arr = service_relations_to_server(server, host);
 
     if (json_array_size(arr) > 0)
     {
-        json_object_set_new(rel, "services", arr);
+        json_object_set_new(rel, CN_SERVICES, arr);
     }
     else
     {
@@ -1477,14 +1474,14 @@ json_t* server_to_json(const SERVER* server, const char* host)
 
     if (json_array_size(arr) > 0)
     {
-        json_object_set_new(rel, "monitors", arr);
+        json_object_set_new(rel, CN_MONITORS, arr);
     }
     else
     {
         json_decref(arr);
     }
 
-    json_object_set_new(rval, "relationships", rel);
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
 
     return rval;
 }

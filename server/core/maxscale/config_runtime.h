@@ -89,7 +89,7 @@ bool runtime_unlink_server(SERVER *server, const char *target);
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_server(SERVER *server, char *key, char *value);
+bool runtime_alter_server(SERVER *server, const char *key, const char *value);
 
 /**
  * @brief Enable SSL for a server
@@ -187,6 +187,16 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor);
  * @return Created server or NULL on error
  */
 SERVER* runtime_create_server_from_json(json_t* json);
+
+/**
+ * @brief Alter a server using JSON
+ *
+ * @param server Server to alter
+ * @param new_json JSON definition of the new server
+ *
+ * @return True if the server was successfully modified to represent @c new_json
+ */
+bool runtime_alter_server_from_json(SERVER* server, json_t* new_json);
 
 /**
  * @brief Create a new monitor from JSON
