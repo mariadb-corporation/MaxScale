@@ -1,10 +1,4 @@
-MariaDB MaxScale
-
-Debug & Diagnostic Support
-
-Mark Riddoch
-
-Last Updated: 24th November 2014
+# MariaDB MaxScale Debug & Diagnostic Support
 
 [[TOC]]
 
