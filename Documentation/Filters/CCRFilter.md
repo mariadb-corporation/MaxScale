@@ -10,7 +10,7 @@ done through MaxScale while still allowing scaleout of non-critical reads.
 When the filter detects a statement that would modify the database, it attaches a
 routing hint to all following statements. This routing hint guides the routing
 module to route the statement to the master server where data is guaranteed to be
-in a up-to-date state.
+in an up-to-date state.
 
 ## Filter Options
 
