@@ -1,29 +1,5 @@
 # MariaDB MaxScale Nagios plugins, for Nagios 3.5.1
 
-Massimiliano Pinto
-
-Last Updated: 12th March 2015
-
-## Document History
-
-<table>
-  <tr>
-    <td>Date</td>
-    <td>Change</td>
-    <td>Who</td>
-  </tr>
-  <tr>
-    <td>10th March 2015</td>
-    <td>Initial version</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-    <tr>
-    <td>20th May 2016</td>
-    <td>MaxAdmin uses UNIX socket only</td>
-    <td>Massimiliano Pinto</td>
-  </tr>
-</table>
-
 # Introduction
 
 Nagios® Core™ is an Open Source system and network monitoring application. It watches hosts and services that you specify, alerting you when things go bad and when they get better.
