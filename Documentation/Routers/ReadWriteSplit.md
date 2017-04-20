@@ -1,6 +1,6 @@
 # Readwritesplit
 
-This document provides a short overview of the **readwritesplit** router module and its intended use case scenarios. It also displays all router configuration parameters with their descriptions. A list of current limitations of the module is included and examples of the router's use are provided.
+This document provides a short overview of the **readwritesplit** router module and its intended use case scenarios. It also displays all router configuration parameters with their descriptions. A list of current limitations of the module is included and use examples are provided.
 
 ## Overview
 
@@ -10,7 +10,7 @@ The router is designed to be used with a traditional Master-Slave replication cl
 
 ## Configuration
 
-Readwritesplit router-specific settings are specified in the configuration file of MariaDB MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
+Readwritesplit router-specific settings are specified in the configuration file of MariaDB MaxScale in its specific section. The section can be freely named but the name is used later as a reference in a listener section.
 
 For more details about the standard service parameters, refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
@@ -23,18 +23,16 @@ For more details about the standard service parameters, refer to the [Configurat
 	max_slave_connections=<max. number, or % of available slaves>
 
 ### `max_slave_replication_lag`
-**`max_slave_replication_lag`** specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than configured value a slave can't be used for routing.
+
+**`max_slave_replication_lag`** specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than the configured value a slave can't be used for routing.
 
 This feature is disabled by default.
 
 	max_slave_replication_lag=<allowed lag in seconds>
 
-This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set.
-Please note max_slave_replication_lag must be greater than monitor interval.
+This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set. max_slave_replication_lag must be greater than the monitor interval.
 
-This option only affects Master-Slave clusters. Galera clusters do not have a
-concept of slave lag even if the application of write sets might have lag.
-
+This option only affects Master-Slave clusters. Galera clusters do not have a concept of slave lag even if the application of write sets might have lag.
 
 ### `use_sql_variables_in`
 
@@ -44,11 +42,11 @@ concept of slave lag even if the application of write sets might have lag.
 
 The default is to use SQL variables in all servers.
 
-When value all is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Note, that queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as:
+When value `all` is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as:
 
     INSERT INTO test.t1 VALUES (@myid:=@myid+1)
 
-In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
+In above-mentioned case the user-defined variable would only be updated in the master where the query would be routed to due to the `INSERT` statement.
 
 **Note:** As of version 2.1 of MaxScale, all of the router options can also be
 defined as parameters. The values defined in _router_options_ will have priority
@@ -74,7 +72,9 @@ Multiple options can be defined as a comma-separated list of parameter-value pai
 ```
 router_options=<option>,<option>
 ```
-For example, to set **`slave_selection_criteria** and **`disable_sescmd_history`**, write
+
+For example, to set **`slave_selection_criteria`** and **`disable_sescmd_history`**, write
+
 ```
 router_options=slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS,disable_sescmd_history=true
 ```
@@ -241,8 +241,8 @@ The following operations are routed to master:
 
 * write statements,
 * all statements within an open transaction,
-* stored procedure calls, and
-* user-defined function calls.
+* stored procedure calls
+* user-defined function calls
 * DDL statements (`DROP`|`CREATE`|`ALTER TABLE` … etc.)
 * `EXECUTE` (prepared) statements
 * all statements using temporary tables
