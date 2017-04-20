@@ -170,7 +170,23 @@ The maxscale log can also be flushed explicitly.
 	MaxScale>
 ```
 
-This may be integrated into the Linux _logrotate_ mechanism by adding a configuration file to the /etc/logrotate.d directory.
+This may be integrated into the Linux _logrotate_ mechanism by adding a configuration file to the /etc/logrotate.d directory. If we assume we want to rotate the log files once per month and wish to keep 5 log files worth of history, the configuration file would look as follows.
+ 
+```
+/var/log/maxscale/maxscale.log {
+monthly
+rotate 5
+missingok
+nocompress
+sharedscripts
+postrotate
+\# run if maxscale is running
+if test -n "`ps acx|grep maxscale`"; then
+/usr/bin/maxadmin flush logs
+fi
+endscript
+}
+```
 
 **Note**:
 
