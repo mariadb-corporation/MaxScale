@@ -136,7 +136,7 @@ socket=default
 
 # Starting MariaDB MaxScale
 
-Upon completion of the configuration process MariaDB MaxScale is ready to be started. This may either be done manually by running the `maxscale` command or via the service interface.
+Upon completion of the configuration MariaDB MaxScale is ready to be started. This may either be done manually by running the `maxscale` command or via the service interface.
 
 ```
 % maxscale
