@@ -3276,18 +3276,21 @@ static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *val
         }
 
         int mode = F_OK;
+        int mask = X_OK;
 
         if (params->options & MXS_MODULE_OPT_PATH_W_OK)
         {
+            mask |= S_IWUSR;
             mode |= W_OK;
         }
         if (params->options & MXS_MODULE_OPT_PATH_R_OK)
         {
+            mask |= S_IRUSR;
             mode |= R_OK;
         }
         if (params->options & MXS_MODULE_OPT_PATH_X_OK)
         {
-            mode |= X_OK;
+            mask |= S_IXUSR;
         }
 
         if (access(buf, mode) == 0)
@@ -3296,8 +3299,30 @@ static bool check_path_parameter(const MXS_MODULE_PARAM *params, const char *val
         }
         else
         {
-            MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s", value,
-                      buf, errno, mxs_strerror(errno));
+            /** Save errno as we do a second call to `accept` */
+            int er = errno;
+
+            if (access(buf, F_OK) == 0 || (params->options & MXS_MODULE_OPT_PATH_CREAT) == 0)
+            {
+                /**
+                 * Path already exists and it doesn't have the requested access
+                 * right or the module doesn't want the directory to be created
+                 * if it doesn't exist.
+                 */
+                MXS_ERROR("Bad path parameter '%s' (absolute path '%s'): %d, %s",
+                          value, buf, er, mxs_strerror(er));
+            }
+            else if (mxs_mkdir_all(buf, mask))
+            {
+                /** Successfully created path */
+                valid = true;
+            }
+            else
+            {
+                /** Failed to create the directory, errno is set in `mxs_mkdir_all` */
+                MXS_ERROR("Can't create path '%s' (absolute path '%s'): %d, %s",
+                          value, buf, errno, mxs_strerror(errno));
+            }
         }
     }
     else

@@ -201,7 +201,14 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
             {"heartbeat", MXS_MODULE_PARAM_COUNT, BLR_HEARTBEAT_DEFAULT_INTERVAL},
             {"send_slave_heartbeat", MXS_MODULE_PARAM_BOOL, "false"},
-            {"binlogdir", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_W_OK},
+            {
+                "binlogdir",
+                MXS_MODULE_PARAM_PATH,
+                NULL,
+                MXS_MODULE_OPT_PATH_R_OK |
+                MXS_MODULE_OPT_PATH_W_OK |
+                MXS_MODULE_OPT_PATH_CREAT
+            },
             {"ssl_cert_verification_depth", MXS_MODULE_PARAM_COUNT, "9"},
             {MXS_END_MODULE_PARAMS}
         }

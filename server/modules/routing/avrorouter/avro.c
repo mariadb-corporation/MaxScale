@@ -181,13 +181,16 @@ MXS_MODULE* MXS_CREATE_MODULE()
                 "binlogdir",
                 MXS_MODULE_PARAM_PATH,
                 NULL,
-                MXS_MODULE_OPT_PATH_R_OK
+                MXS_MODULE_OPT_PATH_R_OK |
+                MXS_MODULE_OPT_PATH_CREAT
             },
             {
                 "avrodir",
                 MXS_MODULE_PARAM_PATH,
                 MXS_DEFAULT_DATADIR,
-                MXS_MODULE_OPT_PATH_W_OK
+                MXS_MODULE_OPT_PATH_R_OK |
+                MXS_MODULE_OPT_PATH_W_OK |
+                MXS_MODULE_OPT_PATH_CREAT
             },
             {"source", MXS_MODULE_PARAM_SERVICE},
             {"filestem", MXS_MODULE_PARAM_STRING, BINLOG_NAME_ROOT},

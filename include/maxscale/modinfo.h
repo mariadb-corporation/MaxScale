@@ -102,7 +102,8 @@ enum mxs_module_param_options
     MXS_MODULE_OPT_PATH_R_OK   = (1 << 2), /**< PATH: Read permission to path required */
     MXS_MODULE_OPT_PATH_W_OK   = (1 << 3), /**< PATH: Write permission to path required */
     MXS_MODULE_OPT_PATH_F_OK   = (1 << 4), /**< PATH: Path must exist */
-    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 5)  /**< ENUM: Only one value can be defined */
+    MXS_MODULE_OPT_PATH_CREAT  = (1 << 5), /**< PATH: Create path if it doesn't exist */
+    MXS_MODULE_OPT_ENUM_UNIQUE = (1 << 6)  /**< ENUM: Only one value can be defined */
 };
 
 /** String to enum value mappings */
