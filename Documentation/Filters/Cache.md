@@ -622,6 +622,9 @@ storage=storage_inmemory
 
 ## `storage_rocksdb`
 
+This storage module is not built by default and is not included in the
+MariaDB MaxScale packages.
+
 This storage module uses RocksDB database for storing the cached data. The
 directory where the RocksDB database will be created is by default created
 into the _MaxScale cache_ directory, which usually is not on a RAM disk. For
