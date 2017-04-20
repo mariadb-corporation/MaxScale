@@ -94,6 +94,7 @@ typedef struct server
     uint8_t        charset;        /**< Default server character set */
     bool           is_active;      /**< Server is active and has not been "destroyed" */
     bool           created_online; /**< Whether this server was created after startup */
+    bool           use_proxy_protocol; /**< Send proxy-protocol header when connecting client sessions. */
 #if defined(SS_DEBUG)
     skygw_chk_t    server_chk_tail;
 #endif
@@ -189,6 +190,8 @@ enum
 #define SERVER_IS_RELAY_SERVER(server)                                  \
     (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE))
+
+extern const char USE_PROXY_PROTOCOL[];
 
 /**
  * @brief Allocate a new server

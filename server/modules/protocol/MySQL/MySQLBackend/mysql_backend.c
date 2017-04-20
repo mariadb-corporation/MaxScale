@@ -77,6 +77,9 @@ static int gw_send_change_user_to_backend(char          *dbname,
                                           char          *user,
                                           uint8_t       *passwd,
                                           MySQLProtocol *conn);
+static void gw_send_proxy_protocol_header(DCB *backend_dcb);
+static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
+                                   in_port_t *port_out);
 
 /*
  * The module entry point routine. It is this routine that
@@ -217,6 +220,11 @@ static int gw_create_backend_connection(DCB *backend_dcb,
                   server->port,
                   protocol->fd,
                   session->client_dcb->fd);
+
+        if (server->use_proxy_protocol)
+        {
+            gw_send_proxy_protocol_header(backend_dcb);
+        }
         break;
 
     case 1:
@@ -919,6 +927,10 @@ static int gw_write_backend_event(DCB *dcb)
         if (backend_protocol->protocol_auth_state == MXS_AUTH_STATE_PENDING_CONNECT)
         {
             backend_protocol->protocol_auth_state = MXS_AUTH_STATE_CONNECTED;
+            if (dcb->server->use_proxy_protocol)
+            {
+                gw_send_proxy_protocol_header(dcb);
+            }
         }
         else
         {
@@ -1821,4 +1833,137 @@ gw_send_change_user_to_backend(char          *dbname,
         rc = 1;
     }
     return rc;
+}
+
+/* Send proxy protocol header. See
+ * http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
+ * for more information. Currently only supports the text version (v1) of
+ * the protocol. Binary version may be added when the feature has been confirmed
+ * to work.
+ *
+ * @param backend_dcb The target dcb.
+ */
+static void gw_send_proxy_protocol_header(DCB *backend_dcb)
+{
+    // TODO: Add support for chained proxies. Requires reading the client header.
+
+    const DCB *client_dcb = backend_dcb->session->client_dcb;
+    const int client_fd = client_dcb->fd;
+    const sa_family_t family = client_dcb->ip.ss_family;
+    const char *family_str = NULL;
+
+    struct sockaddr_storage sa_peer;
+    struct sockaddr_storage sa_local;
+    socklen_t sa_peer_len = sizeof(sa_peer);
+    socklen_t sa_local_len = sizeof(sa_local);
+
+    /* Fill in peer's socket address.  */
+    if (getpeername(client_fd, (struct sockaddr *)&sa_peer, &sa_peer_len) == -1)
+    {
+        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getpeername()", client_fd);
+        return;
+    }
+
+    /* Fill in this socket's local address. */
+    if (getsockname(client_fd, (struct sockaddr *)&sa_local, &sa_local_len) == -1)
+    {
+        MXS_ERROR("'%s' failed on file descriptor '%d'.", "getsockname()", client_fd);
+        return;
+    }
+    ss_dassert(sa_peer.ss_family == sa_local.ss_family);
+
+    char peer_ip[INET6_ADDRSTRLEN];
+    char maxscale_ip[INET6_ADDRSTRLEN];
+    in_port_t peer_port;
+    in_port_t maxscale_port;
+
+    if (!get_ip_string_and_port(&sa_peer, peer_ip, sizeof(peer_ip), &peer_port) ||
+        !get_ip_string_and_port(&sa_local, maxscale_ip, sizeof(maxscale_ip), &maxscale_port))
+    {
+        MXS_ERROR("Could not convert network address to string form.");
+        return;
+    }
+
+    switch (family)
+    {
+    case AF_INET:
+        family_str = "TCP4";
+        break;
+
+    case AF_INET6:
+        family_str = "TCP6";
+        break;
+
+    default:
+        family_str = "UNKNOWN";
+        break;
+    }
+
+    int rval;
+    char proxy_header[108]; // 108 is the worst-case length
+    if (family == AF_INET || family == AF_INET6)
+    {
+        rval = snprintf(proxy_header, sizeof(proxy_header), "PROXY %s %s %s %d %d\r\n",
+                        family_str, peer_ip, maxscale_ip, peer_port, maxscale_port);
+    }
+    else
+    {
+        rval = snprintf(proxy_header, sizeof(proxy_header), "PROXY %s\r\n", family_str);
+    }
+    if (rval < 0 || rval >= sizeof(proxy_header))
+    {
+        MXS_ERROR("Proxy header printing error, produced '%s'.", proxy_header);
+        return;
+    }
+
+    GWBUF *headerbuf = gwbuf_alloc_and_load(strlen(proxy_header), proxy_header);
+    if (headerbuf)
+    {
+        if (!dcb_write(backend_dcb, headerbuf))
+        {
+            gwbuf_free(headerbuf);
+        }
+    }
+    return;
+}
+
+/* Read IP and port from socket address structure, return IP as string and port
+ * as host byte order integer.
+ *
+ * @param sa A sockaddr_storage containing either an IPv4 or v6 address
+ * @param ip Pointer to output array
+ * @param iplen Output array length
+ * @param port_out Port number output
+ */
+static bool get_ip_string_and_port(struct sockaddr_storage *sa,
+                                   char *ip, int iplen, in_port_t *port_out)
+{
+    bool success = false;
+    in_port_t port;
+
+    switch (sa->ss_family)
+    {
+    case AF_INET:
+        {
+            struct sockaddr_in *sock_info = (struct sockaddr_in *)sa;
+            struct in_addr *addr = &(sock_info->sin_addr);
+            success = (inet_ntop(AF_INET, addr, ip, iplen) != NULL);
+            port = ntohs(sock_info->sin_port);
+        }
+        break;
+
+    case AF_INET6:
+        {
+            struct sockaddr_in6 *sock_info = (struct sockaddr_in6 *)sa;
+            struct in6_addr *addr = &(sock_info->sin6_addr);
+            success = (inet_ntop(AF_INET6, addr, ip, iplen) != NULL);
+            port = ntohs(sock_info->sin6_port);
+        }
+        break;
+    }
+    if (success)
+    {
+        *port_out = port;
+    }
+    return success;
 }
