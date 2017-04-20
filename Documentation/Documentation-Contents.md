@@ -16,6 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
+- [Upgrading MariaDB MaxScale from 2.0 to 2.1](Upgrading/Upgrading-To-MaxScale-2.1.md)
 - [Upgrading MariaDB MaxScale from 1.4 to 2.0](Upgrading/Upgrading-To-MaxScale-2.0.md)
 
 ## Reference
@@ -54,7 +55,7 @@ Here are tutorials on monitoring and managing MariaDB MaxScale in cluster enviro
  - [MariaDB MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)
  - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
  - [Nagios Plugins for MariaDB MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
- 
+
 ## Routers
 
 The routing module is the core of a MariaDB MaxScale service. The router documentation
