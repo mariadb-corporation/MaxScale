@@ -21,14 +21,14 @@ A global, maxscale, section is included within every MariaDB MaxScale configurat
 threads=4
 ```
 
-Since we are using Galera Cluster and connection routing we want a single to which the client application can connect; MariaDB MaxScale will then route connections to this port onwards to the various nodes within the Galera Cluster. To achieve this within MariaDB MaxScale we need to define a service in the ini file. Create a section for each in your MariaDB MaxScale configuration file and set the type to service, the section name is the names of the service and should be meaningful to the administrator. Names may contain whitespace.
+Since we are using Galera Cluster and connection routing, we want a single point to which the client application can connect. MariaDB MaxScale will then route connections to this port onwards to the various nodes within the Galera Cluster. To achieve this within MariaDB MaxScale, we need to define a service in the config file. Create a section in your configuration file and set the type to service, the section name is the name of the service and should be meaningful to the administrator. Names may contain whitespace.
 
 ```
 [Galera Service]
 type=service
 ```
 
-The router for this section the readconnroute module, also the service should be provided with the list of servers that will be part of the cluster. The server names given here are actually the names of server sections in the configuration file and not the physical hostnames or addresses of the servers.
+The router for this section is the *readconnroute* module, also the service should be provided with the list of servers that will be part of the cluster. The server names given here are the names of server sections in the configuration file and not the physical hostnames or addresses of the servers.
 
 ```
 [Galera Service]
@@ -37,7 +37,7 @@ router=readconnroute
 servers=dbserv1, dbserv2, dbserv3
 ```
 
-In order to instruct the router to which servers it should route we must add router options to the service. The router options are compared to the status that the monitor collects from the servers and used to restrict the eligible set of servers to which that service may route. In our case we use the option that restricts us to servers that are fully functional members of the Galera cluster which are able to support SQL operations on the cluster. To achieve this we use the router option synced.
+In order to instruct the router to which servers it should route we must add router options to the service. The router options are compared to the statuses the monitor collects from the servers and are used to restrict the eligible set of servers to which that service may route to. In our case we use the option that restricts us to servers that are fully functional members of the Galera cluster and which are able to support SQL operations on the cluster. To achieve this we use the router option `synced`.
 
 ```
 [Galera Service]
@@ -47,7 +47,7 @@ router_options=synced
 servers=dbserv1, dbserv2, dbserv3
 ```
 
-The final step in the service section is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password, either plain text or encrypted passwords may be used. In order to use encrypted passwords a set of keys must be generated that will be used by the encryption and decryption process. To generate the keys use the maxkeys command and pass the name of the secrets file in which the keys are stored.
+The final step in the service section is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password, either plain text or encrypted passwords may be used. To use encrypted passwords a set of keys must be generated that will be used by the encryption and decryption process. To generate the keys use the maxkeys command and pass the name of the secrets file in which the keys are stored.
 
 ```
 % maxkeys /var/lib/maxscale/.secrets
@@ -74,7 +74,7 @@ user=maxscale
 passwd=96F99AA1315BDC3604B006F427DD9484
 ```
 
-This completes the definitions required by the service, however listening ports must be associated with a service in order to allow network connections. This is done by creating a series of listener sections. These sections again are named for the convenience of the administrator and should be of type listener with an entry labeled service which contains the name of the service to associate the listener with. Each service may have multiple listeners.
+This completes the definitions required by the service, however listening ports must be associated with a service in order to allow network connections. This is done by creating a series of listener sections. These sections again are named for the convenience of the administrator and should be of type `listener` with a service entry which contains the name of the service to associate the listener with. Each service may have multiple listeners.
 
 ```
 [Galera Listener]
@@ -82,7 +82,7 @@ type=listener
 service=Galera Service
 ```
 
-A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the MySQLClient protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
+A listener must also define the protocol module it will use for the incoming network protocol, currently this should be the `MySQLClient` protocol for all database listeners. The listener may then supply a network port to listen on and/or a socket within the file system.
 
 ```
 [Galera Listener]
