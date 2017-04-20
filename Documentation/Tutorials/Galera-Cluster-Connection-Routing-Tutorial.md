@@ -266,6 +266,5 @@ them to the master or slaves within your cluster. Other configuration options ar
 available that can alter the criteria used for routing, such as using weights to
 obtain unequal balancing operations.
 These options may be found in the MariaDB MaxScale Configuration Guide.
-More detail on the use of maxadmin can be found in the
-document ["MaxAdmin - The MariaDB MaxScale Administration & Monitoring Client Application"]
-(../Reference/MaxAdmin.md).
+More detail on the use of maxadmin can be found in the document
+["MaxAdmin - The MariaDB MaxScale Administration & Monitoring Client Application"](../Reference/MaxAdmin.md).
