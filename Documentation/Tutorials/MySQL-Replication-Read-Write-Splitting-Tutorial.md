@@ -2,19 +2,19 @@
 
 ## Environment & Solution Space
 
-The object of this tutorial is to have a system that appears to the clients of MariaDB MaxScale as if there is a single database behind MariaDB MaxScale. MariaDB MaxScale will split the statements such that write statements will be sent to the current master server in the replication cluster and read statements will be balanced across the rest of the slave servers.
+The object of this tutorial is to have a system that appears to the clients of MariaDB MaxScale as if there was a single database behind MariaDB MaxScale. MariaDB MaxScale will split the statements such that write statements will be sent to the current master server in the replication cluster and read statements will be balanced across the rest of the slave servers.
 
 ## Setting up MariaDB MaxScale
 
 The first part of this tutorial is covered in [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md). Please read it and follow the instructions for setting up MariaDB MaxScale with the type of cluster you want to use.
 
-Once you have MariaDB MaxScale installed and the database users created, we can create the configuration file for MariaDB MaxScale.
+Once you have MariaDB MaxScale installed and the database users created, the configuration file for MariaDB MaxScale can be written.
 
 ## Creating Your MariaDB MaxScale Configuration
 
-MariaDB MaxScale configuration is held in an ini file that is located in the file maxscale.cnf in the directory /etc, if you have installed in the default location then this file is available in /etc/maxscale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within the /usr/share/maxscale directory that may be use as a basis for your configuration.
+MariaDB MaxScale configuration is defined in the file `maxscale.cnf` located in the directory `/etc`. If you have installed MaxScale in the default location the file path should be `/etc/maxscale.cnf`. This file is not created as part of the installation process and must be manually created. A template file, which may be used as a basis for your configuration, exists within the `/usr/share/maxscale` directory.
 
-A global, maxscale, section is included within every MariaDB MaxScale configuration file; this is used to set the values of various MariaDB MaxScale wide parameters, perhaps the most important of these is the number of threads that MariaDB MaxScale will use to execute the code that forwards requests and handles responses for clients.
+A global section, marked `maxscale`, is included within every MariaDB MaxScale configuration file. The section is used to set the values of various process-wide parameters, for example the number of worker threads.
 
 ```
 [maxscale]
@@ -22,14 +22,14 @@ threads=4
 
 ```
 
-The first step is to create a service for our Read/Write Splitter. Create a section in your MariaDB MaxScale configuration file and set the type to service, the section names are the names of the services themselves and should be meaningful to the administrator. Names may contain whitespace.
+The first step is to create a Read/Write Splitter service. Create a section in your configuration file and set the type to service. The section header is the name of the service and should be meaningful to the administrator. Names may contain whitespace.
 
 ```
 [Splitter Service]
 type=service
 ```
 
-The router for we need to use for this configuration is the readwritesplit module, also the services should be provided with the list of servers that will be part of the cluster. The server names given here are actually the names of server sections in the configuration file and not the physical hostnames or addresses of the servers.
+The router module needed for this service is named `readwritesplit`. The service must contain a list of backend server names. The server names are the headers of server sections in the configuration file and not the physical hostnames or addresses of the servers.
 
 ```
 [Splitter Service]
@@ -38,14 +38,14 @@ router=readwritesplit
 servers=dbserv1, dbserv2, dbserv3
 ```
 
-The final step in the service sections is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password, either plain text or encrypted passwords may be used. In order to use encrypted passwords a set of keys must be generated that will be used by the encryption and decryption process. To generate the keys use the maxkeys command and pass the name of the secrets file in which the keys are stored.
+The final step in the service section is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password: either plain text or encrypted passwords. To use encrypted passwords, a set of keys for encryption/decryption must be generated. To generate the keys use the `maxkeys` command and pass the name of the secrets file containing the keys.
 
 ```
 maxkeys /var/lib/maxscale/.secrets
 
 ```
 
-Once the keys have been created the maxpasswd command can be used to generate the encrypted password.
+Once the keys have been created, use the maxpasswd command can be used to generate the encrypted password.
 
 ```
 maxpasswd plainpassword
