@@ -31,7 +31,7 @@ using std::string;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
 
-Resource::Resource(ResourceCallback cb, int components, ...):
+Resource::Resource(ResourceCallback cb, int components, ...) :
     m_cb(cb)
 {
     va_list args;
@@ -45,9 +45,11 @@ Resource::Resource(ResourceCallback cb, int components, ...):
     va_end(args);
 }
 
-Resource::~Resource() { }
+Resource::~Resource()
+{
+}
 
-bool Resource::match(HttpRequest& request)
+bool Resource::match(const HttpRequest& request) const
 {
     bool rval = false;
 
@@ -69,20 +71,20 @@ bool Resource::match(HttpRequest& request)
     return rval;
 }
 
-HttpResponse Resource::call(HttpRequest& request)
+HttpResponse Resource::call(const HttpRequest& request) const
 {
     return m_cb(request);
 };
 
-bool Resource::matching_variable_path(const string& path, const string& target)
+bool Resource::matching_variable_path(const string& path, const string& target) const
 {
     bool rval = false;
 
     if (path[0] == ':')
     {
         if ((path == ":service" && service_find(target.c_str())) ||
-            (path == ":server"  && server_find_by_unique_name(target.c_str())) ||
-            (path == ":filter"  && filter_def_find(target.c_str())) ||
+            (path == ":server" && server_find_by_unique_name(target.c_str())) ||
+            (path == ":filter" && filter_def_find(target.c_str())) ||
             (path == ":monitor" && monitor_find(target.c_str())))
         {
             rval = true;
@@ -103,7 +105,7 @@ bool Resource::matching_variable_path(const string& path, const string& target)
     return rval;
 }
 
-HttpResponse cb_create_server(HttpRequest& request)
+HttpResponse cb_create_server(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
@@ -120,7 +122,7 @@ HttpResponse cb_create_server(HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
-HttpResponse cb_alter_server(HttpRequest& request)
+HttpResponse cb_alter_server(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
@@ -137,7 +139,7 @@ HttpResponse cb_alter_server(HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
-HttpResponse cb_create_monitor(HttpRequest& request)
+HttpResponse cb_create_monitor(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
@@ -154,12 +156,12 @@ HttpResponse cb_create_monitor(HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
-HttpResponse cb_all_servers(HttpRequest& request)
+HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
 }
 
-HttpResponse cb_get_server(HttpRequest& request)
+HttpResponse cb_get_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
 
@@ -171,12 +173,12 @@ HttpResponse cb_get_server(HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
-HttpResponse cb_all_services(HttpRequest& request)
+HttpResponse cb_all_services(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, service_list_to_json(request.host()));
 }
 
-HttpResponse cb_get_service(HttpRequest& request)
+HttpResponse cb_get_service(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
 
@@ -188,12 +190,12 @@ HttpResponse cb_get_service(HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
-HttpResponse cb_all_filters(HttpRequest& request)
+HttpResponse cb_all_filters(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, filter_list_to_json(request.host()));
 }
 
-HttpResponse cb_get_filter(HttpRequest& request)
+HttpResponse cb_get_filter(const HttpRequest& request)
 {
     MXS_FILTER_DEF* filter = filter_def_find(request.uri_part(1).c_str());
 
@@ -205,12 +207,12 @@ HttpResponse cb_get_filter(HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
-HttpResponse cb_all_monitors(HttpRequest& request)
+HttpResponse cb_all_monitors(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, monitor_list_to_json(request.host()));
 }
 
-HttpResponse cb_get_monitor(HttpRequest& request)
+HttpResponse cb_get_monitor(const HttpRequest& request)
 {
     MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
 
@@ -222,13 +224,13 @@ HttpResponse cb_get_monitor(HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
-HttpResponse cb_all_sessions(HttpRequest& request)
+HttpResponse cb_all_sessions(const HttpRequest& request)
 {
     // TODO: Implement this
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_get_session(HttpRequest& request)
+HttpResponse cb_get_session(const HttpRequest& request)
 {
     int id = atoi(request.uri_part(1).c_str());
     MXS_SESSION* session = session_get_by_id(id);
@@ -243,19 +245,19 @@ HttpResponse cb_get_session(HttpRequest& request)
     return HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
-HttpResponse cb_maxscale(HttpRequest& request)
+HttpResponse cb_maxscale(const HttpRequest& request)
 {
     // TODO: Show logs
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_logs(HttpRequest& request)
+HttpResponse cb_logs(const HttpRequest& request)
 {
     // TODO: Show logs
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_flush(HttpRequest& request)
+HttpResponse cb_flush(const HttpRequest& request)
 {
     // Flush logs
     if (mxs_log_rotate() == 0)
@@ -268,19 +270,19 @@ HttpResponse cb_flush(HttpRequest& request)
     }
 }
 
-HttpResponse cb_threads(HttpRequest& request)
+HttpResponse cb_threads(const HttpRequest& request)
 {
     // TODO: Show thread status
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_tasks(HttpRequest& request)
+HttpResponse cb_tasks(const HttpRequest& request)
 {
     // TODO: Show housekeeper tasks
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_modules(HttpRequest& request)
+HttpResponse cb_modules(const HttpRequest& request)
 {
     // TODO: Show modules
     return HttpResponse(MHD_HTTP_OK);
@@ -288,6 +290,8 @@ HttpResponse cb_modules(HttpRequest& request)
 
 class RootResource
 {
+    RootResource(const RootResource&);
+    RootResource& operator=(const RootResource&);
 public:
     typedef std::shared_ptr<Resource> SResource;
     typedef list<SResource> ResourceList;
@@ -367,9 +371,9 @@ private:
 };
 
 static RootResource resources; /**< Core resource set */
-static SpinLock    resource_lock;
+static SpinLock resource_lock;
 
-HttpResponse resource_handle_request(HttpRequest& request)
+HttpResponse resource_handle_request(const HttpRequest& request)
 {
     SpinLockGuard guard(resource_lock);
     return resources.process_request(request);

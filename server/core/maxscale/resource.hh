@@ -29,7 +29,7 @@
 #include "filter.h"
 #include "session.h"
 
-typedef HttpResponse (*ResourceCallback)(HttpRequest& request);
+typedef HttpResponse (*ResourceCallback)(const HttpRequest& request);
 
 class Resource
 {
@@ -47,7 +47,7 @@ public:
      *
      * @return True if this request matches this resource
      */
-    bool match(HttpRequest& request);
+    bool match(const HttpRequest& request) const;
 
     /**
      * @brief Handle a HTTP request
@@ -56,11 +56,11 @@ public:
      *
      * @return Response to the request
      */
-    HttpResponse call(HttpRequest& request);
+    HttpResponse call(const HttpRequest& request) const;
 
 private:
 
-    bool matching_variable_path(const std::string& path, const std::string& target);
+    bool matching_variable_path(const std::string& path, const std::string& target) const;
 
     ResourceCallback m_cb; /**< Resource handler callback */
     std::deque<std::string>    m_path; /**< Path components */
@@ -73,4 +73,4 @@ private:
  *
  * @return Response to request
  */
-HttpResponse resource_handle_request(HttpRequest& request);
+HttpResponse resource_handle_request(const HttpRequest& request);
