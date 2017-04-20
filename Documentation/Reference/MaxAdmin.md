@@ -1229,20 +1229,21 @@ to servers are persisted meaning that they will still be in effect even after a
 restart.
 
 ```
-'server' - Create a new server
+create server - Create a new server
 
 Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
 
-Create a new server from the following parameters.
-
+Parameters:
 NAME          Server name
 HOST          Server host address
 PORT          Server port (default 3306)
 PROTOCOL      Server protocol (default MySQLBackend)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
-OPTIONS       Options for the authenticator module
+OPTIONS       Comma separated list of options for the authenticator
 
-The first three parameters are required, the others are optional.
+The first two parameters are required, the others are optional.
+
+Example: create server my-db-1 192.168.0.102 3306
 ```
 
 ### Adding Servers to Services and Monitors
@@ -1256,14 +1257,17 @@ sessions will only use the servers that were a part of the service when they
 were created.
 
 ```
-'server' - Add a new server to a service
+add server - Add a new server to a service
 
 Usage: add server SERVER TARGET...
 
-The TARGET must be a list of service and monitor names
-e.g. add server my-db my-service 'Cluster Monitor'
+Parameters:
+SERVER  The server that is added to TARGET
+TARGET  List of service and/or monitor names separated by spaces
 
 A server can be assigned to a maximum of 11 objects in one command
+
+Example: add server my-db my-service "Cluster Monitor"
 ```
 
 ### Removing Servers from Services and Monitors
@@ -1274,14 +1278,17 @@ server` also apply to `remove server`. The servers will only be removed from new
 sessions created after the command is executed.
 
 ```
-'server' - Remove a server from a service or a monitor
+remove server - Remove a server from a service or a monitor
 
 Usage: remove server SERVER TARGET...
 
-The TARGET must be a list of service and monitor names
-e.g. remove server my-db my-service 'Cluster Monitor'
+Parameters:
+SERVER  The server that is removed from TARGET
+TARGET  List of service and/or monitor names separated by spaces
 
 A server can be removed from a maximum of 11 objects in one command
+
+Example: remove server my-db my-service "Cluster Monitor"
 ```
 
 ### Altering Servers
@@ -1295,7 +1302,13 @@ required SSL parameters (`ssl`, `ssl_key`, `ssl_cert` and `ssl_ca_cert`) must be
 given in the same command.
 
 ```
+alter server - Alter server parameters
+
 Usage: alter server NAME KEY=VALUE ...
+
+Parameters:
+NAME      Server name
+KEY=VALUE List of `key=value` pairs separated by spaces
 
 This will alter an existing parameter of a server. The accepted values for KEY are:
 
@@ -1310,9 +1323,10 @@ ssl_ca_cert           Path to SSL CA certificate
 ssl_version           SSL version
 ssl_cert_verify_depth Certificate verification depth
 
-A maximum of 11 parameters can be changed at one time.
 To configure SSL for a newly created server, the 'ssl', 'ssl_cert',
 'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.
+
+Example: alter server my-db-1 address=192.168.0.202 port=3307
 ```
 
 ### Destroying Servers
@@ -1322,9 +1336,14 @@ created with the `create server` command should be destroyed. A server can only
 be destroyed once it has been removed from all services and monitors.
 
 ```
-'server' - Destroy a server
+destroy server - Destroy a server
 
 Usage: destroy server NAME
+
+Parameters:
+NAME Server to destroy
+
+Example: destroy server my-db-1
 ```
 
 ## Listeners
@@ -1342,16 +1361,15 @@ order for SSL to be enabled. The _default_ parameter can be used to signal that
 MaxScale should use a default value for the parameter in question.
 
 ```
-'listener' - Create a new listener for a service
+create listener - Create a new listener for a service
 
 Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
                        [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]
 
-Create a new server from the following parameters.
-
+Parameters
 SERVICE       Service where this listener is added
 NAME          Listener name
-HOST          Listener host address (default 0.0.0.0)
+HOST          Listener host address (default [::])
 PORT          Listener port (default 3306)
 PROTOCOL      Listener protocol (default MySQLClient)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
@@ -1365,6 +1383,8 @@ SSL_VERIFY_DEPTH Certificate verification depth
 The first two parameters are required, the others are optional.
 Any of the optional parameters can also have the value 'default'
 which will be replaced with the default value.
+
+Example: create listener my-service my-new-listener 192.168.0.101 4006
 ```
 
 ### Destroying Listeners
@@ -1375,9 +1395,16 @@ startup. The listener is stopped but it will remain a part of the runtime
 configuration until the next restart.
 
 ```
-'listener' - Destroy a listener
+destroy listener - Destroy a listener
 
 Usage: destroy listener SERVICE NAME
+
+Parameters:
+NAME Listener to destroy
+
+The listener is stopped and it will be removed on the next restart of MaxScale
+
+Example: destroy listener my-listener
 ```
 
 ## Monitors
@@ -1390,11 +1417,15 @@ it with the `restart monitor` command. The _user_ and _password_ parameters of
 the monitor must be defined before the monitor is started.
 
 ```
-'monitor' - Create a new monitor
+create monitor - Create a new monitor
 
 Usage: create monitor NAME MODULE
+
+Parameters:
 NAME    Monitor name
 MODULE  Monitor module
+
+Example: create monitor my-monitor mysqlmon
 ```
 
 ### Altering Monitors
@@ -1403,13 +1434,26 @@ To alter a monitor, use the `alter monitor` command. Module specific parameters
 can also be altered.
 
 ```
-'monitor' - Alter monitor parameters
+alter monitor - Alter monitor parameters
 
 Usage: alter monitor NAME KEY=VALUE ...
 
+Parameters:
+NAME      Monitor name
+KEY=VALUE List of `key=value` pairs separated by spaces
+
+All monitors support the following values for KEY:
+user                    Username used when connecting to servers
+password                Password used when connecting to servers
+monitor_interval        Monitoring interval in milliseconds
+backend_connect_timeout Server coneection timeout in seconds
+backend_write_timeout   Server write timeout in seconds
+backend_read_timeout    Server read timeout in seconds
+
 This will alter an existing parameter of a monitor. To remove parameters,
 pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='
-A maximum of 11 key-value pairs can be changed at one time
+
+Example: alter monitor my-monitor user=maxuser password=maxpwd
 ```
 
 ### Destroying Monitors
@@ -1420,9 +1464,16 @@ should be destroyed and they will remain a part of the runtime configuration
 until the next restart.
 
 ```
-'monitor' - Destroy a monitor
+destroy monitor - Destroy a monitor
 
 Usage: destroy monitor NAME
+
+Parameters:
+NAME Monitor to destroy
+
+The monitor is stopped and it will be removed on the next restart of MaxScale
+
+Example: destroy monitor my-monitor
 ```
 
 ## Other Modules
@@ -1434,6 +1485,18 @@ To list all module commands, execute `list commands` in maxadmin. This shows all
 commands that the modules have exposed. It also explains what they do and what
 sort of arguments they take.
 
+```
+list commands - List registered commands
+
+Usage: list commands [MODULE] [COMMAND]
+
+Parameters:
+MODULE  Regular expressions for filtering module names
+COMMAND Regular expressions for filtering module command names
+
+Example: list commands my-module my-command
+```
+
 If no module commands are registered, no output will be generated. Refer to the
 module specific documentation for more details about module commands.
 
@@ -1441,6 +1504,21 @@ To call a module commands, execute `call command <module> <command>` in
 maxadmin. The _<module>_ is the name of the module and _<command>_ is the
 command that should be called. The commands take a variable amount of arguments
 which are explained in the output of `list commands`.
+
+```
+call command - Call module command
+
+Usage: call command MODULE COMMAND ARGS...
+
+Parameters:
+MODULE  The module name
+COMMAND The command to call
+ARGS... Arguments for the command
+
+To list all registered commands, run 'list commands'.
+
+Example: call command my-module my-command hello world!
+```
 
 An example of this is the `dbfwfilter` module that implements a rule reloading
 mechanism as a module command. This command takes a filter name as a parameter.
