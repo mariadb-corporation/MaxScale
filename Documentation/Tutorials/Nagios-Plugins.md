@@ -123,8 +123,7 @@ In this example we are using the check_maxscale_resource as the check command
        -r <resource>	= threads
        -h		= provide this usage message
        -H <host>	= which host to connect to with SSH
-       -u <user>	= username to connect to maxscale host via SSH (same user
-       is used for maxadmin authentication)
+       -u <user>	= username to connect to maxscale host via SSH (same user is used for maxadmin authentication)
        -i <identity>	= identity file to use for <user> at <host>
        -m <maxadmin>	= /path/to/maxadmin
        -S <socket>      = UNIX socket path between maxadmin and maxscale (default
@@ -134,37 +133,31 @@ In this example we are using the check_maxscale_resource as the check command
 
 	MaxScale monitor checker plugin for Nagios
 
-	Usage: check_maxscale_resources.pl [-r <resource>] [-H <host>] [-u <user>]
-	[-S <socket>] [-m <maxadmin>] [-h]
+	Usage: check_maxscale_resources.pl [-r <resource>] [-H <host>] [-u <user>] [-S <socket>] [-m <maxadmin>] [-h]
 
 	Options:
        -r <resource>	= modules|services|filters|listeners|servers|sessions
        -h		= provide this usage message
        -H <host>	= which host to connect to with SSH
-       -u <user>	= username to connect to maxscale host via SSH (same user is
-       used for maxadmin authentication)
+       -u <user>	= username to connect to maxscale host via SSH (same user is used for maxadmin authentication)
        -i <identity>	= identity file to use for <user> at <host>
        -m <maxadmin>	= /path/to/maxadmin
-       -S <socket>      = UNIX socket path between maxadmin and maxscale (default
-       is /tmp/maxadmin.sock)
+       -S <socket>      = UNIX socket path between maxadmin and maxscale (default is /tmp/maxadmin.sock)
 
 	(3) ./check_maxscale_monitor.pl -h
 
 	MaxScale monitor checker plugin for Nagios
 
-	Usage: check_maxscale_monitors.pl [-r <resource>] [-H <host>] [-u <user>]
-	[-S <socket>] [-m <maxadmin>] [-h]
+	Usage: check_maxscale_monitors.pl [-r <resource>] [-H <host>] [-u <user>] [-S <socket>] [-m <maxadmin>] [-h]
 
 	Options:
        -r <resource>	= monitors
        -h		= provide this usage message
        -H <host>	= which host to connect to with SSH
-       -u <user>	= username to connect to maxscale host via SSH (same user is
-       used for maxadmin authentication)
+       -u <user>	= username to connect to maxscale host via SSH (same user is used for maxadmin authentication)
        -i <identity>	= identity file to use for <user> at <host>
        -m <maxadmin>	= /path/to/maxadmin
-       -S <socket>      = UNIX socket path between maxadmin and maxscale (default is
-       /tmp/maxadmin.sock)
+       -S <socket>      = UNIX socket path between maxadmin and maxscale (default is /tmp/maxadmin.sock)
 
 # Output description:
 
@@ -176,7 +169,7 @@ Example for 'services'
 OK: 7 services found | services1=RW_Router;readwritesplit;1;1 services2=RW_Split;
 readwritesplit;1;1 services3=Test Service;readconnroute;1;1 services4=Master Service;
 readconnroute;2;2 services5=Debug Service;debugcli;1;1 services6=CLI;cli;2;145
- services7=MaxInfo;maxinfo;2;2
+services7=MaxInfo;maxinfo;2;2
 ```
 
 Returns OK and the number of services
