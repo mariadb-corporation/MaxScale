@@ -2529,7 +2529,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
         for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
         {
-            if (ref->server == server)
+            if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
                 add_service_relation(arr, host, service);
             }
