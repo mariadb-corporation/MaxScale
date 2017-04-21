@@ -3473,10 +3473,11 @@ int poll_add_dcb(DCB *dcb)
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
         worker_id = dcb->session->client_dcb->poll.thread.id;
+        ss_dassert(worker_id == Worker::get_current_id());
     }
     else
     {
-        worker_id = MXS_WORKER_ANY;
+        worker_id = Worker::get_current_id();
     }
 
     if (poll_add_fd_to_worker(worker_id, dcb->fd, events, (MXS_POLL_DATA*)dcb))

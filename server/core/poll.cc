@@ -80,25 +80,7 @@ static bool add_fd_to_workers(int fd, uint32_t events, MXS_POLL_DATA* data)
     bool rv = true;
     int thread_id = data->thread.id;
 
-    for (int i = 0; i < n_threads; i++)
-    {
-        Worker* worker = Worker::get(i);
-        ss_dassert(worker);
-
-        if (!worker->add_fd(fd, events, data))
-        {
-            /** Remove the fd from the previous epoll instances */
-            for (int j = 0; j < i; j++)
-            {
-                Worker* worker = Worker::get(j);
-                ss_dassert(worker);
-
-                worker->remove_fd(fd);
-            }
-            rv = false;
-            break;
-        }
-    }
+    rv = Worker::add_shared_fd(fd, events, data);
 
     if (rv)
     {
@@ -161,18 +143,7 @@ static bool remove_fd_from_worker(int wid, int fd)
 
 static bool remove_fd_from_workers(int fd)
 {
-    int rc;
-
-    for (int i = 0; i < n_threads; ++i)
-    {
-        Worker* worker = Worker::get(i);
-        ss_dassert(worker);
-        // We don't care about the result, anything serious and the
-        // function will not return and the process taken down.
-        worker->remove_fd(fd);
-    }
-
-    return true;
+    return Worker::remove_shared_fd(fd);
 }
 
 bool poll_remove_fd_from_worker(int wid, int fd)
