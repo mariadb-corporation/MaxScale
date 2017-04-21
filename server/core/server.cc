@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string>
 
 #include <maxscale/config.h>
 #include <maxscale/service.h>
@@ -44,6 +45,8 @@
 using maxscale::Semaphore;
 using maxscale::Worker;
 using maxscale::WorkerTask;
+
+using std::string;
 
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
@@ -1456,8 +1459,13 @@ json_t* server_to_json(const SERVER* server, const char* host)
 
     json_object_set_new(rval, "statictics", stats);
 
-    /** Store server relations to other objects */
+    /** Store relationships to other objects */
     json_t* rel = json_object();
+
+    string self = host;
+    self += "/servers/";
+    self += server->unique_name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
 
     json_t* arr = service_relations_to_server(server, host);
 

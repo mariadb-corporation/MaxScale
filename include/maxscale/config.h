@@ -85,6 +85,7 @@ extern const char CN_REQUIRED[];
 extern const char CN_RETRY_ON_FAILURE[];
 extern const char CN_ROUTER[];
 extern const char CN_ROUTER_OPTIONS[];
+extern const char CN_SELF[];
 extern const char CN_SERVERS[];
 extern const char CN_SERVER[];
 extern const char CN_SERVICES[];

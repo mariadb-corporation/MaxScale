@@ -19,6 +19,11 @@
 using std::string;
 using std::deque;
 
+#define HTTP_HOST_HEADER "Host"
+
+const std::string HttpRequest::HTTP_PREFIX = "http://";
+const std::string HttpRequest::HTTPS_PREFIX = "https://";
+
 /** TODO: Move this to a C++ string utility header */
 namespace maxscale
 {
@@ -93,7 +98,9 @@ HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string m
     m_connection(connection)
 {
     process_uri(url, m_resource_parts);
-    m_hostname = get_header("Host");
+    // TODO: Add https support
+    m_hostname = HttpRequest::HTTP_PREFIX;
+    m_hostname += get_header(HTTP_HOST_HEADER);
 }
 
 HttpRequest::~HttpRequest()

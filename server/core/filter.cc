@@ -14,21 +14,26 @@
 /**
  * @file filter.c  - A representation of a filter within MaxScale.
  */
-#include <maxscale/filter.h>
-#include <maxscale/filter.hh>
+
+#include "maxscale/filter.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <string>
+
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/service.h>
+#include <maxscale/filter.hh>
 
-#include "maxscale/filter.h"
 #include "maxscale/config.h"
 #include "maxscale/modules.h"
+
+using std::string;
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
@@ -506,7 +511,13 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
         }
     }
 
+    /** Store relationships to other objects */
     json_t* rel = json_object();
+
+    string self = host;
+    self += "/filters/";
+    self += filter->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
 
     json_t* arr = service_relations_to_filter(filter, host);
 

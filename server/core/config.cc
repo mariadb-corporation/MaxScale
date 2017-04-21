@@ -96,6 +96,7 @@ const char CN_REQUIRED[]                      = "required";
 const char CN_RETRY_ON_FAILURE[]              = "retry_on_failure";
 const char CN_ROUTER[]                        = "router";
 const char CN_ROUTER_OPTIONS[]                = "router_options";
+const char CN_SELF[]                          = "self";
 const char CN_SERVERS[]                       = "servers";
 const char CN_SERVER[]                        = "server";
 const char CN_SERVICES[]                      = "services";

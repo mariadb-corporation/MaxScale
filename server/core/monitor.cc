@@ -13,19 +13,6 @@
 
 /**
  * @file monitor.c  - The monitor module management routines
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 08/07/13     Mark Riddoch            Initial implementation
- * 23/05/14     Massimiliano Pinto      Addition of monitor_interval parameter
- *                                      and monitor id
- * 30/10/14     Massimiliano Pinto      Addition of disable_master_failback parameter
- * 07/11/14     Massimiliano Pinto      Addition of monitor network timeouts
- * 08/05/15     Markus Makela           Moved common monitor variables to MONITOR struct
- *
- * @endverbatim
  */
 #include <maxscale/monitor.h>
 
@@ -1561,7 +1548,23 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 
     json_object_set_new(rval, "state", json_string(monitor_state_to_string(monitor->state)));
 
+    if (monitor->handle && monitor->module->diagnostics)
+    {
+        json_t* diag = monitor->module->diagnostics(monitor);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "monitor_diagnostics", diag);
+        }
+    }
+
     json_t* rel = json_object();
+
+    /** Store relationships to other objects */
+    string self = host;
+    self += "/monitors/";
+    self += monitor->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
 
     if (monitor->databases)
     {
@@ -1579,16 +1582,6 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
     }
 
     json_object_set_new(rval, "relationships", rel);
-
-    if (monitor->handle && monitor->module->diagnostics)
-    {
-        json_t* diag = monitor->module->diagnostics(monitor);
-
-        if (diag)
-        {
-            json_object_set_new(rval, "monitor_diagnostics", diag);
-        }
-    }
 
     return rval;
 }

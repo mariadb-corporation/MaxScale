@@ -12,31 +12,7 @@
  */
 
 /**
- * @file service.c  - A representation of the service within the gateway.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 18/06/13     Mark Riddoch            Initial implementation
- * 24/06/13     Massimiliano Pinto      Added: Loading users from mysql backend in serviceStart
- * 06/02/14     Massimiliano Pinto      Added: serviceEnableRootUser routine
- * 25/02/14     Massimiliano Pinto      Added: service refresh limit feature
- * 28/02/14     Massimiliano Pinto      users_alloc moved from service_alloc to
- *                                      serviceStartPort (generic hashable for services)
- * 07/05/14     Massimiliano Pinto      Added: version_string initialized to NULL
- * 23/05/14     Mark Riddoch            Addition of service validation call
- * 29/05/14     Mark Riddoch            Filter API implementation
- * 09/09/14     Massimiliano Pinto      Added service option for localhost authentication
- * 13/10/14     Massimiliano Pinto      Added hashtable for resources (i.e database names for MySQL services)
- * 06/02/15     Mark Riddoch            Added caching of authentication data
- * 18/02/15     Mark Riddoch            Added result set management
- * 03/03/15     Massimiliano Pinto      Added config_enable_feedback_task() call in serviceStartAll
- * 19/06/15     Martin Brampton         More meaningful names for temp variables
- * 31/05/16     Martin Brampton         Implement connection throttling
- * 08/11/16     Massimiliano Pinto      Added: service_shutdown() calls destroyInstance() hoosk for routers
- *
- * @endverbatim
+ * @file service.c  - A representation of a service within MaxScale
  */
 
 #include <maxscale/cppdefs.hh>
@@ -2429,7 +2405,13 @@ json_t* service_to_json(const SERVICE* service, const char* host)
         json_object_set_new(rval, "listeners", arr);
     }
 
+    /** Store relationships to other objects */
     json_t* rel = json_object();
+
+    string self = host;
+    self += "/services/";
+    self += service->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
 
     if (service->n_filters)
     {

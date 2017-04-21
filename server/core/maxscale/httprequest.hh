@@ -162,6 +162,10 @@ public:
     }
 private:
 
+    /** Constants */
+    static const std::string HTTP_PREFIX;
+    static const std::string HTTPS_PREFIX;
+
     std::map<std::string, std::string> m_options;        /**< Request options */
     mxs::Closer<json_t*>               m_json;           /**< Request body */
     std::string                        m_json_string;    /**< String version of @c m_json */
