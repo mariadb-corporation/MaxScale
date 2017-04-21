@@ -82,6 +82,7 @@ typedef struct mxs_authenticator
     void  (*free)(struct dcb *);
     void  (*destroy)(void *);
     int   (*loadusers)(struct servlistener *);
+    void  (*diagnostic)(struct dcb*, struct servlistener *);
 
     /**
      * @brief Return diagnostic information about the authenticator
@@ -95,7 +96,7 @@ typedef struct mxs_authenticator
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostic)(const struct servlistener *listener);
+    json_t*  (*diagnostic_json)(const struct servlistener *listener);
 
     /** This entry point was added to avoid calling authenticator functions
      * directly when a COM_CHANGE_USER command is executed. */

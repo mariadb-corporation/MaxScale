@@ -175,12 +175,21 @@ typedef struct mxs_filter_object
      *
      * @param instance Filter instance
      * @param fsession Filter session, NULL if general information about the filter is queried
+     * @param dcb      DCB where the diagnostic information should be written
+     */
+    void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
      *
      * @return JSON formatted information about the filter
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics)(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+    json_t* (*diagnostics_json)(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 
     /**
      * @brief Called to obtain the capabilities of the filter

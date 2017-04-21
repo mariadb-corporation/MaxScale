@@ -212,12 +212,7 @@ dprintAllFilters(DCB *dcb)
         }
         if (ptr->obj && ptr->filter)
         {
-            json_t* json = ptr->obj->diagnostics(ptr->filter, NULL);
-
-            if (json)
-            {
-                json_decref(json);
-            }
+           ptr->obj->diagnostics(ptr->filter, NULL, dcb);
         }
         else
         {
@@ -252,12 +247,7 @@ dprintFilter(DCB *dcb, const MXS_FILTER_DEF *filter)
     }
     if (filter->obj && filter->filter)
     {
-        json_t* json = filter->obj->diagnostics(filter->filter, NULL);
-
-        if (json)
-        {
-            json_decref(json);
-        }
+        filter->obj->diagnostics(filter->filter, NULL, dcb);
     }
 }
 
@@ -503,7 +493,7 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
 
     if (filter->obj && filter->filter)
     {
-        json_t* diag = filter->obj->diagnostics(filter->filter, NULL);
+        json_t* diag = filter->obj->diagnostics_json(filter->filter, NULL);
 
         if (diag)
         {
@@ -596,7 +586,11 @@ int FilterSession::clientReply(GWBUF* pPacket)
     return m_up.clientReply(pPacket);
 }
 
-json_t* FilterSession::diagnostics() const
+void FilterSession::diagnostics(DCB *pDcb)
+{
+}
+
+json_t* FilterSession::diagnostics_json() const
 {
     return NULL;
 }

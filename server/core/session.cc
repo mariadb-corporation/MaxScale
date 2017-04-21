@@ -533,13 +533,9 @@ dprintSession(DCB *dcb, MXS_SESSION *print_session)
         {
             dcb_printf(dcb, "\tFilter: %s\n",
                        print_session->filters[i].filter->name);
-            json_t* json = print_session->filters[i].filter->obj->diagnostics(print_session->filters[i].instance,
-                                                               print_session->filters[i].session);
-
-            if (json)
-            {
-                json_decref(json);
-            }
+            print_session->filters[i].filter->obj->diagnostics(print_session->filters[i].instance,
+                                                               print_session->filters[i].session,
+                                                               dcb);
         }
     }
 }

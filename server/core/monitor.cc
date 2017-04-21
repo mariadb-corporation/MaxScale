@@ -477,12 +477,7 @@ monitorShow(DCB *dcb, MXS_MONITOR *monitor)
     {
         if (monitor->module->diagnostics)
         {
-            json_t* json = monitor->module->diagnostics(monitor);
-
-            if (json)
-            {
-                json_decref(json);
-            }
+            monitor->module->diagnostics(dcb, monitor);
         }
         else
         {
@@ -1550,7 +1545,7 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 
     if (monitor->handle && monitor->module->diagnostics)
     {
-        json_t* diag = monitor->module->diagnostics(monitor);
+        json_t* diag = monitor->module->diagnostics_json(monitor);
 
         if (diag)
         {

@@ -21,7 +21,8 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue, DCB*);
-static json_t* diagnostic(const MXS_ROUTER *instance);
+static void diagnostic(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostic_json(const MXS_ROUTER *instance);
 static uint64_t getCapabilities(MXS_ROUTER* instance);
 static void handleError(MXS_ROUTER *instance,
                         MXS_ROUTER_SESSION *router_session,
@@ -56,6 +57,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostic,
+        diagnostic_json,
         clientReply,
         handleError,
         getCapabilities,
@@ -145,7 +147,18 @@ void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* queue
  * @param   instance    The router instance
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostic(const MXS_ROUTER *instance)
+static  void
+diagnostic(MXS_ROUTER *instance, DCB *dcb)
+{
+}
+
+/**
+ * Diagnostics routine
+ *
+ * @param   instance    The router instance
+ * @param   dcb     The DCB for diagnostic output
+ */
+static json_t* diagnostic_json(const MXS_ROUTER *instance)
 {
     return NULL;
 }

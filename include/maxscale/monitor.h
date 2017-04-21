@@ -78,6 +78,7 @@ typedef struct mxs_monitor_object
      * @param monitor The monitor object
      */
     void (*stopMonitor)(MXS_MONITOR *monitor);
+    void (*diagnostics)(DCB *, const MXS_MONITOR *);
 
     /**
      * @brief Return diagnostic information about the monitor
@@ -86,7 +87,7 @@ typedef struct mxs_monitor_object
      *
      * @see jansson.h
      */
-    json_t* (*diagnostics)(const MXS_MONITOR *monitor);
+    json_t* (*diagnostics_json)(const MXS_MONITOR *monitor);
 } MXS_MONITOR_OBJECT;
 
 /**

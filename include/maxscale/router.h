@@ -145,6 +145,15 @@ typedef struct mxs_router_object
      */
     int32_t  (*routeQuery)(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 
+
+    /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Router instance
+     * @param dcb      DCB where the diagnostic information should be written
+     */
+    void     (*diagnostics)(MXS_ROUTER *instance, DCB *dcb);
+
     /**
      * @brief Called for diagnostic output
      *
@@ -154,7 +163,7 @@ typedef struct mxs_router_object
      *
      * @see jansson.h
      */
-    json_t*  (*diagnostics)(const MXS_ROUTER *instance);
+    json_t*  (*diagnostics_json)(const MXS_ROUTER *instance);
 
     /**
      * @brief Called for each reply packet

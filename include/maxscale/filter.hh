@@ -144,8 +144,15 @@ public:
 
     /**
      * Called for obtaining diagnostics about the filter session.
+     *
+     * @param pDcb  The dcb where the diagnostics should be written.
      */
-    json_t* diagnostics() const;
+    void diagnostics(DCB *pDcb);
+
+    /**
+     * Called for obtaining diagnostics about the filter session.
+     */
+    json_t* diagnostics_json() const;
 
 protected:
     FilterSession(MXS_SESSION* pSession);
@@ -272,7 +279,23 @@ public:
         return rv;
     }
 
-    static json_t* diagnostics(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
+    static void diagnostics(MXS_FILTER* pInstance, MXS_FILTER_SESSION* pData, DCB* pDcb)
+    {
+        if (pData)
+        {
+            FilterSessionType* pFilterSession = static_cast<FilterSessionType*>(pData);
+
+            MXS_EXCEPTION_GUARD(pFilterSession->diagnostics(pDcb));
+        }
+        else
+        {
+            FilterType* pFilter = static_cast<FilterType*>(pInstance);
+
+            MXS_EXCEPTION_GUARD(pFilter->diagnostics(pDcb));
+        }
+    }
+
+    static json_t* diagnostics_json(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
     {
         json_t* rval = NULL;
 
@@ -280,13 +303,13 @@ public:
         {
             const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
 
-            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics());
+            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics_json());
         }
         else
         {
             const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
 
-            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics());
+            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics_json());
         }
 
         return rval;
@@ -326,6 +349,7 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::routeQuery,
     &Filter<FilterType, FilterSessionType>::clientReply,
     &Filter<FilterType, FilterSessionType>::diagnostics,
+    &Filter<FilterType, FilterSessionType>::diagnostics_json,
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };
