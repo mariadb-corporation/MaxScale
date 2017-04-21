@@ -831,15 +831,13 @@ SERVER* runtime_create_server_from_json(json_t* json)
     return rval;
 }
 
-bool handle_alter_server_relations(SERVER* server, json_t* new_json)
+bool handle_alter_server_relations(SERVER* server, json_t* old_json, json_t* new_json)
 {
     bool rval = false;
     set<string> old_relations;
     set<string> new_relations;
-    Closer<json_t*> old_json(server_to_json(server, ""));
-    ss_dassert(old_json.get());
 
-    if (extract_relations(old_json.get(), old_relations, server_relation_types, server_relation_is_valid) &&
+    if (extract_relations(old_json, old_relations, server_relation_types, server_relation_is_valid) &&
         extract_relations(new_json, new_relations, server_relation_types, server_relation_is_valid))
     {
         set<string> removed_relations;
@@ -866,20 +864,31 @@ bool handle_alter_server_relations(SERVER* server, json_t* new_json)
 bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 {
     bool rval = false;
+    Closer<json_t*> old_json(server_to_json(server, ""));
+    ss_dassert(old_json.get());
 
-    if (handle_alter_server_relations(server, new_json))
+    if (handle_alter_server_relations(server, old_json.get(), new_json))
     {
         json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);;
+        ss_dassert(old_parameters);
 
         if (parameters)
         {
             rval = true;
-            const char *key;
-            json_t *value;
+            const char* key;
+            json_t* value;
 
             json_object_foreach(parameters, key, value)
             {
-                if (!runtime_alter_server(server, key, mxs::json_to_string(value).c_str()))
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (!runtime_alter_server(server, key, mxs::json_to_string(value).c_str()))
                 {
                     rval = false;
                 }

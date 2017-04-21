@@ -14,12 +14,13 @@
 
 #include <maxscale/cppdefs.hh>
 
-#include <string>
 #include <sstream>
+#include <string>
 
+#include <maxscale/alloc.h>
+#include <maxscale/debug.h>
 #include <maxscale/jansson.h>
 #include <maxscale/utils.hh>
-#include <maxscale/alloc.h>
 
 namespace maxscale
 {
@@ -83,29 +84,35 @@ static inline std::string json_to_string(json_t* json)
 {
     std::stringstream ss;
 
-    if (json_is_string(json))
+    switch (json_typeof(json))
     {
+    case JSON_STRING:
         ss << json_string_value(json);
-    }
-    else if (json_is_boolean(json))
-    {
-        ss << (json_boolean_value(json) ? "true" : "false");
-    }
-    else if (json_is_real(json))
-    {
-        ss << json_real_value(json);
-    }
-    else if (json_is_number(json))
-    {
-        ss << json_number_value(json);
-    }
-    else if (json_is_integer(json))
-    {
+        break;
+
+    case JSON_INTEGER:
         ss << json_integer_value(json);
-    }
-    else if (json_is_null(json))
-    {
-        ss << "";
+        break;
+
+    case JSON_REAL:
+        ss << json_real_value(json);
+        break;
+
+    case JSON_TRUE:
+        ss << "true";
+        break;
+
+    case JSON_FALSE:
+        ss << "false";
+        break;
+
+    case JSON_NULL:
+        break;
+
+    default:
+        ss_dassert(false);
+        break;
+
     }
 
     return ss.str();
