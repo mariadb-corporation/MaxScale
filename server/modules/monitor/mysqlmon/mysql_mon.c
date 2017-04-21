@@ -507,6 +507,8 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
     MXS_MONITOR_SERVERS* database = mon->databases;
     MXS_MONITOR_SERVERS *ptr, *rval = NULL;
     int i;
+    MYSQL_MONITOR *handle = mon->handle;
+
     while (database)
     {
         bool ismaster = false;
@@ -547,14 +549,16 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             /* Set the Slave Role */
             if (ismaster)
             {
-                MYSQL_MONITOR *handle = mon->handle;
                 handle->master = database;
 
                 MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
                           database->server->name,
                           database->server->port,
                           nslaves);
+
                 monitor_set_pending_status(database, SERVER_MASTER);
+                database->server->depth = 0; // Add Depth 0 for Master
+
                 if (rval == NULL || rval->server->node_id > database->server->node_id)
                 {
                     rval = database;
@@ -578,13 +582,17 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
                 if (ptr->server->slaves[i] == database->server->node_id)
                 {
                     database->server->master_id = ptr->server->node_id;
+                    database->server->depth = 1; // Add Depth 1 for Slave
                     break;
                 }
             }
             ptr = ptr->next;
         }
-        if (database->server->master_id <= 0 && SERVER_IS_SLAVE(database->server))
+        if (SERVER_IS_SLAVE(database->server) &&
+            (database->server->master_id <= 0 ||
+            database->server->master_id != handle->master->server->node_id))
         {
+            monitor_clear_pending_status(database, SERVER_SLAVE);
             monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
         }
         database = database->next;
