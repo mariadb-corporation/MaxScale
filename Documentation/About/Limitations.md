@@ -118,6 +118,17 @@ Read queries are routed to the master server in the following situations:
 * if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT
 LAST_INSERT_ID();`
 
+#### JDBC Batched Statements
+
+Readwritesplit does not support execution of JDBC batched statements with
+non-INSERT statements mixed in it. This is caused by the fact that
+readwritesplit expects that the protocol is idle before another command is sent.
+
+Most clients conform to this expectation but some JDBC drivers send multiple
+requests without waiting for the protocol to be idle. If you are using the
+MariaDB Connector/J, add `useBatchMultiSend=false` to the JDBC connection string
+to disable batched statement execution.
+
 #### Backend write timeout handling
 
 The backend connections opened by readwritesplit will not be kept alive if they
