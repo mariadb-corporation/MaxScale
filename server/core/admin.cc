@@ -67,7 +67,7 @@ int Client::process(string url, string method, const char* upload_data, size_t *
 
     if (*upload_size)
     {
-        m_data += upload_data;
+        m_data.append(upload_data, *upload_size);
         *upload_size = 0;
         return MHD_YES;
     }
