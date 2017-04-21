@@ -75,8 +75,10 @@ public:
      *
      * To be called once at process startup. This will cause as many workers
      * to be created as the number of threads defined.
+     *
+     * @return True if the initialization succeeded, false otherwise.
      */
-    static void init();
+    static bool init();
 
     /**
      * Finalize the worker mechanism.

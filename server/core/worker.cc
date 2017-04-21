@@ -39,6 +39,7 @@ namespace
  */
 static struct this_unit
 {
+    bool     initialized;       // Whether the initialization has been performed.
     int      n_workers;         // How many workers there are.
     Worker** ppWorkers;         // Array of worker instances.
     int      number_poll_spins; // Maximum non-block polls
@@ -46,8 +47,11 @@ static struct this_unit
 
 } this_unit =
 {
+    false,
     0,
-    NULL
+    NULL,
+    0,
+    0
 };
 
 static thread_local struct this_thread
@@ -154,47 +158,62 @@ Worker::~Worker()
 }
 
 // static
-void Worker::init()
+bool Worker::init()
 {
+    ss_dassert(!this_unit.initialized);
+
     this_unit.n_workers = config_threadcount();
     this_unit.number_poll_spins = config_nbpolls();
     this_unit.max_poll_sleep = config_pollsleep();
-
     this_unit.ppWorkers = new (std::nothrow) Worker* [this_unit.n_workers] (); // Zero initialized array
 
-    if (!this_unit.ppWorkers)
+    if (this_unit.ppWorkers)
     {
-        // If we cannot allocate the array, we just exit.
-        exit(-1);
+        for (int i = 0; i < this_unit.n_workers; ++i)
+        {
+            Worker* pWorker = Worker::create(i);
+
+            if (pWorker)
+            {
+                this_unit.ppWorkers[i] = pWorker;
+            }
+            else
+            {
+                for (int j = i - 1; j >= 0; --j)
+                {
+                    delete this_unit.ppWorkers[j];
+                }
+
+                delete this_unit.ppWorkers;
+                this_unit.ppWorkers = NULL;
+                break;
+            }
+
+            if (this_unit.ppWorkers)
+            {
+                this_unit.initialized = true;
+            }
+        }
     }
 
-    for (int i = 0; i < this_unit.n_workers; ++i)
-    {
-        Worker* pWorker = Worker::create(i);
-
-        if (pWorker)
-        {
-            this_unit.ppWorkers[i] = pWorker;
-        }
-        else
-        {
-            // If a worker cannot be created, we just exit. No way we can continue.
-            exit(-1);
-        }
-    }
-
-    MXS_NOTICE("Workers created!");
+    return this_unit.initialized;
 }
 
 void Worker::finish()
 {
-    for (int i = 0; i < this_unit.n_workers; ++i)
+    ss_dassert(this_unit.initialized);
+
+    for (int i = this_unit.n_workers - 1; i >= 0; --i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
 
         delete pWorker;
         this_unit.ppWorkers[i] = NULL;
     }
+
+    delete [] this_unit.ppWorkers;
+    this_unit.ppWorkers = NULL;
+    this_unit.initialized = false;
 }
 
 namespace

@@ -12,27 +12,7 @@
  */
 
 /**
- * @file gateway.c - The gateway entry point.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 23-05-2013   Massimiliano Pinto      epoll loop test
- * 12-06-2013   Mark Riddoch            Add the -p option to set the
- *                                      listening port
- *                                      and bind addr is 0.0.0.0
- * 19/06/13     Mark Riddoch            Extract the epoll functionality
- * 21/06/13     Mark Riddoch            Added initial config support
- * 27/06/13
- * 28/06/13     Vilho Raatikka          Added necessary headers, example functions and
- *                                      calls to log manager and to query classifier.
- *                                      Put example code behind SS_DEBUG macros.
- * 05/02/14     Mark Riddoch            Addition of version string
- * 29/06/14     Massimiliano Pinto      Addition of pidfile
- * 10/08/15     Markus Makela           Added configurable directory locations
- * 19/01/16     Markus Makela           Set cwd to log directory
- * @endverbatim
+ * @file gateway.c - The entry point of MaxScale
  */
 
 #include <maxscale/cdefs.h>
@@ -1910,7 +1890,12 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    Worker::init();
+    if (!Worker::init())
+    {
+        MXS_ERROR("Failed to initialize workers.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
 
     /* Init MaxScale modules */
     if (!modules_process_init())
