@@ -125,7 +125,7 @@ the following format:
 ```
 
 The avrorouter uses the schema file to identify the columns, their names and
-what type they are. The Name fiels contains the name of the column and the Type
+what type they are. The Name fields contains the name of the column and the Type
 contains the Avro type. Read the [Avro specification](https://avro.apache.org/docs/1.8.1/spec.html)
 for details on the layout of the schema files.
 

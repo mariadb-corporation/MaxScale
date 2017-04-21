@@ -321,7 +321,7 @@ maxadmin list servers
 
 Servers.
 -------------------+-----------------+-------+-------------+--------------------
-Server             | Address         | Port  | Connections | Status              
+Server             | Address         | Port  | Connections | Status 
 -------------------+-----------------+-------+-------------+--------------------
 production-1       | 192.168.0.200   |  3306 |           0 | Running
 archive-1          | 192.168.0.201   |  3000 |           0 | Running

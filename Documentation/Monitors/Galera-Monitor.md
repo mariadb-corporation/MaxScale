@@ -74,7 +74,7 @@ same node for writes.
 
 If the `root_node_as_master` option is disabled for galeramon, the node with the
 lowest index will always be chosen as the master. If it is enabled, only the
-node with a a _wsrep_local_index_ value of 0 can be chosed as the master.
+node with a a _wsrep_local_index_ value of 0 can be chosen as the master.
 
 ### `set_donor_nodes`
 

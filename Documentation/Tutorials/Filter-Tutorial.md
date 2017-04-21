@@ -130,7 +130,7 @@ servers=dbbubble1,dbbubble2,dbbubble3,dbbubble4,dbbubble5
 user=maxscale
 passwd=6628C50E07CCE1F0392EDEEB9D1203F3
 ```
-The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to cassandra. Add this server into the MariaDB MaxScale configuration and create a service that will connect to this server.
+The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to Cassandra. Add this server into the MariaDB MaxScale configuration and create a service that will connect to this server.
 ```
 [CassandraDB]
 type=server
