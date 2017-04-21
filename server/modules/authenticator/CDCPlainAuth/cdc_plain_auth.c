@@ -167,6 +167,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                           /* No destroy entry point */
         cdc_replace_users,              /* Load CDC users */
         users_default_diagnostic,       /* Default diagnostic */
+        users_default_diagnostic_json,  /* Default diagnostic */
         NULL                            /* No user reauthentication */
     };
 

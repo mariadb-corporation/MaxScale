@@ -64,6 +64,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                            /* No destroy entry point */
         users_default_loadusers,         /* Load generic users */
         NULL,                            /* No diagnostic */
+        NULL,
         NULL                             /* No user reauthentication */
     };
 

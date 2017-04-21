@@ -49,7 +49,8 @@ static bool warn_erange_on_local_index = true;
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
-static json_t* diagnostics(const MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR*);
 static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *, MXS_MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
@@ -80,7 +81,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -218,9 +220,36 @@ stopMonitor(MXS_MONITOR *mon)
 /**
  * Diagnostic interface
  *
+ * @param dcb   DCB to send output
  * @param arg   The monitor handle
  */
-static json_t* diagnostics(const MXS_MONITOR *mon)
+static void
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+    const GALERA_MONITOR *handle = (const GALERA_MONITOR *) mon->handle;
+
+    dcb_printf(dcb, "Master Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
+    dcb_printf(dcb, "Available when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
+    dcb_printf(dcb, "Master Role Setting Disabled:\t%s\n",
+               handle->disableMasterRoleSetting ? "on" : "off");
+    dcb_printf(dcb, "Set wsrep_sst_donor node list:\t%s\n", (handle->set_donor_nodes == 1) ? "on" : "off");
+    if (handle->cluster_info.c_uuid)
+    {
+        dcb_printf(dcb, "Galera Cluster UUID:\t%s\n", handle->cluster_info.c_uuid);
+        dcb_printf(dcb, "Galera Cluster size:\t%d\n", handle->cluster_info.c_size);
+    }
+    else
+    {
+        dcb_printf(dcb, "Galera Cluster NOT set:\tno member nodes\n");
+    }
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
 {
     json_t* rval = json_object();
     const GALERA_MONITOR *handle = (const GALERA_MONITOR *)mon->handle;

@@ -48,7 +48,8 @@ static void monitorMain(void *);
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
-static json_t* diagnostics(const MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *getServerByNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *getSlaveOfNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *, int);
@@ -76,7 +77,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -311,11 +313,48 @@ stopMonitor(MXS_MONITOR *mon)
 }
 
 /**
+ * Daignostic interface
+ *
+ * @param dcb   DCB to print diagnostics
+ * @param arg   The monitor handle
+ */
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
+
+    dcb_printf(dcb, "MaxScale MonitorId:\t%lu\n", handle->id);
+    dcb_printf(dcb, "Replication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb, "Server information\n\n");
+
+    for (MXS_MONITOR_SERVERS *db = mon->databases; db; db = db->next)
+    {
+        MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+        dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
+        dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
+        dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
+        dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
+        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_io ? "YES" : "NO");
+        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_sql ? "YES" : "NO");
+        dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
+        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
+        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+
+        if (handle->multimaster)
+        {
+            dcb_printf(dcb, "Master group: %d\n", serv_info->group);
+        }
+
+        dcb_printf(dcb, "\n");
+    }
+}
+
+/**
  * Diagnostic interface
  *
  * @param arg   The monitor handle
  */
-static json_t* diagnostics(const MXS_MONITOR *mon)
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
 {
     json_t* rval = json_object();
 

@@ -245,7 +245,18 @@ stopMonitor(MXS_MONITOR *mon)
  * @param dcb   DCB to send output
  * @param mon   The monitor
  */
-static json_t* diagnostics(const MXS_MONITOR *mon)
+static void
+diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param dcb   DCB to send output
+ * @param mon   The monitor
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
 {
     return NULL;
 }
@@ -263,7 +274,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =

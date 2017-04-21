@@ -39,7 +39,8 @@ MXS_MODULE info =
 
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_MONITOR *);
-static json_t* diagnostics(const MXS_MONITOR *);
+static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
 static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
@@ -60,7 +61,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -166,9 +168,22 @@ stopMonitor(MXS_MONITOR *mon)
 /**
  * Diagnostic interface
  *
+ * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static json_t* diagnostics(const MXS_MONITOR *mon)
+static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
+{
+    const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
+
+    dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
 {
     const MM_MONITOR *handle = (const MM_MONITOR *)mon->handle;
 
