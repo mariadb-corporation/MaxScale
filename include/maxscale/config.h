@@ -27,7 +27,7 @@
 MXS_BEGIN_DECLS
 
 /** Default port where the REST API listens */
-#define DEFAULT_ADMIN_HTTP_PORT 8080
+#define DEFAULT_ADMIN_HTTP_PORT 8989
 
 #define _RELEASE_STR_LENGTH     256     /**< release len */
 #define MAX_ADMIN_USER_LEN      1024
