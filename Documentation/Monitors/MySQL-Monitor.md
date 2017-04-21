@@ -87,7 +87,8 @@ detect_stale_slave=true
 
 ### `mysql51_replication`
 
-Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL server older than 5.5 is used as a slave in replication.
+Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL
+server older than 5.5 is used as a slave in replication.
 
 ```
 mysql51_replication=true
@@ -112,7 +113,7 @@ the master status.
 By setting the servers into read-only mode, the user can control which
 server receive the master status. To do this:
 
-- Enable `@@read_only` on all servers (preferrably through the configuration file)
+- Enable `@@read_only` on all servers (preferably through the configuration file)
 - Manually disable `@@read_only` on the server which should be the master
 
 This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
@@ -146,7 +147,7 @@ This mode in mysqlmon is completely passive in the sense that it does not modify
 the cluster or any of the servers in it. It only labels the last remaining
 server in a cluster as the master server.
 
-Before a server is labeled as a standalone master, the following conditions must
+Before a server is labelled as a standalone master, the following conditions must
 have been met:
 
 - Previous attempts to connect to other servers in the cluster have failed,
@@ -173,7 +174,7 @@ been set up.
 ### `failcount`
 
 Number of failures that must occur on all failed servers before a standalone
-server is labeled as a master. The default value is 5 failures.
+server is labelled as a master. The default value is 5 failures.
 
 The monitor will attempt to contact all servers once per monitoring cycle. When
 `detect_standalone_master` is enabled, all of the failed servers must fail
@@ -181,7 +182,7 @@ _failcount_ number of connection attempts before the last server is labeled as
 the master.
 
 The formula for calculating the actual number of milliseconds before the server
-is labeled as the master is `monitor_interval * failcount`.
+is labelled as the master is `monitor_interval * failcount`.
 
 ### `allow_cluster_recovery`
 
@@ -190,7 +191,7 @@ takes a boolean parameter is enabled by default. This parameter requires that
 `detect_standalone_master` is set to true. In MaxScale 2.1.0, this parameter was
 called `failover_recovery`.
 
-When this parameter is disabled, if the last remaining server is labeled as the
+When this parameter is disabled, if the last remaining server is labelled as the
 master, the monitor will set all of the failed servers into maintenance
 mode. When this option is enabled, the failed servers are allowed to rejoin the
 cluster.
@@ -202,7 +203,8 @@ configures the failed servers as new slaves of the current master.
 
 ## Example 1 - Monitor script
 
-Here is an example shell script which sends an email to an admin when a server goes down.
+Here is an example shell script which sends an email to an admin@my.org
+when a server goes down.
 
 ```
 #!/usr/bin/env bash
