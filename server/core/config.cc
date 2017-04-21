@@ -71,6 +71,7 @@ const char CN_FILTERS[]                       = "filters";
 const char CN_FILTER[]                        = "filter";
 const char CN_GATEWAY[]                       = "gateway";
 const char CN_LISTENER[]                      = "listener";
+const char CN_LISTENERS[]                     = "listeners";
 const char CN_LOCALHOST_MATCH_WILDCARD_HOST[] = "localhost_match_wildcard_host";
 const char CN_LOG_AUTH_WARNINGS[]             = "log_auth_warnings";
 const char CN_LOG_THROTTLING[]                = "log_throttling";

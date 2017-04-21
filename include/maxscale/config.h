@@ -60,6 +60,7 @@ extern const char CN_FILTERS[];
 extern const char CN_FILTER[];
 extern const char CN_GATEWAY[];
 extern const char CN_LISTENER[];
+extern const char CN_LISTENERS[];
 extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
 extern const char CN_LOG_AUTH_WARNINGS[];
 extern const char CN_LOG_THROTTLING[];

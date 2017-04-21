@@ -2346,12 +2346,66 @@ static const char* service_state_to_string(int state)
     }
 }
 
+json_t* service_parameters_to_json(const SERVICE* service)
+{
+    json_t* rval = json_object();
+    json_t* arr = json_array();
+
+    string options;
+
+    if (service->routerOptions && service->routerOptions[0])
+    {
+        options += service->routerOptions[0];
+
+        for (int i = 1; service->routerOptions[i]; i++)
+        {
+            options += ",";
+            options += service->routerOptions[i];
+        }
+    }
+
+    json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
+
+    /** Can these be NULL? */
+    if (service->credentials.name)
+    {
+        json_object_set_new(rval, CN_USER, json_string(service->credentials.name));
+    }
+
+    if (service->credentials.authdata)
+    {
+        json_object_set_new(rval, CN_PASSWORD, json_string(service->credentials.authdata));
+    }
+
+    json_object_set_new(rval, CN_ENABLE_ROOT_USER, json_boolean(service->enable_root));
+    json_object_set_new(rval, CN_MAX_RETRY_INTERVAL, json_integer(service->max_retry_interval));
+    json_object_set_new(rval, CN_MAX_CONNECTIONS, json_integer(service->max_connections));
+    json_object_set_new(rval, CN_CONNECTION_TIMEOUT, json_integer(service->conn_idle_timeout));
+
+    json_object_set_new(rval, CN_AUTH_ALL_SERVERS, json_boolean(service->users_from_all));
+    json_object_set_new(rval, CN_STRIP_DB_ESC, json_boolean(service->strip_db_esc));
+    json_object_set_new(rval, CN_LOCALHOST_MATCH_WILDCARD_HOST,
+                        json_boolean(service->localhost_match_wildcard_host));
+    json_object_set_new(rval, CN_VERSION_STRING, json_string(service->version_string));
+
+    if (service->weightby)
+    {
+        json_object_set_new(rval, CN_WEIGHTBY, json_string(service->weightby));
+    }
+
+    json_object_set_new(rval, CN_LOG_AUTH_WARNINGS, json_boolean(service->log_auth_warnings));
+    json_object_set_new(rval, CN_RETRY_ON_FAILURE, json_boolean(service->retry_start));
+
+    return rval;
+}
+
 json_t* service_to_json(const SERVICE* service, const char* host)
 {
     spinlock_acquire(&service->spin);
-    // TODO: Handle errors
+
     json_t* rval = json_object();
 
+    /** General service information */
     json_object_set_new(rval, "name", json_string(service->name));
     json_object_set_new(rval, "router", json_string(service->routerModule));
     json_object_set_new(rval, "state", json_string(service_state_to_string(service->state)));
@@ -2373,15 +2427,11 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     trim(timebuf);
 
     json_object_set_new(rval, "started", json_string(timebuf));
-    json_object_set_new(rval, "enable_root", json_boolean(service->enable_root));
-
-    if (service->weightby)
-    {
-        json_object_set_new(rval, "weightby", json_string(service->weightby));
-    }
-
     json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
     json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+
+    /** Add service parameters */
+    json_object_set_new(rval, CN_PARAMETERS, service_parameters_to_json(service));
 
     if (service->ports)
     {
@@ -2392,7 +2442,7 @@ json_t* service_to_json(const SERVICE* service, const char* host)
             json_array_append_new(arr, listener_to_json(p));
         }
 
-        json_object_set_new(rval, "listeners", arr);
+        json_object_set_new(rval, CN_LISTENERS, arr);
     }
 
     /** Store relationships to other objects */
@@ -2444,10 +2494,10 @@ json_t* service_to_json(const SERVICE* service, const char* host)
             }
         }
 
-        json_object_set_new(rel, "servers", arr);
+        json_object_set_new(rel, CN_SERVERS, arr);
     }
 
-    json_object_set_new(rval, "relationships", rel);
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
 
     spinlock_release(&service->spin);
 
