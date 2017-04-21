@@ -28,7 +28,8 @@ set up replication between the two. The only thing we need to do is to create th
 users we will use for monitoring and authentication.
 
 The process of creating monitoring and authentication users for MariaDB MaxScale is described 
-in the Creating Database Users section of the [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md).
+	in the Creating Database Users section of the 
+[MariaDB MaxScale Tutorial](MaxScale-Tutorial.md#creating-database-users).
 
 ## Setting up RabbitMQ server
 
@@ -301,7 +302,7 @@ router=cli
 type=listener
 service=MaxAdmin Service
 protocol=maxscaled
-port=6603
+socket=default
 ```
 
 ## Testing the setup
@@ -317,7 +318,7 @@ sudo systemctl start maxscale
 We can see the state of the two servers with MaxAdmin:
 
 ```
-maxadmin list servers
+sudo maxadmin list servers
 
 Servers.
 -------------------+-----------------+-------+-------------+--------------------

@@ -10,7 +10,7 @@ Please note that the PCRE2 library uses a different syntax to refer to capture g
 
 ## Configuration
 
-The configuration block for the Regex filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the Regex filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 
 ```
 [MyRegexFilter]
