@@ -107,7 +107,7 @@ set_donor_nodes=true
 If the `use_priority` option is set and a server is configured with the
 `priority=<int>` parameter, galeramon will use that as the basis on which the
 master node is chosen. This requires the `disable_master_role_setting` to be
-undefined or disabled. The server with the lowest positive value in _priority_
+undefined or disabled. The server with the lowest positive value of _priority_
 will be chosen as the master node when a replacement Galera node is promoted to
 a master server inside MaxScale.
 
@@ -115,7 +115,7 @@ Nodes with a non-positive value (_priority_ <= 0) will never be chosen as the ma
 you to mark some servers as permanent slaves by assigning a non-positive value
 into _priority_.
 
-Here is an example with two servers.
+Here is an example.
 
 ```
 [node-1]
@@ -147,9 +147,9 @@ In this example `node-1` is always used as the master if available. If `node-1`
 is not available, then the next node with the highest priority rank is used. In
 this case it would be `node-3`. If both `node-1` and `node-3` were down, then
 `node-2` would be used. Because `node-4` has a value of 0 in _priority_, it will
-never be the master. Nodes without priority are considered as having the lowest
-priority rank and will be used only if all nodes with priority ranks are not
-available.
+never be the master. Nodes without _priority_ parameter are considered as 
+having the lowest priority rank and will be used only if all nodes
+with _priority_ parameter are not available.
 
 With priority ranks you can control the order in which MaxScale chooses the
 master node. This will allow for a controlled failure and replacement of nodes.

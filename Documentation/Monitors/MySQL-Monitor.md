@@ -35,9 +35,9 @@ These are optional parameters specific to the MySQL Monitor.
 
 ### `detect_replication_lag`
 
-A truth value which controls if replication lag between the master and the
+A boolean value which controls if replication lag between the master and the
 slaves is monitored. This allows the routers to route read queries to only
-slaves that are up to date. Default value for this parameter is false.
+slaves that are up to date. Default value for this parameter is _false_.
 
 To detect the replication lag, MaxScale uses the _maxscale_schema.replication_heartbeat_
 table. This table is created on the master server and it is updated at every heartbeat

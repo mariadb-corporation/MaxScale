@@ -1,4 +1,4 @@
-#Database Firewall filter
+# Database Firewall filter
 
 ## Overview
 
@@ -220,7 +220,7 @@ the network address. You can use the `%` character as the wildcard to enable
 user name matching from any address or network matching for all users. After the
 list of users and networks the keyword match is expected.
 
-After this either the keyword `any` `all` or `strict_all` is expected. This
+After this either the keyword `any`, `all` or `strict_all` is expected. This
 defined how the rules are matched. If `any` is used when the first rule is
 matched the query is considered as matched and the rest of the rules are
 skipped. If instead the `all` keyword is used all rules must match for the query

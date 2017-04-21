@@ -22,7 +22,7 @@ module=maxrows
 [MaxRows Routing Service]
 type=service
 ...
-filters=maxrows
+filters=MaxRows
 ```
 
 ### Filter Parameters

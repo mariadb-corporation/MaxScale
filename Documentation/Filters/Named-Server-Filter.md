@@ -6,7 +6,7 @@ The **namedserverfilter** is a filter module for MariaDB MaxScale which is able 
 
 ## Configuration
 
-The configuration block for the Named Server filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
+The configuration block for the Named Server filter requires the minimal filter options in its section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 
 ```
 [NamedServerFilter]
