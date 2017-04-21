@@ -54,6 +54,7 @@ struct WORKER_STATISTICS
 
 class Worker : public MXS_WORKER
              , private MessageQueue::Handler
+             , private MXS_POLL_DATA
 {
     Worker(const Worker&);
     Worker& operator = (const Worker&);
@@ -163,13 +164,41 @@ public:
     bool add_fd(int fd, uint32_t events, MXS_POLL_DATA* pData);
 
     /**
-     * Remove a file descriptor from a poll set.
+     * Add a file descriptor to the epoll instance shared between all workers.
+     * Events occuring on the provided file descriptor will be handled by all
+     * workers. This is primarily intended for listening sockets where the
+     * only event is EPOLLIN, signaling that accept() can be used on the listening
+     * socket for creating a connected socket to a client.
      *
-     * @param fd       The file descriptor to be removed.
+     * @param fd      The file descriptor to be added.
+     * @param events  Mask of epoll event types.
+     * @param pData   The poll data associated with the descriptor:
+     *
+     *                  data->handler  : Handler that knows how to deal with events
+     *                                   for this particular type of 'struct mxs_poll_data'.
+     *                  data->thread.id: 0
+     *
+     * @return True, if the descriptor could be added, false otherwise.
+     */
+    static bool add_shared_fd(int fd, uint32_t events, MXS_POLL_DATA* pData);
+
+    /**
+     * Remove a file descriptor from the worker's epoll instance.
+     *
+     * @param fd  The file descriptor to be removed.
      *
      * @return True on success, false on failure.
      */
     bool remove_fd(int fd);
+
+    /**
+     * Remove a file descriptor from the epoll instance shared between all workers.
+     *
+     * @param fd  The file descriptor to be removed.
+     *
+     * @return True on success, false on failure.
+     */
+    static bool remove_shared_fd(int fd);
 
     /**
      * Main function of worker.
@@ -306,13 +335,16 @@ private:
            int epoll_fd);
     virtual ~Worker();
 
-    static Worker* create(int id);
+    static Worker* create(int id, int epoll_listener_fd);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
     static void thread_main(void* arg);
 
     void poll_waitevents();
+
+    static uint32_t epoll_instance_handler(struct mxs_poll_data* data, int wid, uint32_t events);
+    uint32_t handle_epoll_events(uint32_t events);
 
 private:
     int           m_id;                 /*< The id of the worker. */
