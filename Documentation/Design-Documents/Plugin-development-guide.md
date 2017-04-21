@@ -8,19 +8,19 @@ on, so the APIs of these two are discussed in detail.
 
 ## Table of Contents
 
-1. [Introduction](#introduction)
-* [Module categories](#module-categories)
-* [Common definitions and headers](#common-definitions-and-headers)
- 1. [Module information container](#module-information-container)
-* [Module API](#module-api)
- 1. [Overview](#overview)
- * [General module management](#general-module-management)
- * [Protocol](#protocol)
- * [Authenticator](#authenticator)
- * [Filter and Router](#filter-and-router)
- * [Monitor](#monitor)
+* [Introduction](#introduction)
+  * [Module categories](#module-categories)
+  * [Common definitions and headers](#common-definitions-and-headers)
+* [Module information container](#module-information-container)
+  * [Module API](#module-api)
+* [Overview](#overview)
+  * [General module management](#general-module-management)
+  * [Protocol](#protocol)
+  * [Authenticator](#authenticator)
+  * [Filter and Router](#filter-and-router)
+  * [Monitor](#monitor)
 * [Compiling, installing and running](#compiling-installing-and-running)
- 1. [Hands-on example: RoundRobinRouter](#hands-on-example-roundrobinrouter)
+* [Hands-on example: RoundRobinRouter](#hands-on-example-roundrobinrouter)
 * [Summary and conclusion](#summary-and-conclusion)
 
 ## Introduction

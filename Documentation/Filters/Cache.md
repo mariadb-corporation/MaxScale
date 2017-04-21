@@ -622,6 +622,9 @@ storage=storage_inmemory
 
 ## `storage_rocksdb`
 
+This storage module is not built by default and is not included in the
+MariaDB MaxScale packages.
+
 This storage module uses RocksDB database for storing the cached data. The
 directory where the RocksDB database will be created is by default created
 into the _MaxScale cache_ directory, which usually is not on a RAM disk. For
@@ -651,7 +654,8 @@ created, under which the actual instance specific cache directories are created.
 
 Specifies whether RocksDB should collect statistics that later can be queried
 using `maxadmin`. It should be noted, though, that collecting RocksDB statistics
-is not without a cost. From the [RocksDB Documentation](https://github.com/facebook/rocksdb/wiki/Statistics)
+is not without a cost.
+From the [RocksDB Documentation](https://github.com/facebook/rocksdb/wiki/Statistics)
 
 _The overhead of statistics is usually small but non-negligible. We usually
 observe an overhead of 5%-10%._
