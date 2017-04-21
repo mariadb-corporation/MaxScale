@@ -76,7 +76,8 @@ static MXS_ROUTER_SESSION *newSession(MXS_ROUTER *instance, MXS_SESSION *session
 static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
-static json_t* diagnostics(const MXS_ROUTER *instance);
+static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics_json(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *message,
@@ -157,6 +158,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         errorReply,
         getCapabilities,
@@ -806,8 +808,111 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
  * Display router diagnostics
  *
  * @param instance  Instance of the router
+ * @param dcb       DCB to send diagnostics to
  */
-static json_t* diagnostics(const MXS_ROUTER *router)
+static void
+diagnostics(MXS_ROUTER *router, DCB *dcb)
+{
+    AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *) router;
+    AVRO_CLIENT *session;
+    int i = 0;
+    char buf[40];
+    struct tm tm;
+
+    spinlock_acquire(&router_inst->lock);
+    session = router_inst->clients;
+    while (session)
+    {
+        i++;
+        session = session->next;
+    }
+    spinlock_release(&router_inst->lock);
+
+    dcb_printf(dcb, "\tAVRO Converter infofile:             %s/%s\n",
+               router_inst->avrodir, AVRO_PROGRESS_FILE);
+    dcb_printf(dcb, "\tAVRO files directory:                %s\n",
+               router_inst->avrodir);
+
+    localtime_r(&router_inst->stats.lastReply, &tm);
+    asctime_r(&tm, buf);
+
+    dcb_printf(dcb, "\tBinlog directory:                    %s\n",
+               router_inst->binlogdir);
+    dcb_printf(dcb, "\tCurrent binlog file:                 %s\n",
+               router_inst->binlog_name);
+    dcb_printf(dcb, "\tCurrent binlog position:             %lu\n",
+               router_inst->current_pos);
+    dcb_printf(dcb, "\tCurrent GTID value:                  %lu-%lu-%lu\n",
+               router_inst->gtid.domain, router_inst->gtid.server_id,
+               router_inst->gtid.seq);
+    dcb_printf(dcb, "\tCurrent GTID timestamp:              %u\n",
+               router_inst->gtid.timestamp);
+    dcb_printf(dcb, "\tCurrent GTID #events:                %lu\n",
+               router_inst->gtid.event_num);
+
+    dcb_printf(dcb, "\tCurrent GTID affected tables: ");
+    avro_get_used_tables(router_inst, dcb);
+    dcb_printf(dcb, "\n");
+
+    dcb_printf(dcb, "\tNumber of AVRO clients:              %u\n",
+               router_inst->stats.n_clients);
+
+    if (router_inst->clients)
+    {
+        dcb_printf(dcb, "\tClients:\n");
+        spinlock_acquire(&router_inst->lock);
+        session = router_inst->clients;
+        while (session)
+        {
+
+            char sync_marker_hex[SYNC_MARKER_SIZE * 2 + 1];
+
+            dcb_printf(dcb, "\t\tClient UUID:                 %s\n", session->uuid);
+            dcb_printf(dcb, "\t\tClient_host_port:            [%s]:%d\n",
+                       session->dcb->remote, dcb_get_port(session->dcb));
+            dcb_printf(dcb, "\t\tUsername:                    %s\n", session->dcb->user);
+            dcb_printf(dcb, "\t\tClient DCB:                  %p\n", session->dcb);
+            dcb_printf(dcb, "\t\tClient protocol:             %s\n",
+                       session->dcb->service->ports->protocol);
+            dcb_printf(dcb, "\t\tClient Output Format:        %s\n",
+                       avro_client_ouput[session->format]);
+            dcb_printf(dcb, "\t\tState:                       %s\n",
+                       avro_client_states[session->state]);
+            dcb_printf(dcb, "\t\tAvro file:                   %s\n", session->avro_binfile);
+
+            gw_bin2hex(sync_marker_hex, session->avro_file.sync, SYNC_MARKER_SIZE);
+
+            dcb_printf(dcb, "\t\tAvro file SyncMarker:        %s\n", sync_marker_hex);
+            dcb_printf(dcb, "\t\tAvro file last read block:   %lu\n",
+                       session->avro_file.blocks_read);
+            dcb_printf(dcb, "\t\tAvro file last read record:  %lu\n",
+                       session->avro_file.records_read);
+
+            if (session->gtid_start.domain > 0 || session->gtid_start.server_id > 0 ||
+                session->gtid_start.seq > 0)
+            {
+                dcb_printf(dcb, "\t\tRequested GTID:          %lu-%lu-%lu\n",
+                           session->gtid_start.domain, session->gtid_start.server_id,
+                           session->gtid_start.seq);
+            }
+
+            dcb_printf(dcb, "\t\tCurrent GTID:                %lu-%lu-%lu\n",
+                       session->gtid.domain, session->gtid.server_id,
+                       session->gtid.seq);
+
+            dcb_printf(dcb, "\t\t--------------------\n\n");
+            session = session->next;
+        }
+        spinlock_release(&router_inst->lock);
+    }
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
 {
     AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *)router;
 
