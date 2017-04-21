@@ -1,10 +1,8 @@
 # MariaDB MaxScale Administration Tutorial
 
-Last updated 24th June 2015
-
 ## Common Administration Tasks
 
-The purpose of this tutorial is to introduce the MariaDB MaxScale Administrator to a few of the common administration tasks that need to be performed with MariaDB MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MariaDB MaxScale.
+The purpose of this tutorial is to introduce the MariaDB MaxScale Administrator to a few of the common administration tasks. This is intended to be an introduction for administrators who are new to MariaDB MaxScale and not a reference to all the tasks that may be performed.  
 
 - [Starting MariaDB MaxScale](#starting)
 - [Stopping MariaDB MaxScale](#stopping)
@@ -17,7 +15,7 @@ The purpose of this tutorial is to introduce the MariaDB MaxScale Administrator 
 <a name="starting"></a>
 ### Starting MariaDB MaxScale
 
-There are several ways to start MariaDB MaxScale, the most convenient mechanism is probably using the Linux service interface. When a MariaDB MaxScale package is installed the package manager will also installed a script in /etc/init.d which may be used to start and stop MariaDB MaxScale either directly or via the service interface.
+There are several ways to start MariaDB MaxScale, the most convenient mechanism is probably using the Linux service interface. When a MariaDB MaxScale package is installed, the package manager will also install a script in /etc/init.d which may be used to start and stop MariaDB MaxScale either directly or via the service interface.
 ```
 	$ service maxscale start
 ```
@@ -38,7 +36,7 @@ MAXSCALE_OPTIONS="--logdir=/home/maxscale/logs --piddir=/tmp --syslog=no"
 <a name="stopping"></a>
 ### Stopping MariaDB MaxScale
 
-There are numerous ways in which MariaDB MaxScale can be stopped; using the service interface, killing the process or by use of the maxadmin utility.
+There are numerous ways in which MariaDB MaxScale can be stopped; using the service interface, killing the process or by using the maxadmin utility.
 
 Stopping MariaDB MaxScale with the service interface is simply a case of using the service stop command or calling the init.d script with the stop argument.
 ```
@@ -59,7 +57,7 @@ In order to shutdown MariaDB MaxScale using the maxadmin command you may either 
 <a name="checking"></a>
 ### Checking The Status Of The MariaDB MaxScale Services
 
-It is possible to use the maxadmin command to obtain statistics regarding the services that are configured within your MariaDB MaxScale configuration file. The maxadmin command "list services" will give very basic information regarding the services that are define. This command may be either run in interactive mode or passed on the maxadmin command line.
+It is possible to use the maxadmin command to obtain statistics about the services that are running within MaxScale. The maxadmin command "list services" will give very basic information regarding services. This command may be either run in interactive mode or passed on the maxadmin command line.
 
 ```
 	$ maxadmin
@@ -84,30 +82,30 @@ It is possible to use the maxadmin command to obtain statistics regarding the se
 	MaxScale>
 ```
 
-It should be noted that network listeners count as a user of the service, therefore there will always be one user per network port in which the service listens. More detail can be obtained by use of the "show service" command which is passed a service name.
+Network listeners count as a user of the service, therefore there will always be one user per network port in which the service listens. More details can be obtained by using the "show service" command.
 
 <a name="persistent"></a>
 ### Persistent Connections
 
-Where the clients who are accessing a database system through MariaDB MaxScale make frequent
-short connections, there may be a benefit from invoking the MariaDB MaxScale Persistent
-Connection feature.  This is controlled by two configuration values that are specified
-per server in the relevant server section of the configuration file.  The configuration
-options are `persistpoolmax` and `persistmaxtime`.
+When clients who are accessing a database system through MariaDB MaxScale make frequent
+short connections, there may be a benefit in using persistent connections. This feature
+is controlled by two configuration values that are specified per server in the relevant
+server section of the configuration file.  The configuration options are `persistpoolmax`
+and `persistmaxtime`.
 
 Normally, when a client connection is terminated, all the related back end database
-connections are also terminated.  If the `persistpoolmax` options is set to a non-zero
+connections are also terminated. If the `persistpoolmax` options is set to a non-zero
 integer, then up to that number of connections will be kept in a pool for that
-server. When a new connection is requested by the system to meet a new client request,
+server. When a new connection is requested by the system to handle a client session,
 then a connection from the pool will be used if possible.
 
 The connection will only be taken from the pool if it has been there for no more
-than `persistmaxtime` seconds.  It was also be discarded if it has been disconnected
-by the back end server. Connections will be selected that match the user name and
-protocol for the new request.
+than `persistmaxtime` seconds. The connection will also be discarded if it has been
+disconnectedby the back end server. Connections will be selected so that they match
+the user name and protocol for the new request.
 
-Starting with the 2.1 version of MaxScale, when a MySQL protocol connection is
-taken from the pool the backend protocol module resets the session state. This
+Starting with MaxScale 2.1, when a MySQL protocol connection is
+taken from the pool, the backend protocol module resets the session state. This
 allows persistent connections to be used with no functional limitations.
 
 The session state is reset when the first outgoing network transmission is
@@ -129,7 +127,7 @@ values in each server section.
 <a name="clients"></a>
 ### What Clients Are Connected To MariaDB MaxScale
 
-To determine what client are currently connected to MariaDB MaxScale you can use the "list clients" command within maxadmin. This will give you IP address and the ID’s of the DCB and session for that connection. As with any maxadmin command this can be passed on the command line or typed interactively in maxadmin.
+To determine what client are currently connected to MariaDB MaxScale, you can use the "list clients" command within maxadmin. This will give you IP address and the ID’s of the DCB and session for that connection. As with any maxadmin command this can be passed on the command line or typed interactively in maxadmin.
 
 ```
 	$ maxadmin list clients
@@ -148,29 +146,34 @@ To determine what client are currently connected to MariaDB MaxScale you can use
 
 	$
 ```
+
 <a name="rotating"></a>
 ### Rotating the Log File
 
-MariaDB MaxScale logs messages of different priority into a single log file. With the exception if error messages that are always logged, whether messages of a particular priority should be logged or not can be enabled via the maxadmin interface or in the configuration file. By default, MaxScale keeps on writing to the same log file, so to prevent the file from growing indefinitely, the administrator must take action.
+MariaDB MaxScale logs messages of different priority into a single log file. With the exception if error messages that are always logged, whether messages of a particular priority should be logged or not can be enabled via the maxadmin interface or in the configuration file. By default, MaxScale keeps on writing to the same log file. To prevent the file from growing indefinitely, the administrator must take action.
 
-When MaxScale is started for the first time, the name of the log file is maxscale1.log. When the log is rotated, MaxScale closes the current log file and opens a new one where the sequence number is increased by one. That is, the first time the log is rotated, the name will be maxscale2.log.
+The name of the log file is maxscale.log. When the log is rotated, MaxScale closes the current log file and opens a new one using the same name.
 
 Log file rotation is achieved by use of the "flush log" or “flush logs” command in maxadmin.
+
 ```
 	$ maxadmin flush logs
 ```
-Flushes all logs. However, as there currently is only the maxscale log, that is the only one that will be rotated.
+
+As there currently is only the maxscale log, that is the only one that will be rotated.
 
 The maxscale log can also be flushed explicitly.
+
 ```
 	$ maxadmin
 	MaxScale> flush log maxscale
 	MaxScale>
 ```
-This may be integrated into the Linux _logrotate_ mechanism by adding a configuration file to the /etc/logrotate.d directory. If we assume we want to rotate the log files once per month and wish to keep 5 log files worth of history, the configuration file would look like the following.
 
+This may be integrated into the Linux _logrotate_ mechanism by adding a configuration file to the /etc/logrotate.d directory. If we assume we want to rotate the log files once per month and wish to keep 5 log files worth of history, the configuration file would look as follows.
+ 
 ```
-/var/log/maxscale/*.log {
+/var/log/maxscale/maxscale.log {
 monthly
 rotate 5
 missingok
@@ -186,16 +189,19 @@ endscript
 ```
 
 **Note**:
-If 'root' user is no longer available for maxadmin connection and say 'user1' is one of the allowed users, the maxadmin command should be run this way:
+
+If 'root' user is no longer available for maxadmin connection and for example 'user1' is one of the allowed users, the maxadmin command should be run as:
+
 `
 su - user1 -c '/usr/bin/maxadmin flush logs'
 `
+
 If listening socket is not the default one, /tmp/maxadmin.sock, use -S option.
 
 MariaDB MaxScale will also rotate all of its log files if it receives the USR1 signal. Using this the logrotate configuration script can be rewritten as
 
 ```
-/var/log/maxscale/*.log {
+/var/log/maxscale/maxscale.log {
 monthly
 rotate 5
 missingok
@@ -215,16 +221,20 @@ endscript
 MariaDB MaxScale supports the concept of maintenance mode for servers within a cluster, this allows for planned, temporary removal of a database from the cluster within the need to change the MariaDB MaxScale configuration.
 
 To achieve the removal of a database server you can use the set server command in the maxadmin utility to set the maintenance mode flag for the server. This may be done interactively within maxadmin or by passing the command on the command line.
+
 ```
 	MaxScale> set server dbserver3 maintenance
 	MaxScale>
 ```
+
 This will cause MariaDB MaxScale to stop routing any new requests to the server, however if there are currently requests executing on the server these will not be interrupted.
 
 To bring the server back into service use the "clear server" command to clear the maintenance mode bit for that server.
+
 ```
 	MaxScale> clear server dbserver3 maintenance
 	MaxScale>
 ```
+
 Note that maintenance mode is not persistent, if MariaDB MaxScale restarts when a node is in maintenance mode a new instance of MariaDB MaxScale will not honor this mode. If multiple MariaDB MaxScale instances are configured to use the node them maintenance mode must be set within each MariaDB MaxScale instance. However if multiple services within one MariaDB MaxScale instance are using the server then you only need set the maintenance mode once on the server for all services to take note of the mode change.
 

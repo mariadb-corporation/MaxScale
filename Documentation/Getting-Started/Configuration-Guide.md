@@ -2,11 +2,11 @@
 
 ## Introduction
 
-The purpose of this document is to describe how to configure MariaDB MaxScale
-and to discuss some possible usage scenarios for MariaDB MaxScale. MariaDB
+This document describes how to configure MariaDB MaxScale
+and presents some possible usage scenarios. MariaDB
 MaxScale is designed with flexibility in mind, and consists of an event
 processing core with various support functions and plugin modules that tailor
-the behavior of the MariaDB MaxScale itself.
+the behavior of the program.
 
 # Table of Contents
 
@@ -25,23 +25,22 @@ the behavior of the MariaDB MaxScale itself.
 * [Authentication](#authentication)
 * [Error Reporting](#error-reporting)
 
-### Terms
+## Glossary
 
-
-|        Term       |    Description
-------------------- | ------------------
-           service | A service represents a set of databases with a specific access mechanism that is offered to clients of MariaDB MaxScale. The access mechanism defines the algorithm that MariaDB MaxScale will use to direct particular requests to the individual databases.
-            server | A server represents an individual database server to which a client can be connected via MariaDB MaxScale.
-            router | A router is a module within MariaDB MaxScale that will route client requests to the various database servers which MariaDB MaxScale provides a service interface to.
-connection routing | Connection routing is a method of handling requests in which MariaDB MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.
-statement routing  | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.
-          protocol | A protocol is a module of software that is used to communicate with another software entity within the system. MariaDB MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.
-            module | A module is a separate code entity that may be loaded dynamically into MariaDB MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.
-           monitor | A monitor is a module that can be executed within MariaDB MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MariaDB MaxScale.
-          listener | A listener is the network endpoint that is used to listen for connections to MariaDB MaxScale from the client applications. A listener is associated to a single service, however, a service may have many listeners.
-connection failover| When a connection currently being used between MariaDB MaxScale and the database server fails a replacement will be automatically created to another server by MariaDB MaxScale without client intervention
-  backend database | A term used to refer to a database that sits behind MariaDB MaxScale and is accessed by applications via MariaDB MaxScale.
-            filter | A module that can be placed between the client and the MariaDB MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
+Word | Description
+--------------------|----------------------------------------------------
+service             | A service represents a set of databases with a specific access mechanism that is offered to clients of MariaDB MaxScale. The access mechanism defines the algorithm that MariaDB MaxScale will use to direct particular requests to the individual databases.
+server              | A server represents an individual database server to which a client can be connected via MariaDB MaxScale.
+router              | A router is a module within MariaDB MaxScale that will route client requests to the various database servers which MariaDB MaxScale provides a service interface to.
+connection routing  | Connection routing is a method of handling requests in which MariaDB MaxScale will accept connections from a client and route data on that connection to a single database using a single connection. Connection based routing will not examine individual requests on a connection and it will not move that connection once it is established.
+statement routing   | Statement routing is a method of handling requests in which each request within a connection will be handled individually. Requests may be sent to one or more servers and connections may be dynamically added or removed from the session.
+protocol            | A protocol is a module of software that is used to communicate with another software entity within the system. MariaDB MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.
+module              | A module is a separate code entity that may be loaded dynamically into MariaDB MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.
+monitor             | A monitor is a module that can be executed within MariaDB MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MariaDB MaxScale.
+listener            | A listener is the network endpoint that is used to listen for connections to MariaDB MaxScale from the client applications. A listener is associated to a single service, however, a service may have many listeners.
+connection failover | When a connection currently being used between MariaDB MaxScale and the database server fails a replacement will be automatically created to another server by MariaDB MaxScale without client intervention
+backend database    | A term used to refer to a database that sits behind MariaDB MaxScale and is accessed by applications via MariaDB MaxScale.
+filter              | A module that can be placed between the client and the MariaDB MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
 ## Configuration
 
@@ -134,7 +133,7 @@ used for systems dedicated for running MariaDB MaxScale.
 threads=1
 ```
 
-It should be noted that additional threads will be created to execute other
+Additional threads will be created to execute other
 internal services within MariaDB MaxScale. This setting is used to configure the
 number of threads that will be used to manage the user connections.
 
@@ -346,7 +345,7 @@ To disable the augmentation use the value 0 and to enable it use the value 1.
 
 #### `log_throttling`
 
-In some circumstances it is possible that a particular error (or warning) is
+It is possible that a particular error (or warning) is
 logged over and over again, if the cause for the error persistently remains. To
 prevent the log from flooding, it is possible to specify how many times a
 particular error may be logged within a time period, before the logging of that

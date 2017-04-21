@@ -53,9 +53,8 @@ int main(int argc, char **argv)
 }
 ```
 
-The array of _modulecmd_arg_type_t_ type is used to tell what kinds of arguments
-the command expects. The first argument is a SERVER which will be replaced with a
-pointer to a server. The second argument is an optional string argument.
+The array _my_args_ of type _modulecmd_arg_type_t_ is used to tell what kinds of arguments
+the command expects. The first argument is a boolean and the second argument is an optional string.
 
 Arguments are passed to the parsing function as an array of void pointers. They
 are interpreted as the types the command expects.

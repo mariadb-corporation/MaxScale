@@ -1,24 +1,16 @@
-# Maxbinlogcheck
-
-# The MySQL/MariaDB binlog check utility 
-
-Massimiliano Pinto
-
-Last Updated: 07th December 2016
+# Maxbinlogcheck, the MySQL/MariaDB binlog check utility 
 
 # Overview
 
-Maxbinlogcheck is a command line utility for checking binlogfiles downloaded by MariaDB MaxScale binlog router or the MySQL/MariaDB binlog files stored in a database server acting as a master in a replication environment.  
-It checks the binlog file against any corruption and incomplete transaction stored and reports a transaction summary after reading all the events.  
-It may optionally truncate binlog file.
+Maxbinlogcheck is a command line utility for checking binlogfiles. The files may have been downloaded by the MariaDB MaxScale binlog router or they may be MySQL/MariaDB binlog files stored in a database server acting as a master in a replication environment. Maxbinlogcheck checks the binlog files against any corruption and stored incomplete transactions and reports a transaction summary after reading all the events. It may optionally truncate the binlog file.
 
-Maxbinlogcheck supports
+Maxbinlogcheck supports:
 
 * MariaDB 5.5 and MySQL 5.6
-
 * MariaDB 10.0 and 10.1 with a command line option
 
 # Running maxbinlogcheck
+
 ```
 # /usr/local/bin/maxbinlogcheck /path_to_file/bin.000002
 ```
@@ -36,27 +28,27 @@ The maxbinlogcheck command accepts a number of switches
   <tr>
     <td>-f</td>
     <td>--fix</td>
-    <td>If the option is set the binlog file will be truncated at last safe transaction pos in case of any error</td>
+    <td>If set the binlog file will be truncated at last safe transaction pos in case of any error</td>
   </tr>
   <tr>
     <td>-M</td>
     <td>--mariadb10</td>
-    <td>Check the current binlog against MariaDB 10.0.x events</td>
+    <td>Checks the current binlog against MariaDB 10.0.x events</td>
   </tr>
   <tr>
     <td>-d</td>
     <td>--debug</td>
-    <td>Set the debug mode. If set the FD Events, Rotate events and opening/closing transactions are displayed.</td>
+    <td>Sets the debug mode. If set the FD Events, Rotate events and opening/closing transactions are displayed.</td>
   </tr>
   <tr>
     <td>-?</td>
     <td>--help</td>
-    <td>Print usage information regarding maxbinlogcheck</td>
+    <td>Prints usage information regarding maxbinlogcheck</td>
   </tr>
   <tr>
     <td>-V</td>
     <td>--version</td>
-    <td>Print the maxbinlogcheck version information</td>
+    <td>Prints the maxbinlogcheck version information</td>
   </tr>
   <tr>
     <td>-K</td>
@@ -71,7 +63,7 @@ The maxbinlogcheck command accepts a number of switches
     <tr>
     <td>-H</td>
     <td>--header</td>
-    <td>Print the binlog event header</td>
+    <td>Prints the binlog event header</td>
   </tr>
 </table>
 
@@ -183,7 +175,7 @@ This file is corrupted, as reported by the utility:
 2015-09-08 10:03:16   Check retcode: 1, Binlog Pos = 245
 ```
 
-The suggested safe pos is 245
+The suggested safe pos is 245.
 
 Use -f option for fix with debug:
 
@@ -281,8 +273,9 @@ And finally big transaction is now done.
 2015-09-08 10:17:16   Check retcode: 0, Binlog Pos = 590760698
 ```
 
-**Note**  
-with current maxbinlogcheck it's not possible to fix a binlog with incomplete transaction and no other errors
+**Note**
+
+With current maxbinlogcheck it's not possible to fix a binlog with incomplete transaction and no other errors
 
 If that is really desired it will be possible with UNIX command line:
 
