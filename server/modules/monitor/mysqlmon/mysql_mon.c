@@ -547,6 +547,9 @@ static MXS_MONITOR_SERVERS *build_mysql51_replication_tree(MXS_MONITOR *mon)
             /* Set the Slave Role */
             if (ismaster)
             {
+                MYSQL_MONITOR *handle = mon->handle;
+                handle->master = database;
+
                 MXS_DEBUG("Master server found at [%s]:%d with %d slaves",
                           database->server->name,
                           database->server->port,
