@@ -101,7 +101,8 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -273,6 +274,21 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
 static void rule_free_all(RULE* rule);
 static bool process_rule_file(const char* filename, RULE** rules, HASHTABLE **users);
 bool replace_rules(FW_INSTANCE* instance);
+
+static void print_rule(RULE *rules, char *dest)
+{
+    int type = 0;
+
+    if ((int)rules->type > 0 && (int)rules->type < rule_names_len)
+    {
+        type = (int)rules->type;
+    }
+
+    sprintf(dest, "%s, %s, %d",
+            rules->name,
+            rule_names[type],
+            rules->times_matched);
+}
 
 static json_t* rule_to_json(RULE *rule)
 {
@@ -766,6 +782,8 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
     MXS_FILTER_DEF *filter = argv->argv[1].value.filter;
     FW_INSTANCE *inst = (FW_INSTANCE*)filter_def_get_instance(filter);
 
+    dcb_printf(dcb, "Rule, Type, Times Matched\n");
+
     if (!thr_rules || !thr_users)
     {
         if (!replace_rules(inst))
@@ -774,18 +792,11 @@ bool dbfw_show_rules(const MODULECMD_ARG *argv)
         }
     }
 
-    json_t* json = rules_to_json(thr_rules);
-
-    if (json)
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
     {
-        char* dump = json_dumps(json, JSON_INDENT(4));
-
-        if (dump)
-        {
-            dcb_printf(dcb, "%s\n", dump);
-        }
-
-        MXS_FREE(dump);
+        char buf[strlen(rule->name) + 200]; // Some extra space
+        print_rule(rule, buf);
+        dcb_printf(dcb, "%s\n", buf);
     }
 
     return true;
@@ -836,6 +847,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -2503,8 +2515,33 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  * @param   fsession    Filter session, may be NULL
  * @param   dcb     The DCB for diagnostic output
  */
-static json_t*
-diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static void
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    FW_INSTANCE *my_instance = (FW_INSTANCE *) instance;
+
+    dcb_printf(dcb, "Firewall Filter\n");
+    dcb_printf(dcb, "Rule, Type, Times Matched\n");
+
+    for (RULE *rule = thr_rules; rule; rule = rule->next)
+    {
+        char buf[strlen(rule->name) + 200];
+        print_rule(rule, buf);
+        dcb_printf(dcb, "%s\n", buf);
+    }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Prints the connection details and the names of the exchange,
+ * queue and the routing key.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     return rules_to_json(thr_rules);
 }

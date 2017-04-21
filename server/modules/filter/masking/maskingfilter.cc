@@ -138,7 +138,13 @@ MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* MaskingFilter::diagnostics() const
+void MaskingFilter::diagnostics(DCB* pDcb)
+{
+    dcb_printf(pDcb, "Hello, World!\n");
+}
+
+// static
+json_t* MaskingFilter::diagnostics_json() const
 {
     return NULL;
 }

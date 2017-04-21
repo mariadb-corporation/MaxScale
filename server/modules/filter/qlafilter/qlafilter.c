@@ -81,7 +81,8 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -182,6 +183,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No client reply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -578,8 +580,52 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
  *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
  */
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static void
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    QLA_INSTANCE *my_instance = (QLA_INSTANCE *) instance;
+    QLA_SESSION *my_session = (QLA_SESSION *) fsession;
+
+    if (my_session)
+    {
+        dcb_printf(dcb, "\t\tLogging to file            %s.\n",
+                   my_session->filename);
+    }
+    if (my_instance->source)
+    {
+        dcb_printf(dcb, "\t\tLimit logging to connections from  %s\n",
+                   my_instance->source);
+    }
+    if (my_instance->user_name)
+    {
+        dcb_printf(dcb, "\t\tLimit logging to user      %s\n",
+                   my_instance->user_name);
+    }
+    if (my_instance->match)
+    {
+        dcb_printf(dcb, "\t\tInclude queries that match     %s\n",
+                   my_instance->match);
+    }
+    if (my_instance->nomatch)
+    {
+        dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
+                   my_instance->nomatch);
+    }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     QLA_INSTANCE *my_instance = (QLA_INSTANCE*)instance;
     QLA_SESSION *my_session = (QLA_SESSION*)fsession;

@@ -311,10 +311,27 @@ RegexHintFilter::create(const char* name, char** options, MXS_CONFIG_PARAMETER* 
  *
  * @param   dcb     The DCB for diagnostic output
  */
-json_t* RegexHintFSession::diagnostics() const
+void RegexHintFSession::diagnostics(DCB* dcb)
 {
 
-    json_t* rval = m_fil_inst.diagnostics(); /* Print overall diagnostics */
+    m_fil_inst.diagnostics(dcb); /* Print overall diagnostics */
+    dcb_printf(dcb, "\t\tNo. of queries diverted by filter (session): %d\n",
+               m_n_diverted);
+    dcb_printf(dcb, "\t\tNo. of queries not diverted by filter (session):     %d\n",
+               m_n_undiverted);
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Print diagnostics on the filter instance as a whole + session-specific info.
+ *
+ * @param   dcb     The DCB for diagnostic output
+ */
+json_t* RegexHintFSession::diagnostics_json() const
+{
+
+    json_t* rval = m_fil_inst.diagnostics_json(); /* Print overall diagnostics */
 
     json_object_set_new(rval, "session_queries_diverted", json_integer(m_n_diverted));
     json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
@@ -329,7 +346,50 @@ json_t* RegexHintFSession::diagnostics() const
  *
  * @param   dcb     The DCB for diagnostic output
  */
-json_t* RegexHintFilter::diagnostics() const
+void RegexHintFilter::diagnostics(DCB* dcb)
+{
+    if (m_mapping.size() > 0)
+    {
+        dcb_printf(dcb, "\t\tMatches and routes:\n");
+    }
+    for (unsigned int i = 0; i < m_mapping.size(); i++)
+    {
+        dcb_printf(dcb, "\t\t\t/%s/ -> ",
+                   m_mapping[i].m_match.c_str());
+        dcb_printf(dcb, "%s", m_mapping[i].m_targets[0].c_str());
+        for (unsigned int j = 1; j < m_mapping[i].m_targets.size(); j++)
+        {
+            dcb_printf(dcb, ", %s", m_mapping[i].m_targets[j].c_str());
+        }
+        dcb_printf(dcb, "\n");
+    }
+    dcb_printf(dcb, "\t\tTotal no. of queries diverted by filter (approx.):     %d\n",
+               m_total_diverted);
+    dcb_printf(dcb, "\t\tTotal no. of queries not diverted by filter (approx.): %d\n",
+               m_total_undiverted);
+
+    if (m_source)
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limited to connections from     %s\n",
+                   m_source->m_address.c_str());
+    }
+    if (m_user.length())
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limit to user           %s\n",
+                   m_user.c_str());
+    }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Print diagnostics on the filter instance as a whole.
+ *
+ * @param   dcb     The DCB for diagnostic output
+ */
+json_t* RegexHintFilter::diagnostics_json() const
 {
     json_t* rval = json_object();
 

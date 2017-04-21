@@ -98,15 +98,7 @@ bool cache_command_show(const MODULECMD_ARG* pArgs)
     ss_dassert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 
-    json_t* json = NULL;
-
-    MXS_EXCEPTION_GUARD(json = pFilter->cache().show());
-
-    if (json)
-    {
-        string str = mxs::json_dump(json, JSON_INDENT(4));
-        dcb_printf(pDcb, "%s\n", str.c_str());
-    }
+    MXS_EXCEPTION_GUARD(pFilter->cache().show(pDcb));
 
     return true;
 }
@@ -306,9 +298,15 @@ CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* CacheFilter::diagnostics() const
+void CacheFilter::diagnostics(DCB* pDcb)
 {
-    return m_sCache->show();
+    m_sCache->show(pDcb);
+}
+
+// static
+json_t* CacheFilter::diagnostics_json() const
+{
+    return m_sCache->show_json();
 }
 
 uint64_t CacheFilter::getCapabilities()

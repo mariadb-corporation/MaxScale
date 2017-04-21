@@ -32,7 +32,8 @@ static void closeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -56,6 +57,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -218,11 +220,30 @@ routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWBUF *queue)
 /**
  * Diagnostics routine
  *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
+ */
+static void
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    HINT_INSTANCE *my_instance = (HINT_INSTANCE *)instance;
+    HINT_SESSION *my_session = (HINT_SESSION *)fsession;
+
+}
+
+/**
+ * Diagnostics routine
+ *
  * @param   instance    The filter instance
  * @param   fsession    Filter session, may be NULL
  */
 static json_t*
-diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     return NULL;
 }

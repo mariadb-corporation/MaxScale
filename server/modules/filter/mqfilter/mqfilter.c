@@ -94,7 +94,8 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MX
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_UPSTREAM *upstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
@@ -270,6 +271,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -1482,9 +1484,41 @@ static int clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF 
  *
  * @param       instance        The filter instance
  * @param       fsession        Filter session, may be NULL
+ * @param       dcb             The DCB for diagnostic output
+ */
+static void
+diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    MQ_INSTANCE *my_instance = (MQ_INSTANCE *) instance;
+
+    if (my_instance)
+    {
+        dcb_printf(dcb, "Connecting to [%s]:%d as '%s'.\nVhost: %s\tExchange: %s\nKey: %s\tQueue: %s\n\n",
+                   my_instance->hostname, my_instance->port,
+                   my_instance->username,
+                   my_instance->vhost, my_instance->exchange,
+                   my_instance->key, my_instance->queue
+                  );
+        dcb_printf(dcb, "%-16s%-16s%-16s\n",
+                   "Messages", "Queued", "Sent");
+        dcb_printf(dcb, "%-16d%-16d%-16d\n",
+                   my_instance->stats.n_msg,
+                   my_instance->stats.n_queued,
+                   my_instance->stats.n_sent);
+    }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Prints the connection details and the names of the exchange,
+ * queue and the routing key.
+ *
+ * @param       instance        The filter instance
+ * @param       fsession        Filter session, may be NULL
  */
 static json_t*
-diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     MQ_INSTANCE *my_instance = (MQ_INSTANCE*)instance;
     json_t* rval = json_object();

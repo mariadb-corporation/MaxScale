@@ -37,7 +37,8 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *session, MXS_UPSTREAM *upstream);
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GWBUF *reply);
 static bool extract_insert_target(GWBUF *buffer, char* target, int len);
@@ -99,6 +100,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL,
     };
@@ -497,8 +499,33 @@ static int32_t clientReply(MXS_FILTER* instance, MXS_FILTER_SESSION *session, GW
  *
  * @param   instance The filter instance
  * @param   fsession Filter session, may be NULL
+ * @param   dcb      The DCB for diagnostic output
  */
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    DS_INSTANCE *my_instance = (DS_INSTANCE *) instance;
+
+    if (my_instance->source)
+    {
+        dcb_printf(dcb, "\t\tReplacement limited to connections from     %s\n", my_instance->source);
+    }
+    if (my_instance->user)
+    {
+        dcb_printf(dcb, "\t\tReplacement limit to user           %s\n", my_instance->user);
+    }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance The filter instance
+ * @param   fsession Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     DS_INSTANCE *my_instance = (DS_INSTANCE*)instance;
 

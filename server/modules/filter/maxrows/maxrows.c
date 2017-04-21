@@ -67,7 +67,10 @@ static int     routeQuery(MXS_FILTER *instance,
 static int     clientReply(MXS_FILTER *instance,
                            MXS_FILTER_SESSION *sdata,
                            GWBUF *queue);
-static json_t* diagnostics(const MXS_FILTER *instance,
+static void    diagnostics(MXS_FILTER *instance,
+                           MXS_FILTER_SESSION *sdata,
+                           DCB *dcb);
+static json_t* diagnostics_json(const MXS_FILTER *instance,
                            const MXS_FILTER_SESSION *sdata);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
@@ -106,6 +109,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostics,
+        diagnostics_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -487,11 +491,28 @@ static int clientReply(MXS_FILTER *instance,
  * @param fsession  Filter session, may be NULL
  * @param dcb       The DCB for diagnostic output
  */
-static json_t* diagnostics(const MXS_FILTER *instance, const MXS_FILTER_SESSION *sdata)
+static void diagnostics(MXS_FILTER *instance, MXS_FILTER_SESSION *sdata, DCB *dcb)
+{
+    MAXROWS_INSTANCE *cinstance = (MAXROWS_INSTANCE*)instance;
+    MAXROWS_SESSION_DATA *csdata = (MAXROWS_SESSION_DATA*)sdata;
+
+    dcb_printf(dcb, "Maxrows filter is working\n");
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If csdata is NULL then print diagnostics on the instance as a whole,
+ * otherwise print diagnostics for the particular session.
+ *
+ * @param instance  The filter instance
+ * @param fsession  Filter session, may be NULL
+ * @param dcb       The DCB for diagnostic output
+ */
+static json_t* diagnostics_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *sdata)
 {
     return NULL;
 }
-
 
 /**
  * Capability routine.

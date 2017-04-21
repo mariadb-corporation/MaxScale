@@ -33,7 +33,8 @@ public:
 
     MaskingFilterSession* newSession(MXS_SESSION* pSession);
 
-    json_t* diagnostics() const;
+    void diagnostics(DCB* pDcb);
+    json_t* diagnostics_json() const;
 
     uint64_t getCapabilities();
 

@@ -142,7 +142,13 @@ NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession)
 }
 
 // static
-json_t* NullFilter::diagnostics() const
+void NullFilter::diagnostics(DCB* pDcb)
+{
+    dcb_printf(pDcb, "Hello, World!\n");
+}
+
+// static
+json_t* NullFilter::diagnostics_json() const
 {
     return NULL;
 }

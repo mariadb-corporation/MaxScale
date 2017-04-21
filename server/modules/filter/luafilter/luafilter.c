@@ -63,7 +63,8 @@ static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  M
 static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS_UPSTREAM *upstream);
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
@@ -87,6 +88,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -620,11 +622,60 @@ static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *session, GWB
  *
  * This will call the matching diagnostics entry point in the Lua script. If the
  * Lua function returns a string, it will be printed to the client DCB.
+ * @param instance The filter instance
+ * @param fsession Filter session, may be NULL
+ * @param dcb  The DCB for diagnostic output
+ */
+static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
+{
+    LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
+
+    if (my_instance)
+    {
+        if (my_instance->global_lua_state)
+        {
+            spinlock_acquire(&my_instance->lock);
+
+            lua_getglobal(my_instance->global_lua_state, "diagnostic");
+
+            if (lua_pcall(my_instance->global_lua_state, 0, 1, 0) == 0)
+            {
+                lua_gettop(my_instance->global_lua_state);
+                if (lua_isstring(my_instance->global_lua_state, -1))
+                {
+                    dcb_printf(dcb, "%s", lua_tostring(my_instance->global_lua_state, -1));
+                    dcb_printf(dcb, "\n");
+                }
+            }
+            else
+            {
+                dcb_printf(dcb, "Global scope call to 'diagnostic' failed: '%s'.\n",
+                           lua_tostring(my_instance->global_lua_state, -1));
+                lua_pop(my_instance->global_lua_state, -1);
+            }
+            spinlock_release(&my_instance->lock);
+        }
+        if (my_instance->global_script)
+        {
+            dcb_printf(dcb, "Global script: %s\n", my_instance->global_script);
+        }
+        if (my_instance->session_script)
+        {
+            dcb_printf(dcb, "Session script: %s\n", my_instance->session_script);
+        }
+    }
+}
+
+/**
+ * Diagnostics routine.
+ *
+ * This will call the matching diagnostics entry point in the Lua script. If the
+ * Lua function returns a string, it will be printed to the client DCB.
  *
  * @param instance The filter instance
  * @param fsession Filter session, may be NULL
  */
-static json_t* diagnostic(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
 {
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *)instance;
     json_t* rval = json_object();
