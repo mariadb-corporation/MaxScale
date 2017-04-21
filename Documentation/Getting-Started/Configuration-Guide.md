@@ -2,11 +2,10 @@
 
 ## Introduction
 
-This document describes how to configure MariaDB MaxScale
-and presents some possible usage scenarios. MariaDB
-MaxScale is designed with flexibility in mind, and consists of an event
-processing core with various support functions and plugin modules that tailor
-the behavior of the program.
+This document describes how to configure MariaDB MaxScale and presents some
+possible usage scenarios. MariaDB MaxScale is designed with flexibility in mind,
+and consists of an event processing core with various support functions and
+plugin modules that tailor the behavior of the program.
 
 # Table of Contents
 
@@ -48,7 +47,7 @@ The MariaDB MaxScale configuration is read from a file that MariaDB MaxScale
 will look for in the following places:
 
 1. By default, the file `maxscale.cnf` in the directory `/etc`
-1. The location given with the `--configdir=<path>` command line argument.
+2. The location given with the `--configdir=<path>` command line argument.
 
 MariaDB MaxScale will further look for a directory with the same name as the
 configuration file, followed by `.d` (for instance `/etc/maxscale.cnf.d`) and
@@ -62,10 +61,10 @@ separate configuration files for _servers_, _filters_, etc.
 
 The configuration file itself is based on the
 [.ini](https://en.wikipedia.org/wiki/INI_file) file format and consists of
-various sections that are used to build the configuration; these sections
-define services, servers, listeners, monitors and global settings. Parameters,
-which expect a comma-separated list of values can be defined on multiple
-lines. The following is an example of a multi-line definition.
+various sections that are used to build the configuration; these sections define
+services, servers, listeners, monitors and global settings. Parameters, which
+expect a comma-separated list of values can be defined on multiple lines. The
+following is an example of a multi-line definition.
 
 ```
 [MyService]
@@ -76,18 +75,18 @@ servers=server1,
         server3
 ```
 
-The values of the parameter that are not on the first line need to have at
-least one whitespace character before them in order for them to be recognized
-as a part of the multi-line parameter.
+The values of the parameter that are not on the first line need to have at least
+one whitespace character before them in order for them to be recognized as a
+part of the multi-line parameter.
 
 ### Sizes
 
-Where _specifically noted_, a number denoting a size can be suffixed by a subset of
-the IEC binary prefixes or the SI prefixes. In the former case the number will be
-interpreted as a certain multiple of 1024 and in the latter case as a certain multiple
-of 1000. The supported IEC binary suffixes are `Ki`, `Mi`, `Gi` and `Ti` and the
-supported SI suffixes are `k`, `M`, `G` and `T`. In both cases, the matching is
-case insensitive.
+Where _specifically noted_, a number denoting a size can be suffixed by a subset
+of the IEC binary prefixes or the SI prefixes. In the former case the number
+will be interpreted as a certain multiple of 1024 and in the latter case as a
+certain multiple of 1000. The supported IEC binary suffixes are `Ki`, `Mi`, `Gi`
+and `Ti` and the supported SI suffixes are `k`, `M`, `G` and `T`. In both cases,
+the matching is case insensitive.
 
 For instance, the following entries
 ```
@@ -133,9 +132,9 @@ used for systems dedicated for running MariaDB MaxScale.
 threads=1
 ```
 
-Additional threads will be created to execute other
-internal services within MariaDB MaxScale. This setting is used to configure the
-number of threads that will be used to manage the user connections.
+Additional threads will be created to execute other internal services within
+MariaDB MaxScale. This setting is used to configure the number of threads that
+will be used to manage the user connections.
 
 #### `auth_connect_timeout`
 
@@ -212,8 +211,7 @@ By default logging to *syslog* is enabled.
 syslog=1
 ```
 
-To enable logging to syslog use the value 1 and to disable use
-the value 0.
+To enable logging to syslog use the value 1 and to disable use the value 0.
 
 #### `maxlog`
 
@@ -232,15 +230,15 @@ disable use the value 0.
 
 #### `log_to_shm`
 
-Enable or disable the writing of the *maxscale.log* file to shared memory.
-If enabled, then the actual log file will be created under `/dev/shm` and
-a symbolic link to that file will be created in the *MaxScale* log directory.
+Enable or disable the writing of the *maxscale.log* file to shared memory. If
+enabled, then the actual log file will be created under `/dev/shm` and a
+symbolic link to that file will be created in the *MaxScale* log directory.
 
-Logging to shared memory may be appropriate if *log_info* and/or *log_debug*
-are enabled, as logging to a regular file may in that case cause performance
-degradation, due to the amount of data logged. However, as shared memory is
-a scarce resource, logging to shared memory should be used only temporarily
-and not regularly.
+Logging to shared memory may be appropriate if *log_info* and/or *log_debug* are
+enabled, as logging to a regular file may in that case cause performance
+degradation, due to the amount of data logged. However, as shared memory is a
+scarce resource, logging to shared memory should be used only temporarily and
+not regularly.
 
 Since *MariaDB MaxScale* can log to both file and *syslog* an approach that
 provides maximum flexibility is to enable *syslog* and *log_to_shm*, and to
@@ -257,8 +255,8 @@ By default, logging to shared memory is disabled.
 log_to_shm=1
 ```
 
-To enable logging to shared memory use the value 1 and to disable use
-the value 0.
+To enable logging to shared memory use the value 1 and to disable use the value
+0.
 
 #### `log_warning`
 
@@ -276,8 +274,8 @@ To disable these messages use the value 0 and to enable them use the value 1.
 #### `log_notice`
 
 Enable or disable the logging of messages whose syslog priority is *notice*.
-Messages of this priority provide information about the functioning of
-MariaDB MaxScale and are enabled by default.
+Messages of this priority provide information about the functioning of MariaDB
+MaxScale and are enabled by default.
 
 ```
 # Valid options are:
@@ -289,12 +287,12 @@ To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_info`
 
-Enable or disable the logging of messages whose syslog priority is *info*.
-These messages provide detailed information about the internal workings of
-MariaDB MaxScale and should not, due to their frequency, be enabled, unless there
-is a specific reason for that. For instance, from these messages it will be
-evident, e.g., why a particular query was routed to the master instead of
-to a slave. These informational messages are disabled by default.
+Enable or disable the logging of messages whose syslog priority is *info*. These
+messages provide detailed information about the internal workings of MariaDB
+MaxScale and should not, due to their frequency, be enabled, unless there is a
+specific reason for that. For instance, from these messages it will be evident,
+e.g., why a particular query was routed to the master instead of to a slave.
+These informational messages are disabled by default.
 
 ```
 # Valid options are:
@@ -306,9 +304,9 @@ To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_debug`
 
-Enable or disable the logging of messages whose syslog priority is *debug*.
-This kind of messages are intended for development purposes and are disabled
-by default. Note that if MariaDB MaxScale has been built in release mode, then
+Enable or disable the logging of messages whose syslog priority is *debug*. This
+kind of messages are intended for development purposes and are disabled by
+default. Note that if MariaDB MaxScale has been built in release mode, then
 debug messages are excluded from the build and this setting will not have any
 effect.
 
@@ -345,11 +343,11 @@ To disable the augmentation use the value 0 and to enable it use the value 1.
 
 #### `log_throttling`
 
-It is possible that a particular error (or warning) is
-logged over and over again, if the cause for the error persistently remains. To
-prevent the log from flooding, it is possible to specify how many times a
-particular error may be logged within a time period, before the logging of that
-error is suppressed for a while.
+It is possible that a particular error (or warning) is logged over and over
+again, if the cause for the error persistently remains. To prevent the log from
+flooding, it is possible to specify how many times a particular error may be
+logged within a time period, before the logging of that error is suppressed for
+a while.
 
 ```
 # A valid value looks like
@@ -392,9 +390,9 @@ logdir=/tmp/
 
 #### `datadir`
 
-Set the directory where the data files used by MariaDB MaxScale are
-stored. Modules can write to this directory and for example the binlogrouter
-uses this folder as the default location for storing binary logs.
+Set the directory where the data files used by MariaDB MaxScale are stored.
+Modules can write to this directory and for example the binlogrouter uses this
+folder as the default location for storing binary logs.
 
 ```
 datadir=/home/user/maxscale_data/
@@ -414,9 +412,9 @@ libdir=/home/user/lib64/
 #### `cachedir`
 
 Configure the directory MariaDB MaxScale uses to store cached data. An example
-of cached data is the authentication data fetched from the backend
-servers. MariaDB MaxScale stores this in case a connection to the backend server
-is not possible.
+of cached data is the authentication data fetched from the backend servers.
+MariaDB MaxScale stores this in case a connection to the backend server is not
+possible.
 
 ```
 cachedir=/tmp/maxscale_cache/
@@ -493,21 +491,23 @@ language=/home/user/lang/
 
 The module used by MariaDB MaxScale for query classification. The information
 provided by this module is used by MariaDB MaxScale when deciding where a
-particular statement should be sent. The default query classifier
-is _qc_sqlite_.
+particular statement should be sent. The default query classifier is
+_qc_sqlite_.
 
 #### `query_classifier_args`
 
-Arguments for the query classifier. What arguments are accepted depends
-on the particular query classifier being used. The default query
-classifier - _qc_sqlite_ - supports the following arguments:
+Arguments for the query classifier. What arguments are accepted depends on the
+particular query classifier being used. The default query classifier -
+_qc_sqlite_ - supports the following arguments:
 
 ##### `log_unrecognized_statements`
 
 An integer argument taking the following values:
    * 0: Nothing is logged. This is the default.
-   * 1: Statements that cannot be parsed completely are logged. They may have been partially parsed, or classified based on keyword matching.
-   * 2: Statements that cannot even be partially parsed are logged. They may have been classified based on keyword matching.
+   * 1: Statements that cannot be parsed completely are logged. They may have been
+partially parsed, or classified based on keyword matching.
+   * 2: Statements that cannot even be partially parsed are logged. They may have
+been classified based on keyword matching.
    * 3: Statements that cannot even be classified by keyword matching are logged.
 
 ```
@@ -515,8 +515,8 @@ query_classifier=qc_sqlite
 query_classifier_args=log_unrecognized_statements=1
 ```
 
-This will log all statements that cannot be parsed completely. This
-may be useful if you suspect that MariaDB MaxScale routes statements to the wrong
+This will log all statements that cannot be parsed completely. This may be
+useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).
 
 ### Service
@@ -529,12 +529,12 @@ statements or route connections to those backend servers.
 A service may be considered as a virtual database server that MariaDB MaxScale
 makes available to its clients.
 
-Several different services may be defined using the same set of backend
-servers. For example a connection based routing service might be used by clients
-that already performed internal read/write splitting, whilst a different
-statement based router may be used by clients that are not written with this
-functionality in place. Both sets of applications could access the same data in
-the same databases.
+Several different services may be defined using the same set of backend servers.
+For example a connection based routing service might be used by clients that
+already performed internal read/write splitting, whilst a different statement
+based router may be used by clients that are not written with this functionality
+in place. Both sets of applications could access the same data in the same
+databases.
 
 A service is identified by a service name, which is the name of the
 configuration file section and a type parameter of service.
@@ -580,9 +580,9 @@ router is included with the documentation of the router itself.
 
 #### `router_options`
 
-Option string given to the router module. The value of this parameter
-should be a comma-separated list of key-value pairs. See router specific
-documentation for more details.
+Option string given to the router module. The value of this parameter should be
+a comma-separated list of key-value pairs. See router specific documentation for
+more details.
 
 #### `filters`
 
@@ -756,9 +756,10 @@ control the load balancing applied in the router in use by the service. This
 allows varying weights to be applied to each server to create a non-uniform
 distribution of the load amongst the servers.
 
-An example of this might be to define a parameter for each server that represents
-the amount of resource available on the server, we could call this serversize.
-Every server should then have a serversize parameter set for the server.
+An example of this might be to define a parameter for each server that
+represents the amount of resource available on the server, we could call this
+serversize. Every server should then have a serversize parameter set for the
+server.
 
 ```
 serversize=10
@@ -766,8 +767,8 @@ serversize=10
 
 The service would then have the parameter `weightby=serversize`. If there are 4
 servers defined in the service (serverA, serverB, serverC and serverD) with the
-serversize set as shown in the table below, the connections would balanced
-using the percentages in this table.
+serversize set as shown in the table below, the connections would balanced using
+the percentages in this table.
 
  Server  |serversize|% connections
 ---------|----------|-------------
@@ -780,8 +781,8 @@ _**Note**: If the value of the weighting parameter of an individual server is
 zero or the relative weight rounds down to zero, no queries will be routed to
 that server as long as a server with a positive weight is available._
 
-Here is an excerpt from an example configuration with the `serv_weight` parameter
-used as the weighting parameter.
+Here is an excerpt from an example configuration with the `serv_weight`
+parameter used as the weighting parameter.
 
 ```
 [server1]
@@ -806,19 +807,19 @@ weightby=serv_weight
 ```
 
 With this configuration and a heavy query load, the server _server1_ will get
-most of the connections and about a third of the remaining queries are routed
-to the second server. With server weights, you can assign secondary servers
-that are only used when the primary server is under heavy load.
+most of the connections and about a third of the remaining queries are routed to
+the second server. With server weights, you can assign secondary servers that
+are only used when the primary server is under heavy load.
 
 Without the weightby parameter, each connection counts as a single connection.
-With a weighting parameter, a single connection received its weight from
-the server's own weighting parameter divided by the sum of all weighting
-parameters in all the configured servers.
+With a weighting parameter, a single connection received its weight from the
+server's own weighting parameter divided by the sum of all weighting parameters
+in all the configured servers.
 
 If we use the previous configuration as an example, the sum of the `serv_weight`
-parameter is 4. _Server1_ would receive a weight of `3/4=75%` and _server2_ would get
-`1/4=25%`. This means that _server1_ would get 75% of the connections and _server2_
-would get 25% of the connections.
+parameter is 4. _Server1_ would receive a weight of `3/4=75%` and _server2_
+would get `1/4=25%`. This means that _server1_ would get 75% of the connections
+and _server2_ would get 25% of the connections.
 
 #### `auth_all_servers`
 
@@ -832,9 +833,9 @@ servers.
 The strip_db_esc parameter strips escape characters from database names of
 grants when loading the users from the backend server.
 
-This parameter takes a boolean value and when enabled, will strip all backslash
-(`\`) characters from the database names. The default value for this parameter
-is true since MaxScale 2.0.1. In previous version, the default value was false.
+This parameter takes a boolean value and when enabled, will strip all backslash (`\`)
+characters from the database names. The default value for this parameter is true
+since MaxScale 2.0.1. In previous version, the default value was false.
 
 Some visual database management tools automatically escape some characters and
 this might cause conflicts when MariaDB MaxScale tries to authenticate users.
@@ -978,10 +979,9 @@ able to accept SSL connections.
 #### `ssl`
 
 This enables SSL connections to the server, when set to `required`. If that is
-done, the three certificate files mentioned below must also be
-supplied. MaxScale connections to this server will then be encrypted with
-SSL. If this is not possible, client connection attempts that rely on the server
-will fail.
+done, the three certificate files mentioned below must also be supplied.
+MaxScale connections to this server will then be encrypted with SSL. If this is
+not possible, client connection attempts that rely on the server will fail.
 
 #### `ssl_key`
 
@@ -1020,10 +1020,10 @@ should be used.
 
 #### `ssl_cert_verification_depth`
 
-The maximum length of the certificate authority chain that will be
-accepted. Legal values are positive integers. Note that if the client is to
-submit an SSL certificate, the `ssl_cert_verification_depth` parameter must not
-be 0. If no value is specified, the default is 9.
+The maximum length of the certificate authority chain that will be accepted.
+Legal values are positive integers. Note that if the client is to submit an SSL
+certificate, the `ssl_cert_verification_depth` parameter must not be 0. If no
+value is specified, the default is 9.
 
 ```
 # Example
@@ -1068,9 +1068,9 @@ The network socket where the listener listens will have a backlog of
 connections. The size of this backlog is controlled by the
 net.ipv4.tcp_max_syn_backlog and net.core.somaxconn kernel parameters.
 
-Increasing the size of the backlog by modifying the kernel parameters
-helps with sudden connection spikes and rejected connections. For more
-information see [listen(2)](http://man7.org/linux/man-pages/man2/listen.2.html).
+Increasing the size of the backlog by modifying the kernel parameters helps with
+sudden connection spikes and rejected connections. For more information see
+[listen(2)](http://man7.org/linux/man-pages/man2/listen.2.html).
 
 ```
 [<Listener name>]
@@ -1117,14 +1117,14 @@ on both the specific IP address and the Unix socket.
 #### `authenticator`
 
 The authenticator module to use. Each protocol module defines a default
-authentication module which is used if no `authenticator` parameter is
-found from the configuration.
+authentication module which is used if no `authenticator` parameter is found
+from the configuration.
 
 #### `authenticator_options`
 
-Option string given to the authenticator module. The value of this
-parameter should be a comma-separated list of key-value pairs. See
-authenticator specific documentation for more details.
+Option string given to the authenticator module. The value of this parameter
+should be a comma-separated list of key-value pairs. See authenticator specific
+documentation for more details.
 
 #### Available Protocols
 
@@ -1173,9 +1173,9 @@ SSL/TLS encryption method and the various certificate files involved in it. To
 enable SSL from client to MaxScale, you must configure the `ssl` parameter to
 the value `required` and provide the three files for `ssl_cert`, `ssl_key` and
 `ssl_ca_cert`. After this, MySQL connections to this listener will be encrypted
-with SSL. Attempts to connect to the listener with a non-SSL client will
-fail. Note that the same service can have an SSL listener and a non-SSL listener
-if you wish, although they must be on different ports.
+with SSL. Attempts to connect to the listener with a non-SSL client will fail.
+Note that the same service can have an SSL listener and a non-SSL listener if
+you wish, although they must be on different ports.
 
 #### `ssl`
 
@@ -1223,10 +1223,10 @@ TLS 1.2 is also available. MAX will use the best available version.
 
 #### `ssl_cert_verification_depth`
 
-The maximum length of the certificate authority chain that will be
-accepted. Legal values are positive integers. Note that if the client is to
-submit an SSL certificate, the `ssl_cert_verification_depth` parameter must not
-be 0. If no value is specified, the default is 9.
+The maximum length of the certificate authority chain that will be accepted.
+Legal values are positive integers. Note that if the client is to submit an SSL
+certificate, the `ssl_cert_verification_depth` parameter must not be 0. If no
+value is specified, the default is 9.
 
 ```
 # Example
@@ -1255,7 +1255,6 @@ This example configuration requires all connections to be encrypted with SSL. It
 also specifies that TLSv1.2 should be used as the encryption method. The paths
 to the server certificate files and the Certificate Authority file are also
 provided.
-
 
 ## Routing Modules
 

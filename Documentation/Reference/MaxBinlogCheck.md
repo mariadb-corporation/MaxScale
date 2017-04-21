@@ -1,8 +1,13 @@
-# Maxbinlogcheck, the MySQL/MariaDB binlog check utility 
+# Maxbinlogcheck, the MySQL/MariaDB binlog check utility
 
 # Overview
 
-Maxbinlogcheck is a command line utility for checking binlogfiles. The files may have been downloaded by the MariaDB MaxScale binlog router or they may be MySQL/MariaDB binlog files stored in a database server acting as a master in a replication environment. Maxbinlogcheck checks the binlog files against any corruption and stored incomplete transactions and reports a transaction summary after reading all the events. It may optionally truncate the binlog file.
+Maxbinlogcheck is a command line utility for checking binlogfiles. The files may
+have been downloaded by the MariaDB MaxScale binlog router or they may be
+MySQL/MariaDB binlog files stored in a database server acting as a master in a
+replication environment. Maxbinlogcheck checks the binlog files against any
+corruption and stored incomplete transactions and reports a transaction summary
+after reading all the events. It may optionally truncate the binlog file.
 
 Maxbinlogcheck supports:
 
@@ -26,9 +31,8 @@ The maxbinlogcheck command accepts a number of switches
     <td>Description</td>
   </tr>
   <tr>
-    <td>-f</td>
-    <td>--fix</td>
-    <td>If set the binlog file will be truncated at last safe transaction pos in case of any error</td>
+    <td>-f</td> <td>--fix</td> <td>If set the binlog file will be truncated at
+    last safe transaction pos in case of any error</td>
   </tr>
   <tr>
     <td>-M</td>
@@ -38,7 +42,8 @@ The maxbinlogcheck command accepts a number of switches
   <tr>
     <td>-d</td>
     <td>--debug</td>
-    <td>Sets the debug mode. If set the FD Events, Rotate events and opening/closing transactions are displayed.</td>
+    <td>Sets the debug mode. If set the FD Events, Rotate events and
+    opening/closing transactions are displayed.</td>
   </tr>
   <tr>
     <td>-?</td>
@@ -58,7 +63,8 @@ The maxbinlogcheck command accepts a number of switches
   <tr>
     <td>-A</td>
     <td>--aes_algo</td>
-    <td>AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC, AES_CTR)</td>
+    <td>AES Algorithm for MariaDB 10.1 binlog file decryption (default=AES_CBC,
+    AES_CTR)</td>
   </tr>
     <tr>
     <td>-H</td>
@@ -167,7 +173,7 @@ The maxbinlogcheck command accepts a number of switches
 This file is corrupted, as reported by the utility:
 
 ```
-[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002
 2015-09-08 10:03:16   maxbinlogcheck 1.0.0
 2015-09-08 10:03:16   Checking /servers/binlogs/new-trx/bin.000002 (bin.000002), size 109498 bytes
 2015-09-08 10:03:16   Event size error: size 0 at 290.
@@ -197,7 +203,7 @@ Use -f option for fix with debug:
 Check it again, last pos will be 245 and no errors will be reported:
 
 ```
-[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 -d 
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 -d
 2015-09-08 09:56:56   maxbinlogcheck 1.0.0
 2015-09-08 09:56:56   Checking /servers/binlogs/new-trx/bin.000002 (bin.000002), size 245 bytes
 2015-09-08 09:56:56   - Format Description event FDE @ 4, size 241
@@ -275,7 +281,8 @@ And finally big transaction is now done.
 
 **Note**
 
-With current maxbinlogcheck it's not possible to fix a binlog with incomplete transaction and no other errors
+With current maxbinlogcheck it's not possible to fix a binlog with incomplete
+transaction and no other errors
 
 If that is really desired it will be possible with UNIX command line:
 
@@ -356,8 +363,8 @@ Check result:
 Key File content example: /var/binlogs/key_file.txt
 
 First two bytes are: the encryption scheme, it must be 1, and the ';' separator.
-Following bytes are the HEX representation of the key (length must be 16, 24 or 32).
-The example shows a 32 bytes key in HEX format (64 bytes):
+Following bytes are the HEX representation of the key (length must be 16, 24 or
+32). The example shows a 32 bytes key in HEX format (64 bytes):
 
 ```
 1;666f6f62617220676f657320746f207468652062617220666f7220636f66666565
