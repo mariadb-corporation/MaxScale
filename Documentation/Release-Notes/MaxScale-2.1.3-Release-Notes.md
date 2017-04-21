@@ -14,6 +14,13 @@ release notes:
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## MariaDB 10.2
+
+MaxScale 2.1 has not been extended to understand all new features that
+MariaDB 10.2 introduces. Please see
+[Support for 10.2](About/Support-for-10.2.md)
+for details.
+
 ## Changed Features
 
 ### Cache

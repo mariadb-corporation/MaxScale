@@ -10,6 +10,17 @@ In versions 2.1.2 and earlier, the configuration files are limited to 1024
 characters per line. This limitation was increased to 16384 characters in
 MaxScale 2.1.3.
 
+## Security limitiations
+
+### MariaDB 10.2
+
+The parser of MaxScale correctly parses `WITH` statements, but fails to
+collect columns, functions and tables used in the `SELECT` defining the
+`WITH` clause.
+
+Consequently, the database firewall will **not** block `WITH` statements
+where the `SELECT` of the `WITH` clause refers to forbidden columns.
+
 ## Protocol limitations
 
 ### Limitations with MySQL Protocol support (MySQLClient)
