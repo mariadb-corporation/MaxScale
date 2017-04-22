@@ -22,6 +22,7 @@
 #include <string.h>
 #include <errno.h>
 #include <string>
+#include <set>
 
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
@@ -34,6 +35,7 @@
 #include "maxscale/modules.h"
 
 using std::string;
+using std::set;
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
@@ -212,7 +214,7 @@ dprintAllFilters(DCB *dcb)
         }
         if (ptr->obj && ptr->filter)
         {
-           ptr->obj->diagnostics(ptr->filter, NULL, dcb);
+            ptr->obj->diagnostics(ptr->filter, NULL, dcb);
         }
         else
         {
@@ -472,12 +474,9 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     }
     return me;
 }
-
-json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
 {
     json_t* rval = json_object();
-    json_object_set_new(rval, "name", json_string(filter->name));
-    json_object_set_new(rval, "module", json_string(filter->module));
 
     if (filter->options)
     {
@@ -490,6 +489,21 @@ json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
 
         json_object_set_new(rval, "options", arr);
     }
+
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(filter->module, MODULE_FILTER);
+    config_add_module_params_json(mod, filter->parameters, config_filter_params, rval);
+
+    return rval;
+}
+
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_NAME, json_string(filter->name));
+    json_object_set_new(rval, CN_MODULE, json_string(filter->module));
+    json_object_set_new(rval, CN_PARAMETERS, filter_parameters_to_json(filter));
 
     if (filter->obj && filter->filter)
     {

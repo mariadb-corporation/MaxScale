@@ -93,6 +93,8 @@ extern const char CN_SERVICES[];
 extern const char CN_SERVICE[];
 extern const char CN_SKIP_PERMISSION_CHECKS[];
 extern const char CN_SOCKET[];
+extern const char CN_STATE[];
+extern const char CN_STATUS[];
 extern const char CN_SSL[];
 extern const char CN_SSL_CA_CERT[];
 extern const char CN_SSL_CERT[];

@@ -27,6 +27,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <string>
+#include <set>
 
 #include <maxscale/service.h>
 #include <maxscale/alloc.h>
@@ -55,6 +56,7 @@
 #include "maxscale/service.h"
 
 using std::string;
+using std::set;
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
@@ -2396,6 +2398,10 @@ json_t* service_parameters_to_json(const SERVICE* service)
     json_object_set_new(rval, CN_LOG_AUTH_WARNINGS, json_boolean(service->log_auth_warnings));
     json_object_set_new(rval, CN_RETRY_ON_FAILURE, json_boolean(service->retry_start));
 
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    config_add_module_params_json(mod, service->svc_config_param, config_service_params, rval);
+
     return rval;
 }
 
@@ -2406,9 +2412,9 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     json_t* rval = json_object();
 
     /** General service information */
-    json_object_set_new(rval, "name", json_string(service->name));
-    json_object_set_new(rval, "router", json_string(service->routerModule));
-    json_object_set_new(rval, "state", json_string(service_state_to_string(service->state)));
+    json_object_set_new(rval, CN_NAME, json_string(service->name));
+    json_object_set_new(rval, CN_ROUTER, json_string(service->routerModule));
+    json_object_set_new(rval, CN_STATE, json_string(service_state_to_string(service->state)));
 
     if (service->router && service->router_instance)
     {

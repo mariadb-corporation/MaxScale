@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <set>
 
 #include <maxscale/alloc.h>
 #include <mysqld_error.h>
@@ -37,14 +38,15 @@
 #include "maxscale/modules.h"
 
 using std::string;
+using std::set;
 
 const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
 const char CN_BACKEND_READ_TIMEOUT[]     = "backend_read_timeout";
 const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
 const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
 const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
-const char CN_SCRIPT[]                   = "monitor_interval";
-const char CN_EVENTS[]                   = "monitor_interval";
+const char CN_SCRIPT[]                   = "script";
+const char CN_EVENTS[]                   = "events";
 
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
@@ -995,7 +997,7 @@ bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_srv->mon_prev_status != (uint32_t)-1)
+    if (mon_srv->mon_prev_status != static_cast<uint32_t>(-1))
     {
 
         unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
@@ -1529,19 +1531,39 @@ static const char* monitor_state_to_string(int state)
     }
 }
 
-json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, CN_NAME, json_string(monitor->name));
-    json_object_set_new(rval, CN_MODULE, json_string(monitor->module_name));
     json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
     json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
     json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
     json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
     json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
 
-    json_object_set_new(rval, "state", json_string(monitor_state_to_string(monitor->state)));
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
+    config_add_module_params_json(mod, monitor->parameters, config_monitor_params, rval);
+
+    /** Don't show the default value for events if no script is defined */
+    if (json_object_get(rval, CN_SCRIPT) == NULL)
+    {
+        json_object_del(rval, CN_EVENTS);
+    }
+
+    return rval;
+}
+
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_NAME, json_string(monitor->name));
+    json_object_set_new(rval, CN_MODULE, json_string(monitor->module_name));
+    json_object_set_new(rval, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
+
+    /** Monitor parameters */
+    json_object_set_new(rval, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
     if (monitor->handle && monitor->module->diagnostics)
     {

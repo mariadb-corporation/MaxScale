@@ -104,6 +104,8 @@ const char CN_SERVICES[]                      = "services";
 const char CN_SERVICE[]                       = "service";
 const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
 const char CN_SOCKET[]                        = "socket";
+const char CN_STATE[]                         = "state";
+const char CN_STATUS[]                        = "status";
 const char CN_SSL[]                           = "ssl";
 const char CN_SSL_CA_CERT[]                   = "ssl_ca_cert";
 const char CN_SSL_CERT[]                      = "ssl_cert";
@@ -156,7 +158,7 @@ static FEEDBACK_CONF feedback;
 char *version_string = NULL;
 static bool is_persisted_config = false; /**< True if a persisted configuration file is being parsed */
 
-static const char *service_params[] =
+const char *config_service_params[] =
 {
     CN_TYPE,
     CN_ROUTER,
@@ -183,7 +185,7 @@ static const char *service_params[] =
     NULL
 };
 
-static const char *listener_params[] =
+const char *config_listener_params[] =
 {
     CN_AUTHENTICATOR_OPTIONS,
     CN_TYPE,
@@ -202,7 +204,7 @@ static const char *listener_params[] =
     NULL
 };
 
-static const char *monitor_params[] =
+const char *config_monitor_params[] =
 {
     CN_TYPE,
     CN_MODULE,
@@ -220,14 +222,14 @@ static const char *monitor_params[] =
     NULL
 };
 
-static const char *filter_params[] =
+const char *config_filter_params[] =
 {
     CN_TYPE,
     CN_MODULE,
     NULL
 };
 
-static const char *server_params[] =
+const char *server_params[] =
 {
     CN_TYPE,
     CN_PROTOCOL,
@@ -2035,23 +2037,23 @@ check_config_objects(CONFIG_CONTEXT *context)
         {
             if (!strcmp(type, CN_SERVICE))
             {
-                param_set = service_params;
+                param_set = config_service_params;
                 module = config_get_value(obj->parameters, CN_ROUTER);
                 module_type = MODULE_ROUTER;
             }
             else if (!strcmp(type, CN_LISTENER))
             {
-                param_set = listener_params;
+                param_set = config_listener_params;
             }
             else if (!strcmp(type, CN_MONITOR))
             {
-                param_set = monitor_params;
+                param_set = config_monitor_params;
                 module = config_get_value(obj->parameters, CN_MODULE);
                 module_type = MODULE_MONITOR;
             }
             else if (!strcmp(type, CN_FILTER))
             {
-                param_set = filter_params;
+                param_set = config_filter_params;
                 module = config_get_value(obj->parameters, CN_MODULE);
                 module_type = MODULE_FILTER;
             }
@@ -2628,6 +2630,55 @@ void config_add_defaults(CONFIG_CONTEXT *ctx, const MXS_MODULE_PARAM *params)
                 bool rv = config_add_param(ctx, params[i].name, params[i].default_value);
                 MXS_ABORT_IF_FALSE(rv);
             }
+        }
+    }
+}
+
+static json_t* param_value_json(const MXS_CONFIG_PARAMETER* param,
+                                const MXS_MODULE* mod)
+{
+    json_t* rval = NULL;
+
+    for (int i = 0; mod->parameters[i].name; i++)
+    {
+        if (strcmp(mod->parameters[i].name, param->name) == 0)
+        {
+            switch (mod->parameters[i].type)
+            {
+            case MXS_MODULE_PARAM_COUNT:
+            case MXS_MODULE_PARAM_INT:
+                rval = json_integer(strtol(param->value, NULL, 10));
+                break;
+
+            case MXS_MODULE_PARAM_BOOL:
+                rval = json_boolean(config_truth_value(param->value));
+                break;
+
+            default:
+                rval = json_string(param->value);
+                break;
+            }
+        }
+    }
+
+    return rval;
+}
+
+void config_add_module_params_json(const MXS_MODULE* mod, MXS_CONFIG_PARAMETER* parameters,
+                                   const char** type_params, json_t* output)
+{
+    set<string> param_set;
+
+    for (int i = 0; type_params[i]; i++)
+    {
+        param_set.insert(type_params[i]);
+    }
+
+    for (MXS_CONFIG_PARAMETER* p = parameters; p; p = p->next)
+    {
+        if (param_set.find(p->name) == param_set.end())
+        {
+            json_object_set_new(output, p->name, param_value_json(p, mod));
         }
     }
 }
