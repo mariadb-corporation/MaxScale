@@ -1059,3 +1059,23 @@ json_t* session_to_json(const MXS_SESSION *session, const char *host)
 
     return rval;
 }
+
+struct SessionListData
+{
+    json_t* json;
+    const char* host;
+};
+
+bool seslist_cb(DCB* dcb, void* data)
+{
+    SessionListData* d = (SessionListData*)data;
+    json_array_append_new(d->json, session_to_json(dcb->session, d->host));
+    return true;
+}
+
+json_t* session_list_to_json(const char* host)
+{
+    SessionListData data = {json_array(), host};
+    dcb_foreach(seslist_cb, &data);
+    return data.json;
+}

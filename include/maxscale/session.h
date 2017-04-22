@@ -423,4 +423,13 @@ void session_clear_stmt(MXS_SESSION *session);
  */
 json_t* session_to_json(const MXS_SESSION *session, const char* host);
 
+/**
+ * @brief Convert all sessions to JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array with all sessions
+ */
+json_t* session_list_to_json(const char* host);
+
 MXS_END_DECLS

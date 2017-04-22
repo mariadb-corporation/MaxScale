@@ -228,8 +228,7 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
 
 HttpResponse cb_all_sessions(const HttpRequest& request)
 {
-    // TODO: Implement this
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, session_list_to_json(request.host()));
 }
 
 HttpResponse cb_get_session(const HttpRequest& request)
