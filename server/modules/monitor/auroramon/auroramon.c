@@ -30,6 +30,7 @@ typedef struct aurora_monitor
     THREAD thread;              /**< Monitor thread */
     char*  script;              /**< Launchable script */
     uint64_t   events;          /**< Enabled monitor events */
+    MXS_MONITOR* monitor;
 } AURORA_MONITOR;
 
 /**
@@ -111,8 +112,8 @@ void update_server_status(MXS_MONITOR *monitor, MXS_MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR *monitor = (MXS_MONITOR*)arg;
-    AURORA_MONITOR *handle = monitor->handle;
+    AURORA_MONITOR *handle = (AURORA_MONITOR*)arg;
+    MXS_MONITOR *monitor = handle->monitor;
 
     if (mysql_thread_init())
     {
@@ -201,6 +202,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         }
 
         handle->shutdown = false;
+        handle->monitor = mon;
 
         if (!check_monitor_permissions(mon, "SELECT @@aurora_server_id, server_id FROM "
                                        "information_schema.replica_host_status "
@@ -215,7 +217,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
     handle->script = config_copy_string(params, "script");
     handle->events = config_get_enum(params, "events", mxs_monitor_event_enum_values);
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
         auroramon_free(handle);

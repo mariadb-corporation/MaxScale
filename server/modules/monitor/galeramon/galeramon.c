@@ -168,8 +168,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->galera_nodes_info = nodes_info;
         handle->cluster_info.c_size = 0;
         handle->cluster_info.c_uuid = NULL;
-
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
@@ -195,9 +194,13 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        hashtable_free(handle->galera_nodes_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -490,19 +493,15 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    GALERA_MONITOR *handle;
+    GALERA_MONITOR *handle = (GALERA_MONITOR*)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
     MXS_MONITOR_SERVERS *candidate_master = NULL;
     int master_stickiness;
     int is_cluster = 0;
     int log_no_members = 1;
-    mxs_monitor_event_t evtype;
 
-    spinlock_acquire(&mon->lock);
-    handle = (GALERA_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     master_stickiness = handle->disableMasterFailback;
     if (mysql_thread_init())
     {

@@ -129,7 +129,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->shutdown = 0;
         handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->script = config_copy_string(params, "script");
@@ -144,9 +144,12 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -307,14 +310,10 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = arg;
-    MYSQL_MONITOR *handle;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
-
-    spinlock_acquire(&mon->lock);
-    handle = (MYSQL_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
 
     if (mysql_thread_init())
     {

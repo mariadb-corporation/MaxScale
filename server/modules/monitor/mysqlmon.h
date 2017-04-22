@@ -57,7 +57,6 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    SPINLOCK lock; /**< The monitor spinlock */
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
@@ -81,6 +80,7 @@ typedef struct
     bool warn_failover; /**< Log a warning when failover happens */
     bool load_journal; /**< Whether journal file should be loaded */
     time_t journal_max_age; /**< Maximum age of journal file */
+    MXS_MONITOR* monitor;
 } MYSQL_MONITOR;
 
 /**

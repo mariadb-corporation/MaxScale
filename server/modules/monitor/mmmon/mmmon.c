@@ -128,7 +128,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->shutdown = 0;
         handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
@@ -143,9 +143,12 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -482,16 +485,13 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    MM_MONITOR *handle;
+    MM_MONITOR *handle = (MM_MONITOR *)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     int detect_stale_master = false;
     MXS_MONITOR_SERVERS *root_master = NULL;
     size_t nrounds = 0;
 
-    spinlock_acquire(&mon->lock);
-    handle = (MM_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     detect_stale_master = handle->detectStaleMaster;
 
     if (mysql_thread_init())

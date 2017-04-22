@@ -246,7 +246,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
         handle->load_journal = true;
-        spinlock_init(&handle->lock);
+        handle->monitor = monitor;
     }
 
     /** This should always be reset to NULL */
@@ -290,9 +290,13 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         MXS_FREE(handle);
         handle = NULL;
     }
-    else if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
+    else if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
+        hashtable_free(handle->server_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        handle = NULL;
     }
 
     return handle;
@@ -1090,8 +1094,8 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    MYSQL_MONITOR *handle;
+    MYSQL_MONITOR *handle  = (MYSQL_MONITOR *) arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     int replication_heartbeat;
     bool detect_stale_master;
@@ -1101,9 +1105,6 @@ monitorMain(void *arg)
     int log_no_master = 1;
     bool heartbeat_checked = false;
 
-    spinlock_acquire(&mon->lock);
-    handle = (MYSQL_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     replication_heartbeat = handle->replicationHeartbeat;
     detect_stale_master = handle->detectStaleMaster;
 
