@@ -377,7 +377,7 @@ static void add_monitor_defaults(MXS_MONITOR *monitor)
     }
 }
 
-bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
 {
     spinlock_acquire(&crt_lock);
     bool valid = false;
@@ -450,8 +450,8 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             if (value[0])
             {
                 MXS_CONFIG_PARAMETER p = {};
-                p.name = key;
-                p.value = value;
+                p.name = const_cast<char*>(key);
+                p.value = const_cast<char*>(value);
                 monitorAddParameters(monitor, &p);
             }
 
@@ -760,7 +760,7 @@ static bool server_relation_is_valid(const string& type, const string& value)
            (type == CN_MONITORS && monitor_find(value.c_str()));
 }
 
-static bool unlink_server_relations(SERVER* server, set<string>& relations)
+static bool unlink_server_from_objects(SERVER* server, set<string>& relations)
 {
     bool rval = true;
 
@@ -775,7 +775,7 @@ static bool unlink_server_relations(SERVER* server, set<string>& relations)
     return rval;
 }
 
-static bool link_server_relations(SERVER* server, set<string>& relations)
+static bool link_server_to_objects(SERVER* server, set<string>& relations)
 {
     bool rval = true;
 
@@ -783,7 +783,7 @@ static bool link_server_relations(SERVER* server, set<string>& relations)
     {
         if (!runtime_link_server(server, it->c_str()))
         {
-            unlink_server_relations(server, relations);
+            unlink_server_from_objects(server, relations);
             rval = false;
             break;
         }
@@ -820,7 +820,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
             rval = server_find_by_unique_name(name);
             ss_dassert(rval);
 
-            if (!link_server_relations(rval, relations))
+            if (!link_server_to_objects(rval, relations))
             {
                 runtime_destroy_server(rval);
                 rval = NULL;
@@ -831,7 +831,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
     return rval;
 }
 
-bool handle_alter_server_relations(SERVER* server, json_t* old_json, json_t* new_json)
+bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_json)
 {
     bool rval = false;
     set<string> old_relations;
@@ -851,8 +851,8 @@ bool handle_alter_server_relations(SERVER* server, json_t* old_json, json_t* new
                             old_relations.begin(), old_relations.end(),
                             std::inserter(added_relations, added_relations.begin()));
 
-        if (link_server_relations(server, added_relations) &&
-            unlink_server_relations(server, removed_relations))
+        if (link_server_to_objects(server, added_relations) &&
+            unlink_server_from_objects(server, removed_relations))
         {
             rval = true;
         }
@@ -867,7 +867,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     Closer<json_t*> old_json(server_to_json(server, ""));
     ss_dassert(old_json.get());
 
-    if (handle_alter_server_relations(server, old_json.get(), new_json))
+    if (server_to_object_relations(server, old_json.get(), new_json))
     {
         json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
         json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);;
@@ -907,18 +907,18 @@ static bool monitor_contains_required_fields(json_t* json)
            (value = json_object_get(json, CN_MODULE)) && json_is_string(value);
 }
 
-const char* monitor_relation_types[] =
+const char* object_relation_types[] =
 {
     CN_SERVERS,
     NULL
 };
 
-static bool monitor_relation_is_valid(const string& type, const string& value)
+static bool object_relation_is_valid(const string& type, const string& value)
 {
     return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
 }
 
-static bool unlink_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
+static bool unlink_object_from_servers(const char* target, set<string>& relations)
 {
     bool rval = true;
 
@@ -926,7 +926,7 @@ static bool unlink_monitor_relations(MXS_MONITOR* monitor, set<string>& relation
     {
         SERVER* server = server_find_by_unique_name(it->c_str());
 
-        if (!server || !runtime_unlink_server(server, monitor->name))
+        if (!server || !runtime_unlink_server(server, target))
         {
             rval = false;
             break;
@@ -936,7 +936,7 @@ static bool unlink_monitor_relations(MXS_MONITOR* monitor, set<string>& relation
     return rval;
 }
 
-static bool link_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
+static bool link_object_to_servers(const char* target, set<string>& relations)
 {
     bool rval = true;
 
@@ -944,9 +944,9 @@ static bool link_monitor_relations(MXS_MONITOR* monitor, set<string>& relations)
     {
         SERVER* server = server_find_by_unique_name(it->c_str());
 
-        if (!server || !runtime_link_server(server, monitor->name))
+        if (!server || !runtime_link_server(server, target))
         {
-            unlink_server_relations(server, relations);
+            unlink_server_from_objects(server, relations);
             rval = false;
             break;
         }
@@ -966,17 +966,97 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 
         set<string> relations;
 
-        if (extract_relations(json, relations, monitor_relation_types, monitor_relation_is_valid) &&
+        if (extract_relations(json, relations, object_relation_types, object_relation_is_valid) &&
             runtime_create_monitor(name, module))
         {
             rval = monitor_find(name);
             ss_dassert(rval);
 
-            if (!link_monitor_relations(rval, relations))
+            if (!link_object_to_servers(rval->name, relations))
             {
                 runtime_destroy_monitor(rval);
                 rval = NULL;
             }
+        }
+    }
+
+    return rval;
+}
+
+bool object_to_server_relations(const char* target, json_t* old_json, json_t* new_json)
+{
+    bool rval = false;
+    set<string> old_relations;
+    set<string> new_relations;
+
+    if (extract_relations(old_json, old_relations, object_relation_types, object_relation_is_valid) &&
+        extract_relations(new_json, new_relations, object_relation_types, object_relation_is_valid))
+    {
+        set<string> removed_relations;
+        set<string> added_relations;
+
+        std::set_difference(old_relations.begin(), old_relations.end(),
+                            new_relations.begin(), new_relations.end(),
+                            std::inserter(removed_relations, removed_relations.begin()));
+
+        std::set_difference(new_relations.begin(), new_relations.end(),
+                            old_relations.begin(), old_relations.end(),
+                            std::inserter(added_relations, added_relations.begin()));
+
+        if (link_object_to_servers(target, added_relations) &&
+            unlink_object_from_servers(target, removed_relations))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
+{
+    bool rval = false;
+    Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    ss_dassert(old_json.get());
+
+    if (object_to_server_relations(monitor->name, old_json.get(), new_json))
+    {
+        bool changed = false;
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);;
+        ss_dassert(old_parameters);
+
+        if (parameters)
+        {
+            rval = true;
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (runtime_alter_monitor(monitor, key, mxs::json_to_string(value).c_str()))
+                {
+                    changed = true;
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+        }
+
+        if (changed)
+        {
+            /** A configuration change was made, restart the monitor */
+            monitorStop(monitor);
+            monitorStart(monitor, monitor->parameters);
         }
     }
 

@@ -158,6 +158,23 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
+HttpResponse cb_alter_monitor(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json)
+    {
+        MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+
+        if (monitor && runtime_alter_monitor_from_json(monitor, json))
+        {
+            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+}
+
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -334,6 +351,7 @@ public:
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
 
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
+        m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
     }
 
     ~RootResource()

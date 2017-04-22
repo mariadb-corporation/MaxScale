@@ -118,7 +118,7 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value);
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value);
 
 /**
  * @brief Create a new listener for a service
@@ -192,7 +192,7 @@ SERVER* runtime_create_server_from_json(json_t* json);
  * @brief Alter a server using JSON
  *
  * @param server Server to alter
- * @param new_json JSON definition of the new server
+ * @param new_json JSON definition of the updated server
  *
  * @return True if the server was successfully modified to represent @c new_json
  */
@@ -206,5 +206,15 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json);
  * @return Created monitor or NULL on error
  */
 MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
+
+/**
+ * @brief Alter a monitor using JSON
+ *
+ * @param monitor Monitor to alter
+ * @param new_json JSON definition of the updated monitor
+ *
+ * @return True if the monitor was successfully modified to represent @c new_json
+ */
+bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
 
 MXS_END_DECLS

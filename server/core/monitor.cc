@@ -393,7 +393,7 @@ void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
  * @param passwd        The default password associated to the default user.
  */
 void
-monitorAddUser(MXS_MONITOR *mon, char *user, char *passwd)
+monitorAddUser(MXS_MONITOR *mon, const char *user, const char *passwd)
 {
     if (user != mon->user)
     {
@@ -1535,6 +1535,8 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
 {
     json_t* rval = json_object();
 
+    json_object_set_new(rval, CN_USER, json_string(monitor->user));
+    json_object_set_new(rval, CN_PASSWORD, json_string(monitor->password));
     json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
     json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
     json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
