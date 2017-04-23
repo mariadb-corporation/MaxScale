@@ -32,6 +32,7 @@ add_library(maxscale-common SHARED
   resultset.cc
   router.cc
   secrets.cc
+  semaphore.cc
   server.cc
   service.cc
   session.cc
