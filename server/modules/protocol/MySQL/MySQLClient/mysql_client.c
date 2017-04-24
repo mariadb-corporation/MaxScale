@@ -248,7 +248,7 @@ int MySQLSendHandshake(DCB* dcb)
     GWBUF *buf;
 
     /* get the version string from service property if available*/
-    if (dcb->service->version_string != NULL)
+    if (dcb->service->version_string[0])
     {
         version_string = dcb->service->version_string;
         len_version_string = strlen(version_string);

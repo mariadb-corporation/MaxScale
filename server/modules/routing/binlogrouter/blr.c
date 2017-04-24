@@ -243,8 +243,8 @@ createInstance(SERVICE *service, char **options)
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
-    if (service->credentials.name == NULL ||
-        service->credentials.authdata == NULL)
+    if (!service->credentials.name[0] ||
+        !service->credentials.authdata[0])
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",

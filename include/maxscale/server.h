@@ -26,8 +26,8 @@
 MXS_BEGIN_DECLS
 
 #define MAX_SERVER_NAME_LEN 1024
-#define MAX_SERVER_MONUSER_LEN 512
-#define MAX_SERVER_MONPW_LEN 512
+#define MAX_SERVER_MONUSER_LEN 1024
+#define MAX_SERVER_MONPW_LEN 1024
 #define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
@@ -302,7 +302,7 @@ extern void server_set_status_nolock(SERVER *server, unsigned bit);
 extern void server_clear_status_nolock(SERVER *server, unsigned bit);
 extern void server_transfer_status(SERVER *dest_server, const SERVER *source_server);
 extern void server_add_mon_user(SERVER *server, const char *user, const char *passwd);
-extern const char *server_get_parameter(const SERVER *server, char *name);
+extern const char *server_get_parameter(const SERVER *server, const char *name);
 extern void server_update_credentials(SERVER *server, const char *user, const char *passwd);
 extern DCB  *server_get_persistent(SERVER *server, const char *user, const char *protocol, int id);
 extern void server_update_address(SERVER *server, const char *address);

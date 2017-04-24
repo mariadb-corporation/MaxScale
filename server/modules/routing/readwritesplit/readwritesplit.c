@@ -651,7 +651,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
-    char *weightby;
+    const char *weightby = serviceGetWeightingParameter(router->service);
     double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
 
     dcb_printf(dcb, "\n");
@@ -695,7 +695,7 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
     dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
                router->stats.n_all, all_pct);
 
-    if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
+    if (*weightby)
     {
         dcb_printf(dcb, "\tConnection distribution based on %s "
                    "server parameter.\n",
@@ -754,9 +754,9 @@ static json_t* diagnostics_json(const MXS_ROUTER *instance)
     json_object_set_new(rval, "route_slave", json_integer(router->stats.n_slave));
     json_object_set_new(rval, "route_all", json_integer(router->stats.n_all));
 
-    char *weightby = serviceGetWeightingParameter(router->service);
+    const char *weightby = serviceGetWeightingParameter(router->service);
 
-    if (weightby)
+    if (*weightby)
     {
         json_object_set_new(rval, "weightby", json_string(weightby));
     }

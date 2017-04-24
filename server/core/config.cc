@@ -1870,11 +1870,7 @@ process_config_update(CONFIG_CONTEXT *context)
 
                     if (version_string)
                     {
-                        if (service->version_string)
-                        {
-                            MXS_FREE(service->version_string);
-                        }
-                        service->version_string = MXS_STRDUP_A(version_string);
+                        serviceSetVersionString(service, version_string);
                     }
 
                     if (user && auth)
@@ -2816,22 +2812,18 @@ int create_new_service(CONFIG_CONTEXT *obj)
         if (version_string[0] != '5')
         {
             size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
-            service->version_string = (char*)MXS_MALLOC(len);
-            MXS_ABORT_IF_NULL(service->version_string);
-            strcpy(service->version_string, "5.5.5-");
-            strcat(service->version_string, version_string);
+            char ver[len];
+            snprintf(ver, sizeof(ver), "5.5.5-%s", version_string);
+            serviceSetVersionString(service, ver);
         }
         else
         {
-            service->version_string = MXS_STRDUP_A(version_string);
+            serviceSetVersionString(service, version_string);
         }
     }
-    else
+    else if (gateway.version_string)
     {
-        if (gateway.version_string)
-        {
-            service->version_string = MXS_STRDUP_A(gateway.version_string);
-        }
+        serviceSetVersionString(service, gateway.version_string);
     }
 
 

@@ -142,10 +142,6 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
     service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
-    service->weightby = NULL;
-    service->credentials.authdata = NULL;
-    service->credentials.name = NULL;
-    service->version_string = NULL;
     service->svc_config_param = NULL;
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
@@ -720,10 +716,6 @@ void service_free(SERVICE *service)
 
     MXS_FREE(service->name);
     MXS_FREE(service->routerModule);
-    MXS_FREE(service->weightby);
-    MXS_FREE(service->version_string);
-    MXS_FREE(service->credentials.name);
-    MXS_FREE(service->credentials.authdata);
 
     config_parameter_free(service->svc_config_param);
     serviceClearRouterOptions(service);
@@ -992,23 +984,19 @@ serviceClearRouterOptions(SERVICE *service)
  * @return      0 on failure
  */
 int
-serviceSetUser(SERVICE *service, char *user, char *auth)
+serviceSetUser(SERVICE *service, const char *user, const char *auth)
 {
-    user = MXS_STRDUP(user);
-    auth = MXS_STRDUP(auth);
-
-    if (!user || !auth)
+    if (service->credentials.name != user)
     {
-        MXS_FREE(user);
-        MXS_FREE(auth);
-        return 0;
+        snprintf(service->credentials.name,
+                 sizeof(service->credentials.name), "%s", user);
     }
 
-    MXS_FREE(service->credentials.name);
-    MXS_FREE(service->credentials.authdata);
-
-    service->credentials.name = user;
-    service->credentials.authdata = auth;
+    if (service->credentials.authdata != auth)
+    {
+        snprintf(service->credentials.authdata,
+                 sizeof(service->credentials.authdata), "%s", auth);
+    }
 
     return 1;
 }
@@ -1123,6 +1111,14 @@ serviceSetTimeout(SERVICE *service, int val)
     return 1;
 }
 
+void serviceSetVersionString(SERVICE *service, const char* value)
+{
+    if (service->version_string != value)
+    {
+        snprintf(service->version_string, sizeof(service->version_string), "%s", value);
+    }
+}
+
 /**
  * Sets the connection limits, if any, for the service.
  * @param service Service to configure
@@ -1185,7 +1181,7 @@ service_queue_check(void *data)
  * @param service Service to configure
  * @param value A string representation of a boolean value
  */
-void serviceSetRetryOnFailure(SERVICE *service, char* value)
+void serviceSetRetryOnFailure(SERVICE *service, const char* value)
 {
     if (value)
     {
@@ -1444,7 +1440,7 @@ void dprintService(DCB *dcb, SERVICE *service)
         }
         server = server->next;
     }
-    if (service->weightby)
+    if (*service->weightby)
     {
         dcb_printf(dcb, "\tRouting weight parameter:            %s\n",
                    service->weightby);
@@ -1793,14 +1789,12 @@ service_get_name(SERVICE *svc)
  * @param       service         The service pointer
  * @param       weightby        The parameter name to weight the routing by
  */
-void
-serviceWeightBy(SERVICE *service, char *weightby)
+void serviceWeightBy(SERVICE *service, const char *weightby)
 {
-    if (service->weightby)
+    if (service->weightby != weightby)
     {
-        MXS_FREE(service->weightby);
+        snprintf(service->weightby, sizeof(service->weightby), "%s", weightby);
     }
-    service->weightby = MXS_STRDUP_A(weightby);
 }
 
 /**
@@ -1808,8 +1802,7 @@ serviceWeightBy(SERVICE *service, char *weightby)
  * by
  * @param service               The Service pointer
  */
-char *
-serviceGetWeightingParameter(SERVICE *service)
+const char* serviceGetWeightingParameter(SERVICE *service)
 {
     return service->weightby;
 }
@@ -2101,8 +2094,9 @@ bool service_all_services_have_listeners()
 
 static void service_calculate_weights(SERVICE *service)
 {
-    char *weightby = serviceGetWeightingParameter(service);
-    if (weightby && service->dbref)
+    const char *weightby = serviceGetWeightingParameter(service);
+
+    if (*weightby && service->dbref)
     {
         /** Service has a weighting parameter and at least one server */
         int total = 0;
@@ -2367,17 +2361,8 @@ json_t* service_parameters_to_json(const SERVICE* service)
     }
 
     json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
-
-    /** Can these be NULL? */
-    if (service->credentials.name)
-    {
-        json_object_set_new(rval, CN_USER, json_string(service->credentials.name));
-    }
-
-    if (service->credentials.authdata)
-    {
-        json_object_set_new(rval, CN_PASSWORD, json_string(service->credentials.authdata));
-    }
+    json_object_set_new(rval, CN_USER, json_string(service->credentials.name));
+    json_object_set_new(rval, CN_PASSWORD, json_string(service->credentials.authdata));
 
     json_object_set_new(rval, CN_ENABLE_ROOT_USER, json_boolean(service->enable_root));
     json_object_set_new(rval, CN_MAX_RETRY_INTERVAL, json_integer(service->max_retry_interval));
@@ -2390,7 +2375,7 @@ json_t* service_parameters_to_json(const SERVICE* service)
                         json_boolean(service->localhost_match_wildcard_host));
     json_object_set_new(rval, CN_VERSION_STRING, json_string(service->version_string));
 
-    if (service->weightby)
+    if (*service->weightby)
     {
         json_object_set_new(rval, CN_WEIGHTBY, json_string(service->weightby));
     }

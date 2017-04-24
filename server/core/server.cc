@@ -911,7 +911,7 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  * @return      The parameter value or NULL if not found
  */
 const char *
-server_get_parameter(const SERVER *server, char *name)
+server_get_parameter(const SERVER *server, const char *name)
 {
     SERVER_PARAM *param = server->parameters;
 
