@@ -57,7 +57,7 @@ static inline size_t request_data_length(MHD_Connection *connection)
 static bool modifies_data(MHD_Connection *connection, string method)
 {
     return (method == MHD_HTTP_METHOD_POST || method == MHD_HTTP_METHOD_PUT ||
-            method == MHD_HTTP_METHOD_PATCH || method == MHD_HTTP_METHOD_DELETE) &&
+            method == MHD_HTTP_METHOD_DELETE) &&
            request_data_length(connection);
 }
 
@@ -182,7 +182,7 @@ int handle_client(void *cls,
 
 bool mxs_admin_init()
 {
-    http_daemon = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY | MHD_USE_DUAL_STACK,
+    http_daemon = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DUAL_STACK,
                                    config_get_global_options()->admin_port,
                                    NULL, NULL,
                                    handle_client, NULL,

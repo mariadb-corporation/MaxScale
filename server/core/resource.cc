@@ -406,10 +406,6 @@ public:
         {
             l.push_back(MHD_HTTP_METHOD_DELETE);
         }
-        if (find_resource(m_patch, request) != m_patch.end())
-        {
-            l.push_back(MHD_HTTP_METHOD_PATCH);
-        }
 
         stringstream rval;
 
@@ -440,10 +436,6 @@ public:
         else if (request.get_verb() == MHD_HTTP_METHOD_POST)
         {
             return process_request_type(m_post, request);
-        }
-        else if (request.get_verb() == MHD_HTTP_METHOD_PATCH)
-        {
-            return process_request_type(m_patch, request);
         }
         else if (request.get_verb() == MHD_HTTP_METHOD_DELETE)
         {
@@ -477,7 +469,6 @@ private:
     ResourceList m_put;    /**< PUT request handlers */
     ResourceList m_post;   /**< POST request handlers */
     ResourceList m_delete; /**< DELETE request handlers */
-    ResourceList m_patch;  /**< PATCH request handlers */
 };
 
 static RootResource resources; /**< Core resource set */
