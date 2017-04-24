@@ -325,13 +325,32 @@ void dcb_process_idle_sessions(int thr);
 /**
  * @brief Call a function for each connected DCB
  *
+ * @deprecated You should not use this function, use dcb_foreach_parallel instead
+ *
  * @param func Function to call. The function should return @c true to continue iteration
  * and @c false to stop iteration earlier. The first parameter is a DCB and the second
  * is the value of @c data that the user provided.
  * @param data User provided data passed as the second parameter to @c func
  * @return True if all DCBs were iterated, false if the callback returned false
  */
-bool dcb_foreach(bool (*func)(DCB *, void *), void *data);
+bool dcb_foreach(bool (*func)(DCB *dcb, void *data), void *data);
+
+/**
+ * @brief Call a function for each connected DCB
+ *
+ * @note This function can call @c func from multiple thread at one time.
+ *
+ * @param func Function to call. The function should return @c true to continue iteration
+ *             and @c false to stop iteration earlier. The first is a DCB and
+ *             the second is this thread's value in the @c data array that
+ *             the user provided.
+ *
+ * @param data Array of user provided data passed as the second parameter to @c func.
+ *             The array must have more space for pointers thann the return
+ *             value of `config_threadcount()`. The value passed to @c func will
+ *             be the value of the array at the index of the current thread's ID.
+ */
+void dcb_foreach_parallel(bool (*func)(DCB *dcb, void *data), void **data);
 
 /**
  * @brief Return the port number this DCB is connected to
