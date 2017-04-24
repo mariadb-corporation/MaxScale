@@ -603,6 +603,25 @@ size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
 
     return n;
 }
+//static
+size_t Worker::execute_on_all_serially(Task* pTask)
+{
+    Semaphore sem;
+    size_t n = 0;
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+
+        if (pWorker->execute(pTask, &sem))
+        {
+            sem.wait();
+            ++n;
+        }
+    }
+
+    return n;
+}
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
