@@ -421,7 +421,12 @@ bool Worker::add_shared_fd(int fd, uint32_t events, MXS_POLL_DATA* pData)
 {
     bool rv = true;
 
-    // TODO: Does this really need to be level-triggered?
+    // This must be level-triggered. Since this is intended for listening
+    // sockets and each worker will call accept() just once before going
+    // back the epoll_wait(), using EPOLLET would mean that if there are
+    // more clients to be accepted than there are threads returning from
+    // epoll_wait() for an event, then some clients would be accepted only
+    // when a new client has connected, thus causing a new EPOLLIN event.
     events &= ~EPOLLET;
 
     struct epoll_event ev;
