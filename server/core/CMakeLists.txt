@@ -44,6 +44,7 @@ add_library(maxscale-common SHARED
   users.cc
   utils.cc
   worker.cc
+  workertask.cc
   )
 
 if(WITH_JEMALLOC)

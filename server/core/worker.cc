@@ -23,6 +23,7 @@
 #include <maxscale/hk_heartbeat.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/platform.h>
+#include <maxscale/semaphore.hh>
 #include "maxscale/modules.h"
 #include "maxscale/poll.h"
 #include "maxscale/statistics.h"
@@ -33,6 +34,9 @@ using maxscale::Worker;
 
 namespace
 {
+
+const int MXS_WORKER_MSG_TASK = -1;
+const int MXS_WORKER_MSG_DISPOSABLE_TASK = -2;
 
 /**
  * Unit variables.
@@ -529,6 +533,77 @@ void Worker::set_maxwait(unsigned int maxwait)
     this_unit.max_poll_sleep = maxwait;
 }
 
+bool Worker::execute(Task* pTask, Semaphore* pSem)
+{
+    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+    intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
+
+    return post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+}
+
+bool Worker::execute(std::auto_ptr<DisposableTask> sTask)
+{
+    return execute_disposable(sTask.release());
+}
+
+// private
+bool Worker::execute_disposable(DisposableTask* pTask)
+{
+    pTask->inc_count();
+
+    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+
+    bool posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
+
+    if (!posted)
+    {
+        pTask->dec_count();
+    }
+
+    return posted;
+}
+
+//static
+size_t Worker::execute_on_all(Task* pTask, Semaphore* pSem)
+{
+    size_t n = 0;
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+
+        if (pWorker->execute(pTask, pSem))
+        {
+            ++n;
+        }
+    }
+
+    return n;
+}
+
+//static
+size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
+{
+    DisposableTask* pTask = sTask.release();
+    pTask->inc_count();
+
+    size_t n = 0;
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+
+        if (pWorker->execute_disposable(pTask))
+        {
+            ++n;
+        }
+    }
+
+    pTask->dec_count();
+
+    return n;
+}
+
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
@@ -742,6 +817,28 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
             void (*f)(int, void*) = (void (*)(int,void*))msg.arg1();
 
             f(m_id, (void*)msg.arg2());
+        }
+        break;
+
+    case MXS_WORKER_MSG_TASK:
+        {
+            Task *pTask = reinterpret_cast<Task*>(msg.arg1());
+            Semaphore* pSem = reinterpret_cast<Semaphore*>(msg.arg2());
+
+            pTask->execute(*this);
+
+            if (pSem)
+            {
+                pSem->post();
+            }
+        }
+        break;
+
+    case MXS_WORKER_MSG_DISPOSABLE_TASK:
+        {
+            DisposableTask *pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
+            pTask->execute(*this);
+            pTask->dec_count();
         }
         break;
 

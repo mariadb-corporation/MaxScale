@@ -13,13 +13,17 @@
  */
 
 #include <maxscale/cppdefs.hh>
+#include <memory>
 #include <maxscale/platform.h>
 #include "messagequeue.hh"
 #include "poll.h"
 #include "worker.h"
+#include "workertask.hh"
 
 namespace maxscale
 {
+
+class Semaphore;
 
 struct WORKER_STATISTICS
 {
@@ -61,6 +65,8 @@ class Worker : public MXS_WORKER
 
 public:
     typedef WORKER_STATISTICS STATISTICS;
+    typedef WorkerTask Task;
+    typedef WorkerDisposableTask DisposableTask;
 
     enum state_t
     {
@@ -245,6 +251,76 @@ public:
     }
 
     /**
+     * Executes a task in the context of a Worker.
+     *
+     * @param pTask  The task to be executed.
+     * @param pSem   If non-NULL, will be posted once the task's `execute` return.
+     *
+     * @return True if the task could be *posted*, false otherwise.
+     *
+     * @attention  The instance must remain valid for as long as it takes for the
+     *             task to be transferred to the worker and its `execute` function
+     *             to be called.
+     *
+     * The semaphore can be used for waiting for the task to be finished.
+     *
+     * @code
+     *     Semaphore sem;
+     *     MyTask task;
+     *
+     *     pWorker->execute(&task, &sem);
+     *     sem.wait();
+     *
+     *     MyResult& result = task.result();
+     * @endcode
+     */
+    bool execute(Task* pTask, Semaphore* pSem = NULL);
+
+    /**
+     * Executes a disposable task in the context of a Worker.
+     *
+     * @param pTask  The task to be executed.
+     *
+     * @return True if the task could be *posted*, false otherwise.
+     *
+     * @attention  Once the task has been executed, it will be deleted.
+     */
+    bool execute(std::auto_ptr<DisposableTask> sTask);
+
+    /**
+     * Executes a task on all workers.
+     *
+     * @param pTask  The task to be executed.
+     * @param pSem   If non-NULL, will be posted once per worker when the task's
+     *               `execute` return.
+     *
+     * @return How many workers the task was posted to.
+     *
+     * @attention The very same task will be posted to all workers. The task
+     *            should either not have any sharable data or then it should
+     *            have data specific to each worker that can be accessed
+     *            without locks.
+     */
+    static size_t execute_on_all(Task* pTask, Semaphore* pSem = NULL);
+
+    /**
+     * Executes a task on all workers.
+     *
+     * @param pTask  The task to be executed.
+     *
+     * @return How many workers the task was posted to.
+     *
+     * @attention The very same task will be posted to all workers. The task
+     *            should either not have any sharable data or then it should
+     *            have data specific to each worker that can be accessed
+     *            without locks.
+     *
+     * @attention Once the task has been executed by all workers, it will
+     *            be deleted.
+     */
+    static size_t execute_on_all(std::auto_ptr<DisposableTask> sTask);
+
+    /**
      * Post a message to a worker.
      *
      * @param msg_id  The message id.
@@ -336,6 +412,8 @@ private:
     virtual ~Worker();
 
     static Worker* create(int id, int epoll_listener_fd);
+
+    bool execute_disposable(DisposableTask* pTask);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
