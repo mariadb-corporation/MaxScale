@@ -172,6 +172,7 @@ static char *monitor_params[] =
     "monitor_interval",
     "detect_replication_lag",
     "detect_stale_master",
+    "detect_stale_slave",
     "disable_master_failback",
     "backend_connect_timeout",
     "backend_read_timeout",
