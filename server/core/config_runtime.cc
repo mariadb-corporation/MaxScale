@@ -474,6 +474,86 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *va
     return valid;
 }
 
+bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue)
+{
+    string key(zKey);
+    string value(zValue);
+    bool valid = true;
+
+    spinlock_acquire(&crt_lock);
+
+    if (key == CN_USER)
+    {
+        serviceSetUser(service, value.c_str(), service->credentials.authdata);
+    }
+    else if (key == CN_PASSWORD)
+    {
+        serviceSetUser(service, service->credentials.name, value.c_str());
+    }
+    else if (key == CN_ENABLE_ROOT_USER)
+    {
+        serviceEnableRootUser(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_MAX_RETRY_INTERVAL)
+    {
+        service_set_retry_interval(service, strtol(value.c_str(), NULL, 10));
+    }
+    else if (key == CN_MAX_CONNECTIONS)
+    {
+        // TODO: Once connection queues are implemented, use correct values
+        serviceSetConnectionLimits(service, strtol(value.c_str(), NULL, 10), 0, 0);
+    }
+    else if (key == CN_CONNECTION_TIMEOUT)
+    {
+        serviceSetTimeout(service, strtol(value.c_str(), NULL, 10));
+    }
+    else if (key == CN_AUTH_ALL_SERVERS)
+    {
+        serviceAuthAllServers(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_STRIP_DB_ESC)
+    {
+        serviceStripDbEsc(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
+    {
+        serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_VERSION_STRING)
+    {
+        serviceSetVersionString(service, value.c_str());
+    }
+    else if (key == CN_WEIGHTBY)
+    {
+        serviceWeightBy(service, value.c_str());
+    }
+    else if (key == CN_LOG_AUTH_WARNINGS)
+    {
+        // TODO: Move this inside the service source
+        service->log_auth_warnings = config_truth_value(value.c_str());
+    }
+    else if (key == CN_RETRY_ON_FAILURE)
+    {
+        serviceSetRetryOnFailure(service, value.c_str());
+    }
+    else
+    {
+        MXS_ERROR("Unknown parameter for service '%s': %s=%s",
+                  service->name, key.c_str(), value.c_str());
+        valid = false;
+    }
+
+    if (valid)
+    {
+        service_serialize(service);
+        MXS_NOTICE("Updated service '%s': %s=%s", service->name, key.c_str(), value.c_str());
+    }
+
+    spinlock_release(&crt_lock);
+
+    return valid;
+}
+
 bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,

@@ -121,6 +121,17 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
 bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value);
 
 /**
+ * @brief Alter service parameters
+ *
+ * @param monitor Service to alter
+ * @param key     Key to modify
+ * @param value   New value
+ *
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue);
+
+/**
  * @brief Create a new listener for a service
  *
  * This function adds a new listener to a service and starts it.

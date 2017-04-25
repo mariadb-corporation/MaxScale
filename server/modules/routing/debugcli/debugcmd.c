@@ -1513,6 +1513,34 @@ static void alterMonitor(DCB *dcb, MXS_MONITOR *monitor, char *v1, char *v2, cha
 
 }
 
+static void alterService(DCB *dcb, SERVICE *service, char *v1, char *v2, char *v3,
+                         char *v4, char *v5, char *v6, char *v7, char *v8, char *v9,
+                         char *v10, char *v11)
+{
+    char *values[11] = {v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11};
+    const int items = sizeof(values) / sizeof(values[0]);
+
+    for (int i = 0; i < items && values[i]; i++)
+    {
+        char *key = values[i];
+        char *value = strchr(key, '=');
+
+        if (value)
+        {
+            *value++ = '\0';
+
+            if (!runtime_alter_service(service, key, value))
+            {
+                dcb_printf(dcb, "Error: Bad key-value parameter: %s=%s\n", key, value);
+            }
+        }
+        else
+        {
+            dcb_printf(dcb, "Error: not a key-value parameter: %s\n", values[i]);
+        }
+    }
+}
+
 struct subcommand alteroptions[] =
 {
     {
@@ -1570,6 +1598,37 @@ struct subcommand alteroptions[] =
         "Example: alter monitor my-monitor user=maxuser password=maxpwd",
         {
             ARG_TYPE_MONITOR, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
+            ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
+        }
+    },
+    {
+        "service", 2, 12, alterService,
+        "Alter service parameters",
+        "Usage: alter service NAME KEY=VALUE ...\n"
+        "\n"
+        "Parameters:\n"
+        "NAME      Service name\n"
+        "KEY=VALUE List of `key=value` pairs separated by spaces\n"
+        "\n"
+        "All services support the following values for KEY:\n"
+        "user                          Username used when connecting to servers\n"
+        "password                      Password used when connecting to servers\n"
+        "enable_root_user              Allow root user access through this service\n"
+        "max_retry_interval            Maximum restart retry interval\n"
+        "max_connections               Maximum connection limit\n"
+        "connection_timeout            Client idle timeout in seconds\n"
+        "auth_all_servers              Retrieve authentication data from all servers\n"
+        "strip_db_esc                  Strip escape characters from database names\n"
+        "localhost_match_wildcard_host Match wildcard host to 'localhost' address\n"
+        "version_string                The version string given to client connections\n"
+        "weightby                      Weighting parameter name\n"
+        "log_auth_warnings             Log authentication warnings\n"
+        "retry_on_failure              Retry service start on failure\n"
+        "\n"
+        "Example: alter service my-service user=maxuser password=maxpwd",
+        {
+            ARG_TYPE_SERVICE, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING,
             ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING, ARG_TYPE_STRING
         }
