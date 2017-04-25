@@ -40,7 +40,7 @@ void WorkerDisposableTask::inc_ref()
 
 void WorkerDisposableTask::dec_ref()
 {
-    ss_dassert(atomic_read(&m_count) > 0);
+    ss_dassert(atomic_load_int32(&m_count) > 0);
 
     if (atomic_add(&m_count, -1) == 1)
     {
