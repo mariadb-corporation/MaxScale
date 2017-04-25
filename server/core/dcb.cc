@@ -3106,13 +3106,7 @@ void dcb_foreach_parallel(bool(*func)(DCB *dcb, void *data), void **data)
 {
     Semaphore sem;
     ParallelDcbTask task(func, data);
-    size_t n = Worker::execute_on_all(&task, &sem);
-
-    // TODO: Use the multi-wait version of this function
-    for (size_t i = 0; i < n; i++)
-    {
-        sem.wait();
-    }
+    sem.wait_n(Worker::execute_on_all(&task, &sem));
 }
 
 int dcb_get_port(const DCB *dcb)
