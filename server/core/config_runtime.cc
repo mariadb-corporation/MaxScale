@@ -49,7 +49,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     {
         if (serviceAddBackend(service, server))
         {
-            service_serialize_servers(service);
+            service_serialize(service);
             rval = true;
         }
     }
@@ -57,7 +57,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     {
         if (monitorAddServer(monitor, server))
         {
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
             rval = true;
         }
     }
@@ -87,12 +87,12 @@ bool runtime_unlink_server(SERVER *server, const char *target)
         if (service)
         {
             serviceRemoveBackend(service, server);
-            service_serialize_servers(service);
+            service_serialize(service);
         }
         else if (monitor)
         {
             monitorRemoveServer(monitor, server);
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
         }
 
         const char *type = service ? "service" : "monitor";
@@ -102,7 +102,6 @@ bool runtime_unlink_server(SERVER *server, const char *target)
     spinlock_release(&crt_lock);
     return rval;
 }
-
 
 bool runtime_create_server(const char *name, const char *address, const char *port,
                            const char *protocol, const char *authenticator,
@@ -804,7 +803,7 @@ SERVER* runtime_create_server_from_json(json_t* json)
         /** The port needs to be in string format */
         char port[200]; // Enough to store any port value
         int i = json_integer_value(json_object_get(json, CN_PORT));
-        snprintf(port, sizeof (port), "%d", i);
+        snprintf(port, sizeof(port), "%d", i);
 
         /** Optional parameters */
         const char* protocol = string_or_null(json, CN_PROTOCOL);
@@ -870,7 +869,8 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     if (server_to_object_relations(server, old_json.get(), new_json))
     {
         json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);;
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
         ss_dassert(old_parameters);
 
         if (parameters)
@@ -1023,7 +1023,8 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
     {
         bool changed = false;
         json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);;
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
         ss_dassert(old_parameters);
 
         if (parameters)

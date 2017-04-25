@@ -93,6 +93,16 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 
 /**
+ * @brief Replace an existing parameter
+ *
+ * @param obj Configuration context
+ * @param key Parameter name
+ * @param value Parameter value
+ * @return True on success, false on memory allocation error
+ */
+bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+
+/**
  * @brief Construct an SSL structure
  *
  * The SSL structure is used by both listeners and servers.

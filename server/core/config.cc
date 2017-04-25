@@ -474,7 +474,14 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
 
     if (config_get_param(ptr->parameters, name))
     {
-        if (!config_append_param(ptr, name, value))
+        /** The values in the persisted configurations are updated versions of
+         * the ones in the main configuration file.  */
+        if (is_persisted_config && !config_replace_param(ptr, name, value))
+        {
+            return 0;
+        }
+        /** Multi-line parameter */
+        else if (!config_append_param(ptr, name, value))
         {
             return 0;
         }
@@ -2413,6 +2420,23 @@ bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value
     strcat(tmp, value);
 
     char *new_value = config_clean_string_list(tmp);
+
+    if (new_value)
+    {
+        MXS_FREE(param->value);
+        param->value = new_value;
+        rval = true;
+    }
+
+    return rval;
+}
+
+bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value)
+{
+    MXS_CONFIG_PARAMETER *param = config_get_param(obj->parameters, key);
+    ss_dassert(param);
+    char *new_value = MXS_STRDUP(value);
+    bool rval;
 
     if (new_value)
     {

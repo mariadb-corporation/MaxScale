@@ -82,18 +82,15 @@ void serviceRemoveBackend(SERVICE *service, const SERVER *server);
 /**
  * @brief Serialize a service to a file
  *
- * This partially converts @c service into an INI format file. Only the servers
- * of the service are serialized. This allows the service to keep using the servers
- * added at runtime even after a restart.
+ * This converts @c service into an INI format file.
  *
  * NOTE: This does not persist the complete service configuration and requires
  * that an existing service configuration is in the main configuration file.
- * Changes to service parameters are not persisted.
  *
  * @param service Service to serialize
  * @return False if the serialization of the service fails, true if it was successful
  */
-bool service_serialize_servers(const SERVICE *service);
+bool service_serialize(const SERVICE *service);
 
 /**
  * Internal utility functions

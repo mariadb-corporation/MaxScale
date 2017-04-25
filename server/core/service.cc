@@ -2223,22 +2223,36 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     }
 
     /**
-     * Only additional parameters are added to the configuration. This prevents
-     * duplication or addition of parameters that don't support it.
-     *
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", service->name);
+    dprintf(file, "%s=service\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_USER, service->credentials.name);
+    dprintf(file, "%s=%s\n", CN_PASSWORD, service->credentials.authdata);
+    dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, service->enable_root ? "true" : "false");
+    dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, service->max_retry_interval);
+    dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, service->max_connections);
+    dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, service->conn_idle_timeout);
+    dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, service->users_from_all ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST, service->localhost_match_wildcard_host ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
+    dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
+    dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, service->retry_start ? "true" : "false");
+
     if (service->dbref)
     {
-        dprintf(file, "servers=");
+        dprintf(file, "%s=", CN_SERVERS);
+        const char *sep = "";
+
         for (SERVER_REF *db = service->dbref; db; db = db->next)
         {
-            if (db != service->dbref)
+            if (SERVER_REF_IS_ACTIVE(db))
             {
-                dprintf(file, ",");
+                dprintf(file, "%s%s", sep, db->server->unique_name);
+                sep = ",";
             }
-            dprintf(file, "%s", db->server->unique_name);
         }
         dprintf(file, "\n");
     }
@@ -2246,6 +2260,41 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     close(file);
 
     return true;
+}
+
+bool service_serialize(const SERVICE *service)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             service->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+    else if (create_service_config(service, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
 }
 
 bool service_serialize_servers(const SERVICE *service)

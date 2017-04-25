@@ -66,22 +66,6 @@ void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
 
 /**
- * @brief Serialize the servers of a monitor to a file
- *
- * This partially converts @c monitor into an INI format file. Only the servers
- * of the monitor are serialized. This allows the monitor to keep monitoring
- * the servers that were added at runtime even after a restart.
- *
- * NOTE: This does not persist the complete monitor configuration and requires
- * that an existing monitor configuration is in the main configuration file.
- * Changes to monitor parameters are not persisted.
- *
- * @param monitor Monitor to serialize
- * @return False if the serialization of the monitor fails, true if it was successful
- */
-bool monitor_serialize_servers(const MXS_MONITOR *monitor);
-
-/**
  * @brief Serialize a monitor to a file
  *
  * This converts the static configuration of the monitor into an INI format file.
