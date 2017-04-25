@@ -175,6 +175,23 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
+HttpResponse cb_alter_service(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json)
+    {
+        SERVICE* service = service_find(request.uri_part(1).c_str());
+
+        if (service && runtime_alter_service_from_json(service, json))
+        {
+            return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
+        }
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+}
+
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -352,6 +369,7 @@ public:
 
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
+        m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
     }
 
     ~RootResource()

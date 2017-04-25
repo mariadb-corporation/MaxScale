@@ -228,4 +228,14 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
  */
 bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
 
+/**
+ * @brief Alter a service using JSON
+ *
+ * @param service Service to alter
+ * @param new_json JSON definition of the updated service
+ *
+ * @return True if the service was successfully modified to represent @c new_json
+ */
+bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
+
 MXS_END_DECLS

@@ -1143,3 +1143,70 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 
     return rval;
 }
+
+/**
+ * @brief Check if the service parameter can be altered at runtime
+ *
+ * @param key Parameter name
+ * @return True if the parameter can be altered
+ */
+static bool is_dynamic_param(const string& key)
+{
+    return key != CN_TYPE &&
+           key != CN_ROUTER &&
+           key != CN_ROUTER_OPTIONS &&
+           key != CN_SERVERS;
+}
+
+bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
+{
+    bool rval = false;
+    Closer<json_t*> old_json(service_to_json(service, ""));
+    ss_dassert(old_json.get());
+
+    if (object_to_server_relations(service->name, old_json.get(), new_json))
+    {
+        bool changed = false;
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
+        ss_dassert(old_parameters);
+
+        if (parameters)
+        {
+            /** Create a set of accepted service parameters */
+            set<string> paramset;
+            for (int i = 0; config_service_params[i]; i++)
+            {
+                if (is_dynamic_param(config_service_params[i]))
+                {
+                    paramset.insert(config_service_params[i]);
+                }
+            }
+
+            rval = true;
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (paramset.find(key) != paramset.end())
+                {
+                    if (!runtime_alter_service(service, key, mxs::json_to_string(value).c_str()))
+                    {
+                        rval = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return rval;
+}
