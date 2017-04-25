@@ -89,6 +89,7 @@ typedef struct parsing_info_st
     size_t function_infos_len;
     size_t function_infos_capacity;
     GWBUF* preparable_stmt;
+    qc_parse_result_t result;
 #if defined(SS_DEBUG)
     skygw_chk_t pi_chk_tail;
 #endif
@@ -148,7 +149,11 @@ int32_t qc_mysql_parse(GWBUF* querybuf, uint32_t collect, int32_t* result)
 
     if (parsed)
     {
-        *result = QC_QUERY_PARSED;
+        parsing_info_t* pi = (parsing_info_t*) gwbuf_get_buffer_object_data(querybuf,
+                                                                            GWBUF_PARSING_INFO);
+        ss_dassert(pi);
+
+        *result = pi->result;
     }
     else
     {
@@ -270,7 +275,11 @@ static bool parse_query(GWBUF* querybuf)
      * Create parse_tree inside thd.
      * thd and lex are readable even if creating parse tree fails.
      */
-    create_parse_tree(thd);
+    if (create_parse_tree(thd))
+    {
+        pi->result = QC_QUERY_PARSED;
+    }
+
     /** Add complete parsing info struct to the query buffer */
     gwbuf_add_buffer_object(querybuf,
                             GWBUF_PARSING_INFO,
@@ -454,7 +463,7 @@ static bool create_parse_tree(THD* thd)
     }
 
 return_here:
-    return failp;
+    return !failp;
 }
 
 /**
@@ -830,6 +839,10 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
 
     case SQLCOM_SHOW_TABLES:
         type |= QUERY_TYPE_SHOW_TABLES;
+        goto return_qtype;
+        break;
+
+    case SQLCOM_END:
         goto return_qtype;
         break;
 
@@ -1546,6 +1559,7 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
     /** Set handle and free function to parsing info struct */
     pi->pi_handle = mysql;
     pi->pi_done_fp = donefun;
+    pi->result = QC_QUERY_INVALID;
 
 retblock:
     return pi;
