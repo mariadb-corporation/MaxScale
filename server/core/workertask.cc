@@ -13,6 +13,7 @@
 
 #include "maxscale/workertask.hh"
 #include <maxscale/atomic.h>
+#include <maxscale/debug.h>
 
 namespace maxscale
 {
@@ -32,13 +33,15 @@ WorkerDisposableTask::WorkerDisposableTask()
 {
 }
 
-void WorkerDisposableTask::inc_count()
+void WorkerDisposableTask::inc_ref()
 {
     atomic_add(&m_count, 1);
 }
 
-void WorkerDisposableTask::dec_count()
+void WorkerDisposableTask::dec_ref()
 {
+    ss_dassert(atomic_read(&m_count) > 0);
+
     if (atomic_add(&m_count, -1) == 1)
     {
         delete this;

@@ -549,7 +549,7 @@ bool Worker::execute(std::auto_ptr<DisposableTask> sTask)
 // private
 bool Worker::execute_disposable(DisposableTask* pTask)
 {
-    pTask->inc_count();
+    pTask->inc_ref();
 
     intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
 
@@ -557,7 +557,7 @@ bool Worker::execute_disposable(DisposableTask* pTask)
 
     if (!posted)
     {
-        pTask->dec_count();
+        pTask->dec_ref();
     }
 
     return posted;
@@ -585,7 +585,7 @@ size_t Worker::execute_on_all(Task* pTask, Semaphore* pSem)
 size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
 {
     DisposableTask* pTask = sTask.release();
-    pTask->inc_count();
+    pTask->inc_ref();
 
     size_t n = 0;
 
@@ -599,7 +599,7 @@ size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
         }
     }
 
-    pTask->dec_count();
+    pTask->dec_ref();
 
     return n;
 }
@@ -838,7 +838,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
         {
             DisposableTask *pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
             pTask->execute(*this);
-            pTask->dec_count();
+            pTask->dec_ref();
         }
         break;
 
