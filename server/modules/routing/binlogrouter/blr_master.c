@@ -70,6 +70,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
 #include <maxscale/buffer.h>
+#include <maxscale/worker.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -178,21 +179,39 @@ blr_start_master(void* data)
     router->master_state = BLRM_CONNECTING;
 
     spinlock_release(&router->lock);
+
+    /* Create fake 'client' DCB */
     if ((client = dcb_alloc(DCB_ROLE_INTERNAL, NULL)) == NULL)
     {
         MXS_ERROR("failed to create DCB for dummy client");
         return;
     }
     router->client = client;
+
+    /* Fake the client is reading */
     client->state = DCB_STATE_POLLING;  /* Fake the client is reading */
+
+    /* Create MySQL Athentication from configured user/passwd */
     client->data = CreateMySQLAuthData(router->user, router->password, "");
+
+    /* Create a session for dummy client DCB */
     if ((router->session = session_alloc(router->service, client)) == NULL)
     {
         MXS_ERROR("failed to create session for connection to master");
         return;
     }
     client->session = router->session;
-    if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
+
+    /**
+     * 'client' is the fake DCB that emulates a client session:
+     * we need to set the poll.thread.id for the "dummy client"
+     */
+    client->session->client_dcb->poll.thread.id = mxs_worker_get_current_id();
+
+    /* Connect to configured master server */
+    if ((router->master = dcb_connect(router->service->dbref->server,
+                                      router->session,
+                                      BLR_PROTOCOL)) == NULL)
     {
         char *name = MXS_MALLOC(strlen(router->service->name) + strlen(" Master") + 1);
 
@@ -225,6 +244,13 @@ blr_start_master(void* data)
     }
 
     router->master_state = BLRM_AUTHENTICATED;
+
+    /**
+     * Start the slave protocol registration phase.
+     * This is the first step: SELECT UNIX_TIMESTAMP()
+     *
+     * Next states are handled by blr_master_response()
+     */
     router->master->func.write(router->master,
                                blr_make_query(router->master,
                                "SELECT UNIX_TIMESTAMP()"));
