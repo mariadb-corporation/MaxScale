@@ -70,6 +70,15 @@ MXS_WORKER* mxs_worker_get(int worker_id);
 int mxs_worker_id(MXS_WORKER* pWorker);
 
 /**
+ * Return the id of the worker.
+ *
+ * @return The id of the worker.
+ *
+ * @attention If there is no current worker, then -1 will be returned.
+ */
+int mxs_worker_get_current_id();
+
+/**
  * Post a message to a worker.
  *
  * @param worker  The worker to whom the message should be sent.

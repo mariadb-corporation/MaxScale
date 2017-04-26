@@ -17,13 +17,14 @@
 namespace maxscale
 {
 
-bool Semaphore::timedwait(time_t seconds,
-                          long nseconds,
-                          signal_approach_t signal_approach) const
+//static
+void Semaphore::get_current_timespec(time_t seconds,
+                                     long nseconds,
+                                     timespec* pTs)
 {
     ss_dassert(nseconds <= 999999999);
 
-    timespec ts;
+    timespec& ts = *pTs;
 
     ss_debug(int rc=) clock_gettime(CLOCK_REALTIME, &ts);
     ss_dassert(rc == 0);
@@ -39,8 +40,6 @@ bool Semaphore::timedwait(time_t seconds,
     }
 
     ts.tv_nsec = nseconds_sum;
-
-    return timedwait(ts, signal_approach);
 }
 
 }

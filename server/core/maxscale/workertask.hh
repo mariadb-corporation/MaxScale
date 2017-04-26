@@ -55,8 +55,8 @@ protected:
 private:
     friend class Worker;
 
-    void inc_count();
-    void dec_count();
+    void inc_ref();
+    void dec_ref();
 
 private:
     int32_t m_count;

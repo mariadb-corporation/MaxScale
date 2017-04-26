@@ -321,6 +321,21 @@ public:
     static size_t execute_on_all(std::auto_ptr<DisposableTask> sTask);
 
     /**
+     * Executes a task on all workers in serial mode.
+     *
+     * The task is executed on at most one worker thread at a time.
+     *
+     * @param pTask  The task to be executed.
+     *
+     * @return How many workers the task was posted to.
+     *
+     * @warning This function is extremely inefficient and will be slow compared
+     * to the other functions. Only use this function when printing thread-specific
+     * data to stdout.
+     */
+    static size_t execute_on_all_serially(Task* pTask);
+
+    /**
      * Post a message to a worker.
      *
      * @param msg_id  The message id.

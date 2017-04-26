@@ -65,6 +65,14 @@ void test_simple()
     ss_dassert(rv);
     cout << "Waited" << endl;
 
+    sem2.post();
+    sem2.post();
+    sem2.post();
+
+    cout << "Waiting 3 times for semaphore with a count of 3." << endl;
+    rv = sem2.wait_n(3);
+    cout << "Waited" << endl;
+
     Semaphore sem3;
 
     time_t started;
@@ -118,10 +126,7 @@ void test_threads()
 
     cout << "Waiting for threads." << endl;
 
-    for (int i = 0; i < n_threads; ++i)
-    {
-        sem.wait();
-    }
+    sem.wait_n(n_threads);
 
     cout << "Joining threads." << endl;
 

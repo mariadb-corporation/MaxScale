@@ -214,6 +214,16 @@ bool Worker::init()
         MXS_ERROR("Could not allocate an epoll instance.");
     }
 
+    if (this_unit.initialized)
+    {
+        // When the initialization has successfully been performed, we set the
+        // current_worker_id of this thread to 0. That way any connections that
+        // are made during service startup (after this function returns, but
+        // bofore the workes have been started) will be handled by the worker
+        // that will be running in the main thread.
+        this_thread.current_worker_id = 0;
+    }
+
     return this_unit.initialized;
 }
 
@@ -502,6 +512,11 @@ MXS_WORKER* mxs_worker_get(int worker_id)
     return Worker::get(worker_id);
 }
 
+int mxs_worker_get_current_id()
+{
+    return Worker::get_current_id();
+}
+
 Worker* Worker::get_current()
 {
     Worker* pWorker = NULL;
@@ -549,7 +564,7 @@ bool Worker::execute(std::auto_ptr<DisposableTask> sTask)
 // private
 bool Worker::execute_disposable(DisposableTask* pTask)
 {
-    pTask->inc_count();
+    pTask->inc_ref();
 
     intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
 
@@ -557,7 +572,7 @@ bool Worker::execute_disposable(DisposableTask* pTask)
 
     if (!posted)
     {
-        pTask->dec_count();
+        pTask->dec_ref();
     }
 
     return posted;
@@ -585,7 +600,7 @@ size_t Worker::execute_on_all(Task* pTask, Semaphore* pSem)
 size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
 {
     DisposableTask* pTask = sTask.release();
-    pTask->inc_count();
+    pTask->inc_ref();
 
     size_t n = 0;
 
@@ -599,7 +614,26 @@ size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
         }
     }
 
-    pTask->dec_count();
+    pTask->dec_ref();
+
+    return n;
+}
+//static
+size_t Worker::execute_on_all_serially(Task* pTask)
+{
+    Semaphore sem;
+    size_t n = 0;
+
+    for (int i = 0; i < this_unit.n_workers; ++i)
+    {
+        Worker* pWorker = this_unit.ppWorkers[i];
+
+        if (pWorker->execute(pTask, &sem))
+        {
+            sem.wait();
+            ++n;
+        }
+    }
 
     return n;
 }
@@ -838,7 +872,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
         {
             DisposableTask *pTask = reinterpret_cast<DisposableTask*>(msg.arg1());
             pTask->execute(*this);
-            pTask->dec_count();
+            pTask->dec_ref();
         }
         break;
 

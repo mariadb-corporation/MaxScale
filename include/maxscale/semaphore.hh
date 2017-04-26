@@ -95,7 +95,7 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
-     * If the semaphore count is greater that zero, decrements the count and
+     * If the semaphore count is greater than zero, decrements the count and
      * returns immediately. Otherwise blocks the caller until someone posts
      * the semaphore.
      *
@@ -118,6 +118,39 @@ public:
         ss_dassert((rc == 0) || ((errno == EINTR) && (signal_approach == HONOUR_SIGNALS)));
 
         return rc == 0;
+    }
+
+    /**
+     * @brief Waits multiple times on the semaphore.
+     *
+     * If the semaphore count is greater than or equal to the specified amount,
+     * decrements the count and returns immediately. Otherwise blocks the caller
+     * until the semaphore has been posted the required number of times.
+     *
+     * @param n_wait           How many times should be waited.
+     * @param signal_approach  Whether signals should be ignored or honoured.
+     *
+     * @return How many times the semaphore has been waited on.
+     *
+     * @attention The function can return a different number than `n_wait` only
+     *            if `signal_approach` is `HONOUR_SIGNALS`.
+     */
+    size_t wait_n(size_t n_wait,
+                  signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    {
+        bool waited = true;
+        size_t n_waited = 0;
+
+        while (waited && n_wait--)
+        {
+            waited = wait(signal_approach);
+            if (waited)
+            {
+                ++n_waited;
+            }
+        }
+
+        return n_waited;
     }
 
     /**
@@ -193,6 +226,46 @@ public:
     /**
      * @brief Waits on the semaphore.
      *
+     * Waits on the sempahore the specified number of times, at most until the
+     * specified time.
+     *
+     * @param n_wait           How many times should be waited.
+     * @param ts               The *absolute* time until which the waiting at
+     *                         most is performed.
+     * @param signal_approach  Whether signals should be ignored or honoured.
+     *
+     * @return How many times the semaphore has been waited on. If the
+     *         function times out or is interrupted, then the returned
+     *         value will be less than `n_wait`.
+     *
+     * @attention If the function returns a value less than `n_count` and
+     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            the value of `errno` to find out whether the call was timed out or
+     *            interrupted. In the former case the value will be `ETIMEDOUT`
+     *            and in the latter `EINTR.
+     */
+    size_t timedwait_n(size_t n_wait,
+                       struct timespec& ts,
+                       signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    {
+        bool waited = true;
+        size_t n_waited = 0;
+
+        while (waited && n_wait--)
+        {
+            waited = timedwait(ts, signal_approach);
+            if (waited)
+            {
+                ++n_waited;
+            }
+        }
+
+        return n_waited;
+    }
+
+    /**
+     * @brief Waits on the semaphore.
+     *
      * Waits on the sempahore at most until the specified amount of time
      * has passed.
      *
@@ -212,7 +285,43 @@ public:
      */
     bool timedwait(time_t seconds,
                    long nseconds,
-                   signal_approach_t signal_approach = IGNORE_SIGNALS) const;
+                   signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    {
+        timespec ts;
+        get_current_timespec(seconds, nseconds, &ts);
+        return timedwait(ts, signal_approach);
+    }
+
+    /**
+     * @brief Waits on the semaphore.
+     *
+     * Waits on the sempahore the specified number of times at most until the
+     * specified time.
+     *
+     * @param n_wait           How many times should be waited.
+     * @param seconds          How many seconds to wait at most.
+     * @param nseconds         How many nanonseconds to wait at most.
+     * @param signal_approach  Whether signals should be ignored or honoured.
+     *
+     * @return How many times the semaphore has been waited on. If the
+     *         function times out or is interrupted, then the returned
+     *         value will be less than `n_wait`.
+     *
+     * @attention If the function returns a value less than `n_count` and
+     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            the value of `errno` to find out whether the call was timed out or
+     *            interrupted. In the former case the value will be `ETIMEDOUT`
+     *            and in the latter `EINTR.
+     */
+    size_t timedwait_n(size_t n_wait,
+                       time_t seconds,
+                       long nseconds,
+                       signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    {
+        timespec ts;
+        get_current_timespec(seconds, nseconds, &ts);
+        return timedwait_n(n_wait, ts, signal_approach);
+    }
 
     /**
      * @brief Waits on the semaphore.
@@ -236,6 +345,36 @@ public:
     {
         return timedwait(seconds, 0, signal_approach);
     }
+
+    /**
+     * @brief Waits on the semaphore.
+     *
+     * Waits on the sempahore the specified number of times at most until the
+     * specified time.
+     *
+     * @param n_wait           How many times should be waited.
+     * @param seconds          How many seconds to wait at most.
+     * @param signal_approach  Whether signals should be ignored or honoured.
+     *
+     * @return How many times the semaphore has been waited on. If the
+     *         function times out or is interrupted, then the returned
+     *         value will be less than `n_wait`.
+     *
+     * @attention If the function returns a value less than `n_count` and
+     *            `signal_approch` is `HONOUR_SIGNALS` then the caller must check
+     *            the value of `errno` to find out whether the call was timed out or
+     *            interrupted. In the former case the value will be `ETIMEDOUT`
+     *            and in the latter `EINTR.
+     */
+    bool timedwait_n(size_t n_wait,
+                     time_t seconds,
+                     signal_approach_t signal_approach = IGNORE_SIGNALS) const
+    {
+        return timedwait_n(n_wait, seconds, 0, signal_approach);
+    }
+
+private:
+    static void get_current_timespec(time_t seconds, long nseconds, timespec* pTs);
 
 private:
     mutable sem_t m_sem;

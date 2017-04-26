@@ -37,6 +37,32 @@ int64_t  atomic_add_int64(int64_t *variable, int64_t value);
 uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
 
 /**
+ * Implementation of an atomic load operation for the GCC environment.
+ *
+ * Loads a value from the contents of a location pointed to by the first parameter.
+ * The load operation is atomic and it uses the strongest memory ordering.
+ *
+ * @param variable      Pointer the the variable to load from
+ * @return The stored value
+ */
+int atomic_load_int32(int *variable);
+int64_t atomic_load_int64(int64_t *variable);
+uint64_t atomic_load_uint64(uint64_t *variable);
+
+/**
+ * Implementation of an atomic store operation for the GCC environment.
+ *
+ * Stores a value to the contents of a location pointed to by the first parameter.
+ * The store operation is atomic and it uses the strongest memory ordering.
+ *
+ * @param variable      Pointer the the variable to store to
+ * @param value         Value to be stored
+ */
+void atomic_store_int32(int *variable, int value);
+void atomic_store_int64(int64_t *variable, int64_t value);
+void atomic_store_uint64(uint64_t *variable, uint64_t value);
+
+/**
  * @brief Impose a full memory barrier
  *
  * A full memory barrier guarantees that all store and load operations complete
