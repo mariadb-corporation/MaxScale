@@ -512,6 +512,11 @@ MXS_WORKER* mxs_worker_get(int worker_id)
     return Worker::get(worker_id);
 }
 
+int mxs_worker_get_current_id()
+{
+    return Worker::get_current_id();
+}
+
 Worker* Worker::get_current()
 {
     Worker* pWorker = NULL;
