@@ -642,26 +642,18 @@ The account used must be able to select from the mysql.user table, the following
 is an example showing how to create this user.
 
 ```
-MariaDB [mysql]> CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'Mhu87p2D';
-Query OK, 0 rows affected (0.01 sec)
-
-MariaDB [mysql]> GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
+CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
 ```
 
-Additionally, `SELECT` privileges on the `mysql.db` and `mysql.tables_priv`
+Additionally, `SELECT` privileges on the `mysql.user`, `mysql.db` and `mysql.tables_priv`
 tables and `SHOW DATABASES` privileges are required in order to load databases
 name and grants suitable for database name authorization.
 
 ```
-MariaDB [(none)]> GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
-
-MariaDB [(none)]> GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
-
-MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
-Query OK, 0 rows affected (0.00 sec)
+GRANT SELECT ON mysql.user TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.db TO 'maxscale'@'maxscalehost';
+GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost';
+GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
 ```
 
 MariaDB MaxScale will execute the following query to retrieve the users. If you
@@ -689,6 +681,8 @@ In versions of MySQL 5.7.6 and later, the `Password` column was replaced by
 `authentication_string`. Change `user.password` above with
 `user.authentication_string`.
 
+**Note**: If authentication fails, MaxScale will try to refresh the list of
+database users used by the service up to 4 times every 30 seconds.
 
 #### `passwd`
 
