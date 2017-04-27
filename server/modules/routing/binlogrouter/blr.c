@@ -77,6 +77,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/housekeeper.h>
+#include <maxscale/worker.h>
 #include <time.h>
 
 #include <maxscale/log_manager.h>
