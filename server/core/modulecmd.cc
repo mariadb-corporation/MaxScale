@@ -297,7 +297,7 @@ static bool process_argument(const MODULECMD *cmd, modulecmd_arg_type_t *type, c
             break;
 
         case MODULECMD_ARG_SESSION:
-            if ((arg->value.session = session_get_by_id(atoi((const char*)value))))
+            if ((arg->value.session = session_get_by_id(strtoul((const char*)value, NULL, 0))))
             {
                 arg->type.type = MODULECMD_ARG_SESSION;
             }

@@ -1724,7 +1724,7 @@ convert_arg(char *arg, int arg_type)
         break;
 
     case ARG_TYPE_SESSION:
-        rval = (unsigned long)session_get_by_id(strtol(arg, NULL, 0));
+        rval = (unsigned long)session_get_by_id(strtoul(arg, NULL, 0));
         break;
 
     case ARG_TYPE_MONITOR:

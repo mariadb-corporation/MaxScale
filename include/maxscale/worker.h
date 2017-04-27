@@ -116,4 +116,9 @@ bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1,
  */
 size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
+// These automatically act on the currently executing worker thread. Not implemented yet.
+void mxs_add_to_session_map(uint32_t id, MXS_SESSION* session);
+void mxs_remove_from_session_map(uint32_t id);
+MXS_SESSION* mxs_find_in_session_map(uint32_t id);
+
 MXS_END_DECLS

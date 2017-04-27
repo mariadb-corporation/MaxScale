@@ -313,7 +313,7 @@ int dcb_isvalid(DCB *);                     /* Check the DCB is in the linked li
 int dcb_count_by_usage(DCB_USAGE);          /* Return counts of DCBs */
 int dcb_persistent_clean_count(DCB *, int, bool);      /* Clean persistent and return count */
 void dcb_hangup_foreach (struct server* server);
-size_t dcb_get_session_id(DCB* dcb);
+uint32_t dcb_get_session_id(DCB* dcb);
 char *dcb_role_name(DCB *);                  /* Return the name of a role */
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);

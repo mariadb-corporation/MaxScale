@@ -24,6 +24,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <netinet/tcp.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -162,8 +163,7 @@ static uint32_t dcb_process_poll_events(DCB *dcb, int thread_id, uint32_t ev);
 static void dcb_process_fake_events(DCB *dcb, int thread_id);
 static bool dcb_session_check(DCB *dcb, const char *);
 
-size_t dcb_get_session_id(
-    DCB *dcb)
+uint32_t dcb_get_session_id(DCB *dcb)
 {
     return (dcb && dcb->session) ? dcb->session->ses_id : 0;
 }
@@ -1673,7 +1673,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 
     if (dcb->session && dcb->session->state != SESSION_STATE_DUMMY)
     {
-        dcb_printf(pdcb, "\tOwning Session:     %lu\n", dcb->session->ses_id);
+        dcb_printf(pdcb, "\tOwning Session:     %" PRIu32 "\n", dcb->session->ses_id);
     }
 
     if (dcb->writeq)

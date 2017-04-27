@@ -29,6 +29,7 @@
  */
 #include <maxscale/session.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -48,8 +49,10 @@
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
 
-/** Global session id; updated safely by use of atomic_add */
-static int session_id;
+/** Global session id counter. Must be updated atomically. Value 0 is reserved for
+ *  dummy/unused sessions.
+ */
+static uint32_t next_session_id = 1;
 
 static struct session session_dummy_struct;
 
@@ -59,7 +62,8 @@ static void session_simple_free(MXS_SESSION *session, DCB *dcb);
 static void session_add_to_all_list(MXS_SESSION *session);
 static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
-
+static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
+                                       MXS_SESSION* session);
 /**
  * The clientReply of the session.
  *
@@ -87,30 +91,35 @@ session_initialize(MXS_SESSION *session)
     session->ses_chk_tail = CHK_NUM_SESSION;
 }
 
-/**
- * Allocate a new session for a new client of the specified service.
- *
- * Create the link to the router session by calling the newSession
- * entry point of the router using the router instance of the
- * service this session is part of.
- *
- * @param service       The service this connection was established by
- * @param client_dcb    The client side DCB
- * @return              The newly created session or NULL if an error occured
- */
-MXS_SESSION *
-session_alloc(SERVICE *service, DCB *client_dcb)
+MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
 {
     MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
-
     if (NULL == session)
     {
         return NULL;
     }
-    session_initialize(session);
 
-    /** Assign a session id and increase */
-    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
+    session_initialize(session);
+    session->ses_id = session_get_next_id();
+    return session_alloc_body(service, client_dcb, session);
+}
+
+MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint32_t id)
+{
+    MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
+    if (session == NULL)
+    {
+        return NULL;
+    }
+
+    session_initialize(session);
+    session->ses_id = id;
+    return session_alloc_body(service, client_dcb, session);
+}
+
+static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
+                                       MXS_SESSION* session)
+{
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
     session->service = service;
     session->client_dcb = client_dcb;
@@ -134,14 +143,13 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->trx_state = SESSION_TRX_INACTIVE;
     session->autocommit = true;
     /*
-     * Only create a router session if we are not the listening
-     * DCB or an internal DCB. Creating a router session may create a connection to a
-     * backend server, depending upon the router module implementation
-     * and should be avoided for the listener session
+     * Only create a router session if we are not the listening DCB or an
+     * internal DCB. Creating a router session may create a connection to
+     * a backend server, depending upon the router module implementation
+     * and should be avoided for a listener session.
      *
      * Router session creation may create other DCBs that link to the
-     * session, therefore it is important that the session lock is
-     * relinquished before the router call.
+     * session.
      */
     if (client_dcb->state != DCB_STATE_LISTENING &&
         client_dcb->dcb_role != DCB_ROLE_INTERNAL)
@@ -163,7 +171,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
          * protocol end of the chain.
          */
         // NOTE: Here we cast the router instance into a MXS_FILTER and
-        // NOTE: and the router session into a MXS_FILTER_SESSION and
+        // NOTE: the router session into a MXS_FILTER_SESSION and
         // NOTE: the router routeQuery into a filter routeQuery. That
         // NOTE: is in order to be able to treat the router as the first
         // NOTE: filter.
@@ -197,13 +205,13 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 
         if (session->client_dcb->user == NULL)
         {
-            MXS_INFO("Started session [%lu] for %s service ",
+            MXS_INFO("Started session [%" PRIu32 "] for %s service ",
                      session->ses_id,
                      service->name);
         }
         else
         {
-            MXS_INFO("Started %s client session [%lu] for '%s' from %s",
+            MXS_INFO("Started %s client session [%" PRIu32 "] for '%s' from %s",
                      service->name,
                      session->ses_id,
                      session->client_dcb->user,
@@ -212,7 +220,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     }
     else
     {
-        MXS_INFO("Start %s client session [%lu] for '%s' from %s failed, will be "
+        MXS_INFO("Start %s client session [%" PRIu32 "] for '%s' from %s failed, will be "
                  "closed as soon as all related DCBs have been closed.",
                  service->name,
                  session->ses_id,
@@ -224,7 +232,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     CHK_SESSION(session);
 
     client_dcb->session = session;
-    return SESSION_STATE_TO_BE_FREED == session->state ? NULL : session;
+    return (session->state == SESSION_STATE_TO_BE_FREED) ? NULL : session;
 }
 
 /**
@@ -382,7 +390,7 @@ static void session_free(MXS_SESSION *session)
         MXS_FREE(session->filters);
     }
 
-    MXS_INFO("Stopped %s client session [%lu]", session->service->name, session->ses_id);
+    MXS_INFO("Stopped %s client session [%" PRIu32 "]", session->service->name, session->ses_id);
 
     /** If session doesn't have parent referencing to it, it can be freed */
     if (!session->ses_is_child)
@@ -494,7 +502,7 @@ dprintSession(DCB *dcb, MXS_SESSION *print_session)
     char buf[30];
     int i;
 
-    dcb_printf(dcb, "Session %lu\n", print_session->ses_id);
+    dcb_printf(dcb, "Session %" PRIu32 "\n", print_session->ses_id);
     dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name);
 
@@ -534,7 +542,7 @@ bool dListSessions_cb(DCB *dcb, void *data)
     {
         DCB *out_dcb = (DCB*)data;
         MXS_SESSION *session = dcb->session;
-        dcb_printf(out_dcb, "%-16lu | %-15s | %-14s | %s\n", session->ses_id,
+        dcb_printf(out_dcb, "%-16" PRIu32 " | %-15s | %-14s | %s\n", session->ses_id,
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
                    session->service && session->service->name ?
@@ -898,7 +906,7 @@ static bool ses_find_id(DCB *dcb, void *data)
 {
     void **params = (void**)data;
     MXS_SESSION **ses = (MXS_SESSION**)params[0];
-    size_t *id = (size_t*)params[1];
+    uint32_t *id = (uint32_t*)params[1];
     bool rval = true;
 
     if (dcb->session->ses_id == *id)
@@ -910,7 +918,7 @@ static bool ses_find_id(DCB *dcb, void *data)
     return rval;
 }
 
-MXS_SESSION* session_get_by_id(int id)
+MXS_SESSION* session_get_by_id(uint32_t id)
 {
     MXS_SESSION *session = NULL;
     void *params[] = {&session, &id};
@@ -980,4 +988,9 @@ void session_clear_stmt(MXS_SESSION *session)
     gwbuf_free(session->stmt.buffer);
     session->stmt.buffer = NULL;
     session->stmt.target = NULL;
+}
+
+uint32_t session_get_next_id()
+{
+    return atomic_add_uint32(&next_session_id, 1);
 }

@@ -14,7 +14,9 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <tr1/unordered_map>
 #include <maxscale/platform.h>
+#include <maxscale/session.h>
 #include "messagequeue.hh"
 #include "poll.h"
 #include "worker.h"
@@ -67,6 +69,7 @@ public:
     typedef WORKER_STATISTICS STATISTICS;
     typedef WorkerTask Task;
     typedef WorkerDisposableTask DisposableTask;
+    typedef std::tr1::unordered_map<uint32_t, MXS_SESSION*> SessionsById;
 
     enum state_t
     {
@@ -449,6 +452,11 @@ private:
     bool          m_started;            /*< Whether the thread has been started or not. */
     bool          m_should_shutdown;    /*< Whether shutdown should be performed. */
     bool          m_shutdown_initiated; /*< Whether shutdown has been initated. */
+    SessionsById  m_sessions;           /*< A mapping of session_id->MXS_SESSION. The map
+                                         *  should contain sessions exclusive to this
+                                         *  worker and not e.g. listener sessions. For now,
+                                         *  it's up to the protocol to decide whether a new
+                                         *  session is added to the map. */
 };
 
 }

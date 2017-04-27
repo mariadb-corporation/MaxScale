@@ -13,6 +13,8 @@
 
 #include "schemarouter.hh"
 
+#include <inttypes.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/query_classifier.h>
 #include <maxscale/modutil.h>
@@ -361,7 +363,7 @@ int32_t SchemaRouterSession::routeQuery(GWBUF* pPacket)
                 if (m_config->debug)
                 {
                     sprintf(errbuf + strlen(errbuf),
-                            " ([%lu]: DB change failed)",
+                            " ([%" PRIu32 "]: DB change failed)",
                             m_client->session->ses_id);
                 }
 
@@ -989,7 +991,7 @@ bool SchemaRouterSession::handle_default_db()
         sprintf(errmsg, "Unknown database '%s'", m_connect_db.c_str());
         if (m_config->debug)
         {
-            sprintf(errmsg + strlen(errmsg), " ([%lu]: DB not found on connect)",
+            sprintf(errmsg + strlen(errmsg), " ([%" PRIu32 "]: DB not found on connect)",
                     m_client->session->ses_id);
         }
         write_error_to_client(m_client,

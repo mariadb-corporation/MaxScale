@@ -44,6 +44,7 @@ MXS_BEGIN_DECLS
  * @return              The value of variable before the add occurred
  */
 int      atomic_add(int *variable, int value);
+uint32_t atomic_add_uint32(uint32_t *variable, int32_t value);
 int64_t  atomic_add_int64(int64_t *variable, int64_t value);
 uint64_t atomic_add_uint64(uint64_t *variable, int64_t value);
 
