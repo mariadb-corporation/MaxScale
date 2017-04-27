@@ -3491,11 +3491,15 @@ int poll_add_dcb(DCB *dcb)
     }
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
+        ss_dassert(Worker::get_current_id() != -1);
+
         worker_id = dcb->session->client_dcb->poll.thread.id;
         ss_dassert(worker_id == Worker::get_current_id());
     }
     else
     {
+        ss_dassert(Worker::get_current_id() != -1);
+
         worker_id = Worker::get_current_id();
     }
 
