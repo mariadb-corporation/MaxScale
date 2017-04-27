@@ -23,6 +23,7 @@ addons:
       - pandoc
       - uuid
       - uuid-dev
+      - libmicrohttpd-dev
   coverity_scan:
     project:
       name: "mariadb-corporation/MaxScale"
