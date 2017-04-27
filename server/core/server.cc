@@ -55,6 +55,8 @@
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
 
+const char USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
+
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
 
@@ -139,6 +141,7 @@ SERVER* server_alloc(const char *name, const char *address, unsigned short port,
     server->is_active = true;
     server->created_online = false;
     server->charset = SERVER_DEFAULT_CHARSET;
+    server->use_proxy_protocol = false;
 
     spinlock_acquire(&server_spin);
     server->next = allServers;
@@ -621,6 +624,10 @@ dprintServer(DCB *dcb, const SERVER *server)
                    l->ssl_key ? l->ssl_key : "null");
         dcb_printf(dcb, "\tSSL CA certificate:                  %s\n",
                    l->ssl_ca_cert ? l->ssl_ca_cert : "null");
+    }
+    if (server->use_proxy_protocol)
+    {
+        dcb_printf(dcb, "\tProxy protocol enabled.\n");
     }
 }
 
@@ -1192,6 +1199,11 @@ static bool create_server_config(const SERVER *server, const char *filename)
     if (server->persistmaxtime)
     {
         dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+    }
+
+    if (server->use_proxy_protocol)
+    {
+        dprintf(file, "%s=yes\n", USE_PROXY_PROTOCOL);
     }
 
     for (SERVER_PARAM *p = server->parameters; p; p = p->next)

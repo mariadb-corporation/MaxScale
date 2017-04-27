@@ -202,6 +202,7 @@ static const char *server_params[] =
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
+    USE_PROXY_PROTOCOL,
     NULL
 };
 
@@ -2794,6 +2795,8 @@ int create_new_server(CONFIG_CONTEXT *obj)
                 server->persistmaxtime = persistmaxtime;
             }
         }
+
+        server->use_proxy_protocol = config_get_bool(obj->parameters, USE_PROXY_PROTOCOL);
 
         MXS_CONFIG_PARAMETER *params = obj->parameters;
 
