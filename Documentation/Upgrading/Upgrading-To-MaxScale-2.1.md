@@ -7,12 +7,27 @@ For more information about MariaDB MaxScale 2.1, please refer to the
 [ChangeLog](../Changelog.md).
 
 For a complete list of changes in MaxScale 2.1.0, refer to the
+[MaxScale 2.1.3 Release Notes](../Release-Notes/MaxScale-2.1.3-Release-Notes.md).
+[MaxScale 2.1.2 Release Notes](../Release-Notes/MaxScale-2.1.2-Release-Notes.md).
+[MaxScale 2.1.1 Release Notes](../Release-Notes/MaxScale-2.1.1-Release-Notes.md).
 [MaxScale 2.1.0 Release Notes](../Release-Notes/MaxScale-2.1.0-Release-Notes.md).
 
 ## Installation
 
 Before starting the upgrade, we **strongly** recommend you back up your current
 configuration file.
+
+## IPv6 Support
+
+MaxScale 2.1.2 added support for IPv6 addresses. The default interface that listeners bind to
+was changed from the IPv4 address `0.0.0.0` to the IPv6 address `::`. To bind to the old IPv4 address,
+add `address=0.0.0.0` to the listener definition.
+
+## Persisted Configuration Files
+
+Starting with MaxScale 2.1, any changes made with the newly added
+[runtime configuration change](../Reference/MaxAdmin.md#runtime-configuration-changes)
+will be persisted in a configuration file. These files are located in `/var/lib/maxscale/maxscale.cnf.d/`.
 
 ## MaxScale Log Files
 

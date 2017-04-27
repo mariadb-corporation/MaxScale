@@ -13,7 +13,7 @@ replication setup where replication is high-priority.
 
 ## Mandatory Router Parameters
 
-The binlogrouter requires the `server`, `user` and `passwd` parameters. These
+The binlogrouter requires the `server`, `user` and `password` parameters. These
 should be configured according to the
 [Configuration Guide](../Getting-Started/Configuration-Guide.md#service).
 
@@ -32,18 +32,20 @@ following options should be given as a value to the `router_options` parameter.
 
 ### `binlogdir`
 
-This parameter allows the location that MariaDB MaxScale uses to store binlog
-files to be set. If this parameter is not set to a directory name then MariaDB
+This parameter controls the location where MariaDB MaxScale stores the binary log
+files. If this parameter is not set to a directory name then MariaDB
 MaxScale will store the binlog files in the directory
-/var/cache/maxscale/<Service Name>.  In the binlog dir there is also the 'cache'
-directory that contains data retrieved from the master during registration phase
-and the master.ini file which contains the configuration of current configured
-master.
+`/var/cache/maxscale/<Service Name>` where `<Service Name>` is the name of the
+service in the configuration file.  The _binlogdir_ also contains the
+_cache_ subdirectory which stores data retrieved from the master during the slave
+registration phase. The master.ini file also resides in the _binlogdir_. This
+file keeps track of the current master configuration and it is updated when a
+`CHANGE MASTER TO` query is executed.
 
 From 2.1 onwards, the 'cache' directory is stored in the same location as other
 user credential caches. This means that with the default options, the user
 credential cache is stored in
-/var/cache/maxscale/<Service Name>/<Listener Name>/cache/.
+`/var/cache/maxscale/<Service Name>/<Listener Name>/cache/`.
 
 Read the [MySQL Authenticator](../Authenticators/MySQL-Authenticator.md)
 documentation for instructions on how to define a custom location for the user
@@ -51,45 +53,45 @@ cache.
 
 ### `uuid`
 
-This is used to set the unique uuid that the binlog router uses when it connects
-to the master server. If no explicit value is given for the uuid in the
-configuration file then a uuid will be generated.
+This is used to set the unique UUID that the binlog router uses when it connects
+to the master server. If no explicit value is given for the UUID in the
+configuration file then a UUID will be generated.
 
 ### `server_id`
 
-As with uuid, MariaDB MaxScale must have a unique _server id_ for the connection
-it makes to the master. This parameter provides the value of the server id that
+As with UUID, MariaDB MaxScale must have a unique _server_id_. This parameter
+configures the value of the _server_id_ that
 MariaDB MaxScale will use when connecting to the master.
 
-The id can also be specified using `server-id` but that is deprecated
-and will be removed in a future release of MariaDB MaxScale.
+Older versions of MaxScale allowed the ID to be specified using `server-id`.
+This has been deprecated and will be removed in a future release of MariaDB MaxScale.
 
 ### `master_id`
 
-The _server id_ value that MariaDB MaxScale should use to report to the slaves
+The _server_id_ value that MariaDB MaxScale should use to report to the slaves
 that connect to MariaDB MaxScale. This may either be the same as the server id
 of the real master or can be chosen to be different if the slaves need to be
-aware of the proxy layer. The real master server id will be used if the option
+aware of the proxy layer. The real master server ID will be used if the option
 is not set.
 
-The id can also be specified using `master-id` but that is deprecated
-and will be removed in a future release of MariaDB MaxScale.
+Older versions of MaxScale allowed the ID to be specified using `master-id`.
+This has been deprecated and will be removed in a future release of MariaDB MaxScale.
 
 ### `master_uuid`
 
-It is a requirement of replication that each slave have a unique UUID value. The
-MariaDB MaxScale router will identify itself to the slaves using the uuid of the
+It is a requirement of replication that each slave has a unique UUID value. The
+MariaDB MaxScale router will identify itself to the slaves using the UUID of the
 real master if this option is not set.
 
 ### `master_version`
 
-The MariaDB MaxScale router will identify itself to the slaves using the server
-version of the real master if this option is not set.
+By default, the router will identify itself to the slaves using the server
+version of the real master. This option allows the router to use a custom version string.
 
 ### `master_hostname`
 
-The MariaDB MaxScale router will identify itself to the slaves using the server
-hostname of the real master if this option is not set.
+By default, the router will identify itself to the slaves using the
+hostname of the real master. This option allows the router to use a custom hostname.
 
 ### `user`
 
@@ -113,13 +115,13 @@ the router options or using the username and password defined of the service
 must be granted replication privileges on the database server.
 
 ```
-    MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
-    MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
+CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
 ```
 
 ### `password`
 
-The password of the above user. If the password is not explicitly given then the
+The password for the user. If the password is not explicitly given then the
 password in the service entry will be used. For compatibility with other
 username and password definitions within the MariaDB MaxScale configuration file
 it is also possible to use the parameter passwd=.
@@ -167,9 +169,9 @@ incomplete transactions detection.
 
 ### `send_slave_heartbeat`
 
-This defines whether (on | off) MariaDB MaxScale sends to the slave the
-heartbeat packet when there are no real binlog events to send. The default value
-if 'off', no heartbeat event is sent to slave server. If value is 'on' the
+This defines whether MariaDB MaxScale sends the heartbeat packet to the slave
+when there are no real binlog events to send. The default value
+is 'off' and no heartbeat events are sent to slave servers. If value is 'on' the
 interval value (requested by the slave during registration) is reported in the
 diagnostic output and the packet is send after the time interval without any
 event to send.
@@ -205,6 +207,7 @@ master.ini or later via CHANGE MASTER TO. This parameter cannot be modified at
 runtime, default is 9.
 
 ### `encrypt_binlog`
+
 Whether to encrypt binlog files: the default is Off.
 
 When set to On the binlog files will be encrypted using specified AES algorithm
@@ -226,11 +229,11 @@ the binlog events positions in binlog file are the same as in the master binlog
 file and there is no position mismatch.
 
 ### `encryption_algorithm`
-'aes_ctr' or 'aes_cbc'
 
-The default is 'aes_cbc'
+The encryption algorithm, either 'aes_ctr' or 'aes_cbc'. The default is 'aes_cbc'
 
 ### `encryption_key_file`
+
 The specified key file must contains lines with following format:
 
 `id;HEX(KEY)`
@@ -277,10 +280,8 @@ values may be used for all other options.
 
 ## Examples
 
-The [Replication
-Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will
+The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will
 show you how to configure and administrate a binlogrouter installation.
-
 
 Tutorial also includes SSL communication setup to the master server and SSL
 client connections setup to MaxScale Binlog Server.

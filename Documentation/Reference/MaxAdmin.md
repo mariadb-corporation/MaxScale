@@ -330,34 +330,128 @@ that file.
 
 A help system is available that describes the commands available via the
 administration interface. To obtain a list of all commands available simply type
-the command help.
+the command `help`.
 
 ```
-MaxScale> help
 Available commands:
-    add [user|server]
-    remove [user|server]
-    create [server|listener|monitor]
-    destroy [server|listener|monitor]
-    alter [server|monitor]
-    set [server|pollsleep|nbpolls|log_throttling]
-    clear server
-    disable [heartbeat|log|log-priority|sessionlog|sessionlog-priority|root|feedback|syslog|maxlog|account]
-    enable [heartbeat|log|log-priority|sessionlog|sessionlog-priority|root|feedback|syslog|maxlog|account]
-    flush [log|logs]
-    list [clients|dcbs|filters|listeners|modules|monitors|services|servers|sessions|threads|commands]
-    reload [config|dbusers]
-    restart [monitor|service|listener]
-    shutdown [maxscale|monitor|service|listener]
-    show [dcblist|dcbs|dcb|dbusers|epoll|eventq|eventstats|feedbackreport|filter|filters|log_throttling|modules|monitor|monitors|persistent|server|servers|serversjson|services|service|session|sessionlist|sessions|tasks|threads|users]
-    sync logs
-    call command
+add:
+    add user - Add insecure account for using maxadmin over the network
+    add server - Add a new server to a service
 
-Type help command to see details of each command.  Where commands require names
-as arguments and these names contain whitespace either the \ character may be
-used to escape the whitespace or the name may be enclosed in double quotes ".
+remove:
+    remove user - Remove account for using maxadmin over the network
+    remove server - Remove a server from a service or a monitor
 
-MaxScale>
+create:
+    create server - Create a new server
+    create listener - Create a new listener for a service
+    create monitor - Create a new monitor
+
+destroy:
+    destroy server - Destroy a server
+    destroy listener - Destroy a listener
+    destroy monitor - Destroy a monitor
+
+alter:
+    alter server - Alter server parameters
+    alter monitor - Alter monitor parameters
+
+set:
+    set server - Set the status of a server
+    set pollsleep - Set poll sleep period
+    set nbpolls - Set non-blocking polls
+    set log_throttling - Set the log throttling configuration
+
+clear:
+    clear server - Clear server status
+
+disable:
+    disable log-priority - Disable a logging priority
+    disable sessionlog-priority - [Deprecated] Disable a logging priority for a particular session
+    disable root - Disable root access
+    disable feedback - Disable MaxScale feedback to notification service
+    disable syslog - Disable syslog logging
+    disable maxlog - Disable MaxScale logging
+    disable account - Disable Linux user
+
+enable:
+    enable log-priority - Enable a logging priority
+    enable sessionlog-priority - [Deprecated] Enable a logging priority for a session
+    enable root - Enable root user access to a service
+    enable feedback - Enable MaxScale feedback to notification service
+    enable syslog - Enable syslog logging
+    enable maxlog - Enable MaxScale logging
+    enable account - Activate a Linux user account for MaxAdmin use
+
+flush:
+    flush log - Flush the content of a log file and reopen it
+    flush logs - Flush the content of a log file and reopen it
+
+list:
+    list clients - List all the client connections to MaxScale
+    list dcbs - List all active connections within MaxScale
+    list filters - List all filters
+    list listeners - List all listeners
+    list modules - List all currently loaded modules
+    list monitors - List all monitors
+    list services - List all services
+    list servers - List all servers
+    list sessions - List all the active sessions within MaxScale
+    list threads - List the status of the polling threads in MaxScale
+    list commands - List registered commands
+
+reload:
+    reload config - Reload the configuration
+    reload dbusers - Reload the database users for a service
+
+restart:
+    restart monitor - Restart a monitor
+    restart service - Restart a service
+    restart listener - Restart a listener
+
+shutdown:
+    shutdown maxscale - Initiate a controlled shutdown of MaxScale
+    shutdown monitor - Stop a monitor
+    shutdown service - Stop a service
+    shutdown listener - Stop a listener
+
+show:
+    show dcbs - Show all DCBs
+    show dbusers - [deprecated] Show user statistics
+    show authenticators - Show authenticator diagnostics for a service
+    show epoll - Show the polling system statistics
+    show eventstats - Show event queue statistics
+    show feedbackreport - Show the report of MaxScale loaded modules, suitable for Notification Service
+    show filter - Show filter details
+    show filters - Show all filters
+    show log_throttling - Show the current log throttling setting (count, window (ms), suppression (ms))
+    show modules - Show all currently loaded modules
+    show monitor - Show monitor details
+    show monitors - Show all monitors
+    show persistent - Show the persistent connection pool of a server
+    show server - Show server details
+    show servers - Show all servers
+    show serversjson - Show all servers in JSON
+    show services - Show all configured services in MaxScale
+    show service - Show a single service in MaxScale
+    show session - Show session details
+    show sessions - Show all active sessions in MaxScale
+    show tasks - Show all active housekeeper tasks in MaxScale
+    show threads - Show the status of the worker threads in MaxScale
+    show users - Show enabled Linux accounts
+    show version - Show the MaxScale version number
+
+sync:
+    sync logs - Flush log files to disk
+
+call:
+    call command - Call module command
+
+
+Type `help COMMAND` to see details of each command.
+Where commands require names as arguments and these names contain
+whitespace either the \ character may be used to escape the whitespace
+or the name may be enclosed in double quotes ".
 ```
 
 To see more details on a particular command, and a list of the sub commands of
@@ -365,53 +459,77 @@ the command, type help followed by the command name.
 
 ```
 MaxScale> help list
-Available options to the list command:
-'clients' - List all clients
+Available options to the `list` command:
 
-List all the client connections to MaxScale
+list clients - List all the client connections to MaxScale
 
-'dcbs' - List all DCBs
+Usage: list clients
 
-List all the DCBs active within MaxScale
+----------------------------------------------------------------------------
 
-'filters' - List all filters
+list dcbs - List all active connections within MaxScale
 
-List all the filters defined within MaxScale
+Usage: list dcbs
 
-'listeners' - List all listeners
+----------------------------------------------------------------------------
 
-List all the listeners defined within MaxScale
+list filters - List all filters
 
-'modules' - List all currently loaded modules
+Usage: list filters
 
-List all currently loaded modules
+----------------------------------------------------------------------------
 
-'monitors' - List all monitors
+list listeners - List all listeners
 
-List all monitors
+Usage: list listeners
 
-'services' - List all the services
+----------------------------------------------------------------------------
 
-List all the services defined within MaxScale
+list modules - List all currently loaded modules
 
-'servers' - List all servers
+Usage: list modules
 
-List all the servers defined within MaxScale
+----------------------------------------------------------------------------
 
-'sessions' - List all sessions
+list monitors - List all monitors
 
-List all the active sessions within MaxScale
+Usage: list monitors
 
-'threads' - List polling threads
+----------------------------------------------------------------------------
 
-List the status of the polling threads in MaxScale
+list services - List all services
 
-'commands' - List registered commands
+Usage: list services
 
-Usage list commands [MODULE] [COMMAND]
+----------------------------------------------------------------------------
+
+list servers - List all servers
+
+Usage: list servers
+
+----------------------------------------------------------------------------
+
+list sessions - List all the active sessions within MaxScale
+
+Usage: list sessions
+
+----------------------------------------------------------------------------
+
+list threads - List the status of the polling threads in MaxScale
+
+Usage: list threads
+
+----------------------------------------------------------------------------
+
+list commands - List registered commands
+
+Usage: list commands [MODULE] [COMMAND]
+
 Parameters:
 MODULE  Regular expressions for filtering module names
 COMMAND Regular expressions for filtering module command names
+
+Example: list commands my-module my-command
 
 MaxScale>
 ```
@@ -431,16 +549,15 @@ available within your MariaDB MaxScale configuration.
 ```
 MaxScale> list services
 Services.
---------------------------+----------------------+--------+---------------
-Service Name              | Router Module        | #Users | Total Sessions
---------------------------+----------------------+--------+---------------
-Test Service              | readconnroute        |      1 |     1
-Split Service             | readwritesplit       |      1 |     1
-Filter Service            | readconnroute        |      1 |     1
-QLA Service               | readconnroute        |      1 |     1
-Debug Service             | debugcli             |      1 |     1
-CLI                       | cli                  |      2 |    24
---------------------------+----------------------+--------+---------------
+--------------------------+-------------------+--------+----------------+-------------------
+Service Name              | Router Module     | #Users | Total Sessions | Backend databases
+--------------------------+-------------------+--------+----------------+-------------------
+RWSplit                   | readwritesplit    |      1 |              1 | server1, server2, server3, server4
+SchemaRouter              | schemarouter      |      1 |              1 | server1, server2, server3, server4
+RWSplit-Hint              | readwritesplit    |      1 |              1 | server1, server2, server3, server4
+ReadConn                  | readconnroute     |      1 |              1 | server1
+CLI                       | cli               |      2 |              2 | 
+--------------------------+-------------------+--------+----------------+-------------------
 MaxScale>
 ```
 
@@ -450,16 +567,15 @@ command can be used.
 ```
 MaxScale> list listeners
 Listeners.
----------------------+--------------------+-----------------+-------+--------
-Service Name         | Protocol Module    | Address         | Port  | State
----------------------+--------------------+-----------------+-------+--------
-Test Service         | MySQLClient        | *               |  4006 | Running
-Split Service        | MySQLClient        | *               |  4007 | Running
-Filter Service       | MySQLClient        | *               |  4008 | Running
-QLA Service          | MySQLClient        | *               |  4009 | Running
-Debug Service        | telnetd            | localhost       |  4242 | Running
-CLI                  | maxscaled          | localhost       |  6603 | Running
----------------------+--------------------+-----------------+-------+--------
+----------------------+---------------------+--------------------+-----------------+-------+--------
+Name                  | Service Name        | Protocol Module    | Address         | Port  | State
+----------------------+---------------------+--------------------+-----------------+-------+--------
+RWSplit-Listener      | RWSplit             | MySQLClient        | *               |  4006 | Running
+SchemaRouter-Listener | SchemaRouter        | MySQLClient        | *               |  4010 | Running
+RWSplit-Hint-Listener | RWSplit-Hint        | MySQLClient        | *               |  4009 | Running
+ReadConn-Listener     | ReadConn            | MySQLClient        | *               |  4008 | Running
+CLI-Listener          | CLI                 | maxscaled          | default         |     0 | Running
+----------------------+---------------------+--------------------+-----------------+-------+--------
 MaxScale>
 ```
 
@@ -471,23 +587,37 @@ to examine as an argument. Where a service name contains spaces characters there
 should either be escaped or the name placed in quotes.
 
 ```
-MaxScale> show service "QLA Service"
-Service 0x70c6a0
-    Service:                                QLA Service
-    Router:                         readconnroute (0x7ffff0f7ae60)
-    Number of router sessions:      0
-    Current no. of router sessions: 0
-    Number of queries forwarded:    0
-    Started:                                Wed Jun 25 10:08:23 2014
-    Backend databases
-            127.0.0.1:3309  Protocol: MySQLBackend
-            127.0.0.1:3308  Protocol: MySQLBackend
-            127.0.0.1:3307  Protocol: MySQLBackend
-            127.0.0.1:3306  Protocol: MySQLBackend
-    Users data:                             0x724340
-    Total connections:                      1
-    Currently connected:                    1
-MaxScale>
+MaxScale> show service RWSplit
+	Service:                             RWSplit
+	Router:                              readwritesplit
+	State:                               Started
+
+	use_sql_variables_in:      all
+	slave_selection_criteria:  LEAST_CURRENT_OPERATIONS
+	master_failure_mode:       fail_instantly
+	max_slave_replication_lag: -1
+	retry_failed_reads:        true
+	strict_multi_stmt:         true
+	disable_sescmd_history:    true
+	max_sescmd_history:        0
+	master_accept_reads:       false
+
+	Number of router sessions:           	0
+	Current no. of router sessions:      	1
+	Number of queries forwarded:          	0
+	Number of queries forwarded to master:	0 (0.00%)
+	Number of queries forwarded to slave: 	0 (0.00%)
+	Number of queries forwarded to all:   	0 (0.00%)
+	Started:                             Thu Apr 20 09:45:13 2017
+	Root user access:                    Disabled
+	Backend databases:
+		[127.0.0.1]:3000    Protocol: MySQLBackend    Name: server1
+		[127.0.0.1]:3001    Protocol: MySQLBackend    Name: server2
+		[127.0.0.1]:3002    Protocol: MySQLBackend    Name: server3
+		[127.0.0.1]:3003    Protocol: MySQLBackend    Name: server4
+	Total connections:                   1
+	Currently connected:                 1
+MaxScale> 
 ```
 
 This allows the set of backend servers defined by the service to be seen along
@@ -502,9 +632,10 @@ from one of the backend databases defined for the service. The _show dbusers_
 command can be used to examine the user data held by MariaDB MaxScale.
 
 ```
-MaxScale> show dbusers "Filter Service"
-User names: pappo@%, rana@%, new_control@%, new_nuovo@%, uno@192.168.56.1, nuovo@192.168.56.1, pesce@%, tryme@192.168.1.199, repluser@%, seven@%, due@%, pippo@%, mmm@%, daka@127.0.0.1, timour@%, ivan@%, prova@%, changeme@127.0.0.1, uno@%, massimiliano@127.0.0.1, massim@127.0.0.1, massi@127.0.0.1, masssi@127.0.0.1, pappo@127.0.0.1, rana@127.0.0.1, newadded@127.0.0.1, newaded@127.0.0.1, pesce@127.0.0.1, repluser@127.0.0.1, seven@127.0.0.1, pippo@127.0.0.1, due@127.0.0.1, nopwd@127.0.0.1, timour@127.0.0.1, controlla@192.168.56.1, ivan@127.0.0.1, ppp@127.0.0.1, daka@%, nuovo@127.0.0.1, uno@127.0.0.1, repluser@192.168.56.1, havoc@%, tekka@192.168.1.19, due@192.168.56.1, qwerty@127.0.0.1, massimiliano@%, massi@%, massim@%
-MaxScale>
+MaxScale> show dbusers RWSplit
+User names: @localhost @localhost.localdomain 14567USER@localhost monuser@localhost monuser@% 14609USER@localhost maxuser@localhost maxuser@% 14651USER@localhost maxtest@localhost maxtest@% 14693USER@localhost skysql@localhost skysql@% 14735USER@localhost cliuser@localhost cliuser@% repuser@localhost repuser@% 
+MaxScale> 
+
 ```
 
 ## Reloading Service User Data
@@ -517,8 +648,8 @@ the MariaDB MaxScale internal table. The reload dbusers command can be used to
 force the reloading of the user table within MariaDB MaxScale.
 
 ```
-MaxScale> reload dbusers "Split Service"
-Loaded 34 database users for service Split Service.
+MaxScale> reload dbusers RWSplit
+Reloaded database users for service RWSplit.
 MaxScale>
 ```
 
@@ -530,8 +661,8 @@ already in place for a service, but will stop any new connections from being
 accepted.
 
 ```
-MaxScale> shutdown service "Split Service"
-MaxScale>
+MaxScale> shutdown service RWSplit
+MaxScale> 
 ```
 
 ## Restart A Stopped Service
@@ -539,7 +670,7 @@ MaxScale>
 A stopped service may be restarted by using the _restart service_ command.
 
 ```
-MaxScale> restart service "Split Service"
+MaxScale> restart service RWSplit
 MaxScale>
 ```
 
@@ -556,15 +687,15 @@ configured within MariaDB MaxScale.
 ```
 MaxScale> list servers
 Servers.
--------------------+-----------------+-------+----------------------+------------
-Server             | Address         | Port  | Status               | Connections
--------------------+-----------------+-------+----------------------+------------
-server1            | 127.0.0.1       |  3306 | Running              |    0
-server2            | 127.0.0.1       |  3307 | Master, Running      |    0
-server3            | 127.0.0.1       |  3308 | Running              |    0
-server4            | 127.0.0.1       |  3309 | Slave, Running       |    0
--------------------+-----------------+-------+----------------------+------------
-MaxScale>
+-------------------+-----------------+-------+-------------+--------------------
+Server             | Address         | Port  | Connections | Status              
+-------------------+-----------------+-------+-------------+--------------------
+server1            | 127.0.0.1       |  3000 |           0 | Master, Running
+server2            | 127.0.0.1       |  3001 |           0 | Slave, Running
+server3            | 127.0.0.1       |  3002 |           0 | Slave, Running
+server4            | 127.0.0.1       |  3003 |           0 | Slave, Running
+-------------------+-----------------+-------+-------------+--------------------
+MaxScale> 
 ```
 
 ## Server Details
@@ -574,17 +705,20 @@ server_ command.
 
 ```
 MaxScale> show server server2
-Server 0x70d460 (server2)
-    Server:                         127.0.0.1
-    Status:                         Master, Running
-    Protocol:                       MySQLBackend
-    Port:                           3307
-    Server Version:                 5.5.25-MariaDB-log
-    Node Id:                        124
-    Number of connections:          0
-    Current no. of conns:           0
-    Current no. of operations:      0
-MaxScale>
+Server 0x6501d0 (server2)
+	Server:                              127.0.0.1
+	Status:                              Slave, Running
+	Protocol:                            MySQLBackend
+	Port:                                3001
+	Server Version:                      10.1.22-MariaDB
+	Node Id:                             3001
+	Master Id:                           3000
+	Slave Ids:                           
+	Repl Depth:                          1
+	Number of connections:               0
+	Current no. of conns:                0
+	Current no. of operations:           0
+MaxScale> 
 ```
 
 If the server has a non-zero value set for the server configuration item
@@ -636,6 +770,7 @@ format described below in the DCB section) with a command like:
 
 ```
 MaxScale> show persistent server1
+Number of persistent DCBs: 0
 ```
 
 # Working With Sessions
@@ -653,38 +788,17 @@ comprehensive being the _list sessions_ command.
 
 ```
 MaxScale> list sessions
-Sessions.
 -----------------+-----------------+----------------+--------------------------
 Session          | Client          | Service        | State
 -----------------+-----------------+----------------+--------------------------
-0x7267a0         | 127.0.0.1       | CLI            | Session ready for routing
-0x726340         |                 | CLI            | Listener Session
-0x725720         |                 | Debug Service  | Listener Session
-0x724720         |                 | QLA Service    | Listener Session
-0x72a750         |                 | Filter Service | Listener Session
-0x709500         |                 | Split Service  | Listener Session
-0x7092d0         |                 | Test Service   | Listener Session
+10               | localhost       | CLI            | Session ready for routing
+11               | ::ffff:127.0.0.1 | RWSplit        | Session ready for routing
 -----------------+-----------------+----------------+--------------------------
-MaxScale>
+
+MaxScale> 
 ```
 
-This lists all the sessions for both user connections and for the service
-listeners.
-
-The _list clients_ command will give just the subset of sessions that originate
-from a client connection.
-
-```
-MaxScale> list clients
-Client Connections
------------------+------------+----------------------+------------
- Client          | DCB        | Service              | Session
------------------+------------+----------------------+------------
- 127.0.0.1       |   0x7274b0 | CLI                  |   0x727700
- 127.0.0.1       |   0x727900 | QLA Service          |   0x727da0
------------------+------------+----------------------+------------
-MaxScale>
-```
+This will give a list of client connections.
 
 ## Display Session Details
 
@@ -693,14 +807,15 @@ possible to determine more detail regarding a session by using the _show
 session_ command.
 
 ```
-MaxScale> show session 0x727da0
-Session 0x727da0
-    State:                  Session ready for routing
-    Service:                QLA Service (0x70d6a0)
-    Client DCB:             0x727900
-    Client Address:         127.0.0.1
-    Connected:              Wed Jun 25 15:27:21 2014
-MaxScale>
+MaxScale> show session 11
+Session 11
+	State:               Session ready for routing
+	Service:             RWSplit
+	Client Address:          maxuser@::ffff:127.0.0.1
+	Connected:               Thu Apr 20 09:51:31 2017
+
+	Idle:                82 seconds
+MaxScale> 
 ```
 
 # Descriptor Control Blocks
@@ -722,20 +837,23 @@ MaxScale server, the most straightforward being the _list dcbs_ command.
 ```
 MaxScale> list dcbs
 Descriptor Control Blocks
-------------+----------------------------+----------------------+----------
- DCB        | State                      | Service              | Remote
-------------+----------------------------+----------------------+----------
-   0x667170 | DCB for listening socket   | Test Service         |
-   0x71a350 | DCB for listening socket   | Split Service        |
-   0x724b40 | DCB for listening socket   | Filter Service       |
-   0x7250d0 | DCB for listening socket   | QLA Service          |
-   0x725740 | DCB for listening socket   | Debug Service        |
-   0x726740 | DCB for listening socket   | CLI                  |
-   0x7274b0 | DCB in the polling loop    | CLI                  | 127.0.0.1
-   0x727900 | DCB in the polling loop    | QLA Service          | 127.0.0.1
-   0x72e880 | DCB in the polling loop    | QLA Service          |
-------------+----------------------------+----------------------+----------
-MaxScale>
+------------------+----------------------------+--------------------+----------
+ DCB              | State                      | Service            | Remote
+------------------+----------------------------+--------------------+----------
+ 0x68c0a0         | DCB for listening socket   | RWSplit            | 
+ 0x6e23f0         | DCB for listening socket   | CLI                | 
+ 0x691710         | DCB for listening socket   | SchemaRouter       | 
+ 0x7fffe40130f0   | DCB in the polling loop    | CLI                | localhost
+ 0x6b7540         | DCB for listening socket   | RWSplit-Hint       | 
+ 0x6cd020         | DCB for listening socket   | ReadConn           | 
+ 0x7fffd80130f0   | DCB in the polling loop    | RWSplit            | ::ffff:127.0.0.1
+ 0x7fffdc014590   | DCB in the polling loop    | RWSplit            | 
+ 0x7fffdc0148d0   | DCB in the polling loop    | RWSplit            | 
+ 0x7fffdc014c60   | DCB in the polling loop    | RWSplit            | 
+ 0x7fffdc014ff0   | DCB in the polling loop    | RWSplit            | 
+------------------+----------------------------+--------------------+----------
+
+MaxScale> 
 ```
 
 A MariaDB MaxScale server that has activity on it will however have many more
@@ -752,28 +870,49 @@ address to determine the one of interest.
 
 ## DCB Details
 
-The details of an individual DCB can be obtained by use of the _show dcb_
+The details of DCBs can be obtained by use of the _show dcbs_
 command
 
 ```
-MaxScale> show dcb 0x727900
-DCB: 0x727900
-    DCB state:              DCB in the polling loop
-    Username:               somename
-    Protocol:               MySQLBackend
-    Server Status:          Master, running
-    Role:                   Request Handler
-    Connected to:           127.0.0.1
-    Owning Session:         0x727da0
-    Statistics:
-            No. of Reads:                   4
-            No. of Writes:                  3
-            No. of Buffered Writes:         0
-            No. of Accepts:                 0
-            No. of High Water Events:       0
-            No. of Low Water Events:        0
-            Added to persistent pool:       Jun 24 09:09:56
-MaxScale>
+DCB: 0x68c0a0
+	DCB state:          DCB for listening socket
+	Service:            RWSplit
+	Role:                     Service Listener
+	Statistics:
+		No. of Reads:             0
+		No. of Writes:            0
+		No. of Buffered Writes:   0
+		No. of Accepts:           1
+		No. of High Water Events: 0
+		No. of Low Water Events:  0
+DCB: 0x7fffd80130f0
+	DCB state:          DCB in the polling loop
+	Service:            RWSplit
+	Connected to:       ::ffff:127.0.0.1
+	Username:           maxuser
+	Role:                     Client Request Handler
+	Statistics:
+		No. of Reads:             5
+		No. of Writes:            0
+		No. of Buffered Writes:   6
+		No. of Accepts:           0
+		No. of High Water Events: 0
+		No. of Low Water Events:  0
+DCB: 0x7fffdc014590
+	DCB state:          DCB in the polling loop
+	Service:            RWSplit
+	Server name/IP:     127.0.0.1
+	Port number:        3000
+	Protocol:           MySQLBackend
+	Server status:            Master, Running
+	Role:                     Backend Request Handler
+	Statistics:
+		No. of Reads:             4
+		No. of Writes:            0
+		No. of Buffered Writes:   3
+		No. of Accepts:           0
+		No. of High Water Events: 0
+		No. of Low Water Events:  0
 ```
 
 The information Username, Protocol, Server Status are not always relevant, and
@@ -831,58 +970,38 @@ within a session.  First use _list sessions_ or _list clients_ to find the
 session of interest and then run the _show session_ command
 
 ```
-MaxScale> list clients
-Client Connections
------------------+------------+----------------------+------------
- Client          | DCB        | Service              | Session
------------------+------------+----------------------+------------
- 127.0.0.1       |   0x7361a0 | Split Service        |   0x736680
- 127.0.0.1       |   0x737ec0 | Plumbing             |   0x7382b0
- 127.0.0.1       |   0x73ab20 | DigitalOcean         |   0x73ad90
- 127.0.0.1       |   0x7219e0 | CLI                  |   0x721bd0
------------------+------------+----------------------+------------
-MaxScale> show session 0x736680
-Session 0x736680
-    State:                  Session ready for routing
-    Service:                Split Service (0x719f60)
-    Client DCB:             0x7361a0
-    Client Address:         127.0.0.1
-    Connected:              Thu Jun 26 10:10:44 2014
-    Filter: top10
-            Report size                     10
-            Logging to file /tmp/Query.top10.1.
-            Current Top 10:
-            1 place:
-                    Execution time: 23.826 seconds
-                    SQL: select sum(salary), year(from_date) from salaries s, (select distinct year(from_date) as y1 from salaries) y where (makedate(y.y1, 1) between s.from_date and s.to_date) group by y.y1 ("1988-08-01?
-            2 place:
-                    Execution time: 5.251 seconds
-                    SQL: select d.dept_name as "Department", y.y1 as "Year", count(*) as "Count" from departments d, dept_emp de, (select distinct year(from_date) as y1 from dept_emp order by 1) y where d.dept_no = de.dept_no and (makedate(y.y1, 1) between de.from_date and de.to_date) group by y.y1, d.dept_name order by 1, 2
-            3 place:
-                    Execution time: 2.903 seconds
-                    SQL: select year(now()) - year(birth_date) as age, gender, avg(salary) as "Average Salary" from employees e, salaries s where e.emp_no = s.emp_no and ("1988-08-01"  between from_date AND to_date) group by year(now()) - year(birth_date), gender order by 1,2
-            4 place:
-                    Execution time: 2.138 seconds
-                    SQL: select dept_name as "Department", sum(salary) / 12 as "Salary Bill" from employees e, departments d, dept_emp de, salaries s where e.emp_no = de.emp_no and de.dept_no = d.dept_no and ("1988-08-01"  between de.from_date AND de.to_date) and ("1988-08-01"  between s.from_date AND s.to_date) and s.emp_no = e.emp_no group by dept_name order by 1
-            5 place:
-                    Execution time: 0.839 seconds
-                    SQL: select dept_name as "Department", avg(year(now()) - year(birth_date)) as "Average Age", gender from employees e, departments d, dept_emp de where e.emp_no = de.emp_no and de.dept_no = d.dept_no and ("1988-08-01"  between from_date AND to_date) group by dept_name, gender
-            6 place:
-                    Execution time: 0.662 seconds
-                    SQL: select year(hire_date) as "Hired", d.dept_name, count(*) as "Count" from employees e, departments d, dept_emp de where de.emp_no = e.emp_no and de.dept_no = d.dept_no group by d.dept_name, year(hire_date)
-            7 place:
-                    Execution time: 0.286 seconds
-                    SQL: select moves.n_depts As "No. of Departments", count(moves.emp_no) as "No. of Employees" from (select de1.emp_no as emp_no, count(de1.emp_no) as n_depts from dept_emp de1 group by de1.emp_no) as moves group by moves.n_depts order by 1
-            8 place:
-                    Execution time: 0.248 seconds
-                    SQL: select year(now()) - year(birth_date) as age, gender, count(*) as "Count" from employees group by year(now()) - year(birth_date), gender order by 1,2@
-            9 place:
-                    Execution time: 0.182 seconds
-                    SQL: select year(hire_date) as "Hired", count(*) as "Count" from employees group by year(hire_date)
-            10 place:
-                    Execution time: 0.169 seconds
-                    SQL: select year(hire_date) - year(birth_date) as "Age", count(*) as Count from employees group by year(hire_date) - year(birth_date) order by 1
-MaxScale>
+MaxScale> list sessions
+-----------------+-----------------+----------------+--------------------------
+Session          | Client          | Service        | State
+-----------------+-----------------+----------------+--------------------------
+6                | ::ffff:127.0.0.1 | RWSplit-Top    | Session ready for routing
+7                | localhost       | CLI            | Session ready for routing
+-----------------+-----------------+----------------+--------------------------
+
+MaxScale> show session 6
+Session 6
+	State:               Session ready for routing
+	Service:             RWSplit-Top
+	Client Address:          maxuser@::ffff:127.0.0.1
+	Connected:               Thu Apr 20 09:58:38 2017
+
+	Idle:                9 seconds
+	Filter: Top
+		Report size            10
+		Logging to file /tmp/top.1.
+		Current Top 10:
+		1 place:
+			Execution time: 0.000 seconds
+			SQL: show tables from information_schema
+		2 place:
+			Execution time: 0.000 seconds
+			SQL: show databases
+		3 place:
+			Execution time: 0.000 seconds
+			SQL: show tables
+		4 place:
+			Execution time: 0.000 seconds
+			SQL: select @@version_comment limit 1
 ```
 
 The data displayed varies from filter to filter, the example above is the top
@@ -902,12 +1021,12 @@ command.
 
 ```
 MaxScale> list monitors
-+----------------------+---------------------
-| Monitor              | Status
-+----------------------+---------------------
-| MySQL Monitor        | Running
-+----------------------+---------------------
-MaxScale>
+---------------------+---------------------
+Monitor              | Status
+---------------------+---------------------
+MySQL-Monitor        | Running
+---------------------+---------------------
+MaxScale> 
 ```
 
 ## Details Of A Particular Monitor
@@ -915,62 +1034,62 @@ MaxScale>
 To see the details of a particular monitor use the _show monitor_ command.
 
 ```
-MaxScale> show monitor "MySQL Monitor"
-Monitor: 0x71c370
-    Name:           MySQL Monitor
-    Monitor running
-    Sampling interval:      10000 milliseconds
-    MaxScale MonitorId:     24209641
-    Replication lag:        disabled
-    Monitored servers:      127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
-MaxScale>
-```
+MaxScale> show monitor MySQL-Monitor
+Monitor:           0x6577e0
+Name:              MySQL-Monitor
+State:             Running
+Sampling interval: 10000 milliseconds
+Connect Timeout:   3 seconds
+Read Timeout:      1 seconds
+Write Timeout:     2 seconds
+Monitored servers: [127.0.0.1]:3000, [127.0.0.1]:3001, [127.0.0.1]:3002, [127.0.0.1]:3003
+MaxScale MonitorId:	0
+Replication lag:	disabled
+Detect Stale Master:	enabled
+Server information
 
-## Controlling Replication Heartbeat
+Server: server1
+Server ID: 3000
+Read only: OFF
+Slave configured: NO
+Slave IO running: NO
+Slave SQL running: NO
+Master ID: -1
+Master binlog file: 
+Master binlog position: 0
 
-Some monitors provide a replication heartbeat mechanism that monitors the delay
-for data that is replicated from a master to slaves in a tree structured
-replication environment. This can be enabled or disabled using the commands
-_enable heartbeat_ and _disable heartbeat_.
+Server: server2
+Server ID: 3001
+Read only: OFF
+Slave configured: YES
+Slave IO running: YES
+Slave SQL running: YES
+Master ID: 3000
+Master binlog file: binlog.000001
+Master binlog position: 435
 
-```
-MaxScale> disable heartbeat "MySQL Monitor"
-MaxScale> enable heartbeat "MySQL Monitor"
-MaxScale>
-```
+Server: server3
+Server ID: 3002
+Read only: OFF
+Slave configured: YES
+Slave IO running: YES
+Slave SQL running: YES
+Master ID: 3000
+Master binlog file: binlog.000001
+Master binlog position: 435
 
-Please note that changes made via this interface will not persist across
-restarts of MariaDB MaxScale. To make a permanent change edit the maxscale.cnf
-file.
+Server: server4
+Server ID: 3003
+Read only: OFF
+Slave configured: YES
+Slave IO running: YES
+Slave SQL running: YES
+Master ID: 3000
+Master binlog file: binlog.000001
+Master binlog position: 435
 
-Enabling the replication heartbeat mechanism will add the display of heartbeat
-information in the show server output
 
-```
-MaxScale> show server server4
-Server 0x719800 (server4)
-    Server:                 127.0.0.1
-    Status:                 Slave, Running
-    Protocol:               MySQLBackend
-    Port:                   3309
-    Server Version:         5.5.25-MariaDB-log
-    Node Id:                4
-    Number of connections:  0
-    Current no. of conns:   0
-MaxScale> enable heartbeat "MySQL Monitor"
-MaxScale> show server server4
-Server 0x719800 (server4)
-    Server:                 127.0.0.1
-    Status:                 Slave, Running
-    Protocol:               MySQLBackend
-    Port:                   3309
-    Server Version:         5.5.25-MariaDB-log
-    Node Id:                4
-    Slave delay:            0
-    Last Repl Heartbeat:    Thu Jun 26 17:04:58 2014
-    Number of connections:  0
-    Current no. of conns:   0
-MaxScale>
+MaxScale> 
 ```
 
 ## Shutting Down A Monitor
@@ -980,14 +1099,14 @@ manual control of the status of servers using the _set server_ and _clear
 server_ commands.
 
 ```
-MaxScale> shutdown monitor "MySQL Monitor"
+MaxScale> shutdown monitor MySQL-Monitor
 MaxScale> list monitors
-+----------------------+---------------------
-| Monitor              | Status
-+----------------------+---------------------
-| MySQL Monitor        | Stopped
-+----------------------+---------------------
-MaxScale>
+---------------------+---------------------
+Monitor              | Status
+---------------------+---------------------
+MySQL-Monitor        | Stopped
+---------------------+---------------------
+MaxScale> 
 ```
 
 ## Restarting A Monitor
@@ -996,16 +1115,14 @@ A monitor that has been shutdown may be restarted using the _restart monitor_
 command.
 
 ```
-MaxScale> restart monitor "MySQL Monitor"
-MaxScale> show monitor "MySQL Monitor"
-Monitor: 0x71a310
-    Name:           MySQL Monitor
-    Monitor running
-    Sampling interval:      10000 milliseconds
-    MaxScale MonitorId:     24201552
-    Replication lag:        enabled
-    Monitored servers:      127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
-MaxScale>
+MaxScale> restart monitor MySQL-Monitor
+MaxScale> list monitors
+---------------------+---------------------
+Monitor              | Status
+---------------------+---------------------
+MySQL-Monitor        | Running
+---------------------+---------------------
+MaxScale> 
 ```
 
 # MaxScale Status Commands
@@ -1024,17 +1141,21 @@ determine what each thread is currently being used for.
 ```
 MaxScale> show threads
 Polling Threads.
-Historic Thread Load Average: 1.00.
-Current Thread Load Average: 1.00.
-15 Minute Average: 0.48, 5 Minute Average: 1.00, 1 Minute Average: 1.00
+
+Historic Thread Load Average: 1.06.
+Current Thread Load Average: 0.00.
+15 Minute Average: 0.10, 5 Minute Average: 0.30, 1 Minute Average: 0.67
+
 Pending event queue length averages:
-15 Minute Average: 0.90, 5 Minute Average: 1.83, 1 Minute Average: 2.00
+15 Minute Average: 0.00, 5 Minute Average: 0.00, 1 Minute Average: 0.00
+
  ID | State      | # fds  | Descriptor       | Running  | Event
 ----+------------+--------+------------------+----------+---------------
-  0 | Processing |      1 | 0xf55a70         | <  100ms | IN|OUT
-  1 | Processing |      1 | 0xf49ba0         | <  100ms | IN|OUT
-  2 | Processing |      1 | 0x7f54c0030d00   | <  100ms | IN|OUT
-MaxScale>
+  0 | Polling    |        |                  |          |
+  1 | Polling    |        |                  |          |
+  2 | Processing |      1 | 0x6e0dd0         | <202400ms | IN|OUT
+  3 | Polling    |        |                  |          |
+MaxScale> 
 ```
 
 The resultant output returns data as to the average thread utilization for the
@@ -1042,27 +1163,6 @@ past minutes 5 minutes and 15 minutes. It also gives a table, with a row per
 thread that shows what DCB that thread is currently processing events for, the
 events it is processing and how long, to the nearest 100ms has been send
 processing these events.
-
-## The Event Queue
-
-At the core of MariaDB MaxScale is an event driven engine that is processing
-network events for the network connections between MariaDB MaxScale and client
-applications and MariaDB MaxScale and the backend servers. It is possible to see
-the event queue using the _show eventq_ command. This will show the events
-currently being executed and those that are queued for execution.
-
-```
-MaxScale> show eventq
-Event Queue.
-DCB              | Status     | Processing Events  | Pending Events
------------------+------------+--------------------+-------------------
-0x1e22f10        | Processing | IN|OUT             |
-MaxScale>
-```
-
-The output of this command gives the DCB’s that are currently in the event
-queue, the events queued for that DCB, and events that are being processed for
-that DCB.
 
 ## The Housekeeper Tasks
 
@@ -1074,8 +1174,8 @@ are outstanding within the housekeeper.
 MaxScale> show tasks
 Name                      | Type     | Frequency | Next Due
 --------------------------+----------+-----------+-------------------------
-Load Average              | Repeated | 10        | Wed Nov 19 15:10:51 2014
-MaxScale>
+Load Average              | Repeated | 10        | Thu Apr 20 10:02:26 2017
+MaxScale> 
 ```
 
 # Administration Commands
@@ -1088,23 +1188,25 @@ those modules the _list modules_ command can be used.
 ```
 MaxScale> list modules
 Modules.
-----------------+-------------+---------+-------+-------------------------
-Module Name     | Module Type | Version | API   | Status
-----------------+-------------+---------+-------+-------------------------
-tee             | Filter      | V1.0.0  | 1.1.0 | Alpha
-qlafilter       | Filter      | V1.1.1  | 1.1.0 | Alpha
-topfilter       | Filter      | V1.0.1  | 1.1.0 | Alpha
-MySQLBackend    | Protocol    | V2.0.0  | 1.0.0 | Alpha
-maxscaled       | Protocol    | V1.0.0  | 1.0.0 | Alpha
-telnetd         | Protocol    | V1.0.1  | 1.0.0 | Alpha
-MySQLClient     | Protocol    | V1.0.0  | 1.0.0 | Alpha
-mysqlmon        | Monitor     | V1.2.0  | 1.0.0 | Alpha
-readconnroute   | Router      | V1.0.2  | 1.0.0 | Alpha
-readwritesplit  | Router      | V1.0.2  | 1.0.0 | Alpha
-debugcli        | Router      | V1.1.1  | 1.0.0 | Alpha
-cli             | Router      | V1.0.0  | 1.0.0 | Alpha
-----------------+-------------+---------+-------+-------------------------
-MaxScale>
+----------------+-----------------+---------+-------+-------------------------
+Module Name     | Module Type     | Version | API   | Status
+----------------+-----------------+---------+-------+-------------------------
+qc_sqlite       | QueryClassifier | V1.0.0  | 1.1.0 | Beta
+MySQLAuth       | Authenticator   | V1.1.0  | 1.1.0 | GA
+MySQLClient     | Protocol        | V1.1.0  | 1.1.0 | GA
+MaxAdminAuth    | Authenticator   | V2.1.0  | 1.1.0 | GA
+maxscaled       | Protocol        | V2.0.0  | 1.1.0 | GA
+MySQLBackendAuth | Authenticator   | V1.0.0  | 1.1.0 | GA
+MySQLBackend    | Protocol        | V2.0.0  | 1.1.0 | GA
+mysqlmon        | Monitor         | V1.5.0  | 3.0.0 | GA
+schemarouter    | Router          | V1.0.0  | 2.0.0 | Beta
+readwritesplit  | Router          | V1.1.0  | 2.0.0 | GA
+topfilter       | Filter          | V1.0.1  | 2.2.0 | GA
+readconnroute   | Router          | V1.1.0  | 2.0.0 | GA
+cli             | Router          | V1.0.0  | 2.0.0 | GA
+----------------+-----------------+---------+-------+-------------------------
+
+MaxScale> 
 ```
 
 This command provides important version information for the module. Each module
@@ -1142,14 +1244,12 @@ $ kill -SIGUSR1 <maxscale-pid>
 $ # MaxScale closes the file (i.e. maxscale1.log) and reopens maxscale.log
 ```
 
-There are two ways for rotating the log - *flush log maxscale* and *flush logs*
-- and the result is identical. The two alternatives are due to historical
+There are two ways for rotating the log - *flush log maxscale* and *flush logs*;
+the result is identical. The two alternatives are due to historical
 reasons; earlier MariaDB MaxScale had several different log files.
 
 ```
 MaxScale> flush log maxscale
-MaxScale>
-The flush logs command may be used to rotate all logs with a single command.
 MaxScale> flush logs
 MaxScale>
 ```
@@ -1205,7 +1305,9 @@ of the values to 0, disables the throttling.
 ## Reloading The Configuration
 
 A command, _reload config_, is available that will cause MariaDB MaxScale to
-reload the maxscale.cnf configuration file. Refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
+reload the maxscale.cnf configuration file. Note that not all configuration
+changes are taken into effect when the configuration is reloaded. Refer to
+the [Configuration Guide](../Getting-Started/Configuration-Guide.md)
 for a list of parameters that can be changed with it.
 
 ## Shutting Down MariaDB MaxScale
@@ -1213,10 +1315,16 @@ for a list of parameters that can be changed with it.
 The MariaDB MaxScale server may be shutdown using the _shutdown maxscale_
 command.
 
+```
+MaxScale> shutdown maxscale
+MaxScale> 
+```
+
 # Runtime Configuration Changes
 
 Starting with the 2.1 version of MaxScale, you can modify the runtime
-configuration.
+configuration. This means that new objects (servers, listeners, monitors)
+can be created, altered and removed at runtime.
 
 ## Servers
 
@@ -1228,20 +1336,21 @@ to servers are persisted meaning that they will still be in effect even after a
 restart.
 
 ```
-'server' - Create a new server
+create server - Create a new server
 
 Usage: create server NAME HOST [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
 
-Create a new server from the following parameters.
-
+Parameters:
 NAME          Server name
 HOST          Server host address
 PORT          Server port (default 3306)
 PROTOCOL      Server protocol (default MySQLBackend)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
-OPTIONS       Options for the authenticator module
+OPTIONS       Comma separated list of options for the authenticator
 
-The first three parameters are required, the others are optional.
+The first two parameters are required, the others are optional.
+
+Example: create server my-db-1 192.168.0.102 3306
 ```
 
 ### Adding Servers to Services and Monitors
@@ -1255,14 +1364,17 @@ sessions will only use the servers that were a part of the service when they
 were created.
 
 ```
-'server' - Add a new server to a service
+add server - Add a new server to a service
 
 Usage: add server SERVER TARGET...
 
-The TARGET must be a list of service and monitor names
-e.g. add server my-db my-service 'Cluster Monitor'
+Parameters:
+SERVER  The server that is added to TARGET
+TARGET  List of service and/or monitor names separated by spaces
 
 A server can be assigned to a maximum of 11 objects in one command
+
+Example: add server my-db my-service "Cluster Monitor"
 ```
 
 ### Removing Servers from Services and Monitors
@@ -1273,14 +1385,17 @@ server` also apply to `remove server`. The servers will only be removed from new
 sessions created after the command is executed.
 
 ```
-'server' - Remove a server from a service or a monitor
+remove server - Remove a server from a service or a monitor
 
 Usage: remove server SERVER TARGET...
 
-The TARGET must be a list of service and monitor names
-e.g. remove server my-db my-service 'Cluster Monitor'
+Parameters:
+SERVER  The server that is removed from TARGET
+TARGET  List of service and/or monitor names separated by spaces
 
 A server can be removed from a maximum of 11 objects in one command
+
+Example: remove server my-db my-service "Cluster Monitor"
 ```
 
 ### Altering Servers
@@ -1294,7 +1409,13 @@ required SSL parameters (`ssl`, `ssl_key`, `ssl_cert` and `ssl_ca_cert`) must be
 given in the same command.
 
 ```
+alter server - Alter server parameters
+
 Usage: alter server NAME KEY=VALUE ...
+
+Parameters:
+NAME      Server name
+KEY=VALUE List of `key=value` pairs separated by spaces
 
 This will alter an existing parameter of a server. The accepted values for KEY are:
 
@@ -1309,9 +1430,10 @@ ssl_ca_cert           Path to SSL CA certificate
 ssl_version           SSL version
 ssl_cert_verify_depth Certificate verification depth
 
-A maximum of 11 parameters can be changed at one time.
 To configure SSL for a newly created server, the 'ssl', 'ssl_cert',
 'ssl_key' and 'ssl_ca_cert' parameters must be given at the same time.
+
+Example: alter server my-db-1 address=192.168.0.202 port=3307
 ```
 
 ### Destroying Servers
@@ -1321,9 +1443,14 @@ created with the `create server` command should be destroyed. A server can only
 be destroyed once it has been removed from all services and monitors.
 
 ```
-'server' - Destroy a server
+destroy server - Destroy a server
 
 Usage: destroy server NAME
+
+Parameters:
+NAME Server to destroy
+
+Example: destroy server my-db-1
 ```
 
 ## Listeners
@@ -1341,16 +1468,15 @@ order for SSL to be enabled. The _default_ parameter can be used to signal that
 MaxScale should use a default value for the parameter in question.
 
 ```
-'listener' - Create a new listener for a service
+create listener - Create a new listener for a service
 
 Usage: create listener SERVICE NAME [HOST] [PORT] [PROTOCOL] [AUTHENTICATOR] [OPTIONS]
                        [SSL_KEY] [SSL_CERT] [SSL_CA] [SSL_VERSION] [SSL_VERIFY_DEPTH]
 
-Create a new server from the following parameters.
-
+Parameters
 SERVICE       Service where this listener is added
 NAME          Listener name
-HOST          Listener host address (default 0.0.0.0)
+HOST          Listener host address (default [::])
 PORT          Listener port (default 3306)
 PROTOCOL      Listener protocol (default MySQLClient)
 AUTHENTICATOR Authenticator module name (default MySQLAuth)
@@ -1364,6 +1490,8 @@ SSL_VERIFY_DEPTH Certificate verification depth
 The first two parameters are required, the others are optional.
 Any of the optional parameters can also have the value 'default'
 which will be replaced with the default value.
+
+Example: create listener my-service my-new-listener 192.168.0.101 4006
 ```
 
 ### Destroying Listeners
@@ -1374,9 +1502,16 @@ startup. The listener is stopped but it will remain a part of the runtime
 configuration until the next restart.
 
 ```
-'listener' - Destroy a listener
+destroy listener - Destroy a listener
 
 Usage: destroy listener SERVICE NAME
+
+Parameters:
+NAME Listener to destroy
+
+The listener is stopped and it will be removed on the next restart of MaxScale
+
+Example: destroy listener my-listener
 ```
 
 ## Monitors
@@ -1389,11 +1524,15 @@ it with the `restart monitor` command. The _user_ and _password_ parameters of
 the monitor must be defined before the monitor is started.
 
 ```
-'monitor' - Create a new monitor
+create monitor - Create a new monitor
 
 Usage: create monitor NAME MODULE
+
+Parameters:
 NAME    Monitor name
 MODULE  Monitor module
+
+Example: create monitor my-monitor mysqlmon
 ```
 
 ### Altering Monitors
@@ -1402,13 +1541,26 @@ To alter a monitor, use the `alter monitor` command. Module specific parameters
 can also be altered.
 
 ```
-'monitor' - Alter monitor parameters
+alter monitor - Alter monitor parameters
 
 Usage: alter monitor NAME KEY=VALUE ...
 
+Parameters:
+NAME      Monitor name
+KEY=VALUE List of `key=value` pairs separated by spaces
+
+All monitors support the following values for KEY:
+user                    Username used when connecting to servers
+password                Password used when connecting to servers
+monitor_interval        Monitoring interval in milliseconds
+backend_connect_timeout Server coneection timeout in seconds
+backend_write_timeout   Server write timeout in seconds
+backend_read_timeout    Server read timeout in seconds
+
 This will alter an existing parameter of a monitor. To remove parameters,
 pass an empty value for a key e.g. 'maxadmin alter monitor my-monitor my-key='
-A maximum of 11 key-value pairs can be changed at one time
+
+Example: alter monitor my-monitor user=maxuser password=maxpwd
 ```
 
 ### Destroying Monitors
@@ -1419,9 +1571,16 @@ should be destroyed and they will remain a part of the runtime configuration
 until the next restart.
 
 ```
-'monitor' - Destroy a monitor
+destroy monitor - Destroy a monitor
 
 Usage: destroy monitor NAME
+
+Parameters:
+NAME Monitor to destroy
+
+The monitor is stopped and it will be removed on the next restart of MaxScale
+
+Example: destroy monitor my-monitor
 ```
 
 ## Other Modules
@@ -1433,6 +1592,18 @@ To list all module commands, execute `list commands` in maxadmin. This shows all
 commands that the modules have exposed. It also explains what they do and what
 sort of arguments they take.
 
+```
+list commands - List registered commands
+
+Usage: list commands [MODULE] [COMMAND]
+
+Parameters:
+MODULE  Regular expressions for filtering module names
+COMMAND Regular expressions for filtering module command names
+
+Example: list commands my-module my-command
+```
+
 If no module commands are registered, no output will be generated. Refer to the
 module specific documentation for more details about module commands.
 
@@ -1440,6 +1611,21 @@ To call a module commands, execute `call command <module> <command>` in
 maxadmin. The _<module>_ is the name of the module and _<command>_ is the
 command that should be called. The commands take a variable amount of arguments
 which are explained in the output of `list commands`.
+
+```
+call command - Call module command
+
+Usage: call command MODULE COMMAND ARGS...
+
+Parameters:
+MODULE  The module name
+COMMAND The command to call
+ARGS... Arguments for the command
+
+To list all registered commands, run 'list commands'.
+
+Example: call command my-module my-command hello world!
+```
 
 An example of this is the `dbfwfilter` module that implements a rule reloading
 mechanism as a module command. This command takes a filter name as a parameter.
@@ -1505,31 +1691,35 @@ increasing the number of non-blocking polls should help the situation.
 
 ```
 MaxScale> show epoll
-Number of epoll cycles:                     534
-Number of epoll cycles with wait:   10447
-Number of read events:                      35
-Number of write events:                     1988
-Number of error events:                     0
-Number of hangup events:                    1
-Number of accept events:                    3
-Number of times no threads polling: 5
-Current event queue length:         1
-Maximum event queue length:         2
-Number of DCBs with pending events: 0
-Number of wakeups with pending queue:       0
+
+Poll Statistics.
+
+No. of epoll cycles:                           343
+No. of epoll cycles with wait:                 66
+No. of epoll calls returning events:           19
+No. of non-blocking calls returning events:    10
+No. of read events:                            2
+No. of write events:                           15
+No. of error events:                           0
+No. of hangup events:                          0
+No. of accept events:                          4
+No. of times no threads polling:               4
+Total event queue length:                      1
+Average event queue length:                    1
+Maximum event queue length:                    1
 No of poll completions with descriptors
-    No. of descriptors      No. of poll completions.
-     1                      534
-     2                      0
-     3                      0
-     4                      0
-     5                      0
-     6                      0
-     7                      0
-     8                      0
-     9                      0
-    >= 10                   0
-MaxScale>
+	No. of descriptors	No. of poll completions.
+	 1			19
+	 2			0
+	 3			0
+	 4			0
+	 5			0
+	 6			0
+	 7			0
+	 8			0
+	 9			0
+	>= 10			0
+MaxScale> 
 ```
 
 If the "Number of DCBs with pending events" grows rapidly it is an indication
@@ -1548,46 +1738,49 @@ events took to execute once they have been allocated a thread to run on.
 
 ```
 MaxScale> show eventstats
+
 Event statistics.
-Maximum queue time:                  2600ms
-Maximum execution time:              1600ms
-Maximum event queue length:     3
-Current event queue length:     3
+Maximum queue time:             000ms
+Maximum execution time:         000ms
+Maximum event queue length:     1
+Total event queue length:       4
+Average event queue length:     1
+
                |    Number of events
 Duration       | Queued     | Executed
 ---------------+------------+-----------
- < 100ms       | 107        | 461
-  100 -  200ms | 958        | 22830
-  200 -  300ms | 20716      | 2545
-  300 -  400ms | 3284       | 253
-  400 -  500ms | 505        | 45
-  500 -  600ms | 66         | 73
-  600 -  700ms | 116        | 169
-  700 -  800ms | 319        | 185
-  800 -  900ms | 382        | 42
-  900 - 1000ms | 95         | 31
- 1000 - 1100ms | 63         | 7
- 1100 - 1200ms | 18         | 4
- 1200 - 1300ms | 8          | 2
- 1300 - 1400ms | 6          | 0
- 1400 - 1500ms | 1          | 1
- 1500 - 1600ms | 3          | 1
- 1600 - 1700ms | 2          | 1
- 1700 - 1800ms | 2          | 0
- 1800 - 1900ms | 0          | 0
- 1900 - 2000ms | 1          | 0
- 2000 - 2100ms | 0          | 0
- 2100 - 2200ms | 0          | 0
- 2200 - 2300ms | 0          | 0
- 2300 - 2400ms | 0          | 0
- 2400 - 2500ms | 0          | 0
- 2500 - 2600ms | 0          | 0
- 2600 - 2700ms | 1          | 0
- 2700 - 2800ms | 0          | 0
- 2800 - 2900ms | 0          | 0
- 2900 - 3000ms | 0          | 0
- > 3000ms      | 0          | 0
-MaxScale>
+ < 100ms       | 27         | 26        
+  100 -  200ms | 0          | 0         
+  200 -  300ms | 0          | 0         
+  300 -  400ms | 0          | 0         
+  400 -  500ms | 0          | 0         
+  500 -  600ms | 0          | 0         
+  600 -  700ms | 0          | 0         
+  700 -  800ms | 0          | 0         
+  800 -  900ms | 0          | 0         
+  900 - 1000ms | 0          | 0         
+ 1000 - 1100ms | 0          | 0         
+ 1100 - 1200ms | 0          | 0         
+ 1200 - 1300ms | 0          | 0         
+ 1300 - 1400ms | 0          | 0         
+ 1400 - 1500ms | 0          | 0         
+ 1500 - 1600ms | 0          | 0         
+ 1600 - 1700ms | 0          | 0         
+ 1700 - 1800ms | 0          | 0         
+ 1800 - 1900ms | 0          | 0         
+ 1900 - 2000ms | 0          | 0         
+ 2000 - 2100ms | 0          | 0         
+ 2100 - 2200ms | 0          | 0         
+ 2200 - 2300ms | 0          | 0         
+ 2300 - 2400ms | 0          | 0         
+ 2400 - 2500ms | 0          | 0         
+ 2500 - 2600ms | 0          | 0         
+ 2600 - 2700ms | 0          | 0         
+ 2700 - 2800ms | 0          | 0         
+ 2800 - 2900ms | 0          | 0         
+ 2900 - 3000ms | 0          | 0         
+ > 3000ms      | 0          | 0         
+MaxScale> 
 ```
 
 The statics are defined in 100ms buckets, with the count of the events that fell

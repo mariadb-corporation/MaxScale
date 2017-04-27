@@ -5,9 +5,9 @@ The plugin is capable of returning data in one of two ways, either as MySQL resu
 
 # Configuration
 
-The plugin is configured in the maxscale.cnf plugin in much the same way as any other router service is configured, there needs to be a service section in the configuration file and also listeners defined for that service. The service does not however require any backend servers to be associated with it, or any monitors.
+The plugin is configured in the `maxscale.cnf` configuration file in much the same way as any other router service is configured; there must be a service section in the configuration file and also listeners defined for that service. The service does not however require any backend servers to be associated with it, or any monitors.
 
-The service entry needs to define the service name, the type as service and the router module to load.
+The service entry should define the service name, the type as service and the router module to load.
 The specified user, with the password (plain or encrypted via maxpassword utility) is allowed to connect via MySQL protocol.
 Currently the user can connect to maxinfo from any remote IP and to localhost as well.
 
@@ -196,7 +196,7 @@ mysql>
 
 The show services command does not accept a like clause and will ignore any like clause that is given.
 
-## Show listeners
+## Show listeners
 
 The show listeners command will return a set of status information for every listener defined within the MariaDB MaxScale configuration file.
 
@@ -248,7 +248,7 @@ mysql> show sessions;
 mysql> 
 ```
 
-## Show clients
+## Show clients
 
 The show clients command reports a row for every client application connected to MariaDB MaxScale. Like clauses are not available of the show clients command.
 
@@ -284,7 +284,7 @@ mysql> show servers;
 mysql> 
 ```
 
-## Show modules
+## Show modules
 
 The show modules command reports the information on the modules currently loaded into MariaDB MaxScale. This includes the name type and version of each module. It also includes the API version the module has been written against and the current release status of the module.
 
@@ -309,7 +309,7 @@ mysql> show modules;
 mysql> 
 ```
 
-## Show monitors
+## Show monitors
 
 The show monitors command reports each monitor configured within the system and the state of that monitor.
 
@@ -376,7 +376,7 @@ Each row represents a time interval, in 100ms increments, with the counts repres
 
 The simplified JSON interface takes the URL of the request made to maxinfo and maps that to a show command in the above section.
 
-## Variables
+## Variables
 
 The /variables URL will return the MariaDB MaxScale variables, these variables can not be filtered via this interface.
 
@@ -460,7 +460,7 @@ $ curl http://maxscale.mariadb.com:8003/listeners
 $
 ```
 
-## Modules
+## Modules
 
 The /modules URI returns data for each plugin that has been loaded into MariaDB MaxScale. The plugin name, type and version are returned as is the version of the plugin API that the plugin was built against and the release status of the plugin.
 
@@ -479,7 +479,7 @@ $ curl http://maxscale.mariadb.com:8003/modules
 $
 ```
 
-## Sessions
+## Sessions
 
 The /sessions URI returns a JSON array with an object for each active session within MariaDB MaxScale.
 
@@ -511,7 +511,7 @@ $ curl http://maxscale.mariadb.com:8003/clients
 $
 ```
 
-## Servers
+## Servers
 
 The /servers URI is used to retrieve information for each of the servers defined within the MariaDB MaxScale configuration. This information includes the connection count and the current status as monitored by MariaDB MaxScale. The connection count is only those connections made by MariaDB MaxScale to those servers.
 

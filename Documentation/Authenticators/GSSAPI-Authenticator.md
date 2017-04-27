@@ -19,7 +19,7 @@ the _kadmin_ or _kadmin.local_ tools.
 kadmin.local -q "addprinc -nokey mariadb/example.com@EXAMPLE.COM"
 ```
 
-The _-nokey_ option will make the principal a passwordless one. This allows the
+The `-nokey` option will make the principal a passwordless one. This allows the
 _maxscale_ user to acquire a ticket for it without a password being prompted.
 
 The next step is to export this principal into the Kerberos keytab file.

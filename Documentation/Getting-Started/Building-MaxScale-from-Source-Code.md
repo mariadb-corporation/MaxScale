@@ -106,7 +106,8 @@ make test
 sudo make install
 ```
 
-Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
+Other useful targets for Make are `documentation`, which generates the Doxygen documentation,
+and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
 
 **Note**: If you configure CMake multiple times, it's possible that you will run
   into problems when building MaxScale. Most of the time this manifests as a

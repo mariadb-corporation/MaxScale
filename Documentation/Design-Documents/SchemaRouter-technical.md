@@ -1,4 +1,4 @@
-#SchemaRouter Router - Technical Overview
+# SchemaRouter Router - Technical Overview
 
 This document is designed with a developer's point-of-view in mind. It explains the lifecycle of the module and details about its internal workings. It refers to the source code which can be found at [GitHub](https://github.com/mariadb-corporation/MaxScale).
 

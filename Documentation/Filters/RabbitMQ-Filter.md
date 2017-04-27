@@ -1,13 +1,26 @@
-#RabbitMQ Filter
+# RabbitMQ Filter
 
 ## Overview
-This filter is designed to extract queries and transform them into a canonical form e.g. `INSERT INTO database.table VALUES ("John Doe", "Downtown",100,50.0);` turns into `INSERT INTO database.table VALUES ("?", "?",?,?);`. The filter pushes these canonicalized queries and their replies in to a RabbitMQ broker where they can later be retrieved. The retrieval can be done with your own application or the [RabbitMQ Consumer Client](RabbitMQ-Consumer-Client.md) utility tool, which reads the messages from the broker and sends the contents of those messages as SQL queries to a database.
+
+This filter is designed to extract queries and transform them into a canonical
+form e.g. `INSERT INTO database.table VALUES ("John Doe", "Downtown",100,50.0);`
+turns into `INSERT INTO database.table VALUES ("?", "?",?,?);`. The filter
+pushes these canonized queries and their replies into a RabbitMQ broker where
+they can later be retrieved from. The retrieval can be done with a custom
+application or the [RabbitMQ Consumer Client](RabbitMQ-Consumer-Client.md)
+utility tool, which reads the messages from the broker and sends the contents of
+those messages as SQL queries to a database.
 
 ## Configuration
 
-The configuration block for the **mqfilter** filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf. Although the filter will start, it will use the default values which only work with a freshly installed RabbitMQ server and use its default values. This setup is mostly intended for testing the filter.
+The configuration block for the **mqfilter** requires the minimal filter options
+in its section within the MaxScale configuration file. Although the filter will
+start, it will use the default values which only work with a freshly installed
+RabbitMQ server and use its default values. This setup is mostly intended for
+testing the filter.
 
-The following is an example of a mqfilter configuration in the maxscale.cnf file used for actual logging of queries to a RabbitMQ broker on a different host.
+The following is an example of an mqfilter configuration used for actual logging
+of queries to a RabbitMQ broker on a different host.
 
 ```
 [RabbitMQ]
@@ -41,7 +54,10 @@ The mqfilter filter does not support any filter options.
 
 ### Filter Parameters
 
-The RabbitMQ filter has parameters to control which queries are logged based on either the attributes of the user or the query itself. These can be combined to to only log queries targeting a certain table in a certain database from a certain user from a certain network address.
+The RabbitMQ filter has parameters to control which queries are logged based on
+either the attributes of the user or the query itself. These can be combined to
+to only log queries targeting a certain table in a certain database from a
+certain user from a certain network address.
 
 
  Option | Description | Accepted Values | Default |

@@ -10,6 +10,39 @@ In versions 2.1.2 and earlier, the configuration files are limited to 1024
 characters per line. This limitation was increased to 16384 characters in
 MaxScale 2.1.3.
 
+## Security limitiations
+
+### MariaDB 10.2
+
+The parser of MaxScale correctly parses `WITH` statements, but fails to
+collect columns, functions and tables used in the `SELECT` defining the
+`WITH` clause.
+
+Consequently, the database firewall will **not** block `WITH` statements
+where the `SELECT` of the `WITH` clause refers to forbidden columns.
+
+## Prepared Statements
+
+For its proper functioning, MaxScale needs in general to be aware of the
+transaction state and _autocommit_ mode. In order to be that, MaxScale
+parses statements going through it.
+
+However, if a transaction is commited or rolled back, or the autocommit
+mode is changed using a prepared statement, MaxScale will miss that and its
+internal state will be incorrect, until the transaction state or autocommit
+mode is changed using an explicit statement.
+
+For instance, after the following sequence of commands, MaxScale will still
+think _autocommit_ is on:
+```
+set autocommit=1
+PREPARE hide_autocommit FROM "set autocommit=0"
+EXECUTE hide_autocommit
+```
+
+To ensure that MaxScale functions properly, do not commit or rollback a
+transaction or change the autocommit mode using a prepared statement.
+
 ## Protocol limitations
 
 ### Limitations with MySQL Protocol support (MySQLClient)
@@ -84,6 +117,17 @@ Read queries are routed to the master server in the following situations:
 * statement includes a stored procedure or an UDF call
 * if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT
 LAST_INSERT_ID();`
+
+#### JDBC Batched Statements
+
+Readwritesplit does not support execution of JDBC batched statements with
+non-INSERT statements mixed in it. This is caused by the fact that
+readwritesplit expects that the protocol is idle before another command is sent.
+
+Most clients conform to this expectation but some JDBC drivers send multiple
+requests without waiting for the protocol to be idle. If you are using the
+MariaDB Connector/J, add `useBatchMultiSend=false` to the JDBC connection string
+to disable batched statement execution.
 
 #### Backend write timeout handling
 
