@@ -3492,6 +3492,11 @@ int poll_add_dcb(DCB *dcb)
     else if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
         worker_id = dcb->session->client_dcb->poll.thread.id;
+
+        fprintf(stderr, "%i, %i\n",
+                worker_id,
+                Worker::get_current_id());
+
         ss_dassert(worker_id == Worker::get_current_id());
     }
     else
