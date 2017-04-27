@@ -476,9 +476,12 @@ ini_handler(void *userdata, const char *section, const char *name, const char *v
     {
         /** The values in the persisted configurations are updated versions of
          * the ones in the main configuration file.  */
-        if (is_persisted_config && !config_replace_param(ptr, name, value))
+        if (is_persisted_config)
         {
-            return 0;
+            if (!config_replace_param(ptr, name, value))
+            {
+                return 0;
+            }
         }
         /** Multi-line parameter */
         else if (!config_append_param(ptr, name, value))

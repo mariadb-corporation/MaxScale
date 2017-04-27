@@ -819,11 +819,23 @@ static inline const char* string_or_null(json_t* json, const char* name)
 
 static bool server_contains_required_fields(json_t* json)
 {
+    bool rval = false;
     json_t* value;
 
-    return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-           (value = json_object_get(json, CN_ADDRESS)) && json_is_string(value) &&
-           (value = json_object_get(json, CN_PORT)) && json_is_integer(value);
+    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value))
+    {
+        /** Object has a name field */
+        json_t* param = json_object_get(json, CN_PARAMETERS);
+
+        if (param &&
+            (value = json_object_get(param, CN_ADDRESS)) && json_is_string(value) &&
+            (value = json_object_get(param, CN_PORT)) && json_is_integer(value))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 const char* server_relation_types[] =

@@ -206,7 +206,7 @@ HttpResponse cb_get_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 HttpResponse cb_all_services(const HttpRequest& request)
@@ -223,7 +223,7 @@ HttpResponse cb_get_service(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)
@@ -240,7 +240,7 @@ HttpResponse cb_get_filter(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, filter_to_json(filter, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 HttpResponse cb_all_monitors(const HttpRequest& request)
@@ -257,7 +257,7 @@ HttpResponse cb_get_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
 HttpResponse cb_all_sessions(const HttpRequest& request)

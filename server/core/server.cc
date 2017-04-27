@@ -1370,16 +1370,19 @@ json_t* server_list_to_json(const char* host)
 
         for (SERVER* server = allServers; server; server = server->next)
         {
-            json_t* srv_json = server_to_json(server, host);
-
-            if (srv_json == NULL)
+            if (SERVER_IS_ACTIVE(server))
             {
-                json_decref(rval);
-                rval = NULL;
-                break;
-            }
+                json_t* srv_json = server_to_json(server, host);
 
-            json_array_append_new(rval, srv_json);
+                if (srv_json == NULL)
+                {
+                    json_decref(rval);
+                    rval = NULL;
+                    break;
+                }
+
+                json_array_append_new(rval, srv_json);
+            }
         }
 
         spinlock_release(&server_spin);
