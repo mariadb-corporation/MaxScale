@@ -1790,10 +1790,6 @@ errorReply(MXS_ROUTER *instance,
            mxs_error_action_t action,
            bool *succp)
 {
-    fprintf(stderr, "errorReply %i, %i\n",
-            backend_dcb->poll.thread.id,
-            mxs_worker_get_current_id());
-
     ss_dassert(backend_dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER);
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
     int error;
