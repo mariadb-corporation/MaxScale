@@ -129,6 +129,9 @@ static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf);
 
+static void worker_cb_start_master(int worker_id, void* data);
+static void blr_start_master_in_main(void* data);
+
 static int keepalive = 1;
 
 /** Master Semi-Sync capability */
@@ -218,7 +221,7 @@ blr_start_master(void* data)
         if (name)
         {
             sprintf(name, "%s Master", router->service->name);
-            hktask_oneshot(name, blr_start_master, router,
+            hktask_oneshot(name, blr_start_master_in_main, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
             MXS_FREE(name);
         }
@@ -260,6 +263,42 @@ blr_start_master(void* data)
 }
 
 /**
+ * Callback function to be called in the context of the main worker.
+ *
+ * @param worker_id  The id of the worker in whose context the function is called.
+ * @param data       The data to be passed to `blr_start_master`
+ */
+static void worker_cb_start_master(int worker_id, void* data)
+{
+    // This is itended to be called only in the main worker.
+    ss_dassert(worker_id == 0);
+
+    blr_start_master(data);
+}
+
+/**
+ * Start master in the main Worker.
+ *
+ * @param data  Data intended for `blr_start_master`.
+ */
+static void blr_start_master_in_main(void* data)
+{
+    // The master should be connected to in the main worker, so we post it a
+    // message and call `blr_start_master` there.
+
+    MXS_WORKER* worker = mxs_worker_get(0); // The worker running in the main thread.
+    ss_dassert(worker);
+
+    intptr_t arg1 = (intptr_t)worker_cb_start_master;
+    intptr_t arg2 = (intptr_t)data;
+
+    if (!mxs_worker_post_message(worker, MXS_WORKER_MSG_CALL, arg1, arg2))
+    {
+        MXS_ERROR("Could not post message to main worker.");
+    }
+}
+
+/**
  * Reconnect to the master server.
  *
  * IMPORTANT - must be called with router->active_logs set by the
@@ -286,7 +325,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
         if (name)
         {
             sprintf(name, "%s Master", router->service->name);
-            hktask_oneshot(name, blr_start_master, router,
+            hktask_oneshot(name, blr_start_master_in_main, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
             MXS_FREE(name);
         }
@@ -298,7 +337,7 @@ blr_restart_master(ROUTER_INSTANCE *router)
     else
     {
         router->master_state = BLRM_UNCONNECTED;
-        blr_start_master(router);
+        blr_start_master_in_main(router);
     }
 }
 
@@ -376,7 +415,7 @@ blr_master_delayed_connect(ROUTER_INSTANCE *router)
     if (name)
     {
         sprintf(name, "%s Master Recovery", router->service->name);
-        hktask_oneshot(name, blr_start_master, router, 60);
+        hktask_oneshot(name, blr_start_master_in_main, router, 60);
         MXS_FREE(name);
     }
 }
