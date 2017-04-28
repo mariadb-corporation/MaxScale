@@ -128,6 +128,10 @@ static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_checksemisync(ROUTER_INSTANCE *router, GWBUF *buf);
+static bool blr_register_requestsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
 
 static void worker_cb_start_master(int worker_id, void* data);
 static void blr_start_master_in_main(void* data);
@@ -667,18 +671,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
          */
         if (router->maxwell_compat)
         {
-            if (router->saved_master.server_vars)
-            {
-                GWBUF_CONSUME_ALL(router->saved_master.server_vars);
-            }
-            router->saved_master.server_vars = buf;
-            blr_cache_response(router, "server_vars", buf);
-
-            buf = blr_make_query(router->master,
-                                 "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
-                                 "@@global.binlog_format, @@global.binlog_row_image");
-            router->master_state = BLRM_BINLOG_VARS;
-            router->master->func.write(router->master, buf);
+            blr_register_mxw_binlogvars(router, buf);
             break;
         }
     case BLRM_BINLOG_VARS:
@@ -689,16 +682,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
          */
         if (router->maxwell_compat)
         {
-            if (router->saved_master.binlog_vars)
-            {
-                GWBUF_CONSUME_ALL(router->saved_master.binlog_vars);
-            }
-            router->saved_master.binlog_vars = buf;
-            blr_cache_response(router, "binlog_vars", buf);
-
-            buf = blr_make_query(router->master, "select @@lower_case_table_names");
-            router->master_state = BLRM_LOWER_CASE_TABLES;
-            router->master->func.write(router->master, buf);
+            blr_register_mxw_tables(router, buf);
             break;
         }
     case BLRM_LOWER_CASE_TABLES:
@@ -731,15 +715,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         /* if semisync option is set, check for master semi-sync availability */
         if (router->request_semi_sync)
         {
-            MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
-                       router->service->name,
-                       router->service->dbref->server->name,
-                       router->service->dbref->server->port);
-
-            buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'");
-            router->master_state = BLRM_CHECK_SEMISYNC;
-            router->master->func.write(router->master, buf);
-
+            blr_register_checksemisync(router, buf);
             break;
         }
         else
@@ -748,58 +724,16 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             router->master_state = BLRM_REQUEST_BINLOGDUMP;
         }
     case BLRM_CHECK_SEMISYNC:
+        /**
+         * This branch could be reached as fallthrough from BLRM_REGISTER
+         * if request_semi_sync option is false
+         */
+        if (router->master_state == BLRM_CHECK_SEMISYNC)
         {
-            /**
-             * This branch could be reached as fallthrough from BLRM_REGISTER
-             * if request_semi_sync option is false
-             */
-            if (router->master_state == BLRM_CHECK_SEMISYNC)
-            {
-                /* Get master semi-sync installed, enabled, disabled */
-                router->master_semi_sync = blr_get_master_semisync(buf);
-
-                /* Discard buffer */
-                gwbuf_free(buf);
-
-                if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
-                {
-                    /* not installed */
-                    MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
-                               router->service->name,
-                               router->service->dbref->server->name,
-                               router->service->dbref->server->port);
-
-                    /* Continue */
-                    router->master_state = BLRM_REQUEST_BINLOGDUMP;
-
-                }
-                else
-                {
-                    if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
-                    {
-                        /* Installed but not enabled,  right now */
-                        MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync enabled right now, "
-                                   "Requesting Semi-Sync Replication",
-                                   router->service->name,
-                                   router->service->dbref->server->name,
-                                   router->service->dbref->server->port);
-                    }
-                    else
-                    {
-                        /* Installed and enabled */
-                        MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled, Requesting Semi-Sync Replication",
-                                   router->service->name,
-                                   router->service->dbref->server->name,
-                                   router->service->dbref->server->port);
-                    }
-
-                    buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
-                    router->master_state = BLRM_REQUEST_SEMISYNC;
-                    router->master->func.write(router->master, buf);
-
-                    break;
-                }
-            }
+           if (blr_register_requestsemisync(router, buf))
+           {
+               break;
+           }
         }
     case BLRM_REQUEST_SEMISYNC:
         /**
@@ -3059,4 +2993,125 @@ static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf)
     // Set the new state
     router->master_state = BLRM_MAP;
     router->master->func.write(router->master, buf);
+}
+
+/**
+ * Slave Protocol registration to Master (MaxWell compatibility):
+ *
+ * Handles previous reply from Master and
+ * sends SELECT IF(@@global.log_bin ...) to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    if (router->saved_master.server_vars)
+    {
+        GWBUF_CONSUME_ALL(router->saved_master.server_vars);
+    }
+    router->saved_master.server_vars = buf;
+    blr_cache_response(router, "server_vars", buf);
+
+    // New registration message
+    buf = blr_make_query(router->master,
+                         "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
+                         "@@global.binlog_format, @@global.binlog_row_image");
+    // Set the new state
+    router->master_state = BLRM_BINLOG_VARS;
+    router->master->func.write(router->master, buf);
+}
+
+/**
+ * Slave Protocol registration to Master (MaxWell compatibility):
+ *
+ * Handles previous reply from Master and
+ * sends select @@lower_case_table_names to Master
+ *
+ * @param router    Current router instance
+ * @param buf       GWBUF with server reply to previous
+ *                  registration command
+ */
+static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    if (router->saved_master.binlog_vars)
+    {
+        GWBUF_CONSUME_ALL(router->saved_master.binlog_vars);
+    }
+    router->saved_master.binlog_vars = buf;
+    blr_cache_response(router, "binlog_vars", buf);
+
+    // New registration message
+    buf = blr_make_query(router->master, "select @@lower_case_table_names");
+    // Set the new state
+    router->master_state = BLRM_LOWER_CASE_TABLES;
+    router->master->func.write(router->master, buf);
+}
+
+static void blr_register_checksemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    MXS_NOTICE("%s: checking Semi-Sync replication capability for master server [%s]:%d",
+               router->service->name,
+               router->service->dbref->server->name,
+               router->service->dbref->server->port);
+
+    buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'");
+    router->master_state = BLRM_CHECK_SEMISYNC;
+    router->master->func.write(router->master, buf);
+}
+
+static bool blr_register_requestsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
+{
+    if (router->master_state == BLRM_CHECK_SEMISYNC)
+    {
+        /* Get master semi-sync installed, enabled, disabled */
+        router->master_semi_sync = blr_get_master_semisync(buf);
+
+        /* Discard buffer */
+        gwbuf_free(buf);
+
+        if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
+        {
+            /* not installed */
+            MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync capability",
+                       router->service->name,
+                       router->service->dbref->server->name,
+                       router->service->dbref->server->port);
+
+            /* Continue without semisync */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+
+            return false;
+        }
+        else
+        {
+            if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
+            {
+                /* Installed but not enabled, right now */
+                MXS_NOTICE("%s: master server [%s]:%d doesn't have semi_sync enabled right now, "
+                           "Requesting Semi-Sync Replication",
+                           router->service->name,
+                           router->service->dbref->server->name,
+                           router->service->dbref->server->port);
+            }
+            else
+            {
+                /* Installed and enabled */
+                MXS_NOTICE("%s: master server [%s]:%d has semi_sync enabled, Requesting Semi-Sync Replication",
+                           router->service->name,
+                           router->service->dbref->server->name,
+                           router->service->dbref->server->port);
+            }
+
+            buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
+            router->master_state = BLRM_REQUEST_SEMISYNC;
+            router->master->func.write(router->master, buf);
+
+            /* Request semisync */
+            return true;
+        }
+    }
+
+    return false;
 }
