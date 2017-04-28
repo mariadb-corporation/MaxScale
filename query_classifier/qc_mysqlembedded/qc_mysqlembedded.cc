@@ -113,6 +113,19 @@ static bool ensure_query_is_parsed(GWBUF* query);
 static bool parse_query(GWBUF* querybuf);
 static bool query_is_parsed(GWBUF* buf);
 
+#if MYSQL_VERSION_MINOR >= 3
+inline void get_string_and_length(const LEX_CSTRING& ls, const char** s, size_t* length)
+{
+    *s = ls.str;
+    *length = ls.length;
+}
+#else
+inline void get_string_and_length(const char* cs, const char** s, size_t* length)
+{
+    *s = cs;
+    *length = cs ? strlen(cs) : 0;
+}
+#endif
 
 /**
  * Ensures that the query is parsed. If it is not already parsed, it
@@ -883,8 +896,6 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                 Item::Type itype;
 
                 itype = item->type();
-                MXS_DEBUG("%lu [resolve_query_type] Item %s:%s",
-                          pthread_self(), item->name, STRITEMTYPE(itype));
 
                 if (itype == Item::SUBSELECT_ITEM)
                 {
@@ -978,10 +989,18 @@ static uint32_t resolve_query_type(parsing_info_t *pi, THD* thd)
                     /** System session variable */
                     case Item_func::GSYSVAR_FUNC:
                         {
-                            const char* name = item->name;
+                            const char* name;
+                            size_t length;
+                            get_string_and_length(item->name, &name, &length);
+
+                            const char last_insert_id[] = "@@last_insert_id";
+                            const char identity[] = "@@identity";
+
                             if (name &&
-                                ((strcasecmp(name, "@@last_insert_id") == 0) ||
-                                 (strcasecmp(name, "@@identity") == 0)))
+                                (((length == sizeof(last_insert_id) - 1) &&
+                                  (strcasecmp(name, last_insert_id) == 0)) ||
+                                 ((length == sizeof(identity) - 1) &&
+                                  (strcasecmp(name, identity) == 0))))
                             {
                                 func_qtype |= QUERY_TYPE_MASTER_READ;
                             }
@@ -1889,6 +1908,9 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 
                 if (!pi->preparable_stmt)
                 {
+#if MYSQL_VERSION_MINOR >= 3
+                    ss_info_dassert(!true, "Preparable statements in MariaDB 10.3 not yet handled.");
+#else
                     const char* preparable_stmt = lex->prepared_stmt_code.str;
                     size_t preparable_stmt_len = lex->prepared_stmt_code.length;
                     size_t payload_len = preparable_stmt_len + 1;
@@ -1930,6 +1952,7 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                     }
 
                     pi->preparable_stmt = preperable_packet;
+#endif
                 }
 
                 *preparable_stmt = pi->preparable_stmt;
@@ -1948,9 +1971,13 @@ static bool should_exclude(const char* name, List<Item>* excludep)
 
     while (!exclude && (exclude_item = ilist++))
     {
-        const char* exclude_name = exclude_item->name;
+        const char* exclude_name;
+        size_t length;
+        get_string_and_length(exclude_item->name, &exclude_name, &length);
 
-        if (exclude_name && (strcasecmp(name, exclude_name) == 0))
+        if (exclude_name &&
+            (strlen(name) == length) &&
+            (strcasecmp(name, exclude_name) == 0))
         {
             exclude = true;
         }
@@ -2123,7 +2150,12 @@ static void add_field_info(parsing_info_t* pi, Item_field* item, uint32_t usage,
 {
     const char* database = item->db_name;
     const char* table = item->table_name;
-    const char* column = item->field_name;
+    const char* s;
+    size_t l;
+    get_string_and_length(item->field_name, &s, &l);
+    char column[l + 1];
+    strncpy(column, s, l);
+    column[l] = 0;
 
     LEX* lex = get_lex(pi);
 
@@ -2212,7 +2244,12 @@ static void add_field_info(parsing_info_t* pi, Item* item, uint32_t usage, List<
 {
     const char* database = NULL;
     const char* table = NULL;
-    const char* column = item->name;
+    const char* s;
+    size_t l;
+    get_string_and_length(item->name, &s, &l);
+    char column[l + 1];
+    strncpy(column, s, l);
+    column[l] = 0;
 
     add_field_info(pi, database, table, column, usage, excludep);
 }
@@ -2382,7 +2419,10 @@ static void update_field_infos(parsing_info_t* pi,
                     // Embedded library silently changes "mod" into "%". We need to check
                     // what it originally was, so that the result agrees with that of
                     // qc_sqlite.
-                    if (func_item->name && (strncasecmp(func_item->name, "mod", 3) == 0))
+                    const char* s;
+                    size_t l;
+                    get_string_and_length(func_item->name, &s, &l);
+                    if (s && (strncasecmp(s, "mod", 3) == 0))
                     {
                         strcpy(func_name, "mod");
                     }
@@ -2398,7 +2438,10 @@ static void update_field_infos(parsing_info_t* pi,
                     // Embedded library silently changes "substring" into "substr". We need
                     // to check what it originally was, so that the result agrees with
                     // that of qc_sqlite. We reserved space for this above.
-                    if (func_item->name && (strncasecmp(func_item->name, "substring", 9) == 0))
+                    const char* s;
+                    size_t l;
+                    get_string_and_length(func_item->name, &s, &l);
+                    if (s && (strncasecmp(s, "substring", 9) == 0))
                     {
                         strcpy(func_name, "substring");
                     }
@@ -2706,7 +2749,10 @@ const char* server_options[] =
     "--no-defaults",
     "--datadir=",
     "--language=",
+#if MYSQL_VERSION_MINOR < 3
+    // TODO: 10.3 understands neither "--skip-innodb" or "--innodb=OFF", although it should.
     "--skip-innodb",
+#endif
     "--default-storage-engine=myisam",
     NULL
 };
