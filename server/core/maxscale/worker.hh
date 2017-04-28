@@ -80,6 +80,12 @@ public:
         ZPROCESSING
     };
 
+    enum execute_mode_t
+    {
+        EXECUTE_AUTO,  /**< Execute tasks immediately */
+        EXECUTE_QUEUED /**< Only queue tasks for execution */
+    };
+
     /**
      * Initialize the worker mechanism.
      *
@@ -258,6 +264,7 @@ public:
      *
      * @param pTask  The task to be executed.
      * @param pSem   If non-NULL, will be posted once the task's `execute` return.
+     * @param mode   Execution mode
      *
      * @return True if the task could be posted (i.e. not executed), false otherwise.
      *
@@ -283,6 +290,7 @@ public:
      * Posts a task to a worker for execution.
      *
      * @param pTask  The task to be executed.
+     * @param mode   Execution mode
      *
      * @return True if the task could be posted (i.e. not executed), false otherwise.
      *

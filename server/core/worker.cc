@@ -554,7 +554,24 @@ bool Worker::post(Task* pTask, Semaphore* pSem)
     intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
     intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
 
-    return post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
+    {
+        pTask->execute(*this);
+
+        if (pSem)
+        {
+            pSem->post();
+        }
+    }
+    else
+    {
+        intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+        intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
+
+        rval = post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+    }
+
+    return rval;
 }
 
 bool Worker::post(std::auto_ptr<DisposableTask> sTask)
@@ -566,15 +583,25 @@ bool Worker::post(std::auto_ptr<DisposableTask> sTask)
 // private
 bool Worker::post_disposable(DisposableTask* pTask)
 {
+    bool posted = true;
+
     pTask->inc_ref();
 
-    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
-
-    bool posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
-
-    if (!posted)
+    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
     {
+        pTask->execute(*this);
         pTask->dec_ref();
+    }
+    else
+    {
+        intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+
+        posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
+
+        if (!posted)
+        {
+            pTask->dec_ref();
+        }
     }
 
     return posted;
@@ -859,7 +886,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXS_WORKER_MSG_CALL:
         {
-            void (*f)(int, void*) = (void (*)(int,void*))msg.arg1();
+            void (*f)(int, void*) = (void (*)(int, void*))msg.arg1();
 
             f(m_id, (void*)msg.arg2());
         }
