@@ -20,7 +20,7 @@
 int atomic_add(int *variable, int value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
-    return __atomic_add_fetch(variable, value, __ATOMIC_SEQ_CST);
+    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
 #else
     return __sync_fetch_and_add(variable, value);
 #endif
@@ -29,7 +29,7 @@ int atomic_add(int *variable, int value)
 int64_t atomic_add_int64(int64_t *variable, int64_t value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
-    return __atomic_add_fetch(variable, value, __ATOMIC_SEQ_CST);
+    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
 #else
     return __sync_fetch_and_add(variable, value);
 #endif
@@ -38,7 +38,7 @@ int64_t atomic_add_int64(int64_t *variable, int64_t value)
 uint64_t atomic_add_uint64(uint64_t *variable, int64_t value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
-    return __atomic_add_fetch(variable, value, __ATOMIC_SEQ_CST);
+    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
 #else
     return __sync_fetch_and_add(variable, value);
 #endif
