@@ -93,7 +93,7 @@ test1()
         ss_dfprintf(stderr, "Filled %d, emptied %d, expired %d\n", filled, emptied, expired);
         if (random_jkiss() % 2)
         {
-            int *entrynumber = MXS_MALLOC(sizeof(int));
+            int *entrynumber = (int*)MXS_MALLOC(sizeof(int));
             *entrynumber = input_counter;
             if (mxs_enqueue(queue, entrynumber))
             {

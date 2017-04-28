@@ -54,7 +54,7 @@ test1()
     MXS_FREE(name);
     mxs_log_flush_sync();
     ss_info_dassert(NULL != hint, "New hint list should not be null");
-    ss_info_dassert(0 == strcmp("value", hint->value), "Hint value should be correct");
+    ss_info_dassert(0 == strcmp("value", (char*)hint->value), "Hint value should be correct");
     ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
     ss_dfprintf(stderr, "\t..done\nFree hints.");
     if (NULL != hint)
