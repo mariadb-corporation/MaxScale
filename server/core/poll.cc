@@ -43,12 +43,6 @@ using maxscale::Worker;
 static int next_epoll_fd = 0;              /*< Which thread handles the next DCB */
 static int n_threads;                      /*< Number of threads */
 
-
-/** Poll cross-thread messaging variables */
-static volatile int     *poll_msg;
-static void    *poll_msg_data = NULL;
-static SPINLOCK poll_msg_lock = SPINLOCK_INIT;
-
 /**
  * Initialise the polling system we are using for the gateway.
  *
@@ -58,11 +52,6 @@ void
 poll_init()
 {
     n_threads = config_threadcount();
-
-    if ((poll_msg = (int*)MXS_CALLOC(n_threads, sizeof(int))) == NULL)
-    {
-        exit(-1);
-    }
 }
 
 static bool add_fd_to_worker(int wid, int fd, uint32_t events, MXS_POLL_DATA* data)
@@ -421,46 +410,4 @@ eventTimesGetList()
     resultset_add_column(set, "No. Events Executed", 12, COL_TYPE_VARCHAR);
 
     return set;
-}
-
-void poll_send_message(enum poll_message msg, void *data)
-{
-    spinlock_acquire(&poll_msg_lock);
-    int nthr = config_threadcount();
-    poll_msg_data = data;
-
-    for (int i = 0; i < nthr; i++)
-    {
-        poll_msg[i] |= msg;
-    }
-
-    /** Handle this thread's message */
-    poll_check_message();
-
-    for (int i = 0; i < nthr; i++)
-    {
-        if (i != Worker::get_current_id())
-        {
-            while (poll_msg[i] & msg)
-            {
-                thread_millisleep(1);
-            }
-        }
-    }
-
-    poll_msg_data = NULL;
-    spinlock_release(&poll_msg_lock);
-}
-
-void poll_check_message()
-{
-    int thread_id = Worker::get_current_id();
-
-    if (poll_msg[thread_id] & POLL_MSG_CLEAN_PERSISTENT)
-    {
-        SERVER *server = (SERVER*)poll_msg_data;
-        dcb_persistent_clean_count(server->persistent[thread_id], thread_id, false);
-        atomic_synchronize();
-        poll_msg[thread_id] &= ~POLL_MSG_CLEAN_PERSISTENT;
-    }
 }

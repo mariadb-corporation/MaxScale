@@ -284,7 +284,7 @@ public:
      *     MyResult& result = task.result();
      * @endcode
      */
-    bool post(Task* pTask, Semaphore* pSem = NULL);
+    bool post(Task* pTask, Semaphore* pSem = NULL, enum execute_mode_t mode = EXECUTE_AUTO);
 
     /**
      * Posts a task to a worker for execution.
@@ -296,7 +296,7 @@ public:
      *
      * @attention  Once the task has been executed, it will be deleted.
      */
-    bool post(std::auto_ptr<DisposableTask> sTask);
+    bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
     /**
      * Posts a task to all workers for execution.
@@ -450,7 +450,7 @@ private:
 
     static Worker* create(int id, int epoll_listener_fd);
 
-    bool post_disposable(DisposableTask* pTask);
+    bool post_disposable(DisposableTask* pTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 

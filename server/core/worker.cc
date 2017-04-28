@@ -548,11 +548,10 @@ void Worker::set_maxwait(unsigned int maxwait)
     this_unit.max_poll_sleep = maxwait;
 }
 
-bool Worker::post(Task* pTask, Semaphore* pSem)
+bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
-    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
-    intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
+    bool rval = true;
 
     if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
     {
@@ -574,14 +573,14 @@ bool Worker::post(Task* pTask, Semaphore* pSem)
     return rval;
 }
 
-bool Worker::post(std::auto_ptr<DisposableTask> sTask)
+bool Worker::post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
-    return post_disposable(sTask.release());
+    return post_disposable(sTask.release(), mode);
 }
 
 // private
-bool Worker::post_disposable(DisposableTask* pTask)
+bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
 {
     bool posted = true;
 
@@ -1085,8 +1084,6 @@ void Worker::poll_waitevents()
 
         /** Process closed DCBs */
         dcb_process_zombies(m_id);
-
-        poll_check_message();
 
         m_state = IDLE;
     } /*< while(1) */

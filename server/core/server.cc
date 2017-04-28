@@ -48,9 +48,16 @@
 #include <maxscale/ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
+#include <maxscale/semaphore.hh>
 
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
+#include "maxscale/workertask.hh"
+#include "maxscale/worker.hh"
+
+using maxscale::Semaphore;
+using maxscale::Worker;
+using maxscale::WorkerTask;
 
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
@@ -524,6 +531,39 @@ dprintAllServersJson(DCB *dcb)
     spinlock_release(&server_spin);
 }
 
+/**
+ * A class for cleaning up persistent connections
+ */
+class CleanupTask : public WorkerTask
+{
+public:
+    CleanupTask(const SERVER* server):
+        m_server(server)
+    {
+    }
+
+    void execute(Worker& worker)
+    {
+        int thread_id = worker.get_current_id();
+        dcb_persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
+    }
+
+private:
+    const SERVER* m_server; /**< Server to clean up */
+};
+
+/**
+ * @brief Clean up any stale persistent connections
+ *
+ * This function purges any stale persistent connections from @c server.
+ *
+ * @param server Server to clean up
+ */
+static void cleanup_persistent_connections(const SERVER* server)
+{
+    CleanupTask task(server);
+    Worker::execute_concurrently(task);
+}
 
 /**
  * Print server details to a DCB
@@ -604,7 +644,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
-        poll_send_message(POLL_MSG_CLEAN_PERSISTENT, (void*)server);
+        cleanup_persistent_connections(server);
         dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
