@@ -970,6 +970,24 @@ closed.
 For more information about persistent connections, please read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
 
+#### `use_proxy_protocol`
+
+If `use_proxy_protocol` is set to `yes`, MaxScale will send a proxy protocol
+header when connecting client sessions to the server. The header contains the
+original client IP address and port, as seen by MaxScale. The server will then
+read the header and perform authentication as if the connection originated from
+this address instead of the MaxScale IP address. With this feature, the user
+accounts on the backend server can be simplified to only contain the actual
+client hosts and not the MaxScale host.
+
+Currently, using this feature is unpractical due to the restrictiveness of the
+proxy protocol. The protocol requires that *all* connections from proxy enabled
+addresses must send a valid proxy header. MaxScale has other connections to the
+servers in addition to client sessions, e.g. monitors, and the server will
+refuse these due to the lack of the header. To bypass this restriction, the
+server monitor needs to be disabled and the service listener needs to be
+configured to disregard authentication errors (`skip_authentication=true`).
+
 ### Server and SSL
 
 This section describes configuration parameters for servers that control the

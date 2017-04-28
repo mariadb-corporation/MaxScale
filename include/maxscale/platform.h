@@ -38,8 +38,8 @@ MXS_BEGIN_DECLS
 
 #else // __cplusplus
 
-// C++11 supports thread_local natively.
-#if __cplusplus < 201103
+// GCC 4.8 added support for native thread_local.
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
 
 #if defined(__GNUC__)
 #define thread_local __thread
@@ -47,7 +47,7 @@ MXS_BEGIN_DECLS
 #error Do not know how to define thread_local on this compiler/OS platform.
 #endif
 
-#endif // __cplusplus < 201103
+#endif
 
 #endif // __cplusplus
 
