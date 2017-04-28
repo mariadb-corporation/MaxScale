@@ -192,6 +192,30 @@ HttpResponse cb_alter_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_BAD_REQUEST);
 }
 
+HttpResponse cb_delete_server(const HttpRequest& request)
+{
+    SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
+
+    if (server && runtime_destroy_server(server))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+}
+
+HttpResponse cb_delete_monitor(const HttpRequest& request)
+{
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+
+    if (monitor && runtime_destroy_monitor(monitor))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+}
+
 HttpResponse cb_all_servers(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, server_list_to_json(request.host()));
@@ -363,13 +387,18 @@ public:
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
         m_get.push_back(SResource(new Resource(cb_modules, 2, "maxscale", "modules")));
 
+        /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
 
+        /** Update resources */
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+
+        m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
+        m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
     }
 
     ~RootResource()
