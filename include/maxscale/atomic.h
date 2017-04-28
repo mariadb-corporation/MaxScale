@@ -21,6 +21,17 @@
 MXS_BEGIN_DECLS
 
 /**
+ * Pre 4.7 GCC doesn't support the __atomic builtin functions. The older __sync
+ * builtins don't have proper store/load functionality so we use a somewhat ugly
+ * hack to emulate the store/load.
+ */
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
+#ifndef MXS_USE_ATOMIC_BUILTINS
+#define MXS_USE_ATOMIC_BUILTINS 1
+#endif
+#endif
+
+/**
  * Implementation of an atomic add operations for the GCC environment.
  *
  * Adds a value to the contents of a location pointed to by the first parameter.
@@ -76,7 +87,13 @@ void atomic_store_uint64(uint64_t *variable, uint64_t value);
 static inline void atomic_synchronize()
 {
 #ifdef __GNUC__
+
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#else
     __sync_synchronize(); /* Memory barrier. */
+#endif
+
 #else
 #error "No GNUC atomics available."
 #endif
