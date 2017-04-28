@@ -264,5 +264,12 @@ To build the avrorouter from source, you will need the [Avro C](https://avro.apa
 library, liblzma, [the Jansson library](http://www.digip.org/jansson/) and sqlite3 development headers. When
 configuring MaxScale with CMake, you will need to add `-DBUILD_CDC=Y` to build the CDC module set.
 
+The Avro C library needs to be build with position independent code enabled. You can do this by
+adding the following flags to the CMake invocation when configuring the Avro C library.
+
+```
+-DCMAKE_C_FLAGS=-fPIC -DCMAKE_CXX_FLAGS=-fPIC
+```
+
 For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.
