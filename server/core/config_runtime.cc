@@ -890,17 +890,18 @@ SERVER* runtime_create_server_from_json(json_t* json)
     if (server_contains_required_fields(json))
     {
         const char* name = json_string_value(json_object_get(json, CN_NAME));
-        const char* address = json_string_value(json_object_get(json, CN_ADDRESS));
+        json_t* params = json_object_get(json, CN_PARAMETERS);
+        const char* address = json_string_value(json_object_get(params, CN_ADDRESS));
 
         /** The port needs to be in string format */
         char port[200]; // Enough to store any port value
-        int i = json_integer_value(json_object_get(json, CN_PORT));
+        int i = json_integer_value(json_object_get(params, CN_PORT));
         snprintf(port, sizeof(port), "%d", i);
 
         /** Optional parameters */
-        const char* protocol = string_or_null(json, CN_PROTOCOL);
-        const char* authenticator = string_or_null(json, CN_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(json, CN_AUTHENTICATOR_OPTIONS);
+        const char* protocol = string_or_null(params, CN_PROTOCOL);
+        const char* authenticator = string_or_null(params, CN_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(params, CN_AUTHENTICATOR_OPTIONS);
 
 
         set<string> relations;
@@ -942,8 +943,8 @@ bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_js
                             old_relations.begin(), old_relations.end(),
                             std::inserter(added_relations, added_relations.begin()));
 
-        if (link_server_to_objects(server, added_relations) &&
-            unlink_server_from_objects(server, removed_relations))
+        if (unlink_server_from_objects(server, removed_relations) &&
+            link_server_to_objects(server, added_relations))
         {
             rval = true;
         }
@@ -991,14 +992,6 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
     return rval;
 }
 
-static bool monitor_contains_required_fields(json_t* json)
-{
-    json_t* value;
-
-    return (value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-           (value = json_object_get(json, CN_MODULE)) && json_is_string(value);
-}
-
 const char* object_relation_types[] =
 {
     CN_SERVERS,
@@ -1008,6 +1001,31 @@ const char* object_relation_types[] =
 static bool object_relation_is_valid(const string& type, const string& value)
 {
     return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
+}
+
+/**
+ * @brief Do a coarse validation of the monitor JSON
+ *
+ * @param json JSON to validate
+ *
+ * @return True of the JSON is valid
+ */
+static bool validate_monitor_json(json_t* json)
+{
+    bool rval = false;
+    json_t* value;
+
+    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
+        (value = json_object_get(json, CN_MODULE)) && json_is_string(value))
+    {
+        set<string> relations;
+        if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
 }
 
 static bool unlink_object_from_servers(const char* target, set<string>& relations)
@@ -1051,20 +1069,17 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 {
     MXS_MONITOR* rval = NULL;
 
-    if (monitor_contains_required_fields(json))
+    if (validate_monitor_json(json))
     {
         const char* name = json_string_value(json_object_get(json, CN_NAME));
         const char* module = json_string_value(json_object_get(json, CN_MODULE));
 
-        set<string> relations;
-
-        if (extract_relations(json, relations, object_relation_types, object_relation_is_valid) &&
-            runtime_create_monitor(name, module))
+        if (runtime_create_monitor(name, module))
         {
             rval = monitor_find(name);
             ss_dassert(rval);
 
-            if (!link_object_to_servers(rval->name, relations))
+            if (!runtime_alter_monitor_from_json(rval, json))
             {
                 runtime_destroy_monitor(rval);
                 rval = NULL;
@@ -1095,8 +1110,8 @@ bool object_to_server_relations(const char* target, json_t* old_json, json_t* ne
                             old_relations.begin(), old_relations.end(),
                             std::inserter(added_relations, added_relations.begin()));
 
-        if (link_object_to_servers(target, added_relations) &&
-            unlink_object_from_servers(target, removed_relations))
+        if (unlink_object_from_servers(target, removed_relations) &&
+            link_object_to_servers(target, added_relations))
         {
             rval = true;
         }
