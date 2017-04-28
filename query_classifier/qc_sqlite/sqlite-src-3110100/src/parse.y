@@ -278,6 +278,8 @@ cmdlist ::= ecmd.
 ecmd ::= SEMI.
 ecmd ::= explain SEMI.
 ecmd ::= cmdx SEMI.
+ecmd ::= oracle_variable_assignment SEMI.
+ecmd ::= explain cmdx SEMI.
 %ifdef MAXSCALE
 explain_kw ::= EXPLAIN.  // Also covers DESCRIBE
 explain_kw ::= DESC.
@@ -3230,6 +3232,15 @@ cmd ::= TRUNCATE table_opt nm(X) dbnm(Y). {
   }
 
   maxscaleTruncate(pParse, pDatabase, pName);
+}
+
+//////////////////////// ORACLE ////////////////////////////////////
+//
+oracle_variable_assignment ::= id(X) EQ expr(Y). {
+    Expr* pX = sqlite3PExpr(pParse, TK_ID, 0, 0, &X);
+    Expr* pExpr = sqlite3PExpr(pParse, TK_EQ, pX, Y.pExpr, 0);
+    ExprList* pExprList = sqlite3ExprListAppend(pParse, 0, pExpr);
+    maxscaleSet(pParse, 0, MXS_SET_VARIABLES, pExprList);
 }
 
 %endif
