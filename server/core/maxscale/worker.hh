@@ -339,6 +339,16 @@ public:
     static size_t execute_on_all_serially(Task* pTask);
 
     /**
+     * Executes a task on all workers concurrently and waits until
+     * all workers are done.
+     *
+     * @param pTask  The task to be executed.
+     *
+     * @return How many workers the task was posted to.
+     */
+    static size_t execute_on_all_concurrently(Task* pTask);
+
+    /**
      * Post a message to a worker.
      *
      * @param msg_id  The message id.
