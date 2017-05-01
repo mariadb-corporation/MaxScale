@@ -3451,6 +3451,12 @@ int poll_add_dcb(DCB *dcb)
     }
     else
     {
+        /**
+         * Listeners are always added in level triggered mode. This will cause
+         * new events to be generated as long as there is at least one connection
+         * to accept.
+         */
+        events = EPOLLIN;
         ss_dassert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
         new_state = DCB_STATE_LISTENING;
     }
