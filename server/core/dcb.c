@@ -1658,6 +1658,7 @@ static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
     if (dcb->user != NULL
+        && (dcb->func.established == NULL || dcb->func.established(dcb))
         && strlen(dcb->user)
         && dcb->server
         && dcb->server->persistpoolmax

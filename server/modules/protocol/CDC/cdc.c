@@ -85,7 +85,9 @@ MXS_MODULE* MXS_CREATE_MODULE()
         cdc_listen, /* Create a listener             */
         NULL, /* Authentication                */
         NULL, /* Session                       */
-        cdc_default_auth /* default authentication */
+        cdc_default_auth, /* default authentication */
+        NULL,
+        NULL,
     };
 
     static MXS_MODULE info =

@@ -77,6 +77,7 @@ static int gw_send_change_user_to_backend(char          *dbname,
                                           char          *user,
                                           uint8_t       *passwd,
                                           MySQLProtocol *conn);
+static bool gw_connection_established(DCB* dcb);
 
 /*
  * The module entry point routine. It is this routine that
@@ -102,7 +103,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_change_user,             /* Authentication                */
         NULL,                       /* Session                       */
         gw_backend_default_auth,    /* Default authenticator         */
-        NULL                        /* Connection limit reached      */
+        NULL,                       /* Connection limit reached      */
+        gw_connection_established
     };
 
     static MXS_MODULE info =
@@ -883,7 +885,8 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     CHK_DCB(dcb);
 
-    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING)
+    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING &&
+        backend_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
         ss_dassert(dcb->persistentstart == 0);
         /**
@@ -1948,4 +1951,10 @@ gw_send_change_user_to_backend(char          *dbname,
         rc = 1;
     }
     return rc;
+}
+
+static bool gw_connection_established(DCB* dcb)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE;
 }

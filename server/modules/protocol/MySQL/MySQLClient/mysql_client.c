@@ -115,7 +115,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                                   /* Authentication                */
         NULL,                                   /* Session                       */
         gw_default_auth,                        /* Default authenticator         */
-        gw_connection_limit                     /* Send error connection limit   */
+        gw_connection_limit,                    /* Send error connection limit   */
+        NULL
     };
 
     static MXS_MODULE info =

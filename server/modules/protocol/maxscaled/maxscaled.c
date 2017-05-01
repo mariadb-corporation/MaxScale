@@ -185,7 +185,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         NULL,                           /**< Authentication                */
         NULL,                           /**< Session                       */
         mxsd_default_auth,              /**< Default authenticator         */
-        NULL                            /**< Connection limit reached      */
+        NULL,                           /**< Connection limit reached      */
+        NULL
     };
 
     static MXS_MODULE info =
