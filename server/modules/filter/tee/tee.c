@@ -493,6 +493,8 @@ newSession(MXS_FILTER *instance, MXS_SESSION *session)
                 goto retblock;
             }
 
+            dcb->service = my_instance->service;
+
             if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
             {
                 dcb_close(dcb);
