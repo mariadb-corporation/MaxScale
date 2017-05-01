@@ -43,7 +43,10 @@ struct session;
  *      close           MaxScale close entry point for the socket
  *      listen          Create a listener for the protocol
  *      auth            Authentication entry point
- *  session         Session handling entry point
+ *      session         Session handling entry point
+ *      auth_default    Default authenticator name
+ *      connlimit       Maximum connection limit
+ *      established     Whether connection is fully established
  * @endverbatim
  *
  * This forms the "module object" for protocol modules within the gateway.
@@ -62,9 +65,10 @@ typedef struct mxs_protocol
     int32_t (*close)(struct dcb *);
     int32_t (*listen)(struct dcb *, char *);
     int32_t (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
-    int32_t (*session)(struct dcb *, void *);
+    int32_t (*session)(struct dcb *, void *); // TODO: remove this, not used
     char   *(*auth_default)();
     int32_t (*connlimit)(struct dcb *, int limit);
+    bool    (*established)(struct dcb *);
 } MXS_PROTOCOL;
 
 /**

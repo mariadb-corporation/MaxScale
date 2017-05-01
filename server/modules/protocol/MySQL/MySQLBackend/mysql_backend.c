@@ -80,6 +80,7 @@ static int gw_send_change_user_to_backend(char          *dbname,
 static void gw_send_proxy_protocol_header(DCB *backend_dcb);
 static bool get_ip_string_and_port(struct sockaddr_storage *sa, char *ip, int iplen,
                                    in_port_t *port_out);
+static bool gw_connection_established(DCB* dcb);
 
 /*
  * The module entry point routine. It is this routine that
@@ -105,7 +106,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gw_change_user,             /* Authentication                */
         NULL,                       /* Session                       */
         gw_backend_default_auth,    /* Default authenticator         */
-        NULL                        /* Connection limit reached      */
+        NULL,                       /* Connection limit reached      */
+        gw_connection_established
     };
 
     static MXS_MODULE info =
@@ -794,7 +796,7 @@ gw_read_and_write(DCB *dcb)
          * The reply to an ignorable command is in the packet. Extract the
          * response type and discard the response.
          */
-        uint8_t result;
+        uint8_t result = 0xff;
         gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN, 1, &result);
         proto->ignore_replies--;
         ss_dassert(proto->ignore_replies >= 0);
@@ -957,7 +959,8 @@ static int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 
     CHK_DCB(dcb);
 
-    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING)
+    if (dcb->was_persistent && dcb->state == DCB_STATE_POLLING &&
+        backend_protocol->protocol_auth_state == MXS_AUTH_STATE_COMPLETE)
     {
         ss_dassert(dcb->persistentstart == 0);
         /**
@@ -1966,4 +1969,10 @@ static bool get_ip_string_and_port(struct sockaddr_storage *sa,
         *port_out = port;
     }
     return success;
+}
+
+static bool gw_connection_established(DCB* dcb)
+{
+    MySQLProtocol *proto = (MySQLProtocol*)dcb->protocol;
+    return proto->protocol_auth_state == MXS_AUTH_STATE_COMPLETE;
 }
