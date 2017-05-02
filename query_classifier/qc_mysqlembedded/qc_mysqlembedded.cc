@@ -1908,11 +1908,15 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
 
                 if (!pi->preparable_stmt)
                 {
+                    const char* preparable_stmt;
+                    size_t preparable_stmt_len;
 #if MYSQL_VERSION_MINOR >= 3
-                    ss_info_dassert(!true, "Preparable statements in MariaDB 10.3 not yet handled.");
+                    preparable_stmt = lex->prepared_stmt_code->name.str;
+                    preparable_stmt_len = lex->prepared_stmt_code->name.length;
 #else
-                    const char* preparable_stmt = lex->prepared_stmt_code.str;
-                    size_t preparable_stmt_len = lex->prepared_stmt_code.length;
+                    preparable_stmt = lex->prepared_stmt_code.str;
+                    preparable_stmt_len = lex->prepared_stmt_code.length;
+#endif
                     size_t payload_len = preparable_stmt_len + 1;
                     size_t packet_len = MYSQL_HEADER_LEN + payload_len;
 
@@ -1952,7 +1956,6 @@ int32_t qc_mysql_get_preparable_stmt(GWBUF* stmt, GWBUF** preparable_stmt)
                     }
 
                     pi->preparable_stmt = preperable_packet;
-#endif
                 }
 
                 *preparable_stmt = pi->preparable_stmt;
