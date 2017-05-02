@@ -28,10 +28,12 @@ MXS_BEGIN_DECLS
 
 /** Default port where the REST API listens */
 #define DEFAULT_ADMIN_HTTP_PORT 8989
+#define DEFAULT_ADMIN_HOST      "::"
 
 #define _RELEASE_STR_LENGTH     256     /**< release len */
 #define MAX_ADMIN_USER_LEN      1024
 #define MAX_ADMIN_PW_LEN        1024
+#define MAX_ADMIN_HOST_LEN      1024
 
 /**
  * Common configuration parameters names
@@ -42,6 +44,7 @@ MXS_BEGIN_DECLS
  */
 extern const char CN_ADDRESS[];
 extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_HOST[];
 extern const char CN_ADMIN_PASSWORD[];
 extern const char CN_ADMIN_PORT[];
 extern const char CN_ADMIN_USER[];
@@ -156,6 +159,7 @@ typedef struct
     char*         qc_args;                             /**< Arguments for the query classifier */
     char          admin_user[MAX_ADMIN_USER_LEN];      /**< Admin interface user */
     char          admin_password[MAX_ADMIN_PW_LEN];    /**< Admin interface password */
+    char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
 } MXS_CONFIG;

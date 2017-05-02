@@ -11,11 +11,17 @@
  * Public License.
  */
 
+/**
+ * @file The embedded HTTP protocol administrative interface
+ */
 #include "maxscale/admin.hh"
 
 #include <climits>
 #include <new>
 #include <microhttpd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <maxscale/atomic.h>
 #include <maxscale/debug.h>
@@ -180,16 +186,64 @@ int handle_client(void *cls,
     return client->process(url, method, upload_data, upload_data_size);
 }
 
+static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_storage* addr)
+{
+    struct addrinfo *ai = NULL, hint = {};
+    int rc;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_family = AF_UNSPEC;
+    hint.ai_flags = AI_ALL;
+
+    if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
+    {
+        MXS_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
+        return false;
+    }
+
+    /* Take the first one */
+    if (ai)
+    {
+        memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+
+        if (addr->ss_family == AF_INET)
+        {
+            struct sockaddr_in *ip = (struct sockaddr_in*)addr;
+            ip->sin_port = htons(port);
+        }
+        else if (addr->ss_family == AF_INET6)
+        {
+            struct sockaddr_in6 *ip = (struct sockaddr_in6*)addr;
+            ip->sin6_port = htons(port);
+        }
+    }
+
+    freeaddrinfo(ai);
+    return true;
+}
+
 bool mxs_admin_init()
 {
-    http_daemon = MHD_start_daemon(MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY | MHD_USE_DUAL_STACK,
-                                   config_get_global_options()->admin_port,
-                                   NULL, NULL,
-                                   handle_client, NULL,
-                                   MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
-                                   MHD_OPTION_END);
-    return http_daemon != NULL;
+    struct sockaddr_storage addr;
 
+    if (host_to_sockaddr(config_get_global_options()->admin_host,
+                         config_get_global_options()->admin_port,
+                         &addr))
+    {
+        int options = MHD_USE_EPOLL_INTERNALLY_LINUX_ONLY;
+
+        if (addr.ss_family == AF_INET6)
+        {
+            options |= MHD_USE_DUAL_STACK;
+        }
+
+        // The port argument is ignored and the port in the struct sockaddr is used instead
+        http_daemon = MHD_start_daemon(options, 0,  NULL, NULL, handle_client, NULL,
+                                       MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
+                                       MHD_OPTION_SOCK_ADDR, &addr,
+                                       MHD_OPTION_END);
+    }
+
+    return http_daemon != NULL;
 }
 
 void mxs_admin_shutdown()

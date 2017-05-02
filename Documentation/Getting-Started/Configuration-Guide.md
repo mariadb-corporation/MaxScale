@@ -172,6 +172,12 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
+#### `admin_host`
+
+The network interface where the HTTP admin interface listens on. The default
+value is the IPv6 address `::` which listens on all available network
+interfaces.
+
 #### `admin_port`
 
 The port where the HTTP admin interface listens on. The default value is port

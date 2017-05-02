@@ -53,6 +53,7 @@ using std::string;
 
 const char CN_ADDRESS[]                       = "address";
 const char CN_ADMIN_AUTH[]                    = "admin_auth";
+const char CN_ADMIN_HOST[]                    = "admin_host";
 const char CN_ADMIN_PASSWORD[]                = "admin_password";
 const char CN_ADMIN_PORT[]                    = "admin_port";
 const char CN_ADMIN_USER[]                    = "admin_user";
@@ -1520,6 +1521,10 @@ handle_global_item(const char *name, const char *value)
     {
         gateway.admin_port = atoi(value);
     }
+    else if (strcmp(name, CN_ADMIN_HOST) == 0)
+    {
+        strcpy(gateway.admin_host, value);
+    }
     else if (strcmp(name, CN_ADMIN_AUTH) == 0)
     {
         gateway.admin_auth = config_truth_value(value);
@@ -1746,6 +1751,7 @@ global_defaults()
     gateway.skip_permission_checks = false;
     gateway.admin_port = DEFAULT_ADMIN_HTTP_PORT;
     gateway.admin_auth = false;
+    strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
     strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
 

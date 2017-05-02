@@ -1982,6 +1982,18 @@ int main(int argc, char **argv)
         }
     }
 
+    if (mxs_admin_init())
+    {
+        MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
+    }
+    else
+    {
+        const char* logerr = "Failed to initialize admin interface";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
     /**
      * Successful start, notify the parent process that it can exit.
@@ -1990,14 +2002,6 @@ int main(int argc, char **argv)
     if (daemon_mode)
     {
         write_child_exit_code(daemon_pipe[1], rc);
-    }
-
-    if (!mxs_admin_init())
-    {
-        const char* logerr = "Failed to initialize admin interface";
-        print_log_n_stderr(true, true, logerr, logerr, 0);
-        rc = MAXSCALE_INTERNALERROR;
-        goto return_main;
     }
 
     /*<
