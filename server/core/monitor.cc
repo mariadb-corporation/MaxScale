@@ -164,18 +164,21 @@ monitor_free(MXS_MONITOR *mon)
 void
 monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    spinlock_acquire(&monitor->lock);
-
-    if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+    if (monitor)
     {
-        monitor->state = MONITOR_STATE_RUNNING;
-    }
-    else
-    {
-        MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
-    }
+        spinlock_acquire(&monitor->lock);
 
-    spinlock_release(&monitor->lock);
+        if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+        {
+            monitor->state = MONITOR_STATE_RUNNING;
+        }
+        else
+        {
+            MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+        }
+
+        spinlock_release(&monitor->lock);
+    }
 }
 
 /**
@@ -203,26 +206,29 @@ void monitorStartAll()
 void
 monitorStop(MXS_MONITOR *monitor)
 {
-    spinlock_acquire(&monitor->lock);
-
-    /** Only stop the monitor if it is running */
-    if (monitor->state == MONITOR_STATE_RUNNING)
+    if (monitor)
     {
-        monitor->state = MONITOR_STATE_STOPPING;
-        monitor->module->stopMonitor(monitor);
-        monitor->state = MONITOR_STATE_STOPPED;
+        spinlock_acquire(&monitor->lock);
 
-        MXS_MONITOR_SERVERS* db = monitor->databases;
-        while (db)
+        /** Only stop the monitor if it is running */
+        if (monitor->state == MONITOR_STATE_RUNNING)
         {
-            // TODO: Create a generic entry point for this or move it inside stopMonitor
-            mysql_close(db->con);
-            db->con = NULL;
-            db = db->next;
-        }
-    }
+            monitor->state = MONITOR_STATE_STOPPING;
+            monitor->module->stopMonitor(monitor);
+            monitor->state = MONITOR_STATE_STOPPED;
 
-    spinlock_release(&monitor->lock);
+            MXS_MONITOR_SERVERS* db = monitor->databases;
+            while (db)
+            {
+                // TODO: Create a generic entry point for this or move it inside stopMonitor
+                mysql_close(db->con);
+                db->con = NULL;
+                db = db->next;
+            }
+        }
+
+        spinlock_release(&monitor->lock);
+    }
 }
 
 /**

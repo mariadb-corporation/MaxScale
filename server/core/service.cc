@@ -627,23 +627,24 @@ int service_launch_all()
 
 bool serviceStop(SERVICE *service)
 {
-    SERV_LISTENER *port;
     int listeners = 0;
 
-    port = service->ports;
-    while (port)
+    if (service)
     {
-        if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER)
+        for (SERV_LISTENER * port = service->ports; port; port = port->next)
         {
-            if (poll_remove_dcb(port->listener) == 0)
+            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-                listeners++;
+                if (poll_remove_dcb(port->listener) == 0)
+                {
+                    port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                    listeners++;
+                }
             }
         }
-        port = port->next;
+
+        service->state = SERVICE_STATE_STOPPED;
     }
-    service->state = SERVICE_STATE_STOPPED;
 
     return listeners > 0;
 }
@@ -658,23 +659,25 @@ bool serviceStop(SERVICE *service)
  */
 bool serviceStart(SERVICE *service)
 {
-    SERV_LISTENER *port;
     int listeners = 0;
 
-    port = service->ports;
-    while (port)
+    if (service)
     {
-        if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+        for (SERV_LISTENER* port = service->ports; port; port = port->next)
         {
-            if (poll_add_dcb(port->listener) == 0)
+            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER;
-                listeners++;
+                if (poll_add_dcb(port->listener) == 0)
+                {
+                    port->listener->session->state = SESSION_STATE_LISTENER;
+                    listeners++;
+                }
             }
         }
-        port = port->next;
+
+        service->state = SERVICE_STATE_STARTED;
     }
-    service->state = SERVICE_STATE_STARTED;
+
     return listeners > 0;
 }
 
