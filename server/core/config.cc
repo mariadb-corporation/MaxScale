@@ -155,6 +155,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 int create_new_listener(CONFIG_CONTEXT *obj);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
+void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p);
 
 static const char *config_file = NULL;
 static MXS_CONFIG gateway;
@@ -2119,6 +2120,11 @@ check_config_objects(CONFIG_CONTEXT *context)
                     {
                         process_path_parameter(params);
                     }
+                    else
+                    {
+                        /** Fix old-style object names */
+                        config_fix_param(mod->parameters, params);
+                    }
                 }
                 params = params->next;
             }
@@ -3550,6 +3556,51 @@ static bool config_contains_type(const CONFIG_CONTEXT *ctx, const char *name, co
     }
 
     return false;
+}
+
+void fix_serverlist(char* value)
+{
+    string dest;
+    char* end;
+    char* start = strtok_r(value, ",", &end);
+    const char* sep = "";
+
+    while (start)
+    {
+        fix_section_name(start);
+        dest += sep;
+        dest += start;
+        sep = ",";
+    }
+
+    /** The value will always be smaller than the original one or of equal size */
+    strcpy(value, dest.c_str());
+}
+
+void config_fix_param(const MXS_MODULE_PARAM *params, MXS_CONFIG_PARAMETER *p)
+{
+    for (int i = 0; params[i].name; i++)
+    {
+        if (strcmp(params[i].name, p->name) == 0)
+        {
+            switch (params[i].type)
+            {
+            case MXS_MODULE_PARAM_SERVER:
+            case MXS_MODULE_PARAM_SERVICE:
+                fix_section_name(p->value);
+                break;
+
+            case MXS_MODULE_PARAM_SERVERLIST:
+                fix_serverlist(p->value);
+                break;
+
+            default:
+                break;
+            }
+
+            break;
+        }
+    }
 }
 
 bool config_param_is_valid(const MXS_MODULE_PARAM *params, const char *key,
