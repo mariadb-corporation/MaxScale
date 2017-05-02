@@ -1113,6 +1113,7 @@ select_into(A) ::= INTO OUTFILE STRING. {A = sqlite3ExprListAppend(pParse, 0, 0)
 %type select_options {int}
 select_options(A) ::= . {A = 0;}
 select_options(A) ::= select_options DISTINCT. {A = SF_Distinct;}
+select_options(A) ::= select_options UNIQUE. {A = SF_Distinct;}
 select_options(A) ::= select_options ALL. {A = SF_All;}
 select_options(A) ::= select_options(X) HIGH_PRIORITY. {A = X;}
 select_options(A) ::= select_options(X) SELECT_OPTIONS_KW. {A = X;}
@@ -1122,6 +1123,9 @@ select_options(A) ::= select_options(X) STRAIGHT_JOIN. {A = X;}
 // present and false (0) if it is not.
 //
 %type distinct {int}
+%ifdef MAXSCALE
+distinct(A) ::= UNIQUE.     {A = SF_Distinct;}
+%endif
 distinct(A) ::= DISTINCT.   {A = SF_Distinct;}
 distinct(A) ::= ALL.        {A = SF_All;}
 distinct(A) ::= .           {A = 0;}
