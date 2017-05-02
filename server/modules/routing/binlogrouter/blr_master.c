@@ -119,8 +119,6 @@ static void blr_register_heartbeat(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_handle_checksum(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mariadb10(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mysqlgtid(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf);
@@ -268,10 +266,10 @@ blr_start_master(void* data)
      *
      * Next states are handled by blr_master_response()
      */
-    router->master->func.write(router->master,
-                               blr_make_query(router->master,
-                               "SELECT UNIX_TIMESTAMP()"));
-    router->master_state = BLRM_TIMESTAMP;
+
+    blr_register_send_command(router,
+                              "SELECT UNIX_TIMESTAMP()",
+                              BLRM_TIMESTAMP);
 
     router->stats.n_masterstarts++;
 }
@@ -543,7 +541,15 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     switch (router->master_state)
     {
     case BLRM_TIMESTAMP:
-        blr_register_serverid(router, buf);
+        /**
+         * Previous state was BLRM_TIMESTAMP
+         * No need to save the server reply
+         */
+        gwbuf_free(buf);
+        blr_register_send_command(router,
+                                  "SHOW VARIABLES LIKE 'SERVER_ID'",
+                                  BLRM_SERVERID);
+        router->retry_backoff = 1;
         break;
     case BLRM_SERVERID:
         blr_register_heartbeat(router, buf);
@@ -558,13 +564,15 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         // Set router->master_chksum based on server reply
         blr_register_getchecksum(router, buf);
         // Next state is BLRM_MARIADB10 or BLRM_GTIDMODE
-        if (router->mariadb10_compat)
         {
-            blr_register_mariadb10(router, buf);
-        }
-        else
-        {
-            blr_register_mysqlgtid(router, buf);
+            unsigned int state = router->mariadb10_compat ?
+                                 BLRM_MARIADB10 :
+                                 BLRM_GTIDMODE;
+            const char *command = router->mariadb10_compat ?
+                                  "SET @mariadb_slave_capability=4" :
+                                  "SELECT @@GLOBAL.GTID_MODE";
+
+            blr_register_send_command(router, command, state);
         }
         break;
     case BLRM_MARIADB10:
@@ -591,6 +599,8 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         break;
     case BLRM_UTF8:
         blr_register_cache_utf8(router, buf);
+        // Next state is MAXWELL BLRM_RESULTS_CHARSET or
+        // BLRM_SELECT1
         {
             unsigned int state = router->maxwell_compat ?
                                  BLRM_RESULTS_CHARSET :
@@ -2565,33 +2575,6 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
  * Slave Protocol registration to Master:
  *
  * Handles previous reply from Master and sends
- * SHOW VARIABLES LIKE 'SERVER_ID to master
- *
- * @param router    Current router instance
- * @param buf       GWBUF with server reply to previous
- *                  registration command
- */
-static void blr_register_serverid(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    /**
-     * Previous state was BLRM_TIMESTAMP
-     * No need to save the server reply
-     */
-    gwbuf_free(buf);
-
-    // Prepare the new message
-    buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_ID'");
-
-    // Set the new state
-    router->master_state = BLRM_SERVERID;
-    router->master->func.write(router->master, buf);
-    router->retry_backoff = 1;
-}
-
-/**
- * Slave Protocol registration to Master:
- *
- * Handles previous reply from Master and sends
  * SET @master_heartbeat_period to master
  *
  * @param router    Current router instance
@@ -2660,12 +2643,10 @@ static void blr_register_setchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
     blr_cache_response(router, "heartbeat", buf);
 
     // New registration message
-    buf = blr_make_query(router->master,
-                         "SET @master_binlog_checksum = @@global.binlog_checksum");
-
-    // Set the new state
-    router->master_state = BLRM_CHKSUM1;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SET @master_binlog_checksum ="
+                              " @@global.binlog_checksum",
+                              BLRM_CHKSUM1);
 }
 
 /**
@@ -2689,11 +2670,9 @@ static void blr_register_getchecksum(ROUTER_INSTANCE *router, GWBUF *buf)
     blr_cache_response(router, "chksum1", buf);
 
     // New registration message
-    buf = blr_make_query(router->master, "SELECT @master_binlog_checksum");
-
-    // Set the new state
-    router->master_state = BLRM_CHKSUM2;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT @master_binlog_checksum",
+                              BLRM_CHKSUM2);
 }
 
 /**
@@ -2731,43 +2710,8 @@ static void blr_register_handlechecksum(ROUTER_INSTANCE *router, GWBUF *buf)
 /**
  * Slave Protocol registration to Master:
  *
- * Send SET @mariadb_slave_capability=4 to MariaDB10 Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF with server reply to previous
- *                  registration command
- */
-static void blr_register_mariadb10(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    // New registration message
-    buf = blr_make_query(router->master, "SET @mariadb_slave_capability=4");
-    // Set the new state
-    router->master_state = BLRM_MARIADB10;
-    router->master->func.write(router->master, buf);
-}
-
-/**
- * Slave Protocol registration to Master:
- *
- * Send SELECT @@GLOBAL.GTID_MODE to MySQL 5.6/5.7 Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF with server reply to previous
- *                  registration command
- */
-static void blr_register_mysqlgtid(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    // New registration message
-    buf = blr_make_query(router->master, "SELECT @@GLOBAL.GTID_MODE");
-    // Set the new state
-    router->master_state = BLRM_GTIDMODE;
-    router->master->func.write(router->master, buf);
-}
-
-/**
- * Slave Protocol registration to Master:
- *
- * Send SHOW VARIABLES LIKE 'SERVER_UUID' to MySQL 5.6/5.7 Master
+ * Handles the reply from Master and
+ * sends SHOW VARIABLES LIKE 'SERVER_UUID' to MySQL 5.6/5.7 Master
  *
  * @param router    Current router instance
  * @param buf       GWBUF with server reply to previous
@@ -2782,11 +2726,11 @@ static void blr_register_serveruuid(ROUTER_INSTANCE *router, GWBUF *buf)
     }
     router->saved_master.gtid_mode = buf;
     blr_cache_response(router, "gtidmode", buf);
+
     // New registration message
-    buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'SERVER_UUID'");
-    // Set the new state
-    router->master_state = BLRM_MUUID;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SHOW VARIABLES LIKE 'SERVER_UUID'",
+                              BLRM_MUUID);
 }
 
 /**
@@ -2829,11 +2773,11 @@ static void blr_register_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.uuid = buf;
     blr_cache_response(router, "uuid", buf);
     sprintf(query, "SET @slave_uuid='%s'", router->uuid);
+
     // New registration message
-    buf = blr_make_query(router->master, query);
-    // Set the new state
-    router->master_state = BLRM_SUUID;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              query,
+                              BLRM_SUUID);
 }
 
 /**
@@ -2855,10 +2799,9 @@ static void blr_register_utf8(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.setnames = buf;
     blr_cache_response(router, "setnames", buf);
     // New registration message
-    buf = blr_make_query(router->master, "SET NAMES utf8");
-    // Set the new state
-    router->master_state = BLRM_UTF8;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SET NAMES utf8",
+                              BLRM_UTF8);
 }
 
 /**
@@ -2881,10 +2824,9 @@ static void blr_register_selectversion(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.select1 = buf;
     blr_cache_response(router, "select1", buf);
     // New registration message
-    buf = blr_make_query(router->master, "SELECT VERSION()");
-    // Set the new state
-    router->master_state = BLRM_SELECTVER;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT VERSION()",
+                              BLRM_SELECTVER);
 }
 
 /**
@@ -2907,10 +2849,9 @@ static void blr_register_selectvercomment(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.selectver = buf;
     blr_cache_response(router, "selectver", buf);
     // New registration message
-    buf = blr_make_query(router->master, "SELECT @@version_comment limit 1");
-    // Set the new state
-    router->master_state = BLRM_SELECTVERCOM;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT @@version_comment limit 1",
+                              BLRM_SELECTVERCOM);
 }
 
 /**
@@ -2933,10 +2874,9 @@ static void blr_register_selecthostname(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.selectvercom = buf;
     blr_cache_response(router, "selectvercom", buf);
     // New registration message
-    buf = blr_make_query(router->master, "SELECT @@hostname");
-    // Set the new state
-    router->master_state = BLRM_SELECTHOSTNAME;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT @@hostname",
+                              BLRM_SELECTHOSTNAME);
 }
 
 /**
@@ -2959,10 +2899,9 @@ static void blr_register_selectmap(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.selecthostname = buf;
     blr_cache_response(router, "selecthostname", buf);
     // New registration message
-    buf = blr_make_query(router->master, "SELECT @@max_allowed_packet");
-    // Set the new state
-    router->master_state = BLRM_MAP;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT @@max_allowed_packet",
+                              BLRM_MAP);
 }
 
 /**
@@ -2985,12 +2924,10 @@ static void blr_register_mxw_binlogvars(ROUTER_INSTANCE *router, GWBUF *buf)
     blr_cache_response(router, "server_vars", buf);
 
     // New registration message
-    buf = blr_make_query(router->master,
-                         "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
-                         "@@global.binlog_format, @@global.binlog_row_image");
-    // Set the new state
-    router->master_state = BLRM_BINLOG_VARS;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SELECT IF(@@global.log_bin, 'ON', 'OFF'), "
+                              "@@global.binlog_format, @@global.binlog_row_image",
+                              BLRM_BINLOG_VARS);
 }
 
 /**
@@ -3014,10 +2951,9 @@ static void blr_register_mxw_tables(ROUTER_INSTANCE *router, GWBUF *buf)
     blr_cache_response(router, "binlog_vars", buf);
 
     // New registration message
-    buf = blr_make_query(router->master, "select @@lower_case_table_names");
-    // Set the new state
-    router->master_state = BLRM_LOWER_CASE_TABLES;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "select @@lower_case_table_names",
+                              BLRM_LOWER_CASE_TABLES);
 }
 
 /**
@@ -3039,10 +2975,9 @@ static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
                router->service->dbref->server->port);
 
     // New registration message
-    buf = blr_make_query(router->master, "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'");
-    // Set the new state
-    router->master_state = BLRM_CHECK_SEMISYNC;
-    router->master->func.write(router->master, buf);
+    blr_register_send_command(router,
+                              "SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'",
+                              BLRM_CHECK_SEMISYNC);
 }
 
 /**
@@ -3100,11 +3035,10 @@ static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf)
                            router->service->dbref->server->port);
             }
 
-            buf = blr_make_query(router->master, "SET @rpl_semi_sync_slave = 1");
-            router->master_state = BLRM_REQUEST_SEMISYNC;
-            router->master->func.write(router->master, buf);
-
             /* Request semisync */
+            blr_register_send_command(router,
+                                      "SET @rpl_semi_sync_slave = 1",
+                                      BLRM_REQUEST_SEMISYNC);
             return true;
         }
     }
