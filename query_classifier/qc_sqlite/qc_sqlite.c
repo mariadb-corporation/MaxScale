@@ -2038,7 +2038,7 @@ void maxscaleDrop(Parse* pParse, MxsDrop* pDrop)
     info->operation = QUERY_OP_DROP;
 }
 
-void maxscaleExecute(Parse* pParse, Token* pName)
+void maxscaleExecute(Parse* pParse, Token* pName, int type_mask)
 {
     QC_TRACE();
 
@@ -2046,7 +2046,7 @@ void maxscaleExecute(Parse* pParse, Token* pName)
     ss_dassert(info);
 
     info->status = QC_QUERY_PARSED;
-    info->type_mask = QUERY_TYPE_WRITE;
+    info->type_mask = (QUERY_TYPE_WRITE | type_mask);
 
     // If information is collected in several passes, then we may
     // this information already.

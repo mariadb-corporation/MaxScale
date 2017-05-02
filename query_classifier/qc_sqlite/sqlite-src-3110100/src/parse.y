@@ -64,6 +64,7 @@ enum
 {
   QUERY_TYPE_READ               = 0x000002, /*< Read database data:any */
   QUERY_TYPE_WRITE              = 0x000004, /*< Master data will be  modified:master */
+  QUERY_TYPE_USERVAR_READ       = 0x000040, /*< Read a user variable:master or any */
 };
 
 typedef enum qc_field_usage
@@ -112,7 +113,8 @@ extern void maxscaleCheckTable(Parse*, SrcList* pTables);
 extern void maxscaleDeallocate(Parse*, Token* pName);
 extern void maxscaleDo(Parse*, ExprList* pEList);
 extern void maxscaleDrop(Parse*, MxsDrop* pDrop);
-extern void maxscaleExecute(Parse*, Token* pName);
+extern void maxscaleExecute(Parse*, Token* pName, int type_mask);
+extern void maxscaleExplain(Parse*, SrcList* pName);
 extern void maxscaleExplain(Parse*, Token* pNext);
 extern void maxscaleFlush(Parse*, Token* pWhat);
 extern void maxscaleHandler(Parse*, mxs_handler_t, SrcList* pFullName, Token* pName);
@@ -2848,11 +2850,13 @@ prepare ::= PREPARE nm(X) FROM STRING(Y).
 execute_variables ::= VARIABLE.
 execute_variables ::= execute_variables COMMA VARIABLE.
 
-execute_variables_opt ::= .
-execute_variables_opt ::= USING execute_variables.
+%type execute_variables_opt {int}
 
-execute ::= EXECUTE nm(X) execute_variables_opt. {
-  maxscaleExecute(pParse, &X);
+execute_variables_opt(A) ::= .                     { A = 0; }
+execute_variables_opt(A) ::= USING execute_variables. { A = QUERY_TYPE_USERVAR_READ; }
+
+execute ::= EXECUTE nm(X) execute_variables_opt(Y). {
+    maxscaleExecute(pParse, &X, Y);
 }
 
 dod ::= DEALLOCATE.
