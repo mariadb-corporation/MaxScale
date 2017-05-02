@@ -142,4 +142,11 @@ void config_add_module_params_json(const MXS_MODULE* mod,
                                    const char** type_params,
                                    json_t* output);
 
+/**
+ * @brief Convert section names to new format
+ *
+ * @param section Section name to fix
+ */
+void fix_section_name(char *section);
+
 MXS_END_DECLS

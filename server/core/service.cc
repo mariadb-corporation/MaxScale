@@ -1222,6 +1222,8 @@ serviceSetFilters(SERVICE *service, char *filters)
     ptr = strtok_r(filters, "|", &brkt);
     while (ptr)
     {
+        fix_section_name(ptr);
+
         n++;
         MXS_FILTER_DEF **tmp;
         if ((tmp = (MXS_FILTER_DEF **) MXS_REALLOC(flist,
