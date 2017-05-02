@@ -306,8 +306,7 @@ HttpResponse cb_get_session(const HttpRequest& request)
 
 HttpResponse cb_maxscale(const HttpRequest& request)
 {
-    // TODO: Show logs
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, config_paths_to_json(request.host()));
 }
 
 HttpResponse cb_logs(const HttpRequest& request)

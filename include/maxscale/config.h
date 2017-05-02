@@ -23,6 +23,7 @@
 #include <sys/utsname.h>
 
 #include <maxscale/modinfo.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -394,5 +395,13 @@ void config_disable_feedback_task(void);
  * @return True if reloading was successful
  */
 bool config_reload(void);
+
+/**
+ * @brief List all path parameters as JSON
+ *
+ * @param host Hostname of this server
+ * @return JSON object representing the paths used by MaxScale
+ */
+json_t* config_paths_to_json(const char* host);
 
 MXS_END_DECLS
