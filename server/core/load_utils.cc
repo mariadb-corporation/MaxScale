@@ -28,12 +28,16 @@
  *
  * @endverbatim
  */
+
+#include "maxscale/modules.h"
+
 #include <sys/param.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <dlfcn.h>
+
 #include <maxscale/modinfo.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/version.h>
@@ -45,6 +49,7 @@
 #include <maxscale/alloc.h>
 
 #include "maxscale/modules.h"
+#include "maxscale/config.h"
 
 typedef struct loaded_module
 {
@@ -399,6 +404,64 @@ void dprintAllModules(DCB *dcb)
         ptr = ptr->next;
     }
     dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
+}
+
+static json_t* module_to_json(const LOADED_MODULE *mod, const char* host)
+{
+    json_t* obj = json_object();
+
+    json_object_set_new(obj, "name", json_string(mod->module));
+    json_object_set_new(obj, "type", json_string(mod->type));
+    json_object_set_new(obj, "version", json_string(mod->info->version));
+    json_object_set_new(obj, "description", json_string(mod->info->description));
+    json_object_set_new(obj, "api", json_string(mxs_module_api_to_string(mod->info->modapi)));
+    json_object_set_new(obj, "status", json_string(mxs_module_status_to_string(mod->info->status)));
+
+    json_t* params = json_array();
+
+    for (int i = 0; mod->info->parameters[i].name; i++)
+    {
+        json_t* p = json_object();
+
+        json_object_set_new(p, CN_NAME, json_string(mod->info->parameters[i].name));
+        json_object_set_new(p, CN_TYPE, json_string(mxs_module_param_type_to_string(mod->info->parameters[i].type)));
+
+        if (mod->info->parameters[i].default_value)
+        {
+            json_object_set(p, "default_value", json_string(mod->info->parameters[i].default_value));
+        }
+
+        if (mod->info->parameters[i].type == MXS_MODULE_PARAM_ENUM &&
+            mod->info->parameters[i].accepted_values)
+        {
+            json_t* arr = json_array();
+
+            for (int x = 0; mod->info->parameters[i].accepted_values[x].name; x++)
+            {
+                json_array_append_new(arr, json_string(mod->info->parameters[i].accepted_values[x].name));
+            }
+
+            json_object_set_new(p, "enum_values", arr);
+        }
+
+        json_array_append_new(params, p);
+    }
+
+    json_object_set_new(obj, CN_PARAMETERS, params);
+
+    return obj;
+}
+
+json_t* module_list_to_json(const char* host)
+{
+    json_t* arr = json_array();
+
+    for (LOADED_MODULE *ptr = registered; ptr; ptr = ptr->next)
+    {
+        json_array_append_new(arr, module_to_json(ptr, host));
+    }
+
+    return arr;
 }
 
 void moduleShowFeedbackReport(DCB *dcb)
@@ -843,7 +906,7 @@ const MXS_MODULE *get_module(const char *name, const char *type)
 {
     LOADED_MODULE *mod = find_module(name);
 
-    if (mod == NULL && load_module(name, type))
+    if (mod == NULL && type && load_module(name, type))
     {
         mod = find_module(name);
     }

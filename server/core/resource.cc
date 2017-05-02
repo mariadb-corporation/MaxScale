@@ -26,6 +26,7 @@
 #include "maxscale/monitor.h"
 #include "maxscale/service.h"
 #include "maxscale/config_runtime.h"
+#include "maxscale/modules.h"
 
 using std::list;
 using std::string;
@@ -340,10 +341,9 @@ HttpResponse cb_tasks(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK);
 }
 
-HttpResponse cb_modules(const HttpRequest& request)
+HttpResponse cb_all_modules(const HttpRequest& request)
 {
-    // TODO: Show modules
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, module_list_to_json(request.host()));
 }
 
 HttpResponse cb_send_ok(const HttpRequest& request)
@@ -384,7 +384,7 @@ public:
         m_get.push_back(SResource(new Resource(cb_threads, 2, "maxscale", "threads")));
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
-        m_get.push_back(SResource(new Resource(cb_modules, 2, "maxscale", "modules")));
+        m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
 
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
