@@ -108,6 +108,34 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
     return rval;
 }
 
+HttpResponse cb_stop_monitor(const HttpRequest& request)
+{
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    monitorStop(monitor);
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
+HttpResponse cb_start_monitor(const HttpRequest& request)
+{
+    MXS_MONITOR* monitor = monitor_find(request.uri_part(1).c_str());
+    monitorStart(monitor, monitor->parameters);
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
+HttpResponse cb_stop_service(const HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    serviceStop(service);
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
+HttpResponse cb_start_service(const HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    serviceStart(service);
+    return HttpResponse(MHD_HTTP_NO_CONTENT);
+}
+
 HttpResponse cb_create_server(const HttpRequest& request)
 {
     json_t* json = request.get_json();
@@ -395,6 +423,12 @@ public:
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+
+        /** Change resource states */
+        m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));
+        m_put.push_back(SResource(new Resource(cb_start_monitor, 3, "monitors", ":monitor", "start")));
+        m_put.push_back(SResource(new Resource(cb_stop_service, 3, "services", ":service", "stop")));
+        m_put.push_back(SResource(new Resource(cb_start_service, 3, "services", ":service", "start")));
 
         m_delete.push_back(SResource(new Resource(cb_delete_server, 2, "servers", ":server")));
         m_delete.push_back(SResource(new Resource(cb_delete_monitor, 2, "monitors", ":monitor")));
