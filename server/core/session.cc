@@ -36,6 +36,7 @@
 #include <string.h>
 #include <errno.h>
 #include <string>
+#include <sstream>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -54,6 +55,7 @@
 #include "maxscale/workertask.hh"
 
 using std::string;
+using std::stringstream;
 
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
@@ -1075,32 +1077,83 @@ void session_broadcast_kill_command(MXS_SESSION* issuer, uint64_t target_id)
     }
 }
 
-json_t* session_to_json(const MXS_SESSION *session, const char *host)
+json_t* session_json_data(const MXS_SESSION *session, const char *host)
 {
-    json_t* rval = json_object();
+    json_t* data = json_object();
 
-    json_object_set_new(rval, "id", json_integer(session->ses_id));
-    json_object_set_new(rval, "state", json_string(session_state(session->state)));
+    stringstream ss;
+    ss << session->ses_id;
 
+    /** ID and type */
+    json_object_set_new(data, "id", json_string(ss.str().c_str()));
+    json_object_set_new(data, "type", json_string("sessions"));
+
+    /** Relationships */
     json_t* rel = json_object();
-    json_t* arr = json_array();
 
+    /** Service relationship (one-to-one) */
     string svc = host;
     svc += "/services/";
-    svc += session->service->name;
 
-    json_array_append_new(arr, json_string(svc.c_str()));
-    json_object_set_new(rel, "services", arr);
-    json_object_set_new(rval, "relationships", rel);
+    json_t* services = json_object();
+
+    /** Service self link */
+    json_t* services_links = json_object();
+    json_object_set_new(services_links, "self", json_string(svc.c_str()));
+
+    /** Only one value for data, the service where this session belongs to */
+    json_t* services_data_value = json_object();
+    json_object_set_new(services_data_value, "id", json_string(session->service->name));
+    json_object_set_new(services_data_value, "type", json_string("services"));
+
+    json_object_set_new(services, "links", services_links);
+    json_object_set_new(services, "data", services_data_value);
+    json_object_set_new(rel, "services", services);
+
+    /** Filter relationships (one-to-many) */
+    if (session->n_filters)
+    {
+        json_t* filters = json_object();
+
+        /** Filter self link */
+        string fil = host;
+        fil += "/filters/";
+        json_t* filters_links = json_object();
+        json_object_set_new(filters_links, "self", json_string(fil.c_str()));
+
+        /** Array of data values */
+        json_t* filters_data_array = json_array();
+
+        for (int i = 0; i < session->n_filters; i++)
+        {
+            /** Each value is a reference to a filter */
+            json_t* filters_data_value = json_object();
+
+            json_object_set_new(filters_data_value, "id", json_string(session->filters[i].filter->name));
+            json_object_set_new(filters_data_value, "type", json_string("filters"));
+
+            json_array_append_new(filters_data_array, filters_data_value);
+        }
+
+        json_object_set_new(filters, "data", filters_data_array);
+        json_object_set_new(filters, "links", filters_links);
+        json_object_set_new(rel, "filters", filters);
+    }
+
+    json_object_set_new(data, "relationships", rel);
+
+    /** Session attributes */
+    json_t* attr = json_object();
+    json_object_set_new(attr, "state", json_string(session_state(session->state)));
 
     if (session->client_dcb->user)
     {
-        json_object_set_new(rval, "user", json_string(session->client_dcb->user));
+        json_object_set_new(attr, "user", json_string(session->client_dcb->user));
     }
 
     if (session->client_dcb->remote)
     {
-        json_object_set_new(rval, "remote", json_string(session->client_dcb->remote));
+        json_object_set_new(attr, "remote", json_string(session->client_dcb->remote));
     }
 
     struct tm result;
@@ -1109,29 +1162,33 @@ json_t* session_to_json(const MXS_SESSION *session, const char *host)
     asctime_r(localtime_r(&session->stats.connect, &result), buf);
     trim(buf);
 
-    json_object_set_new(rval, "connected", json_string(buf));
+    json_object_set_new(attr, "connected", json_string(buf));
 
     if (session->client_dcb->state == DCB_STATE_POLLING)
     {
         double idle = (hkheartbeat - session->client_dcb->last_read);
         idle = idle > 0 ? idle / 10.f : 0;
-        json_object_set_new(rval, "idle", json_real(idle));
+        json_object_set_new(attr, "idle", json_real(idle));
     }
 
-    if (session->n_filters)
-    {
-        json_t* filters = json_array();
+    json_object_set_new(data, "attributes", attr);
 
-        for (int i = 0; i < session->n_filters; i++)
-        {
-            string fil = host;
-            fil += "/filters/";
-            fil += session->filters[i].filter->name;
-            json_array_append_new(filters, json_string(fil.c_str()));
-        }
+    return data;
+}
 
-        json_object_set_new(rval, "filters", filters);
-    }
+json_t* session_to_json(const MXS_SESSION *session, const char *host)
+{
+    json_t* rval = json_object();
+
+    /** Create the top level self link */
+    stringstream self;
+    self << host << "/sessions/" << session->ses_id;
+    json_t* links_self = json_object();
+    json_object_set_new(links_self, "self", json_string(self.str().c_str()));
+    json_object_set_new(rval, "links", links_self);
+
+    /** Only one value */
+    json_object_set_new(rval, "data", session_json_data(session, host));
 
     return rval;
 }
@@ -1145,7 +1202,7 @@ struct SessionListData
 bool seslist_cb(DCB* dcb, void* data)
 {
     SessionListData* d = (SessionListData*)data;
-    json_array_append_new(d->json, session_to_json(dcb->session, d->host));
+    json_array_append_new(d->json, session_json_data(dcb->session, d->host));
     return true;
 }
 
@@ -1153,5 +1210,17 @@ json_t* session_list_to_json(const char* host)
 {
     SessionListData data = {json_array(), host};
     dcb_foreach(seslist_cb, &data);
-    return data.json;
+    json_t* rval = json_object();
+
+    /** Create the top level self link */
+    stringstream self;
+    self << host << "/sessions/";
+    json_t* links_self = json_object();
+    json_object_set_new(links_self, "self", json_string(self.str().c_str()));
+    json_object_set_new(rval, "links", links_self);
+
+    /** Array of session values */
+    json_object_set_new(rval, "data", data.json);
+
+    return rval;
 }
