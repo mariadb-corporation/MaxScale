@@ -279,6 +279,20 @@ HttpResponse cb_get_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
 }
 
+HttpResponse cb_get_service_listeners(const HttpRequest& request)
+{
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+    json_t* json = service_to_json(service, request.host());
+
+    // The 'listeners' key is always defined
+    json_t* listeners = json_incref(json_object_get(json, CN_LISTENERS));
+    ss_dassert(listeners);
+
+    json_decref(json);
+
+    return HttpResponse(MHD_HTTP_OK, listeners);
+}
+
 HttpResponse cb_all_filters(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK, filter_list_to_json(request.host()));
@@ -398,6 +412,8 @@ public:
 
         m_get.push_back(SResource(new Resource(cb_all_services, 1, "services")));
         m_get.push_back(SResource(new Resource(cb_get_service, 2, "services", ":service")));
+        m_get.push_back(SResource(new Resource(cb_get_service_listeners, 3,
+                                               "services", ":service", "listeners")));
 
         m_get.push_back(SResource(new Resource(cb_all_filters, 1, "filters")));
         m_get.push_back(SResource(new Resource(cb_get_filter, 2, "filters", ":filter")));

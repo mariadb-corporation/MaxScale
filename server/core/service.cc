@@ -2473,17 +2473,18 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     /** Add service parameters */
     json_object_set_new(rval, CN_PARAMETERS, service_parameters_to_json(service));
 
+    /** Add listeners */
+    json_t* arr = json_array();
+
     if (service->ports)
     {
-        json_t* arr = json_array();
-
         for (SERV_LISTENER* p = service->ports; p; p = p->next)
         {
             json_array_append_new(arr, listener_to_json(p));
         }
-
-        json_object_set_new(rval, CN_LISTENERS, arr);
     }
+
+    json_object_set_new(rval, CN_LISTENERS, arr);
 
     /** Store relationships to other objects */
     json_t* rel = json_object();
