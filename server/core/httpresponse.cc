@@ -33,6 +33,11 @@ HttpResponse::HttpResponse(int code, json_t* response):
     add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED, http_date);
     // This ETag is the base64 encoding of `not-yet-implemented`
     add_header(HTTP_RESPONSE_HEADER_ETAG, "bm90LXlldC1pbXBsZW1lbnRlZAo");
+
+    if (m_body)
+    {
+        add_header(HTTP_RESPONSE_HEADER_CONTENT_TYPE, "application/json");
+    }
 }
 
 HttpResponse::HttpResponse(const HttpResponse& response):

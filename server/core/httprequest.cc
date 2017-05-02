@@ -74,20 +74,12 @@ static void process_uri(string& uri, std::deque<string>& uri_parts)
         my_uri.erase(my_uri.begin());
     }
 
-    if (my_uri.length() == 0)
+    while (my_uri.length() > 0)
     {
-        /** Special handling for the / resource */
-        uri_parts.push_back("");
-    }
-    else
-    {
-        while (my_uri.length() > 0)
-        {
-            size_t pos = my_uri.find("/");
-            string part = pos == string::npos ? my_uri : my_uri.substr(0, pos);
-            my_uri.erase(0, pos == string::npos ? pos : pos + 1);
-            uri_parts.push_back(part);
-        }
+        size_t pos = my_uri.find("/");
+        string part = pos == string::npos ? my_uri : my_uri.substr(0, pos);
+        my_uri.erase(0, pos == string::npos ? pos : pos + 1);
+        uri_parts.push_back(part);
     }
 }
 
@@ -102,9 +94,29 @@ HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string m
 
     m_hostname = mxs_admin_https_enabled() ? HttpRequest::HTTPS_PREFIX : HttpRequest::HTTP_PREFIX;
     m_hostname += get_header(HTTP_HOST_HEADER);
+
+    if (m_hostname[m_hostname.size() - 1] != '/')
+    {
+        m_hostname += "/";
+    }
+
+    m_hostname += MXS_REST_API_VERSION;
 }
 
 HttpRequest::~HttpRequest()
 {
 
+}
+bool HttpRequest::validate_api_version()
+{
+    bool rval = false;
+
+    if (m_resource_parts.size() > 0 &&
+        m_resource_parts[0] == MXS_REST_API_VERSION)
+    {
+        m_resource_parts.pop_front();
+        rval = true;
+    }
+
+    return rval;
 }

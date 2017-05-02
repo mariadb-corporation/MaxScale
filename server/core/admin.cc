@@ -102,7 +102,12 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     }
 
     HttpRequest request(m_connection, url, method, json);
-    HttpResponse reply = resource_handle_request(request);
+    HttpResponse reply(MHD_HTTP_NOT_FOUND);
+
+    if (request.validate_api_version())
+    {
+        reply = resource_handle_request(request);
+    }
 
     string data;
 

@@ -26,6 +26,9 @@
 
 #include "http.hh"
 
+// The API version part of the URL
+#define MXS_REST_API_VERSION "v1"
+
 static int value_iterator(void *cls,
                           enum MHD_ValueKind kind,
                           const char *key,
@@ -160,6 +163,14 @@ public:
     {
         return m_hostname.c_str();
     }
+
+    /**
+     * @brief Drop the API version prefix
+     *
+     * @return True if prefix is present and was successfully removed
+     */
+    bool validate_api_version();
+
 private:
 
     /** Constants */
@@ -173,5 +184,5 @@ private:
     std::deque<std::string>            m_resource_parts; /**< @c m_resource split into parts */
     std::string                        m_verb;           /**< Request method */
     std::string                        m_hostname;       /**< The value of the Host header */
-    struct MHD_Connection* m_connection;
+    struct MHD_Connection*             m_connection;
 };
