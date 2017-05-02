@@ -19,17 +19,36 @@ GET /servers/:name
 Status: 200 OK
 
 {
-    "name": "db-serv-1",
-    "address": "192.168.121.58",
-    "port": 3306,
-    "protocol": "MySQLBackend",
-    "status": [
-        "master",
-        "running"
-    ],
+    "name": "server1",
     "parameters": {
-        "report_weight": 10,
-        "app_weight": 2
+        "address": "127.0.0.1",
+        "port": 3000,
+        "protocol": "MySQLBackend",
+        "monitoruser": "maxuser",
+        "monitorpw": "maxpwd"
+    },
+    "status": "Master, Running",
+    "version": "10.1.22-MariaDB",
+    "node_id": 3000,
+    "master_id": -1,
+    "replication_depth": 0,
+    "slaves": [
+        3001
+    ],
+    "statictics": {
+        "connections": 0,
+        "total_connections": 0,
+        "active_operations": 0
+    },
+    "relationships": {
+        "self": "http://localhost:8989/servers/server1",
+        "services": [
+            "http://localhost:8989/services/RW-Split-Router",
+            "http://localhost:8989/services/Read-Connection-Router"
+        ],
+        "monitors": [
+            "http://localhost:8989/monitors/MySQL-Monitor"
+        ]
     }
 }
 ```
@@ -39,7 +58,7 @@ Status: 200 OK
 
 #### Supported Request Parameter
 
-- `fields`
+- `pretty`
 
 ### Get all servers
 
@@ -54,30 +73,65 @@ Status: 200 OK
 
 [
     {
-        "name": "db-serv-1",
-        "address": "192.168.121.58",
-        "port": 3306,
-        "protocol": "MySQLBackend",
-        "status": [
-            "master",
-            "running"
-        ],
+        "name": "server1",
         "parameters": {
-            "report_weight": 10,
-            "app_weight": 2
+            "address": "127.0.0.1",
+            "port": 3000,
+            "protocol": "MySQLBackend",
+            "monitoruser": "maxuser",
+            "monitorpw": "maxpwd"
+        },
+        "status": "Master, Running",
+        "version": "10.1.22-MariaDB",
+        "node_id": 3000,
+        "master_id": -1,
+        "replication_depth": 0,
+        "slaves": [
+            3001
+        ],
+        "statictics": {
+            "connections": 0,
+            "total_connections": 0,
+            "active_operations": 0
+        },
+        "relationships": {
+            "self": "http://localhost:8989/servers/server1",
+            "services": [
+                "http://localhost:8989/services/RW-Split-Router",
+                "http://localhost:8989/services/Read-Connection-Router"
+            ],
+            "monitors": [
+                "http://localhost:8989/monitors/MySQL-Monitor"
+            ]
         }
     },
     {
-        "name": "db-serv-2",
-        "address": "192.168.121.175",
-        "port": 3306,
-        "status": [
-            "slave",
-            "running"
-        ],
-        "protocol": "MySQLBackend",
+        "name": "server2",
         "parameters": {
-            "app_weight": 6
+            "address": "127.0.0.1",
+            "port": 3001,
+            "protocol": "MySQLBackend",
+            "my-weighting-parameter": "3"
+        },
+        "status": "Slave, Running",
+        "version": "10.1.22-MariaDB",
+        "node_id": 3001,
+        "master_id": 3000,
+        "replication_depth": 1,
+        "slaves": [],
+        "statictics": {
+            "connections": 0,
+            "total_connections": 0,
+            "active_operations": 0
+        },
+        "relationships": {
+            "self": "http://localhost:8989/servers/server2",
+            "services": [
+                "http://localhost:8989/services/RW-Split-Router"
+            ],
+            "monitors": [
+                "http://localhost:8989/monitors/MySQL-Monitor"
+            ]
         }
     }
 ]
@@ -85,38 +139,80 @@ Status: 200 OK
 
 #### Supported Request Parameter
 
-- `fields`
-- `range`
+- `pretty`
 
 ### Update a server
 
-**Note**: The update mechanisms described here are provisional and most likely
-  will change in the future. This description is only for design purposes and
-  does not yet work.
-
-Partially update a server. The _:name_ in the URI must map to a server name with
-all whitespace replaced with hyphens and the request body must be a valid JSON
-Patch document which is applied to the resource.
+The _:name_ in the URI must map to a server name with all whitespace replaced
+with hyphens and the request body must be a valid JSON document representing the
+modified server. If the server in question is not found, a 404 Not Found
+response is returned.
 
 ```
-PATCH /servers/:name
+PUT /servers/:name
 ```
 
 ### Modifiable Fields
 
-|Field      |Type        |Description                                                                  |
-|-----------|------------|-----------------------------------------------------------------------------|
-|address    |string      |Server address                                                               |
-|port       |number      |Server port                                                                  |
-|parameters |object      |Server extra parameters                                                      |
-|state      |string array|Server state, array of `master`, `slave`, `synced`, `running` or `maintenance`. An empty array is interpreted as a server that is down.|
+The following standard server parameter can be modified.
+
+- [address](../Getting-Started/Configuration-Guide.md#address)
+- [port](../Getting-Started/Configuration-Guide.md#port)
+- [monitoruser](../Getting-Started/Configuration-Guide.md#monitoruser)
+- [monitorpw](../Getting-Started/Configuration-Guide.md#monitorpw)
+
+Refer to the documentation on these parameters for valid values.
+
+The server weighting parameters can also be added, removed and updated. To
+remove a parameter, define the value of that parameter as the _null_ JSON type
+e.g.  `{ "my-param": null }`. To add a parameter, add a new key-value pair to
+the _parameters_ object with a name that does not conflict with the standard
+parameters. To modify a weighting parameter, simply change the value.
+
+In addition to standard parameters, the _services_ and _monitors_ fields of the
+_relationships_ object can be modified. Removal, addition and modification of
+the links will change which service and monitors use this server.
+
+For example, removing the first value in the _services_ list in the
+_relationships_ object from the following JSON document will remove the
+_server1_ from the service _RW-Split-Router_.
+
+Removing a service from a server is analogous to removing the server from the
+service. Both unlink the two objects from each other.
 
 ```
 {
-    { "op": "replace", "path": "/address", "value": "192.168.0.100" },
-    { "op": "replace", "path": "/port", "value": 4006 },
-    { "op": "add", "path": "/state/0", "value": "maintenance" },
-    { "op": "replace", "path": "/parameters/report_weight", "value": 1 }
+    "name": "server1",
+    "parameters": {
+        "address": "127.0.0.1",
+        "port": 3000,
+        "protocol": "MySQLBackend",
+        "monitoruser": "maxuser",
+        "monitorpw": "maxpwd"
+    },
+    "status": "Master, Running",
+    "version": "10.1.22-MariaDB",
+    "node_id": 3000,
+    "master_id": -1,
+    "replication_depth": 0,
+    "slaves": [
+        3001
+    ],
+    "statictics": {
+        "connections": 0,
+        "total_connections": 0,
+        "active_operations": 0
+    },
+    "relationships": {
+        "self": "http://localhost:8989/servers/server1",
+        "services": [
+            "http://localhost:8989/services/RW-Split-Router", // This value is removed
+            "http://localhost:8989/services/Read-Connection-Router"
+        ],
+        "monitors": [
+            "http://localhost:8989/monitors/MySQL-Monitor"
+        ]
+    }
 }
 ```
 
@@ -128,20 +224,44 @@ Response contains the modified resource.
 Status: 200 OK
 
 {
-    "name": "db-serv-1",
-    "protocol": "MySQLBackend",
-    "address": "192.168.0.100",
-    "port": 4006,
-    "state": [
-        "maintenance",
-        "running"
-    ],
+    "name": "server1",
     "parameters": {
-        "report_weight": 1,
-        "app_weight": 2
+        "address": "127.0.0.1",
+        "port": 3000,
+        "protocol": "MySQLBackend",
+        "monitoruser": "maxuser",
+        "monitorpw": "maxpwd"
+    },
+    "status": "Master, Running",
+    "version": "10.1.22-MariaDB",
+    "node_id": 3000,
+    "master_id": -1,
+    "replication_depth": 0,
+    "slaves": [
+        3001
+    ],
+    "statictics": {
+        "connections": 0,
+        "total_connections": 0,
+        "active_operations": 0
+    },
+    "relationships": {
+        "self": "http://localhost:8989/servers/server1",
+        "services": [
+            "http://localhost:8989/services/Read-Connection-Router"
+        ],
+        "monitors": [
+            "http://localhost:8989/monitors/MySQL-Monitor"
+        ]
     }
 }
 ```
+
+#### Supported Request Parameter
+
+- `pretty`
+
+# **TODO:** Implement the following features
 
 ### Get all connections to a server
 

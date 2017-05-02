@@ -536,7 +536,7 @@ interfaces.
 #### `admin_port`
 
 The port where the HTTP admin interface listens on. The default value is port
-8080.
+8989.
 
 #### `admin_auth`
 
