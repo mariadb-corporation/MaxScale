@@ -1404,6 +1404,16 @@ json_t* server_to_json(const SERVER* server, const char* host)
     json_object_set_new(params, CN_PORT, json_integer(server->port));
     json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
 
+    if (*server->monuser)
+    {
+        json_object_set_new(params, CN_MONITORUSER, json_string(server->monuser));
+    }
+
+    if (*server->monpw)
+    {
+        json_object_set_new(params, CN_MONITORPW, json_string(server->monpw));
+    }
+
     for (SERVER_PARAM* p = server->parameters; p; p = p->next)
     {
         json_object_set_new(params, p->name, json_string(p->value));
