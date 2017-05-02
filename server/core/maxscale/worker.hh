@@ -387,6 +387,31 @@ public:
     bool post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
     /**
+     * Add a session to the sessions hashmap
+     *
+     * @param id Session id, must be unique
+     * @param session The session to add
+     * @return true if successful
+     */
+    bool add_to_session_map(SessionsById::key_type id, SessionsById::mapped_type session);
+
+    /**
+     * Remove a session from the sessions hashmap
+     *
+     * @param id Session id
+     * @return The removed session, or NULL if not found
+     */
+    SessionsById::mapped_type remove_from_session_map(SessionsById::key_type id);
+
+    /**
+     * Find a session in the sessions hashmap
+     *
+     * @param id Session id
+     * @return The found session, or NULL if not found
+     */
+    SessionsById::mapped_type find_in_session_map(SessionsById::key_type id);
+
+    /**
      * Broadcast a message to all worker.
      *
      * @param msg_id  The message id.

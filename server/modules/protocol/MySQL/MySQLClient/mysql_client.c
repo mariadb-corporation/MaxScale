@@ -12,40 +12,6 @@
  * Public License.
  */
 
-/**
- * @file mysql_client.c
- *
- * MySQL Protocol module for handling the protocol between the gateway
- * and the client.
- *
- * Revision History
- * Date         Who                     Description
- * 14/06/2013   Mark Riddoch            Initial version
- * 17/06/2013   Massimiliano Pinto      Added Client To MaxScale routines
- * 24/06/2013   Massimiliano Pinto      Added: fetch passwords from service users' hashtable
- * 02/09/2013   Massimiliano Pinto      Added: session refcount
- * 16/12/2013   Massimiliano Pinto      Added: client closed socket detection with recv(..., MSG_PEEK)
- * 24/02/2014   Massimiliano Pinto      Added: on failed authentication a new users' table is loaded
- *                                      with time and frequency limitations
- *                                      If current user is authenticated the new users' table will
- *                                      replace the old one
- * 28/02/2014   Massimiliano Pinto      Added: client IPv4 in dcb->ipv4 and inet_ntop for string
- *                                      representation
- * 11/03/2014   Massimiliano Pinto      Added: Unix socket support
- * 07/05/2014   Massimiliano Pinto      Added: specific version string in server handshake
- * 09/09/2014   Massimiliano Pinto      Added: 777 permission for socket path
- * 13/10/2014   Massimiliano Pinto      Added: dbname authentication check
- * 10/11/2014   Massimiliano Pinto      Added: client charset added to protocol struct
- * 29/05/2015   Markus Makela           Added SSL support
- * 11/06/2015   Martin Brampton         COM_QUIT suppressed for persistent connections
- * 04/09/2015   Martin Brampton         Introduce DUMMY session to fulfill guarantee DCB always has session
- * 09/09/2015   Martin Brampton         Modify error handler calls
- * 11/01/2016   Martin Brampton         Remove SSL write code, now handled at lower level;
- *                                      replace gwbuf_consume by gwbuf_free (multiple).
- * 07/02/2016   Martin Brampton         Split off authentication and SSL.
- * 31/05/2016   Martin Brampton         Implement connection throttling
- */
-
 #define MXS_MODULE_NAME "MySQLClient"
 
 #include <maxscale/protocol.h>
@@ -61,6 +27,7 @@
 #include <maxscale/query_classifier.h>
 #include <maxscale/authenticator.h>
 #include <maxscale/session.h>
+#include <maxscale/worker.h>
 
 static int process_init(void);
 static void process_finish(void);
@@ -85,11 +52,11 @@ static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint64_t capabilities);
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 static void gw_process_one_new_client(DCB *client_dcb);
+static bool process_special_commands(DCB* client_dcb, GWBUF *read_buffer, int nbytes_read);
 
 /*
  * The "module object" for the mysqld client protocol module.
  */
-
 
 /**
  * The module entry point routine. It is this routine that
@@ -709,6 +676,8 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
+            ss_debug(bool check =) mxs_add_to_session_map(session->ses_id, session);
+            ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
         }
         else
@@ -933,33 +902,14 @@ gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
         if (nbytes_read < 3 || nbytes_read <
             (MYSQL_GET_PAYLOAD_LEN((uint8_t *) GWBUF_DATA(read_buffer)) + 4))
         {
-
             dcb->dcb_readqueue = read_buffer;
-
             return 0;
         }
     }
 
-    /**
-     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
-     *
-     * The option is stored as a two byte integer with the values 0 for enabling
-     * multi-statements and 1 for disabling it.
-     */
-    MySQLProtocol *proto = dcb->protocol;
-    uint8_t opt;
-
-    if (proto->current_command == MYSQL_COM_SET_OPTION &&
-        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
+    if (!process_special_commands(dcb, read_buffer, nbytes_read))
     {
-        if (opt)
-        {
-            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
-        else
-        {
-            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
-        }
+        return 0;
     }
 
     return gw_read_finish_processing(dcb, read_buffer, capabilities);
@@ -1307,7 +1257,10 @@ static int gw_client_close(DCB *dcb)
     CHK_DCB(dcb);
     ss_dassert(dcb->protocol);
     mysql_protocol_done(dcb);
-    session_close(dcb->session);
+    MXS_SESSION* target = dcb->session;
+    ss_debug(MXS_SESSION* removed =) mxs_remove_from_session_map(target->ses_id);
+    ss_dassert(removed == target);
+    session_close(target);
     return 1;
 }
 
@@ -1524,5 +1477,70 @@ static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_rea
         }
     }
 
+    return true;
+}
+
+/**
+ * Some SQL commands/queries need to be detected and handled by the protocol
+ * and MaxScale instead of being routed forward as is.
+ * @param dcb Client dcb
+ * @param read_buffer the current read buffer
+ * @param nbytes_read How many bytes were read
+ * @return true if read buffer should be sent forward to routing, false if more
+ * data is required or processing is complete
+ */
+static bool process_special_commands(DCB* dcb, GWBUF *read_buffer, int nbytes_read)
+{
+    /**
+     * Handle COM_SET_OPTION. This seems to be only used by some versions of PHP.
+     *
+     * The option is stored as a two byte integer with the values 0 for enabling
+     * multi-statements and 1 for disabling it.
+     */
+    MySQLProtocol *proto = dcb->protocol;
+    uint8_t opt;
+
+    if (proto->current_command == MYSQL_COM_SET_OPTION &&
+        gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 2, 1, &opt))
+    {
+        if (opt)
+        {
+            proto->client_capabilities &= ~GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+        else
+        {
+            proto->client_capabilities |= GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS;
+        }
+    }
+    /**
+     * Handle COM_PROCESS_KILL
+     */
+    else if((proto->current_command == MYSQL_COM_PROCESS_KILL))
+    {
+        /* Make sure we have a complete SQL packet before trying to read the
+         * process id. If not, try again next time. */
+        unsigned int expected_len =
+          MYSQL_GET_PAYLOAD_LEN((uint8_t *)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
+        if (gwbuf_length(read_buffer) < expected_len)
+        {
+            dcb->dcb_readqueue = read_buffer;
+            return false;
+        }
+        else
+        {
+            uint8_t bytes[4];
+            if (gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, sizeof(bytes), (uint8_t*)bytes)
+                    == sizeof(bytes))
+            {
+                uint32_t process_id = gw_mysql_get_byte4(bytes);
+                // Do not send this packet for routing
+                gwbuf_free(read_buffer);
+                session_broadcast_kill_command(dcb->session, process_id);
+                // Even if id not found, send ok. TODO: send a correct response to client
+                mxs_mysql_send_ok(dcb, 1, 0, NULL);
+                return false;
+            }
+        }
+    }
     return true;
 }

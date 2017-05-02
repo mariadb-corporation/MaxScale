@@ -50,6 +50,8 @@
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
+#include "maxscale/worker.hh"
+#include "maxscale/workertask.hh"
 
 using std::string;
 
@@ -68,6 +70,41 @@ static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
                                        MXS_SESSION* session);
+
+namespace
+{
+
+class KillCmdTask : public maxscale::Worker::DisposableTask
+{
+private:
+    std::string m_issuer_username;
+    std::string m_issuer_host;
+    uint64_t m_target_id;
+
+public:
+    KillCmdTask(MXS_SESSION* issuer, uint64_t target_id)
+    {
+        DCB* issuer_dcb = issuer->client_dcb;
+        m_issuer_username.assign(issuer_dcb->user);
+        m_issuer_host.assign(issuer_dcb->remote);
+        m_target_id = target_id;
+    }
+    void execute(maxscale::Worker& worker)
+    {
+        MXS_SESSION* target = worker.find_in_session_map(m_target_id);
+        if (target)
+        {
+            DCB* target_dcb = target->client_dcb;
+            if ((strcmp(m_issuer_username.c_str(), target_dcb->user) == 0) &&
+                (strcmp(m_issuer_host.c_str(), target_dcb->remote) == 0))
+            {
+                 poll_fake_hangup_event(target_dcb);
+            }
+        }
+    }
+};
+}
+
 /**
  * The clientReply of the session.
  *
@@ -997,6 +1034,29 @@ void session_clear_stmt(MXS_SESSION *session)
 uint32_t session_get_next_id()
 {
     return atomic_add_uint32(&next_session_id, 1);
+}
+
+void session_broadcast_kill_command(MXS_SESSION* issuer, uint32_t target_id)
+{
+    /* First, check if the target id belongs to the current worker. If it does,
+     * send hangup event. Otherwise, use a worker task to send a message to all
+     * workers.
+     */
+    MXS_SESSION* target_ses = mxs_find_in_session_map(target_id);
+    if (target_ses)
+    {
+        if ((strcmp(issuer->client_dcb->user, target_ses->client_dcb->user) == 0) &&
+            (strcmp(issuer->client_dcb->remote, target_ses->client_dcb->remote) == 0))
+        {
+            poll_fake_hangup_event(target_ses->client_dcb);
+        }
+    }
+    else
+    {
+        KillCmdTask* kill_task = new KillCmdTask(issuer, target_id);
+        std::auto_ptr<maxscale::Worker::DisposableTask> sTask(kill_task);
+        maxscale::Worker::broadcast(sTask);
+    }
 }
 
 json_t* session_to_json(const MXS_SESSION *session, const char *host)

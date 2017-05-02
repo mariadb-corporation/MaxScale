@@ -712,6 +712,65 @@ size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg
     return Worker::broadcast_message(msg_id, arg1, arg2);
 }
 
+bool mxs_add_to_session_map(uint32_t id, MXS_SESSION* session)
+{
+    bool rval = false;
+    Worker* worker = Worker::get_current();
+    if (worker)
+    {
+        rval = worker->add_to_session_map(id, session);
+    }
+    return rval;
+}
+
+MXS_SESSION* mxs_remove_from_session_map(uint32_t id)
+{
+    MXS_SESSION* rval = NULL;
+    Worker* worker = Worker::get_current();
+    if (worker)
+    {
+        rval = worker->remove_from_session_map(id);
+    }
+    return rval;
+}
+
+MXS_SESSION* mxs_find_in_session_map(uint32_t id)
+{
+    MXS_SESSION* rval = NULL;
+    Worker* worker = Worker::get_current();
+    if (worker)
+    {
+        rval = worker->find_in_session_map(id);
+    }
+    return rval;
+}
+
+bool Worker::add_to_session_map(SessionsById::key_type id, SessionsById::mapped_type session)
+{
+    return m_sessions.insert(SessionsById::value_type(id, session)).second;
+}
+
+Worker::SessionsById::mapped_type Worker::remove_from_session_map(SessionsById::key_type id)
+{
+    Worker::SessionsById::mapped_type rval = find_in_session_map(id);
+    if (rval)
+    {
+        m_sessions.erase(id);
+    }
+    return rval;
+}
+
+Worker::SessionsById::mapped_type Worker::find_in_session_map(SessionsById::key_type id)
+{
+    Worker::SessionsById::mapped_type rval = NULL;
+    SessionsById::const_iterator iter = m_sessions.find(id);
+    if (iter != m_sessions.end())
+    {
+        rval = iter->second;
+    }
+    return rval;
+}
+
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;
