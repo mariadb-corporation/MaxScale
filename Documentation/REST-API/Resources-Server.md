@@ -6,12 +6,15 @@ A server resource represents a backend database server.
 
 ### Get a server
 
-Get a single server. The _:name_ in the URI must be a valid server name with all
-whitespace replaced with hyphens. The server names are case-insensitive.
-
 ```
 GET /servers/:name
 ```
+
+Get a single server. The _:name_ in the URI must be a valid server name with all
+whitespace replaced with hyphens. The server names are case-insensitive.
+
+**Note**: The _parameters_ field contains all custom parameters for
+  servers, including the server weighting parameters.
 
 #### Response
 
@@ -53,8 +56,11 @@ Status: 200 OK
 }
 ```
 
-**Note**: The _parameters_ field contains all custom parameters for
-  servers, including the server weighting parameters.
+Server not found:
+
+```
+Status: 404 Not Found
+```
 
 #### Supported Request Parameter
 
@@ -67,6 +73,8 @@ GET /servers
 ```
 
 #### Response
+
+Response contains an array of all servers.
 
 ```
 Status: 200 OK
@@ -141,16 +149,77 @@ Status: 200 OK
 
 - `pretty`
 
+### Create a server
+
+```
+POST /servers
+```
+
+Create a new server by defining the resource. The posted object must define the
+_name_ field with the name of the server and the _parameters_ field with JSON
+object containing values for the _address_ and _port_ parameters. The following
+is the minimal required JSON object for defining a new server.
+
+```
+{
+    "name": "test-server",
+    "parameters": {
+        "address": "127.0.0.1",
+        "port": 3003
+    }
+}
+```
+
+#### Response
+
+Response contains the created resource.
+
+```
+Status: 200 OK
+
+{
+    "name": "test-server",
+    "parameters": {
+        "address": "127.0.0.1",
+        "port": 3003,
+        "protocol": "MySQLBackend"
+    },
+    "status": "Running",
+    "node_id": -1,
+    "master_id": -1,
+    "replication_depth": -1,
+    "slaves": [],
+    "statictics": {
+        "connections": 0,
+        "total_connections": 0,
+        "active_operations": 0
+    },
+    "relationships": {
+        "self": "http://localhost:8989/servers/test-server"
+    }
+}
+```
+
+Invalid JSON body:
+
+```
+Status: 400 Bad Request
+```
+
+#### Supported Request Parameter
+
+- `pretty`
+
 ### Update a server
+
+```
+PUT /servers/:name
+```
 
 The _:name_ in the URI must map to a server name with all whitespace replaced
 with hyphens and the request body must be a valid JSON document representing the
 modified server. If the server in question is not found, a 404 Not Found
 response is returned.
-
-```
-PUT /servers/:name
-```
 
 ### Modifiable Fields
 
@@ -257,9 +326,53 @@ Status: 200 OK
 }
 ```
 
+Server not found:
+
+```
+Status: 404 Not Found
+```
+
+Invalid JSON body:
+
+```
+Status: 400 Bad Request
+```
+
 #### Supported Request Parameter
 
 - `pretty`
+
+### Destroy a server
+
+```
+DELETE /servers/:name
+```
+
+The _:name_ in the URI must map to a server name with all whitespace replaced
+with hyphens.
+
+A server can only be deleted if the only relations in the _relationships_ object
+is the _self_ link.
+
+#### Response
+
+OK:
+
+```
+Status: 204 No Content
+```
+
+Server not found:
+
+```
+Status: 404 Not Found
+```
+
+Server is in use:
+
+```
+Status: 400 Bad Request
+```
 
 # **TODO:** Implement the following features
 

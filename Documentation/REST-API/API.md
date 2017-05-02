@@ -435,7 +435,7 @@ objects. This closely resembles the JSON API definition of links.
 
 In the _relationships_ objects, all resources have a _self_ link that points to
 the resource itself. This allows for easier updating of resources as the reply
-URL is included in the request itself.
+URL is included in the response itself.
 
 The following lists the resources and the types of links each resource can have
 in addition to the _self_ link.
