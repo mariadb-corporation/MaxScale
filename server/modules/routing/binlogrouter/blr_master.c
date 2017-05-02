@@ -134,16 +134,14 @@ static void blr_register_getsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
 static bool blr_register_setsemisync(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
                                              GWBUF *buf);
-static void blr_register_mxw_servervars(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_set_latin1(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_cache_map(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_cache_utf8(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_cache_utf8(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_cache_slaveuuid(ROUTER_INSTANCE *router, GWBUF *buf);
 static void blr_register_cache_mariadb10(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_send_select1(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mxw_sqlmode(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mxw_charset(ROUTER_INSTANCE *router, GWBUF *buf);
+static void blr_register_send_command(ROUTER_INSTANCE *router,
+                                      const char *command,
+                                      unsigned int state);
 
 static void worker_cb_start_master(int worker_id, void* data);
 static void blr_start_master_in_main(void* data);
@@ -572,7 +570,9 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     case BLRM_MARIADB10:
         blr_register_cache_mariadb10(router, buf);
         // Skip SERVER_UUID fetch and SET slave UUID
-        blr_register_set_latin1(router, buf);
+        blr_register_send_command(router,
+                                  "SET NAMES latin1",
+                                  BLRM_LATIN1);
         break;
     case BLRM_GTIDMODE: // MySQL 5.6/7 only
         blr_register_serveruuid(router, buf);
@@ -582,29 +582,37 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         break;
     case BLRM_SUUID:    // MySQL 5.6/7 only
         blr_register_cache_slaveuuid(router, buf);
-        blr_register_set_latin1(router, buf);
+        blr_register_send_command(router,
+                                  "SET NAMES latin1",
+                                  BLRM_LATIN1);
         break;
     case BLRM_LATIN1:
         blr_register_utf8(router, buf);
         break;
     case BLRM_UTF8:
         blr_register_cache_utf8(router, buf);
-	if (router->maxwell_compat)
-	{
-            blr_register_mxw_charset(router, buf);
-	}
-        else
         {
-            blr_register_send_select1(router, buf);
+            unsigned int state = router->maxwell_compat ?
+                                 BLRM_RESULTS_CHARSET :
+                                 BLRM_SELECT1;
+            const char *command = router->maxwell_compat ?
+                                  "SET character_set_results = NULL" :
+                                  "SELECT 1";
+
+            blr_register_send_command(router, command, state);
+            break;
         }
-        break;
     case BLRM_RESULTS_CHARSET:
         gwbuf_free(buf); // Discard server reply, don't save it
-        blr_register_mxw_sqlmode(router, buf);
+        blr_register_send_command(router,
+                                  MYSQL_CONNECTOR_SQL_MODE_QUERY,
+                                  BLRM_SQL_MODE);
         break;
     case BLRM_SQL_MODE:
         gwbuf_free(buf); // Discard server reply, don't save it
-        blr_register_send_select1(router, buf);
+        blr_register_send_command(router,
+                                  "SELECT 1",
+                                  BLRM_SELECT1);
         break;
     case BLRM_SELECT1:
         blr_register_selectversion(router, buf);
@@ -622,7 +630,9 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         blr_register_cache_map(router, buf);
         if (router->maxwell_compat)
         {
-            blr_register_mxw_servervars(router, buf);
+            blr_register_send_command(router,
+                                      MYSQL_CONNECTOR_SERVER_VARS_QUERY,
+                                      BLRM_SERVER_VARS);
             break;
         }
         else
@@ -3126,15 +3136,6 @@ static void blr_register_mxw_handlelowercase(ROUTER_INSTANCE *router,
     router->master_state = BLRM_REGISTER_READY;
 }
 
-/**
- * Slave Protocol registration to Master:
- *
- * Saves previous reply from Master (Max Allowed Packet)
- *
- * @param router    Current router instance
- * @param buf       GWBUF with server reply to previous
- *                  registration command
- */
 static void blr_register_cache_map(ROUTER_INSTANCE *router,
                                              GWBUF *buf)
 {
@@ -3145,23 +3146,6 @@ static void blr_register_cache_map(ROUTER_INSTANCE *router,
     }
     router->saved_master.map = buf;
     blr_cache_response(router, "map", buf);
-}
-
-/**
- * Slave Protocol registration to Master (MaxWell compatibility):
- *
- * Sends MYSQL_CONNECTOR_SERVER_VARS_QUERY to Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF to fill with new request
- */
-static void blr_register_mxw_servervars(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    // New registration message
-    buf = blr_make_query(router->master, MYSQL_CONNECTOR_SERVER_VARS_QUERY);
-    // Set the new state
-    router->master_state = BLRM_SERVER_VARS;
-    router->master->func.write(router->master, buf);
 }
 
 /**
@@ -3182,22 +3166,6 @@ static void blr_register_cache_utf8(ROUTER_INSTANCE *router, GWBUF *buf)
     }
     router->saved_master.utf8 = buf;
     blr_cache_response(router, "utf8", buf);
-}
-
-/**
- * Slave Protocol registration to Master:
- *
- * Sends SET NAMES latin1 to Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF to fill with new request
- */
-static void blr_register_set_latin1(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    buf = blr_make_query(router->master, "SET NAMES latin1");
-    // Set the new state
-    router->master_state = BLRM_LATIN1;
-    router->master->func.write(router->master, buf);
 }
 
 /**
@@ -3239,51 +3207,23 @@ static void blr_register_cache_mariadb10(ROUTER_INSTANCE *router, GWBUF *buf)
     router->saved_master.mariadb10 = buf;
     blr_cache_response(router, "mariadb10", buf);
 }
-
 /**
- * Slave Protocol registration to Master:
+ * Slave Protocol registration to Master: generic send command
  *
- * Sends SELECT 1 to Master
+ * Sends a SQL statement to Master server
  *
- * @param router    Current router instance
- * @param buf       GWBUF to fill with new request
+ * @param router     Current router instance
+ * @param command    The SQL command to send
+ * @param state      The next registration state value
  */
-static void blr_register_send_select1(ROUTER_INSTANCE *router, GWBUF *buf)
+static void blr_register_send_command(ROUTER_INSTANCE *router,
+                                      const char *command,
+                                      unsigned int state)
 {
-    buf = blr_make_query(router->master, "SELECT 1");
-    // Set the new state
-    router->master_state = BLRM_SELECT1;
-    router->master->func.write(router->master, buf);
-}
-
-/**
- * Slave Protocol registration to Master (MaxWell compatibility):
- *
- * Sends MYSQL_CONNECTOR_SQL_MODE_QUERY to Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF to fill with new request
- */
-static void blr_register_mxw_sqlmode(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    buf = blr_make_query(router->master, MYSQL_CONNECTOR_SQL_MODE_QUERY);
-    // Set the new state
-    router->master_state = BLRM_SQL_MODE;
-    router->master->func.write(router->master, buf);
-}
-
-/**
- * Slave Protocol registration to Master (MaxWell compatibility):
- *
- * Sends SET character_set_results = NULL to Master
- *
- * @param router    Current router instance
- * @param buf       GWBUF to fill with new request
- */
-static void blr_register_mxw_charset(ROUTER_INSTANCE *router, GWBUF *buf)
-{
-    buf = blr_make_query(router->master, "SET character_set_results = NULL");
-    // Set the new state
-    router->master_state = BLRM_RESULTS_CHARSET;
+    // Create MySQL protocol packet
+    GWBUF *buf = blr_make_query(router->master, (char *)command);
+    // Set the next registration phase state
+    router->master_state = state;
+    // Send the packet
     router->master->func.write(router->master, buf);
 }
