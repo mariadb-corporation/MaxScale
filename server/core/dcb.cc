@@ -3069,7 +3069,7 @@ private:
 bool dcb_foreach(bool(*func)(DCB *dcb, void *data), void *data)
 {
     SerialDcbTask task(func, data);
-    Worker::execute_on_all_serially(&task);
+    Worker::execute_serially(task);
     return task.more();
 }
 
@@ -3104,9 +3104,8 @@ private:
 
 void dcb_foreach_parallel(bool(*func)(DCB *dcb, void *data), void **data)
 {
-    Semaphore sem;
     ParallelDcbTask task(func, data);
-    sem.wait_n(Worker::execute_on_all(&task, &sem));
+    Worker::execute_concurrently(task);
 }
 
 int dcb_get_port(const DCB *dcb)
