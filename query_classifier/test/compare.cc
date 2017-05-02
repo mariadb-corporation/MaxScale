@@ -53,6 +53,7 @@ char USAGE[] =
     "-B    arguments for the second classifier\n"
     "-s    compare single statement\n"
     "-S    strict, also require that the parse result is identical\n"
+    "-R    strict reporting, report if parse result is different\n"
     "-v 0, only return code\n"
     "   1, query and result for failed cases\n"
     "   2, all queries, and result for failed cases\n"
@@ -75,6 +76,7 @@ struct State
     bool result_printed;
     bool stop_at_error;
     bool strict;
+    bool strict_reporting;
     size_t line;
     size_t n_statements;
     size_t n_errors;
@@ -87,6 +89,7 @@ struct State
              false,            // result_printed
              true,             // stop_at_error
              false,            // strict
+             false,            // strict reporting
              0,                // line
              0,                // n_statements
              0,                // n_errors
@@ -339,7 +342,10 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
         else
         {
             ss << "INF: ";
-            success = true;
+            if (!global.strict_reporting)
+            {
+                success = true;
+            }
         }
 
         ss << static_cast<qc_parse_result_t>(rv1) << " != " << static_cast<qc_parse_result_t>(rv2);
@@ -1317,7 +1323,7 @@ int main(int argc, char* argv[])
     size_t rounds = 1;
     int v = VERBOSITY_NORMAL;
     int c;
-    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:s:S")) != -1)
+    while ((c = getopt(argc, argv, "r:d1:2:v:A:B:s:SR")) != -1)
     {
         switch (c)
         {
@@ -1355,6 +1361,10 @@ int main(int argc, char* argv[])
 
         case 'S':
             global.strict = true;
+            break;
+
+        case 'R':
+            global.strict_reporting = true;
             break;
 
         default:
