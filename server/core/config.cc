@@ -57,6 +57,9 @@ const char CN_ADMIN_HOST[]                    = "admin_host";
 const char CN_ADMIN_PASSWORD[]                = "admin_password";
 const char CN_ADMIN_PORT[]                    = "admin_port";
 const char CN_ADMIN_USER[]                    = "admin_user";
+const char CN_ADMIN_SSL_KEY[]                 = "admin_ssl_key";
+const char CN_ADMIN_SSL_CERT[]                = "admin_ssl_cert";
+const char CN_ADMIN_SSL_CA_CERT[]             = "admin_ssl_ca_cert";
 const char CN_AUTHENTICATOR[]                 = "authenticator";
 const char CN_AUTHENTICATOR_OPTIONS[]         = "authenticator_options";
 const char CN_AUTH_ALL_SERVERS[]              = "auth_all_servers";
@@ -1525,6 +1528,18 @@ handle_global_item(const char *name, const char *value)
     {
         strcpy(gateway.admin_host, value);
     }
+    else if (strcmp(name, CN_ADMIN_SSL_KEY) == 0)
+    {
+        strcpy(gateway.admin_ssl_key, value);
+    }
+    else if (strcmp(name, CN_ADMIN_SSL_CERT) == 0)
+    {
+        strcpy(gateway.admin_ssl_cert, value);
+    }
+    else if (strcmp(name, CN_ADMIN_SSL_CA_CERT) == 0)
+    {
+        strcpy(gateway.admin_ssl_ca_cert, value);
+    }
     else if (strcmp(name, CN_ADMIN_AUTH) == 0)
     {
         gateway.admin_auth = config_truth_value(value);
@@ -1754,6 +1769,9 @@ global_defaults()
     strcpy(gateway.admin_host, DEFAULT_ADMIN_HOST);
     strcpy(gateway.admin_user, INET_DEFAULT_USERNAME);
     strcpy(gateway.admin_password, INET_DEFAULT_PASSWORD);
+    gateway.admin_ssl_key[0] = '\0';
+    gateway.admin_ssl_cert[0] = '\0';
+    gateway.admin_ssl_ca_cert[0] = '\0';
 
     if (version_string != NULL)
     {

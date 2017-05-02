@@ -172,35 +172,6 @@ write or modify the data in the backend server. The default is 2 seconds.
 auth_write_timeout=10
 ```
 
-#### `admin_host`
-
-The network interface where the HTTP admin interface listens on. The default
-value is the IPv6 address `::` which listens on all available network
-interfaces.
-
-#### `admin_port`
-
-The port where the HTTP admin interface listens on. The default value is port
-8080.
-
-#### `admin_auth`
-
-Enable HTTP admin interface authentication using HTTP Basic Access
-authentication. This is not a secure method of authentication but it does add a
-small layer of security. This option id disabled by default.
-
-#### `admin_user`
-
-The HTTP admin interface username. This is the username which is used when
-_admin_auth_ is enabled. The default user for the HTTP admin interface is
-`admin`.
-
-#### `admin_password`
-
-The HTTP admin interface password. This is the which which is used when
-_admin_auth_ is enabled. The default password for the HTTP admin interface is
-`mariadb`.
-
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds
@@ -547,6 +518,60 @@ query_classifier_args=log_unrecognized_statements=1
 This will log all statements that cannot be parsed completely. This may be
 useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).
+
+### REST API Configuration
+
+The MaxScale REST API is an HTTP interface that provides JSON format data
+intended to be consumed by monitoring appllications and visualization tools.
+
+The following options must be defined under the `[maxscale]` section in the
+configuration file.
+
+#### `admin_host`
+
+The network interface where the HTTP admin interface listens on. The default
+value is the IPv6 address `::` which listens on all available network
+interfaces.
+
+#### `admin_port`
+
+The port where the HTTP admin interface listens on. The default value is port
+8080.
+
+#### `admin_auth`
+
+Enable HTTP admin interface authentication using HTTP Basic Access
+authentication. This is not a secure method of authentication but it does add a
+small layer of security. This option id disabled by default.
+
+#### `admin_user`
+
+The HTTP admin interface username. This is the username which is used when
+_admin_auth_ is enabled. The default user for the HTTP admin interface is
+`admin`.
+
+#### `admin_password`
+
+The HTTP admin interface password. This is the which which is used when
+_admin_auth_ is enabled. The default password for the HTTP admin interface is
+`mariadb`.
+
+#### `admin_ssl_key`
+
+The path to the TLS private key in PEM format for the admin interface.
+
+If the `admin_ssl_key`, `admin_ssl_cert` and `admin_ssl_ca_cert` options are all
+defined, the admin interface will use encrypted HTTPS instead of plain HTTP.
+
+#### `admin_ssl_cert`
+
+The path to the TLS public certificate in PEM format. See `admin_ssl_key`
+documentation for more details.
+
+#### `admin_ssl_ca_cert`
+
+The path to the TLS CA certificate in PEM format. See `admin_ssl_key`
+documentation for more details.
 
 ### Service
 

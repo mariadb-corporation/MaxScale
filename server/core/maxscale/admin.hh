@@ -68,3 +68,10 @@ bool mxs_admin_init();
  * @brief Shutdown the administrative interface
  */
 void mxs_admin_shutdown();
+
+/**
+ * @brief Check if admin interface uses HTTPS protocol
+ *
+ * @return True if HTTPS is enabled
+ */
+bool mxs_admin_https_enabled();

@@ -12,6 +12,7 @@
  */
 
 #include "maxscale/httprequest.hh"
+#include "maxscale/admin.hh"
 
 #include <ctype.h>
 #include <string.h>
@@ -98,8 +99,8 @@ HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string m
     m_connection(connection)
 {
     process_uri(url, m_resource_parts);
-    // TODO: Add https support
-    m_hostname = HttpRequest::HTTP_PREFIX;
+
+    m_hostname = mxs_admin_https_enabled() ? HttpRequest::HTTPS_PREFIX : HttpRequest::HTTP_PREFIX;
     m_hostname += get_header(HTTP_HOST_HEADER);
 }
 

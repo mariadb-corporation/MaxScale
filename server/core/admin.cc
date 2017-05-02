@@ -18,7 +18,9 @@
 
 #include <climits>
 #include <new>
+#include <fstream>
 #include <microhttpd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -29,13 +31,22 @@
 #include <maxscale/utils.h>
 #include <maxscale/config.h>
 #include <maxscale/hk_heartbeat.h>
+#include <sys/stat.h>
 
 #include "maxscale/resource.hh"
 #include "maxscale/http.hh"
 
 using std::string;
+using std::ifstream;
 
 static struct MHD_Daemon* http_daemon = NULL;
+
+/** In-memory certificates in PEM format */
+static char* admin_ssl_key     = NULL;
+static char* admin_ssl_cert    = NULL;
+static char* admin_ssl_ca_cert = NULL;
+
+static bool  using_ssl = false;
 
 int kv_iter(void *cls,
             enum MHD_ValueKind kind,
@@ -221,6 +232,58 @@ static bool host_to_sockaddr(const char* host, uint16_t port, struct sockaddr_st
     return true;
 }
 
+static char* load_cert(const char* file)
+{
+    char* rval = NULL;
+    ifstream infile(file);
+    struct stat st;
+
+    if (stat(file, &st) == 0 &&
+        (rval = new (std::nothrow) char[st.st_size + 1]))
+    {
+        infile.read(rval, st.st_size);
+        rval[st.st_size] = '\0';
+
+        if (!infile.good())
+        {
+            MXS_ERROR("Failed to load certificate file: %s", file);
+            delete rval;
+            rval = NULL;
+        }
+    }
+
+    return rval;
+}
+
+static bool load_ssl_certificates()
+{
+    bool rval = false;
+    const char* key = config_get_global_options()->admin_ssl_key;
+    const char* cert = config_get_global_options()->admin_ssl_cert;
+    const char* ca = config_get_global_options()->admin_ssl_ca_cert;
+
+    if (*key && *cert && *ca)
+    {
+        if ((admin_ssl_key = load_cert(key)) &&
+            (admin_ssl_cert = load_cert(cert)) &&
+            (admin_ssl_ca_cert = load_cert(ca)))
+        {
+            rval = true;
+        }
+        else
+        {
+            delete admin_ssl_key;
+            delete admin_ssl_cert;
+            delete admin_ssl_ca_cert;
+            admin_ssl_key = NULL;
+            admin_ssl_cert = NULL;
+            admin_ssl_ca_cert = NULL;
+        }
+    }
+
+    return rval;
+}
+
 bool mxs_admin_init()
 {
     struct sockaddr_storage addr;
@@ -236,10 +299,20 @@ bool mxs_admin_init()
             options |= MHD_USE_DUAL_STACK;
         }
 
+        if (load_ssl_certificates())
+        {
+            using_ssl = true;
+            options |= MHD_USE_SSL;
+        }
+
         // The port argument is ignored and the port in the struct sockaddr is used instead
-        http_daemon = MHD_start_daemon(options, 0,  NULL, NULL, handle_client, NULL,
+        http_daemon = MHD_start_daemon(options, 0, NULL, NULL, handle_client, NULL,
                                        MHD_OPTION_NOTIFY_COMPLETED, close_client, NULL,
                                        MHD_OPTION_SOCK_ADDR, &addr,
+                                       !using_ssl ? MHD_OPTION_END :
+                                       MHD_OPTION_HTTPS_MEM_KEY, admin_ssl_key,
+                                       MHD_OPTION_HTTPS_MEM_CERT, admin_ssl_cert,
+                                       MHD_OPTION_HTTPS_MEM_TRUST, admin_ssl_cert,
                                        MHD_OPTION_END);
     }
 
@@ -249,4 +322,9 @@ bool mxs_admin_init()
 void mxs_admin_shutdown()
 {
     MHD_stop_daemon(http_daemon);
+}
+
+bool mxs_admin_https_enabled()
+{
+    return using_ssl;
 }

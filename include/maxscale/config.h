@@ -48,6 +48,9 @@ extern const char CN_ADMIN_HOST[];
 extern const char CN_ADMIN_PASSWORD[];
 extern const char CN_ADMIN_PORT[];
 extern const char CN_ADMIN_USER[];
+extern const char CN_ADMIN_SSL_KEY[];
+extern const char CN_ADMIN_SSL_CERT[];
+extern const char CN_ADMIN_SSL_CA_CERT[];
 extern const char CN_AUTHENTICATOR[];
 extern const char CN_AUTHENTICATOR_OPTIONS[];
 extern const char CN_AUTH_ALL_SERVERS[];
@@ -162,6 +165,9 @@ typedef struct
     char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
     uint16_t      admin_port;                          /**< Admin interface port */
     bool          admin_auth;                          /**< Admin interface authentication */
+    char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
+    char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
+    char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
 } MXS_CONFIG;
 
 /**
