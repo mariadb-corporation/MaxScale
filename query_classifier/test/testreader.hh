@@ -76,7 +76,7 @@ private:
 private:
     std::istream& m_in;        /*< The stream we are using. */
     size_t        m_line;      /*< The current line. */
-    char          m_delimiter; /*< The current delimiter. */
+    std::string   m_delimiter; /*< The current delimiter. */
 };
 
 };

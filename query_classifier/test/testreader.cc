@@ -193,7 +193,7 @@ TestReader::TestReader(istream& in,
                        size_t   line)
     : m_in(in)
     , m_line(line)
-    , m_delimiter(';')
+    , m_delimiter(";")
 {
     init();
 }
@@ -244,7 +244,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     trim(line);
                     if (line.length() > 0)
                     {
-                        m_delimiter = line.at(0);
+                        m_delimiter = line;
                     }
                     continue;
 
@@ -268,15 +268,20 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
             stmt += line;
 
-            char c = line.at(line.length() - 1);
+            string c;
+
+            if (line.length() >= m_delimiter.length())
+            {
+                c = line.substr(line.length() - m_delimiter.length());
+            }
 
             if (c == m_delimiter)
             {
-                if (c != ';')
+                if (c != ";")
                 {
                     // If the delimiter was something else but ';' we need to
                     // remove that before giving the line to the classifiers.
-                    stmt.erase(stmt.length() - 1);
+                    stmt.erase(stmt.length() - m_delimiter.length());
                 }
 
                 if (!skip)
