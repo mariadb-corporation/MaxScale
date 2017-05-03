@@ -1,3 +1,5 @@
+// These tests use the server/test/maxscale_test.cnf configuration
+
 require("../utils.js")()
 
 describe("Resource Collections", function(){
@@ -28,6 +30,7 @@ describe("Individual Resources", function(){
     var tests = [
         "/servers/server1",
         "/servers/server2",
+        "/services/RW-Split-Router",
         "/sessions/1",
     ]
 

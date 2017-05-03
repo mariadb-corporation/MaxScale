@@ -2446,16 +2446,25 @@ json_t* service_parameters_to_json(const SERVICE* service)
     return rval;
 }
 
-json_t* service_to_json(const SERVICE* service, const char* host)
+static inline bool have_active_servers(const SERVICE* service)
 {
-    spinlock_acquire(&service->spin);
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    {
+        if (SERVER_REF_IS_ACTIVE(ref))
+        {
+            return true;
+        }
+    }
 
-    json_t* rval = json_object();
+    return false;
+}
 
-    /** General service information */
-    json_object_set_new(rval, CN_NAME, json_string(service->name));
-    json_object_set_new(rval, CN_ROUTER, json_string(service->routerModule));
-    json_object_set_new(rval, CN_STATE, json_string(service_state_to_string(service->state)));
+json_t* service_attributes(const SERVICE* service)
+{
+    json_t* attr = json_object();
+
+    json_object_set_new(attr, CN_ROUTER, json_string(service->routerModule));
+    json_object_set_new(attr, CN_STATE, json_string(service_state_to_string(service->state)));
 
     if (service->router && service->router_instance)
     {
@@ -2463,7 +2472,7 @@ json_t* service_to_json(const SERVICE* service, const char* host)
 
         if (diag)
         {
-            json_object_set_new(rval, "router_diagnostics", diag);
+            json_object_set_new(attr, "router_diagnostics", diag);
         }
     }
 
@@ -2473,12 +2482,12 @@ json_t* service_to_json(const SERVICE* service, const char* host)
     asctime_r(localtime_r(&service->stats.started, &result), timebuf);
     trim(timebuf);
 
-    json_object_set_new(rval, "started", json_string(timebuf));
-    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
-    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+    json_object_set_new(attr, "started", json_string(timebuf));
+    json_object_set_new(attr, "total_connections", json_integer(service->stats.n_sessions));
+    json_object_set_new(attr, "connections", json_integer(service->stats.n_current));
 
     /** Add service parameters */
-    json_object_set_new(rval, CN_PARAMETERS, service_parameters_to_json(service));
+    json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
 
     /** Add listeners */
     json_t* arr = json_array();
@@ -2491,76 +2500,76 @@ json_t* service_to_json(const SERVICE* service, const char* host)
         }
     }
 
-    json_object_set_new(rval, CN_LISTENERS, arr);
+    json_object_set_new(attr, CN_LISTENERS, arr);
 
+    return attr;
+}
+
+json_t* service_relationships(const SERVICE* service, const char* host)
+{
     /** Store relationships to other objects */
     json_t* rel = json_object();
 
-    string self = host;
-    self += "/services/";
-    self += service->name;
-    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
-
     if (service->n_filters)
     {
-        json_t* arr = json_array();
+        json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
         for (int i = 0; i < service->n_filters; i++)
         {
-            string filter = host;
-            filter += "/filters/";
-            filter += service->filters[i]->name;
-            json_array_append_new(arr, json_string(filter.c_str()));
+            mxs_json_add_relation(filters, service->filters[i]->name, CN_FILTERS);
         }
 
-        json_object_set_new(rel, "filters", arr);
+        json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    bool active_servers = false;
-
-    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    if (have_active_servers(service))
     {
-        if (SERVER_REF_IS_ACTIVE(ref))
-        {
-            active_servers = true;
-            break;
-        }
-    }
-
-    if (active_servers)
-    {
-        json_t* arr = json_array();
+        json_t* servers = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
 
         for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
         {
             if (SERVER_REF_IS_ACTIVE(ref))
             {
-                string s = host;
-                s += "/servers/";
-                s += ref->server->unique_name;
-                json_array_append_new(arr, json_string(s.c_str()));
+                mxs_json_add_relation(servers, ref->server->unique_name, CN_SERVERS);
             }
         }
 
-        json_object_set_new(rel, CN_SERVERS, arr);
+        json_object_set_new(rel, CN_SERVERS, servers);
     }
 
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    return rel;
+}
+
+json_t* service_json_data(const SERVICE* service, const char* host)
+{
+    json_t* rval = json_object();
+
+    spinlock_acquire(&service->spin);
+
+    json_object_set_new(rval, CN_ID, json_string(service->name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_SERVICES));
+    json_object_set_new(rval, CN_ATTRIBUTES, service_attributes(service));
+    json_object_set_new(rval, CN_RELATIONSHIPS, service_relationships(service, host));
 
     spinlock_release(&service->spin);
 
     return rval;
 }
 
+json_t* service_to_json(const SERVICE* service, const char* host)
+{
+    return mxs_json_resource(host, MXS_JSON_API_SERVICES, service_json_data(service, host));
+}
+
 json_t* service_list_to_json(const char* host)
 {
-    json_t* rval = json_array();
+    json_t* arr = json_array();
 
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
     {
-        json_t* svc = service_to_json(service, host);
+        json_t* svc = service_json_data(service, host);
 
         if (svc)
         {
