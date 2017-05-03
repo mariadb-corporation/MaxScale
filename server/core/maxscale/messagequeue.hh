@@ -117,6 +117,21 @@ public:
     typedef MessageQueueMessage Message;
 
     /**
+     * Initializes the message queue mechanism. To be called once at
+     * process startup.
+     *
+     * @return True if the initialization succeeded, false otherwise.
+     */
+    static bool init();
+
+
+    /**
+     * Finalizes the message queue mechanism. To be called once at
+     * process shutdown, if the initialization succeeded.
+     */
+    static void finish();
+
+    /**
      * Creates a @c MessageQueue with the provided handler.
      *
      * @param pHandler  The handler that will receive the messages sent over the

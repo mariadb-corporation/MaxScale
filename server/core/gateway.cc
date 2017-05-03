@@ -51,6 +51,7 @@
 #include "maxscale/config.h"
 #include "maxscale/dcb.h"
 #include "maxscale/maxscale.h"
+#include "maxscale/messagequeue.hh"
 #include "maxscale/modules.h"
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
@@ -58,7 +59,7 @@
 #include "maxscale/statistics.h"
 #include "maxscale/worker.hh"
 
-using maxscale::Worker;
+using namespace maxscale;
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -1890,6 +1891,13 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    if (!MessageQueue::init())
+    {
+        MXS_ERROR("Failed to initialize message queue.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     if (!Worker::init())
     {
         MXS_ERROR("Failed to initialize workers.");
@@ -2007,6 +2015,7 @@ int main(int argc, char **argv)
     }
 
     Worker::finish();
+    MessageQueue::finish();
 
     /*<
      * Destroy the router and filter instances of all services.
