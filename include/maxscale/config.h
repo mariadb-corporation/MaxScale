@@ -102,6 +102,7 @@ extern const char CN_SERVERS[];
 extern const char CN_SERVER[];
 extern const char CN_SERVICES[];
 extern const char CN_SERVICE[];
+extern const char CN_SESSIONS[];
 extern const char CN_SKIP_PERMISSION_CHECKS[];
 extern const char CN_SOCKET[];
 extern const char CN_STATE[];

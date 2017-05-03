@@ -48,6 +48,7 @@
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
 #include <maxscale/jansson.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -2563,40 +2564,18 @@ json_t* service_list_to_json(const char* host)
 
         if (svc)
         {
-            json_array_append_new(rval, svc);
+            json_array_append_new(arr, svc);
         }
     }
 
     spinlock_release(&service_spin);
 
-    return rval;
-}
-
-static void add_service_relation(json_t* arr, const SERVICE* service)
-{
-    json_t* obj = json_object();
-    json_object_set_new(obj, CN_ID, json_string(service->name));
-    json_object_set_new(obj, CN_TYPE, json_string(CN_SERVICES));
-    json_array_append_new(arr, obj);
-}
-
-static json_t* service_self_link(const char* host)
-{
-    json_t* rel_links = json_object();
-
-    string links = host;
-    links += "/services/";
-    json_object_set_new(rel_links, CN_SELF, json_string(links.c_str()));
-
-    return rel_links;
+    return mxs_json_resource(host, MXS_JSON_API_SERVICES, arr);
 }
 
 json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
 {
-    json_t* rel = json_object();
-    json_t* rel_data = json_array();
-
-    json_object_set_new(rel, CN_LINKS, service_self_link(host));
+    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
 
     spinlock_acquire(&service_spin);
 
@@ -2608,7 +2587,7 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
         {
             if (service->filters[i] == filter)
             {
-                add_service_relation(rel_data, service);
+                mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }
         }
 
@@ -2617,18 +2596,13 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
 
     spinlock_release(&service_spin);
 
-    json_object_set_new(rel, CN_DATA, rel_data);
-
     return rel;
 }
 
 
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* rel = json_object();
-    json_t* rel_data = json_array();
-
-    json_object_set_new(rel, CN_LINKS, service_self_link(host));
+    json_t* rel = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
 
     spinlock_acquire(&service_spin);
 
@@ -2640,7 +2614,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         {
             if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
-                add_service_relation(rel_data, service);
+                mxs_json_add_relation(rel, service->name, CN_SERVICES);
             }
         }
 
@@ -2648,8 +2622,6 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
     }
 
     spinlock_release(&service_spin);
-
-    json_object_set_new(rel, CN_DATA, rel_data);
 
     return rel;
 }

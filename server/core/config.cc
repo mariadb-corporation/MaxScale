@@ -110,6 +110,7 @@ const char CN_SERVERS[]                       = "servers";
 const char CN_SERVER[]                        = "server";
 const char CN_SERVICES[]                      = "services";
 const char CN_SERVICE[]                       = "service";
+const char CN_SESSIONS[]                      = "sessions";
 const char CN_SKIP_PERMISSION_CHECKS[]        = "skip_permission_checks";
 const char CN_SOCKET[]                        = "socket";
 const char CN_STATE[]                         = "state";

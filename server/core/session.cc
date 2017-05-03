@@ -48,6 +48,7 @@
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
@@ -1081,66 +1082,35 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
 {
     json_t* data = json_object();
 
+    /** ID must be a string */
     stringstream ss;
     ss << session->ses_id;
 
     /** ID and type */
-    json_object_set_new(data, "id", json_string(ss.str().c_str()));
-    json_object_set_new(data, "type", json_string("sessions"));
+    json_object_set_new(data, CN_ID, json_string(ss.str().c_str()));
+    json_object_set_new(data, CN_TYPE, json_string(CN_SESSIONS));
 
     /** Relationships */
     json_t* rel = json_object();
 
     /** Service relationship (one-to-one) */
-    string svc = host;
-    svc += "/services/";
-
-    json_t* services = json_object();
-
-    /** Service self link */
-    json_t* services_links = json_object();
-    json_object_set_new(services_links, "self", json_string(svc.c_str()));
-
-    /** Only one value for data, the service where this session belongs to */
-    json_t* services_data_value = json_object();
-    json_object_set_new(services_data_value, "id", json_string(session->service->name));
-    json_object_set_new(services_data_value, "type", json_string("services"));
-
-    json_object_set_new(services, "links", services_links);
-    json_object_set_new(services, "data", services_data_value);
-    json_object_set_new(rel, "services", services);
+    json_t* services = mxs_json_relationship(host, MXS_JSON_API_SERVICES);
+    mxs_json_add_relation(services, session->service->name, CN_SERVICES);
+    json_object_set_new(rel, CN_SERVICES, services);
 
     /** Filter relationships (one-to-many) */
     if (session->n_filters)
     {
-        json_t* filters = json_object();
-
-        /** Filter self link */
-        string fil = host;
-        fil += "/filters/";
-        json_t* filters_links = json_object();
-        json_object_set_new(filters_links, "self", json_string(fil.c_str()));
-
-        /** Array of data values */
-        json_t* filters_data_array = json_array();
+        json_t* filters = mxs_json_relationship(host, MXS_JSON_API_FILTERS);
 
         for (int i = 0; i < session->n_filters; i++)
         {
-            /** Each value is a reference to a filter */
-            json_t* filters_data_value = json_object();
-
-            json_object_set_new(filters_data_value, "id", json_string(session->filters[i].filter->name));
-            json_object_set_new(filters_data_value, "type", json_string("filters"));
-
-            json_array_append_new(filters_data_array, filters_data_value);
+            mxs_json_add_relation(filters, session->filters[i].filter->name, CN_FILTERS);
         }
-
-        json_object_set_new(filters, "data", filters_data_array);
-        json_object_set_new(filters, "links", filters_links);
-        json_object_set_new(rel, "filters", filters);
+        json_object_set_new(rel, CN_FILTERS, filters);
     }
 
-    json_object_set_new(data, "relationships", rel);
+    json_object_set_new(data, CN_RELATIONSHIPS, rel);
 
     /** Session attributes */
     json_t* attr = json_object();
@@ -1178,19 +1148,7 @@ json_t* session_json_data(const MXS_SESSION *session, const char *host)
 
 json_t* session_to_json(const MXS_SESSION *session, const char *host)
 {
-    json_t* rval = json_object();
-
-    /** Create the top level self link */
-    stringstream self;
-    self << host << "/sessions/" << session->ses_id;
-    json_t* links_self = json_object();
-    json_object_set_new(links_self, "self", json_string(self.str().c_str()));
-    json_object_set_new(rval, "links", links_self);
-
-    /** Only one value */
-    json_object_set_new(rval, "data", session_json_data(session, host));
-
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_SESSIONS, session_json_data(session, host));
 }
 
 struct SessionListData
@@ -1210,17 +1168,5 @@ json_t* session_list_to_json(const char* host)
 {
     SessionListData data = {json_array(), host};
     dcb_foreach(seslist_cb, &data);
-    json_t* rval = json_object();
-
-    /** Create the top level self link */
-    stringstream self;
-    self << host << "/sessions/";
-    json_t* links_self = json_object();
-    json_object_set_new(links_self, "self", json_string(self.str().c_str()));
-    json_object_set_new(rval, "links", links_self);
-
-    /** Array of session values */
-    json_object_set_new(rval, "data", data.json);
-
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_SESSIONS, data.json);
 }

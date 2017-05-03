@@ -36,6 +36,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/utils.h>
 #include <maxscale/semaphore.hh>
+#include <maxscale/json_api.h>
 
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
@@ -1476,15 +1477,7 @@ static json_t* server_to_json_data(const SERVER* server, const char* host)
 
 json_t* server_to_json(const SERVER* server, const char* host)
 {
-    json_t* rval = json_object();
-
-    /** Top level self link */
-    json_object_set_new(rval, CN_LINKS, server_self_link(host));
-
-    /** Add server data */
-    json_object_set_new(rval, CN_DATA, server_to_json_data(server, host));
-
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_SERVERS, server_to_json_data(server, host));
 }
 
 json_t* server_list_to_json(const char* host)
@@ -1503,13 +1496,5 @@ json_t* server_list_to_json(const char* host)
 
     spinlock_release(&server_spin);
 
-    json_t* rval = json_object();
-
-    /** Top level self link */
-    json_object_set_new(rval, CN_LINKS, server_self_link(host));
-
-    /** Add server data array */
-    json_object_set_new(rval, CN_DATA, data);
-
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_SERVERS, data);
 }
