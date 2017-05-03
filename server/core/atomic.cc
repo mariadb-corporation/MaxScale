@@ -26,6 +26,15 @@ int atomic_add(int *variable, int value)
 #endif
 }
 
+uint32_t atomic_add_uint32(uint32_t *variable, int32_t value)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    return __atomic_fetch_add(variable, value, __ATOMIC_SEQ_CST);
+#else
+    return __sync_fetch_and_add(variable, value);
+#endif
+}
+
 int64_t atomic_add_int64(int64_t *variable, int64_t value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS

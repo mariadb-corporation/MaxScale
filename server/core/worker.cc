@@ -548,21 +548,23 @@ void Worker::set_maxwait(unsigned int maxwait)
     this_unit.max_poll_sleep = maxwait;
 }
 
-bool Worker::execute(Task* pTask, Semaphore* pSem)
+bool Worker::post(Task* pTask, Semaphore* pSem)
 {
+    // No logging here, function must be signal safe.
     intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
     intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
 
     return post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
 }
 
-bool Worker::execute(std::auto_ptr<DisposableTask> sTask)
+bool Worker::post(std::auto_ptr<DisposableTask> sTask)
 {
-    return execute_disposable(sTask.release());
+    // No logging here, function must be signal safe.
+    return post_disposable(sTask.release());
 }
 
 // private
-bool Worker::execute_disposable(DisposableTask* pTask)
+bool Worker::post_disposable(DisposableTask* pTask)
 {
     pTask->inc_ref();
 
@@ -579,15 +581,16 @@ bool Worker::execute_disposable(DisposableTask* pTask)
 }
 
 //static
-size_t Worker::execute_on_all(Task* pTask, Semaphore* pSem)
+size_t Worker::broadcast(Task* pTask, Semaphore* pSem)
 {
+    // No logging here, function must be signal safe.
     size_t n = 0;
 
     for (int i = 0; i < this_unit.n_workers; ++i)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
 
-        if (pWorker->execute(pTask, pSem))
+        if (pWorker->post(pTask, pSem))
         {
             ++n;
         }
@@ -597,7 +600,7 @@ size_t Worker::execute_on_all(Task* pTask, Semaphore* pSem)
 }
 
 //static
-size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
+size_t Worker::broadcast(std::auto_ptr<DisposableTask> sTask)
 {
     DisposableTask* pTask = sTask.release();
     pTask->inc_ref();
@@ -608,7 +611,7 @@ size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
 
-        if (pWorker->execute_disposable(pTask))
+        if (pWorker->post_disposable(pTask))
         {
             ++n;
         }
@@ -618,8 +621,9 @@ size_t Worker::execute_on_all(std::auto_ptr<DisposableTask> sTask)
 
     return n;
 }
+
 //static
-size_t Worker::execute_on_all_serially(Task* pTask)
+size_t Worker::execute_serially(Task& task)
 {
     Semaphore sem;
     size_t n = 0;
@@ -628,7 +632,7 @@ size_t Worker::execute_on_all_serially(Task* pTask)
     {
         Worker* pWorker = this_unit.ppWorkers[i];
 
-        if (pWorker->execute(pTask, &sem))
+        if (pWorker->post(&task, &sem))
         {
             sem.wait();
             ++n;
@@ -636,6 +640,13 @@ size_t Worker::execute_on_all_serially(Task* pTask)
     }
 
     return n;
+}
+
+//static
+size_t Worker::execute_concurrently(Task& task)
+{
+    Semaphore sem;
+    return sem.wait_n(Worker::broadcast(&task, &sem));
 }
 
 bool Worker::post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)

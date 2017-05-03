@@ -55,6 +55,12 @@ The Avrorouter now supports the `deflate` compression method. This allows the
 stored Avro format files to be compressed on disk. For more information, refer
 to the [Avrorouter](../Routers/Avrorouter.md) documentation.
 
+### Preliminary proxy protocol support
+
+The MySQL backend protocol module now supports sending a proxy protocol header
+to the server. For more information, see the server section in the
+[Configuration guide](../Getting-Started/Configuration-Guide.md).
+
 ## Bug fixes
 
 [Here is a list of bugs fixed since the release of MaxScale 2.1.X.]()

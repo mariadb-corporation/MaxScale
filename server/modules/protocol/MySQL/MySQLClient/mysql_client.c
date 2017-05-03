@@ -229,7 +229,6 @@ int MySQLSendHandshake(DCB* dcb)
     char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1] = "";
     char *version_string;
     int len_version_string = 0;
-    int id_num;
 
     bool is_maria = false;
 
@@ -275,10 +274,9 @@ int MySQLSendHandshake(DCB* dcb)
         memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
     }
 
-    // thread id, now put thePID
-    id_num = getpid() + dcb->fd;
-    gw_mysql_set_byte4(mysql_thread_id_num, id_num);
-
+    // Get the equivalent of the server process id.
+    protocol->tid = session_get_next_id();
+    gw_mysql_set_byte4(mysql_thread_id_num, protocol->tid);
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
@@ -702,7 +700,8 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * is changed so that future data will go through the
          * normal data handling function instead of this one.
          */
-        MXS_SESSION *session = session_alloc(dcb->service, dcb);
+        MXS_SESSION *session =
+                session_alloc_with_id(dcb->service, dcb, protocol->tid);
 
         if (session != NULL)
         {

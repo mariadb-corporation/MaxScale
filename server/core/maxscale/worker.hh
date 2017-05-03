@@ -14,7 +14,9 @@
 
 #include <maxscale/cppdefs.hh>
 #include <memory>
+#include <tr1/unordered_map>
 #include <maxscale/platform.h>
+#include <maxscale/session.h>
 #include "messagequeue.hh"
 #include "poll.h"
 #include "worker.h"
@@ -67,6 +69,7 @@ public:
     typedef WORKER_STATISTICS STATISTICS;
     typedef WorkerTask Task;
     typedef WorkerDisposableTask DisposableTask;
+    typedef std::tr1::unordered_map<uint32_t, MXS_SESSION*> SessionsById;
 
     enum state_t
     {
@@ -251,12 +254,12 @@ public:
     }
 
     /**
-     * Executes a task in the context of a Worker.
+     * Posts a task to a worker for execution.
      *
      * @param pTask  The task to be executed.
      * @param pSem   If non-NULL, will be posted once the task's `execute` return.
      *
-     * @return True if the task could be *posted*, false otherwise.
+     * @return True if the task could be posted (i.e. not executed), false otherwise.
      *
      * @attention  The instance must remain valid for as long as it takes for the
      *             task to be transferred to the worker and its `execute` function
@@ -274,21 +277,21 @@ public:
      *     MyResult& result = task.result();
      * @endcode
      */
-    bool execute(Task* pTask, Semaphore* pSem = NULL);
+    bool post(Task* pTask, Semaphore* pSem = NULL);
 
     /**
-     * Executes a disposable task in the context of a Worker.
+     * Posts a task to a worker for execution.
      *
      * @param pTask  The task to be executed.
      *
-     * @return True if the task could be *posted*, false otherwise.
+     * @return True if the task could be posted (i.e. not executed), false otherwise.
      *
      * @attention  Once the task has been executed, it will be deleted.
      */
-    bool execute(std::auto_ptr<DisposableTask> sTask);
+    bool post(std::auto_ptr<DisposableTask> sTask);
 
     /**
-     * Executes a task on all workers.
+     * Posts a task to all workers for execution.
      *
      * @param pTask  The task to be executed.
      * @param pSem   If non-NULL, will be posted once per worker when the task's
@@ -301,10 +304,10 @@ public:
      *            have data specific to each worker that can be accessed
      *            without locks.
      */
-    static size_t execute_on_all(Task* pTask, Semaphore* pSem = NULL);
+    static size_t broadcast(Task* pTask, Semaphore* pSem = NULL);
 
     /**
-     * Executes a task on all workers.
+     * Posts a task to all workers for execution.
      *
      * @param pTask  The task to be executed.
      *
@@ -318,14 +321,14 @@ public:
      * @attention Once the task has been executed by all workers, it will
      *            be deleted.
      */
-    static size_t execute_on_all(std::auto_ptr<DisposableTask> sTask);
+    static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
 
     /**
-     * Executes a task on all workers in serial mode.
+     * Executes a task on all workers in serial mode (the task is executed
+     * on at most one worker thread at a time). When the function returns
+     * the task has been executed on all workers.
      *
-     * The task is executed on at most one worker thread at a time.
-     *
-     * @param pTask  The task to be executed.
+     * @param task  The task to be executed.
      *
      * @return How many workers the task was posted to.
      *
@@ -333,7 +336,18 @@ public:
      * to the other functions. Only use this function when printing thread-specific
      * data to stdout.
      */
-    static size_t execute_on_all_serially(Task* pTask);
+    static size_t execute_serially(Task& task);
+
+    /**
+     * Executes a task on all workers concurrently and waits until all workers
+     * are done. That is, when the function returns the task has been executed
+     * by all workers.
+     *
+     * @param task  The task to be executed.
+     *
+     * @return How many workers the task was posted to.
+     */
+    static size_t execute_concurrently(Task& task);
 
     /**
      * Post a message to a worker.
@@ -428,7 +442,7 @@ private:
 
     static Worker* create(int id, int epoll_listener_fd);
 
-    bool execute_disposable(DisposableTask* pTask);
+    bool post_disposable(DisposableTask* pTask);
 
     void handle_message(MessageQueue& queue, const MessageQueue::Message& msg); // override
 
@@ -449,6 +463,11 @@ private:
     bool          m_started;            /*< Whether the thread has been started or not. */
     bool          m_should_shutdown;    /*< Whether shutdown should be performed. */
     bool          m_shutdown_initiated; /*< Whether shutdown has been initated. */
+    SessionsById  m_sessions;           /*< A mapping of session_id->MXS_SESSION. The map
+                                         *  should contain sessions exclusive to this
+                                         *  worker and not e.g. listener sessions. For now,
+                                         *  it's up to the protocol to decide whether a new
+                                         *  session is added to the map. */
 };
 
 }
