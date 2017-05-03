@@ -2801,12 +2801,46 @@ void configure_options(const char* datadir, const char* langdir)
 
 }
 
-int32_t qc_mysql_setup(const char* args)
+int32_t qc_mysql_setup(const char* zArgs)
 {
-    if (args)
+    if (zArgs)
     {
+#if MYSQL_VERSION_MINOR >= 3
+        char args[strlen(zArgs) + 1];
+        strcpy(args, zArgs);
+
+        char *p1;
+        char *token = strtok_r(args, ";", &p1);
+
+        while (token)
+        {
+            char *p2;
+            char* key = trim(strtok_r(token, "=", &p2));
+
+            if (strcmp(key, "sql_mode") == 0)
+            {
+                char* value = trim(p2);
+
+                if (strcmp(value, "MODE_ORACLE") == 0)
+                {
+                    global_system_variables.sql_mode |= MODE_ORACLE;
+                }
+                else
+                {
+                    MXS_WARNING("Unknown value \"%s\" for key \"%s\"", value, key);
+                }
+            }
+            else
+            {
+                MXS_WARNING("Unknown argument \"%s\".", key);
+            }
+
+            token = strtok_r(NULL, ";", &p1);
+        }
+#else
         MXS_WARNING("'%s' provided as arguments, "
-                    "even though no arguments are supported.", args);
+                    "even though no arguments are supported.", zArgs);
+#endif
     }
 
     return QC_RESULT_OK;
@@ -2841,10 +2875,6 @@ int32_t qc_mysql_process_init(void)
 #endif
             MXS_NOTICE("Query classifier initialized.");
             inited = true;
-
-#if MYSQL_VERSION_MINOR >= 3
-            global_system_variables.sql_mode |= MODE_ORACLE;
-#endif
         }
     }
 
