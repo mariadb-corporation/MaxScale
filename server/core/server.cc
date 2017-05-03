@@ -1360,44 +1360,22 @@ bool server_is_mxs_service(const SERVER *server)
     return rval;
 }
 
-json_t* server_list_to_json(const char* host)
+json_t* server_self_link(const char* host)
 {
-    json_t* rval = json_array();
+    json_t* links = json_object();
+    string self = host;
+    self += "/servers/";
+    json_object_set_new(links, CN_SELF, json_string(self.c_str()));
 
-    if (rval)
-    {
-        spinlock_acquire(&server_spin);
-
-        for (SERVER* server = allServers; server; server = server->next)
-        {
-            if (SERVER_IS_ACTIVE(server))
-            {
-                json_t* srv_json = server_to_json(server, host);
-
-                if (srv_json == NULL)
-                {
-                    json_decref(rval);
-                    rval = NULL;
-                    break;
-                }
-
-                json_array_append_new(rval, srv_json);
-            }
-        }
-
-        spinlock_release(&server_spin);
-    }
-
-    return rval;
+    return links;
 }
 
-json_t* server_to_json(const SERVER* server, const char* host)
+static json_t* server_json_attributes(const SERVER* server)
 {
-    json_t* rval = json_object();
+    /** Resource attributes */
+    json_t* attr = json_object();
 
-    json_object_set_new(rval, CN_NAME, json_string(server->unique_name));
-
-    /** Store server parameters  */
+    /** Store server parameters in attributes */
     json_t* params = json_object();
 
     json_object_set_new(params, CN_ADDRESS, json_string(server->name));
@@ -1419,21 +1397,22 @@ json_t* server_to_json(const SERVER* server, const char* host)
         json_object_set_new(params, p->name, json_string(p->value));
     }
 
-    json_object_set_new(rval, CN_PARAMETERS, params);
+    json_object_set_new(attr, CN_PARAMETERS, params);
+
 
     /** Store general information about the server state */
     char* stat = server_status(server);
-    json_object_set_new(rval, "status", json_string(stat));
+    json_object_set_new(attr, CN_STATUS, json_string(stat));
     MXS_FREE(stat);
 
     if (server->server_string)
     {
-        json_object_set_new(rval, "version", json_string(server->server_string));
+        json_object_set_new(attr, CN_VERSION_STRING, json_string(server->server_string));
     }
 
-    json_object_set_new(rval, "node_id", json_integer(server->node_id));
-    json_object_set_new(rval, "master_id", json_integer(server->master_id));
-    json_object_set_new(rval, "replication_depth", json_integer(server->depth));
+    json_object_set_new(attr, "node_id", json_integer(server->node_id));
+    json_object_set_new(attr, "master_id", json_integer(server->master_id));
+    json_object_set_new(attr, "replication_depth", json_integer(server->depth));
 
     if (server->slaves)
     {
@@ -1444,12 +1423,12 @@ json_t* server_to_json(const SERVER* server, const char* host)
             json_array_append_new(slaves, json_integer(server->slaves[i]));
         }
 
-        json_object_set_new(rval, "slaves", slaves);
+        json_object_set_new(attr, "slaves", slaves);
     }
 
     if (server->rlag >= 0)
     {
-        json_object_set_new(rval, "replication_lag", json_integer(server->rlag));
+        json_object_set_new(attr, "replication_lag", json_integer(server->rlag));
     }
 
     if (server->node_ts > 0)
@@ -1460,7 +1439,7 @@ json_t* server_to_json(const SERVER* server, const char* host)
         asctime_r(localtime_r(&tim, &result), timebuf);
         trim(timebuf);
 
-        json_object_set_new(rval, "last_heartbeat", json_string(timebuf));
+        json_object_set_new(attr, "last_heartbeat", json_string(timebuf));
     }
 
     /** Store statistics */
@@ -1470,39 +1449,67 @@ json_t* server_to_json(const SERVER* server, const char* host)
     json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
     json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
 
-    json_object_set_new(rval, "statictics", stats);
+    json_object_set_new(attr, "statictics", stats);
 
-    /** Store relationships to other objects */
+    return attr;
+}
+
+static json_t* server_to_json_data(const SERVER* server, const char* host)
+{
+    json_t* rval = json_object();
+
+    /** Add resource identifiers */
+    json_object_set_new(rval, CN_ID, json_string(server->unique_name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_SERVERS));
+
+    /** Relationships */
     json_t* rel = json_object();
-
-    string self = host;
-    self += "/servers/";
-    self += server->unique_name;
-    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
-
-    json_t* arr = service_relations_to_server(server, host);
-
-    if (json_array_size(arr) > 0)
-    {
-        json_object_set_new(rel, CN_SERVICES, arr);
-    }
-    else
-    {
-        json_decref(arr);
-    }
-
-    arr = monitor_relations_to_server(server, host);
-
-    if (json_array_size(arr) > 0)
-    {
-        json_object_set_new(rel, CN_MONITORS, arr);
-    }
-    else
-    {
-        json_decref(arr);
-    }
-
+    json_object_set_new(rel, CN_SERVICES, service_relations_to_server(server, host));
+    json_object_set_new(rel, CN_MONITORS, monitor_relations_to_server(server, host));
     json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+
+    /** Attributes */
+    json_object_set_new(rval, CN_ATTRIBUTES, server_json_attributes(server));
+
+    return rval;
+}
+
+json_t* server_to_json(const SERVER* server, const char* host)
+{
+    json_t* rval = json_object();
+
+    /** Top level self link */
+    json_object_set_new(rval, CN_LINKS, server_self_link(host));
+
+    /** Add server data */
+    json_object_set_new(rval, CN_DATA, server_to_json_data(server, host));
+
+    return rval;
+}
+
+json_t* server_list_to_json(const char* host)
+{
+    json_t* data = json_array();
+
+    spinlock_acquire(&server_spin);
+
+    for (SERVER* server = allServers; server; server = server->next)
+    {
+        if (SERVER_IS_ACTIVE(server))
+        {
+            json_array_append_new(data, server_to_json_data(server, host));
+        }
+    }
+
+    spinlock_release(&server_spin);
+
+    json_t* rval = json_object();
+
+    /** Top level self link */
+    json_object_set_new(rval, CN_LINKS, server_self_link(host));
+
+    /** Add server data array */
+    json_object_set_new(rval, CN_DATA, data);
 
     return rval;
 }

@@ -1566,9 +1566,31 @@ json_t* monitor_list_to_json(const char* host)
     return rval;
 }
 
+static json_t* monitor_self_link(const char* host)
+{
+    json_t* rel_links = json_object();
+
+    string links = host;
+    links += "/monitors/";
+    json_object_set_new(rel_links, CN_SELF, json_string(links.c_str()));
+
+    return rel_links;
+}
+
+static void add_monitor_relation(json_t* arr, const MXS_MONITOR* monitor)
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_ID, json_string(monitor->name));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MONITORS));
+    json_array_append_new(arr, obj);
+}
+
 json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* arr = json_array();
+    json_t* rel = json_object();
+    json_t* rel_data = json_array();
+
+    json_object_set_new(rel, CN_LINKS, monitor_self_link(host));
 
     spinlock_acquire(&monLock);
 
@@ -1580,10 +1602,8 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
         {
             if (db->server == server)
             {
-                string m = host;
-                m += "/monitors/";
-                m += mon->name;
-                json_array_append_new(arr, json_string(m.c_str()));
+                add_monitor_relation(rel_data, mon);
+                break;
             }
         }
 
@@ -1592,5 +1612,7 @@ json_t* monitor_relations_to_server(const SERVER* server, const char* host)
 
     spinlock_release(&monLock);
 
-    return arr;
+    json_object_set_new(rel, CN_DATA, rel_data);
+
+    return rel;
 }

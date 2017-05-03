@@ -2240,7 +2240,8 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, service->conn_idle_timeout);
     dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, service->users_from_all ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
-    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST, service->localhost_match_wildcard_host ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST,
+            service->localhost_match_wildcard_host ? "true" : "false");
     dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
     dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
     dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
@@ -2571,17 +2572,32 @@ json_t* service_list_to_json(const char* host)
     return rval;
 }
 
-static void add_service_relation(json_t* arr, const char* host, const SERVICE* service)
+static void add_service_relation(json_t* arr, const SERVICE* service)
 {
-    string svc = host;
-    svc += "/services/";
-    svc += service->name;
-    json_array_append_new(arr, json_string(svc.c_str()));
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_ID, json_string(service->name));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_SERVICES));
+    json_array_append_new(arr, obj);
+}
+
+static json_t* service_self_link(const char* host)
+{
+    json_t* rel_links = json_object();
+
+    string links = host;
+    links += "/services/";
+    json_object_set_new(rel_links, CN_SELF, json_string(links.c_str()));
+
+    return rel_links;
 }
 
 json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
 {
-    json_t* arr = json_array();
+    json_t* rel = json_object();
+    json_t* rel_data = json_array();
+
+    json_object_set_new(rel, CN_LINKS, service_self_link(host));
+
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
@@ -2592,7 +2608,7 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
         {
             if (service->filters[i] == filter)
             {
-                add_service_relation(arr, host, service);
+                add_service_relation(rel_data, service);
             }
         }
 
@@ -2601,12 +2617,19 @@ json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* ho
 
     spinlock_release(&service_spin);
 
-    return arr;
+    json_object_set_new(rel, CN_DATA, rel_data);
+
+    return rel;
 }
+
 
 json_t* service_relations_to_server(const SERVER* server, const char* host)
 {
-    json_t* arr = json_array();
+    json_t* rel = json_object();
+    json_t* rel_data = json_array();
+
+    json_object_set_new(rel, CN_LINKS, service_self_link(host));
+
     spinlock_acquire(&service_spin);
 
     for (SERVICE *service = allServices; service; service = service->next)
@@ -2617,7 +2640,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
         {
             if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
             {
-                add_service_relation(arr, host, service);
+                add_service_relation(rel_data, service);
             }
         }
 
@@ -2626,5 +2649,7 @@ json_t* service_relations_to_server(const SERVER* server, const char* host)
 
     spinlock_release(&service_spin);
 
-    return arr;
+    json_object_set_new(rel, CN_DATA, rel_data);
+
+    return rel;
 }
