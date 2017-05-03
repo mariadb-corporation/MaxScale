@@ -55,7 +55,7 @@ int kv_iter(void *cls,
 {
     size_t* rval = (size_t*)cls;
 
-    if (strcmp(key, "Content-Length") == 0)
+    if (strcasecmp(key, "Content-Length") == 0)
     {
         *rval = atoi(value);
         return MHD_NO;
