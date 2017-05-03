@@ -1,0 +1,19 @@
+{
+  "name": "rest-api-tests",
+  "version": "1.0.0",
+  "repository": "https://github.com/mariadb-corporation/MaxScale",
+  "description": "MaxScale REST API tests",
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "",
+  "license": "SEE LICENSE IN ../../../../LICENSE.txt",
+  "dependencies": {
+    "ajv": "^5.0.1",
+    "chai": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "mocha": "^3.3.0",
+    "request": "^2.81.0",
+    "request-promise-native": "^1.0.3"
+  }
+}
