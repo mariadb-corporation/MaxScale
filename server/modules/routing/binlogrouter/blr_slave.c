@@ -6030,7 +6030,7 @@ static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
                                  slave,
                                  heading,
                                  mariadb_gtid,
-                                 BLR_TYPE_STRING);
+                                 BLR_TYPE_INT);
         return true;
     }
     else if (strcasecmp(word, "@@GLOBAL.gtid_domain_id") == 0)
@@ -6039,13 +6039,17 @@ static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
         if (slave->mariadb10_compat && router->mariadb_gtid)
         {
             char heading[40];
+            char gtid_domain[40];
+            sprintf(gtid_domain,
+                    "%lu",
+                    (unsigned long)router->mariadb_gtid_domain);
             strcpy(heading, word);
 
             blr_slave_send_var_value(router,
                                      slave,
                                      heading,
-                                     "0",
-                                     BLR_TYPE_STRING);
+                                     gtid_domain,
+                                     BLR_TYPE_INT);
             return true;
         }
     }
@@ -6532,7 +6536,11 @@ static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
     {
         char server_id[40];
         sprintf(server_id, "%d", router->masterid);
-        blr_slave_send_var_value(router, slave, "server_id", server_id, BLR_TYPE_STRING);
+        blr_slave_send_var_value(router,
+                                 slave,
+                                 "server_id",
+                                 server_id,
+                                 BLR_TYPE_STRING);
         return true;
     }
     else if (strcmp(maxwell_stmt, maxwell_log_bin_query) == 0)
@@ -6570,7 +6578,9 @@ static bool blr_handle_maxwell_stmt(ROUTER_INSTANCE *router,
     }
     else if (strcmp(maxwell_stmt, maxwell_lower_case_tables_query) == 0)
     {
-        int rc = blr_slave_replay(router, slave, router->saved_master.lower_case_tables);
+        int rc = blr_slave_replay(router,
+                                  slave,
+                                  router->saved_master.lower_case_tables);
         if (!rc)
         {
             MXS_ERROR("Error sending lower_case_tables query response");

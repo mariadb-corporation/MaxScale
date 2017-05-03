@@ -651,7 +651,7 @@ typedef struct router_instance
     bool              mariadb_gtid;         /*< Save received MariaDB GTIDs into repo.
                                              * This allows MariaDB 10 slave servers
                                              * connecting with GTID */
-    HASHTABLE         *gtid_repo;           /*< Storage for MariaDB GTIDs */
+    uint32_t          mariadb_gtid_domain;  /*< MariaDB 10 GTID Domain ID */
     sqlite3           *gtid_maps;           /*< GTID storage */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
@@ -727,40 +727,44 @@ typedef struct binlog_pos_fix
 /**
  * State machine for the master to MaxScale replication
  */
-#define BLRM_UNCONFIGURED       0x0000
-#define BLRM_UNCONNECTED        0x0001
-#define BLRM_CONNECTING         0x0002
-#define BLRM_AUTHENTICATED      0x0003
-#define BLRM_TIMESTAMP          0x0004
-#define BLRM_SERVERID           0x0005
-#define BLRM_HBPERIOD           0x0006
-#define BLRM_CHKSUM1            0x0007
-#define BLRM_CHKSUM2            0x0008
-#define BLRM_MARIADB10          0x0009
-#define BLRM_GTIDMODE           0x000A
-#define BLRM_MUUID              0x000B
-#define BLRM_SUUID              0x000C
-#define BLRM_LATIN1             0x000D
-#define BLRM_UTF8               0x000E
-#define BLRM_RESULTS_CHARSET    0x000F
-#define BLRM_SQL_MODE           0x0010
-#define BLRM_SELECT1            0x0011
-#define BLRM_SELECTVER          0x0012
-#define BLRM_SELECTVERCOM       0x0013
-#define BLRM_SELECTHOSTNAME     0x0014
-#define BLRM_MAP                0x0015
-#define BLRM_SERVER_VARS        0x0016
-#define BLRM_BINLOG_VARS        0x0017
-#define BLRM_LOWER_CASE_TABLES  0x0018
-#define BLRM_REGISTER_READY     0x0019
-#define BLRM_REGISTER           0x001A
-#define BLRM_CHECK_SEMISYNC     0x001B
-#define BLRM_REQUEST_SEMISYNC   0x001C
-#define BLRM_REQUEST_BINLOGDUMP 0x001D
-#define BLRM_BINLOGDUMP         0x001E
-#define BLRM_SLAVE_STOPPED      0x001F
+#define BLRM_UNCONFIGURED             0x0000
+#define BLRM_UNCONNECTED              0x0001
+#define BLRM_CONNECTING               0x0002
+#define BLRM_AUTHENTICATED            0x0003
+#define BLRM_TIMESTAMP                0x0004
+#define BLRM_SERVERID                 0x0005
+#define BLRM_HBPERIOD                 0x0006
+#define BLRM_CHKSUM1                  0x0007
+#define BLRM_CHKSUM2                  0x0008
+#define BLRM_MARIADB10                0x0009
+#define BLRM_MARIADB10_GTID_DOMAIN    0x000A
+#define BLRM_MARIADB10_REQUEST_GTID   0x000B
+#define BLRM_MARIADB10_GTID_STRICT    0x000C
+#define BLRM_MARIADB10_GTID_NO_DUP    0x000D
+#define BLRM_GTIDMODE                 0x000E
+#define BLRM_MUUID                    0x000F
+#define BLRM_SUUID                    0x0010
+#define BLRM_LATIN1                   0x0011
+#define BLRM_UTF8                     0x0012
+#define BLRM_RESULTS_CHARSET          0x0013
+#define BLRM_SQL_MODE                 0x0014
+#define BLRM_SELECT1                  0x0015
+#define BLRM_SELECTVER                0x0016
+#define BLRM_SELECTVERCOM             0x0017
+#define BLRM_SELECTHOSTNAME           0x0018
+#define BLRM_MAP                      0x0019
+#define BLRM_SERVER_VARS              0x001A
+#define BLRM_BINLOG_VARS              0x001B
+#define BLRM_LOWER_CASE_TABLES        0x001C
+#define BLRM_REGISTER_READY           0x001D
+#define BLRM_REGISTER                 0x001E
+#define BLRM_CHECK_SEMISYNC           0x001F
+#define BLRM_REQUEST_SEMISYNC         0x0020
+#define BLRM_REQUEST_BINLOGDUMP       0x0021
+#define BLRM_BINLOGDUMP               0x0022
+#define BLRM_SLAVE_STOPPED            0x0023
 
-#define BLRM_MAXSTATE           0x001F
+#define BLRM_MAXSTATE                 0x0023
 
 static char *blrm_states[] =
 {
@@ -773,7 +777,11 @@ static char *blrm_states[] =
     "HeartBeat Period setup",
     "binlog checksum config",
     "binlog checksum rerieval",
-    "Set MariaDB slave capability",
+    "Set MariaDB10 slave capability",
+    "MariaDB10 GTID Domain retrieval",
+    "Set MariaDB10 GTID Request",
+    "Set MariaDB10 GTID strict mode",
+    "Set MariaDB10 GTID ignore duplicates",
     "GTID Mode retrieval",
     "Master UUID retrieval",
     "Set Slave UUID",

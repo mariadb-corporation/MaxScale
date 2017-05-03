@@ -373,9 +373,6 @@ createInstance(SERVICE *service, char **options)
     /* Encryption CTX */
     inst->encryption_ctx = NULL;
 
-    /* MariaDB GTID repo init val */
-    inst->gtid_repo = NULL;
-
     /* Set router uuid */
     inst->uuid = config_copy_string(params, "uuid");
 
