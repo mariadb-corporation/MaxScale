@@ -20,6 +20,7 @@
 #include <set>
 #include <string>
 #include <sstream>
+#include <my_config.h>
 #define MYSQL_COM_QUIT        COM_QUIT
 #define MYSQL_COM_INIT_DB     COM_INIT_DB
 #define MYSQL_COM_CHANGE_USER COM_CHANGE_USER
@@ -38,6 +39,12 @@ using std::map;
 using std::ostream;
 using std::string;
 using std::stringstream;
+
+#if MYSQL_VERSION_MAJOR == 10 && MYSQL_VERSION_MINOR == 3
+#define USING_MARIADB_103
+#else
+#undef USING_MARIADB_103
+#endif
 
 namespace
 {
@@ -1317,7 +1324,11 @@ int main(int argc, char* argv[])
     const char* zClassifier1 = "qc_mysqlembedded";
     const char* zClassifier2 = "qc_sqlite";
     const char* zClassifier1Args = NULL;
+#if defined(USING_MARIADB_103)
+    const char* zClassifier2Args = "parse_as=10.3,log_unrecognized_statements=1";
+#else
     const char* zClassifier2Args = "log_unrecognized_statements=1";
+#endif
     const char* zStatement = NULL;
 
     size_t rounds = 1;
