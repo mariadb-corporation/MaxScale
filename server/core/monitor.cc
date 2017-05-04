@@ -31,6 +31,7 @@
 #include <maxscale/pcre2.h>
 #include <maxscale/secrets.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/externcmd.h"
@@ -1497,16 +1498,22 @@ json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
     return rval;
 }
 
-json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+json_t* monitor_json_data(const MXS_MONITOR* monitor, const char* host)
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, CN_NAME, json_string(monitor->name));
-    json_object_set_new(rval, CN_MODULE, json_string(monitor->module_name));
-    json_object_set_new(rval, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
+    spinlock_acquire(&monitor->lock);
+
+    json_object_set_new(rval, CN_ID, json_string(monitor->name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_MONITORS));
+
+    json_t* attr = json_object();
+
+    json_object_set_new(attr, CN_MODULE, json_string(monitor->module_name));
+    json_object_set_new(attr, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
 
     /** Monitor parameters */
-    json_object_set_new(rval, CN_PARAMETERS, monitor_parameters_to_json(monitor));
+    json_object_set_new(attr, CN_PARAMETERS, monitor_parameters_to_json(monitor));
 
     if (monitor->handle && monitor->module->diagnostics)
     {
@@ -1514,36 +1521,36 @@ json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
 
         if (diag)
         {
-            json_object_set_new(rval, "monitor_diagnostics", diag);
+            json_object_set_new(attr, "monitor_diagnostics", diag);
         }
     }
 
     json_t* rel = json_object();
 
-    /** Store relationships to other objects */
-    string self = host;
-    self += "/monitors/";
-    self += monitor->name;
-    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
 
     if (monitor->databases)
     {
-        json_t* arr = json_array();
+        json_t* mon_rel = mxs_json_relationship(host, MXS_JSON_API_SERVERS);
 
         for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
         {
-            string s = host;
-            s += "/servers/";
-            s += db->server->unique_name;
-            json_array_append_new(arr, json_string(s.c_str()));
+            mxs_json_add_relation(mon_rel, db->server->unique_name, CN_SERVERS);
         }
 
-        json_object_set_new(rel, "servers", arr);
+        json_object_set_new(rel, CN_SERVERS, mon_rel);
     }
 
-    json_object_set_new(rval, "relationships", rel);
+    spinlock_release(&monitor->lock);
+
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     return rval;
+}
+
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+{
+    return mxs_json_resource(host, MXS_JSON_API_MONITORS, monitor_json_data(monitor, host));
 }
 
 json_t* monitor_list_to_json(const char* host)
@@ -1554,7 +1561,7 @@ json_t* monitor_list_to_json(const char* host)
 
     for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
     {
-        json_t *json = monitor_to_json(mon, host);
+        json_t *json = monitor_json_data(mon, host);
 
         if (json)
         {
@@ -1564,7 +1571,7 @@ json_t* monitor_list_to_json(const char* host)
 
     spinlock_release(&monLock);
 
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_MONITORS, rval);
 }
 
 json_t* monitor_relations_to_server(const SERVER* server, const char* host)
