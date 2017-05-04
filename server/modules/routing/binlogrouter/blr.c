@@ -196,7 +196,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
             {"encrypt_binlog", MXS_MODULE_PARAM_BOOL, "false"},
             {"encryption_algorithm", MXS_MODULE_PARAM_ENUM, "aes_cbc", MXS_MODULE_OPT_NONE, enc_algo_values},
             {"encryption_key_file", MXS_MODULE_PARAM_PATH, NULL, MXS_MODULE_OPT_PATH_R_OK},
-            {"mariadb_gtid", MXS_MODULE_PARAM_BOOL, "false"},
+            {"mariadb10_slave_gtid", MXS_MODULE_PARAM_BOOL, "false"},
+            {"mariadb10_master_gtid", MXS_MODULE_PARAM_BOOL, "false"},
             {"shortburst", MXS_MODULE_PARAM_COUNT, DEF_SHORT_BURST},
             {"longburst", MXS_MODULE_PARAM_COUNT, DEF_LONG_BURST},
             {"burstsize", MXS_MODULE_PARAM_SIZE, DEF_BURST_SIZE},
@@ -362,8 +363,11 @@ createInstance(SERVICE *service, char **options)
     inst->request_semi_sync = config_get_bool(params, "semisync");
     inst->master_semi_sync = 0;
 
-    /* Enable MariaDB GTID tracking */
-    inst->mariadb_gtid = config_get_bool(params, "mariadb_gtid");
+    /* Enable MariaDB GTID tracking for slaves */
+    inst->mariadb10_gtid = config_get_bool(params, "mariadb10_slave_gtid");
+
+    /* Enable MariaDB GTID registration to master */
+    inst->mariadb10_master_gtid = config_get_bool(params, "mariadb10_master_gtid");
 
     /* Binlog encryption */
     inst->encryption.enabled = config_get_bool(params, "encrypt_binlog");
@@ -528,9 +532,9 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->encryption.enabled = config_truth_value(value);
                 }
-                else if (strcmp(options[i], "mariadb_gtid") == 0)
+                else if (strcmp(options[i], "mariadb10_slave_gtid") == 0)
                 {
-                    inst->mariadb_gtid = config_truth_value(value);
+                    inst->mariadb10_gtid = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
@@ -689,9 +693,17 @@ createInstance(SERVICE *service, char **options)
         }
     }
 
+    /**
+     * Force GTID slave request handling if GTID Master registration is On
+     */
+    if (inst->mariadb10_master_gtid)
+    {
+        inst->mariadb10_gtid = true;
+    }
+
     /* Enable MariaDB the GTID maps store */
     if (inst->mariadb10_compat &&
-        inst->mariadb_gtid)
+        inst->mariadb10_gtid)
     {
         if (!inst->trx_safe)
         {
@@ -1472,7 +1484,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
             dcb_printf(dcb, "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
 
-            if (router_inst->mariadb_gtid &&
+            if (router_inst->mariadb10_gtid &&
                 router_inst->last_mariadb_gtid[0])
             {
                 dcb_printf(dcb, "\tLast seen MariaDB GTID:                      %s\n",

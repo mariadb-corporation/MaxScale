@@ -648,11 +648,15 @@ typedef struct router_instance
     BINLOG_ENCRYPTION_SETUP encryption;     /*< Binlog encryption setup */
     void              *encryption_ctx;      /*< Encryption context */
     char              last_mariadb_gtid[GTID_MAX_LEN  + 1]; /*< Last seen MariaDB 10 GTID */
-    bool              mariadb_gtid;         /*< Save received MariaDB GTIDs into repo.
-                                             * This allows MariaDB 10 slave servers
-                                             * connecting with GTID */
-    uint32_t          mariadb_gtid_domain;  /*< MariaDB 10 GTID Domain ID */
-    sqlite3           *gtid_maps;           /*< GTID storage */
+    bool              mariadb10_gtid;        /*< Save received MariaDB GTIDs into repo.
+                                              * This allows MariaDB 10 slave servers
+                                              * connecting with GTID
+                                              */
+    bool              mariadb10_master_gtid;/*< Enables MariaDB 10 GTID registration
+                                             * to MariaDB 10.0/10.1 Master
+                                             */
+    uint32_t          mariadb10_gtid_domain;/*< MariaDB 10 GTID Domain ID */
+    sqlite3           *gtid_maps;           /*< MariaDB 10 GTID storage */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 

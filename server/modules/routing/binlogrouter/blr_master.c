@@ -1065,8 +1065,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                             router->pending_transaction.state = BLRM_TRANSACTION_START;
 
-                            /* Handle MariaDB GTID */
-                            if (router->mariadb_gtid)
+                            /* Handle MariaDB 10 GTID */
+                            if (router->mariadb10_gtid)
                             {
                                 char mariadb_gtid[GTID_MAX_LEN + 1];
                                 snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
@@ -1306,7 +1306,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                     router->pending_transaction.end_pos = router->current_pos;
 
                                     if (router->mariadb10_compat &&
-                                        router->mariadb_gtid)
+                                        router->mariadb10_gtid)
                                     {
                                         /* Update last seen MariaDB GTID */
                                         strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
@@ -2734,7 +2734,7 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
 static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
 {
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
- 
+
     switch (router->master_state)
     {
     case BLRM_TIMESTAMP:
@@ -2780,10 +2780,10 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
                                     buf);
         // Next state is BLRM_MARIADB10_GTID_DOMAIN or BLRM_LATIN1
         {
-            unsigned int state = router->mariadb_gtid ?
+            unsigned int state = router->mariadb10_master_gtid ?
                                  BLRM_MARIADB10_GTID_DOMAIN :
                                  BLRM_LATIN1;
-            const char *command = router->mariadb_gtid ?
+            const char *command = router->mariadb10_master_gtid ?
                                   "SELECT @@GLOBAL.gtid_domain_id" :
                                   "SET NAMES latin1";
             blr_register_send_command(router, command, state);
@@ -3019,7 +3019,7 @@ static void blr_register_mariadb_gtid_domain(ROUTER_INSTANCE *router,
     // Extract GTID domain
     char *val = blr_extract_column(buf, 1);
     // Store the Master GTID domain
-    router->mariadb_gtid_domain = atol(val);
+    router->mariadb10_gtid_domain = atol(val);
     MXS_FREE(val);
     // Don't save the server response
     gwbuf_free(buf);

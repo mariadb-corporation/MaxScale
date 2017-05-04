@@ -6019,7 +6019,7 @@ static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
         strcpy(heading, word);
 
         if (router->mariadb10_compat &&
-            router->mariadb_gtid)
+            router->mariadb10_gtid)
         {
             spinlock_acquire(&router->binlog_lock);
             strcpy(mariadb_gtid, router->last_mariadb_gtid);
@@ -6035,14 +6035,15 @@ static bool blr_handle_select_stmt(ROUTER_INSTANCE *router,
     }
     else if (strcasecmp(word, "@@GLOBAL.gtid_domain_id") == 0)
     {
-        /* If not mariadb an error message will be returned */
-        if (slave->mariadb10_compat && router->mariadb_gtid)
+        /* If not mariadb10 mastergtid an error message will be returned */
+        if (slave->mariadb10_compat &&
+            router->mariadb10_master_gtid)
         {
             char heading[40];
             char gtid_domain[40];
             sprintf(gtid_domain,
                     "%lu",
-                    (unsigned long)router->mariadb_gtid_domain);
+                    (unsigned long)router->mariadb10_gtid_domain);
             strcpy(heading, word);
 
             blr_slave_send_var_value(router,
@@ -6911,7 +6912,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
     {
         /* If not mariadb an error message will be returned */
         if (slave->mariadb10_compat &&
-            router->mariadb_gtid &&
+            router->mariadb10_gtid &&
             (word = strtok_r(NULL, sep, &brkb)) != NULL)
         {
             char heading[GTID_MAX_LEN + 1];
@@ -6938,7 +6939,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
     {
         /* If not mariadb an error message will be returned */
         if (slave->mariadb10_compat &&
-            router->mariadb_gtid &&
+            router->mariadb10_gtid &&
             (word = strtok_r(NULL, sep, &brkb)) != NULL)
         {
             /* Set strict mode */
@@ -6951,7 +6952,7 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
     {
         /* If not mariadb an error message will be returned */
         if (slave->mariadb10_compat &&
-            router->mariadb_gtid)
+            router->mariadb10_gtid)
         {
             blr_slave_send_ok(router, slave);
             return true;

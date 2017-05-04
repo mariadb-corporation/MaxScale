@@ -2072,7 +2072,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                         router->pending_transaction.end_pos = 0;
 
                         /* Set MariaDB GTID */
-                        if (router->mariadb_gtid)
+                        if (router->mariadb10_gtid)
                         {
                             strcpy(router->pending_transaction.gtid, mariadb_gtid);
                         }
@@ -2203,7 +2203,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
             replace_trx_events = false;
 
             if (router->mariadb10_compat &&
-                router->mariadb_gtid)
+                router->mariadb10_gtid)
             {
                 /* Update Last Seen MariaDB GTID */
                 strcpy(router->last_mariadb_gtid, router->pending_transaction.gtid);
