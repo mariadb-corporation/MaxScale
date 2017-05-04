@@ -95,6 +95,31 @@ typedef enum qc_log_level
     QC_LOG_NON_TOKENIZED,
 } qc_log_level_t;
 
+typedef enum qc_parse_as
+{
+    QC_PARSE_AS_DEFAULT, // Parse as embedded lib does before 10.3
+    QC_PARSE_AS_103      // Parse as embedded lib does in 10.3
+} qc_parse_as_t;
+
+/**
+ * Defines what a particular name should be mapped to.
+ */
+typedef struct qc_name_mapping
+{
+    const char* from;
+    const char* to;
+} QC_NAME_MAPPING;
+
+static QC_NAME_MAPPING function_name_mappings_default[] =
+{
+    { NULL, NULL }
+};
+
+static QC_NAME_MAPPING function_name_mappings_103[] =
+{
+    { "now", "current_timestamp" },
+    { NULL, NULL }
+};
 
 /**
  * The state of qc_sqlite.
@@ -104,6 +129,8 @@ static struct
     bool initialized;
     bool setup;
     qc_log_level_t log_level;
+    qc_parse_as_t parse_as;
+    QC_NAME_MAPPING* function_name_mappings;
 } this_unit;
 
 /**
@@ -139,6 +166,7 @@ static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info, uint32_t collect);
 static void log_invalid_data(GWBUF* query, const char* message);
+static const char* map_function_name(const char* name);
 static bool parse_query(GWBUF* query, uint32_t collect);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query, uint32_t collect);
@@ -642,6 +670,26 @@ static void log_invalid_data(GWBUF* query, const char* message)
     }
 }
 
+static const char* map_function_name(const char* from)
+{
+    QC_NAME_MAPPING* map = this_unit.function_name_mappings;
+    const char* to = NULL;
+
+    while (!to && map->from)
+    {
+        if (strcasecmp(from, map->from) == 0)
+        {
+            to = map->to;
+        }
+        else
+        {
+            ++map;
+        }
+    }
+
+    return to ? to : from;
+}
+
 static bool should_exclude(const char* zName, const ExprList* pExclude)
 {
     int i;
@@ -794,6 +842,8 @@ static void update_function_info(QC_SQLITE_INFO* info,
         // has already been collected, we just return.
         return;
     }
+
+    name = map_function_name(name);
 
     QC_FUNCTION_INFO item = { (char*)name, usage };
 
@@ -2853,54 +2903,81 @@ static bool get_key_and_value(char* arg, const char** pkey, const char** pvalue)
     return p != NULL;
 }
 
-static char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
+static const char ARG_LOG_UNRECOGNIZED_STATEMENTS[] = "log_unrecognized_statements";
+static const char ARG_PARSE_AS[] = "parse_as";
 
-static int32_t qc_sqlite_setup(const char* args)
+static int32_t qc_sqlite_setup(const char* cargs)
 {
     QC_TRACE();
     assert(!this_unit.setup);
 
     qc_log_level_t log_level = QC_LOG_NOTHING;
+    qc_parse_as_t parse_as = QC_PARSE_AS_DEFAULT;
+    QC_NAME_MAPPING* function_name_mappings = function_name_mappings_default;
 
-    if (args)
+    if (cargs)
     {
-        char arg[strlen(args) + 1];
-        strcpy(arg, args);
+        char args[strlen(cargs) + 1];
+        strcpy(args, cargs);
 
-        const char* key;
-        const char* value;
+        char *p1;
+        char *token = strtok_r(args, ",", &p1);
 
-        if (get_key_and_value(arg, &key, &value))
+        while (token)
         {
-            if (strcmp(key, ARG_LOG_UNRECOGNIZED_STATEMENTS) == 0)
+            const char* key;
+            const char* value;
+
+            if (get_key_and_value(token, &key, &value))
             {
-                char *end;
-
-                long l = strtol(value, &end, 0);
-
-                if ((*end == 0) && (l >= QC_LOG_NOTHING) && (l <= QC_LOG_NON_TOKENIZED))
+                if (strcmp(key, ARG_LOG_UNRECOGNIZED_STATEMENTS) == 0)
                 {
-                    log_level = l;
+                    char *end;
+
+                    long l = strtol(value, &end, 0);
+
+                    if ((*end == 0) && (l >= QC_LOG_NOTHING) && (l <= QC_LOG_NON_TOKENIZED))
+                    {
+                        log_level = l;
+                    }
+                    else
+                    {
+                        MXS_WARNING("'%s' is not a number between %d and %d.",
+                                    value, QC_LOG_NOTHING, QC_LOG_NON_TOKENIZED);
+                    }
+                }
+                else if (strcmp(key, ARG_PARSE_AS) == 0)
+                {
+                    if (strcmp(value, "10.3") == 0)
+                    {
+                        parse_as = QC_PARSE_AS_103;
+                        function_name_mappings = function_name_mappings_103;
+                        MXS_NOTICE("Parsing as 10.3");
+                    }
+                    else
+                    {
+                        MXS_WARNING("'%s' is not a recognized value for '%s'. "
+                                    "Parsing as pre-10.3.", value, key);
+                    }
                 }
                 else
                 {
-                    MXS_WARNING("'%s' is not a number between %d and %d.",
-                                value, QC_LOG_NOTHING, QC_LOG_NON_TOKENIZED);
+                    MXS_WARNING("'%s' is not a recognized argument.", key);
                 }
             }
             else
             {
-                MXS_WARNING("'%s' is not a recognized argument.", key);
+                MXS_WARNING("'%s' is not a recognized argument string.", args);
             }
-        }
-        else
-        {
-            MXS_WARNING("'%s' is not a recognized argument string.", args);
+
+            token = strtok_r(NULL, ",", &p1);
         }
     }
 
     this_unit.setup = true;
     this_unit.log_level = log_level;
+    this_unit.parse_as = parse_as;
+    this_unit.function_name_mappings = function_name_mappings;
 
     return this_unit.setup ? QC_RESULT_OK : QC_RESULT_ERROR;
 }
