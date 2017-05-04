@@ -55,6 +55,8 @@ static const char PTR_SRV_PROTOCOL[]              = PTR_PARAMETERS "/protocol";
 static const char PTR_SRV_AUTHENTICATOR[]         = PTR_PARAMETERS "/authenticator";
 static const char PTR_SRV_AUTHENTICATOR_OPTIONS[] = PTR_PARAMETERS "/authenticator_options";
 
+static const char PTR_MON_MODULE[]                = "/data/attributes/module";
+
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
 bool runtime_link_server(SERVER *server, const char *target)
@@ -991,7 +993,7 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
 const char* object_relation_types[] =
 {
-    CN_SERVERS,
+    PTR_RELATIONSHIPS_SERVERS,
     NULL
 };
 
@@ -1012,8 +1014,8 @@ static bool validate_monitor_json(json_t* json)
     bool rval = false;
     json_t* value;
 
-    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
-        (value = json_object_get(json, CN_MODULE)) && json_is_string(value))
+    if ((value = mxs_json_pointer(json, PTR_ID)) && json_is_string(value) &&
+        (value = json_object_get(json, PTR_MON_MODULE)) && json_is_string(value))
     {
         set<string> relations;
         if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
@@ -1068,8 +1070,8 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
 
     if (validate_monitor_json(json))
     {
-        const char* name = json_string_value(json_object_get(json, CN_NAME));
-        const char* module = json_string_value(json_object_get(json, CN_MODULE));
+        const char* name = json_string_value(mxs_json_pointer(json, PTR_ID));
+        const char* module = json_string_value(mxs_json_pointer(json, PTR_MON_MODULE));
 
         if (runtime_create_monitor(name, module))
         {
@@ -1125,15 +1127,15 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
 
     if (object_to_server_relations(monitor->name, old_json.get(), new_json))
     {
+        rval = true;
         bool changed = false;
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        json_t* parameters = mxs_json_pointer(new_json, PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
         if (parameters)
         {
-            rval = true;
             const char* key;
             json_t* value;
 
@@ -1191,8 +1193,8 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
     if (object_to_server_relations(service->name, old_json.get(), new_json))
     {
         bool changed = false;
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        json_t* parameters = mxs_json_pointer(new_json, PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
@@ -1223,6 +1225,7 @@ bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
                 }
                 else if (paramset.find(key) != paramset.end())
                 {
+                    /** Parameter can be altered */
                     if (!runtime_alter_service(service, key, mxs::json_to_string(value).c_str()))
                     {
                         rval = false;
