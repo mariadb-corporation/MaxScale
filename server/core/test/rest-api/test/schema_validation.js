@@ -2,6 +2,8 @@
 
 require("../utils.js")()
 
+before(startMaxScale)
+
 describe("Resource Collections", function(){
 
     var tests = [
@@ -48,3 +50,5 @@ describe("Individual Resources", function(){
         });
     })
 });
+
+after(stopMaxScale)

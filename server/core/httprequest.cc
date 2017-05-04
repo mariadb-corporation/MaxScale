@@ -105,8 +105,8 @@ HttpRequest::HttpRequest(struct MHD_Connection *connection, string url, string m
 
 HttpRequest::~HttpRequest()
 {
-
 }
+
 bool HttpRequest::validate_api_version()
 {
     bool rval = false;

@@ -421,7 +421,7 @@ module.exports = function() {
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
     this.base_url = "http://localhost:8989/v1"
-    this.before(function(done) {
+    this.startMaxScale = function(done) {
         child_process.execFile("./before.sh", function(err, stdout, stderr) {
             if (process.env.MAXSCALE_DIR == null) {
                 throw new Error("MAXSCALE_DIR is not set");
@@ -429,10 +429,10 @@ module.exports = function() {
 
             done()
         })
-    });
-    this.after(function(done) {
+    };
+    this.stopMaxScale = function(done) {
         child_process.execFile("./after.sh", function(err, stdout, stderr) {
             done()
         })
-    });
+    };
 }

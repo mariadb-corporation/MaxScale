@@ -573,5 +573,7 @@ static SpinLock resource_lock;
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
     SpinLockGuard guard(resource_lock);
+    MXS_DEBUG("%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(),
+              request.get_json_str().c_str());
     return resources.process_request(request);
 }
