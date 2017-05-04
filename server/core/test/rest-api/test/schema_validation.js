@@ -32,6 +32,7 @@ describe("Individual Resources", function(){
         "/servers/server2",
         "/services/RW-Split-Router",
         "/monitors/MySQL-Monitor",
+        "/filters/Hint",
         "/sessions/1",
     ]
 

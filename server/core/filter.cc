@@ -30,6 +30,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/service.h>
 #include <maxscale/filter.hh>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/modules.h"
@@ -497,46 +498,41 @@ json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
     return rval;
 }
 
-json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+json_t* filter_json_data(const MXS_FILTER_DEF* filter, const char* host)
 {
     json_t* rval = json_object();
 
-    json_object_set_new(rval, CN_NAME, json_string(filter->name));
-    json_object_set_new(rval, CN_MODULE, json_string(filter->module));
-    json_object_set_new(rval, CN_PARAMETERS, filter_parameters_to_json(filter));
+    json_object_set_new(rval, CN_ID, json_string(filter->name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_FILTERS));
 
-    if (filter->obj && filter->filter)
+    json_t* attr = json_object();
+
+    json_object_set_new(attr, CN_MODULE, json_string(filter->module));
+    json_object_set_new(attr, CN_PARAMETERS, filter_parameters_to_json(filter));
+
+    if (filter->obj && filter->filter && filter->obj->diagnostics_json)
     {
         json_t* diag = filter->obj->diagnostics_json(filter->filter, NULL);
 
         if (diag)
         {
-            json_object_set_new(rval, "filter_diagnostics", diag);
+            json_object_set_new(attr, "filter_diagnostics", diag);
         }
     }
 
     /** Store relationships to other objects */
     json_t* rel = json_object();
+    json_object_set_new(rel, CN_SERVICES, service_relations_to_filter(filter, host));
 
-    string self = host;
-    self += "/filters/";
-    self += filter->name;
-    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
-
-    json_t* arr = service_relations_to_filter(filter, host);
-
-    if (json_array_size(arr) > 0)
-    {
-        json_object_set_new(rel, "services", arr);
-    }
-    else
-    {
-        json_decref(arr);
-    }
-
-    json_object_set_new(rval, "relationships", rel);
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
 
     return rval;
+}
+
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+{
+    return mxs_json_resource(host, MXS_JSON_API_FILTERS, filter_json_data(filter, host));
 }
 
 json_t* filter_list_to_json(const char* host)
@@ -547,7 +543,7 @@ json_t* filter_list_to_json(const char* host)
 
     for (MXS_FILTER_DEF* f = allFilters; f; f = f->next)
     {
-        json_t* json = filter_to_json(f, host);
+        json_t* json = filter_json_data(f, host);
 
         if (json)
         {
@@ -557,7 +553,7 @@ json_t* filter_list_to_json(const char* host)
 
     spinlock_release(&filter_spin);
 
-    return rval;
+    return mxs_json_resource(host, MXS_JSON_API_FILTERS, rval);
 }
 
 namespace maxscale
