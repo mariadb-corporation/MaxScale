@@ -17,6 +17,7 @@
 
 #include <strings.h>
 #include <string>
+#include <sstream>
 #include <set>
 #include <iterator>
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/jansson.hh>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/monitor.h"
@@ -32,8 +34,26 @@
 #include "maxscale/service.h"
 
 using std::string;
+using std::stringstream;
 using std::set;
 using mxs::Closer;
+
+/** JSON Pointers to key parts of JSON objects */
+#define PTR_ID         "/data/id"
+#define PTR_PARAMETERS "/data/attributes/parameters"
+
+/** Pointers to relation lists */
+static const char PTR_RELATIONSHIPS_SERVERS[]  = "/data/relationships/servers/data";
+static const char PTR_RELATIONSHIPS_SERVICES[] = "/data/relationships/services/data";
+static const char PTR_RELATIONSHIPS_MONITORS[] = "/data/relationships/monitors/data";
+static const char PTR_RELATIONSHIPS_FILTERS[]  = "/data/relationships/filters/data";
+
+/** Server JSON Pointers */
+static const char PTR_SRV_PORT[]                  = PTR_PARAMETERS "/port";
+static const char PTR_SRV_ADDRESS[]               = PTR_PARAMETERS "/address";
+static const char PTR_SRV_PROTOCOL[]              = PTR_PARAMETERS "/protocol";
+static const char PTR_SRV_AUTHENTICATOR[]         = PTR_PARAMETERS "/authenticator";
+static const char PTR_SRV_AUTHENTICATOR_OPTIONS[] = PTR_PARAMETERS "/authenticator_options";
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
@@ -316,12 +336,8 @@ bool runtime_alter_server(SERVER *server, const char *key, const char *value)
         }
     }
 
-    if (valid)
+    if (valid && server_serialize(server))
     {
-        if (server->created_online)
-        {
-            server_serialize(server);
-        }
         MXS_NOTICE("Updated server '%s': %s=%s", server->unique_name, key, value);
     }
 
@@ -756,46 +772,39 @@ static bool extract_relations(json_t* json, set<string>& relations,
                               bool (*relation_check)(const string&, const string&))
 {
     bool rval = true;
-    json_t* rel;
 
-    if ((rel = json_object_get(json, CN_RELATIONSHIPS)))
+    for (int i = 0; relation_types[i]; i++)
     {
-        for (int i = 0; relation_types[i]; i++)
+        json_t* arr = mxs_json_pointer(json, relation_types[i]);
+
+        if (arr && json_is_array(arr))
         {
-            json_t* arr = json_object_get(rel, relation_types[i]);
+            size_t size = json_array_size(arr);
 
-            if (arr)
+            for (size_t j = 0; j < size; j++)
             {
-                size_t size = json_array_size(arr);
+                json_t* obj = json_array_get(arr, j);
+                json_t* id = json_object_get(obj, CN_ID);
+                json_t* type = mxs_json_pointer(obj, CN_TYPE);
 
-                for (size_t j = 0; j < size; j++)
+                if (id && json_is_string(id) &&
+                    type && json_is_string(type))
                 {
-                    json_t* t = json_array_get(arr, j);
+                    string id_value = json_string_value(id);
+                    string type_value = json_string_value(type);
 
-                    if (json_is_string(t))
+                    if (relation_check(type_value, id_value))
                     {
-                        string value = json_string_value(t);
-
-                        // Remove the link part
-                        size_t pos = value.find_last_of("/");
-                        if (pos != string::npos)
-                        {
-                            value.erase(0, pos + 1);
-                        }
-
-                        if (relation_check(relation_types[i], value))
-                        {
-                            relations.insert(value);
-                        }
-                        else
-                        {
-                            rval = false;
-                        }
+                        relations.insert(id_value);
                     }
                     else
                     {
                         rval = false;
                     }
+                }
+                else
+                {
+                    rval = false;
                 }
             }
         }
@@ -804,10 +813,10 @@ static bool extract_relations(json_t* json, set<string>& relations,
     return rval;
 }
 
-static inline const char* string_or_null(json_t* json, const char* name)
+static inline const char* string_or_null(json_t* json, const char* path)
 {
     const char* rval = NULL;
-    json_t* value = json_object_get(json, name);
+    json_t* value = mxs_json_pointer(json, path);
 
     if (value && json_is_string(value))
     {
@@ -819,29 +828,19 @@ static inline const char* string_or_null(json_t* json, const char* name)
 
 static bool server_contains_required_fields(json_t* json)
 {
-    bool rval = false;
-    json_t* value;
+    json_t* id = mxs_json_pointer(json, PTR_ID);
+    json_t* port = mxs_json_pointer(json, PTR_SRV_PORT);
+    json_t* address = mxs_json_pointer(json, PTR_SRV_ADDRESS);
 
-    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value))
-    {
-        /** Object has a name field */
-        json_t* param = json_object_get(json, CN_PARAMETERS);
-
-        if (param &&
-            (value = json_object_get(param, CN_ADDRESS)) && json_is_string(value) &&
-            (value = json_object_get(param, CN_PORT)) && json_is_integer(value))
-        {
-            rval = true;
-        }
-    }
-
-    return rval;
+    return (id && json_is_string(id) &&
+            address && json_is_string(address) &&
+            port && json_is_integer(port));
 }
 
 const char* server_relation_types[] =
 {
-    CN_SERVICES,
-    CN_MONITORS,
+    PTR_RELATIONSHIPS_SERVICES,
+    PTR_RELATIONSHIPS_MONITORS,
     NULL
 };
 
@@ -889,20 +888,18 @@ SERVER* runtime_create_server_from_json(json_t* json)
 
     if (server_contains_required_fields(json))
     {
-        const char* name = json_string_value(json_object_get(json, CN_NAME));
-        json_t* params = json_object_get(json, CN_PARAMETERS);
-        const char* address = json_string_value(json_object_get(params, CN_ADDRESS));
+        const char* name = json_string_value(mxs_json_pointer(json, PTR_ID));
+        const char* address = json_string_value(mxs_json_pointer(json, PTR_SRV_ADDRESS));
 
         /** The port needs to be in string format */
         char port[200]; // Enough to store any port value
-        int i = json_integer_value(json_object_get(params, CN_PORT));
+        int i = json_integer_value(mxs_json_pointer(json, PTR_SRV_PORT));
         snprintf(port, sizeof(port), "%d", i);
 
         /** Optional parameters */
-        const char* protocol = string_or_null(params, CN_PROTOCOL);
-        const char* authenticator = string_or_null(params, CN_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(params, CN_AUTHENTICATOR_OPTIONS);
-
+        const char* protocol = string_or_null(json, PTR_SRV_PROTOCOL);
+        const char* authenticator = string_or_null(json, PTR_SRV_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, PTR_SRV_AUTHENTICATOR_OPTIONS);
 
         set<string> relations;
 
@@ -961,8 +958,8 @@ bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
 
     if (server_to_object_relations(server, old_json.get(), new_json))
     {
-        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
-        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+        json_t* parameters = mxs_json_pointer(new_json, PTR_PARAMETERS);
+        json_t* old_parameters = mxs_json_pointer(old_json.get(), PTR_PARAMETERS);
 
         ss_dassert(old_parameters);
 
