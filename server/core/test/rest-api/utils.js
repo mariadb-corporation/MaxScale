@@ -405,6 +405,8 @@ function validate_json(data) {
     return validate_func(JSON.parse(data))
 }
 
+var child_process = require("child_process")
+
 module.exports = function() {
     this.fs = require("fs")
     this.request = require("request-promise-native")
@@ -419,4 +421,18 @@ module.exports = function() {
     this.validate_func = ajv.compile(json_api_schema)
     this.validate = validate_json
     this.base_url = "http://localhost:8989/v1"
+    this.before(function(done) {
+        child_process.execFile("./before.sh", function(err, stdout, stderr) {
+            if (process.env.MAXSCALE_DIR == null) {
+                throw new Error("MAXSCALE_DIR is not set");
+            }
+
+            done()
+        })
+    });
+    this.after(function(done) {
+        child_process.execFile("./after.sh", function(err, stdout, stderr) {
+            done()
+        })
+    });
 }

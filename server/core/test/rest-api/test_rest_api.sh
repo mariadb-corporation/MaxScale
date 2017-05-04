@@ -50,24 +50,12 @@ chmod 0755 $maxscaledir/lib/maxscale
 chmod 0755 $maxscaledir/cache/maxscale
 chmod 0755 $maxscaledir/run/maxscale
 
-# Start MaxScale
-$maxscaledir/bin/maxscale -df $maxscaledir/maxscale.cnf >& $maxscaledir/maxscale.output &
-pid=$!
-
-# Wait for MaxScale to start
-for ((i=0;i<60;i++))
-do
-    $maxscaledir/bin/maxadmin help >& /dev/null && break
-    sleep 1
-done
+# This variable is used to start and stop MaxScale before each test
+export MAXSCALE_DIR=$maxscaledir
 
 # Run tests
 cd $testdir
 npm test
 rval=$?
-
-# Stop MaxScale
-kill $pid
-wait
 
 exit $rval
