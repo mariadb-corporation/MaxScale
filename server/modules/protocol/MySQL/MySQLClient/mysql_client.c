@@ -668,7 +668,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * normal data handling function instead of this one.
          */
         MXS_SESSION *session =
-                session_alloc_with_id(dcb->service, dcb, protocol->tid);
+            session_alloc_with_id(dcb->service, dcb, protocol->tid);
 
         if (session != NULL)
         {
@@ -676,7 +676,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
             ss_dassert(session->state != SESSION_STATE_ALLOC &&
                        session->state != SESSION_STATE_DUMMY);
             protocol->protocol_auth_state = MXS_AUTH_STATE_COMPLETE;
-            ss_debug(bool check =) mxs_add_to_session_map(session->ses_id, session);
+            ss_debug(bool check = ) mxs_worker_register_session(session);
             ss_dassert(check);
             mxs_mysql_send_ok(dcb, next_sequence, 0, NULL);
         }
@@ -1258,7 +1258,7 @@ static int gw_client_close(DCB *dcb)
     ss_dassert(dcb->protocol);
     mysql_protocol_done(dcb);
     MXS_SESSION* target = dcb->session;
-    ss_debug(MXS_SESSION* removed =) mxs_remove_from_session_map(target->ses_id);
+    ss_debug(MXS_SESSION* removed = ) mxs_worker_deregister_session(target->ses_id);
     ss_dassert(removed == target);
     session_close(target);
     return 1;
@@ -1515,12 +1515,12 @@ static bool process_special_commands(DCB* dcb, GWBUF *read_buffer, int nbytes_re
     /**
      * Handle COM_PROCESS_KILL
      */
-    else if((proto->current_command == MYSQL_COM_PROCESS_KILL))
+    else if ((proto->current_command == MYSQL_COM_PROCESS_KILL))
     {
         /* Make sure we have a complete SQL packet before trying to read the
          * process id. If not, try again next time. */
         unsigned int expected_len =
-          MYSQL_GET_PAYLOAD_LEN((uint8_t *)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
+            MYSQL_GET_PAYLOAD_LEN((uint8_t *)GWBUF_DATA(read_buffer)) + MYSQL_HEADER_LEN;
         if (gwbuf_length(read_buffer) < expected_len)
         {
             dcb->dcb_readqueue = read_buffer;
@@ -1530,9 +1530,9 @@ static bool process_special_commands(DCB* dcb, GWBUF *read_buffer, int nbytes_re
         {
             uint8_t bytes[4];
             if (gwbuf_copy_data(read_buffer, MYSQL_HEADER_LEN + 1, sizeof(bytes), (uint8_t*)bytes)
-                    == sizeof(bytes))
+                == sizeof(bytes))
             {
-                uint32_t process_id = gw_mysql_get_byte4(bytes);
+                uint64_t process_id = gw_mysql_get_byte4(bytes);
                 // Do not send this packet for routing
                 gwbuf_free(read_buffer);
                 session_broadcast_kill_command(dcb->session, process_id);
