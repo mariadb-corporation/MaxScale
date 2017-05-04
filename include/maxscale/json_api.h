@@ -61,4 +61,13 @@ json_t* mxs_json_relationship(const char* host, const char* endpoint);
  */
 void mxs_json_add_relation(json_t* rel, const char* id, const char* type);
 
+/**
+ * @brief Return value at provided JSON Pointer
+ *
+ * @param json     JSON object
+ * @param json_ptr JSON Pointer to object
+ * @return Pointed value or NULL if no value is found
+ */
+json_t* mxs_json_pointer(json_t* json, const char* json_ptr);
+
 MXS_END_DECLS
