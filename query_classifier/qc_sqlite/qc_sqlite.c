@@ -1146,8 +1146,23 @@ static void update_field_infos(QC_SQLITE_INFO* info,
         case TK_REM:
         case TK_SLASH:
         case TK_STAR:
-        case TK_UMINUS:
             update_function_info(info, get_token_symbol(pExpr->op), usage);
+            break;
+
+        case TK_UMINUS:
+            switch (this_unit.parse_as)
+            {
+            case QC_PARSE_AS_DEFAULT:
+                update_function_info(info, get_token_symbol(pExpr->op), usage);
+                break;
+
+            case QC_PARSE_AS_103:
+                // In MariaDB 10.3 a unary minus is not considered a function.
+                break;
+
+            default:
+                ss_dassert(!true);
+            }
             break;
 
         case TK_FUNCTION:
