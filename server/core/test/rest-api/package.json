@@ -4,7 +4,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "description": "MaxScale REST API tests",
   "scripts": {
-    "test": "mocha --timeout 60000 --slow 10000"
+    "test": "mocha --timeout 30000 --slow 10000"
   },
   "author": "",
   "license": "SEE LICENSE IN ../../../../LICENSE.txt",

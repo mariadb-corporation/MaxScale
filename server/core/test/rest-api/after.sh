@@ -9,7 +9,7 @@ test -z "$MAXSCALE_DIR" && exit 1
 
 maxscaledir=$MAXSCALE_DIR
 
-for ((i=0;i<60;i++))
+for ((i=0;i<10;i++))
 do
     pkill maxscale || break
     sleep 0.5
