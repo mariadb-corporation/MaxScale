@@ -49,16 +49,17 @@ public:
  */
 class WorkerDisposableTask
 {
+public:
+    /**
+     * Destructor
+     */
+    virtual ~WorkerDisposableTask();
+
 protected:
     /**
      * Constructor
      */
     WorkerDisposableTask();
-
-    /**
-     * Destructor
-     */
-    virtual ~WorkerDisposableTask();
 
     /**
      * @brief Called in the context of a specific worker.

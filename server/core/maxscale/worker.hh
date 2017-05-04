@@ -298,6 +298,12 @@ public:
      */
     bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
+    template<class T>
+    bool post(std::auto_ptr<T> sTask, enum execute_mode_t mode = EXECUTE_AUTO)
+    {
+        return post(std::auto_ptr<DisposableTask>(sTask.release()), mode);
+    }
+
     /**
      * Posts a task to all workers for execution.
      *
@@ -330,6 +336,12 @@ public:
      *            be deleted.
      */
     static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
+
+    template<class T>
+    static size_t broadcast(std::auto_ptr<T> sTask)
+    {
+        return broadcast(std::auto_ptr<DisposableTask>(sTask.release()));
+    }
 
     /**
      * Executes a task on all workers in serial mode (the task is executed
