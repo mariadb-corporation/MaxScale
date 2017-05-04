@@ -89,3 +89,5 @@ if(TEST_FEEDBACK)
   add_test(TestFeedback testfeedback)
   set_tests_properties(TestFeedback PROPERTIES TIMEOUT 30)
 endif()
+
+add_subdirectory(rest-api)
