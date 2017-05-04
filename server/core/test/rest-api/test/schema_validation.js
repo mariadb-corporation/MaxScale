@@ -38,6 +38,7 @@ describe("Individual Resources", function() {
         "/monitors/MySQL-Monitor",
         "/filters/Hint",
         "/sessions/1",
+        "/maxscale/",
     ]
 
     tests.forEach(function(endpoint) {

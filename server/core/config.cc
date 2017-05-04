@@ -40,6 +40,7 @@
 #include <maxscale/spinlock.h>
 #include <maxscale/utils.h>
 #include <maxscale/paths.h>
+#include <maxscale/json_api.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
@@ -3855,20 +3856,24 @@ int config_parse_server_list(const char *servers, char ***output_array)
 
 json_t* config_paths_to_json(const char* host)
 {
+    json_t* attr = json_object();
+    json_object_set_new(attr, "libdir", json_string(get_libdir()));
+    json_object_set_new(attr, "datadir", json_string(get_datadir()));
+    json_object_set_new(attr, "process_datadir", json_string(get_process_datadir()));
+    json_object_set_new(attr, "cachedir", json_string(get_cachedir()));
+    json_object_set_new(attr, "configdir", json_string(get_configdir()));
+    json_object_set_new(attr, "config_persistdir", json_string(get_config_persistdir()));
+    json_object_set_new(attr, "module_configdir", json_string(get_module_configdir()));
+    json_object_set_new(attr, "piddir", json_string(get_piddir()));
+    json_object_set_new(attr, "logdir", json_string(get_logdir()));
+    json_object_set_new(attr, "langdir", json_string(get_langdir()));
+    json_object_set_new(attr, "execdir", json_string(get_execdir()));
+    json_object_set_new(attr, "connector_plugindir", json_string(get_connector_plugindir()));
+
     json_t* obj = json_object();
+    json_object_set_new(obj, CN_ATTRIBUTES, attr);
+    json_object_set_new(obj, CN_ID, json_string(CN_MAXSCALE));
+    json_object_set_new(obj, CN_TYPE, json_string(CN_MAXSCALE));
 
-    json_object_set_new(obj, "libdir", json_string(get_libdir()));
-    json_object_set_new(obj, "datadir", json_string(get_datadir()));
-    json_object_set_new(obj, "process_datadir", json_string(get_process_datadir()));
-    json_object_set_new(obj, "cachedir", json_string(get_cachedir()));
-    json_object_set_new(obj, "configdir", json_string(get_configdir()));
-    json_object_set_new(obj, "config_persistdir", json_string(get_config_persistdir()));
-    json_object_set_new(obj, "module_configdir", json_string(get_module_configdir()));
-    json_object_set_new(obj, "piddir", json_string(get_piddir()));
-    json_object_set_new(obj, "logdir", json_string(get_logdir()));
-    json_object_set_new(obj, "langdir", json_string(get_langdir()));
-    json_object_set_new(obj, "execdir", json_string(get_execdir()));
-    json_object_set_new(obj, "connector_plugindir", json_string(get_connector_plugindir()));
-
-    return obj;
+    return mxs_json_resource(host, MXS_JSON_API_MAXSCALE, obj);
 }
