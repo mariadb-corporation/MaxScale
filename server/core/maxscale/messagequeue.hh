@@ -39,7 +39,7 @@ public:
      * @param arg1  First argument.
      * @param arg2  Second argument.
      */
-    explicit MessageQueueMessage(uint32_t id = 0, intptr_t arg1 = 0, intptr_t arg2 = 0)
+    explicit MessageQueueMessage(uint64_t id = 0, intptr_t arg1 = 0, intptr_t arg2 = 0)
         : m_id(id)
         , m_arg1(arg1)
         , m_arg2(arg2)
@@ -61,7 +61,7 @@ public:
         return m_arg2;
     }
 
-    MessageQueueMessage& set_id(uint32_t id)
+    MessageQueueMessage& set_id(uint64_t id)
     {
         m_id = id;
         return *this;
@@ -80,7 +80,7 @@ public:
     }
 
 private:
-    uint32_t m_id;
+    uint64_t m_id;
     intptr_t m_arg1;
     intptr_t m_arg2;
 };
