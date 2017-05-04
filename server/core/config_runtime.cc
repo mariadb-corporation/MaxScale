@@ -720,6 +720,10 @@ bool runtime_create_monitor(const char *name, const char *module)
             }
         }
     }
+    else
+    {
+        MXS_INFO("Can't create monitor, it already exists");
+    }
 
     spinlock_release(&crt_lock);
     return rval;
@@ -1015,7 +1019,7 @@ static bool validate_monitor_json(json_t* json)
     json_t* value;
 
     if ((value = mxs_json_pointer(json, PTR_ID)) && json_is_string(value) &&
-        (value = json_object_get(json, PTR_MON_MODULE)) && json_is_string(value))
+        (value = mxs_json_pointer(json, PTR_MON_MODULE)) && json_is_string(value))
     {
         set<string> relations;
         if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
@@ -1084,6 +1088,10 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
                 rval = NULL;
             }
         }
+    }
+    else
+    {
+        MXS_INFO("Invalid request JSON: %s", mxs::json_dump(json).c_str());
     }
 
     return rval;
