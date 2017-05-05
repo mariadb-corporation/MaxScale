@@ -35,7 +35,7 @@ static void skygw_log_disable(int priority)
 int main(int argc, char* argv[])
 {
     int              err = 0;
-    char*            logstr;
+    const char*            logstr;
 
     int              i;
     bool             succp;

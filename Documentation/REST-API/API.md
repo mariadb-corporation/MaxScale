@@ -15,6 +15,12 @@ This document describes the version 1 of the MaxScale REST API.
 - [Resources](#resources)
 - [Common Request Parameter](#common-request-parameters)
 
+## Note About Syntax
+
+Although JSON does not define a syntax for comments, some of the JSON examples
+have C-style inline comments in them. These comments use `//` to mark the start
+of the comment and extend to the end of the current line.
+
 ## HTTP Headers
 
 ### Request Headers
@@ -421,11 +427,64 @@ The MaxScale REST API provides the following resources.
 - [/sessions](Resources-Session.md)
 - [/users](Resources-User.md)
 
+### Resource Relationships
+
+All resources return complete JSON objects. The returned objects can have a
+_relationships_ field that represents any relations the object has to other
+objects. This closely resembles the JSON API definition of links.
+
+In the _relationships_ objects, all resources have a _self_ link that points to
+the resource itself. This allows for easier updating of resources as the reply
+URL is included in the response itself.
+
+The following lists the resources and the types of links each resource can have
+in addition to the _self_ link.
+
+- `services` - Service resource
+
+  - `servers`
+
+    List of servers used by the service
+
+  - `filters`
+
+    List of filters used by the service
+
+- `monitors` - Monitor resource
+
+  - `servers`
+
+    List of servers used by the monitor
+
+- `filters` - Filter resource
+
+  - `services`
+
+    List of services that use this filter
+
+- `servers` - Server resource
+
+  - `services`
+
+    List of services that use this server
+
+  - `monitors`
+
+    List of monitors that use this server
+
 ## Common Request Parameters
 
 Most of the resources that support GET also support the following
 parameters. See the resource documentation for a list of supported request
 parameters.
+
+- `pretty`
+
+  - Pretty-print output.
+
+    If this parameter is set to `true` then the returned objects are
+    formatted in a more human readable format. All resources support this
+    parameter.
 
 - `fields`
 

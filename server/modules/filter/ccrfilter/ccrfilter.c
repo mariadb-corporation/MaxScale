@@ -56,6 +56,7 @@ static  void   freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static  void   setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static  int    routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  void   diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static  json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 #define CCR_DEFAULT_TIME "60"
@@ -123,6 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -380,6 +382,42 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
     dcb_printf(dcb, "\tNo. of data modifications: %d\n", my_instance->stats.n_modified);
     dcb_printf(dcb, "\tNo. of hints added based on count: %d\n", my_instance->stats.n_add_count);
     dcb_printf(dcb, "\tNo. of hints added based on time: %d\n",  my_instance->stats.n_add_time);
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param instance  The filter instance
+ * @param fsession  Filter session, may be NULL
+ * @param dcb       The DCB for diagnostic output
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    CCR_INSTANCE *my_instance = (CCR_INSTANCE *)instance;
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "count", json_integer(my_instance->count));
+    json_object_set_new(rval, "time", json_integer(my_instance->time));
+
+    if (my_instance->match)
+    {
+        json_object_set_new(rval, "match", json_string(my_instance->match));
+    }
+
+    if (my_instance->nomatch)
+    {
+        json_object_set_new(rval, "nomatch", json_string(my_instance->nomatch));
+    }
+
+    json_object_set_new(rval, "data_modifications", json_integer(my_instance->stats.n_modified));
+    json_object_set_new(rval, "hints_added_count", json_integer(my_instance->stats.n_add_count));
+    json_object_set_new(rval, "hints_added_time", json_integer(my_instance->stats.n_add_time));
+
+    return rval;
 }
 
 /**

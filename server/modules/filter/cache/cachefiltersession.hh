@@ -85,6 +85,11 @@ public:
      */
     void diagnostics(DCB *dcb);
 
+    /**
+     * Print diagnostics of the session cache.
+     */
+    json_t* diagnostics_json() const;
+
 private:
     int handle_expecting_fields();
     int handle_expecting_nothing();

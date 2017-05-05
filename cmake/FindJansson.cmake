@@ -6,7 +6,9 @@
 # JANSSON_INCLUDE_DIR - Path to Jansson headers
 
 find_path(JANSSON_INCLUDE_DIR jansson.h)
-find_library(JANSSON_LIBRARIES NAMES libjansson.so libjansson.a)
+
+# Use the static library
+find_library(JANSSON_LIBRARIES NAMES libjansson.a)
 
 if (JANSSON_INCLUDE_DIR AND JANSSON_LIBRARIES)
   message(STATUS "Found Jansson: ${JANSSON_LIBRARIES}")

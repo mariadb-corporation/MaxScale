@@ -80,6 +80,15 @@ uint64_t atomic_load_uint64(uint64_t *variable)
 #endif
 }
 
+void* atomic_load_ptr(void **variable)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    return __atomic_load_n(variable, __ATOMIC_SEQ_CST);
+#else
+    return __sync_fetch_and_or(variable, 0);
+#endif
+}
+
 void atomic_store_int32(int *variable, int value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
@@ -99,6 +108,15 @@ void atomic_store_int64(int64_t *variable, int64_t value)
 }
 
 void atomic_store_uint64(uint64_t *variable, uint64_t value)
+{
+#ifdef MXS_USE_ATOMIC_BUILTINS
+    __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);
+#else
+    __sync_lock_test_and_set(variable, value);
+#endif
+}
+
+void atomic_store_ptr(void **variable, void *value)
 {
 #ifdef MXS_USE_ATOMIC_BUILTINS
     __atomic_store_n(variable, value, __ATOMIC_SEQ_CST);

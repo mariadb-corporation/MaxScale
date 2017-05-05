@@ -59,6 +59,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -146,6 +147,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -622,6 +624,73 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
             }
         }
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    TOPN_INSTANCE *my_instance = (TOPN_INSTANCE*)instance;
+    TOPN_SESSION *my_session = (TOPN_SESSION*)fsession;
+
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "report_size", json_integer(my_instance->topN));
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+    if (my_instance->user)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user));
+    }
+
+    if (my_instance->match)
+    {
+        json_object_set_new(rval, "match", json_string(my_instance->match));
+    }
+
+    if (my_instance->exclude)
+    {
+        json_object_set_new(rval, "exclude", json_string(my_instance->exclude));
+    }
+
+    if (my_session)
+    {
+        json_object_set_new(rval, "session_filename", json_string(my_session->filename));
+
+        json_t* arr = json_array();
+
+        for (int i = 0; i < my_instance->topN; i++)
+        {
+            if (my_session->top[i]->sql)
+            {
+                double exec_time = ((my_session->top[i]->duration.tv_sec * 1000.0)
+                                    + (my_session->top[i]->duration.tv_usec / 1000.0)) / 1000.0;
+
+                json_t* obj = json_object();
+
+                json_object_set_new(obj, "rank", json_integer(i + 1));
+                json_object_set_new(obj, "time", json_real(exec_time));
+                json_object_set_new(obj, "sql", json_string(my_session->top[i]->sql));
+
+                json_array_append_new(arr, obj);
+            }
+        }
+
+        json_object_set_new(rval, "top_queries", arr);
+    }
+
+    return rval;
 }
 
 /**

@@ -324,6 +324,24 @@ void RegexHintFSession::diagnostics(DCB* dcb)
 /**
  * Diagnostics routine
  *
+ * Print diagnostics on the filter instance as a whole + session-specific info.
+ *
+ * @param   dcb     The DCB for diagnostic output
+ */
+json_t* RegexHintFSession::diagnostics_json() const
+{
+
+    json_t* rval = m_fil_inst.diagnostics_json(); /* Print overall diagnostics */
+
+    json_object_set_new(rval, "session_queries_diverted", json_integer(m_n_diverted));
+    json_object_set_new(rval, "session_queries_undiverted", json_integer(m_n_undiverted));
+
+    return rval;
+}
+
+/**
+ * Diagnostics routine
+ *
  * Print diagnostics on the filter instance as a whole.
  *
  * @param   dcb     The DCB for diagnostic output
@@ -362,6 +380,54 @@ void RegexHintFilter::diagnostics(DCB* dcb)
                    "\t\tReplacement limit to user           %s\n",
                    m_user.c_str());
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Print diagnostics on the filter instance as a whole.
+ *
+ * @param   dcb     The DCB for diagnostic output
+ */
+json_t* RegexHintFilter::diagnostics_json() const
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "queries_diverted", json_integer(m_total_diverted));
+    json_object_set_new(rval, "queries_undiverted", json_integer(m_total_undiverted));
+
+    if (m_mapping.size() > 0)
+    {
+        json_t* arr = json_array();
+
+        for (MappingArray::const_iterator it = m_mapping.begin(); it != m_mapping.end(); it++)
+        {
+            json_t* obj = json_object();
+            json_t* targets = json_array();
+
+            for (StringArray::const_iterator it2 = it->m_targets.begin(); it2 != it->m_targets.end(); it2++)
+            {
+                json_array_append_new(targets, json_string(it2->c_str()));
+            }
+
+            json_object_set_new(obj, "match", json_string(it->m_match.c_str()));
+            json_object_set_new(obj, "targets", targets);
+        }
+
+        json_object_set_new(rval, "mappings", arr);
+    }
+
+    if (m_source)
+    {
+        json_object_set_new(rval, "source", json_string(m_source->m_address.c_str()));
+    }
+
+    if (m_user.length())
+    {
+        json_object_set_new(rval, "user", json_string(m_user.c_str()));
+    }
+
+    return rval;
 }
 
 /**

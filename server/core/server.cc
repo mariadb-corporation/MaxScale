@@ -14,23 +14,6 @@
 /**
  * @file server.c  - A representation of a backend server within the gateway.
  *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 18/06/13     Mark Riddoch            Initial implementation
- * 17/05/14     Mark Riddoch            Addition of unique_name
- * 20/05/14     Massimiliano Pinto      Addition of server_string
- * 21/05/14     Massimiliano Pinto      Addition of node_id
- * 28/05/14     Massimiliano Pinto      Addition of rlagd and node_ts fields
- * 20/06/14     Massimiliano Pinto      Addition of master_id, depth, slaves fields
- * 26/06/14     Mark Riddoch            Addition of server parameters
- * 30/08/14     Massimiliano Pinto      Addition of new service status description
- * 30/10/14     Massimiliano Pinto      Addition of SERVER_MASTER_STICKINESS description
- * 01/06/15     Massimiliano Pinto      Addition of server_update_address/port
- * 19/06/15     Martin Brampton         Extra code for persistent connections
- *
- * @endverbatim
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +21,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string>
+
+#include <maxscale/config.h>
 #include <maxscale/service.h>
 #include <maxscale/session.h>
 #include <maxscale/server.h>
@@ -48,14 +34,28 @@
 #include <maxscale/ssl.h>
 #include <maxscale/alloc.h>
 #include <maxscale/paths.h>
+#include <maxscale/utils.h>
+#include <maxscale/semaphore.hh>
 
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
+#include "maxscale/workertask.hh"
+#include "maxscale/worker.hh"
+
+using maxscale::Semaphore;
+using maxscale::Worker;
+using maxscale::WorkerTask;
+
+using std::string;
 
 /** The latin1 charset */
 #define SERVER_DEFAULT_CHARSET 0x08
 
-const char USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
+const char CN_MONITORPW[]          = "monitorpw";
+const char CN_MONITORUSER[]        = "monitoruser";
+const char CN_PERSISTMAXTIME[]     = "persistmaxtime";
+const char CN_PERSISTPOOLMAX[]     = "persistpoolmax";
+const char CN_USE_PROXY_PROTOCOL[] = "use_proxy_protocol";
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -429,101 +429,50 @@ dprintAllServers(DCB *dcb)
 
 /**
  * Print all servers in Json format to a DCB
- *
- * Designed to be called within a debugger session in order
- * to display all active servers within the gateway
  */
 void
 dprintAllServersJson(DCB *dcb)
 {
-    char *stat;
-    int len = 0;
-    int el = 1;
-
-    spinlock_acquire(&server_spin);
-    SERVER *server = next_active_server(allServers);
-    while (server)
-    {
-        server = next_active_server(server->next);
-        len++;
-    }
-
-    server = next_active_server(allServers);
-
-    dcb_printf(dcb, "[\n");
-    while (server)
-    {
-        dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
-                   server->name);
-        stat = server_status(server);
-        dcb_printf(dcb, "    \"status\": \"%s\",\n",
-                   stat);
-        MXS_FREE(stat);
-        dcb_printf(dcb, "    \"protocol\": \"%s\",\n",
-                   server->protocol);
-        dcb_printf(dcb, "    \"port\": \"%d\",\n",
-                   server->port);
-        if (server->server_string)
-        {
-            dcb_printf(dcb, "    \"version\": \"%s\",\n",
-                       server->server_string);
-        }
-        dcb_printf(dcb, "    \"nodeId\": \"%ld\",\n",
-                   server->node_id);
-        dcb_printf(dcb, "    \"masterId\": \"%ld\",\n",
-                   server->master_id);
-        if (server->slaves)
-        {
-            int i;
-            dcb_printf(dcb, "    \"slaveIds\": [ ");
-            for (i = 0; server->slaves[i]; i++)
-            {
-                if (i == 0)
-                {
-                    dcb_printf(dcb, "%li", server->slaves[i]);
-                }
-                else
-                {
-                    dcb_printf(dcb, ", %li ", server->slaves[i]);
-                }
-            }
-            dcb_printf(dcb, "],\n");
-        }
-        dcb_printf(dcb, "    \"replDepth\": \"%d\",\n",
-                   server->depth);
-        if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
-        {
-            if (server->rlag >= 0)
-            {
-                dcb_printf(dcb, "    \"slaveDelay\": \"%d\",\n", server->rlag);
-            }
-        }
-        if (server->node_ts > 0)
-        {
-            dcb_printf(dcb, "    \"lastReplHeartbeat\": \"%lu\",\n", server->node_ts);
-        }
-        dcb_printf(dcb, "    \"totalConnections\": \"%d\",\n",
-                   server->stats.n_connections);
-        dcb_printf(dcb, "    \"currentConnections\": \"%d\",\n",
-                   server->stats.n_current);
-        dcb_printf(dcb, "    \"currentOps\": \"%d\"\n",
-                   server->stats.n_current_ops);
-        if (el < len)
-        {
-            dcb_printf(dcb, "  },\n");
-        }
-        else
-        {
-            dcb_printf(dcb, "  }\n");
-        }
-        server = next_active_server(server->next);
-        el++;
-    }
-
-    dcb_printf(dcb, "]\n");
-    spinlock_release(&server_spin);
+    json_t* all_servers = server_list_to_json("");
+    char* dump = json_dumps(all_servers, JSON_INDENT(4));
+    dcb_printf(dcb, "%s", dump);
+    MXS_FREE(dump);
+    json_decref(all_servers);
 }
 
+/**
+ * A class for cleaning up persistent connections
+ */
+class CleanupTask : public WorkerTask
+{
+public:
+    CleanupTask(const SERVER* server):
+        m_server(server)
+    {
+    }
+
+    void execute(Worker& worker)
+    {
+        int thread_id = worker.get_current_id();
+        dcb_persistent_clean_count(m_server->persistent[thread_id], thread_id, false);
+    }
+
+private:
+    const SERVER* m_server; /**< Server to clean up */
+};
+
+/**
+ * @brief Clean up any stale persistent connections
+ *
+ * This function purges any stale persistent connections from @c server.
+ *
+ * @param server Server to clean up
+ */
+static void cleanup_persistent_connections(const SERVER* server)
+{
+    CleanupTask task(server);
+    Worker::execute_concurrently(task);
+}
 
 /**
  * Print server details to a DCB
@@ -604,7 +553,7 @@ dprintServer(DCB *dcb, const SERVER *server)
     if (server->persistpoolmax)
     {
         dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
-        poll_send_message(POLL_MSG_CLEAN_PERSISTENT, (void*)server);
+        cleanup_persistent_connections(server);
         dcb_printf(dcb, "\tPersistent measured pool size:       %d\n", server->stats.n_persistent);
         dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
         dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
@@ -962,7 +911,7 @@ static void server_parameter_free(SERVER_PARAM *tofree)
  * @return      The parameter value or NULL if not found
  */
 const char *
-server_get_parameter(const SERVER *server, char *name)
+server_get_parameter(const SERVER *server, const char *name)
 {
     SERVER_PARAM *param = server->parameters;
 
@@ -1174,36 +1123,36 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     // TODO: Check for return values on all of the dprintf calls
     dprintf(file, "[%s]\n", server->unique_name);
-    dprintf(file, "type=server\n");
-    dprintf(file, "protocol=%s\n", server->protocol);
-    dprintf(file, "address=%s\n", server->name);
-    dprintf(file, "port=%u\n", server->port);
-    dprintf(file, "authenticator=%s\n", server->authenticator);
+    dprintf(file, "%s=server\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_PROTOCOL, server->protocol);
+    dprintf(file, "%s=%s\n", CN_ADDRESS, server->name);
+    dprintf(file, "%s=%u\n", CN_PORT, server->port);
+    dprintf(file, "%s=%s\n", CN_AUTHENTICATOR, server->authenticator);
 
     if (server->auth_options)
     {
-        dprintf(file, "authenticator_options=%s\n", server->auth_options);
+        dprintf(file, "%s=%s\n", CN_AUTHENTICATOR_OPTIONS, server->auth_options);
     }
 
     if (*server->monpw && *server->monuser)
     {
-        dprintf(file, "monitoruser=%s\n", server->monuser);
-        dprintf(file, "monitorpw=%s\n", server->monpw);
+        dprintf(file, "%s=%s\n", CN_MONITORUSER, server->monuser);
+        dprintf(file, "%s=%s\n", CN_MONITORPW, server->monpw);
     }
 
     if (server->persistpoolmax)
     {
-        dprintf(file, "persistpoolmax=%ld\n", server->persistpoolmax);
+        dprintf(file, "%s=%ld\n", CN_PERSISTPOOLMAX, server->persistpoolmax);
     }
 
     if (server->persistmaxtime)
     {
-        dprintf(file, "persistmaxtime=%ld\n", server->persistmaxtime);
+        dprintf(file, "%s=%ld\n", CN_PERSISTMAXTIME, server->persistmaxtime);
     }
 
     if (server->use_proxy_protocol)
     {
-        dprintf(file, "%s=yes\n", USE_PROXY_PROTOCOL);
+        dprintf(file, "%s=yes\n", CN_USE_PROXY_PROTOCOL);
     }
 
     for (SERVER_PARAM *p = server->parameters; p; p = p->next)
@@ -1216,25 +1165,25 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
     if (server->server_ssl)
     {
-        dprintf(file, "ssl=required\n");
+        dprintf(file, "%s=required\n", CN_SSL);
 
         if (server->server_ssl->ssl_cert)
         {
-            dprintf(file, "ssl_cert=%s\n", server->server_ssl->ssl_cert);
+            dprintf(file, "%s=%s\n", CN_SSL_CERT, server->server_ssl->ssl_cert);
         }
 
         if (server->server_ssl->ssl_key)
         {
-            dprintf(file, "ssl_key=%s\n", server->server_ssl->ssl_key);
+            dprintf(file, "%s=%s\n", CN_SSL_KEY, server->server_ssl->ssl_key);
         }
 
         if (server->server_ssl->ssl_ca_cert)
         {
-            dprintf(file, "ssl_ca_cert=%s\n", server->server_ssl->ssl_ca_cert);
+            dprintf(file, "%s=%s\n", CN_SSL_CA_CERT, server->server_ssl->ssl_ca_cert);
         }
         if (server->server_ssl->ssl_cert_verify_depth)
         {
-            dprintf(file, "ssl_cert_verify_depth=%d\n", server->server_ssl->ssl_cert_verify_depth);
+            dprintf(file, "%s=%d\n", CN_SSL_CERT_VERIFY_DEPTH, server->server_ssl->ssl_cert_verify_depth);
         }
 
         const char *version = NULL;
@@ -1264,7 +1213,7 @@ static bool create_server_config(const SERVER *server, const char *filename)
 
         if (version)
         {
-            dprintf(file, "ssl_version=%s\n", version);
+            dprintf(file, "%s=%s\n", CN_SSL_VERSION, version);
         }
     }
 
@@ -1407,6 +1356,153 @@ bool server_is_mxs_service(const SERVER *server)
             rval = true;
         }
     }
+
+    return rval;
+}
+
+json_t* server_list_to_json(const char* host)
+{
+    json_t* rval = json_array();
+
+    if (rval)
+    {
+        spinlock_acquire(&server_spin);
+
+        for (SERVER* server = allServers; server; server = server->next)
+        {
+            if (SERVER_IS_ACTIVE(server))
+            {
+                json_t* srv_json = server_to_json(server, host);
+
+                if (srv_json == NULL)
+                {
+                    json_decref(rval);
+                    rval = NULL;
+                    break;
+                }
+
+                json_array_append_new(rval, srv_json);
+            }
+        }
+
+        spinlock_release(&server_spin);
+    }
+
+    return rval;
+}
+
+json_t* server_to_json(const SERVER* server, const char* host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_NAME, json_string(server->unique_name));
+
+    /** Store server parameters  */
+    json_t* params = json_object();
+
+    json_object_set_new(params, CN_ADDRESS, json_string(server->name));
+    json_object_set_new(params, CN_PORT, json_integer(server->port));
+    json_object_set_new(params, CN_PROTOCOL, json_string(server->protocol));
+
+    if (*server->monuser)
+    {
+        json_object_set_new(params, CN_MONITORUSER, json_string(server->monuser));
+    }
+
+    if (*server->monpw)
+    {
+        json_object_set_new(params, CN_MONITORPW, json_string(server->monpw));
+    }
+
+    for (SERVER_PARAM* p = server->parameters; p; p = p->next)
+    {
+        json_object_set_new(params, p->name, json_string(p->value));
+    }
+
+    json_object_set_new(rval, CN_PARAMETERS, params);
+
+    /** Store general information about the server state */
+    char* stat = server_status(server);
+    json_object_set_new(rval, "status", json_string(stat));
+    MXS_FREE(stat);
+
+    if (server->server_string)
+    {
+        json_object_set_new(rval, "version", json_string(server->server_string));
+    }
+
+    json_object_set_new(rval, "node_id", json_integer(server->node_id));
+    json_object_set_new(rval, "master_id", json_integer(server->master_id));
+    json_object_set_new(rval, "replication_depth", json_integer(server->depth));
+
+    if (server->slaves)
+    {
+        json_t* slaves = json_array();
+
+        for (int i = 0; server->slaves[i]; i++)
+        {
+            json_array_append_new(slaves, json_integer(server->slaves[i]));
+        }
+
+        json_object_set_new(rval, "slaves", slaves);
+    }
+
+    if (server->rlag >= 0)
+    {
+        json_object_set_new(rval, "replication_lag", json_integer(server->rlag));
+    }
+
+    if (server->node_ts > 0)
+    {
+        struct tm result;
+        char timebuf[30];
+        time_t tim = server->node_ts;
+        asctime_r(localtime_r(&tim, &result), timebuf);
+        trim(timebuf);
+
+        json_object_set_new(rval, "last_heartbeat", json_string(timebuf));
+    }
+
+    /** Store statistics */
+    json_t* stats = json_object();
+
+    json_object_set_new(stats, "connections", json_integer(server->stats.n_current));
+    json_object_set_new(stats, "total_connections", json_integer(server->stats.n_connections));
+    json_object_set_new(stats, "active_operations", json_integer(server->stats.n_current_ops));
+
+    json_object_set_new(rval, "statictics", stats);
+
+    /** Store relationships to other objects */
+    json_t* rel = json_object();
+
+    string self = host;
+    self += "/servers/";
+    self += server->unique_name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
+
+    json_t* arr = service_relations_to_server(server, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, CN_SERVICES, arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    arr = monitor_relations_to_server(server, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, CN_MONITORS, arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
 
     return rval;
 }

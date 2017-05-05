@@ -13,19 +13,6 @@
 
 /**
  * @file monitor.c  - The monitor module management routines
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 08/07/13     Mark Riddoch            Initial implementation
- * 23/05/14     Massimiliano Pinto      Addition of monitor_interval parameter
- *                                      and monitor id
- * 30/10/14     Massimiliano Pinto      Addition of disable_master_failback parameter
- * 07/11/14     Massimiliano Pinto      Addition of monitor network timeouts
- * 08/05/15     Markus Makela           Moved common monitor variables to MONITOR struct
- *
- * @endverbatim
  */
 #include <maxscale/monitor.h>
 
@@ -33,6 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
+#include <set>
 
 #include <maxscale/alloc.h>
 #include <mysqld_error.h>
@@ -47,6 +36,17 @@
 #include "maxscale/externcmd.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
+
+using std::string;
+using std::set;
+
+const char CN_BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
+const char CN_BACKEND_READ_TIMEOUT[]     = "backend_read_timeout";
+const char CN_BACKEND_WRITE_TIMEOUT[]    = "backend_write_timeout";
+const char CN_BACKEND_CONNECT_TIMEOUT[]  = "backend_connect_timeout";
+const char CN_MONITOR_INTERVAL[]         = "monitor_interval";
+const char CN_SCRIPT[]                   = "script";
+const char CN_EVENTS[]                   = "events";
 
 static MXS_MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
@@ -164,18 +164,21 @@ monitor_free(MXS_MONITOR *mon)
 void
 monitorStart(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
 {
-    spinlock_acquire(&monitor->lock);
-
-    if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+    if (monitor)
     {
-        monitor->state = MONITOR_STATE_RUNNING;
-    }
-    else
-    {
-        MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
-    }
+        spinlock_acquire(&monitor->lock);
 
-    spinlock_release(&monitor->lock);
+        if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+        {
+            monitor->state = MONITOR_STATE_RUNNING;
+        }
+        else
+        {
+            MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+        }
+
+        spinlock_release(&monitor->lock);
+    }
 }
 
 /**
@@ -203,26 +206,29 @@ void monitorStartAll()
 void
 monitorStop(MXS_MONITOR *monitor)
 {
-    spinlock_acquire(&monitor->lock);
-
-    /** Only stop the monitor if it is running */
-    if (monitor->state == MONITOR_STATE_RUNNING)
+    if (monitor)
     {
-        monitor->state = MONITOR_STATE_STOPPING;
-        monitor->module->stopMonitor(monitor);
-        monitor->state = MONITOR_STATE_STOPPED;
+        spinlock_acquire(&monitor->lock);
 
-        MXS_MONITOR_SERVERS* db = monitor->databases;
-        while (db)
+        /** Only stop the monitor if it is running */
+        if (monitor->state == MONITOR_STATE_RUNNING)
         {
-            // TODO: Create a generic entry point for this or move it inside stopMonitor
-            mysql_close(db->con);
-            db->con = NULL;
-            db = db->next;
-        }
-    }
+            monitor->state = MONITOR_STATE_STOPPING;
+            monitor->module->stopMonitor(monitor);
+            monitor->state = MONITOR_STATE_STOPPED;
 
-    spinlock_release(&monitor->lock);
+            MXS_MONITOR_SERVERS* db = monitor->databases;
+            while (db)
+            {
+                // TODO: Create a generic entry point for this or move it inside stopMonitor
+                mysql_close(db->con);
+                db->con = NULL;
+                db = db->next;
+            }
+        }
+
+        spinlock_release(&monitor->lock);
+    }
 }
 
 /**
@@ -393,7 +399,7 @@ void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server)
  * @param passwd        The default password associated to the default user.
  */
 void
-monitorAddUser(MXS_MONITOR *mon, char *user, char *passwd)
+monitorAddUser(MXS_MONITOR *mon, const char *user, const char *passwd)
 {
     if (user != mon->user)
     {
@@ -997,7 +1003,7 @@ bool mon_status_changed(MXS_MONITOR_SERVERS* mon_srv)
     bool rval = false;
 
     /* Previous status is -1 if not yet set */
-    if (mon_srv->mon_prev_status != (uint32_t)-1)
+    if (mon_srv->mon_prev_status != static_cast<uint32_t>(-1))
     {
 
         unsigned int old_status = mon_srv->mon_prev_status & all_server_bits;
@@ -1273,51 +1279,6 @@ MXS_MONITOR* monitor_server_in_use(const SERVER *server)
     return rval;
 }
 
-/**
- * Creates a monitor configuration at the location pointed by @c filename
- *
- * @param monitor Monitor to serialize into a configuration
- * @param filename Filename where configuration is written
- * @return True on success, false on error
- */
-static bool create_monitor_server_config(const MXS_MONITOR *monitor, const char *filename)
-{
-    int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
-    if (file == -1)
-    {
-        MXS_ERROR("Failed to open file '%s' when serializing monitor '%s': %d, %s",
-                  filename, monitor->name, errno, mxs_strerror(errno));
-        return false;
-    }
-
-    /**
-     * Only additional parameters are added to the configuration. This prevents
-     * duplication or addition of parameters that don't support it.
-     *
-     * TODO: Check for return values on all of the dprintf calls
-     */
-    dprintf(file, "[%s]\n", monitor->name);
-
-    if (monitor->databases)
-    {
-        dprintf(file, "servers=");
-        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
-        {
-            if (db != monitor->databases)
-            {
-                dprintf(file, ",");
-            }
-            dprintf(file, "%s", db->server->unique_name);
-        }
-        dprintf(file, "\n");
-    }
-
-    close(file);
-
-    return true;
-}
-
 static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filename)
 {
     int file = open(filename, O_EXCL | O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -1336,54 +1297,33 @@ static bool create_monitor_config(const MXS_MONITOR *monitor, const char *filena
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", monitor->name);
-    dprintf(file, "type=monitor\n");
-    dprintf(file, "module=%s\n", monitor->module_name);
-    dprintf(file, "user=%s\n", monitor->user);
-    dprintf(file, "password=%s\n", monitor->password);
-    dprintf(file, "monitor_interval=%lu\n", monitor->interval);
-    dprintf(file, "backend_connect_timeout=%d\n", monitor->connect_timeout);
-    dprintf(file, "backend_write_timeout=%d\n", monitor->write_timeout);
-    dprintf(file, "backend_read_timeout=%d\n", monitor->read_timeout);
-    dprintf(file, "%s=%d\n", BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
+    dprintf(file, "%s=monitor\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_MODULE, monitor->module_name);
+    dprintf(file, "%s=%s\n", CN_USER, monitor->user);
+    dprintf(file, "%s=%s\n", CN_PASSWORD, monitor->password);
+    dprintf(file, "%s=%lu\n", CN_MONITOR_INTERVAL, monitor->interval);
+    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_TIMEOUT, monitor->connect_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_WRITE_TIMEOUT, monitor->write_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_READ_TIMEOUT, monitor->read_timeout);
+    dprintf(file, "%s=%d\n", CN_BACKEND_CONNECT_ATTEMPTS, monitor->connect_attempts);
+
+    if (monitor->databases)
+    {
+        dprintf(file, "%s=", CN_SERVERS);
+        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        {
+            if (db != monitor->databases)
+            {
+                dprintf(file, ",");
+            }
+            dprintf(file, "%s", db->server->unique_name);
+        }
+        dprintf(file, "\n");
+    }
 
     close(file);
 
     return true;
-}
-
-bool monitor_serialize_servers(const MXS_MONITOR *monitor)
-{
-    bool rval = false;
-    char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
-             monitor->name);
-
-    if (unlink(filename) == -1 && errno != ENOENT)
-    {
-        MXS_ERROR("Failed to remove temporary monitor configuration at '%s': %d, %s",
-                  filename, errno, mxs_strerror(errno));
-    }
-    else if (create_monitor_server_config(monitor, filename))
-    {
-        char final_filename[PATH_MAX];
-        strcpy(final_filename, filename);
-
-        char *dot = strrchr(final_filename, '.');
-        ss_dassert(dot);
-        *dot = '\0';
-
-        if (rename(filename, final_filename) == 0)
-        {
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Failed to rename temporary monitor configuration at '%s': %d, %s",
-                      filename, errno, mxs_strerror(errno));
-        }
-    }
-
-    return rval;
 }
 
 bool monitor_serialize(const MXS_MONITOR *monitor)
@@ -1507,4 +1447,150 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
             }
         }
     }
+}
+
+static const char* monitor_state_to_string(int state)
+{
+    switch (state)
+    {
+    case MONITOR_STATE_RUNNING:
+        return "Running";
+
+    case MONITOR_STATE_STOPPING:
+        return "Stopping";
+
+    case MONITOR_STATE_STOPPED:
+        return "Stopped";
+
+    case MONITOR_STATE_ALLOC:
+        return "Allocated";
+
+    default:
+        ss_dassert(false);
+        return "Unknown";
+    }
+}
+
+json_t* monitor_parameters_to_json(const MXS_MONITOR* monitor)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_USER, json_string(monitor->user));
+    json_object_set_new(rval, CN_PASSWORD, json_string(monitor->password));
+    json_object_set_new(rval, CN_MONITOR_INTERVAL, json_integer(monitor->interval));
+    json_object_set_new(rval, CN_BACKEND_CONNECT_TIMEOUT, json_integer(monitor->connect_timeout));
+    json_object_set_new(rval, CN_BACKEND_READ_TIMEOUT, json_integer(monitor->read_timeout));
+    json_object_set_new(rval, CN_BACKEND_WRITE_TIMEOUT, json_integer(monitor->write_timeout));
+    json_object_set_new(rval, CN_BACKEND_CONNECT_ATTEMPTS, json_integer(monitor->connect_attempts));
+
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(monitor->module_name, MODULE_MONITOR);
+    config_add_module_params_json(mod, monitor->parameters, config_monitor_params, rval);
+
+    /** Don't show the default value for events if no script is defined */
+    if (json_object_get(rval, CN_SCRIPT) == NULL)
+    {
+        json_object_del(rval, CN_EVENTS);
+    }
+
+    return rval;
+}
+
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_NAME, json_string(monitor->name));
+    json_object_set_new(rval, CN_MODULE, json_string(monitor->module_name));
+    json_object_set_new(rval, CN_STATE, json_string(monitor_state_to_string(monitor->state)));
+
+    /** Monitor parameters */
+    json_object_set_new(rval, CN_PARAMETERS, monitor_parameters_to_json(monitor));
+
+    if (monitor->handle && monitor->module->diagnostics)
+    {
+        json_t* diag = monitor->module->diagnostics_json(monitor);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "monitor_diagnostics", diag);
+        }
+    }
+
+    json_t* rel = json_object();
+
+    /** Store relationships to other objects */
+    string self = host;
+    self += "/monitors/";
+    self += monitor->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
+
+    if (monitor->databases)
+    {
+        json_t* arr = json_array();
+
+        for (MXS_MONITOR_SERVERS *db = monitor->databases; db; db = db->next)
+        {
+            string s = host;
+            s += "/servers/";
+            s += db->server->unique_name;
+            json_array_append_new(arr, json_string(s.c_str()));
+        }
+
+        json_object_set_new(rel, "servers", arr);
+    }
+
+    json_object_set_new(rval, "relationships", rel);
+
+    return rval;
+}
+
+json_t* monitor_list_to_json(const char* host)
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        json_t *json = monitor_to_json(mon, host);
+
+        if (json)
+        {
+            json_array_append_new(rval, json);
+        }
+    }
+
+    spinlock_release(&monLock);
+
+    return rval;
+}
+
+json_t* monitor_relations_to_server(const SERVER* server, const char* host)
+{
+    json_t* arr = json_array();
+
+    spinlock_acquire(&monLock);
+
+    for (MXS_MONITOR* mon = allMonitors; mon; mon = mon->next)
+    {
+        spinlock_acquire(&mon->lock);
+
+        for (MXS_MONITOR_SERVERS* db = mon->databases; db; db = db->next)
+        {
+            if (db->server == server)
+            {
+                string m = host;
+                m += "/monitors/";
+                m += mon->name;
+                json_array_append_new(arr, json_string(m.c_str()));
+            }
+        }
+
+        spinlock_release(&mon->lock);
+    }
+
+    spinlock_release(&monLock);
+
+    return arr;
 }

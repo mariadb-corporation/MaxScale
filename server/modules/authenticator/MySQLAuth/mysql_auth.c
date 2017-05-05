@@ -59,6 +59,7 @@ static int mysql_auth_set_client_data(
     GWBUF         *buffer);
 
 void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port);
+json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port);
 
 int mysql_auth_reauthenticate(DCB *dcb, const char *user,
                               uint8_t *token, size_t token_len,
@@ -85,6 +86,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         mysql_auth_destroy,               /* Destroy entry point */
         mysql_auth_load_users,            /* Load users from backend databases */
         mysql_auth_diagnostic,
+        mysql_auth_diagnostic_json,
         mysql_auth_reauthenticate         /* Handle COM_CHANGE_USER */
     };
 
@@ -702,4 +704,32 @@ void mysql_auth_diagnostic(DCB *dcb, SERV_LISTENER *port)
         sqlite3_free(err);
     }
     dcb_printf(dcb, "\n");
+}
+
+int diag_cb_json(void *data, int columns, char **row, char **field_names)
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, "user", json_string(row[0]));
+    json_object_set_new(obj, "host", json_string(row[1]));
+
+    json_t* arr = (json_t*)data;
+    json_array_append_new(arr, obj);
+    return 0;
+}
+
+json_t* mysql_auth_diagnostic_json(const SERV_LISTENER *port)
+{
+    json_t* rval = json_array();
+
+    MYSQL_AUTH *instance = (MYSQL_AUTH*)port->auth_instance;
+    char *err;
+
+    if (sqlite3_exec(instance->handle, "SELECT user, host FROM " MYSQLAUTH_USERS_TABLE_NAME,
+                     diag_cb, rval, &err) != SQLITE_OK)
+    {
+        MXS_ERROR("Failed to print users: %s", err);
+        sqlite3_free(err);
+    }
+
+    return rval;
 }

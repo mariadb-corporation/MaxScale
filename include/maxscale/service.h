@@ -19,7 +19,13 @@
  */
 
 #include <maxscale/cdefs.h>
+
 #include <time.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
+
 #include <maxscale/protocol.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/dcb.h>
@@ -30,10 +36,7 @@
 #include <maxscale/resultset.h>
 #include <maxscale/config.h>
 #include <maxscale/queuemanager.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -41,6 +44,11 @@ struct server;
 struct mxs_router;
 struct mxs_router_object;
 struct users;
+
+#define MAX_SERVICE_USER_LEN 1024
+#define MAX_SERVICE_PASSWORD_LEN 1024
+#define MAX_SERVICE_WEIGHTBY_LEN 1024
+#define MAX_SERVICE_VERSION_LEN 1024
 
 /**
  * The service statistics structure
@@ -61,8 +69,8 @@ typedef struct
 */
 typedef struct
 {
-    char *name;     /**< The user name to use to extract information */
-    char *authdata; /**< The authentication data requied */
+    char name[MAX_SERVICE_USER_LEN];     /**< The user name to use to extract information */
+    char authdata[MAX_SERVICE_PASSWORD_LEN]; /**< The authentication data requied */
 } SERVICE_USER;
 
 /**
@@ -127,7 +135,7 @@ typedef struct service
     char **routerOptions;              /**< Router specific option strings */
     struct mxs_router_object *router;  /**< The router we are using */
     struct mxs_router *router_instance;/**< The router instance for this service */
-    char *version_string;              /**< version string for this service listeners */
+    char version_string[MAX_SERVICE_VERSION_LEN]; /**< version string for this service listeners */
     SERVER_REF *dbref;                 /**< server references */
     int         n_dbref;               /**< Number of server references */
     SERVICE_USER credentials;          /**< The cedentials of the service user */
@@ -146,7 +154,7 @@ typedef struct service
     MXS_FILTER_DEF **filters;          /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
     int64_t conn_idle_timeout;         /**< Session timeout in seconds */
-    char *weightby;                    /**< Service weighting parameter name */
+    char weightby[MAX_SERVICE_WEIGHTBY_LEN]; /**< Service weighting parameter name */
     struct service *next;              /**< The next service in the linked list */
     bool retry_start;                  /**< If starting of the service should be retried later */
     bool log_auth_warnings;            /**< Log authentication failures and warnings */
@@ -251,17 +259,18 @@ bool serviceHasListener(SERVICE *service, const char *protocol,
 bool service_port_is_used(unsigned short port);
 
 int   serviceGetUser(SERVICE *service, char **user, char **auth);
-int   serviceSetUser(SERVICE *service, char *user, char *auth);
+int   serviceSetUser(SERVICE *service, const char *user, const char *auth);
 bool  serviceSetFilters(SERVICE *service, char *filters);
 int   serviceEnableRootUser(SERVICE *service, int action);
 int   serviceSetTimeout(SERVICE *service, int val);
 int   serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout);
-void  serviceSetRetryOnFailure(SERVICE *service, char* value);
-void  serviceWeightBy(SERVICE *service, char *weightby);
-char* serviceGetWeightingParameter(SERVICE *service);
+void  serviceSetRetryOnFailure(SERVICE *service, const char* value);
+void  serviceWeightBy(SERVICE *service, const char *weightby);
+const char* serviceGetWeightingParameter(SERVICE *service);
 int   serviceEnableLocalhostMatchWildcardHost(SERVICE *service, int action);
 int   serviceStripDbEsc(SERVICE* service, int action);
 int   serviceAuthAllServers(SERVICE *service, int action);
+void  serviceSetVersionString(SERVICE *service, const char* value);
 int   service_refresh_users(SERVICE *service);
 
 /**
@@ -275,6 +284,45 @@ int   service_refresh_users(SERVICE *service);
  * @param service The service to diagnose
  */
 void service_print_users(DCB *, const SERVICE *);
+
+/**
+ * @brief Convert a service to JSON
+ *
+ * @param service Service to convert
+ * @param host    Hostname of this server
+ *
+ * @return JSON representation of the service
+ */
+json_t* service_to_json(const SERVICE* service, const char* host);
+
+/**
+ * @brief Convert all services to JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array with all services
+ */
+json_t* service_list_to_json(const char* host);
+
+/**
+ * @brief Get links to services that relate to a server
+ *
+ * @param server Server to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_server(const SERVER* server, const char* host);
+
+/**
+ * @brief Get links to services that relate to a filter
+ *
+ * @param filter Filter to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of service links
+ */
+json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host);
 
 void       dprintAllServices(DCB *dcb);
 void       dprintService(DCB *dcb, SERVICE *service);

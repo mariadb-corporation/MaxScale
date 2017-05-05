@@ -278,6 +278,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         gssapi_backend_auth_free,           /* Free authenticator data */
         NULL,                               /* Load users from backend databases */
         NULL,                               /* No diagnostic */
+        NULL,
         NULL                                /* No user reauthentication */
     };
 

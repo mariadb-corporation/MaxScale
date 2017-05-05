@@ -49,6 +49,7 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 static char *regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study,
@@ -112,6 +113,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -405,6 +407,45 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
                    "\t\tReplacement limit to user           %s\n",
                    my_instance->user);
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    REGEX_INSTANCE *my_instance = (REGEX_INSTANCE*)instance;
+    REGEX_SESSION *my_session = (REGEX_SESSION*)fsession;
+
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "match", json_string(my_instance->match));
+    json_object_set_new(rval, "replace", json_string(my_instance->replace));
+
+    if (my_session)
+    {
+        json_object_set_new(rval, "altered", json_integer(my_session->no_change));
+        json_object_set_new(rval, "unaltered", json_integer(my_session->replacements));
+    }
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    if (my_instance->user)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user));
+    }
+
+    return rval;
 }
 
 /**

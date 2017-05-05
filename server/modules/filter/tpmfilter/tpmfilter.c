@@ -86,6 +86,7 @@ static  void    setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, 
 static  int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static  void    diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static  json_t*    diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 static  void checkNamedPipe(void *args);
 
@@ -156,6 +157,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -596,6 +598,51 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
     if (my_instance->query_delimiter)
         dcb_printf(dcb, "\t\tLogging with query delimiter %s.\n",
                    my_instance->query_delimiter);
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t*
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    TPM_INSTANCE *my_instance = (TPM_INSTANCE*)instance;
+
+    json_t* rval = json_object();
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    if (my_instance->user)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user));
+    }
+
+    if (my_instance->filename)
+    {
+        json_object_set_new(rval, "filename", json_string(my_instance->filename));
+    }
+
+    if (my_instance->delimiter)
+    {
+        json_object_set_new(rval, "delimiter", json_string(my_instance->delimiter));
+    }
+
+    if (my_instance->query_delimiter)
+    {
+        json_object_set_new(rval, "query_delimiter", json_string(my_instance->query_delimiter));
+    }
+
+    return rval;
 }
 
 /**

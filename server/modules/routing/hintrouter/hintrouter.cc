@@ -163,6 +163,33 @@ void HintRouter::diagnostics(DCB* pOut)
     dcb_printf(pOut, "\tQueries routed to all servers: %d\n", m_routed_to_all);
 }
 
+json_t* HintRouter::diagnostics_json() const
+{
+    HR_ENTRY();
+
+    json_t* rval = json_object();
+    json_t* arr = json_array();
+
+    for (int i = 0; default_action_values[i].name; i++)
+    {
+        if (default_action_values[i].enum_value == (uint64_t)m_default_action)
+        {
+            json_array_append_new(arr, json_string(default_action_values[i].name));
+        }
+    }
+
+    json_object_set_new(rval, "default_action", arr);
+    json_object_set_new(rval, "default_server", json_string(m_default_server.c_str()));
+    json_object_set_new(rval, "max_slave_connections", json_integer(m_max_slaves));
+    json_object_set_new(rval, "total_slave_connections", json_integer(m_total_slave_conns));
+    json_object_set_new(rval, "route_master", json_integer(m_routed_to_master));
+    json_object_set_new(rval, "route_slave", json_integer(m_routed_to_slave));
+    json_object_set_new(rval, "route_named_server", json_integer(m_routed_to_named));
+    json_object_set_new(rval, "route_all", json_integer(m_routed_to_all));
+
+    return rval;
+}
+
 Dcb HintRouter::connect_to_backend(MXS_SESSION* session, SERVER_REF* sref,
                                    HintRouterSession::BackendMap* all_backends)
 {

@@ -89,7 +89,7 @@ bool runtime_unlink_server(SERVER *server, const char *target);
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_server(SERVER *server, char *key, char *value);
+bool runtime_alter_server(SERVER *server, const char *key, const char *value);
 
 /**
  * @brief Enable SSL for a server
@@ -118,7 +118,18 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
  * @param value New value
  * @return True if @c key was one of the supported parameters
  */
-bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value);
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value);
+
+/**
+ * @brief Alter service parameters
+ *
+ * @param monitor Service to alter
+ * @param key     Key to modify
+ * @param value   New value
+ *
+ * @return True if @c key was one of the supported parameters
+ */
+bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue);
 
 /**
  * @brief Create a new listener for a service
@@ -178,5 +189,53 @@ bool runtime_create_monitor(const char *name, const char *module);
  * @return True if monitor was destroyed
  */
 bool runtime_destroy_monitor(MXS_MONITOR *monitor);
+
+/**
+ * @brief Create a new server from JSON
+ *
+ * @param json JSON defining the server
+ *
+ * @return Created server or NULL on error
+ */
+SERVER* runtime_create_server_from_json(json_t* json);
+
+/**
+ * @brief Alter a server using JSON
+ *
+ * @param server Server to alter
+ * @param new_json JSON definition of the updated server
+ *
+ * @return True if the server was successfully modified to represent @c new_json
+ */
+bool runtime_alter_server_from_json(SERVER* server, json_t* new_json);
+
+/**
+ * @brief Create a new monitor from JSON
+ *
+ * @param json JSON defining the monitor
+ *
+ * @return Created monitor or NULL on error
+ */
+MXS_MONITOR* runtime_create_monitor_from_json(json_t* json);
+
+/**
+ * @brief Alter a monitor using JSON
+ *
+ * @param monitor Monitor to alter
+ * @param new_json JSON definition of the updated monitor
+ *
+ * @return True if the monitor was successfully modified to represent @c new_json
+ */
+bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
+
+/**
+ * @brief Alter a service using JSON
+ *
+ * @param service Service to alter
+ * @param new_json JSON definition of the updated service
+ *
+ * @return True if the service was successfully modified to represent @c new_json
+ */
+bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
 
 MXS_END_DECLS

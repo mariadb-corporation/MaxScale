@@ -23,6 +23,7 @@
 #include <maxscale/dcb.h>
 #include <maxscale/routing.h>
 #include <maxscale/session.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -179,6 +180,18 @@ typedef struct mxs_filter_object
     void     (*diagnostics)(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
 
     /**
+     * @brief Called for diagnostic output
+     *
+     * @param instance Filter instance
+     * @param fsession Filter session, NULL if general information about the filter is queried
+     *
+     * @return JSON formatted information about the filter
+     *
+     * @see jansson.h
+     */
+    json_t* (*diagnostics_json)(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
+
+    /**
      * @brief Called to obtain the capabilities of the filter
      *
      * @return Zero or more bitwise-or'd values from the mxs_routing_capability_t enum
@@ -245,6 +258,25 @@ const char* filter_def_get_module_name(const MXS_FILTER_DEF* filter_def);
  * @return A filter instance.
  */
 MXS_FILTER* filter_def_get_instance(const MXS_FILTER_DEF* filter_def);
+
+/**
+ * @brief Convert a filter to JSON
+ *
+ * @param filter Filter to convert
+ * @param host Hostname of this server
+ *
+ * @return Filter converted to JSON format
+ */
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host);
+
+/**
+ * @brief Convert all filters into JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array containing all filters
+ */
+json_t* filter_list_to_json(const char* host);
 
 void dprintAllFilters(DCB *);
 void dprintFilter(DCB *, const MXS_FILTER_DEF *);

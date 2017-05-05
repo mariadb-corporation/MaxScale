@@ -45,9 +45,11 @@
 #include <regex.h>
 #include <maxscale/maxscale_test.h>
 
+#include "../maxscale/config.h"
+
 #include "../load_utils.cc"
 
-static char* server_options[] =
+static const char* server_options[] =
 {
     "MariaDB Corporation MaxScale",
     "--no-defaults",
@@ -60,7 +62,7 @@ static char* server_options[] =
 
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
-static char* server_groups[] =
+static const char* server_groups[] =
 {
     "embedded",
     "server",
@@ -70,10 +72,6 @@ static char* server_groups[] =
     "server",
     NULL
 };
-
-int config_load(char *);
-void config_enable_feedback_task(void);
-int do_http_post(GWBUF *buffer, void *cfg);
 
 int main(int argc, char** argv)
 {
@@ -85,14 +83,14 @@ int main(int argc, char** argv)
 
     hkinit();
 
-    cnf = MXS_MALLOC(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
+    cnf = (char*)MXS_MALLOC(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
     MXS_ABORT_IF_NULL(cnf);
     sprintf(cnf, "%s/maxscale.cnf", TEST_DIR);
 
     printf("Config: %s\n", cnf);
 
 
-    if (mysql_library_init(num_elements, server_options, server_groups))
+    if (mysql_library_init(num_elements, (char**)server_options, (char**)server_groups))
     {
         FAILTEST("Failed to initialize embedded library.");
     }

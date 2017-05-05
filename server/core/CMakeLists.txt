@@ -1,4 +1,5 @@
 add_library(maxscale-common SHARED
+  admin.cc
   adminusers.cc
   alloc.cc
   atomic.cc
@@ -12,6 +13,8 @@ add_library(maxscale-common SHARED
   hashtable.cc
   hint.cc
   housekeeper.cc
+  httprequest.cc
+  httpresponse.cc
   listener.cc
   load_utils.cc
   log_manager.cc
@@ -30,6 +33,7 @@ add_library(maxscale-common SHARED
   queuemanager.cc
   random_jkiss.cc
   resultset.cc
+  resource.cc
   router.cc
   secrets.cc
   semaphore.cc
@@ -53,7 +57,24 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale-common ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl pthread crypt dl crypto inih z rt m stdc++)
+target_link_libraries(maxscale-common
+  ${MARIADB_CONNECTOR_LIBRARIES}
+  ${LZMA_LINK_FLAGS}
+  ${PCRE2_LIBRARIES}
+  ${CURL_LIBRARIES}
+  ${JANSSON_LIBRARIES}
+  ssl
+  pthread
+  crypt
+  dl
+  crypto
+  inih
+  z
+  rt
+  m
+  stdc++
+  microhttpd
+)
 
 add_dependencies(maxscale-common pcre2 connector-c)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")

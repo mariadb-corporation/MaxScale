@@ -10,18 +10,30 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+#include <maxscale/cppdefs.hh>
+
 #include "maxscale/config_runtime.h"
 
 #include <strings.h>
+#include <string>
+#include <set>
+#include <iterator>
+#include <algorithm>
 
 #include <maxscale/atomic.h>
 #include <maxscale/paths.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/jansson.hh>
 
 #include "maxscale/config.h"
 #include "maxscale/monitor.h"
 #include "maxscale/modules.h"
 #include "maxscale/service.h"
+
+using std::string;
+using std::set;
+using mxs::Closer;
 
 static SPINLOCK crt_lock = SPINLOCK_INIT;
 
@@ -37,7 +49,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     {
         if (serviceAddBackend(service, server))
         {
-            service_serialize_servers(service);
+            service_serialize(service);
             rval = true;
         }
     }
@@ -45,7 +57,7 @@ bool runtime_link_server(SERVER *server, const char *target)
     {
         if (monitorAddServer(monitor, server))
         {
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
             rval = true;
         }
     }
@@ -75,12 +87,12 @@ bool runtime_unlink_server(SERVER *server, const char *target)
         if (service)
         {
             serviceRemoveBackend(service, server);
-            service_serialize_servers(service);
+            service_serialize(service);
         }
         else if (monitor)
         {
             monitorRemoveServer(monitor, server);
-            monitor_serialize_servers(monitor);
+            monitor_serialize(monitor);
         }
 
         const char *type = service ? "service" : "monitor";
@@ -90,7 +102,6 @@ bool runtime_unlink_server(SERVER *server, const char *target)
     spinlock_release(&crt_lock);
     return rval;
 }
-
 
 bool runtime_create_server(const char *name, const char *address, const char *port,
                            const char *protocol, const char *authenticator,
@@ -212,12 +223,12 @@ static SSL_LISTENER* create_ssl(const char *name, const char *key, const char *c
 
     if (obj)
     {
-        if (config_add_param(obj, "ssl", "required") &&
-            config_add_param(obj, "ssl_key", key) &&
-            config_add_param(obj, "ssl_cert", cert) &&
-            config_add_param(obj, "ssl_ca_cert", ca) &&
-            (!version || config_add_param(obj, "ssl_version", version)) &&
-            (!depth || config_add_param(obj, "ssl_cert_verify_depth", depth)))
+        if (config_add_param(obj, CN_SSL, CN_REQUIRED) &&
+            config_add_param(obj, CN_SSL_KEY, key) &&
+            config_add_param(obj, CN_SSL_CERT, cert) &&
+            config_add_param(obj, CN_SSL_CA_CERT, ca) &&
+            (!version || config_add_param(obj, CN_SSL_VERSION, version)) &&
+            (!depth || config_add_param(obj, CN_SSL_CERT_VERIFY_DEPTH, depth)))
         {
             int err = 0;
             SSL_LISTENER *ssl = make_ssl_structure(obj, true, &err);
@@ -266,24 +277,24 @@ bool runtime_enable_server_ssl(SERVER *server, const char *key, const char *cert
     return rval;
 }
 
-bool runtime_alter_server(SERVER *server, char *key, char *value)
+bool runtime_alter_server(SERVER *server, const char *key, const char *value)
 {
     spinlock_acquire(&crt_lock);
     bool valid = true;
 
-    if (strcmp(key, "address") == 0)
+    if (strcmp(key, CN_ADDRESS) == 0)
     {
         server_update_address(server, value);
     }
-    else if (strcmp(key, "port") == 0)
+    else if (strcmp(key, CN_PORT) == 0)
     {
         server_update_port(server, atoi(value));
     }
-    else if (strcmp(key, "monuser") == 0)
+    else if (strcmp(key, CN_MONITORUSER) == 0)
     {
         server_update_credentials(server, value, server->monpw);
     }
-    else if (strcmp(key, "monpw") == 0)
+    else if (strcmp(key, CN_MONITORPW) == 0)
     {
         server_update_credentials(server, server->monuser, value);
     }
@@ -365,22 +376,22 @@ static void add_monitor_defaults(MXS_MONITOR *monitor)
     }
 }
 
-bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
+bool runtime_alter_monitor(MXS_MONITOR *monitor, const char *key, const char *value)
 {
     spinlock_acquire(&crt_lock);
     bool valid = false;
 
-    if (strcmp(key, "user") == 0)
+    if (strcmp(key, CN_USER) == 0)
     {
         valid = true;
         monitorAddUser(monitor, value, monitor->password);
     }
-    else if (strcmp(key, "password") == 0)
+    else if (strcmp(key, CN_PASSWORD) == 0)
     {
         valid = true;
         monitorAddUser(monitor, monitor->user, value);
     }
-    else if (strcmp(key, "monitor_interval") == 0)
+    else if (strcmp(key, CN_MONITOR_INTERVAL) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -389,7 +400,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetInterval(monitor, ival);
         }
     }
-    else if (strcmp(key, "backend_connect_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_CONNECT_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -398,7 +409,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_CONNECT_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, "backend_write_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_WRITE_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -407,7 +418,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_WRITE_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, "backend_read_timeout") == 0)
+    else if (strcmp(key, CN_BACKEND_READ_TIMEOUT) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -416,7 +427,7 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             monitorSetNetworkTimeout(monitor, MONITOR_READ_TIMEOUT, ival);
         }
     }
-    else if (strcmp(key, BACKEND_CONNECT_ATTEMPTS) == 0)
+    else if (strcmp(key, CN_BACKEND_CONNECT_ATTEMPTS) == 0)
     {
         long ival = get_positive_int(value);
         if (ival)
@@ -438,8 +449,8 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
             if (value[0])
             {
                 MXS_CONFIG_PARAMETER p = {};
-                p.name = key;
-                p.value = value;
+                p.name = const_cast<char*>(key);
+                p.value = const_cast<char*>(value);
                 monitorAddParameters(monitor, &p);
             }
 
@@ -463,6 +474,86 @@ bool runtime_alter_monitor(MXS_MONITOR *monitor, char *key, char *value)
     return valid;
 }
 
+bool runtime_alter_service(SERVICE *service, const char* zKey, const char* zValue)
+{
+    string key(zKey);
+    string value(zValue);
+    bool valid = true;
+
+    spinlock_acquire(&crt_lock);
+
+    if (key == CN_USER)
+    {
+        serviceSetUser(service, value.c_str(), service->credentials.authdata);
+    }
+    else if (key == CN_PASSWORD)
+    {
+        serviceSetUser(service, service->credentials.name, value.c_str());
+    }
+    else if (key == CN_ENABLE_ROOT_USER)
+    {
+        serviceEnableRootUser(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_MAX_RETRY_INTERVAL)
+    {
+        service_set_retry_interval(service, strtol(value.c_str(), NULL, 10));
+    }
+    else if (key == CN_MAX_CONNECTIONS)
+    {
+        // TODO: Once connection queues are implemented, use correct values
+        serviceSetConnectionLimits(service, strtol(value.c_str(), NULL, 10), 0, 0);
+    }
+    else if (key == CN_CONNECTION_TIMEOUT)
+    {
+        serviceSetTimeout(service, strtol(value.c_str(), NULL, 10));
+    }
+    else if (key == CN_AUTH_ALL_SERVERS)
+    {
+        serviceAuthAllServers(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_STRIP_DB_ESC)
+    {
+        serviceStripDbEsc(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_LOCALHOST_MATCH_WILDCARD_HOST)
+    {
+        serviceEnableLocalhostMatchWildcardHost(service, config_truth_value(value.c_str()));
+    }
+    else if (key == CN_VERSION_STRING)
+    {
+        serviceSetVersionString(service, value.c_str());
+    }
+    else if (key == CN_WEIGHTBY)
+    {
+        serviceWeightBy(service, value.c_str());
+    }
+    else if (key == CN_LOG_AUTH_WARNINGS)
+    {
+        // TODO: Move this inside the service source
+        service->log_auth_warnings = config_truth_value(value.c_str());
+    }
+    else if (key == CN_RETRY_ON_FAILURE)
+    {
+        serviceSetRetryOnFailure(service, value.c_str());
+    }
+    else
+    {
+        MXS_ERROR("Unknown parameter for service '%s': %s=%s",
+                  service->name, key.c_str(), value.c_str());
+        valid = false;
+    }
+
+    if (valid)
+    {
+        service_serialize(service);
+        MXS_NOTICE("Updated service '%s': %s=%s", service->name, key.c_str(), value.c_str());
+    }
+
+    spinlock_release(&crt_lock);
+
+    return valid;
+}
+
 bool runtime_create_listener(SERVICE *service, const char *name, const char *addr,
                              const char *port, const char *proto, const char *auth,
                              const char *auth_opt, const char *ssl_key,
@@ -470,26 +561,26 @@ bool runtime_create_listener(SERVICE *service, const char *name, const char *add
                              const char *ssl_version, const char *ssl_depth)
 {
 
-    if (addr == NULL || strcasecmp(addr, "default") == 0)
+    if (addr == NULL || strcasecmp(addr, CN_DEFAULT) == 0)
     {
         addr = "::";
     }
-    if (port == NULL || strcasecmp(port, "default") == 0)
+    if (port == NULL || strcasecmp(port, CN_DEFAULT) == 0)
     {
         port = "3306";
     }
-    if (proto == NULL || strcasecmp(proto, "default") == 0)
+    if (proto == NULL || strcasecmp(proto, CN_DEFAULT) == 0)
     {
         proto = "MySQLClient";
     }
 
-    if (auth && strcasecmp(auth, "default") == 0)
+    if (auth && strcasecmp(auth, CN_DEFAULT) == 0)
     {
         /** Set auth to NULL so the protocol default authenticator is used */
         auth = NULL;
     }
 
-    if (auth_opt && strcasecmp(auth_opt, "default") == 0)
+    if (auth_opt && strcasecmp(auth_opt, CN_DEFAULT) == 0)
     {
         /** Don't pass options to the authenticator */
         auth_opt = NULL;
@@ -657,5 +748,492 @@ bool runtime_destroy_monitor(MXS_MONITOR *monitor)
     }
 
     spinlock_release(&crt_lock);
+    return rval;
+}
+
+static bool extract_relations(json_t* json, set<string>& relations,
+                              const char** relation_types,
+                              bool (*relation_check)(const string&, const string&))
+{
+    bool rval = true;
+    json_t* rel;
+
+    if ((rel = json_object_get(json, CN_RELATIONSHIPS)))
+    {
+        for (int i = 0; relation_types[i]; i++)
+        {
+            json_t* arr = json_object_get(rel, relation_types[i]);
+
+            if (arr)
+            {
+                size_t size = json_array_size(arr);
+
+                for (size_t j = 0; j < size; j++)
+                {
+                    json_t* t = json_array_get(arr, j);
+
+                    if (json_is_string(t))
+                    {
+                        string value = json_string_value(t);
+
+                        // Remove the link part
+                        size_t pos = value.find_last_of("/");
+                        if (pos != string::npos)
+                        {
+                            value.erase(0, pos + 1);
+                        }
+
+                        if (relation_check(relation_types[i], value))
+                        {
+                            relations.insert(value);
+                        }
+                        else
+                        {
+                            rval = false;
+                        }
+                    }
+                    else
+                    {
+                        rval = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+static inline const char* string_or_null(json_t* json, const char* name)
+{
+    const char* rval = NULL;
+    json_t* value = json_object_get(json, name);
+
+    if (value && json_is_string(value))
+    {
+        rval = json_string_value(value);
+    }
+
+    return rval;
+}
+
+static bool server_contains_required_fields(json_t* json)
+{
+    bool rval = false;
+    json_t* value;
+
+    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value))
+    {
+        /** Object has a name field */
+        json_t* param = json_object_get(json, CN_PARAMETERS);
+
+        if (param &&
+            (value = json_object_get(param, CN_ADDRESS)) && json_is_string(value) &&
+            (value = json_object_get(param, CN_PORT)) && json_is_integer(value))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+const char* server_relation_types[] =
+{
+    CN_SERVICES,
+    CN_MONITORS,
+    NULL
+};
+
+static bool server_relation_is_valid(const string& type, const string& value)
+{
+    return (type == CN_SERVICES && service_find(value.c_str())) ||
+           (type == CN_MONITORS && monitor_find(value.c_str()));
+}
+
+static bool unlink_server_from_objects(SERVER* server, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        if (!runtime_unlink_server(server, it->c_str()))
+        {
+            rval = false;
+        }
+    }
+
+    return rval;
+}
+
+static bool link_server_to_objects(SERVER* server, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        if (!runtime_link_server(server, it->c_str()))
+        {
+            unlink_server_from_objects(server, relations);
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+SERVER* runtime_create_server_from_json(json_t* json)
+{
+    SERVER* rval = NULL;
+
+    if (server_contains_required_fields(json))
+    {
+        const char* name = json_string_value(json_object_get(json, CN_NAME));
+        json_t* params = json_object_get(json, CN_PARAMETERS);
+        const char* address = json_string_value(json_object_get(params, CN_ADDRESS));
+
+        /** The port needs to be in string format */
+        char port[200]; // Enough to store any port value
+        int i = json_integer_value(json_object_get(params, CN_PORT));
+        snprintf(port, sizeof(port), "%d", i);
+
+        /** Optional parameters */
+        const char* protocol = string_or_null(params, CN_PROTOCOL);
+        const char* authenticator = string_or_null(params, CN_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(params, CN_AUTHENTICATOR_OPTIONS);
+
+
+        set<string> relations;
+
+        if (extract_relations(json, relations, server_relation_types, server_relation_is_valid) &&
+            runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
+        {
+            rval = server_find_by_unique_name(name);
+            ss_dassert(rval);
+
+            if (!link_server_to_objects(rval, relations))
+            {
+                runtime_destroy_server(rval);
+                rval = NULL;
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool server_to_object_relations(SERVER* server, json_t* old_json, json_t* new_json)
+{
+    bool rval = false;
+    set<string> old_relations;
+    set<string> new_relations;
+
+    if (extract_relations(old_json, old_relations, server_relation_types, server_relation_is_valid) &&
+        extract_relations(new_json, new_relations, server_relation_types, server_relation_is_valid))
+    {
+        set<string> removed_relations;
+        set<string> added_relations;
+
+        std::set_difference(old_relations.begin(), old_relations.end(),
+                            new_relations.begin(), new_relations.end(),
+                            std::inserter(removed_relations, removed_relations.begin()));
+
+        std::set_difference(new_relations.begin(), new_relations.end(),
+                            old_relations.begin(), old_relations.end(),
+                            std::inserter(added_relations, added_relations.begin()));
+
+        if (unlink_server_from_objects(server, removed_relations) &&
+            link_server_to_objects(server, added_relations))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_server_from_json(SERVER* server, json_t* new_json)
+{
+    bool rval = false;
+    Closer<json_t*> old_json(server_to_json(server, ""));
+    ss_dassert(old_json.get());
+
+    if (server_to_object_relations(server, old_json.get(), new_json))
+    {
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
+        ss_dassert(old_parameters);
+
+        if (parameters)
+        {
+            rval = true;
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (!runtime_alter_server(server, key, mxs::json_to_string(value).c_str()))
+                {
+                    rval = false;
+                }
+            }
+        }
+    }
+
+    return rval;
+}
+
+const char* object_relation_types[] =
+{
+    CN_SERVERS,
+    NULL
+};
+
+static bool object_relation_is_valid(const string& type, const string& value)
+{
+    return type == CN_SERVERS && server_find_by_unique_name(value.c_str());
+}
+
+/**
+ * @brief Do a coarse validation of the monitor JSON
+ *
+ * @param json JSON to validate
+ *
+ * @return True of the JSON is valid
+ */
+static bool validate_monitor_json(json_t* json)
+{
+    bool rval = false;
+    json_t* value;
+
+    if ((value = json_object_get(json, CN_NAME)) && json_is_string(value) &&
+        (value = json_object_get(json, CN_MODULE)) && json_is_string(value))
+    {
+        set<string> relations;
+        if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+static bool unlink_object_from_servers(const char* target, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        SERVER* server = server_find_by_unique_name(it->c_str());
+
+        if (!server || !runtime_unlink_server(server, target))
+        {
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+static bool link_object_to_servers(const char* target, set<string>& relations)
+{
+    bool rval = true;
+
+    for (set<string>::iterator it = relations.begin(); it != relations.end(); it++)
+    {
+        SERVER* server = server_find_by_unique_name(it->c_str());
+
+        if (!server || !runtime_link_server(server, target))
+        {
+            unlink_server_from_objects(server, relations);
+            rval = false;
+            break;
+        }
+    }
+
+    return rval;
+}
+
+MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
+{
+    MXS_MONITOR* rval = NULL;
+
+    if (validate_monitor_json(json))
+    {
+        const char* name = json_string_value(json_object_get(json, CN_NAME));
+        const char* module = json_string_value(json_object_get(json, CN_MODULE));
+
+        if (runtime_create_monitor(name, module))
+        {
+            rval = monitor_find(name);
+            ss_dassert(rval);
+
+            if (!runtime_alter_monitor_from_json(rval, json))
+            {
+                runtime_destroy_monitor(rval);
+                rval = NULL;
+            }
+        }
+    }
+
+    return rval;
+}
+
+bool object_to_server_relations(const char* target, json_t* old_json, json_t* new_json)
+{
+    bool rval = false;
+    set<string> old_relations;
+    set<string> new_relations;
+
+    if (extract_relations(old_json, old_relations, object_relation_types, object_relation_is_valid) &&
+        extract_relations(new_json, new_relations, object_relation_types, object_relation_is_valid))
+    {
+        set<string> removed_relations;
+        set<string> added_relations;
+
+        std::set_difference(old_relations.begin(), old_relations.end(),
+                            new_relations.begin(), new_relations.end(),
+                            std::inserter(removed_relations, removed_relations.begin()));
+
+        std::set_difference(new_relations.begin(), new_relations.end(),
+                            old_relations.begin(), old_relations.end(),
+                            std::inserter(added_relations, added_relations.begin()));
+
+        if (unlink_object_from_servers(target, removed_relations) &&
+            link_object_to_servers(target, added_relations))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json)
+{
+    bool rval = false;
+    Closer<json_t*> old_json(monitor_to_json(monitor, ""));
+    ss_dassert(old_json.get());
+
+    if (object_to_server_relations(monitor->name, old_json.get(), new_json))
+    {
+        bool changed = false;
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
+        ss_dassert(old_parameters);
+
+        if (parameters)
+        {
+            rval = true;
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (runtime_alter_monitor(monitor, key, mxs::json_to_string(value).c_str()))
+                {
+                    changed = true;
+                }
+                else
+                {
+                    rval = false;
+                }
+            }
+        }
+
+        if (changed)
+        {
+            /** A configuration change was made, restart the monitor */
+            monitorStop(monitor);
+            monitorStart(monitor, monitor->parameters);
+        }
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Check if the service parameter can be altered at runtime
+ *
+ * @param key Parameter name
+ * @return True if the parameter can be altered
+ */
+static bool is_dynamic_param(const string& key)
+{
+    return key != CN_TYPE &&
+           key != CN_ROUTER &&
+           key != CN_ROUTER_OPTIONS &&
+           key != CN_SERVERS;
+}
+
+bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json)
+{
+    bool rval = false;
+    Closer<json_t*> old_json(service_to_json(service, ""));
+    ss_dassert(old_json.get());
+
+    if (object_to_server_relations(service->name, old_json.get(), new_json))
+    {
+        bool changed = false;
+        json_t* parameters = json_object_get(new_json, CN_PARAMETERS);
+        json_t* old_parameters = json_object_get(old_json.get(), CN_PARAMETERS);
+
+        ss_dassert(old_parameters);
+
+        if (parameters)
+        {
+            /** Create a set of accepted service parameters */
+            set<string> paramset;
+            for (int i = 0; config_service_params[i]; i++)
+            {
+                if (is_dynamic_param(config_service_params[i]))
+                {
+                    paramset.insert(config_service_params[i]);
+                }
+            }
+
+            rval = true;
+            const char* key;
+            json_t* value;
+
+            json_object_foreach(parameters, key, value)
+            {
+                json_t* new_val = json_object_get(parameters, key);
+                json_t* old_val = json_object_get(old_parameters, key);
+
+                if (old_val && new_val && mxs::json_to_string(new_val) == mxs::json_to_string(old_val))
+                {
+                    /** No change in values */
+                }
+                else if (paramset.find(key) != paramset.end())
+                {
+                    if (!runtime_alter_service(service, key, mxs::json_to_string(value).c_str()))
+                    {
+                        rval = false;
+                    }
+                }
+            }
+        }
+    }
+
     return rval;
 }

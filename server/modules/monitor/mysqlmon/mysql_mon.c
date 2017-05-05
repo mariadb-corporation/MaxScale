@@ -13,36 +13,6 @@
 
 /**
  * @file mysql_mon.c - A MySQL replication cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 08/07/13 Mark Riddoch        Initial implementation
- * 11/07/13 Mark Riddoch        Addition of code to check replication status
- * 25/07/13 Mark Riddoch        Addition of decrypt for passwords and diagnostic interface
- * 20/05/14 Massimiliano Pinto  Addition of support for MariadDB multimaster replication setup.
- *                              New server field version_string is updated.
- * 28/05/14 Massimiliano Pinto  Added set Id and configuration options (setInverval)
- *                              Parameters are now printed in diagnostics
- * 03/06/14 Mark Ridoch         Add support for maintenance mode
- * 17/06/14 Massimiliano Pinto  Addition of getServerByNodeId routine and first implementation for
- *                              depth of replication for nodes.
- * 23/06/14 Massimiliano Pinto  Added replication consistency after replication tree computation
- * 27/06/14 Massimiliano Pinto  Added replication pending status in monitored server, storing there
- *                              the status to update in server status field before
- *                              starting the replication consistency check.
- *                              This will also give routers a consistent "status" of all servers
- * 28/08/14 Massimiliano Pinto  Added detectStaleMaster feature: previous detected master will be used again, even if the replication is stopped.
- *                              This means both IO and SQL threads are not working on slaves.
- *                              This option is not enabled by default.
- * 10/11/14 Massimiliano Pinto  Addition of setNetworkTimeout for connect, read, write
- * 18/11/14 Massimiliano Pinto  One server only in configuration becomes master. servers=server1 must
- *                              be present in mysql_mon and in router sections as well.
- * 08/05/15 Markus Makela       Added launchable scripts
- * 17/10/15 Martin Brampton     Change DCB callback to hangup
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "mysqlmon"
@@ -79,6 +49,7 @@ static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER*);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *getServerByNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *getSlaveOfNodeId(MXS_MONITOR_SERVERS *, long);
 static MXS_MONITOR_SERVERS *get_replication_tree(MXS_MONITOR *, int);
@@ -106,7 +77,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -274,7 +246,7 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         handle->id = config_get_global_options()->id;
         handle->warn_failover = true;
         handle->load_journal = true;
-        spinlock_init(&handle->lock);
+        handle->monitor = monitor;
     }
 
     /** This should always be reset to NULL */
@@ -318,9 +290,13 @@ startMonitor(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER* params)
         MXS_FREE(handle);
         handle = NULL;
     }
-    else if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
+    else if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
+        hashtable_free(handle->server_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        handle = NULL;
     }
 
     return handle;
@@ -375,6 +351,66 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 
         dcb_printf(dcb, "\n");
     }
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    json_t* rval = json_object();
+
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *)mon->handle;
+    json_object_set_new(rval, "monitor_id", json_integer(handle->id));
+    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
+    json_object_set_new(rval, "detect_stale_slave", json_boolean(handle->detectStaleSlave));
+    json_object_set_new(rval, "detect_replication_lag", json_boolean(handle->replicationHeartbeat));
+    json_object_set_new(rval, "multimaster", json_boolean(handle->multimaster));
+    json_object_set_new(rval, "detect_standalone_master", json_boolean(handle->detect_standalone_master));
+    json_object_set_new(rval, "failcount", json_integer(handle->failcount));
+    json_object_set_new(rval, "allow_cluster_recovery", json_boolean(handle->allow_cluster_recovery));
+    json_object_set_new(rval, "mysql51_replication", json_boolean(handle->mysql51_replication));
+    json_object_set_new(rval, "journal_max_age", json_integer(handle->journal_max_age));
+
+    if (handle->script)
+    {
+        json_object_set_new(rval, "script", json_string(handle->script));
+    }
+
+    if (mon->databases)
+    {
+        json_t* arr = json_array();
+
+        for (MXS_MONITOR_SERVERS *db = mon->databases; db; db = db->next)
+        {
+            json_t* srv = json_object();
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+            json_object_set_new(srv, "name", json_string(db->server->unique_name));
+            json_object_set_new(srv, "server_id", json_integer(serv_info->server_id));
+            json_object_set_new(srv, "master_id", json_integer(serv_info->master_id));
+
+            json_object_set_new(srv, "read_only", json_boolean(serv_info->read_only));
+            json_object_set_new(srv, "slave_configured", json_boolean(serv_info->slave_configured));
+            json_object_set_new(srv, "slave_io_running", json_boolean(serv_info->slave_io));
+            json_object_set_new(srv, "slave_sql_running", json_boolean(serv_info->slave_sql));
+
+            json_object_set_new(srv, "master_binlog_file", json_string(serv_info->binlog_name));
+            json_object_set_new(srv, "master_binlog_position", json_integer(serv_info->binlog_pos));
+
+            if (handle->multimaster)
+            {
+                json_object_set_new(srv, "master_group", json_integer(serv_info->group));
+            }
+
+            json_array_append_new(arr, srv);
+        }
+
+        json_object_set_new(rval, "server_info", arr);
+    }
+
+    return rval;
 }
 
 enum mysql_server_version
@@ -1058,8 +1094,8 @@ void do_failover(MYSQL_MONITOR *handle, MXS_MONITOR_SERVERS *db)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    MYSQL_MONITOR *handle;
+    MYSQL_MONITOR *handle  = (MYSQL_MONITOR *) arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     int replication_heartbeat;
     bool detect_stale_master;
@@ -1069,9 +1105,6 @@ monitorMain(void *arg)
     int log_no_master = 1;
     bool heartbeat_checked = false;
 
-    spinlock_acquire(&mon->lock);
-    handle = (MYSQL_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     replication_heartbeat = handle->replicationHeartbeat;
     detect_stale_master = handle->detectStaleMaster;
 

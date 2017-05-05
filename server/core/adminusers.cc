@@ -62,9 +62,6 @@ static const int LINELEN = 80;
 static const char LINUX_USERS_FILE_NAME[] = "maxadmin-users";
 static const char INET_USERS_FILE_NAME[]  = "passwd";
 
-static const char INET_DEFAULT_USERNAME[] = "admin";
-static const char INET_DEFAULT_PASSWORD[] = "mariadb";
-
 /**
  * Admin Users initialisation
  */

@@ -40,7 +40,6 @@ MXS_BEGIN_DECLS
  */
 typedef struct
 {
-    SPINLOCK lock; /**< The monitor spinlock */
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
@@ -49,6 +48,7 @@ typedef struct
     MXS_MONITOR_SERVERS *master; /**< Master server for Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     uint64_t events; /*< enabled events */
+    MXS_MONITOR* monitor;
 } MM_MONITOR;
 
 MXS_END_DECLS

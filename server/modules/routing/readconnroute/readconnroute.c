@@ -94,6 +94,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics_json(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *errbuf,
@@ -123,6 +124,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         handleError,
         getCapabilities,
@@ -619,7 +621,7 @@ static void
 diagnostics(MXS_ROUTER *router, DCB *dcb)
 {
     ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *) router;
-    char *weightby;
+    const char *weightby = serviceGetWeightingParameter(router_inst->service);
 
     dcb_printf(dcb, "\tNumber of router sessions:   	%d\n",
                router_inst->stats.n_sessions);
@@ -627,8 +629,7 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                router_inst->service->stats.n_current);
     dcb_printf(dcb, "\tNumber of queries forwarded:   	%d\n",
                router_inst->stats.n_queries);
-    if ((weightby = serviceGetWeightingParameter(router_inst->service))
-        != NULL)
+    if (*weightby)
     {
         dcb_printf(dcb, "\tConnection distribution based on %s "
                    "server parameter.\n",
@@ -643,6 +644,31 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                        ref->connections);
         }
     }
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ * @param dcb       DCB to send diagnostics to
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
+{
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "connections", json_integer(router_inst->stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router_inst->service->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router_inst->stats.n_queries));
+
+    const char *weightby = serviceGetWeightingParameter(router_inst->service);
+
+    if (*weightby)
+    {
+        json_object_set_new(rval, "weightby", json_string(weightby));
+    }
+
+    return rval;
 }
 
 /**

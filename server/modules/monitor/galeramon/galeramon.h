@@ -78,7 +78,6 @@ typedef struct galera_cluster_info
  */
 typedef struct
 {
-    SPINLOCK lock; /**< The monitor spinlock */
     THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
@@ -96,6 +95,7 @@ typedef struct
                            * ordered list of nodes */
     HASHTABLE *galera_nodes_info; /**< Contains Galera Cluster variables of all nodes */
     GALERA_CLUSTER_INFO cluster_info; /**< Contains Galera cluster info */
+    MXS_MONITOR* monitor;
 } GALERA_MONITOR;
 
 MXS_END_DECLS

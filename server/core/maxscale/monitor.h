@@ -58,28 +58,12 @@ RESULTSET *monitorGetList();
 
 bool monitorAddServer(MXS_MONITOR *mon, SERVER *server);
 void monitorRemoveServer(MXS_MONITOR *mon, SERVER *server);
-void monitorAddUser(MXS_MONITOR *, char *, char *);
+void monitorAddUser(MXS_MONITOR *, const char *, const char *);
 void monitorAddParameters(MXS_MONITOR *monitor, MXS_CONFIG_PARAMETER *params);
 bool monitorRemoveParameter(MXS_MONITOR *monitor, const char *key);
 
 void monitorSetInterval (MXS_MONITOR *, unsigned long);
 bool monitorSetNetworkTimeout(MXS_MONITOR *, int, int);
-
-/**
- * @brief Serialize the servers of a monitor to a file
- *
- * This partially converts @c monitor into an INI format file. Only the servers
- * of the monitor are serialized. This allows the monitor to keep monitoring
- * the servers that were added at runtime even after a restart.
- *
- * NOTE: This does not persist the complete monitor configuration and requires
- * that an existing monitor configuration is in the main configuration file.
- * Changes to monitor parameters are not persisted.
- *
- * @param monitor Monitor to serialize
- * @return False if the serialization of the monitor fails, true if it was successful
- */
-bool monitor_serialize_servers(const MXS_MONITOR *monitor);
 
 /**
  * @brief Serialize a monitor to a file

@@ -137,6 +137,30 @@ void users_default_diagnostic(DCB *dcb, SERV_LISTENER *port)
     }
 }
 
+json_t* users_default_diagnostic_json(const SERV_LISTENER *port)
+{
+    json_t* rval = json_array();
+
+    if (port->users && port->users->data)
+    {
+        HASHITERATOR *iter = hashtable_iterator(port->users->data);
+
+        if (iter)
+        {
+            char* user;
+
+            while ((user = (char*)hashtable_next(iter)))
+            {
+                json_array_append_new(rval, json_string(user));
+            }
+
+            hashtable_iterator_free(iter);
+        }
+    }
+
+    return rval;
+}
+
 int users_default_loadusers(SERV_LISTENER *port)
 {
     users_free(port->users);

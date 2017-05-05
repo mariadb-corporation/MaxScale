@@ -23,6 +23,7 @@
 #include <maxscale/config.h>
 #include <maxscale/dcb.h>
 #include <maxscale/server.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -54,9 +55,39 @@ typedef struct mxs_monitor MXS_MONITOR;
  */
 typedef struct mxs_monitor_object
 {
+    /**
+     * @brief Start the monitor
+     *
+     * This entry point is called when the monitor is started. If the monitor
+     * requires polling of the servers, it should create a separate monitoring
+     * thread.
+     *
+     * @param monitor The monitor object
+     * @param params  Parameters for this monitor
+     *
+     * @return Pointer to the monitor specific data, stored in @c monitor->handle
+     */
     void *(*startMonitor)(MXS_MONITOR *monitor, const MXS_CONFIG_PARAMETER *params);
+
+    /**
+     * @brief Stop the monitor
+     *
+     * This entry point is called when the monitor is stopped. If the monitor
+     * uses a polling thread, the thread should be stopped.
+     *
+     * @param monitor The monitor object
+     */
     void (*stopMonitor)(MXS_MONITOR *monitor);
     void (*diagnostics)(DCB *, const MXS_MONITOR *);
+
+    /**
+     * @brief Return diagnostic information about the monitor
+     *
+     * @return A JSON object representing the state of the monitor
+     *
+     * @see jansson.h
+     */
+    json_t* (*diagnostics_json)(const MXS_MONITOR *monitor);
 } MXS_MONITOR_OBJECT;
 
 /**
@@ -207,6 +238,17 @@ static const char MXS_MONITOR_EVENT_DEFAULT_VALUE[] = "master_down,master_up,sla
                                                       "ndb_down,ndb_up,lost_master,lost_slave,lost_synced,lost_donor,lost_ndb,"
                                                       "new_master,new_slave,new_synced,new_donor,new_ndb";
 
+/**
+ * Monitor configuration parameters names
+ */
+extern const char CN_BACKEND_CONNECT_ATTEMPTS[];
+extern const char CN_BACKEND_READ_TIMEOUT[];
+extern const char CN_BACKEND_WRITE_TIMEOUT[];
+extern const char CN_BACKEND_CONNECT_TIMEOUT[];
+extern const char CN_MONITOR_INTERVAL[];
+extern const char CN_SCRIPT[];
+extern const char CN_EVENTS[];
+
 bool check_monitor_permissions(MXS_MONITOR* monitor, const char* query);
 
 void monitor_clear_pending_status(MXS_MONITOR_SERVERS *ptr, int bit);
@@ -243,5 +285,34 @@ void mon_process_state_changes(MXS_MONITOR *monitor, const char *script, uint64_
  * @param monitor Monitor object
  */
 void mon_hangup_failed_servers(MXS_MONITOR *monitor);
+
+/**
+ * @brief Convert monitor to JSON
+ *
+ * @param monitor Monitor to convert
+ * @param host    Hostname of this server
+ *
+ * @return JSON representation of the monitor
+ */
+json_t* monitor_to_json(const MXS_MONITOR* monitor, const char* host);
+
+/**
+ * @brief Convert all monitors to JSON
+ *
+ * @param host    Hostname of this server
+ *
+ * @return JSON array containing all monitors
+ */
+json_t* monitor_list_to_json(const char* host);
+
+/**
+ * @brief Get links to monitors that relate to a server
+ *
+ * @param server Server to inspect
+ * @param host   Hostname of this server
+ *
+ * @return Array of monitor links
+ */
+json_t* monitor_relations_to_server(const SERVER* server, const char* host);
 
 MXS_END_DECLS

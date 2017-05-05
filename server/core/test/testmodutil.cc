@@ -62,7 +62,7 @@ test1()
     ss_dfprintf(stderr, "\t..done\nExtract SQL from buffer different way?");
     ss_info_dassert(0 == modutil_MySQL_Query(buffer, &sql, &length, &residual), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nReplace SQL in buffer");
-    ss_info_dassert(0 == modutil_replace_SQL(buffer, "select * from some_table;"), "Default buffer should fail");
+    ss_info_dassert(0 == modutil_replace_SQL(buffer, (char*)"select * from some_table;"), "Default buffer should fail");
     ss_dfprintf(stderr, "\t..done\nTidy up.");
     gwbuf_free(buffer);
     ss_dfprintf(stderr, "\t..done\n");
@@ -89,7 +89,7 @@ test2()
     *((unsigned char*)buffer->start + 2) = 0;
     *((unsigned char*)buffer->start + 3) = 1;
     *((unsigned char*)buffer->start + 4) = 0x03;
-    memcpy(buffer->start + 5, query, strlen(query));
+    memcpy((uint8_t*)buffer->start + 5, query, strlen(query));
     char* result = modutil_get_SQL(buffer);
     ss_dassert(strcmp(result, query) == 0);
     gwbuf_free(buffer);
@@ -109,7 +109,7 @@ static char ok[] =
  * CREATE OR REPLACE TABLE test.t1 (id int);
  * INSERT INTO test.t1 VALUES (3000);
  * SELECT * FROM test.t1; */
-static const char resultset[] =
+static const uint8_t resultset[] =
 {
     /* Packet 1 */
     0x01, 0x00, 0x00, 0x01, 0x01,
@@ -141,7 +141,7 @@ static const char resultset[] =
 struct packet
 {
     int index;
-    int length;
+    unsigned int length;
 } packets[] =
 {
     { PACKET_1_IDX, PACKET_1_LEN },
@@ -259,8 +259,8 @@ void test_multiple_sql_packets1()
     ss_info_dassert(gwbuf_length(complete) == sizeof(resultset),
                     "Complete should be sizeof(resulset) bytes long");
 
-    int headlen = gwbuf_length(head);
-    int completelen = complete ? gwbuf_length(complete) : 0;
+    unsigned int headlen = gwbuf_length(head);
+    unsigned int completelen = complete ? gwbuf_length(complete) : 0;
     uint8_t databuf[sizeof(resultset)];
     ss_info_dassert(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                     "Expected data should be readable");
@@ -344,7 +344,7 @@ void test_multiple_sql_packets2()
 
     buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
     // Empty buffer packet by packet.
-    for (int i = 0; i < N_PACKETS; i++)
+    for (unsigned int i = 0; i < N_PACKETS; i++)
     {
         GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
         ss_info_dassert(next, "Next packet buffer should not be NULL");
@@ -439,7 +439,7 @@ void test_multiple_sql_packets2()
     }
     while (total < sizeof(resultset));
 
-    for (int i = 0; i < N_PACKETS; i++)
+    for (unsigned int i = 0; i < N_PACKETS; i++)
     {
         GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
         ss_info_dassert(next, "Next packet buffer should not be NULL");
@@ -580,7 +580,7 @@ void test_large_packets()
     for (int i = 2; i < 8; i++)
     {
         GWBUF* buffer = gwbuf_append(create_buffer(0x00ffffff), create_buffer(i));
-        ss_dassert(gwbuf_length(buffer) == 0xffffff + i + 8);
+        ss_dassert(gwbuf_length(buffer) == 0xffffffUL + i + 8);
         GWBUF_RTRIM(buffer->next, 1)
         GWBUF* complete = modutil_get_complete_packets(&buffer);
         ss_info_dassert(buffer, "Incomplete buffer is not NULL");
@@ -591,9 +591,9 @@ void test_large_packets()
     }
 }
 
-char* bypass_whitespace(char* sql)
+char* bypass_whitespace(const char* sql)
 {
-    return modutil_MySQL_bypass_whitespace(sql, strlen(sql));
+    return modutil_MySQL_bypass_whitespace((char*)sql, strlen(sql));
 }
 
 void test_bypass_whitespace()

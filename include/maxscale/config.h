@@ -23,10 +23,97 @@
 #include <sys/utsname.h>
 
 #include <maxscale/modinfo.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
+/** Default port where the REST API listens */
+#define DEFAULT_ADMIN_HTTP_PORT 8989
+#define DEFAULT_ADMIN_HOST      "::"
+
 #define _RELEASE_STR_LENGTH     256     /**< release len */
+#define MAX_ADMIN_USER_LEN      1024
+#define MAX_ADMIN_PW_LEN        1024
+#define MAX_ADMIN_HOST_LEN      1024
+
+/**
+ * Common configuration parameters names
+ *
+ * All of the constants resolve to a lowercase version without the CN_ prefix.
+ * For example CN_PASSWORD resolves to the static string "password". This means
+ * that the sizeof(CN_<name>) returns the actual size of that string.
+ */
+extern const char CN_ADDRESS[];
+extern const char CN_ADMIN_AUTH[];
+extern const char CN_ADMIN_HOST[];
+extern const char CN_ADMIN_PASSWORD[];
+extern const char CN_ADMIN_PORT[];
+extern const char CN_ADMIN_USER[];
+extern const char CN_ADMIN_SSL_KEY[];
+extern const char CN_ADMIN_SSL_CERT[];
+extern const char CN_ADMIN_SSL_CA_CERT[];
+extern const char CN_AUTHENTICATOR[];
+extern const char CN_AUTHENTICATOR_OPTIONS[];
+extern const char CN_AUTH_ALL_SERVERS[];
+extern const char CN_AUTH_CONNECT_TIMEOUT[];
+extern const char CN_AUTH_READ_TIMEOUT[];
+extern const char CN_AUTH_WRITE_TIMEOUT[];
+extern const char CN_AUTO[];
+extern const char CN_CONNECTION_TIMEOUT[];
+extern const char CN_DEFAULT[];
+extern const char CN_ENABLE_ROOT_USER[];
+extern const char CN_FEEDBACK[];
+extern const char CN_FILTERS[];
+extern const char CN_FILTER[];
+extern const char CN_GATEWAY[];
+extern const char CN_LISTENER[];
+extern const char CN_LISTENERS[];
+extern const char CN_LOCALHOST_MATCH_WILDCARD_HOST[];
+extern const char CN_LOG_AUTH_WARNINGS[];
+extern const char CN_LOG_THROTTLING[];
+extern const char CN_MAXSCALE[];
+extern const char CN_MAX_CONNECTIONS[];
+extern const char CN_MAX_RETRY_INTERVAL[];
+extern const char CN_MODULE[];
+extern const char CN_MONITORS[];
+extern const char CN_MONITOR[];
+extern const char CN_MS_TIMESTAMP[];
+extern const char CN_NAME[];
+extern const char CN_NON_BLOCKING_POLLS[];
+extern const char CN_OPTIONS[];
+extern const char CN_PARAMETERS[];
+extern const char CN_PASSWORD[];
+extern const char CN_POLL_SLEEP[];
+extern const char CN_PORT[];
+extern const char CN_PROTOCOL[];
+extern const char CN_QUERY_CLASSIFIER[];
+extern const char CN_QUERY_CLASSIFIER_ARGS[];
+extern const char CN_RELATIONSHIPS[];
+extern const char CN_REQUIRED[];
+extern const char CN_RETRY_ON_FAILURE[];
+extern const char CN_ROUTER[];
+extern const char CN_ROUTER_OPTIONS[];
+extern const char CN_SELF[];
+extern const char CN_SERVERS[];
+extern const char CN_SERVER[];
+extern const char CN_SERVICES[];
+extern const char CN_SERVICE[];
+extern const char CN_SKIP_PERMISSION_CHECKS[];
+extern const char CN_SOCKET[];
+extern const char CN_STATE[];
+extern const char CN_STATUS[];
+extern const char CN_SSL[];
+extern const char CN_SSL_CA_CERT[];
+extern const char CN_SSL_CERT[];
+extern const char CN_SSL_CERT_VERIFY_DEPTH[];
+extern const char CN_SSL_KEY[];
+extern const char CN_SSL_VERSION[];
+extern const char CN_STRIP_DB_ESC[];
+extern const char CN_THREADS[];
+extern const char CN_TYPE[];
+extern const char CN_USER[];
+extern const char CN_VERSION_STRING[];
+extern const char CN_WEIGHTBY[];
 
 /**
  * The config parameter
@@ -74,6 +161,14 @@ typedef struct
     bool          skip_permission_checks;              /**< Skip service and monitor permission checks */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
     char*         qc_args;                             /**< Arguments for the query classifier */
+    char          admin_user[MAX_ADMIN_USER_LEN];      /**< Admin interface user */
+    char          admin_password[MAX_ADMIN_PW_LEN];    /**< Admin interface password */
+    char          admin_host[MAX_ADMIN_HOST_LEN];      /**< Admin interface host */
+    uint16_t      admin_port;                          /**< Admin interface port */
+    bool          admin_auth;                          /**< Admin interface authentication */
+    char          admin_ssl_key[PATH_MAX];             /**< Admin SSL key */
+    char          admin_ssl_cert[PATH_MAX];            /**< Admin SSL cert */
+    char          admin_ssl_ca_cert[PATH_MAX];         /**< Admin SSL CA cert */
 } MXS_CONFIG;
 
 /**
@@ -301,6 +396,12 @@ void config_disable_feedback_task(void);
  */
 bool config_reload(void);
 
-static const char BACKEND_CONNECT_ATTEMPTS[] = "backend_connect_attempts";
+/**
+ * @brief List all path parameters as JSON
+ *
+ * @param host Hostname of this server
+ * @return JSON object representing the paths used by MaxScale
+ */
+json_t* config_paths_to_json(const char* host);
 
 MXS_END_DECLS

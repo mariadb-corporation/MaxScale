@@ -61,6 +61,4 @@ void            dShowEventStats(DCB *dcb);
 int             poll_get_stat(POLL_STAT stat);
 RESULTSET       *eventTimesGetList();
 
-void            poll_send_message(enum poll_message msg, void *data);
-
 MXS_END_DECLS

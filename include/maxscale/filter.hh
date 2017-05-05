@@ -149,6 +149,11 @@ public:
      */
     void diagnostics(DCB *pDcb);
 
+    /**
+     * Called for obtaining diagnostics about the filter session.
+     */
+    json_t* diagnostics_json() const;
+
 protected:
     FilterSession(MXS_SESSION* pSession);
 
@@ -290,6 +295,26 @@ public:
         }
     }
 
+    static json_t* diagnostics_json(const MXS_FILTER* pInstance, const MXS_FILTER_SESSION* pData)
+    {
+        json_t* rval = NULL;
+
+        if (pData)
+        {
+            const FilterSessionType* pFilterSession = static_cast<const FilterSessionType*>(pData);
+
+            MXS_EXCEPTION_GUARD(rval = pFilterSession->diagnostics_json());
+        }
+        else
+        {
+            const FilterType* pFilter = static_cast<const FilterType*>(pInstance);
+
+            MXS_EXCEPTION_GUARD(rval = pFilter->diagnostics_json());
+        }
+
+        return rval;
+    }
+
     static uint64_t getCapabilities(MXS_FILTER* pInstance)
     {
         uint64_t rv = 0;
@@ -324,6 +349,7 @@ MXS_FILTER_OBJECT Filter<FilterType, FilterSessionType>::s_object =
     &Filter<FilterType, FilterSessionType>::routeQuery,
     &Filter<FilterType, FilterSessionType>::clientReply,
     &Filter<FilterType, FilterSessionType>::diagnostics,
+    &Filter<FilterType, FilterSessionType>::diagnostics_json,
     &Filter<FilterType, FilterSessionType>::getCapabilities,
     &Filter<FilterType, FilterSessionType>::destroyInstance,
 };

@@ -49,6 +49,7 @@ static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessi
 static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  int execute(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  json_t* diagnostics_json(const MXS_ROUTER *instance);
 static  uint64_t getCapabilities(MXS_ROUTER* instance);
 
 extern int execute_cmd(CLI_SESSION *cli);
@@ -78,6 +79,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         execute,
         diagnostics,
+        diagnostics_json,
         NULL,
         NULL,
         getCapabilities,
@@ -288,6 +290,11 @@ static  void
 diagnostics(MXS_ROUTER *instance, DCB *dcb)
 {
     return; /* Nothing to do currently */
+}
+
+static json_t* diagnostics_json(const MXS_ROUTER *instance)
+{
+    return NULL;
 }
 
 static uint64_t getCapabilities(MXS_ROUTER *instance)

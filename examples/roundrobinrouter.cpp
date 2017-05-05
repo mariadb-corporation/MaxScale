@@ -573,6 +573,7 @@ static void closeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
 static void freeSession(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session);
 static int routeQuery(MXS_ROUTER* instance, MXS_ROUTER_SESSION* session, GWBUF* querybuf);
 static void diagnostics(MXS_ROUTER* instance, DCB* dcb);
+static json_t* diagnostics_json(const MXS_ROUTER* instance);
 static void clientReply(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
                         GWBUF* resultbuf, DCB* backend_dcb);
 static void handleError(MXS_ROUTER* instance, MXS_ROUTER_SESSION* router_session,
@@ -600,6 +601,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         handleError,
         getCapabilities,
@@ -765,6 +767,27 @@ static void diagnostics(MXS_ROUTER* instance, DCB* dcb)
     dcb_printf(dcb, "\t\tQueries routed successfully: %lu\n", router->m_routing_s);
     dcb_printf(dcb, "\t\tFailed routing attempts:     %lu\n", router->m_routing_f);
     dcb_printf(dcb, "\t\tClient replies routed:       %lu\n", router->m_routing_c);
+}
+
+/**
+ * @brief Diagnostics routine (API)
+ *
+ * Print router statistics to the DCB passed in. This is usually called by the
+ * MaxInfo or MaxAdmin modules.
+ *
+ * @param   instance    The router instance
+ * @param   dcb         The DCB for diagnostic output
+ */
+static json_t* diagnostics_json(const MXS_ROUTER* instance)
+{
+    const RRRouter* router = static_cast<const RRRouter*>(instance);
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "queries_ok", json_integer(router->m_routing_s));
+    json_object_set_new(rval, "queries_failed", json_integer(router->m_routing_f));
+    json_object_set_new(rval, "replies", json_integer(router->m_routing_c));
+
+    return rval;
 }
 
 /**

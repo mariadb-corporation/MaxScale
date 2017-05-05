@@ -45,7 +45,7 @@
  */
 uint8_t* generate_data(size_t count)
 {
-    uint8_t* data = MXS_MALLOC(count);
+    uint8_t* data = (uint8_t*)MXS_MALLOC(count);
     MXS_ABORT_IF_NULL(data);
 
     srand(0);
@@ -79,7 +79,7 @@ GWBUF* create_test_buffer()
     uint8_t* data = generate_data(total);
     total = 0;
 
-    for (int i = 0; i < sizeof(buffers) / sizeof(size_t); i++)
+    for (size_t i = 0; i < sizeof(buffers) / sizeof(size_t); i++)
     {
         head = gwbuf_append(head, gwbuf_alloc_and_load(buffers[i], data + total));
         total += buffers[i];
@@ -104,7 +104,7 @@ int get_length_at(int n)
 
 void split_buffer(int n, int offset)
 {
-    int cutoff = get_length_at(n) + offset;
+    size_t cutoff = get_length_at(n) + offset;
     GWBUF* buffer = create_test_buffer();
     int len = gwbuf_length(buffer);
     GWBUF* newbuf = gwbuf_split(&buffer, cutoff);
@@ -119,7 +119,7 @@ void split_buffer(int n, int offset)
 
 void consume_buffer(int n, int offset)
 {
-    int cutoff = get_length_at(n) + offset;
+    size_t cutoff = get_length_at(n) + offset;
     GWBUF* buffer = create_test_buffer();
     int len = gwbuf_length(buffer);
     buffer = gwbuf_consume(buffer, cutoff);
@@ -131,7 +131,7 @@ void consume_buffer(int n, int offset)
 
 void copy_buffer(int n, int offset)
 {
-    int cutoff = get_length_at(n) + offset;
+    size_t cutoff = get_length_at(n) + offset;
     uint8_t* data = generate_data(cutoff);
     GWBUF* buffer = create_test_buffer();
     int len = gwbuf_length(buffer);
@@ -450,30 +450,30 @@ test1()
 {
     GWBUF   *buffer, *extra, *clone, *partclone;
     HINT    *hint;
-    int     size = 100;
-    int     bite1 = 35;
-    int     bite2 = 60;
-    int     bite3 = 10;
-    int     buflen;
+    size_t     size = 100;
+    size_t     bite1 = 35;
+    size_t     bite2 = 60;
+    size_t     bite3 = 10;
+    size_t     buflen;
 
     /* Single buffer tests */
     ss_dfprintf(stderr,
-                "testbuffer : creating buffer with data size %d bytes",
+                "testbuffer : creating buffer with data size %lu bytes",
                 size);
     buffer = gwbuf_alloc(size);
-    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %d.", size);
+    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\nBuffer length is now %d", buflen);
+    ss_dfprintf(stderr, "\nBuffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
     ss_dfprintf(stderr, "\t..done\nSet a hint for the buffer");
-    hint = hint_create_parameter(NULL, "name", "value");
+    hint = hint_create_parameter(NULL, (char*)"name", (char*)"value");
     gwbuf_add_hint(buffer, hint);
     ss_info_dassert(hint == buffer->hint, "Buffer should point to first and only hint");
     ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
-    gwbuf_add_property(buffer, "name", "value");
-    ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, "name")), "Should now have correct property");
+    gwbuf_add_property(buffer, (char*)"name", (char*)"value");
+    ss_info_dassert(0 == strcmp("value", gwbuf_get_property(buffer, (char*)"name")), "Should now have correct property");
     strcpy((char*)GWBUF_DATA(buffer), "The quick brown fox jumps over the lazy dog");
     ss_dfprintf(stderr, "\t..done\nLoad some data into the buffer");
     ss_info_dassert('q' == GWBUF_DATA_CHAR(buffer, 4), "Fourth character of buffer must be 'q'");
@@ -485,7 +485,7 @@ test1()
     clone = gwbuf_clone(buffer);
     ss_dfprintf(stderr, "\t..done\nCloned buffer");
     buflen = GWBUF_LENGTH(clone);
-    ss_dfprintf(stderr, "\nCloned buffer length is now %d", buflen);
+    ss_dfprintf(stderr, "\nCloned buffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(clone), "Cloned buffer should not be empty");
     ss_dfprintf(stderr, "\t..done\n");
@@ -495,45 +495,45 @@ test1()
     buffer = gwbuf_consume(buffer, bite1);
     ss_info_dassert(NULL != buffer, "Buffer should not be null");
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "Consumed %d bytes, now have %d, should have %d", bite1, buflen, size - bite1);
+    ss_dfprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite1, buflen, size - bite1);
     ss_info_dassert((size - bite1) == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_dfprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite2);
     ss_info_dassert(NULL != buffer, "Buffer should not be null");
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "Consumed %d bytes, now have %d, should have %d", bite2, buflen, size - bite1 - bite2);
+    ss_dfprintf(stderr, "Consumed %lu bytes, now have %lu, should have %lu", bite2, buflen, size - bite1 - bite2);
     ss_info_dassert((size - bite1 - bite2) == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_dfprintf(stderr, "\t..done\n");
     buffer = gwbuf_consume(buffer, bite3);
-    ss_dfprintf(stderr, "Consumed %d bytes, should have null buffer", bite3);
+    ss_dfprintf(stderr, "Consumed %lu bytes, should have null buffer", bite3);
     ss_info_dassert(NULL == buffer, "Buffer should be null");
 
     /* Buffer list tests */
     size = 100000;
     buffer = gwbuf_alloc(size);
-    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %d.", size);
+    ss_dfprintf(stderr, "\t..done\nAllocated buffer of size %lu.", size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\nBuffer length is now %d", buflen);
+    ss_dfprintf(stderr, "\nBuffer length is now %lu", buflen);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
     ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
     extra = gwbuf_alloc(size);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nAllocated extra buffer of size %d.", size);
+    ss_dfprintf(stderr, "\t..done\nAllocated extra buffer of size %lu.", size);
     ss_info_dassert(size == buflen, "Incorrect buffer size");
     buffer = gwbuf_append(buffer, extra);
     buflen = gwbuf_length(buffer);
-    ss_dfprintf(stderr, "\t..done\nAppended extra buffer to original buffer to create list of size %d", buflen);
+    ss_dfprintf(stderr, "\t..done\nAppended extra buffer to original buffer to create list of size %lu", buflen);
     ss_info_dassert((size * 2) == gwbuf_length(buffer), "Incorrect size for set of buffers");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nTrimmed 60 bytes from buffer, now size is %d.", buflen);
+    ss_dfprintf(stderr, "\t..done\nTrimmed 60 bytes from buffer, now size is %lu.", buflen);
     ss_info_dassert((size - 60000) == buflen, "Incorrect buffer size");
     buffer = gwbuf_rtrim(buffer, 60000);
     buflen = GWBUF_LENGTH(buffer);
-    ss_dfprintf(stderr, "\t..done\nTrimmed another 60 bytes from buffer, now size is %d.", buflen);
+    ss_dfprintf(stderr, "\t..done\nTrimmed another 60 bytes from buffer, now size is %lu.", buflen);
     ss_info_dassert(100000 == buflen, "Incorrect buffer size");
     ss_info_dassert(buffer == extra, "The buffer pointer should now point to the extra buffer");
     ss_dfprintf(stderr, "\t..done\n");

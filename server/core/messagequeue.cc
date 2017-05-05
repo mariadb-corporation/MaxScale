@@ -12,13 +12,30 @@
  */
 
 #include "maxscale/messagequeue.hh"
+#include <linux/version.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 #include <maxscale/debug.h>
 #include <maxscale/log_manager.h>
 #include "maxscale/worker.hh"
+
+namespace
+{
+
+struct
+{
+    bool initialized;
+    int  pipe_flags;
+} this_unit =
+{
+    false,
+    O_NONBLOCK | O_CLOEXEC
+};
+
+}
 
 namespace maxscale
 {
@@ -47,16 +64,88 @@ MessageQueue::~MessageQueue()
 }
 
 //static
+bool MessageQueue::init()
+{
+    ss_dassert(!this_unit.initialized);
+
+    /* From "man 7 pipe"
+     * ----
+     *
+     * O_NONBLOCK enabled, n <= PIPE_BUF
+     *   If  there  is room to write n bytes to the pipe, then write(2)
+     *   succeeds immediately, writing all n bytes; otherwise write(2)
+     *   fails, with errno set to EAGAIN.
+     *
+     * ... (On Linux, PIPE_BUF is 4096 bytes.)
+     *
+     * ----
+     *
+     * As O_NONBLOCK is set and the messages are less than 4096 bytes,
+     * O_DIRECT should not be needed and we should be safe without it.
+     *
+     * However, to be in the safe side, if we run on kernel version >= 3.4
+     * we use it.
+     */
+
+    utsname u;
+
+    if (uname(&u) == 0)
+    {
+        char* p;
+        char* zMajor = strtok_r(u.release, ".", &p);
+        char* zMinor = strtok_r(NULL, ".", &p);
+
+        if (zMajor && zMinor)
+        {
+            int major = atoi(zMajor);
+            int minor = atoi(zMinor);
+
+            if (major >= 3 && minor >= 4)
+            {
+                // O_DIRECT for pipes is supported from kernel 3.4 onwards.
+                this_unit.pipe_flags |= O_DIRECT;
+            }
+            else
+            {
+                MXS_NOTICE("O_DIRECT is not supported for pipes on Linux kernel %s "
+                           "(supported from version 3.4 onwards), NOT using it.",
+                           u.release);
+            }
+        }
+        else
+        {
+            MXS_WARNING("Syntax used in utsname.release seems to have changed, "
+                        "not able to figure out current kernel version. Assuming "
+                        "O_DIRECT is not supported for pipes.");
+        }
+    }
+    else
+    {
+        MXS_WARNING("uname() failed, assuming O_DIRECT is not supported for pipes: %s",
+                    mxs_strerror(errno));
+    }
+
+    this_unit.initialized = true;
+
+    return this_unit.initialized;
+}
+
+//static
+void MessageQueue::finish()
+{
+    ss_dassert(this_unit.initialized);
+    this_unit.initialized = false;
+}
+
+//static
 MessageQueue* MessageQueue::create(Handler* pHandler)
 {
+    ss_dassert(this_unit.initialized);
+
     MessageQueue* pThis = NULL;
 
-    // We create the pipe in message mode (O_DIRECT), so that we do
-    // not need to deal with partial messages and as non blocking so
-    // that the descriptor can be added to an epoll instance.
-
     int fds[2];
-    if (pipe2(fds, O_DIRECT | O_NONBLOCK | O_CLOEXEC) == 0)
+    if (pipe2(fds, this_unit.pipe_flags) == 0)
     {
         int read_fd = fds[0];
         int write_fd = fds[1];

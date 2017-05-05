@@ -13,16 +13,6 @@
 
 /**
  * @file mm_mon.c - A Multi-Master Multi Muster cluster monitor
- *
- * @verbatim
- * Revision History
- *
- * Date     Who                 Description
- * 08/09/14 Massimiliano Pinto  Initial implementation
- * 08/05/15 Markus Makela       Addition of launchable scripts
- * 17/10/15 Martin Brampton     Change DCB callback to hangup
- *
- * @endverbatim
  */
 
 #define MXS_MODULE_NAME "mmmon"
@@ -50,6 +40,7 @@ MXS_MODULE info =
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static void detectStaleMaster(void *, int);
 static MXS_MONITOR_SERVERS *get_current_master(MXS_MONITOR *);
 static bool isMySQLEvent(mxs_monitor_event_t event);
@@ -70,7 +61,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -136,7 +128,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->shutdown = 0;
         handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->detectStaleMaster = config_get_bool(params, "detect_stale_master");
@@ -151,9 +143,12 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -174,7 +169,7 @@ stopMonitor(MXS_MONITOR *mon)
 }
 
 /**
- * Daignostic interface
+ * Diagnostic interface
  *
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
@@ -184,6 +179,20 @@ static void diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
 
     dcb_printf(dcb, "Detect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    const MM_MONITOR *handle = (const MM_MONITOR *)mon->handle;
+
+    json_t* rval = json_object();
+    json_object_set_new(rval, "detect_stale_master", json_boolean(handle->detectStaleMaster));
+    return rval;
 }
 
 /**
@@ -476,16 +485,13 @@ monitorDatabase(MXS_MONITOR* mon, MXS_MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    MM_MONITOR *handle;
+    MM_MONITOR *handle = (MM_MONITOR *)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     int detect_stale_master = false;
     MXS_MONITOR_SERVERS *root_master = NULL;
     size_t nrounds = 0;
 
-    spinlock_acquire(&mon->lock);
-    handle = (MM_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     detect_stale_master = handle->detectStaleMaster;
 
     if (mysql_thread_init())

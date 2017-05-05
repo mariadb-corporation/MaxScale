@@ -144,6 +144,12 @@ void MaskingFilter::diagnostics(DCB* pDcb)
 }
 
 // static
+json_t* MaskingFilter::diagnostics_json() const
+{
+    return NULL;
+}
+
+// static
 uint64_t MaskingFilter::getCapabilities()
 {
     return RCAP_TYPE_NONE;

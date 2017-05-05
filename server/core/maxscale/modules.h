@@ -63,7 +63,7 @@ void *load_module(const char *module, const char *type);
  * @brief Get a module
  *
  * @param name Name of the module
- * @param type The module type
+ * @param type The module type or NULL for any type
  * @return The loaded module or NULL if the module is not loaded
  */
 const MXS_MODULE *get_module(const char *name, const char *type);
@@ -160,5 +160,13 @@ bool mxs_module_iterator_has_next(const MXS_MODULE_ITERATOR* iterator);
  * @return A module if there was a module to return, NULL otherwise.
  */
 MXS_MODULE* mxs_module_iterator_get_next(MXS_MODULE_ITERATOR* iterator);
+
+/**
+ * @brief Convert all modules to JSON
+ *
+ * @param host The hostname of this server
+ * @return Array of modules in JSON format
+ */
+json_t* module_list_to_json(const char* host);
 
 MXS_END_DECLS

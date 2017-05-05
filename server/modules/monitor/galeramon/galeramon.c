@@ -50,6 +50,7 @@ static bool warn_erange_on_local_index = true;
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 static MXS_MONITOR_SERVERS *get_candidate_master(MXS_MONITOR*);
 static MXS_MONITOR_SERVERS *set_cluster_master(MXS_MONITOR_SERVERS *, MXS_MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
@@ -80,7 +81,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -166,8 +168,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->galera_nodes_info = nodes_info;
         handle->cluster_info.c_size = 0;
         handle->cluster_info.c_uuid = NULL;
-
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->disableMasterFailback = config_get_bool(params, "disable_master_failback");
@@ -193,9 +194,13 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        hashtable_free(handle->galera_nodes_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -240,6 +245,36 @@ diagnostics(DCB *dcb, const MXS_MONITOR *mon)
     {
         dcb_printf(dcb, "Galera Cluster NOT set:\tno member nodes\n");
     }
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    json_t* rval = json_object();
+    const GALERA_MONITOR *handle = (const GALERA_MONITOR *)mon->handle;
+
+    json_object_set_new(rval, "disable_master_failback", json_boolean(handle->disableMasterFailback));
+    json_object_set_new(rval, "disable_master_role_setting", json_boolean(handle->disableMasterRoleSetting));
+    json_object_set_new(rval, "root_node_as_master", json_boolean(handle->root_node_as_master));
+    json_object_set_new(rval, "use_priority", json_boolean(handle->use_priority));
+    json_object_set_new(rval, "set_donor_nodes", json_boolean(handle->set_donor_nodes));
+
+    if (handle->script)
+    {
+        json_object_set_new(rval, "script", json_string(handle->script));
+    }
+
+    if (handle->cluster_info.c_uuid)
+    {
+        json_object_set_new(rval, "cluster_uuid", json_string(handle->cluster_info.c_uuid));
+        json_object_set_new(rval, "cluster_size", json_integer(handle->cluster_info.c_size));
+    }
+
+    return rval;
 }
 
 /**
@@ -304,10 +339,10 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 
     /* Check if the the Galera FSM shows this node is joined to the cluster */
     char *cluster_member = "SHOW STATUS WHERE Variable_name IN"
-                            " ('wsrep_cluster_state_uuid',"
-                            " 'wsrep_cluster_size',"
-                            " 'wsrep_local_index',"
-                            " 'wsrep_local_state')";
+                           " ('wsrep_cluster_state_uuid',"
+                           " 'wsrep_cluster_size',"
+                           " 'wsrep_local_index',"
+                           " 'wsrep_local_state')";
 
     if (mysql_query(database->con, cluster_member) == 0
         && (result = mysql_store_result(database->con)) != NULL)
@@ -399,7 +434,7 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
                 if (row[1] == NULL || !strlen(row[1]))
                 {
                     MXS_DEBUG("Node %s is not running Galera Cluster",
-                                 database->server->unique_name);
+                              database->server->unique_name);
                     info.cluster_uuid = NULL;
                     info.joined = 0;
                 }
@@ -431,8 +466,8 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
         {
             if (hashtable_add(table, database->server->unique_name, &info))
             {
-                  MXS_DEBUG("Added %s to galera_nodes_info",
-                            database->server->unique_name);
+                MXS_DEBUG("Added %s to galera_nodes_info",
+                          database->server->unique_name);
             }
             /* Free the info.cluster_uuid as it's been added to the table */
             MXS_FREE(info.cluster_uuid);
@@ -458,19 +493,15 @@ monitorDatabase(MXS_MONITOR *mon, MXS_MONITOR_SERVERS *database)
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = (MXS_MONITOR*) arg;
-    GALERA_MONITOR *handle;
+    GALERA_MONITOR *handle = (GALERA_MONITOR*)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
     MXS_MONITOR_SERVERS *candidate_master = NULL;
     int master_stickiness;
     int is_cluster = 0;
     int log_no_members = 1;
-    mxs_monitor_event_t evtype;
 
-    spinlock_acquire(&mon->lock);
-    handle = (GALERA_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
     master_stickiness = handle->disableMasterFailback;
     if (mysql_thread_init())
     {
@@ -1311,13 +1342,13 @@ static bool detect_cluster_size(const GALERA_MONITOR *handle,
         }
         else
         {
-             if (!ret && c_uuid)
-             {
-             /* This error is being logged at every monitor cycle */
-             MXS_ERROR("Galera cluster cannot be set with %d members of %d:"
-                       " not enough nodes (%d at least)",
-                       candidate_size, n_nodes, min_cluster_size);
-             }
+            if (!ret && c_uuid)
+            {
+                /* This error is being logged at every monitor cycle */
+                MXS_ERROR("Galera cluster cannot be set with %d members of %d:"
+                          " not enough nodes (%d at least)",
+                          candidate_size, n_nodes, min_cluster_size);
+            }
         }
     }
 

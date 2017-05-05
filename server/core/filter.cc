@@ -14,20 +14,28 @@
 /**
  * @file filter.c  - A representation of a filter within MaxScale.
  */
-#include <maxscale/filter.h>
-#include <maxscale/filter.hh>
+
+#include "maxscale/filter.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <string>
+#include <set>
+
 #include <maxscale/alloc.h>
 #include <maxscale/log_manager.h>
 #include <maxscale/session.h>
 #include <maxscale/spinlock.h>
-#include "maxscale/filter.h"
+#include <maxscale/service.h>
+#include <maxscale/filter.hh>
 
 #include "maxscale/config.h"
 #include "maxscale/modules.h"
+
+using std::string;
+using std::set;
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static MXS_FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
@@ -466,8 +474,91 @@ filter_upstream(MXS_FILTER_DEF *filter, MXS_FILTER_SESSION *fsession, MXS_UPSTRE
     }
     return me;
 }
+json_t* filter_parameters_to_json(const MXS_FILTER_DEF* filter)
+{
+    json_t* rval = json_object();
 
+    if (filter->options)
+    {
+        json_t* arr = json_array();
 
+        for (int i = 0; filter->options && filter->options[i]; i++)
+        {
+            json_array_append_new(arr, json_string(filter->options[i]));
+        }
+
+        json_object_set_new(rval, "options", arr);
+    }
+
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(filter->module, MODULE_FILTER);
+    config_add_module_params_json(mod, filter->parameters, config_filter_params, rval);
+
+    return rval;
+}
+
+json_t* filter_to_json(const MXS_FILTER_DEF* filter, const char* host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, CN_NAME, json_string(filter->name));
+    json_object_set_new(rval, CN_MODULE, json_string(filter->module));
+    json_object_set_new(rval, CN_PARAMETERS, filter_parameters_to_json(filter));
+
+    if (filter->obj && filter->filter)
+    {
+        json_t* diag = filter->obj->diagnostics_json(filter->filter, NULL);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "filter_diagnostics", diag);
+        }
+    }
+
+    /** Store relationships to other objects */
+    json_t* rel = json_object();
+
+    string self = host;
+    self += "/filters/";
+    self += filter->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
+
+    json_t* arr = service_relations_to_filter(filter, host);
+
+    if (json_array_size(arr) > 0)
+    {
+        json_object_set_new(rel, "services", arr);
+    }
+    else
+    {
+        json_decref(arr);
+    }
+
+    json_object_set_new(rval, "relationships", rel);
+
+    return rval;
+}
+
+json_t* filter_list_to_json(const char* host)
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&filter_spin);
+
+    for (MXS_FILTER_DEF* f = allFilters; f; f = f->next)
+    {
+        json_t* json = filter_to_json(f, host);
+
+        if (json)
+        {
+            json_array_append_new(rval, json);
+        }
+    }
+
+    spinlock_release(&filter_spin);
+
+    return rval;
+}
 
 namespace maxscale
 {
@@ -509,8 +600,13 @@ int FilterSession::clientReply(GWBUF* pPacket)
     return m_up.clientReply(pPacket);
 }
 
-void FilterSession::diagnostics(DCB* pDcb)
+void FilterSession::diagnostics(DCB *pDcb)
 {
+}
+
+json_t* FilterSession::diagnostics_json() const
+{
+    return NULL;
 }
 
 }

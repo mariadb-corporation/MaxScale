@@ -97,8 +97,8 @@ int main(int argc, char **argv)
 
     set_libdir(MXS_STRDUP_A(".."));
     service = service_alloc("test_service", "binlogrouter");
-    service->credentials.name = MXS_STRDUP_A("foo");
-    service->credentials.authdata = MXS_STRDUP_A("bar");
+    strcpy(service->credentials.name, "foo");
+    strcpy(service->credentials.authdata, "bar");
 
     {
         char *lasts;

@@ -456,6 +456,15 @@ void CacheFilterSession::diagnostics(DCB* pDcb)
     dcb_printf(pDcb, "\n");
 }
 
+json_t* CacheFilterSession::diagnostics_json() const
+{
+    // Not printing anything. Session of the same instance share the same cache, in
+    // which case the same information would be printed once per session, or all
+    // threads (but not sessions) share the same cache, in which case the output
+    // would be nonsensical.
+    return NULL;
+}
+
 /**
  * Called when resultset field information is handled.
  */

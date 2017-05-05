@@ -77,6 +77,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessio
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics_json(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void errorReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *message,
@@ -157,6 +158,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         errorReply,
         getCapabilities,
@@ -802,47 +804,6 @@ routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queu
     return avro_client_handle_request(router, client, queue);
 }
 
-/* Not used
-static char *event_names[] =
-{
-    "Invalid", "Start Event V3", "Query Event", "Stop Event", "Rotate Event",
-    "Integer Session Variable", "Load Event", "Slave Event", "Create File Event",
-    "Append Block Event", "Exec Load Event", "Delete File Event",
-    "New Load Event", "Rand Event", "User Variable Event", "Format Description Event",
-    "Transaction ID Event (2 Phase Commit)", "Begin Load Query Event",
-    "Execute Load Query Event", "Table Map Event", "Write Rows Event (v0)",
-    "Update Rows Event (v0)", "Delete Rows Event (v0)", "Write Rows Event (v1)",
-    "Update Rows Event (v1)", "Delete Rows Event (v1)", "Incident Event",
-    "Heartbeat Event", "Ignorable Event", "Rows Query Event", "Write Rows Event (v2)",
-    "Update Rows Event (v2)", "Delete Rows Event (v2)", "GTID Event",
-    "Anonymous GTID Event", "Previous GTIDS Event"
-};
-*/
-
-/* Not used
-// New MariaDB event numbers starts from 0xa0
-static char *event_names_mariadb10[] =
-{
-    "Annotate Rows Event",
-    "Binlog Checkpoint Event",
-    "GTID Event",
-    "GTID List Event"
-};
-*/
-
-/**
- * Display an entry from the spinlock statistics data
- *
- * @param   dcb The DCB to print to
- * @param   desc    Description of the statistic
- * @param   value   The statistic value
- */
-static void
-spin_reporter(void *dcb, char *desc, int value)
-{
-    dcb_printf((DCB *) dcb, "\t\t%-35s  %d\n", desc, value);
-}
-
 /**
  * Display router diagnostics
  *
@@ -939,22 +900,79 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
                        session->gtid.domain, session->gtid.server_id,
                        session->gtid.seq);
 
-            // TODO: Add real value for this
-            //dcb_printf(dcb, "\t\tAvro Transaction ID:         %u\n", 0);
-            // TODO: Add real value for this
-            //dcb_printf(dcb, "\t\tAvro N.MaxTransactions:          %u\n", 0);
-
-#if SPINLOCK_PROFILE
-            dcb_printf(dcb, "\tSpinlock statistics (catch_lock):\n");
-            spinlock_stats(&session->catch_lock, spin_reporter, dcb);
-            dcb_printf(dcb, "\tSpinlock statistics (rses_lock):\n");
-            spinlock_stats(&session->file_lock, spin_reporter, dcb);
-#endif
             dcb_printf(dcb, "\t\t--------------------\n\n");
             session = session->next;
         }
         spinlock_release(&router_inst->lock);
     }
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
+{
+    AVRO_INSTANCE *router_inst = (AVRO_INSTANCE *)router;
+
+    json_t* rval = json_object();
+
+    char pathbuf[PATH_MAX + 1];
+    snprintf(pathbuf, sizeof(pathbuf), "%s/%s", router_inst->avrodir, AVRO_PROGRESS_FILE);
+
+    json_object_set_new(rval, "infofile", json_string(pathbuf));
+    json_object_set_new(rval, "avrodir", json_string(router_inst->avrodir));
+    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir));
+    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name));
+    json_object_set_new(rval, "binlog_pos", json_integer(router_inst->current_pos));
+
+    snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", router_inst->gtid.domain,
+             router_inst->gtid.server_id, router_inst->gtid.seq);
+    json_object_set_new(rval, "gtid", json_string(pathbuf));
+    json_object_set_new(rval, "gtid_timestamp", json_integer(router_inst->gtid.timestamp));
+    json_object_set_new(rval, "gtid_event_number", json_integer(router_inst->gtid.event_num));
+    json_object_set_new(rval, "clients", json_integer(router_inst->stats.n_clients));
+
+    if (router_inst->clients)
+    {
+        json_t* arr = json_array();
+        spinlock_acquire(&router_inst->lock);
+
+        for (AVRO_CLIENT *session = router_inst->clients; session; session = session->next)
+        {
+            json_t* client = json_object();
+            json_object_set_new(client, "uuid", json_string(session->uuid));
+            json_object_set_new(client, "host", json_string(session->dcb->remote));
+            json_object_set_new(client, "port", json_integer(dcb_get_port(session->dcb)));
+            json_object_set_new(client, "user", json_string(session->dcb->user));
+            json_object_set_new(client, "format", json_string(avro_client_ouput[session->format]));
+            json_object_set_new(client, "state", json_string(avro_client_states[session->state]));
+            json_object_set_new(client, "avrofile", json_string(session->avro_binfile));
+            json_object_set_new(client, "avrofile_last_block",
+                                json_integer(session->avro_file.blocks_read));
+            json_object_set_new(client, "avrofile_last_record",
+                                json_integer(session->avro_file.records_read));
+
+            if (session->gtid_start.domain > 0 || session->gtid_start.server_id > 0 ||
+                session->gtid_start.seq > 0)
+            {
+
+                snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", session->gtid_start.domain,
+                         session->gtid_start.server_id, session->gtid_start.seq);
+                json_object_set_new(client, "requested_gtid", json_string(pathbuf));
+            }
+            snprintf(pathbuf, sizeof(pathbuf), "%lu-%lu-%lu", session->gtid.domain,
+                     session->gtid.server_id, session->gtid.seq);
+            json_object_set_new(client, "current_gtid", json_string(pathbuf));
+            json_array_append_new(arr, client);
+        }
+        spinlock_release(&router_inst->lock);
+
+        json_object_set_new(rval, "clients", arr);
+    }
+
+    return rval;
 }
 
 /**

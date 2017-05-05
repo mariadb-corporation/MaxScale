@@ -110,6 +110,11 @@ void Cache::show(DCB* pDcb) const
     }
 }
 
+json_t* Cache::show_json() const
+{
+    return get_info(INFO_ALL);
+}
+
 cache_result_t Cache::get_key(const char* zDefault_db,
                               const GWBUF* pQuery,
                               CACHE_KEY* pKey) const

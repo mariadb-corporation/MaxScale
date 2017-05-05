@@ -51,14 +51,16 @@
 #include "maxscale/config.h"
 #include "maxscale/dcb.h"
 #include "maxscale/maxscale.h"
+#include "maxscale/messagequeue.hh"
 #include "maxscale/modules.h"
 #include "maxscale/monitor.h"
 #include "maxscale/poll.h"
 #include "maxscale/service.h"
 #include "maxscale/statistics.h"
+#include "maxscale/admin.hh"
 #include "maxscale/worker.hh"
 
-using maxscale::Worker;
+using namespace maxscale;
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -1890,6 +1892,13 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    if (!MessageQueue::init())
+    {
+        MXS_ERROR("Failed to initialize message queue.");
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     if (!Worker::init())
     {
         MXS_ERROR("Failed to initialize workers.");
@@ -1973,6 +1982,18 @@ int main(int argc, char **argv)
         }
     }
 
+    if (mxs_admin_init())
+    {
+        MXS_NOTICE("Started REST API on [%s]:%u", cnf->admin_host, cnf->admin_port);
+    }
+    else
+    {
+        const char* logerr = "Failed to initialize admin interface";
+        print_log_n_stderr(true, true, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
     /**
      * Successful start, notify the parent process that it can exit.
@@ -1989,6 +2010,9 @@ int main(int argc, char **argv)
     worker = Worker::get(0);
     ss_dassert(worker);
     worker->run();
+
+    /** Stop administrative interface */
+    mxs_admin_shutdown();
 
     /*<
      * Wait for the housekeeper to finish.
@@ -2007,6 +2031,7 @@ int main(int argc, char **argv)
     }
 
     Worker::finish();
+    MessageQueue::finish();
 
     /*<
      * Destroy the router and filter instances of all services.

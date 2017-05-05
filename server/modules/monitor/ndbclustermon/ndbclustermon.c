@@ -42,6 +42,7 @@ static void monitorMain(void *);
 static void *startMonitor(MXS_MONITOR *, const MXS_CONFIG_PARAMETER *params);
 static void stopMonitor(MXS_MONITOR *);
 static void diagnostics(DCB *, const MXS_MONITOR *);
+static json_t* diagnostics_json(const MXS_MONITOR *);
 bool isNdbEvent(mxs_monitor_event_t event);
 
 
@@ -62,7 +63,8 @@ MXS_MODULE* MXS_CREATE_MODULE()
     {
         startMonitor,
         stopMonitor,
-        diagnostics
+        diagnostics,
+        diagnostics_json
     };
 
     static MXS_MODULE info =
@@ -127,7 +129,7 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         handle->shutdown = 0;
         handle->id = MXS_MONITOR_DEFAULT_ID;
         handle->master = NULL;
-        spinlock_init(&handle->lock);
+        handle->monitor = mon;
     }
 
     handle->script = config_copy_string(params, "script");
@@ -142,9 +144,12 @@ startMonitor(MXS_MONITOR *mon, const MXS_CONFIG_PARAMETER *params)
         return NULL;
     }
 
-    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, handle) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+        return NULL;
     }
 
     return handle;
@@ -173,6 +178,17 @@ stopMonitor(MXS_MONITOR *mon)
 static void
 diagnostics(DCB *dcb, const MXS_MONITOR *mon)
 {
+}
+
+/**
+ * Diagnostic interface
+ *
+ * @param dcb   DCB to send output
+ * @param arg   The monitor handle
+ */
+static json_t* diagnostics_json(const MXS_MONITOR *mon)
+{
+    return NULL;
 }
 
 /**
@@ -294,14 +310,10 @@ monitorDatabase(MXS_MONITOR_SERVERS *database, char *defaultUser, char *defaultP
 static void
 monitorMain(void *arg)
 {
-    MXS_MONITOR* mon = arg;
-    MYSQL_MONITOR *handle;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*)arg;
+    MXS_MONITOR* mon = handle->monitor;
     MXS_MONITOR_SERVERS *ptr;
     size_t nrounds = 0;
-
-    spinlock_acquire(&mon->lock);
-    handle = (MYSQL_MONITOR *) mon->handle;
-    spinlock_release(&mon->lock);
 
     if (mysql_thread_init())
     {

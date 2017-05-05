@@ -75,6 +75,7 @@ static void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session);
 static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *session, GWBUF *queue);
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static json_t* diagnostics_json(const MXS_ROUTER *instance);
 static void clientReply(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue,
                         DCB *backend_dcb);
 static void handleError(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session,
@@ -151,6 +152,7 @@ MXS_MODULE *MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         handleError,
         getCapabilities,
@@ -649,7 +651,7 @@ static int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, 
 static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
-    char *weightby;
+    const char *weightby = serviceGetWeightingParameter(router->service);
     double master_pct = 0.0, slave_pct = 0.0, all_pct = 0.0;
 
     dcb_printf(dcb, "\n");
@@ -693,7 +695,7 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
     dcb_printf(dcb, "\tNumber of queries forwarded to all:   	%" PRIu64 " (%.2f%%)\n",
                router->stats.n_all, all_pct);
 
-    if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
+    if (*weightby)
     {
         dcb_printf(dcb, "\tConnection distribution based on %s "
                    "server parameter.\n",
@@ -709,6 +711,57 @@ static void diagnostics(MXS_ROUTER *instance, DCB *dcb)
                        ref->server->stats.n_current_ops);
         }
     }
+}
+
+/**
+ * @brief Diagnostics routine (API)
+ *
+ * Print query router statistics to the DCB passed in
+ *
+ * @param   instance    The router instance
+ * @param   dcb     The DCB for diagnostic output
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *instance)
+{
+    ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)instance;
+
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "use_sql_variables_in",
+                        json_string(mxs_target_to_str(router->rwsplit_config.use_sql_variables_in)));
+    json_object_set_new(rval, "slave_selection_criteria",
+                        json_string(select_criteria_to_str(router->rwsplit_config.slave_selection_criteria)));
+    json_object_set_new(rval, "master_failure_mode",
+                        json_string(failure_mode_to_str(router->rwsplit_config.master_failure_mode)));
+    json_object_set_new(rval, "max_slave_replication_lag",
+                        json_integer(router->rwsplit_config.max_slave_replication_lag));
+    json_object_set_new(rval, "retry_failed_reads",
+                        json_boolean(router->rwsplit_config.retry_failed_reads));
+    json_object_set_new(rval, "strict_multi_stmt",
+                        json_boolean(router->rwsplit_config.strict_multi_stmt));
+    json_object_set_new(rval, "disable_sescmd_history",
+                        json_boolean(router->rwsplit_config.disable_sescmd_history));
+    json_object_set_new(rval, "max_sescmd_history",
+                        json_integer(router->rwsplit_config.max_sescmd_history));
+    json_object_set_new(rval, "master_accept_reads",
+                        json_boolean(router->rwsplit_config.master_accept_reads));
+
+
+    json_object_set_new(rval, "connections", json_integer(router->stats.n_sessions));
+    json_object_set_new(rval, "current_connections", json_integer(router->service->stats.n_current));
+    json_object_set_new(rval, "queries", json_integer(router->stats.n_queries));
+    json_object_set_new(rval, "route_master", json_integer(router->stats.n_master));
+    json_object_set_new(rval, "route_slave", json_integer(router->stats.n_slave));
+    json_object_set_new(rval, "route_all", json_integer(router->stats.n_all));
+
+    const char *weightby = serviceGetWeightingParameter(router->service);
+
+    if (*weightby)
+    {
+        json_object_set_new(rval, "weightby", json_string(weightby));
+    }
+
+    return rval;
 }
 
 /**

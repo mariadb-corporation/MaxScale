@@ -96,6 +96,7 @@ static  void closeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_sessi
 static  void freeSession(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session);
 static  int routeQuery(MXS_ROUTER *instance, MXS_ROUTER_SESSION *router_session, GWBUF *queue);
 static  void diagnostics(MXS_ROUTER *instance, DCB *dcb);
+static  json_t* diagnostics_json(const MXS_ROUTER *instance);
 static  void clientReply(MXS_ROUTER *instance,
                          MXS_ROUTER_SESSION *router_session,
                          GWBUF *queue,
@@ -160,6 +161,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         freeSession,
         routeQuery,
         diagnostics,
+        diagnostics_json,
         clientReply,
         errorReply,
         getCapabilities,
@@ -242,8 +244,8 @@ createInstance(SERVICE *service, char **options)
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
-    if (service->credentials.name == NULL ||
-        service->credentials.authdata == NULL)
+    if (!service->credentials.name[0] ||
+        !service->credentials.authdata[0])
     {
         MXS_ERROR("%s: Error: Service is missing user credentials."
                   " Add the missing username or passwd parameter to the service.",
@@ -1732,6 +1734,338 @@ diagnostics(MXS_ROUTER *router, DCB *dcb)
         }
         spinlock_release(&router_inst->lock);
     }
+}
+
+/**
+ * Display router diagnostics
+ *
+ * @param instance  Instance of the router
+ */
+static json_t* diagnostics_json(const MXS_ROUTER *router)
+{
+    ROUTER_INSTANCE *router_inst = (ROUTER_INSTANCE *)router;
+    int minno = 0;
+    double min5, min10, min15, min30;
+    char buf[40];
+    struct tm tm;
+
+    json_t* rval = json_object();
+
+    minno = router_inst->stats.minno;
+    min30 = 0.0;
+    min15 = 0.0;
+    min10 = 0.0;
+    min5 = 0.0;
+    for (int j = 0; j < BLR_NSTATS_MINUTES; j++)
+    {
+        minno--;
+        if (minno < 0)
+        {
+            minno += BLR_NSTATS_MINUTES;
+        }
+        min30 += router_inst->stats.minavgs[minno];
+        if (j < 15)
+        {
+            min15 += router_inst->stats.minavgs[minno];
+        }
+        if (j < 10)
+        {
+            min10 += router_inst->stats.minavgs[minno];
+        }
+        if (j < 5)
+        {
+            min5 += router_inst->stats.minavgs[minno];
+        }
+    }
+    min30 /= 30.0;
+    min15 /= 15.0;
+    min10 /= 10.0;
+    min5 /= 5.0;
+
+    /* SSL options */
+    if (router_inst->ssl_enabled)
+    {
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, "ssl_ca_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_ca_cert));
+        json_object_set_new(obj, "ssl_cert", json_string(router_inst->service->dbref->server->server_ssl->ssl_cert));
+        json_object_set_new(obj, "ssl_key", json_string(router_inst->service->dbref->server->server_ssl->ssl_key));
+        json_object_set_new(obj, "ssl_version", json_string(router_inst->ssl_version ? router_inst->ssl_version : "MAX"));
+
+        json_object_set_new(rval, "master_ssl", obj);
+    }
+
+    /* Binlog Encryption options */
+    if (router_inst->encryption.enabled)
+    {
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, "key", json_string(
+                                                    router_inst->encryption.key_management_filename));
+        json_object_set_new(obj, "algorithm", json_string(
+                                                          blr_get_encryption_algorithm(router_inst->encryption.encryption_algorithm)));
+        json_object_set_new(obj, "key_length",
+                            json_integer(8 * router_inst->encryption.key_len));
+
+        json_object_set_new(rval, "master_encryption", obj);
+    }
+
+    json_object_set_new(rval, "master_state", json_string(blrm_states[router_inst->master_state]));
+
+    localtime_r(&router_inst->stats.lastReply, &tm);
+    asctime_r(&tm, buf);
+
+
+    json_object_set_new(rval, "binlogdir", json_string(router_inst->binlogdir));
+    json_object_set_new(rval, "heartbeat", json_integer(router_inst->heartbeat));
+    json_object_set_new(rval, "master_starts", json_integer(router_inst->stats.n_masterstarts));
+    json_object_set_new(rval, "master_reconnects", json_integer(router_inst->stats.n_delayedreconnects));
+    json_object_set_new(rval, "binlog_name", json_string(router_inst->binlog_name));
+    json_object_set_new(rval, "binlog_position", json_integer(router_inst->current_pos));
+
+    if (router_inst->trx_safe)
+    {
+        if (router_inst->pending_transaction.state != BLRM_NO_TRANSACTION)
+        {
+            json_object_set_new(rval, "current_trx_position", json_integer(router_inst->binlog_position));
+        }
+    }
+
+    json_object_set_new(rval, "slaves", json_integer(router_inst->stats.n_slaves));
+    json_object_set_new(rval, "session_events", json_integer(router_inst->stats.n_binlogs_ses));
+    json_object_set_new(rval, "total_events", json_integer(router_inst->stats.n_binlogs));
+    json_object_set_new(rval, "bad_crc_count", json_integer(router_inst->stats.n_badcrc));
+
+    minno = router_inst->stats.minno - 1;
+    if (minno == -1)
+    {
+        minno += BLR_NSTATS_MINUTES;
+    }
+
+    json_object_set_new(rval, "events_0", json_real(router_inst->stats.minavgs[minno]));
+    json_object_set_new(rval, "events_5", json_real(min5));
+    json_object_set_new(rval, "events_10", json_real(min10));
+    json_object_set_new(rval, "events_15", json_real(min15));
+    json_object_set_new(rval, "events_30", json_real(min30));
+
+    json_object_set_new(rval, "fake_events", json_integer(router_inst->stats.n_fakeevents));
+
+    json_object_set_new(rval, "artificial_events", json_integer(router_inst->stats.n_artificial));
+
+    json_object_set_new(rval, "binlog_errors", json_integer(router_inst->stats.n_binlog_errors));
+    json_object_set_new(rval, "binlog_rotates", json_integer(router_inst->stats.n_rotates));
+    json_object_set_new(rval, "heartbeat_events", json_integer(router_inst->stats.n_heartbeats));
+    json_object_set_new(rval, "events_read", json_integer(router_inst->stats.n_reads));
+    json_object_set_new(rval, "residual_packets", json_integer(router_inst->stats.n_residuals));
+
+    double average_packets = router_inst->stats.n_reads != 0 ?
+        ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0;
+
+    json_object_set_new(rval, "average_events_per_packets", json_real(average_packets));
+
+    spinlock_acquire(&router_inst->lock);
+    if (router_inst->stats.lastReply)
+    {
+        if (buf[strlen(buf) - 1] == '\n')
+        {
+            buf[strlen(buf) - 1] = '\0';
+        }
+
+        json_object_set_new(rval, "latest_event", json_string(buf));
+
+        if (!router_inst->mariadb10_compat)
+        {
+            json_object_set_new(rval, "latest_event_type", json_string(
+                                                                       (router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+                                                                       event_names[router_inst->lastEventReceived] : "unknown"));
+        }
+        else
+        {
+            char *ptr = NULL;
+            if (router_inst->lastEventReceived <= MAX_EVENT_TYPE)
+            {
+                ptr = event_names[router_inst->lastEventReceived];
+            }
+            else
+            {
+                /* Check MariaDB 10 new events */
+                if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN &&
+                    router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10)
+                {
+                    ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+                }
+            }
+
+
+            json_object_set_new(rval, "latest_event_type", json_string((ptr != NULL) ? ptr : "unknown"));
+
+            if (router_inst->mariadb_gtid &&
+                router_inst->last_mariadb_gtid[0])
+            {
+                json_object_set_new(rval, "latest_gtid", json_string(router_inst->last_mariadb_gtid));
+            }
+        }
+
+        if (router_inst->lastEventTimestamp)
+        {
+            time_t last_event = (time_t)router_inst->lastEventTimestamp;
+            localtime_r(&last_event, &tm);
+            asctime_r(&tm, buf);
+            if (buf[strlen(buf) - 1] == '\n')
+            {
+                buf[strlen(buf) - 1] = '\0';
+            }
+
+            json_object_set_new(rval, "latest_event_timestamp", json_string(buf));
+        }
+    }
+    spinlock_release(&router_inst->lock);
+
+    json_object_set_new(rval, "active_logs", json_boolean(router_inst->active_logs));
+    json_object_set_new(rval, "reconnect_pending", json_boolean(router_inst->reconnect_pending));
+
+    json_t* ev = json_object();
+
+    for (int i = 0; i <= MAX_EVENT_TYPE; i++)
+    {
+        json_object_set_new(ev, event_names[i], json_integer(router_inst->stats.events[i]));
+    }
+
+    if (router_inst->mariadb10_compat)
+    {
+        /* Display MariaDB 10 new events */
+        for (int i = MARIADB_NEW_EVENTS_BEGIN; i <= MAX_EVENT_TYPE_MARIADB10; i++)
+        {
+            json_object_set_new(ev, event_names_mariadb10[(i - MARIADB_NEW_EVENTS_BEGIN)],
+                                json_integer(router_inst->stats.events[i]));
+        }
+    }
+
+    json_object_set_new(rval, "event_types", ev);
+
+    if (router_inst->slaves)
+    {
+        json_t* arr = json_array();
+        spinlock_acquire(&router_inst->lock);
+
+        for (ROUTER_SLAVE *session = router_inst->slaves; session; session = session->next)
+        {
+            json_t* slave = json_object();
+            minno = session->stats.minno;
+            min30 = 0.0;
+            min15 = 0.0;
+            min10 = 0.0;
+            min5 = 0.0;
+            for (int j = 0; j < BLR_NSTATS_MINUTES; j++)
+            {
+                minno--;
+                if (minno < 0)
+                {
+                    minno += BLR_NSTATS_MINUTES;
+                }
+                min30 += session->stats.minavgs[minno];
+                if (j < 15)
+                {
+                    min15 += session->stats.minavgs[minno];
+                }
+                if (j < 10)
+                {
+                    min10 += session->stats.minavgs[minno];
+                }
+                if (j < 5)
+                {
+                    min5 += session->stats.minavgs[minno];
+                }
+            }
+            min30 /= 30.0;
+            min15 /= 15.0;
+            min10 /= 10.0;
+            min5 /= 5.0;
+
+            json_object_set_new(rval, "server_id", json_integer(session->serverid));
+
+            if (session->hostname)
+            {
+                json_object_set_new(rval, "hostname", json_string(session->hostname));
+            }
+            if (session->uuid)
+            {
+                json_object_set_new(rval, "uuid", json_string(session->uuid));
+            }
+
+            json_object_set_new(rval, "address", json_string(session->dcb->remote));
+            json_object_set_new(rval, "port", json_integer(dcb_get_port(session->dcb)));
+            json_object_set_new(rval, "user", json_string(session->dcb->user));
+            json_object_set_new(rval, "ssl_enabled", json_boolean(session->dcb->ssl));
+            json_object_set_new(rval, "state", json_string(blrs_states[session->state]));
+            json_object_set_new(rval, "next_sequence", json_integer(session->seqno));
+            json_object_set_new(rval, "binlog_file", json_string(session->binlogfile));
+            json_object_set_new(rval, "binlog_pos", json_integer(session->binlog_pos));
+            json_object_set_new(rval, "crc", json_boolean(!session->nocrc));
+
+            json_object_set_new(rval, "requests", json_integer(session->stats.n_requests));
+            json_object_set_new(rval, "events_sent", json_integer(session->stats.n_events));
+            json_object_set_new(rval, "bytes_sent", json_integer(session->stats.n_bytes));
+            json_object_set_new(rval, "data_bursts", json_integer(session->stats.n_bursts));
+
+            if (router_inst->send_slave_heartbeat)
+            {
+                json_object_set_new(rval, "heartbeat_period", json_integer(session->heartbeat));
+            }
+
+            minno = session->stats.minno - 1;
+            if (minno == -1)
+            {
+                minno += BLR_NSTATS_MINUTES;
+            }
+
+            if (session->lastEventTimestamp
+                && router_inst->lastEventTimestamp && session->lastEventReceived != HEARTBEAT_EVENT)
+            {
+                unsigned long seconds_behind;
+                time_t session_last_event = (time_t)session->lastEventTimestamp;
+
+                if (router_inst->lastEventTimestamp > session->lastEventTimestamp)
+                {
+                    seconds_behind = router_inst->lastEventTimestamp - session->lastEventTimestamp;
+                }
+                else
+                {
+                    seconds_behind = 0;
+                }
+
+                localtime_r(&session_last_event, &tm);
+                asctime_r(&tm, buf);
+                trim(buf);
+                json_object_set_new(rval, "last_binlog_event_timestamp", json_string(buf));
+                json_object_set_new(rval, "seconds_behind_master", json_integer(seconds_behind));
+            }
+
+            const char *mode = "connected";
+
+            if (session->state)
+            {
+                if ((session->cstate & CS_WAIT_DATA) == CS_WAIT_DATA)
+                {
+                    mode = "wait-for-data";
+                }
+                else
+                {
+                    mode = "catchup";
+                }
+            }
+
+            json_object_set_new(slave, "mode", json_string(mode));
+
+            json_array_append_new(arr, slave);
+        }
+        spinlock_release(&router_inst->lock);
+
+        json_object_set_new(rval, "slaves", arr);
+
+    }
+
+    return rval;
 }
 
 /**

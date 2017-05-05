@@ -33,6 +33,10 @@ WorkerDisposableTask::WorkerDisposableTask()
 {
 }
 
+WorkerDisposableTask::~WorkerDisposableTask()
+{
+}
+
 void WorkerDisposableTask::inc_ref()
 {
     atomic_add(&m_count, 1);

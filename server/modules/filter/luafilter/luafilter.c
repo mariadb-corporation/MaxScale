@@ -64,6 +64,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession,  MXS
 static int32_t routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int32_t clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
@@ -87,6 +88,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -662,6 +664,56 @@ static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *
             dcb_printf(dcb, "Session script: %s\n", my_instance->session_script);
         }
     }
+}
+
+/**
+ * Diagnostics routine.
+ *
+ * This will call the matching diagnostics entry point in the Lua script. If the
+ * Lua function returns a string, it will be printed to the client DCB.
+ *
+ * @param instance The filter instance
+ * @param fsession Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    LUA_INSTANCE *my_instance = (LUA_INSTANCE *)instance;
+    json_t* rval = json_object();
+
+    if (my_instance)
+    {
+        if (my_instance->global_lua_state)
+        {
+            spinlock_acquire(&my_instance->lock);
+
+            lua_getglobal(my_instance->global_lua_state, "diagnostic");
+
+            if (lua_pcall(my_instance->global_lua_state, 0, 1, 0) == 0)
+            {
+                lua_gettop(my_instance->global_lua_state);
+                if (lua_isstring(my_instance->global_lua_state, -1))
+                {
+                    json_object_set_new(rval, "script_output",
+                                        json_string(lua_tostring(my_instance->global_lua_state, -1)));
+                }
+            }
+            else
+            {
+                lua_pop(my_instance->global_lua_state, -1);
+            }
+            spinlock_release(&my_instance->lock);
+        }
+        if (my_instance->global_script)
+        {
+            json_object_set_new(rval, "global_script", json_string(my_instance->global_script));
+        }
+        if (my_instance->session_script)
+        {
+            json_object_set_new(rval, "session_script", json_string(my_instance->session_script));
+        }
+    }
+
+    return rval;
 }
 
 /**

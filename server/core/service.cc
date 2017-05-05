@@ -12,33 +12,11 @@
  */
 
 /**
- * @file service.c  - A representation of the service within the gateway.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 18/06/13     Mark Riddoch            Initial implementation
- * 24/06/13     Massimiliano Pinto      Added: Loading users from mysql backend in serviceStart
- * 06/02/14     Massimiliano Pinto      Added: serviceEnableRootUser routine
- * 25/02/14     Massimiliano Pinto      Added: service refresh limit feature
- * 28/02/14     Massimiliano Pinto      users_alloc moved from service_alloc to
- *                                      serviceStartPort (generic hashable for services)
- * 07/05/14     Massimiliano Pinto      Added: version_string initialized to NULL
- * 23/05/14     Mark Riddoch            Addition of service validation call
- * 29/05/14     Mark Riddoch            Filter API implementation
- * 09/09/14     Massimiliano Pinto      Added service option for localhost authentication
- * 13/10/14     Massimiliano Pinto      Added hashtable for resources (i.e database names for MySQL services)
- * 06/02/15     Mark Riddoch            Added caching of authentication data
- * 18/02/15     Mark Riddoch            Added result set management
- * 03/03/15     Massimiliano Pinto      Added config_enable_feedback_task() call in serviceStartAll
- * 19/06/15     Martin Brampton         More meaningful names for temp variables
- * 31/05/16     Martin Brampton         Implement connection throttling
- * 08/11/16     Massimiliano Pinto      Added: service_shutdown() calls destroyInstance() hoosk for routers
- *
- * @endverbatim
+ * @file service.c  - A representation of a service within MaxScale
  */
-#include <maxscale/service.h>
+
+#include <maxscale/cppdefs.hh>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,6 +26,10 @@
 #include <sys/types.h>
 #include <math.h>
 #include <fcntl.h>
+#include <string>
+#include <set>
+
+#include <maxscale/service.h>
 #include <maxscale/alloc.h>
 #include <maxscale/dcb.h>
 #include <maxscale/paths.h>
@@ -65,12 +47,16 @@
 #include <maxscale/users.h>
 #include <maxscale/utils.h>
 #include <maxscale/version.h>
+#include <maxscale/jansson.h>
 
 #include "maxscale/config.h"
 #include "maxscale/filter.h"
 #include "maxscale/modules.h"
 #include "maxscale/queuemanager.h"
 #include "maxscale/service.h"
+
+using std::string;
+using std::set;
 
 /** Base value for server weights */
 #define SERVICE_BASE_SERVER_WEIGHT 1000
@@ -156,10 +142,6 @@ SERVICE* service_alloc(const char *name, const char *router)
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
     service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
-    service->weightby = NULL;
-    service->credentials.authdata = NULL;
-    service->credentials.name = NULL;
-    service->version_string = NULL;
     service->svc_config_param = NULL;
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
@@ -645,23 +627,24 @@ int service_launch_all()
 
 bool serviceStop(SERVICE *service)
 {
-    SERV_LISTENER *port;
     int listeners = 0;
 
-    port = service->ports;
-    while (port)
+    if (service)
     {
-        if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER)
+        for (SERV_LISTENER * port = service->ports; port; port = port->next)
         {
-            if (poll_remove_dcb(port->listener) == 0)
+            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-                listeners++;
+                if (poll_remove_dcb(port->listener) == 0)
+                {
+                    port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+                    listeners++;
+                }
             }
         }
-        port = port->next;
+
+        service->state = SERVICE_STATE_STOPPED;
     }
-    service->state = SERVICE_STATE_STOPPED;
 
     return listeners > 0;
 }
@@ -676,23 +659,25 @@ bool serviceStop(SERVICE *service)
  */
 bool serviceStart(SERVICE *service)
 {
-    SERV_LISTENER *port;
     int listeners = 0;
 
-    port = service->ports;
-    while (port)
+    if (service)
     {
-        if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+        for (SERV_LISTENER* port = service->ports; port; port = port->next)
         {
-            if (poll_add_dcb(port->listener) == 0)
+            if (port->listener && port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
             {
-                port->listener->session->state = SESSION_STATE_LISTENER;
-                listeners++;
+                if (poll_add_dcb(port->listener) == 0)
+                {
+                    port->listener->session->state = SESSION_STATE_LISTENER;
+                    listeners++;
+                }
             }
         }
-        port = port->next;
+
+        service->state = SERVICE_STATE_STARTED;
     }
-    service->state = SERVICE_STATE_STARTED;
+
     return listeners > 0;
 }
 
@@ -734,10 +719,6 @@ void service_free(SERVICE *service)
 
     MXS_FREE(service->name);
     MXS_FREE(service->routerModule);
-    MXS_FREE(service->weightby);
-    MXS_FREE(service->version_string);
-    MXS_FREE(service->credentials.name);
-    MXS_FREE(service->credentials.authdata);
 
     config_parameter_free(service->svc_config_param);
     serviceClearRouterOptions(service);
@@ -1006,23 +987,19 @@ serviceClearRouterOptions(SERVICE *service)
  * @return      0 on failure
  */
 int
-serviceSetUser(SERVICE *service, char *user, char *auth)
+serviceSetUser(SERVICE *service, const char *user, const char *auth)
 {
-    user = MXS_STRDUP(user);
-    auth = MXS_STRDUP(auth);
-
-    if (!user || !auth)
+    if (service->credentials.name != user)
     {
-        MXS_FREE(user);
-        MXS_FREE(auth);
-        return 0;
+        snprintf(service->credentials.name,
+                 sizeof(service->credentials.name), "%s", user);
     }
 
-    MXS_FREE(service->credentials.name);
-    MXS_FREE(service->credentials.authdata);
-
-    service->credentials.name = user;
-    service->credentials.authdata = auth;
+    if (service->credentials.authdata != auth)
+    {
+        snprintf(service->credentials.authdata,
+                 sizeof(service->credentials.authdata), "%s", auth);
+    }
 
     return 1;
 }
@@ -1137,6 +1114,14 @@ serviceSetTimeout(SERVICE *service, int val)
     return 1;
 }
 
+void serviceSetVersionString(SERVICE *service, const char* value)
+{
+    if (service->version_string != value)
+    {
+        snprintf(service->version_string, sizeof(service->version_string), "%s", value);
+    }
+}
+
 /**
  * Sets the connection limits, if any, for the service.
  * @param service Service to configure
@@ -1199,7 +1184,7 @@ service_queue_check(void *data)
  * @param service Service to configure
  * @param value A string representation of a boolean value
  */
-void serviceSetRetryOnFailure(SERVICE *service, char* value)
+void serviceSetRetryOnFailure(SERVICE *service, const char* value)
 {
     if (value)
     {
@@ -1237,6 +1222,8 @@ serviceSetFilters(SERVICE *service, char *filters)
     ptr = strtok_r(filters, "|", &brkt);
     while (ptr)
     {
+        fix_section_name(ptr);
+
         n++;
         MXS_FILTER_DEF **tmp;
         if ((tmp = (MXS_FILTER_DEF **) MXS_REALLOC(flist,
@@ -1458,7 +1445,7 @@ void dprintService(DCB *dcb, SERVICE *service)
         }
         server = server->next;
     }
-    if (service->weightby)
+    if (*service->weightby)
     {
         dcb_printf(dcb, "\tRouting weight parameter:            %s\n",
                    service->weightby);
@@ -1807,14 +1794,12 @@ service_get_name(SERVICE *svc)
  * @param       service         The service pointer
  * @param       weightby        The parameter name to weight the routing by
  */
-void
-serviceWeightBy(SERVICE *service, char *weightby)
+void serviceWeightBy(SERVICE *service, const char *weightby)
 {
-    if (service->weightby)
+    if (service->weightby != weightby)
     {
-        MXS_FREE(service->weightby);
+        snprintf(service->weightby, sizeof(service->weightby), "%s", weightby);
     }
-    service->weightby = MXS_STRDUP_A(weightby);
 }
 
 /**
@@ -1822,8 +1807,7 @@ serviceWeightBy(SERVICE *service, char *weightby)
  * by
  * @param service               The Service pointer
  */
-char *
-serviceGetWeightingParameter(SERVICE *service)
+const char* serviceGetWeightingParameter(SERVICE *service)
 {
     return service->weightby;
 }
@@ -2115,8 +2099,9 @@ bool service_all_services_have_listeners()
 
 static void service_calculate_weights(SERVICE *service)
 {
-    char *weightby = serviceGetWeightingParameter(service);
-    if (weightby && service->dbref)
+    const char *weightby = serviceGetWeightingParameter(service);
+
+    if (*weightby && service->dbref)
     {
         /** Service has a weighting parameter and at least one server */
         int total = 0;
@@ -2243,22 +2228,36 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     }
 
     /**
-     * Only additional parameters are added to the configuration. This prevents
-     * duplication or addition of parameters that don't support it.
-     *
      * TODO: Check for return values on all of the dprintf calls
      */
     dprintf(file, "[%s]\n", service->name);
+    dprintf(file, "%s=service\n", CN_TYPE);
+    dprintf(file, "%s=%s\n", CN_USER, service->credentials.name);
+    dprintf(file, "%s=%s\n", CN_PASSWORD, service->credentials.authdata);
+    dprintf(file, "%s=%s\n", CN_ENABLE_ROOT_USER, service->enable_root ? "true" : "false");
+    dprintf(file, "%s=%d\n", CN_MAX_RETRY_INTERVAL, service->max_retry_interval);
+    dprintf(file, "%s=%d\n", CN_MAX_CONNECTIONS, service->max_connections);
+    dprintf(file, "%s=%ld\n", CN_CONNECTION_TIMEOUT, service->conn_idle_timeout);
+    dprintf(file, "%s=%s\n", CN_AUTH_ALL_SERVERS, service->users_from_all ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_STRIP_DB_ESC, service->strip_db_esc ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_LOCALHOST_MATCH_WILDCARD_HOST, service->localhost_match_wildcard_host ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_VERSION_STRING, service->version_string);
+    dprintf(file, "%s=%s\n", CN_WEIGHTBY, service->weightby);
+    dprintf(file, "%s=%s\n", CN_LOG_AUTH_WARNINGS, service->log_auth_warnings ? "true" : "false");
+    dprintf(file, "%s=%s\n", CN_RETRY_ON_FAILURE, service->retry_start ? "true" : "false");
+
     if (service->dbref)
     {
-        dprintf(file, "servers=");
+        dprintf(file, "%s=", CN_SERVERS);
+        const char *sep = "";
+
         for (SERVER_REF *db = service->dbref; db; db = db->next)
         {
-            if (db != service->dbref)
+            if (SERVER_REF_IS_ACTIVE(db))
             {
-                dprintf(file, ",");
+                dprintf(file, "%s%s", sep, db->server->unique_name);
+                sep = ",";
             }
-            dprintf(file, "%s", db->server->unique_name);
         }
         dprintf(file, "\n");
     }
@@ -2266,6 +2265,41 @@ static bool create_service_config(const SERVICE *service, const char *filename)
     close(file);
 
     return true;
+}
+
+bool service_serialize(const SERVICE *service)
+{
+    bool rval = false;
+    char filename[PATH_MAX];
+    snprintf(filename, sizeof(filename), "%s/%s.cnf.tmp", get_config_persistdir(),
+             service->name);
+
+    if (unlink(filename) == -1 && errno != ENOENT)
+    {
+        MXS_ERROR("Failed to remove temporary service configuration at '%s': %d, %s",
+                  filename, errno, mxs_strerror(errno));
+    }
+    else if (create_service_config(service, filename))
+    {
+        char final_filename[PATH_MAX];
+        strcpy(final_filename, filename);
+
+        char *dot = strrchr(final_filename, '.');
+        ss_dassert(dot);
+        *dot = '\0';
+
+        if (rename(filename, final_filename) == 0)
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to rename temporary service configuration at '%s': %d, %s",
+                      filename, errno, mxs_strerror(errno));
+        }
+    }
+
+    return rval;
 }
 
 bool service_serialize_servers(const SERVICE *service)
@@ -2338,4 +2372,259 @@ bool service_port_is_used(unsigned short port)
     spinlock_release(&service_spin);
 
     return rval;
+}
+
+static const char* service_state_to_string(int state)
+{
+    switch (state)
+    {
+    case SERVICE_STATE_STARTED:
+        return "Started";
+
+    case SERVICE_STATE_STOPPED:
+        return "Stopped";
+
+    case SERVICE_STATE_FAILED:
+        return "Failed";
+
+    case SERVICE_STATE_ALLOC:
+        return "Allocated";
+
+    default:
+        ss_dassert(false);
+        return "Unknown";
+    }
+}
+
+json_t* service_parameters_to_json(const SERVICE* service)
+{
+    json_t* rval = json_object();
+    json_t* arr = json_array();
+
+    string options;
+
+    if (service->routerOptions && service->routerOptions[0])
+    {
+        options += service->routerOptions[0];
+
+        for (int i = 1; service->routerOptions[i]; i++)
+        {
+            options += ",";
+            options += service->routerOptions[i];
+        }
+    }
+
+    json_object_set_new(rval, CN_ROUTER_OPTIONS, json_string(options.c_str()));
+    json_object_set_new(rval, CN_USER, json_string(service->credentials.name));
+    json_object_set_new(rval, CN_PASSWORD, json_string(service->credentials.authdata));
+
+    json_object_set_new(rval, CN_ENABLE_ROOT_USER, json_boolean(service->enable_root));
+    json_object_set_new(rval, CN_MAX_RETRY_INTERVAL, json_integer(service->max_retry_interval));
+    json_object_set_new(rval, CN_MAX_CONNECTIONS, json_integer(service->max_connections));
+    json_object_set_new(rval, CN_CONNECTION_TIMEOUT, json_integer(service->conn_idle_timeout));
+
+    json_object_set_new(rval, CN_AUTH_ALL_SERVERS, json_boolean(service->users_from_all));
+    json_object_set_new(rval, CN_STRIP_DB_ESC, json_boolean(service->strip_db_esc));
+    json_object_set_new(rval, CN_LOCALHOST_MATCH_WILDCARD_HOST,
+                        json_boolean(service->localhost_match_wildcard_host));
+    json_object_set_new(rval, CN_VERSION_STRING, json_string(service->version_string));
+
+    if (*service->weightby)
+    {
+        json_object_set_new(rval, CN_WEIGHTBY, json_string(service->weightby));
+    }
+
+    json_object_set_new(rval, CN_LOG_AUTH_WARNINGS, json_boolean(service->log_auth_warnings));
+    json_object_set_new(rval, CN_RETRY_ON_FAILURE, json_boolean(service->retry_start));
+
+    /** Add custom module parameters */
+    const MXS_MODULE* mod = get_module(service->routerModule, MODULE_ROUTER);
+    config_add_module_params_json(mod, service->svc_config_param, config_service_params, rval);
+
+    return rval;
+}
+
+json_t* service_to_json(const SERVICE* service, const char* host)
+{
+    spinlock_acquire(&service->spin);
+
+    json_t* rval = json_object();
+
+    /** General service information */
+    json_object_set_new(rval, CN_NAME, json_string(service->name));
+    json_object_set_new(rval, CN_ROUTER, json_string(service->routerModule));
+    json_object_set_new(rval, CN_STATE, json_string(service_state_to_string(service->state)));
+
+    if (service->router && service->router_instance)
+    {
+        json_t* diag = service->router->diagnostics_json(service->router_instance);
+
+        if (diag)
+        {
+            json_object_set_new(rval, "router_diagnostics", diag);
+        }
+    }
+
+    struct tm result;
+    char timebuf[30];
+
+    asctime_r(localtime_r(&service->stats.started, &result), timebuf);
+    trim(timebuf);
+
+    json_object_set_new(rval, "started", json_string(timebuf));
+    json_object_set_new(rval, "total_connections", json_integer(service->stats.n_sessions));
+    json_object_set_new(rval, "connections", json_integer(service->stats.n_current));
+
+    /** Add service parameters */
+    json_object_set_new(rval, CN_PARAMETERS, service_parameters_to_json(service));
+
+    /** Add listeners */
+    json_t* arr = json_array();
+
+    if (service->ports)
+    {
+        for (SERV_LISTENER* p = service->ports; p; p = p->next)
+        {
+            json_array_append_new(arr, listener_to_json(p));
+        }
+    }
+
+    json_object_set_new(rval, CN_LISTENERS, arr);
+
+    /** Store relationships to other objects */
+    json_t* rel = json_object();
+
+    string self = host;
+    self += "/services/";
+    self += service->name;
+    json_object_set_new(rel, CN_SELF, json_string(self.c_str()));
+
+    if (service->n_filters)
+    {
+        json_t* arr = json_array();
+
+        for (int i = 0; i < service->n_filters; i++)
+        {
+            string filter = host;
+            filter += "/filters/";
+            filter += service->filters[i]->name;
+            json_array_append_new(arr, json_string(filter.c_str()));
+        }
+
+        json_object_set_new(rel, "filters", arr);
+    }
+
+    bool active_servers = false;
+
+    for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+    {
+        if (SERVER_REF_IS_ACTIVE(ref))
+        {
+            active_servers = true;
+            break;
+        }
+    }
+
+    if (active_servers)
+    {
+        json_t* arr = json_array();
+
+        for (SERVER_REF* ref = service->dbref; ref; ref = ref->next)
+        {
+            if (SERVER_REF_IS_ACTIVE(ref))
+            {
+                string s = host;
+                s += "/servers/";
+                s += ref->server->unique_name;
+                json_array_append_new(arr, json_string(s.c_str()));
+            }
+        }
+
+        json_object_set_new(rel, CN_SERVERS, arr);
+    }
+
+    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+
+    spinlock_release(&service->spin);
+
+    return rval;
+}
+
+json_t* service_list_to_json(const char* host)
+{
+    json_t* rval = json_array();
+
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        json_t* svc = service_to_json(service, host);
+
+        if (svc)
+        {
+            json_array_append_new(rval, svc);
+        }
+    }
+
+    spinlock_release(&service_spin);
+
+    return rval;
+}
+
+static void add_service_relation(json_t* arr, const char* host, const SERVICE* service)
+{
+    string svc = host;
+    svc += "/services/";
+    svc += service->name;
+    json_array_append_new(arr, json_string(svc.c_str()));
+}
+
+json_t* service_relations_to_filter(const MXS_FILTER_DEF* filter, const char* host)
+{
+    json_t* arr = json_array();
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (int i = 0; i < service->n_filters; i++)
+        {
+            if (service->filters[i] == filter)
+            {
+                add_service_relation(arr, host, service);
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return arr;
+}
+
+json_t* service_relations_to_server(const SERVER* server, const char* host)
+{
+    json_t* arr = json_array();
+    spinlock_acquire(&service_spin);
+
+    for (SERVICE *service = allServices; service; service = service->next)
+    {
+        spinlock_acquire(&service->spin);
+
+        for (SERVER_REF *ref = service->dbref; ref; ref = ref->next)
+        {
+            if (ref->server == server && SERVER_REF_IS_ACTIVE(ref))
+            {
+                add_service_relation(arr, host, service);
+            }
+        }
+
+        spinlock_release(&service->spin);
+    }
+
+    spinlock_release(&service_spin);
+
+    return arr;
 }

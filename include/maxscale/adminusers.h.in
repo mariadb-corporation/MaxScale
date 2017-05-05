@@ -30,6 +30,9 @@ MXS_BEGIN_DECLS
 /** Default user for the administrative interface */
 #define DEFAULT_ADMIN_USER "@DEFAULT_ADMIN_USER@"
 
+static const char INET_DEFAULT_USERNAME[] = "admin";
+static const char INET_DEFAULT_PASSWORD[] = "mariadb";
+
 /*
  * MySQL session specific data
  *

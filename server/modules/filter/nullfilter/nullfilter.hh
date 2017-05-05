@@ -25,6 +25,7 @@ public:
     NullFilterSession* newSession(MXS_SESSION* pSession);
 
     void diagnostics(DCB* pDcb);
+    json_t* diagnostics_json() const;
 
     uint64_t getCapabilities();
 

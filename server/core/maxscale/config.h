@@ -19,6 +19,7 @@
 #include <maxscale/config.h>
 
 #include <maxscale/ssl.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -33,6 +34,13 @@ enum
 {
     MAX_PARAM_LEN = 256
 };
+
+/** Object type specific parameter name lists */
+extern const char *config_service_params[];
+extern const char *config_listener_params[];
+extern const char *config_monitor_params[];
+extern const char *config_filter_params[];
+extern const char *config_server_params[];
 
 /**
  * @brief Generate default module parameters
@@ -85,6 +93,16 @@ bool config_add_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 bool config_append_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
 
 /**
+ * @brief Replace an existing parameter
+ *
+ * @param obj Configuration context
+ * @param key Parameter name
+ * @param value Parameter value
+ * @return True on success, false on memory allocation error
+ */
+bool config_replace_param(CONFIG_CONTEXT* obj, const char* key, const char* value);
+
+/**
  * @brief Construct an SSL structure
  *
  * The SSL structure is used by both listeners and servers.
@@ -110,5 +128,25 @@ SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *er
  * @return True if all required parameters are present
  */
 bool config_have_required_ssl_params(CONFIG_CONTEXT *obj);
+
+/**
+ * @brief Add non-standard module type parameters to a JSON object
+ *
+ * @param mod         Module whose parameters are inspected
+ * @param parameters  List of configuration parameters for the module
+ * @param type_params NULL terminated list of default module type parameters
+ * @param output      Output JSON object where the parameters are added
+ */
+void config_add_module_params_json(const MXS_MODULE* mod,
+                                   MXS_CONFIG_PARAMETER* parameters,
+                                   const char** type_params,
+                                   json_t* output);
+
+/**
+ * @brief Convert section names to new format
+ *
+ * @param section Section name to fix
+ */
+void fix_section_name(char *section);
 
 MXS_END_DECLS

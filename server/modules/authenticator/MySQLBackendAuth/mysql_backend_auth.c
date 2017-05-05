@@ -171,6 +171,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         auth_backend_destroy,      /* Destroy authenticator */
         NULL,                      /* We don't need to load users */
         NULL,                      /* No diagnostic */
+        NULL,
         NULL                       /* No user reauthentication */
     };
 

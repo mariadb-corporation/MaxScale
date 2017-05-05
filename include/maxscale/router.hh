@@ -180,6 +180,17 @@ public:
         MXS_EXCEPTION_GUARD(pRouter->diagnostics(pDcb));
     }
 
+    static json_t* diagnostics_json(const MXS_ROUTER* pInstance)
+    {
+        const RouterType* pRouter = static_cast<const RouterType*>(pInstance);
+
+        json_t* rval = NULL;
+
+        MXS_EXCEPTION_GUARD(rval = pRouter->diagnostics_json());
+
+        return rval;
+    }
+
     static void clientReply(MXS_ROUTER*, MXS_ROUTER_SESSION* pData, GWBUF* pPacket, DCB* pBackend)
     {
         RouterSessionType* pRouter_session = static_cast<RouterSessionType*>(pData);
@@ -238,6 +249,7 @@ MXS_ROUTER_OBJECT Router<RouterType, RouterSessionType>::s_object =
     &Router<RouterType, RouterSessionType>::freeSession,
     &Router<RouterType, RouterSessionType>::routeQuery,
     &Router<RouterType, RouterSessionType>::diagnostics,
+    &Router<RouterType, RouterSessionType>::diagnostics_json,
     &Router<RouterType, RouterSessionType>::clientReply,
     &Router<RouterType, RouterSessionType>::handleError,
     &Router<RouterType, RouterSessionType>::getCapabilities,

@@ -548,33 +548,59 @@ void Worker::set_maxwait(unsigned int maxwait)
     this_unit.max_poll_sleep = maxwait;
 }
 
-bool Worker::post(Task* pTask, Semaphore* pSem)
+bool Worker::post(Task* pTask, Semaphore* pSem, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
-    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
-    intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
+    bool rval = true;
 
-    return post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
+    {
+        pTask->execute(*this);
+
+        if (pSem)
+        {
+            pSem->post();
+        }
+    }
+    else
+    {
+        intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+        intptr_t arg2 = reinterpret_cast<intptr_t>(pSem);
+
+        rval = post_message(MXS_WORKER_MSG_TASK, arg1, arg2);
+    }
+
+    return rval;
 }
 
-bool Worker::post(std::auto_ptr<DisposableTask> sTask)
+bool Worker::post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode)
 {
     // No logging here, function must be signal safe.
-    return post_disposable(sTask.release());
+    return post_disposable(sTask.release(), mode);
 }
 
 // private
-bool Worker::post_disposable(DisposableTask* pTask)
+bool Worker::post_disposable(DisposableTask* pTask, enum execute_mode_t mode)
 {
+    bool posted = true;
+
     pTask->inc_ref();
 
-    intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
-
-    bool posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
-
-    if (!posted)
+    if (mode == Worker::EXECUTE_AUTO && Worker::get_current() == this)
     {
+        pTask->execute(*this);
         pTask->dec_ref();
+    }
+    else
+    {
+        intptr_t arg1 = reinterpret_cast<intptr_t>(pTask);
+
+        posted = post_message(MXS_WORKER_MSG_DISPOSABLE_TASK, arg1, 0);
+
+        if (!posted)
+        {
+            pTask->dec_ref();
+        }
     }
 
     return posted;
@@ -859,7 +885,7 @@ void Worker::handle_message(MessageQueue& queue, const MessageQueue::Message& ms
 
     case MXS_WORKER_MSG_CALL:
         {
-            void (*f)(int, void*) = (void (*)(int,void*))msg.arg1();
+            void (*f)(int, void*) = (void (*)(int, void*))msg.arg1();
 
             f(m_id, (void*)msg.arg2());
         }
@@ -1058,8 +1084,6 @@ void Worker::poll_waitevents()
 
         /** Process closed DCBs */
         dcb_process_zombies(m_id);
-
-        poll_check_message();
 
         m_state = IDLE;
     } /*< while(1) */

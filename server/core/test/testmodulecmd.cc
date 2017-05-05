@@ -23,7 +23,7 @@
 
 #include "../maxscale/monitor.h"
 
-#define TEST(a, b) do{if (!(a)){printf("%s:%d "b"\n", __FILE__, __LINE__);return 1;}}while(false)
+#define TEST(a, b) do{if (!(a)){printf("%s:%d " b "\n", __FILE__, __LINE__);return 1;}}while(false)
 
 static bool ok = false;
 
@@ -154,8 +154,8 @@ int test_optional_arguments()
     const void *params3[] = {"Hello", NULL};
     const void *params4[] = {NULL, NULL};
 
-    const void *ns = "test_optional_arguments";
-    const void *id = "test_optional_arguments";
+    const char *ns = "test_optional_arguments";
+    const char *id = "test_optional_arguments";
     modulecmd_arg_type_t args1[] =
     {
         {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, ""},
@@ -375,7 +375,7 @@ int test_domain_matching()
     /** Create a monitor */
     char *libdir = MXS_STRDUP_A("../../modules/monitor/mysqlmon/");
     set_libdir(libdir);
-    monitor_alloc((char*)ns, "mysqlmon");
+    monitor_alloc((char*)ns, (char*)"mysqlmon");
 
     const void* params[] = {ns};
 

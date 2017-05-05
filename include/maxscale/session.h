@@ -25,6 +25,7 @@
 #include <maxscale/log_manager.h>
 #include <maxscale/resultset.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/jansson.h>
 
 MXS_BEGIN_DECLS
 
@@ -411,5 +412,24 @@ bool session_take_stmt(MXS_SESSION *session, GWBUF **buffer, const struct server
  * @param session Session to clear
  */
 void session_clear_stmt(MXS_SESSION *session);
+
+/**
+ * @brief Convert a session to JSON
+ *
+ * @param session Session to convert
+ * @param host    Hostname of this server
+ *
+ * @return New JSON object or NULL on error
+ */
+json_t* session_to_json(const MXS_SESSION *session, const char* host);
+
+/**
+ * @brief Convert all sessions to JSON
+ *
+ * @param host Hostname of this server
+ *
+ * @return A JSON array with all sessions
+ */
+json_t* session_list_to_json(const char* host);
 
 MXS_END_DECLS

@@ -87,6 +87,7 @@ int open_unix_socket(enum mxs_socket_type type, struct sockaddr_un *addr,
                      const char *path);
 
 int setnonblocking(int fd);
+int setblocking(int fd);
 char  *gw_strend(register const char *s);
 static char gw_randomchar();
 int gw_generate_random_str(char *output, int len);
@@ -98,7 +99,9 @@ void gw_sha1_2_str(const uint8_t *in, int in_len, const uint8_t *in2, int in2_le
 int gw_getsockerrno(int fd);
 char *create_hex_sha1_sha1_passwd(char *passwd);
 
+/** String formatting functions */
 char* trim(char *str);
+void replace_whitespace(char* str);
 char* squeeze_whitespace(char* str);
 bool strip_escape_chars(char*);
 

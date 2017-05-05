@@ -102,6 +102,7 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -287,6 +288,36 @@ static void print_rule(RULE *rules, char *dest)
             rules->name,
             rule_names[type],
             rules->times_matched);
+}
+
+static json_t* rule_to_json(RULE *rule)
+{
+    int type = 0;
+
+    if ((int)rule->type > 0 && (int)rule->type < rule_names_len)
+    {
+        type = (int)rule->type;
+    }
+
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "name", json_string(rule->name));
+    json_object_set_new(rval, "type", json_string(rule_names[type]));
+    json_object_set_new(rval, "times_matched", json_integer(rule->times_matched));
+
+    return rval;
+}
+
+static json_t* rules_to_json(RULE *rules)
+{
+    json_t* rval = json_array();
+
+    for (RULE *rule = rules; rule; rule = rule->next)
+    {
+        json_array_append_new(rval, rule_to_json(rule));
+    }
+
+    return rval;
 }
 
 /**
@@ -816,6 +847,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No clientReply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -2497,6 +2529,21 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
         print_rule(rule, buf);
         dcb_printf(dcb, "%s\n", buf);
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Prints the connection details and the names of the exchange,
+ * queue and the routing key.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    return rules_to_json(thr_rules);
 }
 
 /**

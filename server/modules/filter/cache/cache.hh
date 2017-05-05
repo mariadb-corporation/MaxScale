@@ -41,6 +41,7 @@ public:
     virtual ~Cache();
 
     void show(DCB* pDcb) const;
+    json_t* show_json() const;
 
     const CACHE_CONFIG& config() const
     {

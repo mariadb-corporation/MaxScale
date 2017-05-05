@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <string>
 
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
@@ -45,9 +46,12 @@
 #include <maxscale/router.h>
 #include <maxscale/service.h>
 #include <maxscale/spinlock.h>
+#include <maxscale/utils.h>
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
+
+using std::string;
 
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
@@ -993,4 +997,85 @@ void session_clear_stmt(MXS_SESSION *session)
 uint32_t session_get_next_id()
 {
     return atomic_add_uint32(&next_session_id, 1);
+}
+
+json_t* session_to_json(const MXS_SESSION *session, const char *host)
+{
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "id", json_integer(session->ses_id));
+    json_object_set_new(rval, "state", json_string(session_state(session->state)));
+
+    json_t* rel = json_object();
+    json_t* arr = json_array();
+
+    string svc = host;
+    svc += "/services/";
+    svc += session->service->name;
+
+    json_array_append_new(arr, json_string(svc.c_str()));
+    json_object_set_new(rel, "services", arr);
+    json_object_set_new(rval, "relationships", rel);
+
+    if (session->client_dcb->user)
+    {
+        json_object_set_new(rval, "user", json_string(session->client_dcb->user));
+    }
+
+    if (session->client_dcb->remote)
+    {
+        json_object_set_new(rval, "remote", json_string(session->client_dcb->remote));
+    }
+
+    struct tm result;
+    char buf[60];
+
+    asctime_r(localtime_r(&session->stats.connect, &result), buf);
+    trim(buf);
+
+    json_object_set_new(rval, "connected", json_string(buf));
+
+    if (session->client_dcb->state == DCB_STATE_POLLING)
+    {
+        double idle = (hkheartbeat - session->client_dcb->last_read);
+        idle = idle > 0 ? idle / 10.f : 0;
+        json_object_set_new(rval, "idle", json_real(idle));
+    }
+
+    if (session->n_filters)
+    {
+        json_t* filters = json_array();
+
+        for (int i = 0; i < session->n_filters; i++)
+        {
+            string fil = host;
+            fil += "/filters/";
+            fil += session->filters[i].filter->name;
+            json_array_append_new(filters, json_string(fil.c_str()));
+        }
+
+        json_object_set_new(rval, "filters", filters);
+    }
+
+    return rval;
+}
+
+struct SessionListData
+{
+    json_t* json;
+    const char* host;
+};
+
+bool seslist_cb(DCB* dcb, void* data)
+{
+    SessionListData* d = (SessionListData*)data;
+    json_array_append_new(d->json, session_to_json(dcb->session, d->host));
+    return true;
+}
+
+json_t* session_list_to_json(const char* host)
+{
+    SessionListData data = {json_array(), host};
+    dcb_foreach(seslist_cb, &data);
+    return data.json;
 }

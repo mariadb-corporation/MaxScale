@@ -47,10 +47,28 @@ public:
  * When the task has been executed, the instance will automatically be
  * deleted.
  */
-class WorkerDisposableTask : public WorkerTask
+class WorkerDisposableTask
 {
 protected:
+    /**
+     * Constructor
+     */
     WorkerDisposableTask();
+
+    /**
+     * Destructor
+     */
+    virtual ~WorkerDisposableTask();
+
+    /**
+     * @brief Called in the context of a specific worker.
+     *
+     * @param worker  The worker in whose context `execute` is called.
+     *
+     * @attention As the function is called by a worker, the body of `execute`
+     *            should execute quickly and not perform any blocking operations.
+     */
+    virtual void execute(Worker& worker) = 0;
 
 private:
     friend class Worker;

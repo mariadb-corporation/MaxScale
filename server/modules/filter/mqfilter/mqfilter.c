@@ -95,6 +95,7 @@ static void setUpstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static int clientReply(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER *instance);
 
 /**
@@ -270,6 +271,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         clientReply,
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -1504,6 +1506,36 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
                    my_instance->stats.n_queued,
                    my_instance->stats.n_sent);
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * Prints the connection details and the names of the exchange,
+ * queue and the routing key.
+ *
+ * @param       instance        The filter instance
+ * @param       fsession        Filter session, may be NULL
+ */
+static json_t*
+diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    MQ_INSTANCE *my_instance = (MQ_INSTANCE*)instance;
+    json_t* rval = json_object();
+
+    json_object_set_new(rval, "host", json_string(my_instance->hostname));
+    json_object_set_new(rval, "user", json_string(my_instance->username));
+    json_object_set_new(rval, "vhost", json_string(my_instance->vhost));
+    json_object_set_new(rval, "exchange", json_string(my_instance->exchange));
+    json_object_set_new(rval, "key", json_string(my_instance->key));
+    json_object_set_new(rval, "queue", json_string(my_instance->queue));
+
+    json_object_set_new(rval, "port", json_integer(my_instance->port));
+    json_object_set_new(rval, "messages", json_integer(my_instance->stats.n_msg));
+    json_object_set_new(rval, "queued", json_integer(my_instance->stats.n_queued));
+    json_object_set_new(rval, "sent", json_integer(my_instance->stats.n_sent));
+
+    return rval;
 }
 
 /**

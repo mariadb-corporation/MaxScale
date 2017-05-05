@@ -82,6 +82,7 @@ static void freeSession(MXS_FILTER *instance, MXS_FILTER_SESSION *session);
 static void setDownstream(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, MXS_DOWNSTREAM *downstream);
 static int routeQuery(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, GWBUF *queue);
 static void diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb);
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession);
 static uint64_t getCapabilities(MXS_FILTER* instance);
 
 /**
@@ -182,6 +183,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         routeQuery,
         NULL, // No client reply
         diagnostic,
+        diagnostic_json,
         getCapabilities,
         NULL, // No destroyInstance
     };
@@ -611,6 +613,51 @@ diagnostic(MXS_FILTER *instance, MXS_FILTER_SESSION *fsession, DCB *dcb)
         dcb_printf(dcb, "\t\tExclude queries that match     %s\n",
                    my_instance->nomatch);
     }
+}
+
+/**
+ * Diagnostics routine
+ *
+ * If fsession is NULL then print diagnostics on the filter
+ * instance as a whole, otherwise print diagnostics for the
+ * particular session.
+ *
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ */
+static json_t* diagnostic_json(const MXS_FILTER *instance, const MXS_FILTER_SESSION *fsession)
+{
+    QLA_INSTANCE *my_instance = (QLA_INSTANCE*)instance;
+    QLA_SESSION *my_session = (QLA_SESSION*)fsession;
+
+    json_t* rval = json_object();
+
+    if (my_session)
+    {
+        json_object_set_new(rval, "session_filename", json_string(my_session->filename));
+    }
+
+    if (my_instance->source)
+    {
+        json_object_set_new(rval, "source", json_string(my_instance->source));
+    }
+
+    if (my_instance->user_name)
+    {
+        json_object_set_new(rval, "user", json_string(my_instance->user_name));
+    }
+
+    if (my_instance->match)
+    {
+        json_object_set_new(rval, "match", json_string(my_instance->match));
+    }
+
+    if (my_instance->nomatch)
+    {
+        json_object_set_new(rval, "exclude", json_string(my_instance->nomatch));
+    }
+
+    return rval;
 }
 
 /**

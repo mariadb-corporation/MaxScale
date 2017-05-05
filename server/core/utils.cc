@@ -122,6 +122,29 @@ int setnonblocking(int fd)
     return 0;
 }
 
+int setblocking(int fd)
+{
+    int fl;
+
+    if ((fl = fcntl(fd, F_GETFL, 0)) == -1)
+    {
+        MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
+                  fd,
+                  errno,
+                  mxs_strerror(errno));
+        return 1;
+    }
+
+    if (fcntl(fd, F_SETFL, fl & ~O_NONBLOCK) == -1)
+    {
+        MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
+                  fd,
+                  errno,
+                  mxs_strerror(errno));
+        return 1;
+    }
+    return 0;
+}
 
 char *gw_strend(register const char *s)
 {
@@ -465,6 +488,22 @@ char* trim(char *str)
     }
 
     return str;
+}
+
+/**
+ * @brief Replace whitespace with hyphens
+ *
+ * @param str String to replace
+ */
+void replace_whitespace(char* str)
+{
+    for (char* s = str; *s; s++)
+    {
+        if (isspace(*s))
+        {
+            *s = '-';
+        }
+    }
 }
 
 /**
