@@ -463,12 +463,19 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
 {
     char path[PATH_MAX + 1] = "";
     int fd;
+    int flags = O_RDWR;
+
+    /* If Master GTID registration is not set, then use append */
+    if (!router->mariadb10_master_gtid)
+    {
+        flags |= O_APPEND;
+    }
 
     strcpy(path, router->binlogdir);
     strcat(path, "/");
     strcat(path, file);
 
-    if ((fd = open(path, O_RDWR | O_APPEND, 0666)) == -1)
+    if ((fd = open(path, flags, 0666)) == -1)
     {
         MXS_ERROR("Failed to open binlog file %s for append.",
                   path);

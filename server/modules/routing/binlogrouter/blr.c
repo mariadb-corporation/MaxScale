@@ -696,6 +696,19 @@ createInstance(SERVICE *service, char **options)
     }
 
     /**
+     * Check mariadb10_compat option before any other mariadb10 option.
+     */
+    if (!inst->mariadb10_compat &&
+        inst->mariadb10_master_gtid)
+    {
+        MXS_ERROR("MariaDB Master GTID registration needs"
+                  " MariaDB compatibilty option."
+                  " Please enable it with option 'mariadb10-compatibility=On'");
+        free_instance(inst);
+        return NULL;
+    }
+
+    /**
      * Force GTID slave request handling if GTID Master registration is On
      */
     if (inst->mariadb10_master_gtid)

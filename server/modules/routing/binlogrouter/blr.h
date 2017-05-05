@@ -515,8 +515,6 @@ typedef struct
     GWBUF           *server_vars;       /*< MySQL Connector master server variables */
     GWBUF           *binlog_vars;       /*< SELECT @@global.log_bin, @@global.binlog_format, @@global.binlog_row_image; */
     GWBUF           *lower_case_tables; /*< select @@lower_case_table_names */
-    uint8_t         *fde_event;         /*< Format Description Event */
-    int             fde_len;            /*< Length of fde_event */
 } MASTER_RESPONSES;
 
 /**
