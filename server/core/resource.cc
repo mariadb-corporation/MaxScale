@@ -28,6 +28,7 @@
 #include "maxscale/service.h"
 #include "maxscale/config_runtime.h"
 #include "maxscale/modules.h"
+#include "maxscale/worker.h"
 
 using std::list;
 using std::string;
@@ -102,6 +103,16 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
             if (ses)
             {
                 session_put_ref(ses);
+                rval = true;
+            }
+        }
+        else if (path == ":thread")
+        {
+            char* end;
+            int id = strtol(target.c_str(), &end, 10);
+
+            if (*end == '\0' && mxs_worker_get(id))
+            {
                 rval = true;
             }
         }
@@ -354,21 +365,26 @@ HttpResponse cb_logs(const HttpRequest& request)
 
 HttpResponse cb_flush(const HttpRequest& request)
 {
+    int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
+
     // Flush logs
     if (mxs_log_rotate() == 0)
     {
-        return HttpResponse(MHD_HTTP_NO_CONTENT);
+        code = MHD_HTTP_NO_CONTENT;
     }
-    else
-    {
-        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR);
-    }
+
+    return HttpResponse(code);
 }
 
-HttpResponse cb_threads(const HttpRequest& request)
+HttpResponse cb_all_threads(const HttpRequest& request)
 {
-    // TODO: Show thread status
-    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_THREADS, json_null()));
+    return HttpResponse(MHD_HTTP_OK, mxs_worker_list_to_json(request.host()));
+}
+
+HttpResponse cb_thread(const HttpRequest& request)
+{
+    int id = atoi(request.last_uri_part().c_str());
+    return HttpResponse(MHD_HTTP_OK, mxs_worker_to_json(request.host(), id));
 }
 
 HttpResponse cb_tasks(const HttpRequest& request)
@@ -425,7 +441,8 @@ public:
         m_get.push_back(SResource(new Resource(cb_get_session, 2, "sessions", ":session")));
 
         m_get.push_back(SResource(new Resource(cb_maxscale, 1, "maxscale")));
-        m_get.push_back(SResource(new Resource(cb_threads, 2, "maxscale", "threads")));
+        m_get.push_back(SResource(new Resource(cb_all_threads, 2, "maxscale", "threads")));
+        m_get.push_back(SResource(new Resource(cb_thread, 3, "maxscale", "threads", ":thread")));
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));

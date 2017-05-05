@@ -160,6 +160,16 @@ public:
     static int64_t get_one_statistic(POLL_STAT what);
 
     /**
+     * Return this worker's statistics.
+     *
+     * @return Local statistics for this worker.
+     */
+    const STATISTICS& get_local_statistics() const
+    {
+        return m_statistics;
+    }
+
+    /**
      * Add a file descriptor to the epoll instance of the worker.
      *
      * @param fd      The file descriptor to be added.
