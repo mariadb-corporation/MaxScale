@@ -359,8 +359,7 @@ HttpResponse cb_maxscale(const HttpRequest& request)
 
 HttpResponse cb_logs(const HttpRequest& request)
 {
-    // TODO: Show logs
-    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_LOGS, json_null()));
+    return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
 }
 
 HttpResponse cb_flush(const HttpRequest& request)
