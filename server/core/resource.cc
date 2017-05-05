@@ -89,7 +89,8 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         if ((path == ":service" && service_find(target.c_str())) ||
             (path == ":server" && server_find_by_unique_name(target.c_str())) ||
             (path == ":filter" && filter_def_find(target.c_str())) ||
-            (path == ":monitor" && monitor_find(target.c_str())))
+            (path == ":monitor" && monitor_find(target.c_str())) ||
+            (path == ":module" && get_module(target.c_str(), NULL)))
         {
             rval = true;
         }
@@ -381,6 +382,12 @@ HttpResponse cb_all_modules(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, module_list_to_json(request.host()));
 }
 
+HttpResponse cb_module(const HttpRequest& request)
+{
+    const MXS_MODULE* module = get_module(request.last_uri_part().c_str(), NULL);
+    return HttpResponse(MHD_HTTP_OK, module_to_json(module, request.host()));
+}
+
 HttpResponse cb_send_ok(const HttpRequest& request)
 {
     return HttpResponse(MHD_HTTP_OK);
@@ -422,6 +429,7 @@ public:
         m_get.push_back(SResource(new Resource(cb_logs, 2, "maxscale", "logs")));
         m_get.push_back(SResource(new Resource(cb_tasks, 2, "maxscale", "tasks")));
         m_get.push_back(SResource(new Resource(cb_all_modules, 2, "maxscale", "modules")));
+        m_get.push_back(SResource(new Resource(cb_module, 3, "maxscale", "modules", ":module")));
 
         /** Create new resources */
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));

@@ -87,6 +87,7 @@ const char CN_MAXSCALE[]                      = "maxscale";
 const char CN_MAX_CONNECTIONS[]               = "max_connections";
 const char CN_MAX_RETRY_INTERVAL[]            = "max_retry_interval";
 const char CN_MODULE[]                        = "module";
+const char CN_MODULES[]                       = "modules";
 const char CN_MONITORS[]                      = "monitors";
 const char CN_MONITOR[]                       = "monitor";
 const char CN_MS_TIMESTAMP[]                  = "ms_timestamp";

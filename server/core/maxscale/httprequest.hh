@@ -159,6 +159,16 @@ public:
         return m_resource_parts.size();
     }
 
+   /**
+    * @brief Return the last part of the URI
+    *
+    * @return The last URI part
+    */
+    const std::string last_uri_part() const
+    {
+        return  m_resource_parts.size() > 0 ? m_resource_parts[m_resource_parts.size() - 1] : "";
+    }
+
     const char* host() const
     {
         return m_hostname.c_str();

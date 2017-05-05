@@ -78,6 +78,7 @@ extern const char CN_MAXSCALE[];
 extern const char CN_MAX_CONNECTIONS[];
 extern const char CN_MAX_RETRY_INTERVAL[];
 extern const char CN_MODULE[];
+extern const char CN_MODULES[];
 extern const char CN_MONITORS[];
 extern const char CN_MONITOR[];
 extern const char CN_MS_TIMESTAMP[];
