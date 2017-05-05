@@ -234,6 +234,18 @@ HttpResponse cb_alter_service(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
+HttpResponse cb_alter_logs(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+
+    if (json && runtime_alter_logs_from_json(json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
+}
+
 HttpResponse cb_delete_server(const HttpRequest& request)
 {
     SERVER* server = server_find_by_unique_name(request.uri_part(1).c_str());
@@ -419,7 +431,7 @@ public:
     RootResource()
     {
         // Special resources required by OPTION etc.
-        m_get.push_back(SResource(new Resource(cb_send_ok, 1, "/")));
+        m_get.push_back(SResource(new Resource(cb_send_ok, 0)));
         m_get.push_back(SResource(new Resource(cb_send_ok, 1, "*")));
 
         m_get.push_back(SResource(new Resource(cb_all_servers, 1, "servers")));
@@ -456,6 +468,7 @@ public:
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));
         m_put.push_back(SResource(new Resource(cb_alter_monitor, 2, "monitors", ":monitor")));
         m_put.push_back(SResource(new Resource(cb_alter_service, 2, "services", ":service")));
+        m_put.push_back(SResource(new Resource(cb_alter_logs, 2, "maxscale", "logs")));
 
         /** Change resource states */
         m_put.push_back(SResource(new Resource(cb_stop_monitor, 3, "monitors", ":monitor", "stop")));

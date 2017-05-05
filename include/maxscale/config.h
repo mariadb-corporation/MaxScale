@@ -36,6 +36,25 @@ MXS_BEGIN_DECLS
 #define MAX_ADMIN_PW_LEN        1024
 #define MAX_ADMIN_HOST_LEN      1024
 
+/** JSON Pointers to key parts of JSON objects */
+#define MXS_JSON_PTR_ID         "/data/id"
+#define MXS_JSON_PTR_PARAMETERS "/data/attributes/parameters"
+
+/** Pointers to relation lists */
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVERS  "/data/relationships/servers/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_SERVICES "/data/relationships/services/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_MONITORS "/data/relationships/monitors/data"
+#define MXS_JSON_PTR_RELATIONSHIPS_FILTERS  "/data/relationships/filters/data"
+
+/** Server JSON Pointers */
+#define MXS_JSON_PTR_SRV_PORT                  MXS_JSON_PTR_PARAMETERS "/port"
+#define MXS_JSON_PTR_SRV_ADDRESS               MXS_JSON_PTR_PARAMETERS "/address"
+#define MXS_JSON_PTR_SRV_PROTOCOL              MXS_JSON_PTR_PARAMETERS "/protocol"
+#define MXS_JSON_PTR_SRV_AUTHENTICATOR         MXS_JSON_PTR_PARAMETERS "/authenticator"
+#define MXS_JSON_PTR_SRV_AUTHENTICATOR_OPTIONS MXS_JSON_PTR_PARAMETERS "/authenticator_options"
+
+#define PTR_MON_MODULE  "/data/attributes/module"
+
 /**
  * Common configuration parameters names
  *

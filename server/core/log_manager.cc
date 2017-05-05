@@ -3019,17 +3019,19 @@ const char* mxs_strerror(int error)
 
 json_t* mxs_logs_to_json(const char* host)
 {
-    json_t* attr = json_object();
-    json_object_set_new(attr, "highprecision", json_boolean(log_config.do_highprecision));
-    json_object_set_new(attr, "maxlog", json_boolean(log_config.do_maxlog));
-    json_object_set_new(attr, "syslog", json_boolean(log_config.do_syslog));
+    json_t* param = json_object();
+    json_object_set_new(param, "highprecision", json_boolean(log_config.do_highprecision));
+    json_object_set_new(param, "maxlog", json_boolean(log_config.do_maxlog));
+    json_object_set_new(param, "syslog", json_boolean(log_config.do_syslog));
 
     json_t* throttling = json_object();
     json_object_set_new(throttling, "count", json_integer(log_config.throttling.count));
     json_object_set_new(throttling, "suppress_ms", json_integer(log_config.throttling.suppress_ms));
     json_object_set_new(throttling, "window_ms", json_integer(log_config.throttling.window_ms));
+    json_object_set_new(param, "throttling", throttling);
 
-    json_object_set_new(attr, "throttling", throttling);
+    json_t* attr = json_object();
+    json_object_set_new(attr, CN_PARAMETERS, param);
 
     json_t* data = json_object();
     json_object_set_new(data, CN_ATTRIBUTES, attr);
