@@ -28,6 +28,10 @@ MXS_BEGIN_DECLS
 #define MXS_JSON_API_MONITORS  "/monitors/"
 #define MXS_JSON_API_SESSIONS  "/sessions/"
 #define MXS_JSON_API_MAXSCALE  "/maxscale/"
+#define MXS_JSON_API_THREADS   "/maxscale/threads/"
+#define MXS_JSON_API_LOGS      "/maxscale/logs/"
+#define MXS_JSON_API_TASKS     "/maxscale/tasks/"
+#define MXS_JSON_API_MODULES   "/maxscale/modules/"
 
 /**
  * @brief Create a JSON object

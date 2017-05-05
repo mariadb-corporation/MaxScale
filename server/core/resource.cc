@@ -18,6 +18,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
 #include <maxscale/spinlock.hh>
+#include <maxscale/json_api.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -150,7 +151,7 @@ HttpResponse cb_create_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_server(const HttpRequest& request)
@@ -167,7 +168,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_create_monitor(const HttpRequest& request)
@@ -184,7 +185,7 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_monitor(const HttpRequest& request)
@@ -201,7 +202,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_alter_service(const HttpRequest& request)
@@ -218,7 +219,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_delete_server(const HttpRequest& request)
@@ -230,7 +231,7 @@ HttpResponse cb_delete_server(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_delete_monitor(const HttpRequest& request)
@@ -242,7 +243,7 @@ HttpResponse cb_delete_monitor(const HttpRequest& request)
         return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
-    return HttpResponse(MHD_HTTP_BAD_REQUEST);
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
 HttpResponse cb_all_servers(const HttpRequest& request)
@@ -355,7 +356,7 @@ HttpResponse cb_maxscale(const HttpRequest& request)
 HttpResponse cb_logs(const HttpRequest& request)
 {
     // TODO: Show logs
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_LOGS, json_null()));
 }
 
 HttpResponse cb_flush(const HttpRequest& request)
@@ -363,7 +364,7 @@ HttpResponse cb_flush(const HttpRequest& request)
     // Flush logs
     if (mxs_log_rotate() == 0)
     {
-        return HttpResponse(MHD_HTTP_OK);
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
     else
     {
@@ -374,13 +375,13 @@ HttpResponse cb_flush(const HttpRequest& request)
 HttpResponse cb_threads(const HttpRequest& request)
 {
     // TODO: Show thread status
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_THREADS, json_null()));
 }
 
 HttpResponse cb_tasks(const HttpRequest& request)
 {
     // TODO: Show housekeeper tasks
-    return HttpResponse(MHD_HTTP_OK);
+    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_TASKS, json_null()));
 }
 
 HttpResponse cb_all_modules(const HttpRequest& request)

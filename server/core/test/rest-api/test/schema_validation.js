@@ -35,10 +35,15 @@ describe("Individual Resources", function() {
         "/servers/server1",
         "/servers/server2",
         "/services/RW-Split-Router",
+        "/services/RW-Split-Router/listeners",
         "/monitors/MySQL-Monitor",
         "/filters/Hint",
         "/sessions/1",
         "/maxscale/",
+        "maxscale/threads",
+        "maxscale/logs",
+        "maxscale/tasks",
+        "maxscale/modules",
     ]
 
     tests.forEach(function(endpoint) {
