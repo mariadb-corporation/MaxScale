@@ -2459,6 +2459,21 @@ static inline bool have_active_servers(const SERVICE* service)
     return false;
 }
 
+json_t* service_listeners_json_data(const SERVICE* service)
+{
+    json_t* arr = json_array();
+
+    if (service->ports)
+    {
+        for (SERV_LISTENER* p = service->ports; p; p = p->next)
+        {
+            json_array_append_new(arr, listener_to_json(p));
+        }
+    }
+
+    return arr;
+}
+
 json_t* service_attributes(const SERVICE* service)
 {
     json_t* attr = json_object();
@@ -2486,21 +2501,9 @@ json_t* service_attributes(const SERVICE* service)
     json_object_set_new(attr, "total_connections", json_integer(service->stats.n_sessions));
     json_object_set_new(attr, "connections", json_integer(service->stats.n_current));
 
-    /** Add service parameters */
+    /** Add service parameters and listeners */
     json_object_set_new(attr, CN_PARAMETERS, service_parameters_to_json(service));
-
-    /** Add listeners */
-    json_t* arr = json_array();
-
-    if (service->ports)
-    {
-        for (SERV_LISTENER* p = service->ports; p; p = p->next)
-        {
-            json_array_append_new(arr, listener_to_json(p));
-        }
-    }
-
-    json_object_set_new(attr, CN_LISTENERS, arr);
+    json_object_set_new(attr, CN_LISTENERS, service_listeners_json_data(service));
 
     return attr;
 }
@@ -2559,6 +2562,17 @@ json_t* service_json_data(const SERVICE* service, const char* host)
 json_t* service_to_json(const SERVICE* service, const char* host)
 {
     return mxs_json_resource(host, MXS_JSON_API_SERVICES, service_json_data(service, host));
+}
+
+json_t* service_listeners_to_json(const SERVICE* service, const char* host)
+{
+    /** This needs to be done here as the listeners are sort of sub-resources
+     * of the service. */
+    string self = MXS_JSON_API_SERVICES;
+    self += service->name;
+    self += "/listeners";
+
+    return mxs_json_resource(host, self.c_str(), service_listeners_json_data(service));
 }
 
 json_t* service_list_to_json(const char* host)

@@ -283,15 +283,7 @@ HttpResponse cb_get_service(const HttpRequest& request)
 HttpResponse cb_get_service_listeners(const HttpRequest& request)
 {
     SERVICE* service = service_find(request.uri_part(1).c_str());
-    json_t* json = service_to_json(service, request.host());
-
-    // The 'listeners' key is always defined
-    json_t* listeners = json_incref(json_object_get(json, CN_LISTENERS));
-    ss_dassert(listeners);
-
-    json_decref(json);
-
-    return HttpResponse(MHD_HTTP_OK, listeners);
+    return HttpResponse(MHD_HTTP_OK, service_listeners_to_json(service, request.host()));
 }
 
 HttpResponse cb_all_filters(const HttpRequest& request)

@@ -32,7 +32,7 @@ static json_t* self_link(const char* host, const char* endpoint)
 
 json_t* mxs_json_resource(const char* host, const char* self, json_t* data)
 {
-    ss_dassert(data && (json_is_array(data) || json_is_object(data)));
+    ss_dassert(data && (json_is_array(data) || json_is_object(data) || json_is_null(data)));
     json_t* rval = json_object();
     json_object_set_new(rval, CN_LINKS, self_link(host, self));
     json_object_set_new(rval, CN_DATA, data);

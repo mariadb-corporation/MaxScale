@@ -6,11 +6,14 @@ describe("Resource Collections", function() {
     before(startMaxScale)
 
     var tests = [
-        "/servers/",
-        "/sessions/",
-        "/services/",
-        "/monitors/",
-        "/filters/",
+        "/servers",
+        "/sessions",
+        "/services",
+        "/monitors",
+        "/filters",
+        "/maxscale/threads",
+        "/maxscale/modules",
+        "/maxscale/tasks",
     ]
 
     tests.forEach(function(endpoint) {
@@ -40,10 +43,9 @@ describe("Individual Resources", function() {
         "/filters/Hint",
         "/sessions/1",
         "/maxscale/",
-        "maxscale/threads",
-        "maxscale/logs",
-        "maxscale/tasks",
-        "maxscale/modules",
+        "/maxscale/threads/0",
+        "/maxscale/logs",
+        "/maxscale/modules/readwritesplit",
     ]
 
     tests.forEach(function(endpoint) {

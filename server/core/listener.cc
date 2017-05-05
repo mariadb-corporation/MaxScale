@@ -514,13 +514,12 @@ bool listener_serialize(const SERV_LISTENER *listener)
 
 json_t* listener_to_json(const SERV_LISTENER* listener)
 {
-    json_t* rval = json_object();
-    json_object_set_new(rval, "name", json_string(listener->name));
-    json_object_set_new(rval, "address", json_string(listener->address));
-    json_object_set_new(rval, "port", json_integer(listener->port));
-    json_object_set_new(rval, "protocol", json_string(listener->protocol));
-    json_object_set_new(rval, "authenticator", json_string(listener->authenticator));
-    json_object_set_new(rval, "auth_options", json_string(listener->auth_options));
+    json_t* param = json_object();
+    json_object_set_new(param, "address", json_string(listener->address));
+    json_object_set_new(param, "port", json_integer(listener->port));
+    json_object_set_new(param, "protocol", json_string(listener->protocol));
+    json_object_set_new(param, "authenticator", json_string(listener->authenticator));
+    json_object_set_new(param, "auth_options", json_string(listener->auth_options));
 
     if (listener->ssl)
     {
@@ -532,8 +531,16 @@ json_t* listener_to_json(const SERV_LISTENER* listener)
         json_object_set_new(ssl, "ssl_ca_cert", json_string(listener->ssl->ssl_ca_cert));
         json_object_set_new(ssl, "ssl_key", json_string(listener->ssl->ssl_key));
 
-        json_object_set_new(rval, "ssl", ssl);
+        json_object_set_new(param, "ssl", ssl);
     }
+
+    json_t* attr = json_object();
+    json_object_set_new(attr, CN_PARAMETERS, param);
+
+    json_t* rval = json_object();
+    json_object_set_new(rval, CN_ATTRIBUTES, attr);
+    json_object_set_new(rval, CN_ID, json_string(listener->name));
+    json_object_set_new(rval, CN_TYPE, json_string(CN_LISTENERS));
 
     return rval;
 }
