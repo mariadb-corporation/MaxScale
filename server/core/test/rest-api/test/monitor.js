@@ -105,3 +105,31 @@ describe("Monitor Relationships", function() {
 
     after(stopMaxScale)
 })
+
+describe("Monitor Actions", function() {
+    before(startMaxScale)
+
+    it("stop monitor", function() {
+        return request.put(base_url + "/monitors/MySQL-Monitor/stop")
+            .then(function() {
+                return request.get(base_url + "/monitors/MySQL-Monitor")
+            })
+            .then(function(resp) {
+                var mon = JSON.parse(resp)
+                mon.data.attributes.state.should.be.equal("Stopped")
+            })
+    });
+
+    it("start monitor", function() {
+        return request.put(base_url + "/monitors/MySQL-Monitor/start")
+            .then(function() {
+                return request.get(base_url + "/monitors/MySQL-Monitor")
+            })
+            .then(function(resp) {
+                var mon = JSON.parse(resp)
+                mon.data.attributes.state.should.be.equal("Running")
+            })
+    });
+
+    after(stopMaxScale)
+})
