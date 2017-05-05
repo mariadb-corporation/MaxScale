@@ -43,7 +43,8 @@ int test_validity()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx = {.object = (char*)""};
+    CONFIG_CONTEXT ctx = {};
+    ctx.object = (char*)"";
 
     /** Int parameter */
     TEST(config_param_is_valid(params, "p1", "1", &ctx));
@@ -90,7 +91,8 @@ int test_validity()
     TEST(!config_param_is_valid(params, "p6", "This is not a valid path", &ctx));
 
     /** Service parameter */
-    CONFIG_CONTEXT svc = {.object = (char*)"test-service"};
+    CONFIG_CONTEXT svc = {};
+    svc.object = (char*)"test-service";
     ctx.next = &svc;
     config_add_param(&svc, "type", "service");
     TEST(config_param_is_valid(params, "p7", "test-service", &ctx));
@@ -193,7 +195,8 @@ int test_required_parameters()
         {MXS_END_MODULE_PARAMS}
     };
 
-    CONFIG_CONTEXT ctx = {.object = (char*)""};
+    CONFIG_CONTEXT ctx = {};
+    ctx.object = (char*)"";
 
     TEST(missing_required_parameters(params, ctx.parameters));
     config_add_defaults(&ctx, params);
