@@ -104,7 +104,12 @@ int Client::process(string url, string method, const char* upload_data, size_t *
     HttpRequest request(m_connection, url, method, json);
     HttpResponse reply(MHD_HTTP_NOT_FOUND);
 
-    if (request.validate_api_version())
+    if (url == "/")
+    {
+        // Respond to pings with 200 OK
+        reply = HttpResponse(MHD_HTTP_OK);
+    }
+    else if (request.validate_api_version())
     {
         reply = resource_handle_request(request);
     }
