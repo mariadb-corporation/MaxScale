@@ -11,7 +11,10 @@ describe("Service", function() {
                 return request.put(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
-                var svc = resp
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
                 svc.data.attributes.parameters.enable_root_user.should.be.true
             })
     });
@@ -25,7 +28,10 @@ describe("Service", function() {
                 return request.put(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
-                var svc = resp
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
                 svc.data.relationships.should.be.empty
             })
     });
@@ -48,7 +54,10 @@ describe("Service", function() {
                 return request.put(base_url + "/services/RW-Split-Router", {json: svc})
             })
             .then(function(resp) {
-                var svc = resp
+                return request.get(base_url + "/services/RW-Split-Router")
+            })
+            .then(function(resp) {
+                var svc = JSON.parse(resp)
                 svc.data.relationships.servers.data[0].id.should.be.equal("server1")
             })
     });

@@ -34,3 +34,21 @@ static inline std::string http_get_date()
 
     return std::string(buf);
 }
+
+/**
+ * @brief Convert a time_t value into a HTTP-date string
+ *
+ * @param t Time to convert
+ *
+ * @return The time converted to a HTTP-date string
+ */
+static inline std::string http_to_date(time_t t)
+{
+    struct tm tm;
+    char buf[200]; // Enough to store all dates
+
+    gmtime_r(&t, &tm);
+    strftime(buf, sizeof(buf), "%a, %d %b %y %T GMT", &tm);
+
+    return std::string(buf);
+}

@@ -153,14 +153,9 @@ HttpResponse cb_create_server(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
-    if (json)
+    if (json && runtime_create_server_from_json(json))
     {
-        SERVER* server = runtime_create_server_from_json(json);
-
-        if (server)
-        {
-            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN);
@@ -176,7 +171,7 @@ HttpResponse cb_alter_server(const HttpRequest& request)
 
         if (server && runtime_alter_server_from_json(server, json))
         {
-            return HttpResponse(MHD_HTTP_OK, server_to_json(server, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
@@ -187,14 +182,9 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
 {
     json_t* json = request.get_json();
 
-    if (json)
+    if (json && runtime_create_monitor_from_json(json))
     {
-        MXS_MONITOR* monitor = runtime_create_monitor_from_json(json);
-
-        if (monitor)
-        {
-            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
-        }
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
     }
 
     return HttpResponse(MHD_HTTP_FORBIDDEN);
@@ -210,7 +200,7 @@ HttpResponse cb_alter_monitor(const HttpRequest& request)
 
         if (monitor && runtime_alter_monitor_from_json(monitor, json))
         {
-            return HttpResponse(MHD_HTTP_OK, monitor_to_json(monitor, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
@@ -227,7 +217,7 @@ HttpResponse cb_alter_service(const HttpRequest& request)
 
         if (service && runtime_alter_service_from_json(service, json))
         {
-            return HttpResponse(MHD_HTTP_OK, service_to_json(service, request.host()));
+            return HttpResponse(MHD_HTTP_NO_CONTENT);
         }
     }
 
