@@ -239,6 +239,16 @@ bool runtime_alter_monitor_from_json(MXS_MONITOR* monitor, json_t* new_json);
 bool runtime_alter_service_from_json(SERVICE* service, json_t* new_json);
 
 /**
+ * @brief Create a listener from JSON
+ *
+ * @param service Service where the listener is created
+ * @param json JSON definition of the new listener
+ *
+ * @return True if the listener was successfully created and started
+ */
+bool runtime_create_listener_from_json(SERVICE* service, json_t* json);
+
+/**
  * @brief Alter logging options using JSON
  *
  * @param json JSON definition of the updated logging options

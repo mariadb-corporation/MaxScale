@@ -190,6 +190,19 @@ HttpResponse cb_create_monitor(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_FORBIDDEN);
 }
 
+HttpResponse cb_create_service_listener(const HttpRequest& request)
+{
+    json_t* json = request.get_json();
+    SERVICE* service = service_find(request.uri_part(1).c_str());
+
+    if (service && json && runtime_create_listener_from_json(service, json))
+    {
+        return HttpResponse(MHD_HTTP_NO_CONTENT);
+    }
+
+    return HttpResponse(MHD_HTTP_FORBIDDEN);
+}
+
 HttpResponse cb_alter_monitor(const HttpRequest& request)
 {
     json_t* json = request.get_json();
@@ -453,6 +466,8 @@ public:
         m_post.push_back(SResource(new Resource(cb_flush, 3, "maxscale", "logs", "flush")));
         m_post.push_back(SResource(new Resource(cb_create_server, 1, "servers")));
         m_post.push_back(SResource(new Resource(cb_create_monitor, 1, "monitors")));
+        m_post.push_back(SResource(new Resource(cb_create_service_listener, 3,
+                                                "services", ":service", "listeners")));
 
         /** Update resources */
         m_put.push_back(SResource(new Resource(cb_alter_server, 2, "servers", ":server")));

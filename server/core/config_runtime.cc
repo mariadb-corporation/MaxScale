@@ -816,8 +816,8 @@ static inline const char* string_or_null(json_t* json, const char* path)
 static bool server_contains_required_fields(json_t* json)
 {
     json_t* id = mxs_json_pointer(json, MXS_JSON_PTR_ID);
-    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_SRV_PORT);
-    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_SRV_ADDRESS);
+    json_t* port = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT);
+    json_t* address = mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS);
 
     return (id && json_is_string(id) &&
             address && json_is_string(address) &&
@@ -869,6 +869,14 @@ static bool link_server_to_objects(SERVER* server, set<string>& relations)
     return rval;
 }
 
+static string json_int_to_string(json_t* json)
+{
+    char str[25]; // Enough to store any 64-bit integer value
+    int64_t i = json_integer_value(json);
+    snprintf(str, sizeof(str), "%ld", i);
+    return string(str);
+}
+
 SERVER* runtime_create_server_from_json(json_t* json)
 {
     SERVER* rval = NULL;
@@ -876,22 +884,20 @@ SERVER* runtime_create_server_from_json(json_t* json)
     if (server_contains_required_fields(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_SRV_ADDRESS));
+        const char* address = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_ADDRESS));
 
         /** The port needs to be in string format */
-        char port[200]; // Enough to store any port value
-        int i = json_integer_value(mxs_json_pointer(json, MXS_JSON_PTR_SRV_PORT));
-        snprintf(port, sizeof(port), "%d", i);
+        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
 
         /** Optional parameters */
-        const char* protocol = string_or_null(json, MXS_JSON_PTR_SRV_PROTOCOL);
-        const char* authenticator = string_or_null(json, MXS_JSON_PTR_SRV_AUTHENTICATOR);
-        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_SRV_AUTHENTICATOR_OPTIONS);
+        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
 
         set<string> relations;
 
         if (extract_relations(json, relations, server_relation_types, server_relation_is_valid) &&
-            runtime_create_server(name, address, port, protocol, authenticator, authenticator_options))
+            runtime_create_server(name, address, port.c_str(), protocol, authenticator, authenticator_options))
         {
             rval = server_find_by_unique_name(name);
             ss_dassert(rval);
@@ -1000,7 +1006,7 @@ static bool validate_monitor_json(json_t* json)
     json_t* value;
 
     if ((value = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(value) &&
-        (value = mxs_json_pointer(json, PTR_MON_MODULE)) && json_is_string(value))
+        (value = mxs_json_pointer(json, MXS_JSON_PTR_MODULE)) && json_is_string(value))
     {
         set<string> relations;
         if (extract_relations(json, relations, object_relation_types, object_relation_is_valid))
@@ -1056,7 +1062,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     if (validate_monitor_json(json))
     {
         const char* name = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_ID));
-        const char* module = json_string_value(mxs_json_pointer(json, PTR_MON_MODULE));
+        const char* module = json_string_value(mxs_json_pointer(json, MXS_JSON_PTR_MODULE));
 
         if (runtime_create_monitor(name, module))
         {
@@ -1320,6 +1326,61 @@ bool runtime_alter_logs_from_json(json_t* json)
                 mxs_log_set_throttling(&throttle);
             }
         }
+    }
+
+    return rval;
+}
+
+static bool validate_listener_json(json_t* json)
+{
+    bool rval = false;
+    json_t* param;
+
+    if ((param = mxs_json_pointer(json, MXS_JSON_PTR_ID)) && json_is_string(param) &&
+        (param = mxs_json_pointer(json, MXS_JSON_PTR_PARAMETERS)) && json_is_object(param))
+    {
+        json_t* value;
+
+        if ((value = mxs_json_pointer(param, CN_PORT)) && json_is_integer(value) &&
+            (!(value = mxs_json_pointer(param, CN_ADDRESS)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_AUTHENTICATOR_OPTIONS)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_KEY)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CERT)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CA_CERT)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_VERSION)) || json_is_string(value)) &&
+            (!(value = mxs_json_pointer(param, CN_SSL_CERT_VERIFY_DEPTH)) || json_is_integer(value)))
+        {
+            rval = true;
+        }
+    }
+
+    return rval;
+}
+
+bool runtime_create_listener_from_json(SERVICE* service, json_t* json)
+{
+    bool rval = false;
+
+    if (validate_listener_json(json))
+    {
+        string port = json_int_to_string(mxs_json_pointer(json, MXS_JSON_PTR_PARAM_PORT));
+
+        const char* id = string_or_null(json, MXS_JSON_PTR_ID);
+        const char* address = string_or_null(json, MXS_JSON_PTR_PARAM_ADDRESS);
+        const char* protocol = string_or_null(json, MXS_JSON_PTR_PARAM_PROTOCOL);
+        const char* authenticator = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR);
+        const char* authenticator_options = string_or_null(json, MXS_JSON_PTR_PARAM_AUTHENTICATOR_OPTIONS);
+        const char* ssl_key = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_KEY);
+        const char* ssl_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT);
+        const char* ssl_ca_cert = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CA_CERT);
+        const char* ssl_version = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_VERSION);
+        const char* ssl_cert_verify_depth = string_or_null(json, MXS_JSON_PTR_PARAM_SSL_CERT_VERIFY_DEPTH);
+
+        rval = runtime_create_listener(service, id, address, port.c_str(), protocol,
+                                       authenticator, authenticator_options,
+                                       ssl_key, ssl_cert, ssl_ca_cert, ssl_version,
+                                       ssl_cert_verify_depth);
     }
 
     return rval;

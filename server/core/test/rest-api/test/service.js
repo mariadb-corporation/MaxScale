@@ -62,5 +62,28 @@ describe("Service", function() {
             })
     });
 
+    it("create a listener", function() {
+        var listener = {
+            "links": {
+                "self": "http://localhost:8989/v1/services/RW-Split-Router/listeners"
+            },
+            "data": {
+                "attributes": {
+                    "parameters": {
+                        "port": 4012,
+                        "protocol": "MySQLClient",
+                        "authenticator": "MySQLAuth",
+                        "address": "127.0.0.1"
+                    }
+                },
+                "id": "RW-Split-Listener-2",
+                "type": "listeners"
+            }
+        }
+
+        return request.post(base_url + "/services/RW-Split-Router/listeners", {json: listener})
+            .should.be.fulfilled
+    });
+
     after(stopMaxScale)
 });
