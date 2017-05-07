@@ -14,6 +14,7 @@
 
 #include <list>
 #include <sstream>
+#include <map>
 
 #include <maxscale/alloc.h>
 #include <maxscale/jansson.hh>
@@ -29,12 +30,75 @@
 #include "maxscale/config_runtime.h"
 #include "maxscale/modules.h"
 #include "maxscale/worker.h"
+#include "maxscale/http.hh"
 
 using std::list;
+using std::map;
 using std::string;
 using std::stringstream;
 using mxs::SpinLock;
 using mxs::SpinLockGuard;
+
+/**
+ * Class that keeps track of resource modification times
+ */
+class ResourceWatcher
+{
+public:
+
+    ResourceWatcher() :
+        m_init(time(NULL))
+    {
+    }
+
+    void modify(const string& path)
+    {
+        map<string, uint64_t>::iterator it = m_etag.find(path);
+
+        if (it != m_etag.end())
+        {
+            it->second++;
+        }
+        else
+        {
+            // First modification
+            m_etag[path] = 1;
+        }
+
+        m_last_modified[path] = time(NULL);
+    }
+
+    time_t last_modified(const string& path) const
+    {
+        map<string, time_t>::const_iterator it = m_last_modified.find(path);
+
+        if (it != m_last_modified.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return m_init;
+    }
+
+    time_t etag(const string& path) const
+    {
+        map<string, uint64_t>::const_iterator it = m_etag.find(path);
+
+        if (it != m_etag.end())
+        {
+            return it->second;
+        }
+
+        // Resource has not yet been updated
+        return 0;
+    }
+
+private:
+    time_t m_init;
+    map<string, time_t> m_last_modified;
+    map<string, uint64_t> m_etag;
+};
 
 Resource::Resource(ResourceCallback cb, int components, ...) :
     m_cb(cb)
@@ -603,12 +667,55 @@ private:
 };
 
 static RootResource resources; /**< Core resource set */
+static ResourceWatcher watcher; /**< Modification watcher */
 static SpinLock resource_lock;
+
+static bool request_modifies_data(const string& verb)
+{
+    return verb == MHD_HTTP_METHOD_POST ||
+           verb == MHD_HTTP_METHOD_PUT ||
+           verb == MHD_HTTP_METHOD_DELETE;
+}
+
+static bool request_reads_data(const string& verb)
+{
+    return verb == MHD_HTTP_METHOD_GET ||
+           verb == MHD_HTTP_METHOD_HEAD;
+}
 
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
-    SpinLockGuard guard(resource_lock);
     MXS_DEBUG("%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(),
               request.get_json_str().c_str());
-    return resources.process_request(request);
+
+    SpinLockGuard guard(resource_lock);
+    HttpResponse rval = resources.process_request(request);
+
+    if (request_modifies_data(request.get_verb()))
+    {
+        switch (rval.get_code())
+        {
+        case MHD_HTTP_OK:
+        case MHD_HTTP_NO_CONTENT:
+        case MHD_HTTP_CREATED:
+            watcher.modify(request.get_uri());
+            break;
+
+        default:
+            break;
+        }
+    }
+    else if (request_reads_data(request.get_verb()))
+    {
+        const string& uri = request.get_uri();
+
+        rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
+                        http_to_date(watcher.last_modified(uri)));
+
+        stringstream ss;
+        ss << watcher.etag(uri);
+        rval.add_header(HTTP_RESPONSE_HEADER_ETAG, ss.str());
+    }
+
+    return rval;
 }

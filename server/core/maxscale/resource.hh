@@ -62,8 +62,8 @@ private:
 
     bool matching_variable_path(const std::string& path, const std::string& target) const;
 
-    ResourceCallback m_cb; /**< Resource handler callback */
-    std::deque<std::string>    m_path; /**< Path components */
+    ResourceCallback        m_cb;   /**< Resource handler callback */
+    std::deque<std::string> m_path; /**< Path components */
 };
 
 /**
