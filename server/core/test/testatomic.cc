@@ -37,7 +37,6 @@ void test_add(void* data)
     }
 }
 
-
 void test_load_store(void* data)
 {
     int id = (size_t)data;
@@ -51,6 +50,29 @@ void test_load_store(void* data)
     }
 }
 
+static void* cas_dest = (void*)1;
+
+void test_cas(void* data)
+{
+    int id = (size_t)data;
+    static int loops = 0;
+
+    while (atomic_load_int32(&running))
+    {
+        intptr_t my_value = (id + 1) % NTHR;
+        intptr_t my_expected = id;
+
+        while (!atomic_cas_ptr(&cas_dest, (void**)&my_expected, (void*)&my_value))
+        {
+            ;
+        }
+
+        loops++;
+    }
+
+    ss_dassert(loops > 0);
+}
+
 int run_test(void(*func)(void*))
 {
     THREAD threads[NTHR];
@@ -58,9 +80,9 @@ int run_test(void(*func)(void*))
     atomic_store_int32(&expected, 0);
     atomic_store_int32(&running, 1);
 
-    for (int i = 0; i < NTHR; i++)
+    for (size_t i = 0; i < NTHR; i++)
     {
-        if (thread_start(&threads[i], func, NULL) == NULL)
+        if (thread_start(&threads[i], func, (void*)(i + 1)) == NULL)
         {
             ss_dassert(false);
         }
@@ -83,6 +105,7 @@ int main(int argc, char** argv)
 
     run_test(test_load_store);
     run_test(test_add);
+    run_test(test_cas);
 
     return rval;
 }
