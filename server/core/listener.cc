@@ -119,6 +119,7 @@ listener_alloc(struct service* service, const char* name, const char *protocol,
         return NULL;
     }
 
+    proto->active = 1;
     proto->name = my_name;
     proto->listener = NULL;
     proto->service = service;
