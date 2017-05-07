@@ -3087,11 +3087,7 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
 
     spinlock_release(&router->binlog_lock);
 
-    if (!blr_rotate_event(router, ptr, hdr))
-    {
-          return false;
-    }
-    return true;
+    return blr_rotate_event(router, ptr, hdr);
 }
 
 /**

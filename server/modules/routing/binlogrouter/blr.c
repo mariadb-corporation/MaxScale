@@ -701,11 +701,12 @@ createInstance(SERVICE *service, char **options)
     if (!inst->mariadb10_compat &&
         inst->mariadb10_master_gtid)
     {
-        MXS_ERROR("MariaDB Master GTID registration needs"
-                  " MariaDB compatibilty option."
-                  " Please enable it with option 'mariadb10-compatibility=On'");
-        free_instance(inst);
-        return NULL;
+        MXS_WARNING("MariaDB Master GTID registration needs"
+                    " MariaDB compatibilty option. The 'mariadb10-compatibility'"
+                    " has been turned on. Please permanently enable it with option"
+                    " 'mariadb10-compatibility=On'");
+
+        inst->mariadb10_compat = true;
     }
 
     /**
@@ -1912,7 +1913,7 @@ static json_t* diagnostics_json(const MXS_ROUTER *router)
 
             json_object_set_new(rval, "latest_event_type", json_string((ptr != NULL) ? ptr : "unknown"));
 
-            if (router_inst->mariadb_gtid &&
+            if (router_inst->mariadb10_gtid &&
                 router_inst->last_mariadb_gtid[0])
             {
                 json_object_set_new(rval, "latest_gtid", json_string(router_inst->last_mariadb_gtid));
