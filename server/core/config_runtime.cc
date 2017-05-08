@@ -703,7 +703,7 @@ bool runtime_create_monitor(const char *name, const char *module)
     }
     else
     {
-        MXS_INFO("Can't create monitor, it already exists");
+        MXS_WARNING("Can't create monitor, it already exists");
     }
 
     spinlock_release(&crt_lock);
@@ -909,6 +909,10 @@ SERVER* runtime_create_server_from_json(json_t* json)
             }
         }
     }
+    else
+    {
+        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
+    }
 
     return rval;
 }
@@ -1078,7 +1082,7 @@ MXS_MONITOR* runtime_create_monitor_from_json(json_t* json)
     }
     else
     {
-        MXS_INFO("Invalid request JSON: %s", mxs::json_dump(json).c_str());
+        MXS_WARNING("Invalid request JSON: %s", mxs::json_dump(json).c_str());
     }
 
     return rval;
