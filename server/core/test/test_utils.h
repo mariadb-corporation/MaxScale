@@ -23,6 +23,7 @@
 
 #include "../maxscale/poll.h"
 #include "../maxscale/statistics.h"
+#include "../maxscale/worker.hh"
 
 
 void init_test_env(char *path)
@@ -37,6 +38,8 @@ void init_test_env(char *path)
     mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
     dcb_global_init();
     poll_init();
+    maxscale::MessageQueue::init();
+    maxscale::Worker::init();
     hkinit();
 }
 
