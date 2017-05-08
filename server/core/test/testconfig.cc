@@ -137,7 +137,7 @@ int test_add_parameter()
     };
 
 
-    CONFIG_CONTEXT svc1, svc2, ctx;
+    CONFIG_CONTEXT svc1 = {}, svc2 = {}, ctx = {};
     svc1.object = (char*)"my-service";
     svc2.object = (char*)"some-service";
     svc2.next = &svc1;
