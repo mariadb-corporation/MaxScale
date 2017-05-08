@@ -683,38 +683,89 @@ static bool request_reads_data(const string& verb)
            verb == MHD_HTTP_METHOD_HEAD;
 }
 
+bool request_precondition_met(const HttpRequest& request, HttpResponse& response)
+{
+    bool rval = true;
+    string str;
+    const string& uri = request.get_uri();
+
+    if ((str = request.get_header(MHD_HTTP_HEADER_IF_MODIFIED_SINCE)).length())
+    {
+        if (watcher.last_modified(uri) <= http_from_date(str))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_UNMODIFIED_SINCE)).length())
+    {
+        if (watcher.last_modified(uri) > http_from_date(str))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_MATCH)).length())
+    {
+        str = str.substr(1, str.length() - 2);
+
+        if (watcher.etag(uri) != strtol(str.c_str(), NULL, 10))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_PRECONDITION_FAILED);
+        }
+    }
+    else if ((str = request.get_header(MHD_HTTP_HEADER_IF_NONE_MATCH)).length())
+    {
+        str = str.substr(1, str.length() - 2);
+
+        if (watcher.etag(uri) == strtol(str.c_str(), NULL, 10))
+        {
+            rval = false;
+            response = HttpResponse(MHD_HTTP_NOT_MODIFIED);
+        }
+    }
+
+    return rval;
+}
+
 HttpResponse resource_handle_request(const HttpRequest& request)
 {
     MXS_DEBUG("%s %s %s", request.get_verb().c_str(), request.get_uri().c_str(),
               request.get_json_str().c_str());
 
     SpinLockGuard guard(resource_lock);
-    HttpResponse rval = resources.process_request(request);
+    HttpResponse rval;
 
-    if (request_modifies_data(request.get_verb()))
+    if (request_precondition_met(request, rval))
     {
-        switch (rval.get_code())
+        rval = resources.process_request(request);
+
+        if (request_modifies_data(request.get_verb()))
         {
-        case MHD_HTTP_OK:
-        case MHD_HTTP_NO_CONTENT:
-        case MHD_HTTP_CREATED:
-            watcher.modify(request.get_uri());
-            break;
+            switch (rval.get_code())
+            {
+            case MHD_HTTP_OK:
+            case MHD_HTTP_NO_CONTENT:
+            case MHD_HTTP_CREATED:
+                watcher.modify(request.get_uri());
+                break;
 
-        default:
-            break;
+            default:
+                break;
+            }
         }
-    }
-    else if (request_reads_data(request.get_verb()))
-    {
-        const string& uri = request.get_uri();
+        else if (request_reads_data(request.get_verb()))
+        {
+            const string& uri = request.get_uri();
 
-        rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
-                        http_to_date(watcher.last_modified(uri)));
+            rval.add_header(HTTP_RESPONSE_HEADER_LAST_MODIFIED,
+                            http_to_date(watcher.last_modified(uri)));
 
-        stringstream ss;
-        ss << watcher.etag(uri);
-        rval.add_header(HTTP_RESPONSE_HEADER_ETAG, ss.str());
+            stringstream ss;
+            ss << "\"" << watcher.etag(uri) << "\"";
+            rval.add_header(HTTP_RESPONSE_HEADER_ETAG, ss.str());
+        }
     }
 
     return rval;
