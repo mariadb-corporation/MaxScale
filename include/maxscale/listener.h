@@ -49,7 +49,12 @@ typedef struct servlistener
     SPINLOCK lock;
     int active;                /**< True if the port has not been deleted */
     struct  servlistener *next; /**< Next service protocol */
-} SERV_LISTENER;
+} SERV_LISTENER; // TODO: Rename to LISTENER
+
+typedef struct listener_iterator
+{
+    SERV_LISTENER* current;
+} LISTENER_ITERATOR;
 
 /**
  * @brief Serialize a listener to a file
@@ -79,5 +84,41 @@ void listener_free(SERV_LISTENER* listener);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
 int listener_init_SSL(SSL_LISTENER *ssl_listener);
+
+/**
+ * @brief Check if listener is active
+ *
+ * @param listener Listener to check
+ *
+ * @return True if listener is active
+ */
+bool listener_is_active(SERV_LISTENER* listener);
+
+/**
+ * @brief Modify listener active state
+ *
+ * @param listener Listener to modify
+ * @param active True to activate, false to disable
+ */
+void listener_set_active(SERV_LISTENER* listener, bool active);
+
+/**
+ * @brief Initialize a listener iterator for iterating service listeners
+ *
+ * @param service Service whose listeners are iterated
+ * @param iter    Pointer to iterator to initialize
+ *
+ * @return The first value pointed by the iterator
+ */
+SERV_LISTENER* listener_iterator_init(const struct service* service, LISTENER_ITERATOR* iter);
+
+/**
+ * @brief Get the next listener
+ *
+ * @param iter Listener iterator
+ *
+ * @return The next listener or NULL on end of list
+ */
+SERV_LISTENER* listener_iterator_next(LISTENER_ITERATOR* iter);
 
 MXS_END_DECLS
