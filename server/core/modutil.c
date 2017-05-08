@@ -30,6 +30,7 @@
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <maxscale/modutil.h>
+#include <maxscale/platform.h>
 #include <strings.h>
 
 /** These are used when converting MySQL wildcards to regular expressions */
@@ -1320,4 +1321,80 @@ char* modutil_MySQL_bypass_whitespace(char* sql, size_t len)
     }
 
     return i;
+}
+
+const char format_str[] = "COM_UNKNOWN(%02x)";
+
+// The message always fits inside the buffer
+thread_local char unknow_type[sizeof(format_str)] = "";
+
+const char* STRPACKETTYPE(int p)
+{
+    switch (p)
+    {
+        case MYSQL_COM_SLEEP:
+            return "MYSQL_COM_SLEEP";
+        case MYSQL_COM_QUIT:
+            return "MYSQL_COM_QUIT";
+        case MYSQL_COM_INIT_DB:
+            return "MYSQL_COM_INIT_DB";
+        case MYSQL_COM_QUERY:
+            return "MYSQL_COM_QUERY";
+        case MYSQL_COM_FIELD_LIST:
+            return "MYSQL_COM_FIELD_LIST";
+        case MYSQL_COM_CREATE_DB:
+            return "MYSQL_COM_CREATE_DB";
+        case MYSQL_COM_DROP_DB:
+            return "MYSQL_COM_DROP_DB";
+        case MYSQL_COM_REFRESH:
+            return "MYSQL_COM_REFRESH";
+        case MYSQL_COM_SHUTDOWN:
+            return "MYSQL_COM_SHUTDOWN";
+        case MYSQL_COM_STATISTICS:
+            return "MYSQL_COM_STATISTICS";
+        case MYSQL_COM_PROCESS_INFO:
+            return "MYSQL_COM_PROCESS_INFO";
+        case MYSQL_COM_CONNECT:
+            return "MYSQL_COM_CONNECT";
+        case MYSQL_COM_PROCESS_KILL:
+            return "MYSQL_COM_PROCESS_KILL";
+        case MYSQL_COM_DEBUG:
+            return "MYSQL_COM_DEBUG";
+        case MYSQL_COM_PING:
+            return "MYSQL_COM_PING";
+        case MYSQL_COM_TIME:
+            return "MYSQL_COM_TIME";
+        case MYSQL_COM_DELAYED_INSERT:
+            return "MYSQL_COM_DELAYED_INSERT";
+        case MYSQL_COM_CHANGE_USER:
+            return "MYSQL_COM_CHANGE_USER";
+        case MYSQL_COM_BINLOG_DUMP:
+            return "MYSQL_COM_BINLOG_DUMP";
+        case MYSQL_COM_TABLE_DUMP:
+            return "MYSQL_COM_TABLE_DUMP";
+        case MYSQL_COM_CONNECT_OUT:
+            return "MYSQL_COM_CONNECT_OUT";
+        case MYSQL_COM_REGISTER_SLAVE:
+            return "MYSQL_COM_REGISTER_SLAVE";
+        case MYSQL_COM_STMT_PREPARE:
+            return "MYSQL_COM_STMT_PREPARE";
+        case MYSQL_COM_STMT_EXECUTE:
+            return "MYSQL_COM_STMT_EXECUTE";
+        case MYSQL_COM_STMT_SEND_LONG_DATA:
+            return "MYSQL_COM_STMT_SEND_LONG_DATA";
+        case MYSQL_COM_STMT_CLOSE:
+            return "MYSQL_COM_STMT_CLOSE";
+        case MYSQL_COM_STMT_RESET:
+            return "MYSQL_COM_STMT_RESET";
+        case MYSQL_COM_SET_OPTION:
+            return "MYSQL_COM_SET_OPTION";
+        case MYSQL_COM_STMT_FETCH:
+            return "MYSQL_COM_STMT_FETCH";
+        case MYSQL_COM_DAEMON:
+            return "MYSQL_COM_DAEMON";
+    }
+
+    snprintf(unknow_type, sizeof(unknow_type), format_str, p);
+
+    return unknow_type;
 }

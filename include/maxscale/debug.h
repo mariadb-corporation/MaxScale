@@ -166,27 +166,6 @@ typedef enum skygw_chk_t
            ((n) == LOG_DEBUG ? "LOG_DEBUG" :    \
             "Unknown log priority"))))))))
 
-#define STRPACKETTYPE(p) ((p) == MYSQL_COM_INIT_DB ? "COM_INIT_DB" :    \
-                          ((p) == MYSQL_COM_CREATE_DB ? "COM_CREATE_DB" : \
-                           ((p) == MYSQL_COM_DROP_DB ? "COM_DROP_DB" :  \
-                            ((p) == MYSQL_COM_REFRESH ? "COM_REFRESH" : \
-                             ((p) == MYSQL_COM_DEBUG ? "COM_DEBUG" :    \
-                              ((p) == MYSQL_COM_PING ? "COM_PING" :     \
-                               ((p) == MYSQL_COM_CHANGE_USER ? "COM_CHANGE_USER" : \
-                                ((p) == MYSQL_COM_QUERY ? "COM_QUERY" : \
-                                 ((p) == MYSQL_COM_SHUTDOWN ? "COM_SHUTDOWN" : \
-                                  ((p) == MYSQL_COM_PROCESS_INFO ? "COM_PROCESS_INFO" : \
-                                   ((p) == MYSQL_COM_CONNECT ? "COM_CONNECT" : \
-                                    ((p) == MYSQL_COM_PROCESS_KILL ? "COM_PROCESS_KILL" : \
-                                     ((p) == MYSQL_COM_TIME ? "COM_TIME" : \
-                                      ((p) == MYSQL_COM_DELAYED_INSERT ? "COM_DELAYED_INSERT" : \
-                                       ((p) == MYSQL_COM_DAEMON ? "COM_DAEMON" : \
-                                        ((p) == MYSQL_COM_QUIT ? "COM_QUIT" : \
-                                         ((p) == MYSQL_COM_STMT_PREPARE ? "MYSQL_COM_STMT_PREPARE" : \
-                                          ((p) == MYSQL_COM_STMT_EXECUTE ? "MYSQL_COM_STMT_EXECUTE" : \
-                                           ((p) == MYSQL_COM_SET_OPTION ? "MYSQL_COM_SET_OPTION" : \
-                                            "UNKNOWN MYSQL PACKET TYPE")))))))))))))))))))
-
 #define STRDCBSTATE(s) ((s) == DCB_STATE_ALLOC ? "DCB_STATE_ALLOC" :    \
                         ((s) == DCB_STATE_POLLING ? "DCB_STATE_POLLING" : \
                          ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
