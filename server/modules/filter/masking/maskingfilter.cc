@@ -139,7 +139,6 @@ MaskingFilterSession* MaskingFilter::newSession(MXS_SESSION* pSession)
 // static
 void MaskingFilter::diagnostics(DCB* pDcb)
 {
-    dcb_printf(pDcb, "Hello, World!\n");
 }
 
 // static
