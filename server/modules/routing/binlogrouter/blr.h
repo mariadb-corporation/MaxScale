@@ -189,6 +189,13 @@ enum blr_aes_mode
  */
 #define BLR_REQUEST_ANNOTATE_ROWS_EVENT         2
 
+/** MaxScale generated events */
+typedef enum
+{
+    BLRM_IGNORABLE,          /*< Ignorable event */
+    BLRM_START_ENCRYPTION    /*< Start Encryption event */
+} generated_event_t;
+
 /**
  * How often to call the binlog status function (seconds)
  */

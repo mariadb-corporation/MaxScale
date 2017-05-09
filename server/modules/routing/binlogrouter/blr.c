@@ -538,6 +538,10 @@ createInstance(SERVICE *service, char **options)
                 {
                     inst->mariadb10_gtid = config_truth_value(value);
                 }
+                else if (strcmp(options[i], "mariadb10_master_gtid") == 0)
+                {
+                    inst->mariadb10_master_gtid = config_truth_value(value);
+                }
                 else if (strcmp(options[i], "encryption_algorithm") == 0)
                 {
                     int ret = blr_check_encryption_algorithm(value);
@@ -2429,7 +2433,8 @@ blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *
  */
 int
-blr_send_custom_error(DCB *dcb, int packet_number,
+blr_send_custom_error(DCB *dcb,
+                      int packet_number,
                       int affected_rows,
                       char *msg,
                       char *statemsg,

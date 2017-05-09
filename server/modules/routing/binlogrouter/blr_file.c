@@ -188,7 +188,7 @@ static uint8_t *blr_create_ignorable_event(uint32_t event_size,
                                            REP_HEADER *hdr,
                                            uint32_t event_pos,
                                            bool do_checksum);
-static int blr_write_special_event(ROUTER_INSTANCE *router,
+int blr_write_special_event(ROUTER_INSTANCE *router,
                                    uint32_t file_offset,
                                    uint32_t hole_size,
                                    REP_HEADER *hdr,
@@ -220,13 +220,6 @@ static int blr_binlog_event_check(ROUTER_INSTANCE *router,
                                   char *errmsg);
 
 static void blr_report_checksum(REP_HEADER hdr, const uint8_t *buffer, char *output);
-
-/** MaxScale generated events */
-typedef enum
-{
-    BLRM_IGNORABLE, /*< Ignorable event */
-    BLRM_START_ENCRYPTION /*< Start Encryption event */
-} generated_event_t;
 
 /**
  * MariaDB 10.1.7 Start Encryption event content
@@ -2069,7 +2062,9 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
                     else
                     {
                         char mariadb_gtid[GTID_MAX_LEN + 1];
-                        snprintf(mariadb_gtid, GTID_MAX_LEN, "%u-%u-%lu",
+                        snprintf(mariadb_gtid,
+                                 GTID_MAX_LEN,
+                                 "%u-%u-%lu",
                                  domainid, hdr.serverid,
                                  n_sequence);
 
@@ -2098,11 +2093,51 @@ blr_read_events_all_events(ROUTER_INSTANCE *router,
         }
 
         /**
-        * Check QUERY_EVENT
-          *
-          * Check for BEGIN ( ONLY for mysql 5.6, mariadb 5.5 )
-          * Check for COMMIT (not transactional engines)
-          */
+         * Check for GTID_LIST_EVENT
+         */
+        if (router->mariadb10_compat)
+        {
+            if (hdr.event_type == MARIADB10_GTID_GTID_LIST_EVENT)
+            {
+                uint32_t n_gtids; /* The lower 28 bits are the number of GTIDs */
+                uint32_t domainid;  /* 4 bytes */
+                uint32_t serverid;  /* 4 bytes */
+                uint64_t n_sequence;/* 8 bytes */
+                uint8_t flags; /* 1 byte, 4 bits */
+                char mariadb_gtid[GTID_MAX_LEN + 1];
+
+                n_gtids = extract_field(ptr, 32);
+                n_gtids &= 0x01111111;
+
+                domainid = extract_field(ptr + 4, 32);
+                serverid = extract_field(ptr + 4 + 4, 32);
+                n_sequence = extract_field(ptr + 4 + 4 + 4, 64);
+
+                snprintf(mariadb_gtid,
+                         GTID_MAX_LEN,
+                         "%u-%u-%lu",
+                         domainid,
+                         serverid,
+                         n_sequence);
+
+                MXS_DEBUG("GTID List has %lu GTIDs, first is %s",
+                           (unsigned long)n_gtids,
+                           mariadb_gtid);
+
+                /* Set MariaDB GTID */
+                if (router->mariadb10_gtid)
+                {
+                    strcpy(router->last_mariadb_gtid, mariadb_gtid);
+                }
+            }
+        }
+
+        /**
+         * Check QUERY_EVENT
+         *
+         * Check for BEGIN ( ONLY for mysql 5.6, mariadb 5.5 )
+         * Check for COMMIT (not transactional engines)
+         */
 
         if (hdr.event_type == QUERY_EVENT)
         {
@@ -2666,7 +2701,7 @@ blr_create_ignorable_event(uint32_t event_size,
  * @param type          Type of special event to create and write
  * @return              1 on success, 0 on error
  */
-static int
+int
 blr_write_special_event(ROUTER_INSTANCE *router, uint32_t file_offset, uint32_t event_size, REP_HEADER *hdr,
                         int type)
 {

@@ -323,7 +323,6 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     case COM_QUERY:
         slave->stats.n_queries++;
         return blr_slave_query(router, slave, queue);
-
     case COM_REGISTER_SLAVE:
         if (router->master_state == BLRM_UNCONFIGURED)
         {
@@ -343,15 +342,38 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
          * If Master is MariaDB10 don't allow registration from
          * MariaDB/Mysql 5 Slaves
          */
-
         if (router->mariadb10_compat && !slave->mariadb10_compat)
         {
             slave->state = BLRS_ERRORED;
-            blr_send_custom_error(slave->dcb, 1, 0,
+            /* Send error that stops slave replication */
+            blr_send_custom_error(slave->dcb,
+                                  ++slave->seqno,
+                                  0,
                                   "MariaDB 10 Slave is required for Slave registration",
-                                  "42000", 1064);
+                                  "42000",
+                                  1064);
 
             MXS_ERROR("%s: Slave %s: a MariaDB 10 Slave is required for Slave registration",
+                      router->service->name,
+                      slave->dcb->remote);
+
+            dcb_close(slave->dcb);
+            return 1;
+        }
+        else if (router->mariadb10_master_gtid && !slave->mariadb_gtid)
+        {
+            slave->state = BLRS_ERRORED;
+            /* Send error that stops slave replication */
+            blr_send_custom_error(slave->dcb,
+                                  ++slave->seqno,
+                                  0,
+                                  "MariaDB 10 Slave GTID is required for Slave registration.",
+                                  "HY000",
+                                  //BINLOG_FATAL_ERROR_READING);
+                                  1597);
+            MXS_ERROR("%s: Slave %s: a MariaDB 10 Slave GTID request"
+                      " is needed for Slave registration."
+                      " Please use: CHANGE MASTER TO master_use_gtid=slave_pos.",
                       router->service->name,
                       slave->dcb->remote);
 
@@ -363,13 +385,11 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             /* Master and Slave version OK: continue with slave registration */
             return blr_slave_register(router, slave, queue);
         }
-
     case COM_BINLOG_DUMP:
         {
             char task_name[BLRM_TASK_NAME_LEN + 1] = "";
-            int rc = 0;
 
-            rc = blr_slave_binlog_dump(router, slave, queue);
+            int rc = blr_slave_binlog_dump(router, slave, queue);
 
             if (router->send_slave_heartbeat && rc && slave->heartbeat > 0)
             {
@@ -384,13 +404,10 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             return rc;
         }
-
     case COM_STATISTICS:
         return blr_statistics(router, slave, queue);
-
     case COM_PING:
         return blr_ping(router, slave, queue);
-
     case COM_QUIT:
         MXS_DEBUG("COM_QUIT received from slave with server_id %d",
                   slave->serverid);
@@ -6908,6 +6925,62 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
         }
         return true;
     }
+    else if (strstr(word, "@@global.gtid_slave_pos") != NULL)
+    {
+        if (slave->serverid != 0)
+        {
+            MXS_ERROR("Master GTID registration can be sent only via administration connection");
+            blr_slave_send_error_packet(slave,
+                                        "Master GTID registration cannot be issued by a regitrating slave.",
+                                        (unsigned int)1198, NULL);
+            return false;
+        }
+        if (router->master_state != BLRM_SLAVE_STOPPED)
+        {
+            MXS_ERROR("Master GTID registration needs stopped slave: issue STOP SLAVE first.");
+            blr_slave_send_error_packet(slave,
+                                        "Cannot use Master GTID registration with a running slave; "
+                                        "run STOP SLAVE first",
+                                        (unsigned int)1198, NULL);
+            return true;
+        }
+        /* If not mariadb GTID an error message will be returned */
+        if (router->mariadb10_master_gtid)
+        {
+            if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
+            {
+                char heading[GTID_MAX_LEN + 1];
+                MXS_INFO("Binlog server requests GTID '%s' to master",
+                         word);
+
+                // TODO: gtid_strip_chars routine for this
+                strcpy(heading, word + 1);
+                heading[strlen(heading) - 1] = '\0';
+                if (!heading[0])
+                {
+                    MXS_ERROR("Cannot request empty GTID righ now");
+                    blr_slave_send_error_packet(slave,
+                                                "Empty GTID not implemented righ now",
+                                                (unsigned int)1198, NULL);
+                    return false;
+                }
+                else
+                {
+                    strcpy(router->last_mariadb_gtid, heading);
+                    blr_slave_send_ok(router, slave);
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            MXS_ERROR("Master GTID registration needs 'mariadb10_master_gtid' option to be set.");
+            blr_slave_send_error_packet(slave,
+                                        "Master GTID registration needs 'mariadb10_master_gtid' option to be set.",
+                                        (unsigned int)1198, NULL);
+            return true;
+        }
+    }
     else if (strstr(word, "@slave_connect_state") != NULL)
     {
         /* If not mariadb an error message will be returned */
@@ -6933,6 +7006,11 @@ static bool blr_handle_set_stmt(ROUTER_INSTANCE *router,
 
              blr_slave_send_ok(router, slave);
              return true;
+        }
+        else
+        {
+            MXS_ERROR("GTID Master registration is not enabled");
+            return false;
         }
     }
     else if (strcasecmp(word, "@slave_gtid_strict_mode") == 0)

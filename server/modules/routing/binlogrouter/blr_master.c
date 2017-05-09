@@ -127,7 +127,7 @@ static void blr_register_cache_response(ROUTER_INSTANCE *router,
                                         const char *save_tag,
                                         GWBUF *in_buf);
 static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf);
-static void blr_register_mariadb_gtid_domain(ROUTER_INSTANCE *router,
+static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
                                              GWBUF *buf);
 static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
                                    REP_HEADER *hdr,
@@ -135,7 +135,11 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
 static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
                                       REP_HEADER *hdr,
                                       uint8_t *ptr);
-
+extern int blr_write_special_event(ROUTER_INSTANCE *router,
+                                   uint32_t file_offset,
+                                   uint32_t hole_size,
+                                   REP_HEADER *hdr,
+                                   int type);
 
 static void worker_cb_start_master(int worker_id, void* data);
 static void blr_start_master_in_main(void* data);
@@ -2792,8 +2796,29 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
         }
         break;
     case BLRM_MARIADB10_GTID_DOMAIN: // MariaDB10 Only
-        // Next state is BLRM_LATIN1
-        blr_register_mariadb_gtid_domain(router, buf);
+        // Next state is BLRM_MARIADB10_REQUEST_GTID
+        blr_register_mariadb_gtid_request(router, buf);
+        break;
+    case BLRM_MARIADB10_REQUEST_GTID: // MariaDB10 Only
+        // Don't save GTID request
+        gwbuf_free(buf);
+        blr_register_send_command(router,
+                                  "SET @slave_gtid_strict_mode=1",
+                                  BLRM_MARIADB10_GTID_STRICT);
+        break;
+    case BLRM_MARIADB10_GTID_STRICT: // MariaDB10 Only
+        // Don't save GTID strict
+        gwbuf_free(buf);
+        blr_register_send_command(router,
+                                  "SET @slave_gtid_ignore_duplicates=1",
+                                  BLRM_MARIADB10_GTID_NO_DUP);
+        break;
+    case BLRM_MARIADB10_GTID_NO_DUP: // MariaDB10 Only
+        // Don't save GTID ignore
+        gwbuf_free(buf);
+        blr_register_send_command(router,
+                                  "SET NAMES latin1",
+                                  BLRM_LATIN1);
         break;
     case BLRM_GTIDMODE: // MySQL 5.6/5.7 only
         blr_register_serveruuid(router, buf);
@@ -3009,13 +3034,15 @@ static void blr_start_master_registration(ROUTER_INSTANCE *router, GWBUF *buf)
  * Slave Protocol registration to Master (MariaDB 10 compatibility):
  *
  * Handles previous reply from MariaDB10 Master (GTID Domain ID) and
- * sets the state to BLRM_LATIN1
+ * sends the SET @slave_connect_state='x-y-z' GTID registration.
+ *
+ * The next state is set to BLRM_MARIADB10_REQUEST_GTID
  *
  * @param router    Current router instance
  * @param buf       GWBUF with server reply to previous
  *                  registration command
  */
-static void blr_register_mariadb_gtid_domain(ROUTER_INSTANCE *router,
+static void blr_register_mariadb_gtid_request(ROUTER_INSTANCE *router,
                                              GWBUF *buf)
 {
     // Extract GTID domain
@@ -3025,9 +3052,20 @@ static void blr_register_mariadb_gtid_domain(ROUTER_INSTANCE *router,
     MXS_FREE(val);
     // Don't save the server response
     gwbuf_free(buf);
+
+    // SET the requested GTID
+    char set_gtid[GTID_MAX_LEN + 33 + 1];
+    sprintf(set_gtid,
+            "SET @slave_connect_state='%s'",
+            router->last_mariadb_gtid);
+
+     MXS_INFO("%s: Requesting GTID (%s) from master server.",
+                   router->service->name,
+                   router->last_mariadb_gtid);
+    // Send the request
     blr_register_send_command(router,
-                              "SET NAMES latin1",
-                              BLRM_LATIN1);
+                              set_gtid,
+                              BLRM_MARIADB10_REQUEST_GTID);
 }
 
 /**
@@ -3066,6 +3104,10 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
     pos <<= 32;
     pos |= extract_field(ptr + BINLOG_EVENT_HDR_LEN, 32);
 
+    MXS_INFO("Fake ROTATE_EVENT received: file %s, pos %lu. Next event at pos %lu\n",
+             file,
+             (unsigned long)pos,
+             (unsigned long)hdr->next_pos);
     /**
      * TODO: Detect any missing file in sequence.
      */
@@ -3075,11 +3117,17 @@ static bool blr_handle_fake_rotate(ROUTER_INSTANCE *router,
     /* Set writing pos to 4 if Master GTID */
     if (router->mariadb10_master_gtid && pos == 4)
     {
-        // Set pos = 4
+        /**
+         * If a MariadB 10 Slave is connecting and reading the
+         * events from this binlog file, the router->binlog_position check
+         * might fail in blr_slave.c:blr_slave_binlog_dump()
+         * and the slave connection will be closed.
+         *
+         * The slave will automatically try to re-connect.
+         */
         router->last_written = BINLOG_MAGIC_SIZE;
         router->current_pos = BINLOG_MAGIC_SIZE;
         router->binlog_position = BINLOG_MAGIC_SIZE;
-        router->current_safe_event = BINLOG_MAGIC_SIZE;
         router->last_event_pos = BINLOG_MAGIC_SIZE;
     }
 
@@ -3111,20 +3159,52 @@ static void blr_handle_fake_gtid_list(ROUTER_INSTANCE *router,
 
     if (router->mariadb10_master_gtid)
     {
+        uint64_t binlog_file_eof = lseek(router->binlog_fd, 0L, SEEK_END);
+
         MXS_INFO("Fake GTID_LIST received: file %s, pos %lu. Next event at pos %lu\n",
                  router->binlog_name,
                  (unsigned long)router->current_pos,
                  (unsigned long)hdr->next_pos);
 
-        /* We can write in any (after FDE and STE) binlog file position */
-        /* TODO: fill any GAP with an ignorable event */
+        /**
+         * We could write in any binlog file position:
+         * fill any GAP with an ignorable event
+         * if GTID_LIST next_pos is greter than current EOF
+         */
 
-        spinlock_acquire(&router->binlog_lock);
+        if (hdr->next_pos && (hdr->next_pos > binlog_file_eof))
+        {
+             uint64_t hole_size = hdr->next_pos - binlog_file_eof;
 
-        router->last_written = hdr->next_pos;
-        router->last_event_pos = router->current_pos;
-        router->current_pos = hdr->next_pos;
+             MXS_INFO("Detected hole while processing"
+                      " a Fake GTID_LIST Event: hole size will be %lu bytes",
+                      (unsigned long)hole_size);
 
-        spinlock_release(&router->binlog_lock);
+             /* Set the offet for the write routine */
+             spinlock_acquire(&router->binlog_lock);
+
+             router->last_written = binlog_file_eof;
+
+             spinlock_release(&router->binlog_lock);
+
+             // Write One Hole
+             // TODO: write small holes
+             blr_write_special_event(router,
+                                     binlog_file_eof,
+                                     hole_size,
+                                     hdr,
+                                     BLRM_IGNORABLE);
+        }
+        else
+        {
+            // Increment internal offsets
+            spinlock_acquire(&router->binlog_lock);
+
+            router->last_written = hdr->next_pos;
+            router->last_event_pos = router->current_pos;
+            router->current_pos = hdr->next_pos;
+
+            spinlock_release(&router->binlog_lock);
+        }
     }
 }
