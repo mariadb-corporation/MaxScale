@@ -550,12 +550,31 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 }
                 else
                 {
-                    uint8_t bytes = *ptr;
+                    /**
+                     * The first byte in the metadata stores the real type of
+                     * the string (ENUM and SET types are also stored as fixed
+                     * length strings).
+                     *
+                     * The first two bits of the second byte contain the XOR'ed
+                     * field length but as that information is not relevant for
+                     * us, we just use this information to know whether to read
+                     * one or two bytes for string length.
+                     */
+
+                    uint8_t bytes = *ptr++;
+                    int len = metadata[metadata_offset] +
+                        (((metadata[metadata_offset + 1] >> 4) & 0x3) ^ 0x3);
+
+                    if (len <= 255)
+                    {
+                        bytes += *ptr++ << 8;
+                    }
+
                     char str[bytes + 1];
-                    memcpy(str, ptr + 1, bytes);
+                    memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
                     avro_value_set_string(&field, str);
-                    ptr += bytes + 1;
+                    ptr += bytes;
                     ss_dassert(ptr < end);
                 }
             }
