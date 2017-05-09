@@ -20,6 +20,7 @@
 #include <maxscale/jansson.hh>
 #include <maxscale/spinlock.hh>
 #include <maxscale/json_api.h>
+#include <maxscale/housekeeper.h>
 
 #include "maxscale/httprequest.hh"
 #include "maxscale/httpresponse.hh"
@@ -467,8 +468,7 @@ HttpResponse cb_thread(const HttpRequest& request)
 
 HttpResponse cb_tasks(const HttpRequest& request)
 {
-    // TODO: Show housekeeper tasks
-    return HttpResponse(MHD_HTTP_OK, mxs_json_resource(request.host(), MXS_JSON_API_TASKS, json_null()));
+    return HttpResponse(MHD_HTTP_OK, hk_tasks_json(request.host()));
 }
 
 HttpResponse cb_all_modules(const HttpRequest& request)

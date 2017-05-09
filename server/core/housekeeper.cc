@@ -11,34 +11,29 @@
  * Public License.
  */
 #include <maxscale/housekeeper.h>
+
 #include <stdlib.h>
 #include <string.h>
+
 #include <maxscale/alloc.h>
 #include <maxscale/atomic.h>
+#include <maxscale/config.h>
 #include <maxscale/semaphore.h>
 #include <maxscale/spinlock.h>
 #include <maxscale/thread.h>
+#include <maxscale/json_api.h>
 
 /**
  * @file housekeeper.c  Provide a mechanism to run periodic tasks
  *
  * The housekeeper provides a mechanism to allow for tasks, function
- * calls basically, to be run on a tiem basis. A task may be run
+ * calls basically, to be run on a time basis. A task may be run
  * repeatedly, with a given frequency (in seconds), or may be a one
  * shot task that will only be run once after a specified number of
  * seconds.
  *
  * The housekeeper also maintains a global variable, hkheartbeat, that
  * is incremented every 100ms.
- *
- * @verbatim
- * Revision History
- *
- * Date         Who             Description
- * 29/08/14     Mark Riddoch    Initial implementation
- * 22/10/14     Mark Riddoch    Addition of one-shot tasks
- *
- * @endverbatim
  */
 
 /**
@@ -57,8 +52,7 @@ static THREAD hk_thr_handle;
 
 static void hkthread(void *);
 
-bool
-hkinit()
+bool hkinit()
 {
     bool inited = false;
 
@@ -74,25 +68,7 @@ hkinit()
     return inited;
 }
 
-/**
- * Add a new task to the housekeepers lists of tasks that should be
- * run periodically.
- *
- * The task will be first run frequency seconds after this call is
- * made and will the be executed repeatedly every frequency seconds
- * until the task is removed.
- *
- * Task names must be unique.
- *
- * @param name          The unique name for this housekeeper task
- * @param taskfn        The function to call for the task
- * @param data          Data to pass to the task function
- * @param frequency     How often to run the task, expressed in seconds
- * @return              Return the time in seconds when the task will be first run
- *                      if the task was added, otherwise 0
- */
-int
-hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
+int hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
 {
     HKTASK *task, *ptr;
 
@@ -144,21 +120,7 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
     return task->nextdue;
 }
 
-/**
- * Add a one-shot task to the housekeeper task list
- *
- * Task names must be unique.
- *
- * @param name          The unique name for this housekeeper task
- * @param taskfn        The function to call for the task
- * @param data          Data to pass to the task function
- * @param when          How many second until the task is executed
- * @return              Return the time in seconds when the task will be first run
- *                      if the task was added, otherwise 0
- *
- */
-int
-hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
+int hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
 {
     HKTASK *task, *ptr;
 
@@ -196,15 +158,7 @@ hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
     return task->nextdue;
 }
 
-
-/**
- * Remove a named task from the housekeepers task list
- *
- * @param name          The task name to remove
- * @return              Returns 0 if the task could not be removed
- */
-int
-hktask_remove(const char *name)
+int hktask_remove(const char *name)
 {
     HKTASK *ptr, *lptr = NULL;
 
@@ -237,7 +191,6 @@ hktask_remove(const char *name)
     }
 }
 
-
 /**
  * The housekeeper thread implementation.
  *
@@ -253,8 +206,7 @@ hktask_remove(const char *name)
  *
  * @param       data            Unused, here to satisfy the thread system
  */
-void
-hkthread(void *data)
+void hkthread(void *data)
 {
     HKTASK *ptr;
     time_t now;
@@ -304,8 +256,7 @@ hkthread(void *data)
     MXS_NOTICE("Housekeeper shutting down.");
 }
 
-void
-hkshutdown()
+void hkshutdown()
 {
     do_shutdown = true;
     atomic_synchronize();
@@ -321,13 +272,7 @@ void hkfinish()
     MXS_NOTICE("Housekeeper has shut down.");
 }
 
-/**
- * Show the tasks that are scheduled for the house keeper
- *
- * @param pdcb          The DCB to send to output
- */
-void
-hkshow_tasks(DCB *pdcb)
+void hkshow_tasks(DCB *pdcb)
 {
     HKTASK *ptr;
     struct tm tm;
@@ -349,4 +294,41 @@ hkshow_tasks(DCB *pdcb)
         ptr = ptr->next;
     }
     spinlock_release(&tasklock);
+}
+
+json_t* hk_tasks_json(const char* host)
+{
+    json_t* arr = json_array();
+
+    spinlock_acquire(&tasklock);
+
+    for (HKTASK* ptr = tasks; ptr; ptr = ptr->next)
+    {
+        struct tm tm;
+        char buf[40];
+        localtime_r(&ptr->nextdue, &tm);
+        asctime_r(&tm, buf);
+        char* nl = strchr(buf, '\n');
+        ss_dassert(nl);
+        *nl = '\0';
+
+        const char* task_type = ptr->type == HK_REPEATED ? "Repeated" : "One-Shot";
+
+        json_t* obj = json_object();
+
+        json_object_set_new(obj, CN_ID, json_string(ptr->name));
+        json_object_set_new(obj, CN_TYPE, json_string("tasks"));
+
+        json_t* attr = json_object();
+        json_object_set_new(attr, "task_type", json_string(task_type));
+        json_object_set_new(attr, "frequency", json_integer(ptr->frequency));
+        json_object_set_new(attr, "next_execution", json_string(buf));
+
+        json_object_set_new(obj, CN_ATTRIBUTES, attr);
+        json_array_append_new(arr, obj);
+    }
+
+    spinlock_release(&tasklock);
+
+    return mxs_json_resource(host, MXS_JSON_API_TASKS, arr);
 }
