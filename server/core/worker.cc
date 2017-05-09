@@ -712,6 +712,61 @@ size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg
     return Worker::broadcast_message(msg_id, arg1, arg2);
 }
 
+bool mxs_worker_register_session(MXS_SESSION* session)
+{
+    Worker* worker = Worker::get_current();
+    ss_dassert(worker);
+    return worker->register_session(session);
+}
+
+MXS_SESSION* mxs_worker_deregister_session(uint64_t id)
+{
+    MXS_SESSION* rval = NULL;
+    Worker* worker = Worker::get_current();
+    if (worker)
+    {
+        rval = worker->deregister_session(id);
+    }
+    return rval;
+}
+
+MXS_SESSION* mxs_worker_find_session(uint64_t id)
+{
+    MXS_SESSION* rval = NULL;
+    Worker* worker = Worker::get_current();
+    if (worker)
+    {
+        rval = worker->find_session(id);
+    }
+    return rval;
+}
+
+bool Worker::register_session(MXS_SESSION* session)
+{
+    return m_sessions.insert(SessionsById::value_type(session->ses_id, session)).second;
+}
+
+MXS_SESSION* Worker::deregister_session(uint64_t id)
+{
+    MXS_SESSION* rval = find_session(id);
+    if (rval)
+    {
+        m_sessions.erase(id);
+    }
+    return rval;
+}
+
+MXS_SESSION* Worker::find_session(uint64_t id)
+{
+    MXS_SESSION* rval = NULL;
+    SessionsById::const_iterator iter = m_sessions.find(id);
+    if (iter != m_sessions.end())
+    {
+        rval = iter->second;
+    }
+    return rval;
+}
+
 void Worker::run()
 {
     this_thread.current_worker_id = m_id;

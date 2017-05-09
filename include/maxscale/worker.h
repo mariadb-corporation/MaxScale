@@ -116,9 +116,30 @@ bool mxs_worker_post_message(MXS_WORKER* worker, uint32_t msg_id, intptr_t arg1,
  */
 size_t mxs_worker_broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
 
-// These automatically act on the currently executing worker thread. Not implemented yet.
-void mxs_add_to_session_map(uint32_t id, MXS_SESSION* session);
-void mxs_remove_from_session_map(uint32_t id);
-MXS_SESSION* mxs_find_in_session_map(uint32_t id);
+/**
+ * Add a session to the current worker's session container. Currently only
+ * required for some special commands e.g. "KILL <process_id>" to work.
+ *
+ * @param session Session to add.
+ * @return true if successful, false if id already existed in map.
+ */
+bool mxs_worker_register_session(MXS_SESSION* session);
+
+/**
+ * Remove a session from the current worker's session container. Does not actually
+ * remove anything from an epoll-set or affect the session in any way.
+ *
+ * @param id Which id to remove.
+ * @return The removed session or NULL if not found.
+ */
+MXS_SESSION* mxs_worker_deregister_session(uint64_t id);
+
+/**
+ * Find a session in the current worker's session container.
+ *
+ * @param id Which id to find.
+ * @return The found session or NULL if not found.
+ */
+MXS_SESSION* mxs_worker_find_session(uint64_t id);
 
 MXS_END_DECLS

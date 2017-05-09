@@ -25,7 +25,7 @@
 namespace
 {
 
-struct
+static struct
 {
     bool initialized;
     int  pipe_flags;

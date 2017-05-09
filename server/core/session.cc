@@ -50,6 +50,8 @@
 
 #include "maxscale/session.h"
 #include "maxscale/filter.h"
+#include "maxscale/worker.hh"
+#include "maxscale/workertask.hh"
 
 using std::string;
 
@@ -68,6 +70,55 @@ static MXS_SESSION *session_find_free();
 static void session_final_free(MXS_SESSION *session);
 static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
                                        MXS_SESSION* session);
+
+namespace
+{
+/**
+ * Checks if issuer_user@issuer_host has the privilege to kill the target session.
+ * Currently just checks that the user and host are the same.
+ *
+ * This function should only be called in the worker thread normally handling
+ * the target session, otherwise target session could be freed while function is
+ * running.
+ *
+ * @param issuer_user User name of command issuer
+ * @param issuer_host Host/ip of command issuer
+ * @param target Target session
+ * @return
+ */
+bool issuer_can_kill_target(const string& issuer_user, const string& issuer_host,
+                            const MXS_SESSION* target)
+{
+    DCB* target_dcb = target->client_dcb;
+    return ((strcmp(issuer_user.c_str(), target_dcb->user) == 0) &&
+            (strcmp(issuer_host.c_str(), target_dcb->remote) == 0));
+}
+
+class KillCmdTask : public maxscale::Worker::DisposableTask
+{
+public:
+    KillCmdTask(MXS_SESSION* issuer, uint64_t target_id)
+        : m_issuer_user(issuer->client_dcb->user)
+        , m_issuer_host(issuer->client_dcb->remote)
+        , m_target_id(target_id)
+    {
+    }
+
+    void execute(maxscale::Worker& worker)
+    {
+        MXS_SESSION* target = worker.find_session(m_target_id);
+        if (target && issuer_can_kill_target(m_issuer_user, m_issuer_host, target))
+        {
+            poll_fake_hangup_event(target->client_dcb);
+        }
+    }
+private:
+    std::string m_issuer_user;
+    std::string m_issuer_host;
+    uint64_t m_target_id;
+};
+}
+
 /**
  * The clientReply of the session.
  *
@@ -997,6 +1048,31 @@ void session_clear_stmt(MXS_SESSION *session)
 uint32_t session_get_next_id()
 {
     return atomic_add_uint32(&next_session_id, 1);
+}
+
+void session_broadcast_kill_command(MXS_SESSION* issuer, uint64_t target_id)
+{
+    /* First, check if the target id belongs to the current worker. If it does,
+     * send hangup event. Otherwise, use a worker task to send a message to all
+     * workers.
+     */
+    MXS_SESSION* target = mxs_worker_find_session(target_id);
+    if (target &&
+        issuer_can_kill_target(issuer->client_dcb->user,
+                               issuer->client_dcb->remote,
+                               target))
+    {
+        poll_fake_hangup_event(target->client_dcb);
+    }
+    else
+    {
+        KillCmdTask* kill_task = new (std::nothrow) KillCmdTask(issuer, target_id);
+        if (kill_task)
+        {
+            std::auto_ptr<KillCmdTask> sKillTask(kill_task);
+            maxscale::Worker::broadcast(sKillTask);
+        }
+    }
 }
 
 json_t* session_to_json(const MXS_SESSION *session, const char *host)

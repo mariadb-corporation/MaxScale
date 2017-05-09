@@ -69,7 +69,7 @@ public:
     typedef WORKER_STATISTICS STATISTICS;
     typedef WorkerTask Task;
     typedef WorkerDisposableTask DisposableTask;
-    typedef std::tr1::unordered_map<uint32_t, MXS_SESSION*> SessionsById;
+    typedef std::tr1::unordered_map<uint64_t, MXS_SESSION*> SessionsById;
 
     enum state_t
     {
@@ -298,6 +298,12 @@ public:
      */
     bool post(std::auto_ptr<DisposableTask> sTask, enum execute_mode_t mode = EXECUTE_AUTO);
 
+    template<class T>
+    bool post(std::auto_ptr<T> sTask, enum execute_mode_t mode = EXECUTE_AUTO)
+    {
+        return post(std::auto_ptr<DisposableTask>(sTask.release()), mode);
+    }
+
     /**
      * Posts a task to all workers for execution.
      *
@@ -330,6 +336,12 @@ public:
      *            be deleted.
      */
     static size_t broadcast(std::auto_ptr<DisposableTask> sTask);
+
+    template<class T>
+    static size_t broadcast(std::auto_ptr<T> sTask)
+    {
+        return broadcast(std::auto_ptr<DisposableTask>(sTask.release()));
+    }
 
     /**
      * Executes a task on all workers in serial mode (the task is executed
@@ -373,6 +385,30 @@ public:
      * @attention This function is signal safe.
      */
     bool post_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2);
+
+    /**
+     * Add a session to the session container.
+     *
+     * @param session The session to add
+     * @return true if successful
+     */
+    bool register_session(MXS_SESSION* session);
+
+    /**
+     * Remove a session from the session container.
+     *
+     * @param id Session id
+     * @return The removed session, or NULL if not found
+     */
+    MXS_SESSION* deregister_session(uint64_t id);
+
+    /**
+     * Find a session in the session container.
+     *
+     * @param id Session id
+     * @return The found session, or NULL if not found
+     */
+    MXS_SESSION* find_session(uint64_t id);
 
     /**
      * Broadcast a message to all worker.
