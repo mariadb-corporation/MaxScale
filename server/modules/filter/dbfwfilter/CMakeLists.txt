@@ -10,13 +10,11 @@ if(BISON_FOUND AND FLEX_FOUND)
   target_link_libraries(dbfwfilter maxscale-common)
   set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
   install_module(dbfwfilter core)
-  add_dependencies(dbfwfilter token ruleparser)
 
   # The offline rule check utility
   add_executable(dbfwchk dbfw_rule_check.c ${BISON_ruleparser_OUTPUTS} ${FLEX_token_OUTPUTS})
   target_link_libraries(dbfwchk maxscale-common)
   install_executable(dbfwchk core)
-  add_dependencies(dbfwchk token ruleparser)
 
 else()
     message(FATAL_ERROR "Could not find Bison or Flex: ${BISON_EXECUTABLE} ${FLEX_EXECUTABLE}")
