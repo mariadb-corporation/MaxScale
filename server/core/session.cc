@@ -61,7 +61,7 @@ using std::stringstream;
 /** Global session id counter. Must be updated atomically. Value 0 is reserved for
  *  dummy/unused sessions.
  */
-static uint32_t next_session_id = 1;
+static uint64_t next_session_id = 1;
 
 static struct session session_dummy_struct;
 
@@ -162,7 +162,7 @@ MXS_SESSION* session_alloc(SERVICE *service, DCB *client_dcb)
     return session_alloc_body(service, client_dcb, session);
 }
 
-MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint32_t id)
+MXS_SESSION* session_alloc_with_id(SERVICE *service, DCB *client_dcb, uint64_t id)
 {
     MXS_SESSION *session = (MXS_SESSION *)(MXS_MALLOC(sizeof(*session)));
     if (session == NULL)
@@ -263,13 +263,13 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
 
         if (session->client_dcb->user == NULL)
         {
-            MXS_INFO("Started session [%" PRIu32 "] for %s service ",
+            MXS_INFO("Started session [%" PRIu64 "] for %s service ",
                      session->ses_id,
                      service->name);
         }
         else
         {
-            MXS_INFO("Started %s client session [%" PRIu32 "] for '%s' from %s",
+            MXS_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s",
                      service->name,
                      session->ses_id,
                      session->client_dcb->user,
@@ -278,7 +278,7 @@ static MXS_SESSION* session_alloc_body(SERVICE* service, DCB* client_dcb,
     }
     else
     {
-        MXS_INFO("Start %s client session [%" PRIu32 "] for '%s' from %s failed, will be "
+        MXS_INFO("Start %s client session [%" PRIu64 "] for '%s' from %s failed, will be "
                  "closed as soon as all related DCBs have been closed.",
                  service->name,
                  session->ses_id,
@@ -448,7 +448,7 @@ static void session_free(MXS_SESSION *session)
         MXS_FREE(session->filters);
     }
 
-    MXS_INFO("Stopped %s client session [%" PRIu32 "]", session->service->name, session->ses_id);
+    MXS_INFO("Stopped %s client session [%" PRIu64 "]", session->service->name, session->ses_id);
 
     /** If session doesn't have parent referencing to it, it can be freed */
     if (!session->ses_is_child)
@@ -560,7 +560,7 @@ dprintSession(DCB *dcb, MXS_SESSION *print_session)
     char buf[30];
     int i;
 
-    dcb_printf(dcb, "Session %" PRIu32 "\n", print_session->ses_id);
+    dcb_printf(dcb, "Session %" PRIu64 "\n", print_session->ses_id);
     dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
     dcb_printf(dcb, "\tService:             %s\n", print_session->service->name);
 
@@ -600,7 +600,7 @@ bool dListSessions_cb(DCB *dcb, void *data)
     {
         DCB *out_dcb = (DCB*)data;
         MXS_SESSION *session = dcb->session;
-        dcb_printf(out_dcb, "%-16" PRIu32 " | %-15s | %-14s | %s\n", session->ses_id,
+        dcb_printf(out_dcb, "%-16" PRIu64 " | %-15s | %-14s | %s\n", session->ses_id,
                    session->client_dcb && session->client_dcb->remote ?
                    session->client_dcb->remote : "",
                    session->service && session->service->name ?
@@ -964,7 +964,7 @@ static bool ses_find_id(DCB *dcb, void *data)
 {
     void **params = (void**)data;
     MXS_SESSION **ses = (MXS_SESSION**)params[0];
-    uint32_t *id = (uint32_t*)params[1];
+    uint64_t *id = (uint64_t*)params[1];
     bool rval = true;
 
     if (dcb->session->ses_id == *id)
@@ -976,7 +976,7 @@ static bool ses_find_id(DCB *dcb, void *data)
     return rval;
 }
 
-MXS_SESSION* session_get_by_id(uint32_t id)
+MXS_SESSION* session_get_by_id(uint64_t id)
 {
     MXS_SESSION *session = NULL;
     void *params[] = {&session, &id};
@@ -1048,9 +1048,9 @@ void session_clear_stmt(MXS_SESSION *session)
     session->stmt.target = NULL;
 }
 
-uint32_t session_get_next_id()
+uint64_t session_get_next_id()
 {
-    return atomic_add_uint32(&next_session_id, 1);
+    return atomic_add_uint64(&next_session_id, 1);
 }
 
 void session_broadcast_kill_command(MXS_SESSION* issuer, uint64_t target_id)

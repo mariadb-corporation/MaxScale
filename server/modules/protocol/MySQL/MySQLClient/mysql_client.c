@@ -241,9 +241,10 @@ int MySQLSendHandshake(DCB* dcb)
         memcpy(mysql_filler_ten + 6, &new_flags, sizeof(new_flags));
     }
 
-    // Get the equivalent of the server process id.
-    protocol->tid = session_get_next_id();
-    gw_mysql_set_byte4(mysql_thread_id_num, protocol->tid);
+    // Get the equivalent of the server thread id.
+    protocol->thread_id = session_get_next_id();
+    // Send only the low 32bits in the handshake.
+    gw_mysql_set_byte4(mysql_thread_id_num, (uint32_t)(protocol->thread_id));
     memcpy(mysql_scramble_buf, server_scramble, 8);
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
@@ -668,7 +669,7 @@ gw_read_do_authentication(DCB *dcb, GWBUF *read_buffer, int nbytes_read)
          * normal data handling function instead of this one.
          */
         MXS_SESSION *session =
-            session_alloc_with_id(dcb->service, dcb, protocol->tid);
+            session_alloc_with_id(dcb->service, dcb, protocol->thread_id);
 
         if (session != NULL)
         {

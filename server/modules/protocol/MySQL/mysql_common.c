@@ -1410,7 +1410,6 @@ gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
     uint8_t *server_version_end = NULL;
     uint16_t mysql_server_capabilities_one = 0;
     uint16_t mysql_server_capabilities_two = 0;
-    unsigned long tid = 0;
     uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
     uint8_t scramble_data_2[GW_MYSQL_SCRAMBLE_SIZE - GW_SCRAMBLE_LENGTH_323] = "";
     uint8_t capab_ptr[4] = "";
@@ -1433,8 +1432,10 @@ gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
     payload = server_version_end + 1;
 
     // get ThreadID: 4 bytes
-    tid = gw_mysql_get_byte4(payload);
-    memcpy(&conn->tid, &tid, 4);
+    uint32_t tid = gw_mysql_get_byte4(payload);
+    /* TODO: Correct value of thread id could be queried later from backend if
+     * there is any worry it might be larger than 32bit allows. */
+    conn->thread_id = tid;
 
     payload += 4;
 

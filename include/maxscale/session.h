@@ -134,7 +134,7 @@ typedef struct session
 {
     skygw_chk_t             ses_chk_top;
     mxs_session_state_t     state;            /*< Current descriptor state */
-    uint32_t                ses_id;           /*< Unique session identifier */
+    uint64_t                ses_id;           /*< Unique session identifier */
     struct dcb              *client_dcb;      /*< The client connection */
     struct mxs_router_session *router_session;  /*< The router instance data */
     MXS_SESSION_STATS       stats;            /*< Session statistics */
@@ -194,7 +194,7 @@ MXS_SESSION *session_alloc(struct service *, struct dcb *);
  * @param id            Id for the new session.
  * @return              The newly created session or NULL if an error occurred
  */
-MXS_SESSION *session_alloc_with_id(struct service *, struct dcb *, uint32_t);
+MXS_SESSION *session_alloc_with_id(struct service *, struct dcb *, uint64_t);
 
 MXS_SESSION *session_set_dummy(struct dcb *);
 
@@ -352,14 +352,14 @@ static inline bool session_set_autocommit(MXS_SESSION* ses, bool autocommit)
  *
  * @note The caller must free the session reference by calling session_put_ref
  */
-MXS_SESSION* session_get_by_id(uint32_t id);
+MXS_SESSION* session_get_by_id(uint64_t id);
 
 /**
  * Get the next available unique (assuming no overflow) session id number.
  *
  * @return An unused session id.
  */
-uint32_t session_get_next_id();
+uint64_t session_get_next_id();
 
 /**
  * @brief Close a session
